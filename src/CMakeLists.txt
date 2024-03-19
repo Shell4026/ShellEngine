@@ -1,0 +1,19 @@
+add_executable(ShellEngine main.cpp)
+
+# FetchContent 를 사용하기 위해 include.
+include(FetchContent)
+
+# fmt 라이브러리를 불러온다.
+FetchContent_Declare(
+  Fmt
+  GIT_REPOSITORY "https://github.com/fmtlib/fmt"
+  GIT_TAG "10.2.1"
+  )
+FetchContent_MakeAvailable(Fmt)
+
+add_subdirectory(Window)
+
+target_link_libraries(ShellEngine PRIVATE fmt)
+target_link_libraries(ShellEngine PUBLIC ShellEngineWindow)
+
+target_include_directories(ShellEngine PUBLIC ${CMAKE_SOURCE_DIR}/include)
