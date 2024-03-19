@@ -4,7 +4,7 @@
 cmake_minimum_required (VERSION 3.8)
 
 project (
- ShellEngine
+ ShellEngineProject
  VERSION 0.1
  LANGUAGES CXX)
 
@@ -15,5 +15,3 @@ project (
 
 # 하위 프로젝트를 포함합니다.
 add_subdirectory (src)
-
-target_precompile_headers(ShellEngine PUBLIC ${CMAKE_SOURCE_DIR}/include/Engine.h)
