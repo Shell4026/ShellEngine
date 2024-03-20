@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "WindowImpl.h"
 
 #include <memory>
@@ -11,7 +11,7 @@ namespace sh {
 	private:
 		std::unique_ptr<WindowImpl> winImpl;
 
-		std::wstring title;
+		std::string title;
 
 		std::queue<Event> events;
 
@@ -20,7 +20,7 @@ namespace sh {
 		Window();
 		~Window();
 
-		void Create(const std::wstring& title, int wsize, int hsize);
+		void Create(const std::string& title, int wsize, int hsize);
 		bool PollEvent(Event& event);
 		bool IsOpen() const;
 		void Close();

@@ -1,4 +1,4 @@
-#include "Win32/WindowImplWin32.h"
+﻿#include "Win32/WindowImplWin32.h"
 
 #include <iostream>
 namespace sh {
@@ -10,19 +10,19 @@ namespace sh {
 
 	WindowImplWin32::~WindowImplWin32()
 	{
+		Close();
 		DestroyWindow(window);
 		UnregisterClassW(className, GetModuleHandle(nullptr));
 	}
 
-	WinHandle WindowImplWin32::Create(const std::wstring& title, int wsize, int hsize)
+	void WindowImplWin32::RegisterWindow()
 	{
-		std::cout << "WindowImplWin32::Create()\n";
-		WNDCLASSW wc;
+		WNDCLASSW wc{ 0 };
 		wc.style = CS_HREDRAW | CS_VREDRAW;
 		wc.lpfnWndProc = &WindowImplWin32::EventHandler;
 		wc.cbClsExtra = 0;
 		wc.cbWndExtra = 0;
-		wc.hInstance = GetModuleHandleW(nullptr);
+		wc.hInstance = GetModuleHandleW(nullptr); //현재 실행중인 프로세스의 핸들
 		wc.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
 		wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
 		wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
@@ -30,9 +30,19 @@ namespace sh {
 		wc.lpszClassName = className;
 
 		RegisterClassW(&wc);
+	}
+
+	WinHandle WindowImplWin32::Create(const std::string& title, int wsize, int hsize)
+	{
+		std::cout << "WindowImplWin32::Create()\n";
+		RegisterWindow();
 
 		unsigned long style = WS_VISIBLE | WS_MINIMIZEBOX | WS_CAPTION | WS_SYSMENU;
-		window = CreateWindowW(className, title.c_str(), style, 0, 0, wsize, hsize, nullptr, nullptr, GetModuleHandleW(nullptr), this);
+		wchar_t* wc = new wchar_t[title.length() + 1];
+		mbstowcs(wc, title.c_str(), title.length());
+		LPWSTR wtitle = wc;
+		window = CreateWindowW(className, L"테스트", style, 0, 0, wsize, hsize, nullptr, nullptr, GetModuleHandleW(nullptr), this);
+		delete[] wc;
 		return 0;
 	}
 
@@ -41,13 +51,14 @@ namespace sh {
 		CloseWindow(window);
 	}
 
+
 	void WindowImplWin32::ProcessEvent()
 	{
 		MSG msg;
-		while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE))
+		while (PeekMessageW(&msg, NULL, 0, 0, PM_REMOVE))
 		{
 			TranslateMessage(&msg);
-			DispatchMessage(&msg);
+			DispatchMessageW(&msg);
 		}
 	}
 
@@ -62,7 +73,9 @@ namespace sh {
 		switch (msg)
 		{
 		case WM_CREATE:
-			win = reinterpret_cast<WindowImplWin32*>(reinterpret_cast<CREATESTRUCT*>(lParam)->lpCreateParams);
+			//USERDATA영역에 이 클래스의 주소를 저장함.
+			//msg == WM_CREATE일시 lParam에는 CREATESTRUCT의 정보가 들어가있음.
+			win = reinterpret_cast<WindowImplWin32*>(reinterpret_cast<CREATESTRUCTW*>(lParam)->lpCreateParams);
 			win->window = hwnd;
 			SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(win));
 			break;
@@ -70,16 +83,21 @@ namespace sh {
 			return 0;
 		}
 
-		return DefWindowProc(hwnd, msg, wParam, lParam);
+		return DefWindowProcW(hwnd, msg, wParam, lParam);
 	}
 
 	void WindowImplWin32::ProcessEvents(UINT msg, WPARAM wParam, LPARAM lParam)
 	{
+		//EventHandler -> ProcessEvents로 호출
 		switch (msg)
 		{
-		case WM_CLOSE:
 			Event e;
+		case WM_CLOSE:
 			e.type = Event::EventType::Close;
+			PushEvent(e);
+			break;
+		case WM_MOVE:
+			e.type = Event::EventType::Move;
 			PushEvent(e);
 			break;
 		}

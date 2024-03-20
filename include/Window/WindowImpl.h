@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 
 #include <string>
 #include <queue>
@@ -20,7 +20,7 @@ namespace sh {
 		Event PopEvent();
 		bool IsEmptyEvent() const;
 
-		virtual auto Create(const std::wstring& title, int wsize, int hsize) -> WinHandle = 0;
+		virtual auto Create(const std::string& title, int wsize, int hsize) -> WinHandle = 0;
 		virtual void Close() = 0;
 		virtual void ProcessEvent() = 0;
 	};

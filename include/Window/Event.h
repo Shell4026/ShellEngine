@@ -1,10 +1,11 @@
-#pragma once
+﻿#pragma once
 
 namespace sh {
 	struct Event {
 		enum class EventType
 		{
-			Close
+			Close,
+			Move
 		};
 
 		EventType type;

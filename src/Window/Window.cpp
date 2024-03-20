@@ -1,4 +1,4 @@
-#include "Window.h"
+﻿#include "Window.h"
 
 #include "WindowFactory.h"
 #include "WindowImpl.h"
@@ -17,7 +17,7 @@ namespace sh {
 		this->Close();
 	}
 
-	void Window::Create(const std::wstring& title, int wsize, int hsize)
+	void Window::Create(const std::string& title, int wsize, int hsize)
 	{
 		std::cout << "Init\n";
 
