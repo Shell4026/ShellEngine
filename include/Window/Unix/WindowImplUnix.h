@@ -5,6 +5,9 @@ namespace sh {
 	class WindowImplUnix : public WindowImpl
 	{
 	public:
-		auto Create() -> WinHandle override;
+		~WindowImplUnix() override;
+
+		auto Create(const std::wstring& title, int wsize, int hsize) -> WinHandle override;
+		bool ProcessEvent() override;
 	};
 }

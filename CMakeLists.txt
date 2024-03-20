@@ -13,5 +13,6 @@ project (
 
  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
+ set(CMAKE_CXX_STANDARD 17)
 # 하위 프로젝트를 포함합니다.
 add_subdirectory (src)
