@@ -11,9 +11,23 @@ elseif(UNIX)
 endif()
 
 add_library(ShellEngineWindow STATIC ${SRC} ${OS_SRC})
+add_library(ShellEngine::Window ALIAS ShellEngineWindow)
 
 if(UNIX)
 	target_link_libraries(ShellEngineWindow ${X11_LIBRARIES})
 endif()
 
 target_include_directories(ShellEngineWindow PUBLIC ${CMAKE_SOURCE_DIR}/include/Window)
+
+FetchContent_Declare(
+  GLEW
+  GIT_REPOSITORY https://github.com/Perlmint/glew-cmake
+  GIT_TAG        glew-cmake-2.2.0
+  )
+FetchContent_MakeAvailable(GLEW)
+
+set_target_properties(libglew_shared PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set_target_properties(libglew_shared PROPERTIES LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
+set_target_properties(libglew_shared PROPERTIES RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
+
+target_link_libraries(ShellEngineWindow PUBLIC libglew_shared)

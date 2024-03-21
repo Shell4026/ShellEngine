@@ -4,7 +4,6 @@
 #include "WindowImpl.h"
 
 #include <iostream>
-
 namespace sh {
 	Window::Window() :
 		isOpen(false)
