@@ -1,6 +1,7 @@
 ﻿#include "Win32/WindowImplWin32.h"
 
 #include <iostream>
+#include <../Core/Util.h>
 namespace sh {
 	WindowImplWin32::WindowImplWin32() :
 		className(L"ShellEngine Window"),
@@ -38,11 +39,8 @@ namespace sh {
 		RegisterWindow();
 
 		unsigned long style = WS_VISIBLE | WS_MINIMIZEBOX | WS_CAPTION | WS_SYSMENU;
-		wchar_t* wc = new wchar_t[title.length() + 1];
-		mbstowcs(wc, title.c_str(), title.length());
-		LPWSTR wtitle = wc;
-		window = CreateWindowW(className, L"테스트", style, 0, 0, wsize, hsize, nullptr, nullptr, GetModuleHandleW(nullptr), this);
-		delete[] wc;
+		std::wstring wtitle = sh::Util::U8StringToWstring(title);
+		window = CreateWindowW(className, wtitle.c_str(), style, 0, 0, wsize, hsize, nullptr, nullptr, GetModuleHandleW(nullptr), this);
 		return 0;
 	}
 

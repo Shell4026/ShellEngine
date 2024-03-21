@@ -1,9 +1,9 @@
-﻿#include "Engine.h"
-#include "Window/Window.h"
+﻿#include "Window/Window.h"
 
 int main(int arg, char** args[]) {
 	sh::Window window;
 	window.Create(u8"테스트", 1024, 768);
+	
 	while (window.IsOpen())
 	{
 		sh::Event e;

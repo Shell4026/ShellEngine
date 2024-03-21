@@ -1,12 +1,12 @@
-add_executable(ShellEngine main.cpp)
+ï»¿add_executable(ShellEngine main.cpp "Core/Util.cpp")
 
 target_include_directories(ShellEngine PUBLIC ${CMAKE_SOURCE_DIR}/include)
-target_precompile_headers(ShellEngine PUBLIC ${CMAKE_SOURCE_DIR}/include/Engine.h)
+#target_precompile_headers(ShellEngine PUBLIC ${CMAKE_SOURCE_DIR}/include/Engine.h)
 
-# FetchContent ¸¦ »ç¿ëÇÏ±â À§ÇØ include.
+# FetchContent ë¥¼ ì‚¬ìš©í•˜ê¸° ìœ„í•´ include.
 include(FetchContent)
 
-# fmt ¶óÀÌºê·¯¸®¸¦ ºÒ·¯¿Â´Ù.
+# fmt ë¼ì´ë¸ŒëŸ¬ë¦¬ë¥¼ ë¶ˆëŸ¬ì˜¨ë‹¤.
 FetchContent_Declare(
   Fmt
   GIT_REPOSITORY "https://github.com/fmtlib/fmt"
@@ -15,6 +15,9 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(Fmt)
 
 target_link_libraries(ShellEngine PUBLIC fmt)
+
+add_subdirectory(Core)
+target_link_libraries(ShellEngine PUBLIC ShellEngineCore)
 
 add_subdirectory(Window)
 target_link_libraries(ShellEngine PUBLIC ShellEngineWindow)
