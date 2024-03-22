@@ -1,4 +1,4 @@
-﻿add_executable(ShellEngine main.cpp "Core/Util.cpp")
+﻿add_executable(ShellEngine main.cpp)
 
 target_include_directories(ShellEngine PUBLIC ${CMAKE_SOURCE_DIR}/include)
 #target_precompile_headers(ShellEngine PUBLIC ${CMAKE_SOURCE_DIR}/include/Engine.h)

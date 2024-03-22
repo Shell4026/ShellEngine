@@ -18,8 +18,10 @@ namespace sh {
 
 	void Window::Create(const std::string& title, int wsize, int hsize)
 	{
-		std::cout << "Init\n";
+		if (isOpen)
+			return;
 
+		std::cout << "Init\n";
 		this->title = title;
 
 		winImpl = WindowFactory::CreateWindowImpl();

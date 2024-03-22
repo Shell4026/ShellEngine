@@ -1,5 +1,6 @@
 ﻿#include "Window/Window.h"
 
+#include <iostream>
 int main(int arg, char** args[]) {
 	sh::Window window;
 	window.Create(u8"테스트", 1024, 768);
@@ -13,6 +14,20 @@ int main(int arg, char** args[]) {
 			{
 			case sh::Event::EventType::Close:
 				window.Close();
+				break;
+			case sh::Event::EventType::MousePressed:
+				if (e.mouseType == sh::Event::MouseType::Left)
+				{
+					std::cout << "Left\n";
+				}
+				else if (e.mouseType == sh::Event::MouseType::Right)
+				{
+					std::cout << "Right\n";
+				}
+				else
+				{
+					std::cout << "Middle\n";
+				}
 				break;
 			}
 		}

@@ -77,7 +77,7 @@ namespace sh {
 			win->window = hwnd;
 			SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(win));
 			break;
-		case WM_CLOSE:
+		case WM_CLOSE: // 윈도우 닫는 이벤트는 유저쪽에서 처리
 			return 0;
 		}
 
@@ -97,6 +97,21 @@ namespace sh {
 		case WM_MOVE:
 			e.type = Event::EventType::Move;
 			PushEvent(e);
+			break;
+		case WM_KEYDOWN:
+			std::cout << "keydown\n";
+			break;
+		case WM_LBUTTONDOWN:
+			e.type = Event::EventType::MousePressed;
+			e.mouseType = Event::MouseType::Left;
+			PushEvent(e);
+			break;
+		case WM_RBUTTONDOWN:
+			e.type = Event::EventType::MousePressed;
+			e.mouseType = Event::MouseType::Right;
+			PushEvent(e);
+			break;
+		default:
 			break;
 		}
 	}

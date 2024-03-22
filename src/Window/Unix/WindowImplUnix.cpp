@@ -13,7 +13,7 @@ namespace sh {
 		Close();
 	}
 
-	auto WindowImplUnix::Create(const std::wstring& title, int wsize, int hsize) -> WinHandle
+	auto WindowImplUnix::Create(const std::string& title, int wsize, int hsize) -> WinHandle
 	{
 		std::cout << "WindowImplUnix::Create()\n";
 
@@ -31,7 +31,8 @@ namespace sh {
 			CopyFromParent, InputOutput, CopyFromParent,
 			CWBackPixel | CWEventMask, &attrs);
 
-		XStoreName(display, win, "test"); //창 제목 설정
+		XStoreName(display, win, title.c_str()); //창 제목 설정
+		Xutf8SetWMProperties(display, win, title.c_str(), NULL, NULL, 0, NULL, NULL, NULL);
 
 		XSelectInput(display, win, attrs.event_mask); //event_mask에 해당하는 이벤트를 선택
 		//창 닫는 이벤트 등록
@@ -54,12 +55,34 @@ namespace sh {
 		XNextEvent(display, &e);
 		switch (e.type)
 		{
+			Event evt;
 		case ClientMessage:
 			if (e.xclient.data.l[0] == wmDeleteMessage)
 			{
-				Event evt;
 				evt.type = Event::EventType::Close;
 				PushEvent(evt);
+			}
+			break;
+		case ButtonPress:
+			XButtonEvent* buttonEvent = (XButtonEvent*)&e;
+
+			switch (buttonEvent->button)
+			{
+			case Button1:
+				evt.type = Event::EventType::MousePressed;
+				evt.mouseType = Event::MouseType::Left;
+				PushEvent(evt);
+				break;
+			case Button2:
+				evt.type = Event::EventType::MousePressed;
+				evt.mouseType = Event::MouseType::Middle;
+				PushEvent(evt);
+				break;
+			case Button3:
+				evt.type = Event::EventType::MousePressed;
+				evt.mouseType = Event::MouseType::Right;
+				PushEvent(evt);
+				break;
 			}
 			break;
 		}
