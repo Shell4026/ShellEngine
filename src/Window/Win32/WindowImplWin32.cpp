@@ -23,7 +23,7 @@ namespace sh {
 		wc.lpfnWndProc = &WindowImplWin32::EventHandler;
 		wc.cbClsExtra = 0;
 		wc.cbWndExtra = 0;
-		wc.hInstance = GetModuleHandleW(nullptr); //현재 실행중인 프로세스의 핸들
+		wc.hInstance = GetModuleHandleW(nullptr);
 		wc.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
 		wc.hCursor = LoadCursor(nullptr, IDC_ARROW);
 		wc.hbrBackground = (HBRUSH)GetStockObject(BLACK_BRUSH);
@@ -40,8 +40,8 @@ namespace sh {
 
 		unsigned long style = WS_VISIBLE | WS_MINIMIZEBOX | WS_CAPTION | WS_SYSMENU;
 		std::wstring wtitle = sh::Util::U8StringToWstring(title);
-		window = CreateWindowW(className, wtitle.c_str(), style, 0, 0, wsize, hsize, nullptr, nullptr, GetModuleHandleW(nullptr), this);
-		return 0;
+		window = CreateWindowExW(0, className, wtitle.c_str(), style, 0, 0, wsize, hsize, nullptr, nullptr, GetModuleHandleW(nullptr), this);
+		return window;
 	}
 
 	void WindowImplWin32::Close()
@@ -71,13 +71,11 @@ namespace sh {
 		switch (msg)
 		{
 		case WM_CREATE:
-			//USERDATA영역에 이 클래스의 주소를 저장함.
-			//msg == WM_CREATE일시 lParam에는 CREATESTRUCT의 정보가 들어가있음.
 			win = reinterpret_cast<WindowImplWin32*>(reinterpret_cast<CREATESTRUCTW*>(lParam)->lpCreateParams);
 			win->window = hwnd;
 			SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(win));
 			break;
-		case WM_CLOSE: // 윈도우 닫는 이벤트는 유저쪽에서 처리
+		case WM_CLOSE:
 			return 0;
 		}
 
@@ -86,7 +84,6 @@ namespace sh {
 
 	void WindowImplWin32::ProcessEvents(UINT msg, WPARAM wParam, LPARAM lParam)
 	{
-		//EventHandler -> ProcessEvents로 호출
 		switch (msg)
 		{
 			Event e;

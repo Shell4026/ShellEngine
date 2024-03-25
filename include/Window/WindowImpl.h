@@ -4,12 +4,17 @@
 #include <queue>
 #include <Event.h>
 
+#ifdef _WIN32
+struct HWND__;
+#endif
+
 namespace sh {
 #ifdef _WIN32
-	typedef unsigned int WinHandle;
+	using WinHandle = HWND__*;
 #elif __unix__
-	typedef int WinHandle;
+	using WinHandle = long long;
 #endif
+
 	class WindowImpl {
 	private:
 		std::queue<Event> events;
