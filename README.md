@@ -6,10 +6,8 @@
 
 **Required**
 ```
-sudo apt install build-essential
+sudo apt install build-essential ninja-build
 ```
-* mesa-utils
-
-* libx11-dev
-
-* libxext-dev
+```
+sudo apt install libx11-dev libxext-dev libgl1-mesa-dev
+```
