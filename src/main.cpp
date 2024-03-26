@@ -45,6 +45,19 @@ int main(int arg, char** args[]) {
 					std::cout << "Middle\n";
 				}
 				break;
+			case sh::Event::EventType::MouseWheelScrolled:
+				std::cout << sh::Event::MouseWheelScrolled::delta << '\n';
+				break;
+			case sh::Event::EventType::KeyDown:
+				if (e.keyType == sh::Event::KeyType::A)
+					std::cout << "Check\n";
+				break;
+			case sh::Event::EventType::WindowFocus:
+				std::cout << "FocusIn\n";
+				break;
+			case sh::Event::EventType::WindowFocusOut:
+				std::cout << "FocusOut\n";
+				break;
 			}
 		}
 	}

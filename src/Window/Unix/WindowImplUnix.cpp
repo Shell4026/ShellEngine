@@ -56,6 +56,7 @@ namespace sh {
 		switch (e.type)
 		{
 			Event evt;
+		//window
 		case ClientMessage:
 			if (e.xclient.data.l[0] == wmDeleteMessage)
 			{
@@ -63,6 +64,16 @@ namespace sh {
 				PushEvent(evt);
 			}
 			break;
+		case FocusIn:
+			evt.type = Event::EventType::WindowFocus;
+			PushEvent(evt);
+			break;
+		case FocusOut:
+			evt.type = Event::EventType::WindowFocusOut;
+			PushEvent(evt);
+			break;
+
+		//mouse
 		case ButtonPress:
 			XButtonEvent* buttonEvent = (XButtonEvent*)&e;
 
@@ -81,6 +92,12 @@ namespace sh {
 			case Button3:
 				evt.type = Event::EventType::MousePressed;
 				evt.mouseType = Event::MouseType::Right;
+				PushEvent(evt);
+				break;
+			case Button4:
+			case Button5:
+				evt.type = Event::EventType::MouseWheelScrolled;
+				Event::MouseWheelScrolled::delta = (e.type == Button4) ? 1.0f : -1.0f;
 				PushEvent(evt);
 				break;
 			}
