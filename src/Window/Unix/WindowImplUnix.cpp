@@ -35,7 +35,7 @@ namespace sh {
 		Atom utf8String = XInternAtom(display, "UTF8_STRING", false);
 
 		XChangeProperty(display, win, netWmName, utf8String, 8, PropModeReplace,
-			(const unsigned char*)u8"테스트", 4);
+			(const unsigned char*)title.c_str(), 4);
 		//XStoreName(display, win, title.c_str()); //창 제목 설정
 		
 		XSelectInput(display, win, attrs.event_mask); //event_mask에 해당하는 이벤트를 선택
