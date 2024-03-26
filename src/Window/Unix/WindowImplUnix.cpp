@@ -31,14 +31,15 @@ namespace sh {
 			CopyFromParent, InputOutput, CopyFromParent,
 			CWBackPixel | CWEventMask, &attrs);
 
+		//창 제목 설정
 		Atom netWmName = XInternAtom(display, "_NET_WM_NAME", false);
 		Atom utf8String = XInternAtom(display, "UTF8_STRING", false);
-
 		XChangeProperty(display, win, netWmName, utf8String, 8, PropModeReplace,
 			(const unsigned char*)title.c_str(), 4);
-		//XStoreName(display, win, title.c_str()); //창 제목 설정
 		
-		XSelectInput(display, win, attrs.event_mask); //event_mask에 해당하는 이벤트를 선택
+		//event_mask에 해당하는 이벤트를 선택
+		XSelectInput(display, win, attrs.event_mask); 
+
 		//창 닫는 이벤트 등록
 		wmDeleteMessage = XInternAtom(display, "WM_DELETE_WINDOW", false); 
 		XSetWMProtocols(display, win, &wmDeleteMessage, 1);
