@@ -31,17 +31,21 @@ namespace sh {
 			CopyFromParent, InputOutput, CopyFromParent,
 			CWBackPixel | CWEventMask, &attrs);
 
-		XStoreName(display, win, title.c_str()); //창 제목 설정
-		Xutf8SetWMProperties(display, win, title.c_str(), NULL, NULL, 0, NULL, NULL, NULL);
+		Atom netWmName = XInternAtom(display, "_NET_WM_NAME", false);
+		Atom utf8String = XInternAtom(display, "UTF8_STRING", false);
 
+		XChangeProperty(display, win, netWmName, utf8String, 8, PropModeReplace,
+			(const unsigned char*)u8"테스트", 4);
+		//XStoreName(display, win, title.c_str()); //창 제목 설정
+		
 		XSelectInput(display, win, attrs.event_mask); //event_mask에 해당하는 이벤트를 선택
 		//창 닫는 이벤트 등록
-		wmDeleteMessage = XInternAtom(display, "WM_DELETE_WINDOW", False); 
+		wmDeleteMessage = XInternAtom(display, "WM_DELETE_WINDOW", false); 
 		XSetWMProtocols(display, win, &wmDeleteMessage, 1);
 
 		XMapWindow(display, win);
 		XFlush(display);
-		return 0;
+		return win;
 	}
 
 	void WindowImplUnix::Close()
@@ -97,7 +101,7 @@ namespace sh {
 			case Button4:
 			case Button5:
 				evt.type = Event::EventType::MouseWheelScrolled;
-				Event::MouseWheelScrolled::delta = (e.type == Button4) ? 1.0f : -1.0f;
+				Event::MouseWheelScrolled::delta = (buttonEvent->button == Button4) ? 1.0f : -1.0f;
 				PushEvent(evt);
 				break;
 			}
