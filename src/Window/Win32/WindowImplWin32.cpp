@@ -123,7 +123,7 @@ namespace sh {
 			break;
 
 		//keyboard
-		case WM_SYSKEYDOWN:
+		case WM_SYSKEYDOWN: //alt, f10
 		case WM_KEYDOWN:
 			e.type = Event::EventType::KeyDown;
 			e.keyType = ConvertKeycode(wParam);
@@ -143,13 +143,28 @@ namespace sh {
 			e.mouseType = Event::MouseType::Left;
 			PushEvent(e);
 			break;
+		case WM_LBUTTONUP:
+			e.type = Event::EventType::MouseReleased;
+			e.mouseType = Event::MouseType::Left;
+			PushEvent(e);
+			break;
 		case WM_RBUTTONDOWN:
 			e.type = Event::EventType::MousePressed;
 			e.mouseType = Event::MouseType::Right;
 			PushEvent(e);
 			break;
+		case WM_RBUTTONUP:
+			e.type = Event::EventType::MouseReleased;
+			e.mouseType = Event::MouseType::Right;
+			PushEvent(e);
+			break;
 		case WM_MBUTTONDOWN:
 			e.type = Event::EventType::MousePressed;
+			e.mouseType = Event::MouseType::Middle;
+			PushEvent(e);
+			break;
+		case WM_MBUTTONUP:
+			e.type = Event::EventType::MouseReleased;
 			e.mouseType = Event::MouseType::Middle;
 			PushEvent(e);
 			break;
