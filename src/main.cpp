@@ -21,6 +21,7 @@ int main(int arg, char** args[]) {
 		std::this_thread::sleep_for(std::chrono::milliseconds(fps - delta_time));
 		end = std::chrono::high_resolution_clock::now();
 		delta_time += std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+		//std::cout << delta_time << "ms\n";
 		//fmt::print("{}ms\n", delta_time);
 
 		sh::Event e;
@@ -49,7 +50,7 @@ int main(int arg, char** args[]) {
 				std::cout << sh::Event::MouseWheelScrolled::delta << '\n';
 				break;
 			case sh::Event::EventType::KeyDown:
-				if (e.keyType == sh::Event::KeyType::A)
+				if (e.keyType == sh::Event::KeyType::G)
 					std::cout << "Check\n";
 				break;
 			case sh::Event::EventType::WindowFocus:

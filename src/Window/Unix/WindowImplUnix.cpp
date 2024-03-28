@@ -78,9 +78,19 @@ namespace sh {
 			PushEvent(evt);
 			break;
 
-		//mouse
+		//Keyboard
+		case KeyPress:
+		{
+			XKeyEvent* keyEvent = reinterpret_cast<XKeyEvent*>(&e);
+			evt.type = Event::EventType::KeyDown;
+			evt.keyType = CovertKeyCode(keyEvent->keycode);
+			PushEvent(evt);
+			break;
+		}
+		//Mouse
 		case ButtonPress:
-			XButtonEvent* buttonEvent = (XButtonEvent*)&e;
+		{
+			XButtonEvent* buttonEvent = reinterpret_cast<XButtonEvent*>(&e);
 
 			switch (buttonEvent->button)
 			{
@@ -108,5 +118,81 @@ namespace sh {
 			}
 			break;
 		}
+		}
 	}
-}
+
+	auto WindowImplUnix::CovertKeyCode(unsigned int keycode) -> Event::KeyType
+	{
+		std::cout << keycode << '\n';
+		constexpr Event::KeyType alphabet[] = { 
+			Event::KeyType::Q, Event::KeyType::W, Event::KeyType::E, Event::KeyType::R,
+			Event::KeyType::T, Event::KeyType::Y, Event::KeyType::U, Event::KeyType::I,
+			Event::KeyType::O, Event::KeyType::P, Event::KeyType::A, Event::KeyType::S,
+			Event::KeyType::D, Event::KeyType::F, Event::KeyType::G, Event::KeyType::H,
+			Event::KeyType::J, Event::KeyType::K, Event::KeyType::L, Event::KeyType::Z,
+			Event::KeyType::X, Event::KeyType::C, Event::KeyType::V, Event::KeyType::B,
+			Event::KeyType::N, Event::KeyType::M
+		};
+		switch (keycode)
+		{
+		case 19:
+			return Event::KeyType::Num0;
+		//C++ 표준 문법은 아님!
+		case 10 ... 18:
+			return static_cast<Event::KeyType>(keycode - 10 + static_cast<int>(Event::KeyType::Num1));
+		case 67 ... 76:
+			return static_cast<Event::KeyType>(keycode - 67 + static_cast<int>(Event::KeyType::F1));
+		case 95 ... 96:
+			return static_cast<Event::KeyType>(keycode - 95 + static_cast<int>(Event::KeyType::F11));
+		case 24 ... 33: //QWERTYUIOP
+			return static_cast<Event::KeyType>(alphabet[keycode - 24]);
+		case 38 ... 46: //ASDEFGHJKL
+			return static_cast<Event::KeyType>(alphabet[keycode - 38 + 10]);
+		case 52 ... 58: //ZXCVBNM
+			return static_cast<Event::KeyType>(alphabet[keycode - 52 + 19]);
+		case 50:
+			return Event::KeyType::LShift;
+		case 62:
+			return Event::KeyType::RShift;
+		case 37:
+			return Event::KeyType::LCtrl;
+		case 109:
+			return Event::KeyType::RCtrl;
+		case 64:
+			return Event::KeyType::LAlt;
+		//case 113:
+			//return Event::KeyType::RAlt;
+		case 65:
+			return Event::KeyType::Space;
+		case 22:
+			return Event::KeyType::BackSpace;
+		case 36:
+			return Event::KeyType::Enter;
+		case 23:
+			return Event::KeyType::Tab;
+		case 9:
+			return Event::KeyType::Esc;
+		case 113:
+			return Event::KeyType::Left;
+		case 111:
+			return Event::KeyType::Up;
+		case 114:
+			return Event::KeyType::Right;
+		case 116:
+			return Event::KeyType::Down;
+		case 119:
+			return Event::KeyType::Delete;
+		case 118:
+			return Event::KeyType::Insert;
+		case 112:
+			return Event::KeyType::PageUp;
+		case 117:
+			return Event::KeyType::PageDown;
+		case 115:
+			return Event::KeyType::End;
+		case 110:
+			return Event::KeyType::Home;
+		}
+		return Event::KeyType::Unknown;
+	}
+}//namespace
