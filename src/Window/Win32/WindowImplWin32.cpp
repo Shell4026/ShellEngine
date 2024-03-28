@@ -65,24 +65,29 @@ namespace sh {
 		if (!hwnd)
 			return 0;
 
+		//USERDATA영역에 이 클래스의 주소를 저장함.
+		//msg == WM_CREATE일시 lParam에는 CREATESTRUCT의 정보가 들어가있음.
+		if (msg == WM_CREATE)
+		{
+			auto win = reinterpret_cast<WindowImplWin32*>(reinterpret_cast<CREATESTRUCTW*>(lParam)->lpCreateParams);
+			win->window = hwnd;
+			SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(win));
+		}
+
 		WindowImplWin32* win = reinterpret_cast<WindowImplWin32*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
 		if (win)
 		{
 			win->ProcessEvents(msg, wParam, lParam);
 		}
 
-		switch (msg)
-		{
-			//USERDATA영역에 이 클래스의 주소를 저장함.
-			//msg == WM_CREATE일시 lParam에는 CREATESTRUCT의 정보가 들어가있음.
-		case WM_CREATE:
-			win = reinterpret_cast<WindowImplWin32*>(reinterpret_cast<CREATESTRUCTW*>(lParam)->lpCreateParams);
-			win->window = hwnd;
-			SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(win));
-			break;
-		case WM_CLOSE:// 윈도우 닫는 이벤트는 유저쪽에서 처리
+		// 윈도우 닫는 이벤트는 유저쪽에서 처리
+		if (msg == WM_CLOSE)
 			return 0;
-		}
+
+		//Alt키나 f10키 이벤트는 유저가 처리해야 함
+		if(msg == WM_SYSCOMMAND)
+			if (wParam == SC_KEYMENU)
+				return 0;
 
 		return DefWindowProcW(hwnd, msg, wParam, lParam);
 	}
@@ -90,6 +95,12 @@ namespace sh {
 	void WindowImplWin32::ProcessEvents(UINT msg, WPARAM wParam, LPARAM lParam)
 	{
 		//EventHandler -> ProcessEvents로 호출
+		
+		if (window == nullptr)
+			return;
+
+		std::cout << "event: " << std::hex << msg << '\n';
+
 		switch (msg)
 		{
 			Event e;
@@ -112,11 +123,14 @@ namespace sh {
 			break;
 
 		//keyboard
+		case WM_SYSKEYDOWN:
 		case WM_KEYDOWN:
 			e.type = Event::EventType::KeyDown;
 			e.keyType = ConvertKeycode(wParam);
+			std::cout << std::hex << wParam << "\n";
 			PushEvent(e);
 			break;
+		case WM_SYSKEYUP:
 		case WM_KEYUP:
 			e.type = Event::EventType::KeyUp;
 			e.keyType = ConvertKeycode(wParam);
@@ -134,6 +148,11 @@ namespace sh {
 			e.mouseType = Event::MouseType::Right;
 			PushEvent(e);
 			break;
+		case WM_MBUTTONDOWN:
+			e.type = Event::EventType::MousePressed;
+			e.mouseType = Event::MouseType::Middle;
+			PushEvent(e);
+			break;
 		case WM_MOUSEWHEEL:
 			e.type = Event::EventType::MouseWheelScrolled;
 			Event::MouseWheelScrolled::delta = static_cast<float>(GET_WHEEL_DELTA_WPARAM(wParam)) / 120.0f;
@@ -146,71 +165,91 @@ namespace sh {
 
 	auto WindowImplWin32::ConvertKeycode(WPARAM wParam) -> Event::KeyType
 	{
+		//std::cout << std::hex << wParam << "\n";
+
 		//0~9
 		if(wParam >= 0x30 && wParam <= 0x39)
 			return static_cast<Event::KeyType>(wParam - 0x30 + static_cast<int>(Event::KeyType::Num0));
 
 		//F1~F12
-		if (wParam >= 0x70 && wParam <= 0x7B)
-			return static_cast<Event::KeyType>(wParam - 0x70 + static_cast<int>(Event::KeyType::F1));
+		if (wParam >= VK_F1 && wParam <= VK_F12)
+			return static_cast<Event::KeyType>(wParam - VK_F1 + static_cast<int>(Event::KeyType::F1));
 
 		//A~Z
 		if (wParam >= 0x41 && wParam <= 0x5A)
 			return static_cast<Event::KeyType>(wParam - 0x41 + static_cast<int>(Event::KeyType::A));
 
-		//LShift, RShift, LCtrl, RCtrl, LAlt, RAlt
-		if (wParam >= 0xA0 && wParam <= 0xA5)
-			return static_cast<Event::KeyType>(wParam - 0xA0 + static_cast<int>(Event::KeyType::LShift));
-
 		//Left Up Right Down
-		if (wParam >= 0x25 && wParam <= 0x28)
-			return static_cast<Event::KeyType>(wParam - 0x25 + static_cast<int>(Event::KeyType::Left));
+		if (wParam >= VK_LEFT && wParam <= VK_DOWN)
+			return static_cast<Event::KeyType>(wParam - VK_LEFT + static_cast<int>(Event::KeyType::Left));
 
 		//PageUp PageDown End Home
-		if (wParam >= 0x21 && wParam <= 0x24)
-			return static_cast<Event::KeyType>(wParam - 0x21 + static_cast<int>(Event::KeyType::PageUp));
+		if (wParam >= VK_PRIOR && wParam <= VK_HOME)
+			return static_cast<Event::KeyType>(wParam - VK_PRIOR + static_cast<int>(Event::KeyType::PageUp));
+
+		//Numpad0~9
+		if (wParam >= VK_NUMPAD0 && wParam <= VK_NUMPAD9)
+			return static_cast<Event::KeyType>(wParam - VK_NUMPAD0 + static_cast<int>(Event::KeyType::Numpad0));
 
 		switch (wParam)
 		{
-		case 0x20:
+		case VK_SHIFT:
+			return Event::KeyType::Shift;
+		case VK_CONTROL:
+			return Event::KeyType::LCtrl;
+		case VK_MENU:
+			return Event::KeyType::LAlt;
+		case VK_SPACE:
 			return Event::KeyType::Space;
-		case 0x8:
+		case VK_BACK:
 			return Event::KeyType::BackSpace;
-		case 0xD:
+		case VK_RETURN:
 			return Event::KeyType::Enter;
-		case 0x9:
+		case VK_TAB:
 			return Event::KeyType::Tab;
-		case 0x1B:
+		case VK_ESCAPE:
 			return Event::KeyType::Esc;
-		case 0x2D:
+		case VK_INSERT:
 			return Event::KeyType::Insert;
-		case 0x2E:
+		case VK_DELETE:
 			return Event::KeyType::Delete;
-		case 0xBB:
-			return Event::KeyType::Plus;
-		case 0xBC:
+		case VK_ADD:
+			return Event::KeyType::NumPadPlus;
+		case VK_SUBTRACT:
+			return Event::KeyType::NumPadMinus;
+		case VK_DIVIDE:
+			return Event::KeyType::NumPadDivide;
+		case VK_MULTIPLY:
+			return Event::KeyType::NumPadMultiply;
+		case VK_DECIMAL:
+			return Event::KeyType::NumPadDecimal;
+		case VK_OEM_COMMA: //,
 			return Event::KeyType::Comma;
-		case 0xBD:
-			return Event::KeyType::Minus;
-		case 0xBE:
+		case VK_OEM_PERIOD: //.
 			return Event::KeyType::Period;
-		case 0xBF:
+		case VK_OEM_2:
 			return Event::KeyType::Slash;
-		case 0xDC:
+		case VK_OEM_5:
 			return Event::KeyType::BackSlash;
-		case 0xDB:
+		case VK_OEM_MINUS:
+			return Event::KeyType::Minus;
+		case VK_OEM_PLUS:
+			return Event::KeyType::Equal;
+		case VK_OEM_4:
 			return Event::KeyType::LBracket;
-		case 0xDD:
+		case VK_OEM_6:
 			return Event::KeyType::RBracket;
-		case 0xBA:
+		case VK_OEM_1:
 			return Event::KeyType::Semicolon;
-		case 0xDE:
+		case VK_OEM_7:
 			return Event::KeyType::Colon;
-		case 0x2C:
+		case VK_SNAPSHOT:
 			return Event::KeyType::Print;
-		case 0x91:
+		case VK_SCROLL:
+			return Event::KeyType::Scroll;
+		case VK_PAUSE:
 			return Event::KeyType::Pause;
-		case 0x90:
+		case VK_NUMLOCK:
 			return Event::KeyType::NumLock;
 		}
 		return Event::KeyType::Unknown;
