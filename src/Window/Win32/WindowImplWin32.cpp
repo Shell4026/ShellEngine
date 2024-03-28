@@ -99,7 +99,7 @@ namespace sh {
 		if (window == nullptr)
 			return;
 
-		std::cout << "event: " << std::hex << msg << '\n';
+		//std::cout << "event: " << std::hex << msg << '\n';
 
 		switch (msg)
 		{
