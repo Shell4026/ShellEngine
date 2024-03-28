@@ -127,7 +127,6 @@ namespace sh {
 		case WM_KEYDOWN:
 			e.type = Event::EventType::KeyDown;
 			e.keyType = ConvertKeycode(wParam);
-			std::cout << std::hex << wParam << "\n";
 			PushEvent(e);
 			break;
 		case WM_SYSKEYUP:
