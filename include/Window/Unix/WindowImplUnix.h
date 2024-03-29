@@ -15,6 +15,8 @@ namespace sh {
 		Atom wmDeleteMessage;
 	private:
 		auto CovertKeyCode(unsigned int keycode) -> Event::KeyType;
+
+		static auto CheckEvent(Display*, XEvent*, XPointer userData) -> int;
 	public:
 		~WindowImplUnix() override;
 

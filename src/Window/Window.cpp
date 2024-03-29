@@ -1,8 +1,6 @@
 ﻿#include "Window.h"
 
 #include "WindowFactory.h"
-#include "WindowImpl.h"
-
 #include <iostream>
 namespace sh {
 	Window::Window() :

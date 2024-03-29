@@ -4,7 +4,7 @@
 #include <chrono>
 #include <thread>
 
-int main(int arg, char** args[]) {
+int main(int arg, char* args[]) {
 	
 	sh::Window window;
 	window.Create(u8"테스트", 1024, 768);
@@ -27,6 +27,7 @@ int main(int arg, char** args[]) {
 		sh::Event e;
 		while (window.PollEvent(e))
 		{
+			
 			switch (e.type)
 			{
 			case sh::Event::EventType::Close:
@@ -50,7 +51,7 @@ int main(int arg, char** args[]) {
 				std::cout << sh::Event::MouseWheelScrolled::delta << '\n';
 				break;
 			case sh::Event::EventType::KeyDown:
-				if (e.keyType == sh::Event::KeyType::G)
+				if (e.keyType == sh::Event::KeyType::Left)
 					std::cout << "Check\n";
 				break;
 			case sh::Event::EventType::WindowFocus:

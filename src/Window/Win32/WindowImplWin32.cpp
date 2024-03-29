@@ -228,15 +228,15 @@ namespace sh {
 		case VK_DELETE:
 			return Event::KeyType::Delete;
 		case VK_ADD:
-			return Event::KeyType::NumPadPlus;
+			return Event::KeyType::NumpadAdd;
 		case VK_SUBTRACT:
-			return Event::KeyType::NumPadMinus;
+			return Event::KeyType::NumpadSubtract;
 		case VK_DIVIDE:
-			return Event::KeyType::NumPadDivide;
+			return Event::KeyType::NumpadDivide;
 		case VK_MULTIPLY:
-			return Event::KeyType::NumPadMultiply;
+			return Event::KeyType::NumpadMultiply;
 		case VK_DECIMAL:
-			return Event::KeyType::NumPadDecimal;
+			return Event::KeyType::NumpadDecimal;
 		case VK_OEM_COMMA: //,
 			return Event::KeyType::Comma;
 		case VK_OEM_PERIOD: //.

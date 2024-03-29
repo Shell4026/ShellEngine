@@ -40,7 +40,7 @@ namespace sh {
 			Delete, Insert, PageUp, PageDown, End, Home,
 			Numpad0, Numpad1, Numpad2, Numpad3, Numpad4,
 			Numpad5, Numpad6, Numpad7, Numpad8, Numpad9,
-			NumPadPlus, NumPadMinus, NumPadDivide, NumPadMultiply, NumPadDecimal,
+			NumpadAdd, NumpadSubtract, NumpadDivide, NumpadMultiply, NumpadDecimal,
 			Comma, Period, Slash, BackSlash, Minus, Equal,
 			Grave, LBracket, RBracket, Colon, Semicolon,
 			Print, Scroll, Pause,

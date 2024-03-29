@@ -3,6 +3,7 @@
 #include <X11/Xutil.h>
 #include <X11/Xos.h>
 #include <X11/Xatom.h>
+#include <X11/XKBlib.h>
 #include <X11/keysym.h>
 
 #include <iostream>
@@ -55,143 +56,137 @@ namespace sh {
 		XCloseDisplay(display);
 	}
 
+	//현재 윈도우에서 발생한 이벤트인가?
+	auto WindowImplUnix::CheckEvent(Display*, XEvent* evt, XPointer userData) -> int {
+		return evt->xany.window == reinterpret_cast<Window>(userData);
+	}
+
 	void WindowImplUnix::ProcessEvent()
 	{
-		XNextEvent(display, &e);
-		switch (e.type)
+		while (XCheckIfEvent(display, &e, &CheckEvent, reinterpret_cast<XPointer>(win)))
 		{
-			Event evt;
-		//window
-		case ClientMessage:
-			if (e.xclient.data.l[0] == wmDeleteMessage)
+			switch (e.type)
 			{
-				evt.type = Event::EventType::Close;
+				Event evt;
+				//window
+			case ClientMessage:
+				if (e.xclient.data.l[0] == wmDeleteMessage)
+				{
+					evt.type = Event::EventType::Close;
+					PushEvent(evt);
+				}
+				break;
+			case FocusIn:
+				evt.type = Event::EventType::WindowFocus;
 				PushEvent(evt);
-			}
-			break;
-		case FocusIn:
-			evt.type = Event::EventType::WindowFocus;
-			PushEvent(evt);
-			break;
-		case FocusOut:
-			evt.type = Event::EventType::WindowFocusOut;
-			PushEvent(evt);
-			break;
+				break;
+			case FocusOut:
+				evt.type = Event::EventType::WindowFocusOut;
+				PushEvent(evt);
+				break;
 
-		//Keyboard
-		case KeyPress:
-		{
-			XKeyEvent* keyEvent = reinterpret_cast<XKeyEvent*>(&e);
-			evt.type = Event::EventType::KeyDown;
-			evt.keyType = CovertKeyCode(keyEvent->keycode);
-			PushEvent(evt);
-			break;
-		}
-		//Mouse
-		case ButtonPress:
-		{
-			XButtonEvent* buttonEvent = reinterpret_cast<XButtonEvent*>(&e);
-
-			switch (buttonEvent->button)
+				//Keyboard
+			case KeyPress:
 			{
-			case Button1:
-				evt.type = Event::EventType::MousePressed;
-				evt.mouseType = Event::MouseType::Left;
-				PushEvent(evt);
-				break;
-			case Button2:
-				evt.type = Event::EventType::MousePressed;
-				evt.mouseType = Event::MouseType::Middle;
-				PushEvent(evt);
-				break;
-			case Button3:
-				evt.type = Event::EventType::MousePressed;
-				evt.mouseType = Event::MouseType::Right;
-				PushEvent(evt);
-				break;
-			case Button4:
-			case Button5:
-				evt.type = Event::EventType::MouseWheelScrolled;
-				Event::MouseWheelScrolled::delta = (buttonEvent->button == Button4) ? 1.0f : -1.0f;
+				XKeyEvent* keyEvent = reinterpret_cast<XKeyEvent*>(&e);
+				evt.type = Event::EventType::KeyDown;
+				evt.keyType = CovertKeyCode(keyEvent->keycode);
 				PushEvent(evt);
 				break;
 			}
-			break;
+			//Mouse
+			case ButtonPress:
+			{
+				XButtonEvent* buttonEvent = reinterpret_cast<XButtonEvent*>(&e);
+
+				switch (buttonEvent->button)
+				{
+				case Button1:
+					evt.type = Event::EventType::MousePressed;
+					evt.mouseType = Event::MouseType::Left;
+					PushEvent(evt);
+					break;
+				case Button2:
+					evt.type = Event::EventType::MousePressed;
+					evt.mouseType = Event::MouseType::Middle;
+					PushEvent(evt);
+					break;
+				case Button3:
+					evt.type = Event::EventType::MousePressed;
+					evt.mouseType = Event::MouseType::Right;
+					PushEvent(evt);
+					break;
+				case Button4:
+				case Button5:
+					evt.type = Event::EventType::MouseWheelScrolled;
+					Event::MouseWheelScrolled::delta = (buttonEvent->button == Button4) ? 1.0f : -1.0f;
+					PushEvent(evt);
+					break;
+				}
+				break;
+			}
+			}//switch
 		}
-		}
+
 	}
 
 	auto WindowImplUnix::CovertKeyCode(unsigned int keycode) -> Event::KeyType
 	{
-		std::cout << keycode << '\n';
-		constexpr Event::KeyType alphabet[] = { 
-			Event::KeyType::Q, Event::KeyType::W, Event::KeyType::E, Event::KeyType::R,
-			Event::KeyType::T, Event::KeyType::Y, Event::KeyType::U, Event::KeyType::I,
-			Event::KeyType::O, Event::KeyType::P, Event::KeyType::A, Event::KeyType::S,
-			Event::KeyType::D, Event::KeyType::F, Event::KeyType::G, Event::KeyType::H,
-			Event::KeyType::J, Event::KeyType::K, Event::KeyType::L, Event::KeyType::Z,
-			Event::KeyType::X, Event::KeyType::C, Event::KeyType::V, Event::KeyType::B,
-			Event::KeyType::N, Event::KeyType::M
-		};
-		switch (keycode)
+		KeySym keySym = XkbKeycodeToKeysym(display, keycode, 0, 0);
+		std::cout << keySym << '\n';
+		switch (keySym)
 		{
-		case 19:
-			return Event::KeyType::Num0;
-		//C++ 표준 문법은 아님!
-		case 10 ... 18:
-			return static_cast<Event::KeyType>(keycode - 10 + static_cast<int>(Event::KeyType::Num1));
-		case 67 ... 76:
-			return static_cast<Event::KeyType>(keycode - 67 + static_cast<int>(Event::KeyType::F1));
-		case 95 ... 96:
-			return static_cast<Event::KeyType>(keycode - 95 + static_cast<int>(Event::KeyType::F11));
-		case 24 ... 33: //QWERTYUIOP
-			return static_cast<Event::KeyType>(alphabet[keycode - 24]);
-		case 38 ... 46: //ASDEFGHJKL
-			return static_cast<Event::KeyType>(alphabet[keycode - 38 + 10]);
-		case 52 ... 58: //ZXCVBNM
-			return static_cast<Event::KeyType>(alphabet[keycode - 52 + 19]);
-		case 50:
-			return Event::KeyType::LShift;
-		case 62:
-			return Event::KeyType::RShift;
-		case 37:
-			return Event::KeyType::LCtrl;
-		case 109:
-			return Event::KeyType::RCtrl;
-		case 64:
-			return Event::KeyType::LAlt;
-		//case 113:
-			//return Event::KeyType::RAlt;
-		case 65:
-			return Event::KeyType::Space;
-		case 22:
-			return Event::KeyType::BackSpace;
-		case 36:
-			return Event::KeyType::Enter;
-		case 23:
-			return Event::KeyType::Tab;
-		case 9:
-			return Event::KeyType::Esc;
-		case 113:
-			return Event::KeyType::Left;
-		case 111:
-			return Event::KeyType::Up;
-		case 114:
-			return Event::KeyType::Right;
-		case 116:
-			return Event::KeyType::Down;
-		case 119:
-			return Event::KeyType::Delete;
-		case 118:
-			return Event::KeyType::Insert;
-		case 112:
-			return Event::KeyType::PageUp;
-		case 117:
-			return Event::KeyType::PageDown;
-		case 115:
-			return Event::KeyType::End;
-		case 110:
-			return Event::KeyType::Home;
+		//A...B : C++ 표준 문법은 아님!
+		case XK_0 ... XK_9:
+			return static_cast<Event::KeyType>(keySym - XK_0 + static_cast<int>(Event::KeyType::Num0));
+		case XK_F1 ... XK_F12: 
+			return static_cast<Event::KeyType>(keySym - XK_F1 + static_cast<int>(Event::KeyType::F1));
+		case XK_a ... XK_z:
+			return static_cast<Event::KeyType>(keySym - XK_a + static_cast<int>(Event::KeyType::A));
+		case XK_A ... XK_Z:
+			return static_cast<Event::KeyType>(keySym - XK_A + static_cast<int>(Event::KeyType::A));
+		case XK_Shift_L: return Event::KeyType::Shift;
+		case XK_Shift_R: return Event::KeyType::Shift;
+		case XK_Control_L: return Event::KeyType::LCtrl;
+		case XK_Control_R: return Event::KeyType::RCtrl;
+		case XK_Alt_L: return Event::KeyType::LAlt;
+		case XK_Alt_R: return Event::KeyType::RAlt;
+		case XK_space: return Event::KeyType::Space;
+		case XK_BackSpace: return Event::KeyType::BackSpace;
+		case XK_Return: return Event::KeyType::Enter;
+		case XK_Tab: return Event::KeyType::Tab;
+		case XK_Escape: return Event::KeyType::Esc;
+		case XK_Left: return Event::KeyType::Left;
+		case XK_Up: return Event::KeyType::Up;
+		case XK_Right: return Event::KeyType::Right;
+		case XK_Down: return Event::KeyType::Down;
+		case XK_Delete : return Event::KeyType::Delete;
+		case XK_Insert: return Event::KeyType::Insert;
+		case XK_Page_Up: return Event::KeyType::PageUp;
+		case XK_Page_Down: return Event::KeyType::PageDown;
+		case XK_End: return Event::KeyType::End;
+		case XK_Home: return Event::KeyType::Home;
+		case XK_KP_0 ... XK_KP_9: 
+			return static_cast<Event::KeyType>(keySym - XK_KP_0 + static_cast<int>(Event::KeyType::Numpad0));
+		case XK_KP_Add: return Event::KeyType::NumpadAdd;
+		case XK_KP_Subtract: return Event::KeyType::NumpadSubtract;
+		case XK_KP_Divide: return Event::KeyType::NumpadDivide;
+		case XK_KP_Multiply: return Event::KeyType::NumpadMultiply;
+		case XK_KP_Decimal: return Event::KeyType::NumpadDecimal;
+		case XK_comma: return Event::KeyType::Comma;
+		case XK_period: return Event::KeyType::Period;
+		case XK_slash: return Event::KeyType::Slash;
+		case XK_minus: return Event::KeyType::Minus;
+		case XK_equal: return Event::KeyType::Equal;
+		case XK_grave: return Event::KeyType::Grave;
+		case XK_bracketleft: return Event::KeyType::LBracket;
+		case XK_braceright: return Event::KeyType::RBracket;
+		case XK_colon: return Event::KeyType::Colon;
+		case XK_semicolon: return Event::KeyType::Semicolon;
+		case XK_Print: return Event::KeyType::Print;
+		case XK_Scroll_Lock: return Event::KeyType::Scroll;
+		case XK_Pause: return Event::KeyType::Pause;
+		case XK_Num_Lock : return Event::KeyType::NumLock;
 		}
 		return Event::KeyType::Unknown;
 	}
