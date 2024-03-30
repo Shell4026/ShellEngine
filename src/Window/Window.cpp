@@ -23,7 +23,7 @@ namespace sh {
 		this->title = title;
 
 		winImpl = WindowFactory::CreateWindowImpl();
-		winImpl->Create(title, wsize, hsize);
+		handle = winImpl->Create(title, wsize, hsize);
 
 		isOpen = true;
 	}
@@ -54,5 +54,10 @@ namespace sh {
 
 		isOpen = false;
 		winImpl.reset();
+	}
+
+	auto Window::GetNativeHandle() -> WinHandle
+	{
+		return handle;
 	}
 }

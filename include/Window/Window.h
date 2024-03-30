@@ -10,6 +10,7 @@ namespace sh {
 	class Window {
 	private:
 		std::unique_ptr<WindowImpl> winImpl;
+		WinHandle handle;
 
 		std::string title;
 
@@ -24,5 +25,7 @@ namespace sh {
 		bool PollEvent(Event& event);
 		bool IsOpen() const;
 		void Close();
+
+		auto GetNativeHandle()->WinHandle;
 	};
 }
