@@ -2,6 +2,10 @@
 
 ## Windows
 
+**Required**
+
+VulkanSDK : https://vulkan.lunarg.com/sdk/home#windows
+
 ## Linux
 
 **Required**
