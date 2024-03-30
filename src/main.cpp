@@ -1,14 +1,17 @@
-﻿#include "Window/Window.h"
-
-#include <iostream>
+﻿#include <iostream>
 #include <chrono>
 #include <thread>
+
+#include "Window/Window.h"
+#include "Render/VulkanRenderer.h"
 
 int main(int arg, char* args[]) {
 	
 	sh::Window window;
 	window.Create(u8"테스트", 1024, 768);
-	
+	sh::render::VulkanRenderer renderer;
+	renderer.Init();
+
 	constexpr long long fps = static_cast<long long>(1000.0f / 144.0f);
 	
 	auto start = std::chrono::high_resolution_clock::now();

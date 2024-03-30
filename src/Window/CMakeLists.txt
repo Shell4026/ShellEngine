@@ -7,7 +7,7 @@ elseif(UNIX)
 	message(STATUS "OS: Unix")
 
 	find_package(X11 REQUIRED)
-	if(NOT ${X11_FOUND})
+	if(NOT X11_FOUND)
 		message(FATAL_ERROR "Could not found X11")
 	endif()
 	file(GLOB_RECURSE OS_SRC CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/Unix/*.cpp)
