@@ -67,13 +67,17 @@ namespace sh {
 
 		//USERDATA영역에 이 클래스의 주소를 저장함.
 		//msg == WM_CREATE일시 lParam에는 CREATESTRUCT의 정보가 들어가있음.
+		//CreateWindowExW의 가장 마지막 파라미터에 클래스의 주소를 전달했기 때문
 		if (msg == WM_CREATE)
 		{
 			auto win = reinterpret_cast<WindowImplWin32*>(reinterpret_cast<CREATESTRUCTW*>(lParam)->lpCreateParams);
 			win->window = hwnd;
+
+			//이벤트를 전달한 창의 USERDATA의 값을 수정
 			SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(win));
 		}
 
+		//이벤트를 전달한 창의 USERDATA값을 가져온다.
 		WindowImplWin32* win = reinterpret_cast<WindowImplWin32*>(GetWindowLongPtrW(hwnd, GWLP_USERDATA));
 		if (win)
 		{
@@ -89,6 +93,7 @@ namespace sh {
 			if (wParam == SC_KEYMENU)
 				return 0;
 
+		//기본 커널 처리
 		return DefWindowProcW(hwnd, msg, wParam, lParam);
 	}
 
