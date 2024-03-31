@@ -1,7 +1,7 @@
 ﻿#include "Util.h"
 
-namespace sh {
-	std::wstring Util::U8StringToWstring(const std::string& u8str)
+namespace sh::core {
+	auto Util::U8StringToWstring(const std::string& u8str) -> std::wstring
 	{
 		std::wstring result;
 		for (int i = 0; i < u8str.size();)

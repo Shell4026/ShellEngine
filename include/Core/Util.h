@@ -1,10 +1,18 @@
 ﻿#pragma once
 
 #include <string>
-namespace sh {
+namespace sh::core {
 	class Util
 	{
 	public:
-		static std::wstring U8StringToWstring(const std::string& u8str);
+		static auto U8StringToWstring(const std::string& u8str)->std::wstring;
+		static constexpr bool IsDebug()
+		{
+#ifdef SH_DEBUG
+			return true;
+#else
+			return false;
+#endif
+		}
 	};
 }

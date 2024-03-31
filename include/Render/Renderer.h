@@ -5,6 +5,6 @@ namespace sh::render {
 	public:
 		virtual ~Renderer() {};
 
-		virtual void Init() = 0;
+		virtual bool Init() = 0;
 	};
 }

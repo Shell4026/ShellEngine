@@ -3,4 +3,8 @@
 add_library(ShellEngineCore STATIC ${SRC})
 add_library(ShellEngine::Core ALIAS ShellEngineCore)
 
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+	target_compile_definitions(ShellEngineCore PUBLIC SH_DEBUG)
+endif()
+
 target_include_directories(ShellEngineCore PUBLIC ${CMAKE_SOURCE_DIR}/include/Core)

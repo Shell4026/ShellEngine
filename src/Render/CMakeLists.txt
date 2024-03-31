@@ -3,6 +3,8 @@
 add_library(ShellEngineRender STATIC ${SRC})
 add_library(ShellEngine::Render ALIAS ShellEngineRender)
 
+target_link_libraries(ShellEngineRender PUBLIC ShellEngine::Core)
+
 find_package(Vulkan)
 if(NOT Vulkan_FOUND)
 	#불칸 경로 지정
@@ -13,8 +15,6 @@ if(NOT Vulkan_FOUND)
 	endif()
 	find_package(Vulkan REQUIRED)
 endif()
-
-add_definitions(-DVK_USE_PLATFORM_WIN32_KHR)
 
 target_include_directories(ShellEngineRender PUBLIC ${Vulkan_INCLUDE_DIR})
 target_link_libraries(ShellEngineRender PRIVATE Vulkan::Vulkan)

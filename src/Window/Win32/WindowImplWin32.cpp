@@ -39,7 +39,7 @@ namespace sh {
 		RegisterWindow();
 
 		unsigned long style = WS_VISIBLE | WS_MINIMIZEBOX | WS_CAPTION | WS_SYSMENU;
-		std::wstring wtitle = sh::Util::U8StringToWstring(title);
+		std::wstring wtitle = sh::core::Util::U8StringToWstring(title);
 		window = CreateWindowExW(0, className, wtitle.c_str(), style, 0, 0, wsize, hsize, nullptr, nullptr, GetModuleHandleW(nullptr), this);
 		return window;
 	}
