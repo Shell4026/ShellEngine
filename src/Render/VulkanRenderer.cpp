@@ -4,12 +4,9 @@
 #include "../Core/Util.h"
 
 namespace sh::render {
-	VulkanRenderer::VulkanRenderer()
-	{
-
-	}
 	VulkanRenderer::~VulkanRenderer()
 	{
+		vkDestroyInstance(instance, nullptr);
 	}
 
 	auto VulkanRenderer::GetInstanceLayerProperties() -> VkResult
@@ -78,9 +75,32 @@ namespace sh::render {
 		return result;
 	}
 
+	auto VulkanRenderer::CreateInstance() -> VkResult
+	{
+		VkApplicationInfo appInfo = {};
+		appInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_APPLICATION_INFO;
+		appInfo.pNext = nullptr;
+		appInfo.pApplicationName = "ShellEngine";
+		appInfo.applicationVersion = 1;
+		appInfo.pEngineName = "ShellEngine";
+		appInfo.engineVersion = 1;
+		appInfo.apiVersion = VK_API_VERSION_1_0;
+
+		VkInstanceCreateInfo instanceInfo = {};
+		instanceInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+		instanceInfo.pNext = nullptr;
+		instanceInfo.flags = 0; // 현재 사용되지 않음
+		instanceInfo.pApplicationInfo = &appInfo;
+
+		//pAllocator = 호스트 메모리의 할당 방법 지정
+		VkResult result = vkCreateInstance(&instanceInfo, nullptr, &instance);
+		return result;
+	}
+
 	bool VulkanRenderer::Init()
 	{
 		GetInstanceLayerProperties();
+		CreateInstance();
 		return true;
 	}
 }//namespace
