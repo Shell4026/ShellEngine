@@ -2,11 +2,13 @@
 
 #include "Renderer.h"
 
+#include <../Core/Singleton.hpp>
+
 #include <vulkan/vulkan.h>
 #include <vector>
 
 namespace sh::render {
-	class VulkanRenderer : public Renderer {
+	class VulkanRenderer : public Renderer, public sh::core::Singleton<VulkanRenderer> {
 	private:
 		struct LayerProperties {
 			VkLayerProperties properties;
@@ -14,11 +16,13 @@ namespace sh::render {
 		};
 
 		std::vector<LayerProperties> layers;
+
+		VkInstance instance;
 	private:
 		auto GetInstanceLayerProperties()->VkResult;
 		auto GetExtensionProperties(LayerProperties& layerProp, VkPhysicalDevice* gpu = nullptr)->VkResult;
+		auto CreateInstance()->VkResult;
 	public:
-		VulkanRenderer();
 		~VulkanRenderer();
 
 		bool Init() override;
