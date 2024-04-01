@@ -19,6 +19,4 @@ endif()
 target_include_directories(ShellEngineRender PUBLIC ${Vulkan_INCLUDE_DIR})
 target_link_libraries(ShellEngineRender PRIVATE Vulkan::Vulkan)
 
-target_link_libraries(ShellEngineRender PUBLIC fmt)
-
 target_include_directories(ShellEngineRender PUBLIC ${CMAKE_SOURCE_DIR}/include/Render)

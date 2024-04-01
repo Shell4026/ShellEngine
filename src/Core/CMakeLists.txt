@@ -8,3 +8,6 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 endif()
 
 target_include_directories(ShellEngineCore PUBLIC ${CMAKE_SOURCE_DIR}/include/Core)
+
+target_link_libraries(ShellEngineCore PUBLIC fmt)
+
