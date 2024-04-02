@@ -8,7 +8,9 @@
 #include <vector>
 
 namespace sh::render {
-	class VulkanRenderer : public Renderer, public sh::core::Singleton<VulkanRenderer> {
+	class VulkanRenderer : 
+		public Renderer, 
+		public sh::core::Singleton<VulkanRenderer> {
 	private:
 		struct LayerProperties {
 			VkLayerProperties properties;
