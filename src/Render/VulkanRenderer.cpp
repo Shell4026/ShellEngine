@@ -39,7 +39,7 @@ namespace sh::render {
 		{
 			for (auto& i : layers)
 			{
-				fmt::print("LayerName: {}\n", i.properties.layerName);
+				fmt::print("LayerName: {} - {}\n", i.properties.layerName, i.properties.description);
 				for (auto& ext : i.extensions)
 				{
 					fmt::print("ExtensionName: {}\n", ext.extensionName);
@@ -77,6 +77,13 @@ namespace sh::render {
 
 	auto VulkanRenderer::CreateInstance() -> VkResult
 	{
+		std::vector<const char*> requestedLayer = { "VK_LAYER_LUNARG_api_dump" };
+		std::vector<const char*> requestedExtension = { VK_KHR_SURFACE_EXTENSION_NAME };
+#if _WIN32
+			requestedExtension.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+#elif __linux__
+			requestedExtension.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+#endif
 		VkApplicationInfo appInfo = {};
 		appInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_APPLICATION_INFO;
 		appInfo.pNext = nullptr;
@@ -91,7 +98,10 @@ namespace sh::render {
 		instanceInfo.pNext = nullptr;
 		instanceInfo.flags = 0; // 현재 사용되지 않음
 		instanceInfo.pApplicationInfo = &appInfo;
-
+		instanceInfo.enabledLayerCount = requestedLayer.size();
+		instanceInfo.ppEnabledLayerNames = requestedLayer.data();
+		instanceInfo.enabledExtensionCount = requestedExtension.size();
+		instanceInfo.ppEnabledExtensionNames = requestedExtension.data();
 		//pAllocator = 호스트 메모리의 할당 방법 지정
 		VkResult result = vkCreateInstance(&instanceInfo, nullptr, &instance);
 		return result;
