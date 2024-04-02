@@ -1,4 +1,5 @@
-﻿file(GLOB SRC CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+﻿message("Build ShellEngine Window")
+file(GLOB SRC CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 
 if(WIN32)
 	message(STATUS "OS: Window")

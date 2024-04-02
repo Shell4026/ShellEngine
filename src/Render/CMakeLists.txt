@@ -1,4 +1,5 @@
-﻿file(GLOB SRC CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+﻿message("Build ShellEngine Renderer")
+file(GLOB SRC CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 
 add_library(ShellEngineRender STATIC ${SRC})
 add_library(ShellEngine::Render ALIAS ShellEngineRender)
