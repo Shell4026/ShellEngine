@@ -14,7 +14,7 @@
 #include <vector>
 
 namespace sh::render {
-	class VulkanRenderer : 
+	class SH_RENDER_API VulkanRenderer :
 		public Renderer, 
 		public sh::core::Singleton<VulkanRenderer> {
 	private:
@@ -31,6 +31,7 @@ namespace sh::render {
 		auto GetExtensionProperties(LayerProperties& layerProp, VkPhysicalDevice* gpu = nullptr)->VkResult;
 		auto CreateInstance()->VkResult;
 	public:
+		VulkanRenderer();
 		~VulkanRenderer();
 
 		bool Init() override;

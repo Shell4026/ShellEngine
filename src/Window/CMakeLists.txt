@@ -14,7 +14,7 @@ elseif(UNIX)
 	file(GLOB_RECURSE OS_SRC CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/Unix/*.cpp)
 endif()
 
-add_library(ShellEngineWindow STATIC ${SRC} ${OS_SRC})
+add_library(ShellEngineWindow SHARED ${SRC} ${OS_SRC})
 add_library(ShellEngine::Window ALIAS ShellEngineWindow)
 
 if(UNIX)

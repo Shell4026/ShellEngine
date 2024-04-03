@@ -12,9 +12,8 @@ FetchContent_Declare(
   GIT_REPOSITORY "https://github.com/fmtlib/fmt"
   GIT_TAG "10.2.1"
   )
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 FetchContent_MakeAvailable(Fmt)
-
-target_link_libraries(ShellEngine PUBLIC fmt)
 
 add_subdirectory(Core)
 target_link_libraries(ShellEngine PUBLIC ShellEngineCore)

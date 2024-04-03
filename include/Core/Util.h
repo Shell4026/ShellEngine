@@ -1,8 +1,9 @@
 ﻿#pragma once
 
+#include "Export.h"
 #include <string>
 namespace sh::core {
-	class Util
+	class SH_CORE_API Util
 	{
 	public:
 		enum class Platform {

@@ -2,7 +2,8 @@
 
 #include <iostream>
 #include <../Core/Util.h>
-namespace sh {
+
+namespace sh::window {
 	WindowImplWin32::WindowImplWin32() :
 		className(L"ShellEngine Window"),
 		window{ 0 }

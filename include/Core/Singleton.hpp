@@ -3,13 +3,14 @@
 #include "NonCopyable.h"
 
 #include <memory>
+#include <mutex>
 namespace sh::core {
 	template<typename T>
 	class Singleton : public NonCopyable {
 	private:
 		static std::unique_ptr<T> instance;
 	protected:
-		Singleton() {}
+		Singleton() = default;
 	public:
 		static auto GetInstance()->T*;
 	};
@@ -20,10 +21,9 @@ namespace sh::core {
 	template<typename T>
 	auto Singleton<T>::GetInstance() -> T*
 	{
-		if (instance.get() == nullptr)
-		{
+		std::call_once(std::once_flag(), []() {
 			instance = std::make_unique<T>();
-		}
+		});
 		return instance.get();
 	}
 }

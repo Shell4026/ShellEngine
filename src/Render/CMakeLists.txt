@@ -1,7 +1,7 @@
 ﻿message("Build ShellEngine Renderer")
 file(GLOB SRC CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 
-add_library(ShellEngineRender STATIC ${SRC})
+add_library(ShellEngineRender SHARED ${SRC})
 add_library(ShellEngine::Render ALIAS ShellEngineRender)
 
 target_link_libraries(ShellEngineRender PUBLIC ShellEngine::Core)
@@ -16,8 +16,8 @@ if(NOT Vulkan_FOUND)
 	endif()
 	find_package(Vulkan REQUIRED)
 endif()
+target_link_libraries(ShellEngineRender PUBLIC Vulkan::Vulkan)
 
 target_include_directories(ShellEngineRender PUBLIC ${Vulkan_INCLUDE_DIR})
-target_link_libraries(ShellEngineRender PRIVATE Vulkan::Vulkan)
-
 target_include_directories(ShellEngineRender PUBLIC ${CMAKE_SOURCE_DIR}/include/Render)
+

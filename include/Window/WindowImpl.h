@@ -1,5 +1,7 @@
 ﻿#pragma once
 
+#include "Export.h"
+
 #include <string>
 #include <queue>
 #include <Event.h>
@@ -8,14 +10,14 @@
 struct HWND__;
 #endif
 
-namespace sh {
+namespace sh::window {
 #ifdef _WIN32
 	using WinHandle = HWND__*;
 #elif __unix__
 	using WinHandle = long long;
 #endif
 
-	class WindowImpl {
+	class SH_WINDOW_API WindowImpl {
 	private:
 		std::queue<Event> events;
 	public:

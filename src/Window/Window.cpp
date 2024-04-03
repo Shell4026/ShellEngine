@@ -2,9 +2,9 @@
 
 #include "WindowFactory.h"
 #include <iostream>
-namespace sh {
+namespace sh::window {
 	Window::Window() :
-		isOpen(false)
+		isOpen(false), handle(nullptr)
 	{
 
 	}

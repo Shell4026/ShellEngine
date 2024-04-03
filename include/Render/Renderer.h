@@ -1,7 +1,8 @@
 ﻿#pragma once
 
+#include "Export.h"
 namespace sh::render {
-	class Renderer {
+	class SH_RENDER_API Renderer {
 	public:
 		virtual ~Renderer() {};
 

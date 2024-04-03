@@ -1,7 +1,9 @@
 ﻿#pragma once
 
-namespace sh {
-	class Event {
+#include "Export.h"
+
+namespace sh::window {
+	class SH_WINDOW_API Event {
 	public:
 		enum class EventType
 		{
@@ -48,7 +50,7 @@ namespace sh {
 			Unknown
 		};
 
-		struct MouseWheelScrolled
+		struct SH_WINDOW_API MouseWheelScrolled
 		{
 			static float delta;
 		};

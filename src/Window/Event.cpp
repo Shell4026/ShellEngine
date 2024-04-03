@@ -1,5 +1,5 @@
 ﻿#include "Event.h"
 
-namespace sh {
+namespace sh::window {
 	float Event::MouseWheelScrolled::delta = 0.0f;
 }

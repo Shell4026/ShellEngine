@@ -6,8 +6,8 @@
 #include <queue>
 #include <Event.h>
 
-namespace sh {
-	class Window {
+namespace sh::window {
+	class SH_WINDOW_API Window {
 	private:
 		std::unique_ptr<WindowImpl> winImpl;
 		WinHandle handle;

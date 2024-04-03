@@ -7,11 +7,12 @@
 
 int main(int arg, char* args[]) {
 	
-	sh::Window window;
+	sh::window::Window window;
 	window.Create(u8"테스트", 1024, 768);
 	auto renderer = sh::render::VulkanRenderer::GetInstance();
+	sh::render::VulkanRenderer renderer2;
 	renderer->Init();
-
+	
 	constexpr long long fps = static_cast<long long>(1000.0f / 144.0f);
 	
 	auto start = std::chrono::high_resolution_clock::now();
@@ -27,21 +28,21 @@ int main(int arg, char* args[]) {
 		//std::cout << delta_time << "ms\n";
 		//fmt::print("{}ms\n", delta_time);
 
-		sh::Event e;
+		sh::window::Event e;
 		while (window.PollEvent(e))
 		{
 			
 			switch (e.type)
 			{
-			case sh::Event::EventType::Close:
+			case sh::window::Event::EventType::Close:
 				window.Close();
 				break;
-			case sh::Event::EventType::MousePressed:
-				if (e.mouseType == sh::Event::MouseType::Left)
+			case sh::window::Event::EventType::MousePressed:
+				if (e.mouseType == sh::window::Event::MouseType::Left)
 				{
 					std::cout << "Left\n";
 				}
-				else if (e.mouseType == sh::Event::MouseType::Right)
+				else if (e.mouseType == sh::window::Event::MouseType::Right)
 				{
 					std::cout << "Right\n";
 				}
@@ -50,17 +51,17 @@ int main(int arg, char* args[]) {
 					std::cout << "Middle\n";
 				}
 				break;
-			case sh::Event::EventType::MouseWheelScrolled:
-				std::cout << sh::Event::MouseWheelScrolled::delta << '\n';
+			case sh::window::Event::EventType::MouseWheelScrolled:
+				std::cout << sh::window::Event::MouseWheelScrolled::delta << '\n';
 				break;
-			case sh::Event::EventType::KeyDown:
-				if (e.keyType == sh::Event::KeyType::Left)
+			case sh::window::Event::EventType::KeyDown:
+				if (e.keyType == sh::window::Event::KeyType::Left)
 					std::cout << "Check\n";
 				break;
-			case sh::Event::EventType::WindowFocus:
+			case sh::window::Event::EventType::WindowFocus:
 				std::cout << "FocusIn\n";
 				break;
-			case sh::Event::EventType::WindowFocusOut:
+			case sh::window::Event::EventType::WindowFocusOut:
 				std::cout << "FocusOut\n";
 				break;
 			}

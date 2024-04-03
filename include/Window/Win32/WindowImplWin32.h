@@ -3,7 +3,7 @@
 #include "../WindowImpl.h"
 
 #include <Windows.h>
-namespace sh {
+namespace sh::window {
 	class WindowImplWin32 : public WindowImpl {
 	private:
 		const wchar_t* className;

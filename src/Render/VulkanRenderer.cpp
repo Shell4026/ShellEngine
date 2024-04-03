@@ -4,9 +4,15 @@
 #include "../Core/Util.h"
 
 namespace sh::render {
+	VulkanRenderer::VulkanRenderer() :
+		instance(nullptr)
+	{
+	}
+
 	VulkanRenderer::~VulkanRenderer()
 	{
-		vkDestroyInstance(instance, nullptr);
+		if(!instance)
+			vkDestroyInstance(instance, nullptr);
 	}
 
 	auto VulkanRenderer::GetInstanceLayerProperties() -> VkResult

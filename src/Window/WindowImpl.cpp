@@ -1,7 +1,7 @@
 ﻿#include "WindowImpl.h"
 
-namespace sh {
-	sh::WindowImpl::~WindowImpl()
+namespace sh::window {
+	WindowImpl::~WindowImpl()
 	{
 	}
 
