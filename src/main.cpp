@@ -10,7 +10,6 @@ int main(int arg, char* args[]) {
 	sh::window::Window window;
 	window.Create(u8"테스트", 1024, 768);
 	auto renderer = sh::render::VulkanRenderer::GetInstance();
-	sh::render::VulkanRenderer renderer2;
 	renderer->Init();
 	
 	constexpr long long fps = static_cast<long long>(1000.0f / 144.0f);
