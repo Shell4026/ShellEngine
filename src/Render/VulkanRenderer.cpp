@@ -43,7 +43,7 @@ namespace sh::render {
 		return result;
 	}
 
-	auto VulkanRenderer::GetLayerExtensions(LayerProperties& layerProp, VkPhysicalDevice* gpu) -> VkResult
+	auto VulkanRenderer::GetLayerExtensions(LayerProperties& layerProp, VkPhysicalDevice gpu) -> VkResult
 	{
 		uint32_t extensionCount = 0;
 		VkResult result;
@@ -52,7 +52,7 @@ namespace sh::render {
 		do
 		{
 			if (gpu)
-				result = vkEnumerateDeviceExtensionProperties(*gpu, layerName, &extensionCount, nullptr);
+				result = vkEnumerateDeviceExtensionProperties(gpu, layerName, &extensionCount, nullptr);
 			else
 				result = vkEnumerateInstanceExtensionProperties(layerName, &extensionCount, nullptr);
 
@@ -61,7 +61,7 @@ namespace sh::render {
 
 			layerProp.extensions.resize(extensionCount);
 			if(gpu)
-				result = vkEnumerateDeviceExtensionProperties(*gpu, layerName, &extensionCount, layerProp.extensions.data());
+				result = vkEnumerateDeviceExtensionProperties(gpu, layerName, &extensionCount, layerProp.extensions.data());
 			else
 				result = vkEnumerateInstanceExtensionProperties(layerName, &extensionCount, layerProp.extensions.data());
 		} while (result == VkResult::VK_INCOMPLETE);
@@ -78,7 +78,7 @@ namespace sh::render {
 		return vkEnumeratePhysicalDevices(instance, &count, gpus.data());
 	}
 
-	auto VulkanRenderer::GetPhysicalDeviceExtensions(VkPhysicalDevice* gpu) -> VkResult
+	auto VulkanRenderer::GetPhysicalDeviceExtensions(VkPhysicalDevice gpu) -> VkResult
 	{
 		VkResult result = VkResult::VK_SUCCESS;
 		for (auto& layer : layers)
@@ -156,7 +156,7 @@ namespace sh::render {
 		CreateInstance();
 		GetPhysicalDevices();
 		for(auto gpu : gpus)
-			GetPhysicalDeviceExtensions(&gpu);
+			GetPhysicalDeviceExtensions(gpu);
 
 		if (sh::core::Util::IsDebug())
 		{

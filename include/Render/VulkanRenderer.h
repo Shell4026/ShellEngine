@@ -31,9 +31,9 @@ namespace sh::render {
 		uint32_t graphicsQueueIndex;
 	private:
 		auto GetInstanceLayerProperties()->VkResult;
-		auto GetLayerExtensions(LayerProperties& layerProp, VkPhysicalDevice* gpu = nullptr)->VkResult;
+		auto GetLayerExtensions(LayerProperties& layerProp, VkPhysicalDevice gpu = nullptr)->VkResult;
 		auto GetPhysicalDevices()->VkResult;
-		auto GetPhysicalDeviceExtensions(VkPhysicalDevice* gpu)->VkResult;
+		auto GetPhysicalDeviceExtensions(VkPhysicalDevice gpu)->VkResult;
 		bool IsDeviceSuitable(VkPhysicalDevice gpu);
 
 		auto CreateInstance()->VkResult;
