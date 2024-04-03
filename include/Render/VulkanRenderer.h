@@ -24,12 +24,20 @@ namespace sh::render {
 		};
 
 		std::vector<LayerProperties> layers;
+		std::vector<VkPhysicalDevice> gpus;
 
 		VkInstance instance;
+
+		uint32_t graphicsQueueIndex;
 	private:
 		auto GetInstanceLayerProperties()->VkResult;
-		auto GetExtensionProperties(LayerProperties& layerProp, VkPhysicalDevice* gpu = nullptr)->VkResult;
+		auto GetLayerExtensions(LayerProperties& layerProp, VkPhysicalDevice* gpu = nullptr)->VkResult;
+		auto GetPhysicalDevices()->VkResult;
+		auto GetPhysicalDeviceExtensions(VkPhysicalDevice* gpu)->VkResult;
+		bool IsDeviceSuitable(VkPhysicalDevice gpu);
+
 		auto CreateInstance()->VkResult;
+		auto CreateDevice()->VkResult;
 	public:
 		VulkanRenderer();
 		~VulkanRenderer();

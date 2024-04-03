@@ -34,28 +34,16 @@ namespace sh::render {
 			LayerProperties layerProp;
 			layerProp.properties = prop;
 
-			result = GetExtensionProperties(layerProp);
+			result = GetLayerExtensions(layerProp);
 			if (result != VkResult::VK_SUCCESS)
 				continue;
 
 			layers.push_back(std::move(layerProp));
 		}
-
-		if (sh::core::Util::IsDebug())
-		{
-			for (auto& i : layers)
-			{
-				fmt::print("LayerName: {} - {}\n", i.properties.layerName, i.properties.description);
-				for (auto& ext : i.extensions)
-				{
-					fmt::print("ExtensionName: {}\n", ext.extensionName);
-				}
-			}
-		}
 		return result;
 	}
 
-	auto VulkanRenderer::GetExtensionProperties(LayerProperties& layerProp, VkPhysicalDevice* gpu) -> VkResult
+	auto VulkanRenderer::GetLayerExtensions(LayerProperties& layerProp, VkPhysicalDevice* gpu) -> VkResult
 	{
 		uint32_t extensionCount = 0;
 		VkResult result;
@@ -79,6 +67,40 @@ namespace sh::render {
 		} while (result == VkResult::VK_INCOMPLETE);
 
 		return result;
+	}
+
+	auto VulkanRenderer::GetPhysicalDevices() -> VkResult
+	{
+		unsigned int count;
+		vkEnumeratePhysicalDevices(instance, &count, nullptr);
+		gpus.resize(count);
+
+		return vkEnumeratePhysicalDevices(instance, &count, gpus.data());
+	}
+
+	auto VulkanRenderer::GetPhysicalDeviceExtensions(VkPhysicalDevice* gpu) -> VkResult
+	{
+		VkResult result = VkResult::VK_SUCCESS;
+		for (auto& layer : layers)
+		{
+			result = GetLayerExtensions(layer, gpu);
+		}
+		
+		return result;
+	}
+
+	bool VulkanRenderer::IsDeviceSuitable(VkPhysicalDevice gpu)
+	{
+		if (!gpu)
+			return false;
+
+		VkPhysicalDeviceProperties prop;
+		vkGetPhysicalDeviceProperties(gpu, &prop);
+
+		VkPhysicalDeviceFeatures feature;
+		vkGetPhysicalDeviceFeatures(gpu, &feature);
+
+		return prop.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
 	}
 
 	auto VulkanRenderer::CreateInstance() -> VkResult
@@ -113,10 +135,40 @@ namespace sh::render {
 		return result;
 	}
 
+	auto VulkanRenderer::CreateDevice() -> VkResult
+	{
+		VkResult result;
+		float queuePriorities[1] = { 0.0f };
+
+		VkDeviceQueueCreateInfo queueInfo = {};
+		queueInfo.queueFamilyIndex = graphicsQueueIndex;
+		queueInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		queueInfo.pNext = nullptr;
+		queueInfo.queueCount = 1;
+		queueInfo.pQueuePriorities = queuePriorities;
+
+		return VkResult();
+	}
+
 	bool VulkanRenderer::Init()
 	{
 		GetInstanceLayerProperties();
 		CreateInstance();
+		GetPhysicalDevices();
+		for(auto gpu : gpus)
+			GetPhysicalDeviceExtensions(&gpu);
+
+		if (sh::core::Util::IsDebug())
+		{
+			for (auto& i : layers)
+			{
+				fmt::print("LayerName: {} - {}\n", i.properties.layerName, i.properties.description);
+				for (auto& ext : i.extensions)
+				{
+					fmt::print("ExtensionName: {}\n", ext.extensionName);
+				}
+			}
+		}
 		return true;
 	}
 }//namespace
