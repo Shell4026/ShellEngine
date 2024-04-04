@@ -5,6 +5,7 @@ add_library(ShellEngineRender SHARED ${SRC})
 add_library(ShellEngine::Render ALIAS ShellEngineRender)
 
 target_link_libraries(ShellEngineRender PUBLIC ShellEngine::Core)
+target_link_libraries(ShellEngineRender PUBLIC ShellEngine::Window)
 
 find_package(Vulkan)
 if(NOT Vulkan_FOUND)

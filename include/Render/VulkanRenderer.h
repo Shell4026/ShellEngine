@@ -18,30 +18,46 @@ namespace sh::render {
 		public Renderer, 
 		public sh::core::Singleton<VulkanRenderer> {
 	private:
+		sh::window::WinHandle win;
+
 		struct LayerProperties {
 			VkLayerProperties properties;
 			std::vector<VkExtensionProperties> extensions;
 		};
 
 		std::vector<LayerProperties> layers;
+		std::vector<LayerProperties> GPULayers;
 		std::vector<VkPhysicalDevice> gpus;
+		std::vector<VkQueueFamilyProperties> queueFamilyProps;
 
 		VkInstance instance;
+		VkDevice device; //논리적 장치
+		VkSurfaceKHR surface;
 
 		uint32_t graphicsQueueIndex;
 	private:
-		auto GetInstanceLayerProperties()->VkResult;
-		auto GetLayerExtensions(LayerProperties& layerProp, VkPhysicalDevice gpu = nullptr)->VkResult;
+		auto GetInstanceLayerProperties() -> VkResult;
+		auto GetLayerExtensions(LayerProperties& layerProp, VkPhysicalDevice gpu = nullptr) -> VkResult;
+
+		auto CreateInstance() -> VkResult;
+
+		auto CreateSurface() -> VkResult;
+
 		auto GetPhysicalDevices()->VkResult;
-		auto GetPhysicalDeviceExtensions(VkPhysicalDevice gpu)->VkResult;
+		auto GetPhysicalDeviceExtensions(VkPhysicalDevice gpu) -> VkResult;
+		auto SelectPhysicalDevice() -> VkPhysicalDevice;
 		bool IsDeviceSuitable(VkPhysicalDevice gpu);
 
-		auto CreateInstance()->VkResult;
-		auto CreateDevice()->VkResult;
+		void GetQueueFamilyProperties(VkPhysicalDevice gpu);
+		auto SelectQueueFamily() -> int;
+
+		auto CreateDevice(VkPhysicalDevice gpu)->VkResult;
+
+		auto CreateCommandPool() -> VkResult;
 	public:
 		VulkanRenderer();
 		~VulkanRenderer();
 
-		bool Init() override;
+		bool Init(sh::window::Window& win) override;
 	};
 }//namespace
