@@ -4,9 +4,51 @@
 
 #include "Window/Window.h"
 #include "Render/VulkanRenderer.h"
+#include "Core/Reflaction.hpp"
+
+#include <Core/Util.h>
+#include <cassert>
+class Base {
+	SCLASS(Base)
+public:
+
+public:
+	void BaseFunction() 
+	{ 
+		std::cout << "Base!!\n"; 
+	}
+};
+
+class Derived : public Base
+{
+	SCLASS(Derived)
+public:
+	void DerivedFunction() 
+	{ 
+		std::cout << "Derived!!\n"; 
+	}
+};
+
+class NoBase {
+public:
+	void NoBaseFunction()
+	{
+		std::cout << "NoBase!!\n";
+	}
+};
 
 int main(int arg, char* args[]) {
 	
+	Base a;
+	Derived b;
+	NoBase c;
+	Base* p = &b;
+
+	auto real = sh::core::Util::Cast<Derived>(p);
+	assert(real != nullptr);
+	p->BaseFunction();
+	real->DerivedFunction();
+
 	sh::window::Window window;
 	window.Create(u8"테스트", 1024, 768);
 	auto renderer = sh::render::VulkanRenderer::GetInstance();
