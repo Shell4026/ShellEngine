@@ -1,10 +1,10 @@
 ﻿#pragma once
 
 namespace sh::core {
-	class NonCopyable {
+	class INonCopyable {
 	public:
-		NonCopyable(){}
-		NonCopyable(const NonCopyable& other) = delete;
-		void operator=(const NonCopyable& other) = delete;
+		INonCopyable() = default;
+		INonCopyable(const INonCopyable& other) = delete;
+		void operator=(const INonCopyable& other) = delete;
 	};
 }

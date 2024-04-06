@@ -6,7 +6,7 @@
 #include <mutex>
 namespace sh::core {
 	template<typename T>
-	class Singleton : public NonCopyable {
+	class Singleton : public INonCopyable {
 	private:
 		static std::unique_ptr<T> instance;
 	protected:
