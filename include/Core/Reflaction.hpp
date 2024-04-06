@@ -7,7 +7,7 @@
 
 #define SCLASS(class_name)\
 public:\
-	using Super = sh::core::Reflection::GetSuper<class_name>::type;\
+	using Super = sh::core::Reflection::MakeSuper<class_name>::type;\
 	using This = class_name;\
 public:\
 	static auto GetStaticTypeInfo() -> sh::core::Reflection::TypeInfo&\
@@ -43,7 +43,7 @@ namespace sh::core
 			}
 		};
 
-		class TypeInfo {
+		class SH_CORE_API TypeInfo {
 		private:
 			const char* name;
 			const TypeInfo* super = nullptr;
@@ -53,40 +53,18 @@ namespace sh::core
 			explicit TypeInfo(TypeInfoData<T>& data) :
 				name(data.name), super(data.super), hash(typeid(T).hash_code()) {}
 
-			auto GetName() const -> const char*
-			{
-				return name;
-			}
-			auto GetSuper() const -> const TypeInfo* {
-				return super;
-			}
-			bool IsA(const TypeInfo& other) const {
-				if (this == &other)
-					return true;
-
-				return this->hash == other.hash;
-			}
-			bool IsChild(const TypeInfo& other) const {
-				if (IsA(other))
-					return true;
-
-				const TypeInfo* super = GetSuper();
-				while (super != nullptr)
-				{
-					if (super->IsA(other))
-						return true;
-					super = super->GetSuper();
-				}
-				return false;
-			}
+			auto GetName() const -> const char*;
+			auto GetSuper() const -> const TypeInfo*;
+			bool IsA(const TypeInfo& other) const;
+			bool IsChild(const TypeInfo& other) const;
 		};
 	public:
 		template<typename T, typename U = void>
-		struct GetSuper {
+		struct MakeSuper {
 			using type = U;
 		};
 		template<typename T>
-		struct GetSuper<T, std::void_t<typename T::This>> {
+		struct MakeSuper<T, std::void_t<typename T::This>> {
 			using type = typename T::This;
 		};
 
@@ -97,9 +75,7 @@ namespace sh::core
 		//T가 Super을 가지고 있다면 오버로딩 된다(SFINAE). 없으면 기본HasSuper
 		template<typename T>
 		struct HasSuper<T, std::void_t<typename T::Super>> :
-			std::integral_constant<bool, !std::is_same<typename T::Super, void>::value>{};
-
-		bool IsA();
+			std::integral_constant<bool, !std::is_same_v<typename T::Super, void>>{};
 	};
 
 }

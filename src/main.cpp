@@ -48,6 +48,8 @@ int main(int arg, char* args[]) {
 	assert(real != nullptr);
 	p->BaseFunction();
 	real->DerivedFunction();
+	
+	std::cout << a.GetTypeInfo().GetName() << "\n";
 
 	sh::window::Window window;
 	window.Create(u8"테스트", 1024, 768);
