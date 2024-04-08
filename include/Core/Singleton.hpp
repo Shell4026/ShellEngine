@@ -21,7 +21,8 @@ namespace sh::core {
 	template<typename T>
 	auto Singleton<T>::GetInstance() -> T*
 	{
-		std::call_once(std::once_flag(), []() {
+		std::once_flag flag;
+		std::call_once(flag , []() {
 			instance = std::make_unique<T>();
 		});
 		return instance.get();

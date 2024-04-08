@@ -2,7 +2,7 @@
 
 #include "../WindowImpl.h"
 #include <X11/Xlib.h>
-namespace sh {
+namespace sh::window {
 	class WindowImplUnix : public WindowImpl
 	{
 	private:
@@ -23,5 +23,7 @@ namespace sh {
 		auto Create(const std::string& title, int wsize, int hsize) -> WinHandle override;
 		void Close() override;
 		void ProcessEvent() override;
+
+		auto GetDisplay() -> Display*;
 	};
 }

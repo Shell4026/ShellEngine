@@ -8,13 +8,18 @@
 
 #ifdef _WIN32
 struct HWND__;
+#elif __linux__
+#include <utility>
+
+struct _XDisplay;
+using XWindow = unsigned long;
 #endif
 
 namespace sh::window {
 #ifdef _WIN32
 	using WinHandle = HWND__*;
-#elif __unix__
-	using WinHandle = long long;
+#elif __linux__
+	using WinHandle = std::pair<_XDisplay*, XWindow>;
 #endif
 
 	class SH_WINDOW_API WindowImpl {

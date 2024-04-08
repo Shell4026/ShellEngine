@@ -1,4 +1,4 @@
-﻿add_executable(ShellEngine main.cpp "Render/VulkanRenderer.cpp")
+﻿add_executable(ShellEngine main.cpp)
 
 target_include_directories(ShellEngine PUBLIC ${CMAKE_SOURCE_DIR}/include)
 #target_precompile_headers(ShellEngine PUBLIC ${CMAKE_SOURCE_DIR}/include/Engine.h)

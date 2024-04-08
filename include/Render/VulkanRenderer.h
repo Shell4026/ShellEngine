@@ -18,7 +18,8 @@ namespace sh::render {
 		public Renderer, 
 		public sh::core::Singleton<VulkanRenderer> {
 	private:
-		sh::window::WinHandle win;
+		sh::window::Window* window;
+		sh::window::WinHandle winHandle;
 
 		struct LayerProperties {
 			VkLayerProperties properties;

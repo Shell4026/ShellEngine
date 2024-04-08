@@ -4,7 +4,7 @@
 #include <iostream>
 namespace sh::window {
 	Window::Window() :
-		isOpen(false), handle(nullptr)
+		isOpen(false)
 	{
 
 	}

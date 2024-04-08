@@ -8,7 +8,7 @@
 
 #include <iostream>
 
-namespace sh {
+namespace sh::window {
 	WindowImplUnix::~WindowImplUnix()
 	{
 		Close();
@@ -47,7 +47,8 @@ namespace sh {
 
 		XMapWindow(display, win);
 		XFlush(display);
-		return win;
+
+		return std::make_pair(display, win);
 	}
 
 	void WindowImplUnix::Close()
@@ -128,6 +129,11 @@ namespace sh {
 			}//switch
 		}
 
+	}
+
+	auto WindowImplUnix::GetDisplay() -> Display*
+	{
+		return display;
 	}
 
 	auto WindowImplUnix::CovertKeyCode(unsigned int keycode) -> Event::KeyType

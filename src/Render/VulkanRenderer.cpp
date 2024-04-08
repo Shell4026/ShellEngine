@@ -6,7 +6,7 @@
 namespace sh::render {
 	VulkanRenderer::VulkanRenderer() :
 		instance(nullptr), device(nullptr), surface(nullptr),
-		graphicsQueueIndex(0), win(nullptr)
+		graphicsQueueIndex(0)
 	{
 	}
 
@@ -113,13 +113,19 @@ namespace sh::render {
 #if _WIN32
 		VkWin32SurfaceCreateInfoKHR createInfo{};
 		createInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-		createInfo.hwnd = win;
+		createInfo.hwnd = winHandle;
 		createInfo.hinstance = GetModuleHandleW(nullptr);
 		createInfo.pNext = nullptr;
 		
 		return vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &surface);
 #elif __linux__
-		
+		VkXlibSurfaceCreateInfoKHR createInfo{};
+		createInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
+		createInfo.dpy = winHandle.first;
+		createInfo.window = winHandle.second;
+		createInfo.pNext = nullptr;
+
+		return vkCreateXlibSurfaceKHR(instance, &createInfo, nullptr, &surface);
 #endif
 		return VkResult::VK_ERROR_NOT_PERMITTED_KHR;
 	}
@@ -159,7 +165,9 @@ namespace sh::render {
 		VkPhysicalDeviceFeatures feature;
 		vkGetPhysicalDeviceFeatures(gpu, &feature);
 
-		return prop.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU;
+		return prop.deviceType == 
+			VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU || 
+			VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_CPU;
 	}
 
 	auto VulkanRenderer::SelectPhysicalDevice() -> VkPhysicalDevice
@@ -231,9 +239,9 @@ namespace sh::render {
 
 	bool VulkanRenderer::Init(sh::window::Window& win)
 	{
-		this->win = win.GetNativeHandle();
-		if (!this->win)
-			return false;
+		window = &win;
+		winHandle = win.GetNativeHandle();
+
 		if (GetInstanceLayerProperties())
 			return false;
 		if (CreateInstance())

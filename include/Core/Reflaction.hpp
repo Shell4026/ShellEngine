@@ -2,6 +2,8 @@
 
 #include "Export.h"
 
+#include <cstddef>
+#include <typeinfo>
 #include <type_traits>
 #include <utility>
 
@@ -10,7 +12,7 @@ public:\
 	using Super = sh::core::Reflection::MakeSuper<class_name>::type;\
 	using This = class_name;\
 public:\
-	static auto GetStaticTypeInfo() -> sh::core::Reflection::TypeInfo&\
+	static auto GetStaticTypeInfo() -> const sh::core::Reflection::TypeInfo&\
 	{\
 		static sh::core::Reflection::TypeInfo info{ sh::core::Reflection::TypeInfoData<class_name>(#class_name) };\
 		return info;\
@@ -20,25 +22,27 @@ public:\
 		return typeInfo;\
 	}\
 private:\
-	inline static sh::core::Reflection::TypeInfo& typeInfo = GetStaticTypeInfo();
+	inline static const sh::core::Reflection::TypeInfo& typeInfo = GetStaticTypeInfo();
 
 namespace sh::core
 {
 	class SH_CORE_API Reflection
 	{
 	public:
+		class TypeInfo;
+
 		template<typename T>
 		struct TypeInfoData
 		{
 			const char* name;
-			const class TypeInfo* super;
+			const TypeInfo* super;
 
 			TypeInfoData(const char* name) :
 				name(name), super(nullptr)
 			{
 				if constexpr (HasSuper<T>())
 				{
-					super = &(typename T::Super::GetStaticTypeInfo());
+					super = &(T::Super::GetStaticTypeInfo());
 				}
 			}
 		};
@@ -46,11 +50,11 @@ namespace sh::core
 		class SH_CORE_API TypeInfo {
 		private:
 			const char* name;
-			const TypeInfo* super = nullptr;
+			const TypeInfo* super;
 			const size_t hash;
 		public:
 			template<typename T>
-			explicit TypeInfo(TypeInfoData<T>& data) :
+			explicit TypeInfo(TypeInfoData<T> data) :
 				name(data.name), super(data.super), hash(typeid(T).hash_code()) {}
 
 			auto GetName() const -> const char*;
