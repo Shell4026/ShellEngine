@@ -34,12 +34,13 @@ namespace sh::core {
 #endif
 		}
 
-		//빠른 다운 캐스팅.
-		//둘 다 SCLASS매크로가 선언 돼 있어야한다.
+		/// \brief 빠른 다운 캐스팅.
+		///
+		/// 둘 다 SCLASS매크로가 선언 돼 있어야한다.
 		template<typename To, typename From>
-		static auto Cast(From* src) -> std::enable_if_t<std::is_same_v<std::void_t<
-			decltype(std::declval<From>().GetTypeInfo()),
-			decltype(std::declval<To>().GetTypeInfo())>, void>, To*>
+		static auto Cast(From* src) -> std::enable_if_t<
+			sh::core::Reflection::IsSClass<To>::value && 
+			sh::core::Reflection::IsSClass<From>::value, To*>
 		{
 			if (!src) return nullptr;
 			if (src->GetTypeInfo().IsChild(To::GetStaticTypeInfo()))
