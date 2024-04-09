@@ -53,7 +53,7 @@ namespace sh::render {
 		void GetQueueFamilyProperties(VkPhysicalDevice gpu);
 		auto SelectQueueFamily() -> int;
 
-		auto CreateDevice(VkPhysicalDevice gpu)->VkResult;
+		auto CreateDevice(VkPhysicalDevice gpu, uint32_t queueIndex)->VkResult;
 
 		auto CreateCommandPool() -> VkResult;
 	public:

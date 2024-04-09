@@ -200,7 +200,7 @@ namespace sh::render {
 		return -1;
 	}
 
-	auto VulkanRenderer::CreateDevice(VkPhysicalDevice gpu) -> VkResult
+	auto VulkanRenderer::CreateDevice(VkPhysicalDevice gpu, uint32_t queueIndex) -> VkResult
 	{
 		VkResult result;
 		float queuePriorities[1] = { 0.0f };
@@ -257,13 +257,15 @@ namespace sh::render {
 
 		if (GetPhysicalDeviceExtensions(gpu))
 			return false;
+
 		GetQueueFamilyProperties(gpu);
+		//그래픽스 큐의 인덱스 값을 가져온다.
 		if (int idx = SelectQueueFamily(); idx == -1)
 			return false;
 		else
 			graphicsQueueIndex = idx;
 
-		if (CreateDevice(gpu))
+		if (CreateDevice(gpu, graphicsQueueIndex))
 			return false;
 
 		if (sh::core::Util::IsDebug())
