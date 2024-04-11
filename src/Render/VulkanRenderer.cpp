@@ -188,7 +188,7 @@ namespace sh::render {
 		vkGetPhysicalDeviceQueueFamilyProperties(gpu, &count, queueFamilyProps.data());
 	}
 
-	auto VulkanRenderer::SelectQueueFamily() -> int
+	auto VulkanRenderer::SelectQueueFamily() -> std::optional<int>
 	{
 		int idx = 0;
 		for (auto& prop : queueFamilyProps)
@@ -197,7 +197,7 @@ namespace sh::render {
 				return idx;
 			++idx;
 		}
-		return -1;
+		return {};
 	}
 
 	auto VulkanRenderer::CreateDevice(VkPhysicalDevice gpu, uint32_t queueIndex) -> VkResult
@@ -260,10 +260,10 @@ namespace sh::render {
 
 		GetQueueFamilyProperties(gpu);
 		//그래픽스 큐의 인덱스 값을 가져온다.
-		if (int idx = SelectQueueFamily(); idx == -1)
+		if (auto idx = SelectQueueFamily(); !idx.has_value())
 			return false;
 		else
-			graphicsQueueIndex = idx;
+			graphicsQueueIndex = *idx;
 
 		if (CreateDevice(gpu, graphicsQueueIndex))
 			return false;

@@ -13,6 +13,7 @@
 
 #include <vulkan/vulkan.h>
 #include <vector>
+#include <optional>
 
 namespace sh::render {
 	class SH_RENDER_API VulkanRenderer :
@@ -51,7 +52,7 @@ namespace sh::render {
 		bool IsDeviceSuitable(VkPhysicalDevice gpu);
 
 		void GetQueueFamilyProperties(VkPhysicalDevice gpu);
-		auto SelectQueueFamily() -> int;
+		auto SelectQueueFamily() -> std::optional<int>;
 
 		auto CreateDevice(VkPhysicalDevice gpu, uint32_t queueIndex)->VkResult;
 
