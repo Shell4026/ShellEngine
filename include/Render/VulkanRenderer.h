@@ -3,17 +3,13 @@
 
 #include "Renderer.h"
 
-#if _WIN32
-#define VK_USE_PLATFORM_WIN32_KHR
-#elif __unix__
-#define VK_USE_PLATFORM_XLIB_KHR
-#endif
-
 #include <../Core/Singleton.hpp>
+#include "VulkanSurface.h"
 
-#include <vulkan/vulkan.h>
+#include <string>
 #include <vector>
 #include <optional>
+#include <memory>
 
 namespace sh::render {
 	class SH_RENDER_API VulkanRenderer :
@@ -23,6 +19,8 @@ namespace sh::render {
 		sh::window::Window* window;
 		sh::window::WinHandle winHandle;
 
+		std::unique_ptr<VulkanSurface> surface;
+
 		struct LayerProperties {
 			VkLayerProperties properties;
 			std::vector<VkExtensionProperties> extensions;
@@ -31,20 +29,28 @@ namespace sh::render {
 		std::vector<LayerProperties> layers;
 		std::vector<LayerProperties> GPULayers;
 		std::vector<VkPhysicalDevice> gpus;
-		std::vector<VkQueueFamilyProperties> queueFamilyProps;
+		std::vector<VkQueueFamilyProperties> queueFamilies;
 
 		VkInstance instance;
+
+		VkDebugUtilsMessengerCreateInfoEXT debugInfo;
+		VkDebugUtilsMessengerEXT debugMessenger;
 		VkDevice device; //논리적 장치
-		VkSurfaceKHR surface;
 
 		uint32_t graphicsQueueIndex;
+
+		VkCommandPool cmdPool;
+
+		std::string validationLayerName;
+		bool bFindValidationLayer : 1;
+		const bool bEnableValidationLayers : 1;
 	private:
 		auto GetInstanceLayerProperties() -> VkResult;
 		auto GetLayerExtensions(LayerProperties& layerProp, VkPhysicalDevice gpu = nullptr) -> VkResult;
 
 		auto CreateInstance() -> VkResult;
-
-		auto CreateSurface() -> VkResult;
+		void InitDebugMessenger();
+		void DestroyDebugMessenger();
 
 		auto GetPhysicalDevices()->VkResult;
 		auto GetPhysicalDeviceExtensions(VkPhysicalDevice gpu) -> VkResult;
@@ -56,7 +62,8 @@ namespace sh::render {
 
 		auto CreateDevice(VkPhysicalDevice gpu, uint32_t queueIndex)->VkResult;
 
-		auto CreateCommandPool() -> VkResult;
+		auto CreateCommandPool(uint32_t queue) -> VkResult;
+		auto ResetCommandPool(uint32_t queue) -> VkResult;
 	public:
 		VulkanRenderer();
 		~VulkanRenderer();
