@@ -18,10 +18,10 @@ namespace sh::core {
 		static auto U8StringToWstring(const std::string& u8str)->std::wstring;
 		static constexpr bool IsDebug()
 		{
-#ifdef SH_DEBUG
-			return true;
-#else
+#ifdef NDEBUG
 			return false;
+#else
+			return true;
 #endif
 		}
 		static constexpr auto GetPlatform()-> Platform {
