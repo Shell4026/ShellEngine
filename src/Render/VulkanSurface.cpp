@@ -32,16 +32,18 @@ namespace sh::render
 
 		return vkCreateWin32SurfaceKHR(instance, &createInfo, nullptr, &surface);
 #elif __linux__
+
 		VkXlibSurfaceCreateInfoKHR createInfo{};
 		createInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_XLIB_SURFACE_CREATE_INFO_KHR;
-		createInfo.dpy = winHandle.first;
-		createInfo.window = winHandle.second;
+		createInfo.dpy = window.GetNativeHandle().first;
+		createInfo.window = window.GetNativeHandle().second;
 		createInfo.pNext = nullptr;
 
 		return vkCreateXlibSurfaceKHR(instance, &createInfo, nullptr, &surface);
-#endif
+#else
 		static_assert(true, "Not Supported OS");
 		return VkResult::VK_ERROR_UNKNOWN;
+#endif
 	}
 
 	void VulkanSurface::DestroySurface()
