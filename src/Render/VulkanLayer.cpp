@@ -8,7 +8,7 @@ namespace sh::render::impl
 
 	}
 
-	auto VulkanLayer::GetLayerExtensions(LayerProperties& layerProp, VkPhysicalDevice gpu) -> VkResult
+	auto VulkanLayer::QueryLayerExtensions(LayerProperties& layerProp, VkPhysicalDevice gpu) -> VkResult
 	{
 		uint32_t extensionCount = 0;
 		VkResult result;
@@ -30,7 +30,22 @@ namespace sh::render::impl
 
 		return result;
 	}
-	auto VulkanLayer::GetGPUExtensions(VkPhysicalDevice gpu) -> VkResult
+
+	auto VulkanLayer::QueryVulkanExtensions() -> VkResult
+	{
+		uint32_t extensionCount = 0;
+		VkResult result = vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, nullptr);
+		assert(result == VkResult::VK_SUCCESS);
+
+		vulkanExtensions.resize(extensionCount);
+
+		result = vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, vulkanExtensions.data());
+		assert(result == VkResult::VK_SUCCESS);
+
+		return result;
+	}
+
+	auto VulkanLayer::QueryGPUExtensions(VkPhysicalDevice gpu) -> VkResult
 	{
 		gpuExtensions.clear();
 
@@ -47,8 +62,10 @@ namespace sh::render::impl
 
 	void VulkanLayer::Query(VkPhysicalDevice gpu)
 	{
-		layers.clear();
-		gpuLayers.clear();
+		if(!gpu)
+			layers.clear();
+		else
+			gpuLayers.clear();
 
 		std::vector<VkLayerProperties> layerProperties;
 		uint32_t instanceLayerCount = 0;
@@ -73,7 +90,7 @@ namespace sh::render::impl
 			LayerProperties layerProp{};
 			layerProp.properties = prop;
 
-			result = GetLayerExtensions(layerProp, gpu);
+			result = QueryLayerExtensions(layerProp, gpu);
 			if (result != VkResult::VK_SUCCESS)
 				continue;
 
@@ -85,7 +102,9 @@ namespace sh::render::impl
 		}
 
 		if (gpu)
-			result = GetGPUExtensions(gpu);
+			result = QueryGPUExtensions(gpu);
+		else
+			result = QueryVulkanExtensions();
 		assert(result == VkResult::VK_SUCCESS);
 	}
 	VulkanLayer::LayerProperties::LayerProperties(const LayerProperties& other)
@@ -115,6 +134,16 @@ namespace sh::render::impl
 		return false;
 	}
 
+	bool VulkanLayer::FindVulkanExtension(std::string_view extensionName)
+	{
+		for (auto& i : vulkanExtensions)
+		{
+			if (extensionName == i.extensionName)
+				return true;
+		}
+		return false;
+	}
+
 	bool VulkanLayer::FindGPUExtension(VkPhysicalDevice gpu, std::string_view extensionName)
 	{
 		for (auto& i : gpuExtensions)
@@ -128,6 +157,10 @@ namespace sh::render::impl
 	auto VulkanLayer::GetLayerProperties() const -> const std::vector<LayerProperties>&
 	{
 		return layers;
+	}
+	auto VulkanLayer::GetVulkanExtensions() const -> const std::vector<VkExtensionProperties>&
+	{
+		return vulkanExtensions;
 	}
 	auto VulkanLayer::GetGPULayerProperties() const -> const std::vector<LayerProperties>&
 	{
