@@ -4,11 +4,13 @@
 #include "../Core/Util.h"
 
 #include <cassert>
+#include <set>
 
 namespace sh::render {
 	VulkanRenderer::VulkanRenderer() :
 		instance(nullptr), device(nullptr), cmdPool(nullptr), window(nullptr),
-		graphicsQueueIndex(0), 
+		graphicsQueueIndex(-1), surfaceQueueIndex(-1),
+		graphicsQueue(nullptr), surfaceQueue(nullptr),
 		debugMessenger(nullptr), validationLayerName("VK_LAYER_KHRONOS_validation"),
 		bFindValidationLayer(false), bEnableValidationLayers(sh::core::Util::IsDebug())
 	{
@@ -175,38 +177,64 @@ namespace sh::render {
 		vkGetPhysicalDeviceQueueFamilyProperties(gpu, &count, queueFamilies.data());
 	}
 
-	auto VulkanRenderer::SelectQueueFamily() -> std::optional<int>
+	auto VulkanRenderer::SelectQueueFamily(VkQueueFlagBits queueType) -> std::optional<int>
 	{
 		int idx = 0;
 		for (auto& prop : queueFamilies)
 		{
-			if (prop.queueFlags & VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT)
+			if (prop.queueFlags & queueType)
 				return idx;
 			++idx;
 		}
 		return {};
 	}
 
-	auto VulkanRenderer::CreateDevice(VkPhysicalDevice gpu, uint32_t queueIndex) -> VkResult
+	auto VulkanRenderer::GetSurfaceQueueFamily(VkPhysicalDevice gpu) -> std::optional<int>
+	{
+		assert(surface.GetSurface() != nullptr);
+		assert(gpu != nullptr);
+		int idx = 0;
+		for (auto& prop : queueFamilies)
+		{
+			VkBool32 support = false;
+			vkGetPhysicalDeviceSurfaceSupportKHR(gpu, idx, surface.GetSurface(), &support);
+			if (support)
+				return idx;
+			++idx;
+		}
+		return {};
+	}
+
+	auto VulkanRenderer::CreateDevice(VkPhysicalDevice gpu) -> VkResult
 	{
 		VkResult result;
-		float queuePriorities[1] = { 0.0f };
 
 		std::vector<const char*> requestedExtension = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 		VkPhysicalDeviceFeatures deviceFeatures{};
 
-		VkDeviceQueueCreateInfo queueInfo = {};
-		queueInfo.queueFamilyIndex = graphicsQueueIndex;
-		queueInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		queueInfo.pNext = nullptr;
-		queueInfo.queueCount = 1;
-		queueInfo.pQueuePriorities = queuePriorities;
+		assert(graphicsQueueIndex != -1);
+		assert(surfaceQueueIndex != -1);
+		std::vector<VkDeviceQueueCreateInfo> queueInfos;
+		std::set<uint32_t> queueIdxs = { graphicsQueueIndex, surfaceQueueIndex };
+
+		for (auto idx : queueIdxs)
+		{
+			VkDeviceQueueCreateInfo queueInfo = {};
+			queueInfo.queueFamilyIndex = idx;
+			queueInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+			queueInfo.pNext = nullptr;
+			queueInfo.queueCount = 1;
+			queueInfo.pQueuePriorities = 0;
+
+			queueInfos.push_back(queueInfo);
+		}
+
 
 		VkDeviceCreateInfo deviceInfo = {};
 		deviceInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
 		deviceInfo.pNext = nullptr;
-		deviceInfo.queueCreateInfoCount = 1;
-		deviceInfo.pQueueCreateInfos = &queueInfo;
+		deviceInfo.queueCreateInfoCount = queueInfos.size();
+		deviceInfo.pQueueCreateInfos = queueInfos.data();
 		deviceInfo.enabledLayerCount = 0;
 		deviceInfo.ppEnabledLayerNames = nullptr;
 		deviceInfo.enabledExtensionCount = requestedExtension.size();
@@ -269,22 +297,27 @@ namespace sh::render {
 
 		InitDebugMessenger();
 
-		if (GetPhysicalDevices()) return false;
+		if (surface.CreateSurface(win, instance)) return false;
 
+		if (GetPhysicalDevices()) return false;
 		VkPhysicalDevice gpu;
 		if (gpu = SelectPhysicalDevice(); !gpu) return false;
 		layers.Query(gpu);
 
 		GetQueueFamilyProperties(gpu);
-		if (auto idx = SelectQueueFamily(); !idx.has_value()) return false;
-		else
-			graphicsQueueIndex = *idx;
+		if (auto idx = SelectQueueFamily(VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT); !idx.has_value()) return false;
+		else graphicsQueueIndex = *idx;
 
-		if (CreateDevice(gpu, graphicsQueueIndex)) return false;
+		if (auto idx = GetSurfaceQueueFamily(gpu); !idx.has_value()) return false;
+		else surfaceQueueIndex = *idx;
+
+		if (CreateDevice(gpu)) return false;
+		vkGetDeviceQueue(device, graphicsQueueIndex, 0, &graphicsQueue);
+		vkGetDeviceQueue(device, surfaceQueueIndex, 0, &surfaceQueue);
+		assert(graphicsQueue);
+		assert(surfaceQueue);
 
 		if (CreateCommandPool(graphicsQueueIndex)) return false;
-
-		if (surface.CreateSurface(win, instance)) return false;
 
 		if (sh::core::Util::IsDebug())
 		{

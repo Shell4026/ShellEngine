@@ -23,5 +23,6 @@ namespace sh::render {
 
 		auto CreateSurface(sh::window::Window& window, VkInstance instance) -> VkResult;
 		void DestroySurface();
+		auto GetSurface() -> VkSurfaceKHR;
 	};
 }

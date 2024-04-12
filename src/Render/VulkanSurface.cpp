@@ -54,4 +54,9 @@ namespace sh::render
 			surface = nullptr;
 		}
 	}
+
+	auto VulkanSurface::GetSurface() -> VkSurfaceKHR
+	{
+		return surface;
+	}
 }

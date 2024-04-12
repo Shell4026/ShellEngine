@@ -34,6 +34,9 @@ namespace sh::render {
 		std::string validationLayerName;
 
 		uint32_t graphicsQueueIndex;
+		VkQueue graphicsQueue;
+		uint32_t surfaceQueueIndex;
+		VkQueue surfaceQueue;
 
 		bool bFindValidationLayer : 1;
 		const bool bEnableValidationLayers : 1;
@@ -50,9 +53,10 @@ namespace sh::render {
 		bool IsDeviceSuitable(VkPhysicalDevice gpu);
 
 		void GetQueueFamilyProperties(VkPhysicalDevice gpu);
-		auto SelectQueueFamily() -> std::optional<int>;
+		auto SelectQueueFamily(VkQueueFlagBits queueType) -> std::optional<int>;
+		auto GetSurfaceQueueFamily(VkPhysicalDevice gpu)->std::optional<int>;
 
-		auto CreateDevice(VkPhysicalDevice gpu, uint32_t queueIndex)->VkResult;
+		auto CreateDevice(VkPhysicalDevice gpu)->VkResult;
 		void DestroyDevice();
 
 		auto CreateCommandPool(uint32_t queue) -> VkResult;
