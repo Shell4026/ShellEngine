@@ -78,6 +78,7 @@ int main(int arg, char* args[]) {
 			switch (e.type)
 			{
 			case sh::window::Event::EventType::Close:
+				renderer->Clean();
 				window.Close();
 				break;
 			case sh::window::Event::EventType::MousePressed:

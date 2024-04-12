@@ -1,28 +1,57 @@
 ﻿#pragma once
+#pragma warning(disable: 4251)
 
 #include "Export.h"
 
 #include "VulkanConfig.h"
+#include <vector>
 
 namespace sh::window
 {
 	class Window;
 }
+namespace sh::render { class VulkanRenderer; }
 
-namespace sh::render {
+namespace sh::render::impl {
 	class SH_RENDER_API VulkanSurface
 	{
+		friend VulkanRenderer;
+	public:
+		struct SwapChainSupportDetails {
+			VkSurfaceCapabilitiesKHR capabilities;
+			std::vector<VkSurfaceFormatKHR> formats;
+			std::vector<VkPresentModeKHR> presentModes;
+		};
 	private:
 		sh::window::Window* window;
 
 		VkSurfaceKHR surface;
 		VkInstance instance;
-	public:
+		VkSwapchainKHR swapChain;
+		std::vector<VkImage> swapChainImages;
+		VkFormat swapChainImageFormat;
+		VkExtent2D swapChainSize;
+
+		SwapChainSupportDetails details;
+	private:
 		VulkanSurface();
+
+		void QuerySwapChainDetails(VkPhysicalDevice gpu);
+
+		auto SelectFormat()->VkSurfaceFormatKHR;
+		auto SelectPresentMode()->VkPresentModeKHR;
+	public:
 		~VulkanSurface();
 
-		auto CreateSurface(sh::window::Window& window, VkInstance instance) -> VkResult;
+		bool CreateSurface(sh::window::Window& window, VkInstance instance);
 		void DestroySurface();
-		auto GetSurface() -> VkSurfaceKHR;
+
+		bool CreateSwapChain(VkDevice device);
+		void DestroySwapChain(VkDevice device);
+		
+		bool IsSwapChainSupport(VkPhysicalDevice gpu);
+
+		auto GetSurface()->VkSurfaceKHR;
+		auto GetSwapChainDetail() const -> const SwapChainSupportDetails&;
 	};
 }

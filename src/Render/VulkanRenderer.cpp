@@ -18,15 +18,7 @@ namespace sh::render {
 
 	VulkanRenderer::~VulkanRenderer()
 	{
-		DestroyCommandPool();
-		DestroyDevice();
-		
-		surface.DestroySurface();
-			
-		if (bEnableValidationLayers)
-			DestroyDebugMessenger();
-		
-		DestroyInstance();
+		Clean();
 	}
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
@@ -84,7 +76,6 @@ namespace sh::render {
 			instanceInfo.pNext = &debugInfo;
 		else
 			instanceInfo.pNext = nullptr;
-		//pAllocator = 호스트 메모리의 할당 방법 지정
 		VkResult result = vkCreateInstance(&instanceInfo, nullptr, &instance);
 		return result;
 	}
@@ -145,6 +136,7 @@ namespace sh::render {
 
 	bool VulkanRenderer::IsDeviceSuitable(VkPhysicalDevice gpu)
 	{
+		assert(gpu);
 		if (!gpu)
 			return false;
 
@@ -154,15 +146,18 @@ namespace sh::render {
 		VkPhysicalDeviceFeatures feature;
 		vkGetPhysicalDeviceFeatures(gpu, &feature);
 
+		bool swapchainExSupport = layers.FindGPUExtension(gpu, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 		return 
-			(prop.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) ||
-			(prop.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_CPU);
+			((prop.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) ||
+			(prop.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_CPU)) && 
+			swapchainExSupport && surface.IsSwapChainSupport(gpu);
 	}
 
 	auto VulkanRenderer::SelectPhysicalDevice() -> VkPhysicalDevice
 	{
 		for (auto gpu : gpus)
 		{
+			layers.Query(gpu);
 			if (IsDeviceSuitable(gpu))
 				return gpu;
 		}
@@ -207,6 +202,7 @@ namespace sh::render {
 
 	auto VulkanRenderer::CreateDevice(VkPhysicalDevice gpu) -> VkResult
 	{
+		assert(gpu);
 		VkResult result;
 
 		std::vector<const char*> requestedExtension = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
@@ -298,12 +294,12 @@ namespace sh::render {
 
 		InitDebugMessenger();
 
-		if (surface.CreateSurface(win, instance)) return false;
+		if (!surface.CreateSurface(win, instance)) return false;
 
 		if (GetPhysicalDevices()) return false;
-		VkPhysicalDevice gpu;
-		if (gpu = SelectPhysicalDevice(); !gpu) return false;
-		layers.Query(gpu);
+		VkPhysicalDevice gpu = SelectPhysicalDevice();
+		if (!gpu) 
+			return false;
 
 		GetQueueFamilyProperties(gpu);
 		if (auto idx = SelectQueueFamily(VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT); !idx.has_value()) return false;
@@ -313,10 +309,13 @@ namespace sh::render {
 		else surfaceQueueIndex = *idx;
 
 		if (CreateDevice(gpu)) return false;
+
 		vkGetDeviceQueue(device, graphicsQueueIndex, 0, &graphicsQueue);
 		vkGetDeviceQueue(device, surfaceQueueIndex, 0, &surfaceQueue);
-		assert(graphicsQueue);
+		assert(graphicsQueue); 
 		assert(surfaceQueue);
+
+		surface.CreateSwapChain(device);
 
 		if (CreateCommandPool(graphicsQueueIndex)) return false;
 
@@ -346,6 +345,19 @@ namespace sh::render {
 			fmt::print("Vulkan Renderer Init!\n");
 		}
 		return true;
+	}
+
+	void VulkanRenderer::Clean()
+	{
+		DestroyCommandPool();
+		surface.DestroySwapChain(device);
+		DestroyDevice();
+		surface.DestroySurface();
+
+		if (bEnableValidationLayers)
+			DestroyDebugMessenger();
+
+		DestroyInstance();
 	}
 }//namespace
 

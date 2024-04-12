@@ -1,8 +1,13 @@
 ﻿#include "VulkanLayer.h"
 
 #include <cassert>
-namespace sh::render
+namespace sh::render::impl
 {
+	VulkanLayer::VulkanLayer()
+	{
+
+	}
+
 	auto VulkanLayer::GetLayerExtensions(LayerProperties& layerProp, VkPhysicalDevice gpu) -> VkResult
 	{
 		uint32_t extensionCount = 0;
@@ -27,6 +32,8 @@ namespace sh::render
 	}
 	auto VulkanLayer::GetGPUExtensions(VkPhysicalDevice gpu) -> VkResult
 	{
+		gpuExtensions.clear();
+
 		uint32_t extensionCount = 0;
 		VkResult result;
 		result = vkEnumerateDeviceExtensionProperties(gpu, nullptr, &extensionCount, nullptr);
@@ -34,11 +41,15 @@ namespace sh::render
 		gpuExtensions.resize(extensionCount);
 
 		result = vkEnumerateDeviceExtensionProperties(gpu, nullptr, &extensionCount, gpuExtensions.data());
+		assert(result == VkResult::VK_SUCCESS);
 		return result;
 	}
 
 	void VulkanLayer::Query(VkPhysicalDevice gpu)
 	{
+		layers.clear();
+		gpuLayers.clear();
+
 		std::vector<VkLayerProperties> layerProperties;
 		uint32_t instanceLayerCount = 0;
 

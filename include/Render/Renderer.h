@@ -8,5 +8,6 @@ namespace sh::render {
 		virtual ~Renderer() {};
 
 		virtual bool Init(sh::window::Window& win) = 0;
+		virtual void Clean() = 0;
 	};
 }

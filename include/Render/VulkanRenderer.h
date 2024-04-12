@@ -20,8 +20,8 @@ namespace sh::render {
 		sh::window::Window* window;
 		sh::window::WinHandle winHandle;
 
-		VulkanSurface surface;
-		VulkanLayer layers;
+		impl::VulkanSurface surface;
+		impl::VulkanLayer layers;
 
 		VkInstance instance;
 		VkDevice device; //논리적 장치
@@ -67,5 +67,6 @@ namespace sh::render {
 		~VulkanRenderer();
 
 		bool Init(sh::window::Window& win) override;
+		void Clean() override;
 	};
 }//namespace
