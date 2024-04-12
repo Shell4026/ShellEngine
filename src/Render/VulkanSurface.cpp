@@ -9,8 +9,8 @@
 
 namespace sh::render
 {
-	VulkanSurface::VulkanSurface(sh::window::Window* window) :
-		window(window), surface(nullptr), instance(nullptr)
+	VulkanSurface::VulkanSurface() :
+		window(nullptr), surface(nullptr), instance(nullptr)
 	{
 	}
 
@@ -19,14 +19,14 @@ namespace sh::render
 		DestroySurface();
 	}
 
-	auto VulkanSurface::CreateSurface(VkInstance instance) -> VkResult
+	auto VulkanSurface::CreateSurface(sh::window::Window& window, VkInstance instance) -> VkResult
 	{
-		assert(window);
+		this->window = &window;
 		this->instance = instance;
 #if _WIN32
 		VkWin32SurfaceCreateInfoKHR createInfo{};
 		createInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-		createInfo.hwnd = window->GetNativeHandle();
+		createInfo.hwnd = window.GetNativeHandle();
 		createInfo.hinstance = GetModuleHandleW(nullptr);
 		createInfo.pNext = nullptr;
 

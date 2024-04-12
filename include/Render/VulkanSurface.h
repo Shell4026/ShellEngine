@@ -2,12 +2,7 @@
 
 #include "Export.h"
 
-#if _WIN32
-#define VK_USE_PLATFORM_WIN32_KHR
-#elif __unix__
-#define VK_USE_PLATFORM_XLIB_KHR
-#endif
-#include <vulkan/vulkan.h>
+#include "VulkanConfig.h"
 
 namespace sh::window
 {
@@ -23,10 +18,10 @@ namespace sh::render {
 		VkSurfaceKHR surface;
 		VkInstance instance;
 	public:
-		VulkanSurface(sh::window::Window* window);
+		VulkanSurface();
 		~VulkanSurface();
 
-		auto CreateSurface(VkInstance instance) -> VkResult;
+		auto CreateSurface(sh::window::Window& window, VkInstance instance) -> VkResult;
 		void DestroySurface();
 	};
 }
