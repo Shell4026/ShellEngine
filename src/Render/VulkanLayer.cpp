@@ -25,6 +25,17 @@ namespace sh::render
 
 		return result;
 	}
+	auto VulkanLayer::GetGPUExtensions(VkPhysicalDevice gpu) -> VkResult
+	{
+		uint32_t extensionCount = 0;
+		VkResult result;
+		result = vkEnumerateDeviceExtensionProperties(gpu, nullptr, &extensionCount, nullptr);
+		assert(result == VkResult::VK_SUCCESS);
+		gpuExtensions.resize(extensionCount);
+
+		result = vkEnumerateDeviceExtensionProperties(gpu, nullptr, &extensionCount, gpuExtensions.data());
+		return result;
+	}
 
 	void VulkanLayer::Query(VkPhysicalDevice gpu)
 	{
@@ -59,7 +70,11 @@ namespace sh::render
 				GPULayers.push_back(std::move(layerProp));
 			else
 				layers.push_back(std::move(layerProp));
+			assert(result == VkResult::VK_SUCCESS);
 		}
+
+		if (gpu)
+			result = GetGPUExtensions(gpu);
 		assert(result == VkResult::VK_SUCCESS);
 	}
 	VulkanLayer::LayerProperties::LayerProperties(const LayerProperties& other)
@@ -95,5 +110,9 @@ namespace sh::render
 	auto VulkanLayer::GetGPULayerProperties() const -> const std::vector<LayerProperties>&
 	{
 		return GPULayers;
+	}
+	auto VulkanLayer::GetGPUExtensions() const -> const std::vector<VkExtensionProperties>&
+	{
+		return gpuExtensions;
 	}
 }

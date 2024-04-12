@@ -217,6 +217,7 @@ namespace sh::render {
 		std::vector<VkDeviceQueueCreateInfo> queueInfos;
 		std::set<uint32_t> queueIdxs = { graphicsQueueIndex, surfaceQueueIndex };
 
+		float queuePriority = 1.0f;
 		for (auto idx : queueIdxs)
 		{
 			VkDeviceQueueCreateInfo queueInfo = {};
@@ -224,7 +225,7 @@ namespace sh::render {
 			queueInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 			queueInfo.pNext = nullptr;
 			queueInfo.queueCount = 1;
-			queueInfo.pQueuePriorities = 0;
+			queueInfo.pQueuePriorities = &queuePriority;
 
 			queueInfos.push_back(queueInfo);
 		}
@@ -338,6 +339,10 @@ namespace sh::render {
 					fmt::print("ExtensionName: {}\n", ext.extensionName);
 				}
 			}
+			fmt::print("-----GPU Extensions------\n");
+			for (auto& i : layers.GetGPUExtensions())
+				fmt::print("ExtensionName: {}\n", i.extensionName);
+
 			fmt::print("Vulkan Renderer Init!\n");
 		}
 		return true;
