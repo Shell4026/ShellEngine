@@ -21,6 +21,19 @@ namespace sh::render {
 		Clean();
 	}
 
+	void VulkanRenderer::Clean()
+	{
+		DestroyCommandPool();
+		surface.DestroySwapChain(device);
+		DestroyDevice();
+		surface.DestroySurface();
+
+		if (bEnableValidationLayers)
+			DestroyDebugMessenger();
+
+		DestroyInstance();
+	}
+
 	VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 		VkDebugUtilsMessageTypeFlagsEXT messageType,
@@ -345,19 +358,6 @@ namespace sh::render {
 			fmt::print("Vulkan Renderer Init!\n");
 		}
 		return true;
-	}
-
-	void VulkanRenderer::Clean()
-	{
-		DestroyCommandPool();
-		surface.DestroySwapChain(device);
-		DestroyDevice();
-		surface.DestroySurface();
-
-		if (bEnableValidationLayers)
-			DestroyDebugMessenger();
-
-		DestroyInstance();
 	}
 }//namespace
 
