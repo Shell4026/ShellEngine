@@ -7,9 +7,9 @@
 
 namespace sh::render {
 	VulkanRenderer::VulkanRenderer() :
-		instance(nullptr), device(nullptr), surface(nullptr), cmdPool(nullptr), window(nullptr),
+		instance(nullptr), device(nullptr), cmdPool(nullptr), window(nullptr),
 		graphicsQueueIndex(0), 
-		debugInfo(), validationLayerName("VK_LAYER_KHRONOS_validation"),
+		debugMessenger(nullptr), validationLayerName("VK_LAYER_KHRONOS_validation"),
 		bFindValidationLayer(false), bEnableValidationLayers(sh::core::Util::IsDebug())
 	{
 
@@ -19,77 +19,23 @@ namespace sh::render {
 	{
 		if (device)
 			vkDestroyDevice(device, nullptr);
-		if (surface)
-			surface->DestroySurface();
+		
+		surface.DestroySurface();
+			
 		if (bEnableValidationLayers)
 			DestroyDebugMessenger();
+			
 		//if (instance)
 			//vkDestroyInstance(instance, nullptr);
 	}
 
-	auto VulkanRenderer::GetInstanceLayerProperties() -> VkResult
-	{
-		std::vector<VkLayerProperties> layerProperties;
-		uint32_t instanceLayerCount = 0;
-
-		VkResult result;
-		do
-		{
-			result = vkEnumerateInstanceLayerProperties(&instanceLayerCount, nullptr);
-
-			layerProperties.resize(instanceLayerCount);
-			result = vkEnumerateInstanceLayerProperties(&instanceLayerCount, layerProperties.data());
-		} while (result == VkResult::VK_INCOMPLETE);
-
-		for (auto& prop : layerProperties)
-		{
-			LayerProperties layerProp;
-			layerProp.properties = prop;
-
-			result = GetLayerExtensions(layerProp);
-			if (result != VkResult::VK_SUCCESS)
-				continue;
-
-			layers.push_back(std::move(layerProp));
-		}
-		return result;
-	}
-
-	auto VulkanRenderer::GetLayerExtensions(LayerProperties& layerProp, VkPhysicalDevice gpu) -> VkResult
-	{
-		uint32_t extensionCount = 0;
-		VkResult result;
-
-		char* layerName = layerProp.properties.layerName;
-		do
-		{
-			if (gpu)
-				result = vkEnumerateDeviceExtensionProperties(gpu, layerName, &extensionCount, nullptr);
-			else
-				result = vkEnumerateInstanceExtensionProperties(layerName, &extensionCount, nullptr);
-
-			if (result != VkResult::VK_SUCCESS || extensionCount == 0)
-				continue;
-
-			layerProp.extensions.resize(extensionCount);
-			if(gpu)
-				result = vkEnumerateDeviceExtensionProperties(gpu, layerName, &extensionCount, layerProp.extensions.data());
-			else
-				result = vkEnumerateInstanceExtensionProperties(layerName, &extensionCount, layerProp.extensions.data());
-		} while (result == VkResult::VK_INCOMPLETE);
-
-		return result;
-	}
-
-	static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
+	VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 		VkDebugUtilsMessageTypeFlagsEXT messageType,
 		const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
-		void* pUserData) {
-
-		if(messageSeverity >= VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
-			fmt::print("validation layer: {}", pCallbackData->pMessage);
-
+		void* pUserData) 
+	{
+		fmt::print("Validation layer: {}\n", pCallbackData->pMessage);
 		return VK_FALSE;
 	}
 
@@ -107,22 +53,13 @@ namespace sh::render {
 		requestedExtension.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
 #endif
 
+		VkDebugUtilsMessengerCreateInfoEXT debugInfo{};
 		if (bFindValidationLayer && bEnableValidationLayers)
 		{
 			requestedLayer.push_back(validationLayerName.c_str());
 			requestedExtension.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
-			debugInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-			debugInfo.messageSeverity =
-				VkDebugUtilsMessageSeverityFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
-				VkDebugUtilsMessageSeverityFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
-				VkDebugUtilsMessageSeverityFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-			debugInfo.messageType =
-				VkDebugUtilsMessageTypeFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
-				VkDebugUtilsMessageTypeFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
-				VkDebugUtilsMessageTypeFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-			debugInfo.pfnUserCallback = debugCallback;
-			debugInfo.pUserData = nullptr; // Optional
+			debugInfo = CreateDebugInfo();
 		}
 
 		VkApplicationInfo appInfo = {};
@@ -154,11 +91,32 @@ namespace sh::render {
 		return result;
 	}
 
+	auto VulkanRenderer::CreateDebugInfo() -> VkDebugUtilsMessengerCreateInfoEXT
+	{
+		VkDebugUtilsMessengerCreateInfoEXT debugInfo{};
+		debugInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+		debugInfo.messageSeverity =
+			VkDebugUtilsMessageSeverityFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
+			VkDebugUtilsMessageSeverityFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT |
+			VkDebugUtilsMessageSeverityFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+		debugInfo.messageType =
+			VkDebugUtilsMessageTypeFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
+			VkDebugUtilsMessageTypeFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
+			VkDebugUtilsMessageTypeFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+		debugInfo.pfnUserCallback = debugCallback;
+		debugInfo.pUserData = nullptr; // Optional
+
+		return debugInfo;
+	}
+
 	void VulkanRenderer::InitDebugMessenger()
 	{
 		auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
 		assert(func != nullptr);
-		VkResult result = func(instance, &debugInfo, nullptr, &debugMessenger);
+
+		auto info = CreateDebugInfo();
+
+		VkResult result = func(instance, &info, nullptr, &debugMessenger);
 		assert(result == VkResult::VK_SUCCESS);
 	}
 
@@ -176,21 +134,6 @@ namespace sh::render {
 		gpus.resize(count);
 
 		return vkEnumeratePhysicalDevices(instance, &count, gpus.data());
-	}
-
-	auto VulkanRenderer::GetPhysicalDeviceExtensions(VkPhysicalDevice gpu) -> VkResult
-	{
-		VkResult result = VkResult::VK_SUCCESS;
-
-		for (auto& layer : layers)
-		{
-			LayerProperties layerProp;
-			layerProp.properties = layer.properties;
-			result = GetLayerExtensions(layerProp, gpu);
-
-			GPULayers.push_back(layerProp);
-		}
-		return result;
 	}
 
 	bool VulkanRenderer::IsDeviceSuitable(VkPhysicalDevice gpu)
@@ -293,18 +236,12 @@ namespace sh::render {
 	{
 		window = &win;
 		winHandle = win.GetNativeHandle();
-
 		//VkResult::Success = 0
-		if (GetInstanceLayerProperties()) return false;
-		for (auto& i : layers)
-		{
-			if (validationLayerName == i.properties.layerName)
-			{
-				fmt::print("Found validation layer\n");
-				bFindValidationLayer = true;
-				break;
-			}
-		}
+
+		layers.Query();
+		if (layers.FindLayer(validationLayerName))
+			bFindValidationLayer = true;
+
 		if (CreateInstance()) return false;
 
 		InitDebugMessenger();
@@ -313,23 +250,23 @@ namespace sh::render {
 
 		VkPhysicalDevice gpu;
 		if (gpu = SelectPhysicalDevice(); !gpu) return false;
-		if (GetPhysicalDeviceExtensions(gpu)) return false;
+		layers.Query(gpu);
 
 		GetQueueFamilyProperties(gpu);
 		//그래픽스 큐의 인덱스 값을 가져온다.
 		if (auto idx = SelectQueueFamily(); !idx.has_value()) return false;
 		else
 			graphicsQueueIndex = *idx;
+
 		if (CreateDevice(gpu, graphicsQueueIndex)) return false;
 
 		if (CreateCommandPool(graphicsQueueIndex)) return false;
 
-		surface = std::make_unique<VulkanSurface>(&win);
-		if (surface->CreateSurface(instance)) return false;
+		if (surface.CreateSurface(instance)) return false;
 
 		if (sh::core::Util::IsDebug())
 		{
-			for (auto& i : layers)
+			for (auto& i : layers.GetLayerProperties())
 			{
 				fmt::print("LayerName: {} - {}\n", i.properties.layerName, i.properties.description);
 				for (auto& ext : i.extensions)
@@ -338,7 +275,7 @@ namespace sh::render {
 				}
 			}
 			fmt::print("-----GPU Layer------\n");
-			for (auto& i : GPULayers)
+			for (auto& i : layers.GetGPULayerProperties())
 			{
 				fmt::print("LayerName: {} - {}\n", i.properties.layerName, i.properties.description);
 				for (auto& ext : i.extensions)
