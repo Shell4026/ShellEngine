@@ -67,7 +67,7 @@ namespace sh::render
 				continue;
 
 			if (gpu)
-				GPULayers.push_back(std::move(layerProp));
+				gpuLayers.push_back(std::move(layerProp));
 			else
 				layers.push_back(std::move(layerProp));
 			assert(result == VkResult::VK_SUCCESS);
@@ -93,11 +93,22 @@ namespace sh::render
 		extensions = std::move(other.extensions);
 	}
 
-	bool VulkanLayer::FindLayer(std::string_view layerName)
+	bool VulkanLayer::FindLayer(std::string_view layerName, VkPhysicalDevice gpu)
 	{
+		auto& layersVector = gpu ? gpuLayers : layers;
 		for (auto& i : layers)
 		{
 			if (layerName == i.properties.layerName)
+				return true;
+		}
+		return false;
+	}
+
+	bool VulkanLayer::FindGPUExtension(VkPhysicalDevice gpu, std::string_view extensionName)
+	{
+		for (auto& i : gpuExtensions)
+		{
+			if (extensionName == i.extensionName)
 				return true;
 		}
 		return false;
@@ -109,7 +120,7 @@ namespace sh::render
 	}
 	auto VulkanLayer::GetGPULayerProperties() const -> const std::vector<LayerProperties>&
 	{
-		return GPULayers;
+		return gpuLayers;
 	}
 	auto VulkanLayer::GetGPUExtensions() const -> const std::vector<VkExtensionProperties>&
 	{

@@ -24,13 +24,14 @@ namespace sh::render
 		std::vector<VkExtensionProperties> gpuExtensions;
 	private:
 		std::vector<LayerProperties> layers;
-		std::vector<LayerProperties> GPULayers;
+		std::vector<LayerProperties> gpuLayers;
 	private:
 		SH_RENDER_API auto GetLayerExtensions(LayerProperties& layerProp, VkPhysicalDevice gpu = nullptr)->VkResult;
 		SH_RENDER_API auto GetGPUExtensions(VkPhysicalDevice gpu)->VkResult;
 	public:
 		SH_RENDER_API void Query(VkPhysicalDevice gpu = nullptr);
-		SH_RENDER_API bool FindLayer(std::string_view layerName);
+		SH_RENDER_API bool FindLayer(std::string_view layerName, VkPhysicalDevice gpu = nullptr);
+		SH_RENDER_API bool FindGPUExtension(VkPhysicalDevice gpu, std::string_view extensionName);
 		SH_RENDER_API auto GetLayerProperties() const->const std::vector<LayerProperties>&;
 		SH_RENDER_API auto GetGPULayerProperties() const->const std::vector<LayerProperties>&;
 		SH_RENDER_API auto GetGPUExtensions() const->const std::vector<VkExtensionProperties>&;
