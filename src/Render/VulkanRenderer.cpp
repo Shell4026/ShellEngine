@@ -12,21 +12,19 @@ namespace sh::render {
 		debugMessenger(nullptr), validationLayerName("VK_LAYER_KHRONOS_validation"),
 		bFindValidationLayer(false), bEnableValidationLayers(sh::core::Util::IsDebug())
 	{
-
 	}
 
 	VulkanRenderer::~VulkanRenderer()
 	{
-		if (device)
-			vkDestroyDevice(device, nullptr);
+		DestroyCommandPool();
+		DestroyDevice();
 		
 		surface.DestroySurface();
 			
 		if (bEnableValidationLayers)
 			DestroyDebugMessenger();
-			
-		//if (instance)
-			//vkDestroyInstance(instance, nullptr);
+		
+		DestroyInstance();
 	}
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
@@ -57,6 +55,7 @@ namespace sh::render {
 		if (bFindValidationLayer && bEnableValidationLayers)
 		{
 			requestedLayer.push_back(validationLayerName.c_str());
+			requestedExtension.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 			requestedExtension.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
 			debugInfo = CreateDebugInfo();
@@ -80,15 +79,21 @@ namespace sh::render {
 		instanceInfo.enabledExtensionCount = requestedExtension.size();
 		instanceInfo.ppEnabledExtensionNames = requestedExtension.data();
 		if (bEnableValidationLayers)
-		{
-			instanceInfo.pNext = nullptr;
-			instanceInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugInfo;
-		}
+			instanceInfo.pNext = &debugInfo;
 		else
 			instanceInfo.pNext = nullptr;
 		//pAllocator = 호스트 메모리의 할당 방법 지정
 		VkResult result = vkCreateInstance(&instanceInfo, nullptr, &instance);
 		return result;
+	}
+
+	void VulkanRenderer::DestroyInstance()
+	{
+		if (instance)
+		{
+			vkDestroyInstance(instance, nullptr);
+			instance = nullptr;
+		}
 	}
 
 	auto VulkanRenderer::CreateDebugInfo() -> VkDebugUtilsMessengerCreateInfoEXT
@@ -104,7 +109,7 @@ namespace sh::render {
 			VkDebugUtilsMessageTypeFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
 			VkDebugUtilsMessageTypeFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 		debugInfo.pfnUserCallback = debugCallback;
-		debugInfo.pUserData = nullptr; // Optional
+		debugInfo.pUserData = nullptr;
 
 		return debugInfo;
 	}
@@ -212,6 +217,15 @@ namespace sh::render {
 		return result;
 	}
 
+	void VulkanRenderer::DestroyDevice()
+	{
+		if (device)
+		{
+			vkDestroyDevice(device, nullptr);
+			device = nullptr;
+		}
+	}
+
 	auto VulkanRenderer::CreateCommandPool(uint32_t queue) -> VkResult
 	{
 		VkCommandPoolCreateInfo poolInfo = {};
@@ -225,6 +239,15 @@ namespace sh::render {
 		assert(result == VkResult::VK_SUCCESS);
 
 		return result;
+	}
+
+	void VulkanRenderer::DestroyCommandPool()
+	{
+		if (cmdPool)
+		{
+			vkDestroyCommandPool(device, cmdPool, nullptr);
+			cmdPool = nullptr;
+		}
 	}
 
 	auto VulkanRenderer::ResetCommandPool(uint32_t queue) -> VkResult
@@ -253,7 +276,6 @@ namespace sh::render {
 		layers.Query(gpu);
 
 		GetQueueFamilyProperties(gpu);
-		//그래픽스 큐의 인덱스 값을 가져온다.
 		if (auto idx = SelectQueueFamily(); !idx.has_value()) return false;
 		else
 			graphicsQueueIndex = *idx;
@@ -262,7 +284,7 @@ namespace sh::render {
 
 		if (CreateCommandPool(graphicsQueueIndex)) return false;
 
-		if (surface.CreateSurface(instance)) return false;
+		if (surface.CreateSurface(win, instance)) return false;
 
 		if (sh::core::Util::IsDebug())
 		{

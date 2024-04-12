@@ -39,6 +39,7 @@ namespace sh::render {
 		const bool bEnableValidationLayers : 1;
 	private:
 		auto CreateInstance()->VkResult;
+		void DestroyInstance();
 
 		auto CreateDebugInfo()->VkDebugUtilsMessengerCreateInfoEXT;
 		void InitDebugMessenger();
@@ -52,8 +53,10 @@ namespace sh::render {
 		auto SelectQueueFamily() -> std::optional<int>;
 
 		auto CreateDevice(VkPhysicalDevice gpu, uint32_t queueIndex)->VkResult;
+		void DestroyDevice();
 
 		auto CreateCommandPool(uint32_t queue) -> VkResult;
+		void DestroyCommandPool();
 		auto ResetCommandPool(uint32_t queue) -> VkResult;
 	public:
 		VulkanRenderer();
