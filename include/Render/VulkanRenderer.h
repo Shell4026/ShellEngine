@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 #include <optional>
+#include <functional>
 
 namespace sh::render {
 	class SH_RENDER_API VulkanRenderer :
@@ -20,10 +21,14 @@ namespace sh::render {
 		sh::window::Window* window;
 		sh::window::WinHandle winHandle;
 
+		std::vector<const char*> requestedLayer;
+		std::vector<const char*> requestedExtension;
+
 		impl::VulkanSurface surface;
 		impl::VulkanLayer layers;
 
 		VkInstance instance;
+		VkPhysicalDevice gpu;
 		VkDevice device; //논리적 장치
 		VkCommandPool cmdPool;
 
@@ -41,7 +46,7 @@ namespace sh::render {
 		bool bFindValidationLayer : 1;
 		const bool bEnableValidationLayers : 1;
 	private:
-		auto CreateInstance()->VkResult;
+		auto CreateInstance(const std::vector<const char*>& requestedLayer, const std::vector<const char*>& requestedExtension)->VkResult;
 		void DestroyInstance();
 
 		auto CreateDebugInfo()->VkDebugUtilsMessengerCreateInfoEXT;
@@ -49,7 +54,7 @@ namespace sh::render {
 		void DestroyDebugMessenger();
 
 		auto GetPhysicalDevices()->VkResult;
-		auto SelectPhysicalDevice() -> VkPhysicalDevice;
+		auto SelectPhysicalDevice(const std::function<bool(VkPhysicalDevice)>& checkFunc)->VkPhysicalDevice;
 		bool IsDeviceSuitable(VkPhysicalDevice gpu);
 
 		void GetQueueFamilyProperties(VkPhysicalDevice gpu);
@@ -62,6 +67,8 @@ namespace sh::render {
 		auto CreateCommandPool(uint32_t queue) -> VkResult;
 		void DestroyCommandPool();
 		auto ResetCommandPool(uint32_t queue) -> VkResult;
+
+		void PrintLayer();
 	public:
 		VulkanRenderer();
 		~VulkanRenderer();
