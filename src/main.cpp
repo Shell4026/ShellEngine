@@ -53,8 +53,8 @@ int main(int arg, char* args[]) {
 
 	sh::window::Window window;
 	window.Create(u8"테스트", 1024, 768);
-	auto renderer = sh::render::VulkanRenderer::GetInstance();
-	renderer->Init(window);
+	auto renderer = sh::render::VulkanRenderer{};
+	renderer.Init(window);
 	
 	constexpr long long fps = static_cast<long long>(1000.0f / 144.0f);
 	
@@ -78,7 +78,7 @@ int main(int arg, char* args[]) {
 			switch (e.type)
 			{
 			case sh::window::Event::EventType::Close:
-				renderer->Clean();
+				renderer.Clean();
 				window.Close();
 				break;
 			case sh::window::Event::EventType::MousePressed:
@@ -100,7 +100,7 @@ int main(int arg, char* args[]) {
 				break;
 			case sh::window::Event::EventType::KeyDown:
 				if (e.keyType == sh::window::Event::KeyType::Left)
-					std::cout << "Check\n";
+					std::cout << "Left\n";
 				break;
 			case sh::window::Event::EventType::WindowFocus:
 				std::cout << "FocusIn\n";

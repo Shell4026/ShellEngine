@@ -3,10 +3,8 @@
 
 #include "Renderer.h"
 
-#include <../Core/Singleton.hpp>
-
-#include "VulkanLayer.h"
-#include "VulkanSurface.h"
+#include <Core/NonCopyable.h>
+#include "VulkanImpl/VulkanConfig.h"
 
 #include <string>
 #include <vector>
@@ -17,6 +15,7 @@ namespace sh::render {
 	class SH_RENDER_API VulkanRenderer :
 		public Renderer, 
 		public sh::core::Singleton<VulkanRenderer> {
+		public IRenderer, public sh::core::INonCopyable{
 	private:
 		sh::window::Window* window;
 		sh::window::WinHandle winHandle;
