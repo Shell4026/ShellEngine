@@ -2,9 +2,12 @@
 
 #include <fmt/core.h>
 #include "../Core/Util.h"
+#include "VulkanImpl/VulkanLayer.h"
+#include "VulkanImpl/VulkanSurface.h"
 
 #include <cassert>
 #include <set>
+
 
 namespace sh::render {
 	VulkanRenderer::VulkanRenderer() :
@@ -12,26 +15,29 @@ namespace sh::render {
 		graphicsQueueIndex(-1), surfaceQueueIndex(-1),
 		graphicsQueue(nullptr), surfaceQueue(nullptr),
 		debugMessenger(nullptr), validationLayerName("VK_LAYER_KHRONOS_validation"),
-		bFindValidationLayer(false), bEnableValidationLayers(sh::core::Util::IsDebug())
+		isInit(false), bFindValidationLayer(false), bEnableValidationLayers(sh::core::Util::IsDebug())
 	{
 	}
 
 	VulkanRenderer::~VulkanRenderer()
 	{
-		Clean();
+		if(isInit)
+			Clean();
 	}
 
 	void VulkanRenderer::Clean()
 	{
 		DestroyCommandPool();
-		surface.DestroySwapChain(device);
+		surface.reset();
 		DestroyDevice();
-		surface.DestroySurface();
 
 		if (bEnableValidationLayers)
 			DestroyDebugMessenger();
 
 		DestroyInstance();
+
+		isInit = false;
+		fmt::print("Clean VulkanRenderer\n");
 	}
 
 	VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
@@ -143,18 +149,18 @@ namespace sh::render {
 		VkPhysicalDeviceFeatures feature;
 		vkGetPhysicalDeviceFeatures(gpu, &feature);
 
-		bool swapchainExSupport = layers.FindGPUExtension(gpu, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+		bool swapchainExSupport = layers->FindGPUExtension(gpu, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 		return 
 			((prop.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) ||
 			(prop.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_CPU)) && 
-			swapchainExSupport && surface.IsSwapChainSupport(gpu);
+			swapchainExSupport && surface->IsSwapChainSupport(gpu);
 	}
 
 	auto VulkanRenderer::SelectPhysicalDevice(const std::function<bool(VkPhysicalDevice)>& checkFunc) -> VkPhysicalDevice
 	{
 		for (auto gpu : gpus)
 		{
-			layers.Query(gpu);
+			layers->Query(gpu);
 			if (checkFunc(gpu))
 				return gpu;
 		}
@@ -183,13 +189,13 @@ namespace sh::render {
 
 	auto VulkanRenderer::GetSurfaceQueueFamily(VkPhysicalDevice gpu) -> std::optional<int>
 	{
-		assert(surface.GetSurface() != nullptr);
+		assert(surface->GetSurface() != nullptr);
 		assert(gpu != nullptr);
 		int idx = 0;
 		for (auto& prop : queueFamilies)
 		{
 			VkBool32 support = false;
-			vkGetPhysicalDeviceSurfaceSupportKHR(gpu, idx, surface.GetSurface(), &support);
+			vkGetPhysicalDeviceSurfaceSupportKHR(gpu, idx, surface->GetSurface(), &support);
 			if (support)
 				return idx;
 			++idx;
@@ -281,24 +287,29 @@ namespace sh::render {
 	{
 		window = &win;
 		winHandle = win.GetNativeHandle();
+
+		layers = std::make_unique<impl::VulkanLayer>();
+		surface = std::make_unique<impl::VulkanSurface>();
 		//VkResult::Success = 0
 
-		layers.Query();
-		if (layers.FindVulkanExtension(VK_KHR_SURFACE_EXTENSION_NAME))
+		if (layers->FindVulkanExtension(VK_KHR_SURFACE_EXTENSION_NAME))
 			requestedExtension.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 		else
 			return false;
 
-		if (layers.FindLayer(validationLayerName))
+		if (bEnableValidationLayers)
 		{
-			bFindValidationLayer = true;
-			requestedLayer.push_back(validationLayerName.c_str());
-			requestedExtension.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-			requestedExtension.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+			if (layers->FindLayer(validationLayerName))
+			{
+				bFindValidationLayer = true;
+				requestedLayer.push_back(validationLayerName.c_str());
+				requestedExtension.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+				requestedExtension.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+			}
 		}
 
 #if _WIN32
-		if (layers.FindVulkanExtension(VK_KHR_WIN32_SURFACE_EXTENSION_NAME))
+		if (layers->FindVulkanExtension(VK_KHR_WIN32_SURFACE_EXTENSION_NAME))
 			requestedExtension.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 		else
 			return false;
@@ -310,10 +321,11 @@ namespace sh::render {
 #endif
 		if (CreateInstance(requestedLayer, requestedExtension)) 
 			return false;
+		
+		if (bEnableValidationLayers)
+			InitDebugMessenger();
 
-		InitDebugMessenger();
-
-		if (!surface.CreateSurface(win, instance))
+		if (!surface->CreateSurface(win, instance))
 			return false;
 
 		if (GetPhysicalDevices())
@@ -345,20 +357,22 @@ namespace sh::render {
 		vkGetDeviceQueue(device, surfaceQueueIndex, 0, &surfaceQueue);
 		assert(surfaceQueue);
 
-		surface.CreateSwapChain(device);
+		surface->CreateSwapChain(device);
 
 		if (CreateCommandPool(graphicsQueueIndex)) 
 			return false;
 
+		isInit = true;
 		PrintLayer();
+
 		return true;
 	}
 
 	void VulkanRenderer::PrintLayer()
 	{
-		if (sh::core::Util::IsDebug())
+		//if (sh::core::Util::IsDebug())
 		{
-			for (auto& i : layers.GetLayerProperties())
+			for (auto& i : layers->GetLayerProperties())
 			{
 				fmt::print("LayerName: {} - {}\n", i.properties.layerName, i.properties.description);
 				for (auto& ext : i.extensions)
@@ -367,7 +381,7 @@ namespace sh::render {
 				}
 			}
 			fmt::print("-----GPU Layer------\n");
-			for (auto& i : layers.GetGPULayerProperties())
+			for (auto& i : layers->GetGPULayerProperties())
 			{
 				fmt::print("LayerName: {} - {}\n", i.properties.layerName, i.properties.description);
 				for (auto& ext : i.extensions)
@@ -376,14 +390,19 @@ namespace sh::render {
 				}
 			}
 			fmt::print("-----Vulkan Extensions-----\n");
-			for (auto& i : layers.GetVulkanExtensions())
+			for (auto& i : layers->GetVulkanExtensions())
 				fmt::print("ExtensionName: {}\n", i.extensionName);
 			fmt::print("-----GPU Extensions------\n");
-			for (auto& i : layers.GetGPUExtensions())
+			for (auto& i : layers->GetGPUExtensions())
 				fmt::print("ExtensionName: {}\n", i.extensionName);
 
 			fmt::print("Vulkan Renderer Init!\n");
 		}
+	}
+
+	bool VulkanRenderer::IsInit() const
+	{
+		return isInit;
 	}
 }//namespace
 

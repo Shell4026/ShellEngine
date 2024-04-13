@@ -1,9 +1,14 @@
-﻿#include "VulkanLayer.h"
+﻿#include "VulkanImpl/VulkanLayer.h"
 
 #include <cassert>
 namespace sh::render::impl
 {
 	VulkanLayer::VulkanLayer()
+	{
+		Query();
+	}
+
+	VulkanLayer::~VulkanLayer()
 	{
 
 	}

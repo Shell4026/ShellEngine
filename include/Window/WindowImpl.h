@@ -2,9 +2,10 @@
 
 #include "Export.h"
 
+#include "Event.h"
+
 #include <string>
 #include <queue>
-#include <Event.h>
 
 #ifdef _WIN32
 struct HWND__;

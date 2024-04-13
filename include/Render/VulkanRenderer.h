@@ -10,11 +10,15 @@
 #include <vector>
 #include <optional>
 #include <functional>
+#include <memory>
 
 namespace sh::render {
+	namespace impl
+	{
+		class VulkanLayer;
+		class VulkanSurface;
+	}
 	class SH_RENDER_API VulkanRenderer :
-		public Renderer, 
-		public sh::core::Singleton<VulkanRenderer> {
 		public IRenderer, public sh::core::INonCopyable{
 	private:
 		sh::window::Window* window;
@@ -23,8 +27,8 @@ namespace sh::render {
 		std::vector<const char*> requestedLayer;
 		std::vector<const char*> requestedExtension;
 
-		impl::VulkanSurface surface;
-		impl::VulkanLayer layers;
+		std::unique_ptr<impl::VulkanSurface> surface;
+		std::unique_ptr<impl::VulkanLayer> layers;
 
 		VkInstance instance;
 		VkPhysicalDevice gpu;
@@ -42,6 +46,7 @@ namespace sh::render {
 		uint32_t surfaceQueueIndex;
 		VkQueue surfaceQueue;
 
+		bool isInit : 1;
 		bool bFindValidationLayer : 1;
 		const bool bEnableValidationLayers : 1;
 	private:
@@ -74,5 +79,7 @@ namespace sh::render {
 
 		bool Init(sh::window::Window& win) override;
 		void Clean() override;
+
+		bool IsInit() const override;
 	};
 }//namespace

@@ -1,6 +1,6 @@
-﻿#include "VulkanSurface.h"
+﻿#include "VulkanImpl/VulkanSurface.h"
 
-#include "../Window/Window.h"
+#include "Window/Window.h"
 
 #include <cassert>
 #if _WIN32
@@ -10,12 +10,15 @@
 namespace sh::render::impl
 {
 	VulkanSurface::VulkanSurface() :
-		window(nullptr), surface(nullptr), instance(nullptr), details()
+		window(nullptr), device(nullptr),
+		surface(nullptr), instance(nullptr), details()
 	{
 	}
 
 	VulkanSurface::~VulkanSurface()
 	{
+		if(device)
+			DestroySwapChain(device);
 		DestroySurface();
 	}
 
@@ -105,6 +108,8 @@ namespace sh::render::impl
 
 	bool VulkanSurface::CreateSwapChain(VkDevice device)
 	{
+		this->device = device;
+
 		VkSurfaceFormatKHR surfaceFormat = SelectFormat();
 		VkPresentModeKHR presentMode = SelectPresentMode();
 		VkExtent2D size = details.capabilities.currentExtent;
@@ -173,10 +178,10 @@ namespace sh::render::impl
 
 	void VulkanSurface::DestroySwapChain(VkDevice device)
 	{
-		assert(device);
 		for (auto imageView : swapChainImageViews) {
 			vkDestroyImageView(device, imageView, nullptr);
 		}
+		swapChainImageViews.clear();
 
 		if (swapChain)
 		{

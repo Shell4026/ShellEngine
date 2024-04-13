@@ -10,12 +10,10 @@ namespace sh::window
 {
 	class Window;
 }
-namespace sh::render { class VulkanRenderer; }
 
 namespace sh::render::impl {
 	class SH_RENDER_API VulkanSurface
 	{
-		friend VulkanRenderer;
 	public:
 		struct SwapChainSupportDetails {
 			VkSurfaceCapabilitiesKHR capabilities;
@@ -24,6 +22,7 @@ namespace sh::render::impl {
 		};
 	private:
 		sh::window::Window* window;
+		VkDevice device;
 
 		VkSurfaceKHR surface;
 		VkInstance instance;
@@ -35,13 +34,12 @@ namespace sh::render::impl {
 
 		SwapChainSupportDetails details;
 	private:
-		VulkanSurface();
-
 		void QuerySwapChainDetails(VkPhysicalDevice gpu);
 
 		auto SelectFormat()->VkSurfaceFormatKHR;
 		auto SelectPresentMode()->VkPresentModeKHR;
 	public:
+		VulkanSurface();
 		~VulkanSurface();
 
 		bool CreateSurface(sh::window::Window& window, VkInstance instance);

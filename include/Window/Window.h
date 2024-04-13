@@ -2,10 +2,11 @@
 #pragma warning(disable: 4251)
 #include "WindowImpl.h"
 
+#include "Event.h"
+
 #include <memory>
 #include <string_view>
 #include <queue>
-#include <Event.h>
 
 namespace sh::window {
 	class SH_WINDOW_API Window {

@@ -7,13 +7,10 @@
 #include <vector>
 #include <string_view>
 
-namespace sh::render { class VulkanRenderer; }
-
 namespace sh::render::impl
 {
 	class VulkanLayer
 	{
-		friend VulkanRenderer;
 	public:
 		struct LayerProperties {
 			VkLayerProperties properties;
@@ -30,12 +27,13 @@ namespace sh::render::impl
 		std::vector<LayerProperties> gpuLayers;
 		std::vector<VkExtensionProperties> gpuExtensions;
 	private:
-		SH_RENDER_API VulkanLayer();
-
 		SH_RENDER_API auto QueryLayerExtensions(LayerProperties& layerProp, VkPhysicalDevice gpu = nullptr)->VkResult;
 		SH_RENDER_API auto QueryVulkanExtensions()->VkResult;
 		SH_RENDER_API auto QueryGPUExtensions(VkPhysicalDevice gpu)->VkResult;
 	public:
+		SH_RENDER_API VulkanLayer();
+		SH_RENDER_API ~VulkanLayer();
+
 		SH_RENDER_API void Query(VkPhysicalDevice gpu = nullptr);
 
 		SH_RENDER_API bool FindLayer(std::string_view layerName, VkPhysicalDevice gpu = nullptr);

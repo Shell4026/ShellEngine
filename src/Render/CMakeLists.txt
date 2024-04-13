@@ -1,7 +1,8 @@
 ﻿message("Build ShellEngine Renderer")
 file(GLOB SRC CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+file(GLOB VULKAN_SRC CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/VulkanImpl/*.cpp)
 
-add_library(ShellEngineRender SHARED ${SRC})
+add_library(ShellEngineRender SHARED ${SRC} ${VULKAN_SRC})
 add_library(ShellEngine::Render ALIAS ShellEngineRender)
 
 target_link_libraries(ShellEngineRender PUBLIC ShellEngine::Core)
@@ -20,5 +21,6 @@ endif()
 target_link_libraries(ShellEngineRender PUBLIC Vulkan::Vulkan)
 
 target_include_directories(ShellEngineRender PUBLIC ${Vulkan_INCLUDE_DIR})
-target_include_directories(ShellEngineRender PUBLIC ${CMAKE_SOURCE_DIR}/include/Render)
-
+target_include_directories(ShellEngineRender PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(ShellEngineRender PRIVATE ${CMAKE_SOURCE_DIR}/include/Render)
+target_include_directories(ShellEngineRender PRIVATE ${CMAKE_SOURCE_DIR}/include/Render/VulkanImpl)

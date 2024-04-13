@@ -21,7 +21,7 @@ if(UNIX)
 	target_link_libraries(ShellEngineWindow PRIVATE ${X11_LIBRARIES})
 endif()
 
-target_include_directories(ShellEngineWindow PUBLIC ${CMAKE_SOURCE_DIR}/include/Window)
+target_include_directories(ShellEngineWindow PRIVATE ${CMAKE_SOURCE_DIR}/include/Window)
 
 target_link_libraries(ShellEngineWindow PUBLIC ShellEngine::Core)
 
