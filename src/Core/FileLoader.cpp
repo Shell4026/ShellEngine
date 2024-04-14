@@ -2,6 +2,8 @@
 
 #include <array>
 #include <algorithm>
+#include <stdio.h>
+#include <string>
 namespace sh::core
 {
 	FileLoader::~FileLoader()
@@ -14,7 +16,7 @@ namespace sh::core
 		std::vector<unsigned char> data;
 		
 		FILE* file;
-		fopen_s(&file, dir.data(), "rb");
+		file = fopen(dir.data(), "rb");
 		if (!file)
 			return {};
 
@@ -34,7 +36,7 @@ namespace sh::core
 		std::string strData;
 
 		FILE* file;
-		fopen_s(&file, dir.data(), "r");
+		file = fopen(dir.data(), "r");
 		if (!file)
 			return {};
 

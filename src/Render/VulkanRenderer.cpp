@@ -314,7 +314,7 @@ namespace sh::render {
 		else
 			return false;
 #elif __linux__
-		if (layers.FindVulkanExtension(VK_KHR_XLIB_SURFACE_EXTENSION_NAME))
+		if (layers->FindVulkanExtension(VK_KHR_XLIB_SURFACE_EXTENSION_NAME))
 			requestedExtension.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
 		else
 			return false;
