@@ -197,12 +197,25 @@ namespace sh::render::impl
 		return !details.formats.empty() && !details.presentModes.empty();
 	}
 
-	auto VulkanSurface::GetSurface() -> VkSurfaceKHR
+	auto VulkanSurface::GetDevice() const -> const VkDevice
+	{
+		return device;
+	}
+
+	auto VulkanSurface::GetSurface() const -> const VkSurfaceKHR
 	{
 		return surface;
 	}
 	auto VulkanSurface::GetSwapChainDetail() const -> const SwapChainSupportDetails&
 	{
 		return details;
+	}
+	auto VulkanSurface::GetSwapChainSize() const -> const VkExtent2D
+	{
+		return swapChainSize;
+	}
+	auto VulkanSurface::GetSwapChainImageFormat() const -> const VkFormat
+	{
+		return swapChainImageFormat;
 	}
 }

@@ -29,7 +29,7 @@ namespace sh::render
 			return nullptr;
 
 		builder->SetData(ShaderBuilder::shaderType::Vertex, std::move(vertData.value()));
-		builder->SetData(ShaderBuilder::shaderType::Vertex, std::move(fragData.value()));
+		builder->SetData(ShaderBuilder::shaderType::Fragment, std::move(fragData.value()));
 
 		return builder->Build();
 	}

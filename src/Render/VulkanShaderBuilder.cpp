@@ -20,6 +20,8 @@ namespace sh::render
 		
 		VkShaderModule vertShader{nullptr}, fragShader{nullptr};
 
+		assert(vertShaderData.data());
+		assert(fragShaderData.data());
 		//Vertex shader
 		VkShaderModuleCreateInfo info{};
 		info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -40,9 +42,9 @@ namespace sh::render
 		if (result != VkResult::VK_SUCCESS)
 			return nullptr;
 
-		std::unique_ptr<Shader> retShader = std::make_unique<impl::VulkanShader>(device);
-		static_cast<impl::VulkanShader*>(retShader.get())->SetVertexShader(vertShader);
-		static_cast<impl::VulkanShader*>(retShader.get())->SetFragmentShader(fragShader);
+		std::unique_ptr<Shader> retShader = std::make_unique<VulkanShader>(device);
+		static_cast<VulkanShader*>(retShader.get())->SetVertexShader(vertShader);
+		static_cast<VulkanShader*>(retShader.get())->SetFragmentShader(fragShader);
 
 		return retShader;
 	}

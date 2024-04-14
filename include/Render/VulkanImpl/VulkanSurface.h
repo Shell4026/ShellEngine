@@ -50,7 +50,11 @@ namespace sh::render::impl {
 		
 		bool IsSwapChainSupport(VkPhysicalDevice gpu);
 
-		auto GetSurface()->VkSurfaceKHR;
+		auto GetDevice() const -> const VkDevice;
+		auto GetSurface() const -> const VkSurfaceKHR;
+
 		auto GetSwapChainDetail() const -> const SwapChainSupportDetails&;
+		auto GetSwapChainSize() const -> const VkExtent2D;
+		auto GetSwapChainImageFormat() const -> const VkFormat;
 	};
 }

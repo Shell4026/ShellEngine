@@ -17,6 +17,7 @@ namespace sh::render {
 	{
 		class VulkanLayer;
 		class VulkanSurface;
+		class VulkanPipeline;
 	}
 	class SH_RENDER_API VulkanRenderer :
 		public IRenderer, public sh::core::INonCopyable{
@@ -29,6 +30,7 @@ namespace sh::render {
 
 		std::unique_ptr<impl::VulkanSurface> surface;
 		std::unique_ptr<impl::VulkanLayer> layers;
+		std::unique_ptr<impl::VulkanPipeline> pipeline;
 
 		VkInstance instance;
 		VkPhysicalDevice gpu;

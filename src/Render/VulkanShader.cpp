@@ -2,13 +2,17 @@
 
 #include <cassert>
 
-namespace sh::render::impl
+namespace sh::render
 {
 	VulkanShader::VulkanShader(VkDevice device) :
 		Shader(ShaderType::SPIR),
 		vertShader(nullptr), fragShader(nullptr),
 		device(device)
 	{
+	}
+	VulkanShader::~VulkanShader()
+	{
+		Clean();
 	}
 
 	void VulkanShader::SetVertexShader(VkShaderModule shader)
@@ -34,5 +38,15 @@ namespace sh::render::impl
 			vkDestroyShaderModule(device, fragShader, nullptr);
 			fragShader = nullptr;
 		}
+	}
+
+	auto VulkanShader::GetVertexShader() const -> const VkShaderModule
+	{
+		return vertShader;
+	}
+
+	auto VulkanShader::GetFragmentShader() const -> const VkShaderModule
+	{
+		return fragShader;
 	}
 }

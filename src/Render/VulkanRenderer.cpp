@@ -4,6 +4,11 @@
 #include "../Core/Util.h"
 #include "VulkanImpl/VulkanLayer.h"
 #include "VulkanImpl/VulkanSurface.h"
+#include "VulkanImpl/VulkanPipeline.h"
+
+#include "VulkanShader.h"
+#include "ShaderLoader.h"
+#include "VulkanShaderBuilder.h"
 
 #include <cassert>
 #include <set>
@@ -28,6 +33,8 @@ namespace sh::render {
 	void VulkanRenderer::Clean()
 	{
 		DestroyCommandPool();
+
+		pipeline.reset();
 		surface.reset();
 		DestroyDevice();
 
@@ -290,6 +297,7 @@ namespace sh::render {
 
 		layers = std::make_unique<impl::VulkanLayer>();
 		surface = std::make_unique<impl::VulkanSurface>();
+		pipeline = std::make_unique<impl::VulkanPipeline>();
 		//VkResult::Success = 0
 
 		if (layers->FindVulkanExtension(VK_KHR_SURFACE_EXTENSION_NAME))
@@ -359,6 +367,13 @@ namespace sh::render {
 
 		surface->CreateSwapChain(device);
 
+		VulkanShaderBuilder shaderBuilder{ device };
+		ShaderLoader loader{ &shaderBuilder };
+		auto shader = loader.LoadShader<VulkanShader>("vert.spv", "frag.spv");
+		assert(shader.get());
+
+		pipeline->CreateRenderPass(surface.get());
+		pipeline->CreateGraphicsPipeline(shader.get(), surface.get());
 		if (CreateCommandPool(graphicsQueueIndex)) 
 			return false;
 
