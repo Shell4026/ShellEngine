@@ -9,8 +9,10 @@ namespace sh::core
 
 	}
 
-	auto FileLoader::LoadBinary(std::string_view dir) -> std::optional<const std::reference_wrapper<std::vector<unsigned char>>>
+	auto FileLoader::LoadBinary(std::string_view dir) -> std::optional<std::vector<unsigned char>>
 	{
+		std::vector<unsigned char> data;
+		
 		FILE* file;
 		fopen_s(&file, dir.data(), "rb");
 		if (!file)
@@ -25,10 +27,12 @@ namespace sh::core
 		}
 		fclose(file);
 
-		return std::ref(data);
+		return data;
 	}
-	auto FileLoader::LoadText(std::string_view dir) ->std::optional<const std::reference_wrapper<std::string>>
+	auto FileLoader::LoadText(std::string_view dir) ->std::optional<std::string>
 	{
+		std::string strData;
+
 		FILE* file;
 		fopen_s(&file, dir.data(), "r");
 		if (!file)
@@ -43,6 +47,6 @@ namespace sh::core
 		}
 		fclose(file);
 
-		return std::ref(strData);
+		return strData;
 	}
 }
