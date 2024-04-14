@@ -33,8 +33,6 @@ namespace sh::render::impl
 
 	void VulkanPipeline::CreateRenderPass(const VulkanSurface* surface)
 	{
-		device = surface->GetDevice();
-
 		VkAttachmentDescription colorAttachment{};
 		colorAttachment.format = surface->GetSwapChainImageFormat();
 		colorAttachment.samples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
@@ -67,9 +65,11 @@ namespace sh::render::impl
 		assert(result == VkResult::VK_SUCCESS);
 	}
 
-	void VulkanPipeline::CreateGraphicsPipeline(const VulkanShader* shader, const VulkanSurface* surface)
+	auto VulkanPipeline::CreateGraphicsPipeline(const VulkanShader* shader, const VulkanSurface* surface) -> VkResult
 	{
 		device = surface->GetDevice();
+
+		CreateRenderPass(surface);
 
 		VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
 		vertShaderStageInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
@@ -189,12 +189,10 @@ namespace sh::render::impl
 		pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
 		VkResult result = vkCreatePipelineLayout(surface->GetDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout);
-		if(result != VkResult::VK_SUCCESS)
-		{
-			return;
-		}
 		assert(result == VkResult::VK_SUCCESS);
-
+		if(result != VkResult::VK_SUCCESS)
+			return result;
+		
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 		pipelineInfo.stageCount = 2;
@@ -215,5 +213,6 @@ namespace sh::render::impl
 
 		result = vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineInfo, nullptr, &pipeline);
 		assert(result == VkResult::VK_SUCCESS);
+		return result;
 	}
 }

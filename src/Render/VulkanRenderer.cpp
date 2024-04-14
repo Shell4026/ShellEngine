@@ -298,7 +298,6 @@ namespace sh::render {
 		layers = std::make_unique<impl::VulkanLayer>();
 		surface = std::make_unique<impl::VulkanSurface>();
 		pipeline = std::make_unique<impl::VulkanPipeline>();
-		//VkResult::Success = 0
 
 		if (layers->FindVulkanExtension(VK_KHR_SURFACE_EXTENSION_NAME))
 			requestedExtension.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
@@ -327,7 +326,7 @@ namespace sh::render {
 		else
 			return false;
 #endif
-		if (CreateInstance(requestedLayer, requestedExtension)) 
+		if (CreateInstance(requestedLayer, requestedExtension) != VkResult::VK_SUCCESS)
 			return false;
 		
 		if (bEnableValidationLayers)
@@ -336,7 +335,7 @@ namespace sh::render {
 		if (!surface->CreateSurface(win, instance))
 			return false;
 
-		if (GetPhysicalDevices())
+		if (GetPhysicalDevices() != VkResult::VK_SUCCESS)
 			return false;
 
 		auto suitableFunc
@@ -357,7 +356,7 @@ namespace sh::render {
 		if (auto idx = GetSurfaceQueueFamily(gpu); !idx.has_value()) return false;
 		else surfaceQueueIndex = *idx;
 
-		if (CreateDevice(gpu)) 
+		if (CreateDevice(gpu) != VkResult::VK_SUCCESS)
 			return false;
 
 		vkGetDeviceQueue(device, graphicsQueueIndex, 0, &graphicsQueue);
@@ -372,8 +371,9 @@ namespace sh::render {
 		auto shader = loader.LoadShader<VulkanShader>("vert.spv", "frag.spv");
 		assert(shader.get());
 
-		pipeline->CreateRenderPass(surface.get());
-		pipeline->CreateGraphicsPipeline(shader.get(), surface.get());
+		if (pipeline->CreateGraphicsPipeline(shader.get(), surface.get()) != VkResult::VK_SUCCESS)
+			return false;
+
 		if (CreateCommandPool(graphicsQueueIndex)) 
 			return false;
 

@@ -17,11 +17,12 @@ namespace sh::render::impl
 		VkPipeline pipeline;
 
 		VkDevice device;
+	private:
+		void CreateRenderPass(const VulkanSurface* surface);
 	public:
 		~VulkanPipeline();
 
-		void CreateRenderPass(const VulkanSurface* surface);
-		void CreateGraphicsPipeline(const VulkanShader* shader, const VulkanSurface* surface);
+		auto CreateGraphicsPipeline(const VulkanShader* shader, const VulkanSurface* surface) -> VkResult;
 		void Destroy();
 	};
 }
