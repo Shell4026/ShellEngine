@@ -5,7 +5,6 @@
 #include "Window/Window.h"
 #include "Render/VulkanRenderer.h"
 #include "Core/Reflaction.hpp"
-
 #include <Core/Util.h>
 #include <cassert>
 class Base {
