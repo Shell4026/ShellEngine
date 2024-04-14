@@ -215,4 +215,14 @@ namespace sh::render::impl
 		assert(result == VkResult::VK_SUCCESS);
 		return result;
 	}
+
+	auto VulkanPipeline::GetRenderPass() const -> VkRenderPass
+	{
+		return renderPass;
+	}
+
+	auto VulkanPipeline::GetPipeline() const -> VkPipeline
+	{
+		return pipeline;
+	}
 }

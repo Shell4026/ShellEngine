@@ -206,6 +206,11 @@ namespace sh::render::impl
 	{
 		return surface;
 	}
+
+	auto VulkanSurface::GetSwapChain() const -> const VkSwapchainKHR
+	{
+		return swapChain;
+	}
 	auto VulkanSurface::GetSwapChainDetail() const -> const SwapChainSupportDetails&
 	{
 		return details;
@@ -217,5 +222,13 @@ namespace sh::render::impl
 	auto VulkanSurface::GetSwapChainImageFormat() const -> const VkFormat
 	{
 		return swapChainImageFormat;
+	}
+	auto VulkanSurface::GetSwapChainImages() const -> const std::vector<VkImage>&
+	{
+		return swapChainImages;
+	}
+	auto VulkanSurface::GetSwapChainImageViews() const -> const std::vector<VkImageView>&
+	{
+		return swapChainImageViews;
 	}
 }

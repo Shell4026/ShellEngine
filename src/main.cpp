@@ -102,13 +102,17 @@ int main(int arg, char* args[]) {
 					std::cout << "Left\n";
 				break;
 			case sh::window::Event::EventType::WindowFocus:
+				renderer.Pause(false);
 				std::cout << "FocusIn\n";
 				break;
 			case sh::window::Event::EventType::WindowFocusOut:
+				renderer.Pause(true);
 				std::cout << "FocusOut\n";
 				break;
 			}
 		}
+
+		renderer.Render();
 	}
 	return 0;
 }

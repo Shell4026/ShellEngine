@@ -5,6 +5,7 @@
 #include "VulkanImpl/VulkanLayer.h"
 #include "VulkanImpl/VulkanSurface.h"
 #include "VulkanImpl/VulkanPipeline.h"
+#include "VulkanImpl/VulkanCommandBuffer.h"
 
 #include "VulkanShader.h"
 #include "ShaderLoader.h"
@@ -12,7 +13,8 @@
 
 #include <cassert>
 #include <set>
-
+#include <cstdint>
+#include <limits>
 
 namespace sh::render {
 	VulkanRenderer::VulkanRenderer() :
@@ -20,7 +22,7 @@ namespace sh::render {
 		graphicsQueueIndex(-1), surfaceQueueIndex(-1),
 		graphicsQueue(nullptr), surfaceQueue(nullptr),
 		debugMessenger(nullptr), validationLayerName("VK_LAYER_KHRONOS_validation"),
-		isInit(false), bFindValidationLayer(false), bEnableValidationLayers(sh::core::Util::IsDebug())
+		isInit(false), bPause(false), bFindValidationLayer(false), bEnableValidationLayers(sh::core::Util::IsDebug())
 	{
 	}
 
@@ -32,8 +34,17 @@ namespace sh::render {
 
 	void VulkanRenderer::Clean()
 	{
+		if (!device)
+			return;
+
+		vkDeviceWaitIdle(device);
+
+		DestroySyncObjects();
+
+		cmdBuffer->Reset();
 		DestroyCommandPool();
 
+		DestroyFramebuffer();
 		pipeline.reset();
 		surface.reset();
 		DestroyDevice();
@@ -261,6 +272,48 @@ namespace sh::render {
 		}
 	}
 
+	auto VulkanRenderer::CreateFramebuffer() -> VkResult
+	{
+		auto& views = surface->GetSwapChainImageViews();
+		framebuffers.resize(views.size());
+
+		VkResult result;
+		for (size_t i = 0; i < views.size(); i++) {
+			VkImageView attachments[] = {
+				views[i]
+			};
+
+			VkFramebufferCreateInfo framebufferInfo{};
+			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			framebufferInfo.renderPass = pipeline->GetRenderPass();
+			framebufferInfo.attachmentCount = 1;
+			framebufferInfo.pAttachments = attachments;
+			framebufferInfo.width = surface->GetSwapChainSize().width;
+			framebufferInfo.height = surface->GetSwapChainSize().height;
+			framebufferInfo.layers = 1;
+
+			result = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffers[i]);
+			assert(result == VkResult::VK_SUCCESS);
+			if (result != VkResult::VK_SUCCESS)
+				return result;
+		}
+
+		return result;
+	}
+
+	void VulkanRenderer::DestroyFramebuffer()
+	{
+		for (auto framebuffer : framebuffers)
+		{
+			if (!framebuffer)
+				continue;
+
+			vkDestroyFramebuffer(device, framebuffer, nullptr);
+			framebuffer = nullptr;
+		}
+		framebuffers.clear();
+	}
+
 	auto VulkanRenderer::CreateCommandPool(uint32_t queue) -> VkResult
 	{
 		VkCommandPoolCreateInfo poolInfo = {};
@@ -288,6 +341,41 @@ namespace sh::render {
 	auto VulkanRenderer::ResetCommandPool(uint32_t queue) -> VkResult
 	{
 		return vkResetCommandPool(device, cmdPool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
+	}
+
+	auto VulkanRenderer::CreateSyncObjects() -> VkResult
+	{
+		VkSemaphoreCreateInfo semaphoreInfo{};
+		semaphoreInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+		VkFenceCreateInfo fenceInfo{};
+		fenceInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		fenceInfo.flags = VkFenceCreateFlagBits::VK_FENCE_CREATE_SIGNALED_BIT; //시작부터 신호를 받음
+
+		VkResult result;
+		result = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore);
+		assert(result == VkResult::VK_SUCCESS);
+		if (result != VkResult::VK_SUCCESS)
+			return result;
+
+		result = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore);
+		assert(result == VkResult::VK_SUCCESS);
+		if (result != VkResult::VK_SUCCESS)
+			return result;
+
+		result = vkCreateFence(device, &fenceInfo, nullptr, &inFlightFence);
+		assert(result == VkResult::VK_SUCCESS);
+		if (result != VkResult::VK_SUCCESS)
+			return result;
+
+		return result;
+	}
+
+	void VulkanRenderer::DestroySyncObjects()
+	{
+		vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
+		vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
+		vkDestroyFence(device, inFlightFence, nullptr);
 	}
 
 	bool VulkanRenderer::Init(sh::window::Window& win)
@@ -374,7 +462,16 @@ namespace sh::render {
 		if (pipeline->CreateGraphicsPipeline(shader.get(), surface.get()) != VkResult::VK_SUCCESS)
 			return false;
 
+		if (CreateFramebuffer() != VkResult::VK_SUCCESS)
+			return false;
+
 		if (CreateCommandPool(graphicsQueueIndex)) 
+			return false;
+
+		cmdBuffer = std::make_unique<impl::VulkanCommandBuffer>(device, cmdPool);
+		cmdBuffer->Create();
+
+		if (CreateSyncObjects() != VkResult::VK_SUCCESS)
 			return false;
 
 		isInit = true;
@@ -418,6 +515,89 @@ namespace sh::render {
 	bool VulkanRenderer::IsInit() const
 	{
 		return isInit;
+	}
+
+	void VulkanRenderer::Render()
+	{
+		if (!isInit || bPause)
+			return;
+
+		vkWaitForFences(device, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
+		vkResetFences(device, 1, &inFlightFence);
+
+		uint32_t imgIdx;
+		VkResult result = vkAcquireNextImageKHR(device, surface->GetSwapChain(), UINT64_MAX, imageAvailableSemaphore, nullptr, &imgIdx);
+		assert(result == VkResult::VK_SUCCESS);
+
+		cmdBuffer->Reset();
+
+		VkCommandBuffer buffer = cmdBuffer->GetCommandBuffer();
+
+		VkSubmitInfo submitInfo{};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+		VkSemaphore waitSemaphores[] = { imageAvailableSemaphore };
+		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+		submitInfo.waitSemaphoreCount = 1;
+		submitInfo.pWaitSemaphores = waitSemaphores;
+		submitInfo.pWaitDstStageMask = waitStages;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &buffer;
+		VkSemaphore signalSemaphores[] = { renderFinishedSemaphore };
+		submitInfo.signalSemaphoreCount = 1;
+		submitInfo.pSignalSemaphores = signalSemaphores;
+
+		cmdBuffer->Submit(graphicsQueue, [&]()
+			{
+				VkRenderPassBeginInfo renderPassInfo{};
+				VkClearValue clearColor = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
+				renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+				renderPassInfo.renderPass = pipeline->GetRenderPass();
+				renderPassInfo.framebuffer = framebuffers[imgIdx];
+				renderPassInfo.renderArea.offset = { 0, 0 };
+				renderPassInfo.renderArea.extent = surface->GetSwapChainSize();
+				renderPassInfo.clearValueCount = 1;
+				renderPassInfo.pClearValues = &clearColor;
+
+				vkCmdBeginRenderPass(buffer, &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
+				vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetPipeline());
+
+				VkViewport viewport{};
+				viewport.x = 0.0f;
+				viewport.y = 0.0f;
+				viewport.width = static_cast<float>(surface->GetSwapChainSize().width);
+				viewport.height = static_cast<float>(surface->GetSwapChainSize().height);
+				viewport.minDepth = 0.0f;
+				viewport.maxDepth = 1.0f;
+				vkCmdSetViewport(buffer, 0, 1, &viewport);
+
+				VkRect2D scissor{};
+				scissor.offset = { 0, 0 };
+				scissor.extent = surface->GetSwapChainSize();
+				vkCmdSetScissor(buffer, 0, 1, &scissor);
+
+				vkCmdDraw(buffer, 3, 1, 0, 0);
+				vkCmdEndRenderPass(buffer);
+			},
+			&submitInfo, inFlightFence
+		);
+
+		VkPresentInfoKHR presentInfo{};
+		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+		presentInfo.waitSemaphoreCount = 1;
+		presentInfo.pWaitSemaphores = signalSemaphores;
+		VkSwapchainKHR swapChains[] = { surface->GetSwapChain() };
+		presentInfo.swapchainCount = 1;
+		presentInfo.pSwapchains = swapChains;
+		presentInfo.pImageIndices = &imgIdx;
+		presentInfo.pResults = nullptr;
+
+		vkQueuePresentKHR(surfaceQueue, &presentInfo);
+	}
+
+	void VulkanRenderer::Pause(bool b)
+	{
+		bPause = b;
 	}
 }//namespace
 

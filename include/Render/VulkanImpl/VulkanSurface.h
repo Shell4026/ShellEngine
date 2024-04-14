@@ -1,5 +1,4 @@
 ﻿#pragma once
-#pragma warning(disable: 4251)
 
 #include "Export.h"
 
@@ -12,7 +11,7 @@ namespace sh::window
 }
 
 namespace sh::render::impl {
-	class SH_RENDER_API VulkanSurface
+	class VulkanSurface
 	{
 	public:
 		struct SwapChainSupportDetails {
@@ -34,27 +33,31 @@ namespace sh::render::impl {
 
 		SwapChainSupportDetails details;
 	private:
-		void QuerySwapChainDetails(VkPhysicalDevice gpu);
+		SH_RENDER_API void QuerySwapChainDetails(VkPhysicalDevice gpu);
 
-		auto SelectFormat()->VkSurfaceFormatKHR;
-		auto SelectPresentMode()->VkPresentModeKHR;
+		SH_RENDER_API auto SelectFormat()->VkSurfaceFormatKHR;
+		SH_RENDER_API auto SelectPresentMode()->VkPresentModeKHR;
 	public:
-		VulkanSurface();
-		~VulkanSurface();
+		SH_RENDER_API VulkanSurface();
+		SH_RENDER_API ~VulkanSurface();
 
-		bool CreateSurface(sh::window::Window& window, VkInstance instance);
-		void DestroySurface();
+		SH_RENDER_API bool CreateSurface(sh::window::Window& window, VkInstance instance);
+		SH_RENDER_API void DestroySurface();
 
-		bool CreateSwapChain(VkDevice device);
-		void DestroySwapChain(VkDevice device);
+		SH_RENDER_API bool CreateSwapChain(VkDevice device);
+		SH_RENDER_API void DestroySwapChain(VkDevice device);
 		
-		bool IsSwapChainSupport(VkPhysicalDevice gpu);
+		SH_RENDER_API bool IsSwapChainSupport(VkPhysicalDevice gpu);
 
-		auto GetDevice() const -> const VkDevice;
-		auto GetSurface() const -> const VkSurfaceKHR;
+		SH_RENDER_API auto GetDevice() const -> const VkDevice;
+		SH_RENDER_API auto GetSurface() const -> const VkSurfaceKHR;
 
-		auto GetSwapChainDetail() const -> const SwapChainSupportDetails&;
-		auto GetSwapChainSize() const -> const VkExtent2D;
-		auto GetSwapChainImageFormat() const -> const VkFormat;
+		SH_RENDER_API auto GetSwapChain() const -> const VkSwapchainKHR;
+		SH_RENDER_API auto GetSwapChainDetail() const -> const SwapChainSupportDetails&;
+		SH_RENDER_API auto GetSwapChainSize() const -> const VkExtent2D;
+		SH_RENDER_API auto GetSwapChainImageFormat() const -> const VkFormat;
+
+		SH_RENDER_API auto GetSwapChainImages() const -> const std::vector<VkImage>&;
+		SH_RENDER_API auto GetSwapChainImageViews() const -> const std::vector<VkImageView>&;
 	};
 }

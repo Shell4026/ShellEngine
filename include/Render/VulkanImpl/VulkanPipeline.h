@@ -24,5 +24,8 @@ namespace sh::render::impl
 
 		auto CreateGraphicsPipeline(const VulkanShader* shader, const VulkanSurface* surface) -> VkResult;
 		void Destroy();
+
+		auto GetRenderPass() const -> VkRenderPass;
+		auto GetPipeline() const -> VkPipeline;
 	};
 }

@@ -11,5 +11,8 @@ namespace sh::render {
 		virtual void Clean() = 0;
 
 		virtual bool IsInit() const = 0;
+
+		virtual void Render() = 0;
+		virtual void Pause(bool b) = 0;
 	};
 }

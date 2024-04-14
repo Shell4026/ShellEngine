@@ -1,36 +1,42 @@
-﻿#include "VulkanImpl/VulkanCommandBuffer.h"
+﻿#include "VulkanCommandBuffer.h"
 
 #include <cassert>
 
-namespace sh::render {
-	CommandBuffer::CommandBuffer(const VkDevice device, const VkCommandPool pool, const VkCommandBufferAllocateInfo* info) :
-		buffer(nullptr)
+namespace sh::render::impl {
+	VulkanCommandBuffer::VulkanCommandBuffer(VkDevice device, VkCommandPool pool) :
+		buffer(nullptr), device(device), cmdPool(pool)
+	{
+
+	}
+
+	VulkanCommandBuffer::~VulkanCommandBuffer()
+	{
+	}
+
+	auto VulkanCommandBuffer::Create(const VkCommandBufferAllocateInfo* info)->VkResult
 	{
 		VkResult result;
 		if (info)
 		{
 			result = vkAllocateCommandBuffers(device, info, &buffer);
 			assert(result == VkResult::VK_SUCCESS);
-			return;
+			return result;
 		}
 
 		VkCommandBufferAllocateInfo cmdInfo = {};
 		cmdInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 		cmdInfo.pNext = nullptr;
 		cmdInfo.level = VkCommandBufferLevel::VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-		cmdInfo.commandPool = pool;
+		cmdInfo.commandPool = cmdPool;
 		cmdInfo.commandBufferCount = 1;
 
-		result = vkAllocateCommandBuffers(device, info, &buffer);
+		result = vkAllocateCommandBuffers(device, &cmdInfo, &buffer);
 		assert(result == VkResult::VK_SUCCESS);
+
+		return result;
 	}
 
-	CommandBuffer::~CommandBuffer()
-	{
-		Reset();
-	}
-
-	auto CommandBuffer::Begin(VkCommandBufferBeginInfo* info) -> VkResult
+	auto VulkanCommandBuffer::Begin(VkCommandBufferBeginInfo* info) -> VkResult
 	{
 		assert(buffer);
 
@@ -58,14 +64,14 @@ namespace sh::render {
 		beginInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		beginInfo.pNext = nullptr;
 		beginInfo.flags = 0;
-		beginInfo.pInheritanceInfo = &inheritInfo;
+		beginInfo.pInheritanceInfo = nullptr; //inheritInfo
 
-		result = vkBeginCommandBuffer(buffer, info);
+		result = vkBeginCommandBuffer(buffer, &beginInfo);
 		assert(result == VkResult::VK_SUCCESS);
 		return result;
 	}
 
-	auto CommandBuffer::End() -> VkResult
+	auto VulkanCommandBuffer::End() -> VkResult
 	{
 		assert(buffer);
 
@@ -75,7 +81,7 @@ namespace sh::render {
 		return result;
 	}
 
-	auto CommandBuffer::Submit(VkQueue queue, std::function<void()>& commands, const VkSubmitInfo* info, const VkFence fence) -> VkResult
+	auto VulkanCommandBuffer::Submit(VkQueue queue, const std::function<void()>& commands, const VkSubmitInfo* info, VkFence fence) -> VkResult
 	{
 		VkResult result;
 		if (result = Begin(); result != VkResult::VK_SUCCESS) return result;
@@ -84,8 +90,7 @@ namespace sh::render {
 
 		if (info)
 		{
-			vkQueueSubmit(queue, 1, info, fence);
-			result = vkQueueWaitIdle(queue);
+			result = vkQueueSubmit(queue, 1, info, fence);
 			return result;
 		}
 
@@ -106,16 +111,21 @@ namespace sh::render {
 		return result;
 	}
 
-	auto CommandBuffer::Reset() -> VkResult
+	auto VulkanCommandBuffer::Reset() -> VkResult
 	{
-		assert(buffer);
 		if (buffer)
 		{
 			VkResult result = vkResetCommandBuffer(buffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
 			assert(result == VkResult::VK_SUCCESS);
+
 			return result;
 		}
 
 		return VkResult::VK_ERROR_UNKNOWN;
+	}
+
+	auto VulkanCommandBuffer::GetCommandBuffer() const -> VkCommandBuffer
+	{
+		return buffer;
 	}
 }
