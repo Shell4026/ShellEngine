@@ -385,7 +385,6 @@ namespace sh::render {
 
 		layers = std::make_unique<impl::VulkanLayer>();
 		surface = std::make_unique<impl::VulkanSurface>();
-		pipeline = std::make_unique<impl::VulkanPipeline>();
 
 		if (layers->FindVulkanExtension(VK_KHR_SURFACE_EXTENSION_NAME))
 			requestedExtension.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
@@ -459,7 +458,10 @@ namespace sh::render {
 		auto shader = loader.LoadShader<VulkanShader>("vert.spv", "frag.spv");
 		assert(shader.get());
 
-		if (pipeline->CreateGraphicsPipeline(shader.get(), surface.get()) != VkResult::VK_SUCCESS)
+		pipeline = std::make_unique<impl::VulkanPipeline>(shader.get());
+		pipeline->AddShaderStage(impl::VulkanPipeline::ShaderStage::Vertex);
+		pipeline->AddShaderStage(impl::VulkanPipeline::ShaderStage::Fragment);
+		if (pipeline->CreateGraphicsPipeline(surface.get()) != VkResult::VK_SUCCESS)
 			return false;
 
 		if (CreateFramebuffer() != VkResult::VK_SUCCESS)

@@ -6,6 +6,12 @@
 #include <cassert>
 namespace sh::render::impl
 {
+	VulkanPipeline::VulkanPipeline(const VulkanShader* shader) :
+		renderPass(nullptr), pipelineLayout(nullptr), pipeline(nullptr), device(nullptr),
+		shader(shader)
+	{
+	}
+
 	VulkanPipeline::~VulkanPipeline()
 	{
 		Destroy();
@@ -65,25 +71,32 @@ namespace sh::render::impl
 		assert(result == VkResult::VK_SUCCESS);
 	}
 
-	auto VulkanPipeline::CreateGraphicsPipeline(const VulkanShader* shader, const VulkanSurface* surface) -> VkResult
+	void VulkanPipeline::AddShaderStage(ShaderStage stage)
+	{
+		assert(shader);
+
+		VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
+		vertShaderStageInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		if (stage == ShaderStage::Vertex)
+		{
+			vertShaderStageInfo.stage = VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT;
+			vertShaderStageInfo.module = shader->GetVertexShader();
+		}
+		else if (stage == ShaderStage::Fragment)
+		{
+			vertShaderStageInfo.stage = VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT;
+			vertShaderStageInfo.module = shader->GetFragmentShader();
+		}
+		vertShaderStageInfo.pName = "main";
+
+		shaderStages.push_back(vertShaderStageInfo);
+	}
+
+	auto VulkanPipeline::CreateGraphicsPipeline(const VulkanSurface* surface) -> VkResult
 	{
 		device = surface->GetDevice();
 
 		CreateRenderPass(surface);
-
-		VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
-		vertShaderStageInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		vertShaderStageInfo.stage = VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT;
-		vertShaderStageInfo.module = shader->GetVertexShader();
-		vertShaderStageInfo.pName = "main";
-
-		VkPipelineShaderStageCreateInfo fragShaderStageInfo{};
-		fragShaderStageInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-		fragShaderStageInfo.stage = VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT;
-		fragShaderStageInfo.module = shader->GetFragmentShader();
-		fragShaderStageInfo.pName = "main";
-
-		VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo, fragShaderStageInfo };
 
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 		vertexInputInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -111,8 +124,8 @@ namespace sh::render::impl
 
 		std::vector<VkDynamicState> dynamicStates =
 		{
-			VK_DYNAMIC_STATE_VIEWPORT,
-			VK_DYNAMIC_STATE_SCISSOR
+			VkDynamicState::VK_DYNAMIC_STATE_VIEWPORT,
+			VkDynamicState::VK_DYNAMIC_STATE_SCISSOR,
 		};
 
 		VkPipelineDynamicStateCreateInfo dynamicState{};
@@ -195,8 +208,8 @@ namespace sh::render::impl
 		
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		pipelineInfo.stageCount = 2;
-		pipelineInfo.pStages = shaderStages;
+		pipelineInfo.stageCount = shaderStages.size();
+		pipelineInfo.pStages = shaderStages.data();
 		pipelineInfo.pVertexInputState = &vertexInputInfo;
 		pipelineInfo.pInputAssemblyState = &inputAssembly;
 		pipelineInfo.pViewportState = &viewportState;
