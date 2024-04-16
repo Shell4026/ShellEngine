@@ -457,6 +457,8 @@ namespace sh::render {
 		ShaderLoader loader{ &shaderBuilder };
 		auto shader = loader.LoadShader<VulkanShader>("vert.spv", "frag.spv");
 		assert(shader.get());
+		if (shader.get() == nullptr)
+			return false;
 
 		pipeline = std::make_unique<impl::VulkanPipeline>(shader.get());
 		pipeline->AddShaderStage(impl::VulkanPipeline::ShaderStage::Vertex);

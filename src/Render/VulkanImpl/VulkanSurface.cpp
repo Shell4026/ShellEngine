@@ -11,7 +11,7 @@ namespace sh::render::impl
 {
 	VulkanSurface::VulkanSurface() :
 		window(nullptr), device(nullptr),
-		surface(nullptr), instance(nullptr), details()
+		swapChain(nullptr), surface(nullptr), instance(nullptr), details()
 	{
 	}
 
@@ -20,6 +20,8 @@ namespace sh::render::impl
 		if(device)
 			DestroySwapChain(device);
 		DestroySurface();
+
+		details.presentModes.clear();
 	}
 
 	void VulkanSurface::QuerySwapChainDetails(VkPhysicalDevice gpu)

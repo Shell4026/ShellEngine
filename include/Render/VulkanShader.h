@@ -8,7 +8,7 @@
 
 namespace sh::render
 {
-	class SH_RENDER_API VulkanShader : public Shader
+	class VulkanShader : public Shader
 	{
 		SCLASS(VulkanShader)
 	private:
@@ -17,15 +17,15 @@ namespace sh::render
 
 		VkDevice device;
 	public:
-		VulkanShader(VkDevice device);
-		~VulkanShader();
+		SH_RENDER_API VulkanShader(VkDevice device);
+		SH_RENDER_API ~VulkanShader();
 
-		void SetVertexShader(VkShaderModule shader);
-		void SetFragmentShader(VkShaderModule shader);
+		SH_RENDER_API void SetVertexShader(VkShaderModule shader);
+		SH_RENDER_API void SetFragmentShader(VkShaderModule shader);
 
-		auto GetVertexShader() const -> const VkShaderModule;
-		auto GetFragmentShader() const -> const VkShaderModule;
+		SH_RENDER_API auto GetVertexShader() const -> const VkShaderModule;
+		SH_RENDER_API auto GetFragmentShader() const -> const VkShaderModule;
 
-		void Clean() override;
+		SH_RENDER_API void Clean() override;
 	};
 }

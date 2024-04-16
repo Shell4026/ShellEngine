@@ -4,7 +4,7 @@
 
 #include "VulkanConfig.h"
 #include <vector>
-
+#include <iostream>
 namespace sh::window
 {
 	class Window;
@@ -18,6 +18,9 @@ namespace sh::render::impl {
 			VkSurfaceCapabilitiesKHR capabilities;
 			std::vector<VkSurfaceFormatKHR> formats;
 			std::vector<VkPresentModeKHR> presentModes;
+
+			SwapChainSupportDetails(){}
+			~SwapChainSupportDetails(){}
 		};
 	private:
 		sh::window::Window* window;
@@ -33,10 +36,10 @@ namespace sh::render::impl {
 
 		SwapChainSupportDetails details;
 	private:
-		SH_RENDER_API void QuerySwapChainDetails(VkPhysicalDevice gpu);
+		void QuerySwapChainDetails(VkPhysicalDevice gpu);
 
-		SH_RENDER_API auto SelectFormat()->VkSurfaceFormatKHR;
-		SH_RENDER_API auto SelectPresentMode()->VkPresentModeKHR;
+		auto SelectFormat()->VkSurfaceFormatKHR;
+		auto SelectPresentMode()->VkPresentModeKHR;
 	public:
 		SH_RENDER_API VulkanSurface();
 		SH_RENDER_API ~VulkanSurface();

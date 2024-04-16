@@ -8,7 +8,7 @@ namespace sh::render
 {
 	class Shader;
 
-	class SH_RENDER_API ShaderBuilder
+	class ShaderBuilder
 	{
 	public:
 		enum class shaderType
@@ -20,10 +20,10 @@ namespace sh::render
 		std::vector<unsigned char> vertShaderData;
 		std::vector<unsigned char> fragShaderData;
 	public:
-		void SetData(shaderType type, const std::vector<unsigned char>& data);
-		void SetData(shaderType type, std::vector<unsigned char>&& data);
+		SH_RENDER_API void SetData(shaderType type, const std::vector<unsigned char>& data);
+		SH_RENDER_API void SetData(shaderType type, std::vector<unsigned char>&& data);
 
-		virtual auto Build() -> std::unique_ptr<Shader> = 0;
-		void ClearData();
+		SH_RENDER_API virtual auto Build() -> std::unique_ptr<Shader> = 0;
+		SH_RENDER_API void ClearData();
 	};
 }

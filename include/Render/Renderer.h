@@ -3,16 +3,16 @@
 #include "Export.h"
 #include "../Window/Window.h"
 namespace sh::render {
-	class SH_RENDER_API IRenderer {
+	class IRenderer {
 	public:
-		virtual ~IRenderer() = default;
+		SH_RENDER_API virtual ~IRenderer() = default;
 
-		virtual bool Init(sh::window::Window& win) = 0;
-		virtual void Clean() = 0;
+		SH_RENDER_API virtual bool Init(sh::window::Window& win) = 0;
+		SH_RENDER_API virtual void Clean() = 0;
 
-		virtual bool IsInit() const = 0;
+		SH_RENDER_API virtual bool IsInit() const = 0;
 
-		virtual void Render() = 0;
-		virtual void Pause(bool b) = 0;
+		SH_RENDER_API virtual void Render() = 0;
+		SH_RENDER_API virtual void Pause(bool b) = 0;
 	};
 }

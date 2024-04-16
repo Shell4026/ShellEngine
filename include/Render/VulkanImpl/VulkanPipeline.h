@@ -11,7 +11,7 @@ namespace sh::render::impl
 {
 	class VulkanSurface;
 
-	class SH_RENDER_API VulkanPipeline
+	class VulkanPipeline
 	{
 	public:
 		 enum class ShaderStage {
@@ -30,15 +30,15 @@ namespace sh::render::impl
 	private:
 		void CreateRenderPass(const VulkanSurface* surface);
 	public:
-		VulkanPipeline(const VulkanShader* shader);
-		~VulkanPipeline();
+		SH_RENDER_API VulkanPipeline(const VulkanShader* shader);
+		SH_RENDER_API ~VulkanPipeline();
 
-		auto CreateGraphicsPipeline(const VulkanSurface* surface) -> VkResult;
-		void Destroy();
+		SH_RENDER_API auto CreateGraphicsPipeline(const VulkanSurface* surface) -> VkResult;
+		SH_RENDER_API void Destroy();
 
-		auto GetRenderPass() const -> VkRenderPass;
-		auto GetPipeline() const -> VkPipeline;
+		SH_RENDER_API auto GetRenderPass() const -> VkRenderPass;
+		SH_RENDER_API auto GetPipeline() const -> VkPipeline;
 
-		void AddShaderStage(ShaderStage stage);
+		SH_RENDER_API void AddShaderStage(ShaderStage stage);
 	};
 }

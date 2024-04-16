@@ -9,14 +9,14 @@
 
 namespace sh::render
 {
-	class SH_RENDER_API VulkanShaderBuilder : public ShaderBuilder
+	class VulkanShaderBuilder : public ShaderBuilder
 	{
 	private:
 		VkDevice device;
 	public:
-		VulkanShaderBuilder(VkDevice device);
-		~VulkanShaderBuilder();
+		SH_RENDER_API VulkanShaderBuilder(VkDevice device);
+		SH_RENDER_API ~VulkanShaderBuilder();
 
-		auto Build()->std::unique_ptr<Shader> override;
+		SH_RENDER_API auto Build()->std::unique_ptr<Shader> override;
 	};
 }

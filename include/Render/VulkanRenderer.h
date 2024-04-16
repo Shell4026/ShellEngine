@@ -20,7 +20,7 @@ namespace sh::render {
 		class VulkanPipeline;
 		class VulkanCommandBuffer;
 	}
-	class SH_RENDER_API VulkanRenderer :
+	class VulkanRenderer :
 		public IRenderer, public sh::core::INonCopyable{
 	private:
 		sh::window::Window* window;
@@ -91,15 +91,15 @@ namespace sh::render {
 
 		void PrintLayer();
 	public:
-		VulkanRenderer();
-		~VulkanRenderer();
+		SH_RENDER_API VulkanRenderer();
+		SH_RENDER_API ~VulkanRenderer();
 
-		bool Init(sh::window::Window& win) override;
-		void Clean() override;
+		SH_RENDER_API bool Init(sh::window::Window& win) override;
+		SH_RENDER_API void Clean() override;
 
-		bool IsInit() const override;
+		SH_RENDER_API bool IsInit() const override;
 
-		void Render() override;
-		void Pause(bool b) override;
+		SH_RENDER_API void Render() override;
+		SH_RENDER_API void Pause(bool b) override;
 	};
 }//namespace

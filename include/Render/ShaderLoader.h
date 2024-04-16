@@ -16,16 +16,16 @@ namespace sh::render
 {
 	class ShaderBuilder;
 
-	class SH_RENDER_API ShaderLoader {
+	class ShaderLoader {
 	private:
 		std::unique_ptr<sh::core::FileLoader> loader;
 
 		ShaderBuilder* builder;
 	public:
-		ShaderLoader(ShaderBuilder* builder);
-		~ShaderLoader();
+		SH_RENDER_API ShaderLoader(ShaderBuilder* builder);
+		SH_RENDER_API ~ShaderLoader();
 
-		auto LoadShader(std::string_view vertexShader, std::string_view fragShader) -> std::unique_ptr<Shader>;
+		SH_RENDER_API auto LoadShader(std::string_view vertexShader, std::string_view fragShader) -> std::unique_ptr<Shader>;
 		template<typename T>
 		auto LoadShader(std::string_view vertexShader, std::string_view fragShader) -> std::unique_ptr<T>
 		{

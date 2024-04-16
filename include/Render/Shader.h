@@ -6,7 +6,7 @@
 
 namespace sh::render
 {
-	class SH_RENDER_API Shader
+	class Shader
 	{
 		SCLASS(Shader)
 	public:
@@ -20,8 +20,8 @@ namespace sh::render
 	protected:
 		Shader(ShaderType type);
 	public:
-		auto GetShaderType()->ShaderType;
+		SH_RENDER_API auto GetShaderType()->ShaderType;
 
-		virtual void Clean() = 0;
+		SH_RENDER_API virtual void Clean() = 0;
 	};
 }
