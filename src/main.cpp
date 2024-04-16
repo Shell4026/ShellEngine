@@ -78,7 +78,7 @@ int main(int arg, char* args[]) {
 			{
 			case sh::window::Event::EventType::Close:
 				renderer.Clean();
-				//window.Close();
+				window.Close();
 				break;
 			case sh::window::Event::EventType::MousePressed:
 				if (e.mouseType == sh::window::Event::MouseType::Left)
