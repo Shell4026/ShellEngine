@@ -20,6 +20,8 @@ namespace sh::render::impl
 			Fragment
 		};
 	private:
+		const VulkanSurface& surface;
+
 		VkRenderPass renderPass;
 		VkPipelineLayout pipelineLayout;
 		VkPipeline pipeline;
@@ -29,17 +31,19 @@ namespace sh::render::impl
 		const VulkanShader* shader;
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 	private:
-		void CreateRenderPass(const VulkanSurface* surface);
+		void CreateRenderPass();
 	public:
-		SH_RENDER_API VulkanPipeline(const VulkanShader* shader);
+		SH_RENDER_API VulkanPipeline(const VulkanSurface& surface, const VulkanShader* shader);
 		SH_RENDER_API ~VulkanPipeline();
 
-		SH_RENDER_API auto CreateGraphicsPipeline(const VulkanSurface* surface) -> VkResult;
+		SH_RENDER_API auto CreateGraphicsPipeline() -> VkResult;
 		SH_RENDER_API void Destroy();
 
 		SH_RENDER_API auto GetRenderPass() const -> VkRenderPass;
 		SH_RENDER_API auto GetPipeline() const -> VkPipeline;
 
 		SH_RENDER_API void AddShaderStage(ShaderStage stage);
+
+		SH_RENDER_API auto GetDevice() const -> VkDevice;
 	};
 }
