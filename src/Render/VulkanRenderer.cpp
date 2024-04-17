@@ -534,22 +534,12 @@ namespace sh::render {
 		assert(result == VkResult::VK_SUCCESS);
 
 		cmdBuffer->Reset();
+		cmdBuffer->SetWaitSemaphore({ imageAvailableSemaphore });
+		cmdBuffer->SetSignalSemaphore({ renderFinishedSemaphore });
+		cmdBuffer->SetWaitStage({ VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT });
 
 		VkCommandBuffer buffer = cmdBuffer->GetCommandBuffer();
 
-		VkSubmitInfo submitInfo{};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-		VkSemaphore waitSemaphores[] = { imageAvailableSemaphore };
-		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-		submitInfo.waitSemaphoreCount = 1;
-		submitInfo.pWaitSemaphores = waitSemaphores;
-		submitInfo.pWaitDstStageMask = waitStages;
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &buffer;
-		VkSemaphore signalSemaphores[] = { renderFinishedSemaphore };
-		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = signalSemaphores;
 
 		cmdBuffer->Submit(graphicsQueue, [&]()
 			{
@@ -583,13 +573,13 @@ namespace sh::render {
 				vkCmdDraw(buffer, 3, 1, 0, 0);
 				vkCmdEndRenderPass(buffer);
 			},
-			&submitInfo, inFlightFence
+			inFlightFence
 		);
 
 		VkPresentInfoKHR presentInfo{};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = signalSemaphores;
+		presentInfo.pWaitSemaphores = &renderFinishedSemaphore;
 		VkSwapchainKHR swapChains[] = { surface->GetSwapChain() };
 		presentInfo.swapchainCount = 1;
 		presentInfo.pSwapchains = swapChains;

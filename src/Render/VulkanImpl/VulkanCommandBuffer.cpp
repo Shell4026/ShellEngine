@@ -4,7 +4,7 @@
 
 namespace sh::render::impl {
 	VulkanCommandBuffer::VulkanCommandBuffer(VkDevice device, VkCommandPool pool) :
-		buffer(nullptr), device(device), cmdPool(pool)
+		buffer(nullptr), device(device), cmdPool(pool), waitStage(0)
 	{
 
 	}
@@ -81,29 +81,45 @@ namespace sh::render::impl {
 		return result;
 	}
 
-	auto VulkanCommandBuffer::Submit(VkQueue queue, const std::function<void()>& commands, const VkSubmitInfo* info, VkFence fence) -> VkResult
+	void VulkanCommandBuffer::SetWaitStage(const std::initializer_list<VkPipelineStageFlagBits> s)
+	{
+		for (auto i : s)
+			waitStage |= i;
+	}
+
+	void VulkanCommandBuffer::SetWaitSemaphore(const std::initializer_list<VkSemaphore> s)
+	{
+		waitSemaphores.resize(s.size());
+		int idx = 0;
+		for (auto i : s)
+			waitSemaphores[idx++] = i;
+	}
+
+	void VulkanCommandBuffer::SetSignalSemaphore(const std::initializer_list<VkSemaphore> s)
+	{
+		signalSemaphores.resize(s.size());
+		int idx = 0;
+		for (auto i : s)
+			signalSemaphores[idx++] = i;
+	}
+
+	auto VulkanCommandBuffer::Submit(VkQueue queue, const std::function<void()>& commands, VkFence fence) -> VkResult
 	{
 		VkResult result;
 		if (result = Begin(); result != VkResult::VK_SUCCESS) return result;
 		commands();
 		if (result = End(); result != VkResult::VK_SUCCESS) return result;
 
-		if (info)
-		{
-			result = vkQueueSubmit(queue, 1, info, fence);
-			return result;
-		}
-
 		VkSubmitInfo sinfo{};
 		sinfo.sType = VkStructureType::VK_STRUCTURE_TYPE_SUBMIT_INFO;
 		sinfo.pNext = nullptr;
-		sinfo.waitSemaphoreCount = 0;
-		sinfo.pWaitSemaphores = nullptr;
-		sinfo.pWaitDstStageMask = nullptr;
+		sinfo.pWaitDstStageMask = &waitStage;
 		sinfo.commandBufferCount = 1;
 		sinfo.pCommandBuffers = &buffer;
-		sinfo.signalSemaphoreCount = 0;
-		sinfo.pSignalSemaphores = nullptr;
+		sinfo.waitSemaphoreCount = static_cast<uint32_t>(waitSemaphores.size());
+		sinfo.pWaitSemaphores = waitSemaphores.data();
+		sinfo.signalSemaphoreCount = static_cast<uint32_t>(signalSemaphores.size());
+		sinfo.pSignalSemaphores = signalSemaphores.data();
 		
 		result = vkQueueSubmit(queue, 1, &sinfo, fence);
 		assert(result == VkResult::VK_SUCCESS);
@@ -113,6 +129,8 @@ namespace sh::render::impl {
 
 	auto VulkanCommandBuffer::Reset() -> VkResult
 	{
+		waitSemaphores.clear();
+		signalSemaphores.clear();
 		if (buffer)
 		{
 			VkResult result = vkResetCommandBuffer(buffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
