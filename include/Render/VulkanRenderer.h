@@ -19,6 +19,7 @@ namespace sh::render {
 		class VulkanSurface;
 		class VulkanPipeline;
 		class VulkanCommandBuffer;
+		class VulkanFramebuffer;
 	}
 	class VulkanRenderer :
 		public IRenderer, public sh::core::INonCopyable{
@@ -37,7 +38,7 @@ namespace sh::render {
 		VkInstance instance;
 		VkPhysicalDevice gpu;
 		VkDevice device; //논리적 장치
-		std::vector<VkFramebuffer> framebuffers;
+		std::vector<impl::VulkanFramebuffer> framebuffers;
 
 		VkCommandPool cmdPool;
 
@@ -78,9 +79,6 @@ namespace sh::render {
 
 		auto CreateDevice(VkPhysicalDevice gpu)->VkResult;
 		void DestroyDevice();
-
-		auto CreateFramebuffer() -> VkResult;
-		void DestroyFramebuffer();
 
 		auto CreateCommandPool(uint32_t queue) -> VkResult;
 		void DestroyCommandPool();

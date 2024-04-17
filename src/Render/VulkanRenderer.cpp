@@ -6,6 +6,7 @@
 #include "VulkanImpl/VulkanSurface.h"
 #include "VulkanImpl/VulkanPipeline.h"
 #include "VulkanImpl/VulkanCommandBuffer.h"
+#include "VulkanImpl/VulkanFramebuffer.h"
 
 #include "VulkanShader.h"
 #include "ShaderLoader.h"
@@ -44,7 +45,7 @@ namespace sh::render {
 		cmdBuffer->Reset();
 		DestroyCommandPool();
 
-		DestroyFramebuffer();
+		framebuffers.clear();
 		pipeline.reset();
 		surface.reset();
 		DestroyDevice();
@@ -272,48 +273,6 @@ namespace sh::render {
 		}
 	}
 
-	auto VulkanRenderer::CreateFramebuffer() -> VkResult
-	{
-		auto& views = surface->GetSwapChainImageViews();
-		framebuffers.resize(views.size());
-
-		VkResult result;
-		for (size_t i = 0; i < views.size(); i++) {
-			VkImageView attachments[] = {
-				views[i]
-			};
-
-			VkFramebufferCreateInfo framebufferInfo{};
-			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			framebufferInfo.renderPass = pipeline->GetRenderPass();
-			framebufferInfo.attachmentCount = 1;
-			framebufferInfo.pAttachments = attachments;
-			framebufferInfo.width = surface->GetSwapChainSize().width;
-			framebufferInfo.height = surface->GetSwapChainSize().height;
-			framebufferInfo.layers = 1;
-
-			result = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffers[i]);
-			assert(result == VkResult::VK_SUCCESS);
-			if (result != VkResult::VK_SUCCESS)
-				return result;
-		}
-
-		return result;
-	}
-
-	void VulkanRenderer::DestroyFramebuffer()
-	{
-		for (auto framebuffer : framebuffers)
-		{
-			if (!framebuffer)
-				continue;
-
-			vkDestroyFramebuffer(device, framebuffer, nullptr);
-			framebuffer = nullptr;
-		}
-		framebuffers.clear();
-	}
-
 	auto VulkanRenderer::CreateCommandPool(uint32_t queue) -> VkResult
 	{
 		VkCommandPoolCreateInfo poolInfo = {};
@@ -460,14 +419,19 @@ namespace sh::render {
 		if (shader.get() == nullptr)
 			return false;
 
-		pipeline = std::make_unique<impl::VulkanPipeline>(shader.get());
+		pipeline = std::make_unique<impl::VulkanPipeline>(*surface.get(), shader.get());
 		pipeline->AddShaderStage(impl::VulkanPipeline::ShaderStage::Vertex);
 		pipeline->AddShaderStage(impl::VulkanPipeline::ShaderStage::Fragment);
-		if (pipeline->CreateGraphicsPipeline(surface.get()) != VkResult::VK_SUCCESS)
+		if (pipeline->CreateGraphicsPipeline() != VkResult::VK_SUCCESS)
 			return false;
 
-		if (CreateFramebuffer() != VkResult::VK_SUCCESS)
-			return false;
+		auto& imgs = surface->GetSwapChainImageViews();
+		framebuffers.resize(imgs.size(), impl::VulkanFramebuffer{ *pipeline });
+		for (int i = 0; i < imgs.size(); ++i)
+		{
+			if (framebuffers[i].Create(surface->GetSwapChainSize().width, surface->GetSwapChainSize().height, imgs[i]) != VkResult::VK_SUCCESS)
+				return false;
+		}
 
 		if (CreateCommandPool(graphicsQueueIndex)) 
 			return false;
@@ -547,7 +511,7 @@ namespace sh::render {
 				VkClearValue clearColor = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
 				renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 				renderPassInfo.renderPass = pipeline->GetRenderPass();
-				renderPassInfo.framebuffer = framebuffers[imgIdx];
+				renderPassInfo.framebuffer = framebuffers[imgIdx].GetVkFramebuffer();
 				renderPassInfo.renderArea.offset = { 0, 0 };
 				renderPassInfo.renderArea.extent = surface->GetSwapChainSize();
 				renderPassInfo.clearValueCount = 1;
