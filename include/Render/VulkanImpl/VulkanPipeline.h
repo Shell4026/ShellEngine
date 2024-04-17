@@ -2,6 +2,7 @@
 
 #include "Export.h"
 #include "VulkanConfig.h"
+#include "Core/NonCopyable.h"
 
 #include <vector>
 
@@ -11,7 +12,7 @@ namespace sh::render::impl
 {
 	class VulkanSurface;
 
-	class VulkanPipeline
+	class VulkanPipeline : public core::INonCopyable
 	{
 	public:
 		 enum class ShaderStage {

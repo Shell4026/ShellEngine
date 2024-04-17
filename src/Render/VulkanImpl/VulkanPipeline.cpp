@@ -6,8 +6,9 @@
 #include <cassert>
 namespace sh::render::impl
 {
-	VulkanPipeline::VulkanPipeline(const VulkanShader* shader) :
-		renderPass(nullptr), pipelineLayout(nullptr), pipeline(nullptr), device(nullptr),
+	VulkanPipeline::VulkanPipeline(const VulkanSurface& surface, const VulkanShader* shader) :
+		surface(surface),
+		renderPass(nullptr), pipelineLayout(nullptr), pipeline(nullptr), device(surface.GetDevice()),
 		shader(shader)
 	{
 	}
@@ -37,10 +38,10 @@ namespace sh::render::impl
 		}
 	}
 
-	void VulkanPipeline::CreateRenderPass(const VulkanSurface* surface)
+	void VulkanPipeline::CreateRenderPass()
 	{
 		VkAttachmentDescription colorAttachment{};
-		colorAttachment.format = surface->GetSwapChainImageFormat();
+		colorAttachment.format = surface.GetSwapChainImageFormat();
 		colorAttachment.samples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
 		colorAttachment.loadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR;
 		colorAttachment.storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE;
@@ -92,11 +93,9 @@ namespace sh::render::impl
 		shaderStages.push_back(vertShaderStageInfo);
 	}
 
-	auto VulkanPipeline::CreateGraphicsPipeline(const VulkanSurface* surface) -> VkResult
+	auto VulkanPipeline::CreateGraphicsPipeline() -> VkResult
 	{
-		device = surface->GetDevice();
-
-		CreateRenderPass(surface);
+		CreateRenderPass();
 
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 		vertexInputInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -113,14 +112,14 @@ namespace sh::render::impl
 		VkViewport viewport{};
 		viewport.x = 0.0f;
 		viewport.y = 0.0f;
-		viewport.width = static_cast<float>(surface->GetSwapChainSize().width);
-		viewport.height = static_cast<float>(surface->GetSwapChainSize().height);
+		viewport.width = static_cast<float>(surface.GetSwapChainSize().width);
+		viewport.height = static_cast<float>(surface.GetSwapChainSize().height);
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
 
 		VkRect2D scissor{};
 		scissor.offset = { 0, 0 };
-		scissor.extent = surface->GetSwapChainSize();
+		scissor.extent = surface.GetSwapChainSize();
 
 		std::vector<VkDynamicState> dynamicStates =
 		{
@@ -201,7 +200,7 @@ namespace sh::render::impl
 		pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
 		pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
-		VkResult result = vkCreatePipelineLayout(surface->GetDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout);
+		VkResult result = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout);
 		assert(result == VkResult::VK_SUCCESS);
 		if(result != VkResult::VK_SUCCESS)
 			return result;
@@ -237,5 +236,10 @@ namespace sh::render::impl
 	auto VulkanPipeline::GetPipeline() const -> VkPipeline
 	{
 		return pipeline;
+	}
+
+	auto VulkanPipeline::GetDevice() const -> VkDevice
+	{
+		return device;
 	}
 }

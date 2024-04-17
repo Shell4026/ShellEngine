@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Export.h"
+#include "Core/NonCopyable.h"
 
 #include "VulkanConfig.h"
 #include <vector>
@@ -11,7 +12,7 @@ namespace sh::window
 }
 
 namespace sh::render::impl {
-	class VulkanSurface
+	class VulkanSurface : public core::INonCopyable
 	{
 	public:
 		struct SwapChainSupportDetails {

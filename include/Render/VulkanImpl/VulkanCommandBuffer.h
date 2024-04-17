@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Export.h"
+#include "Core/NonCopyable.h"
 
 #include <vulkan/vulkan.h>
 
@@ -8,7 +9,7 @@
 #include <initializer_list>
 
 namespace sh::render::impl {
-	class VulkanCommandBuffer
+	class VulkanCommandBuffer : public core::INonCopyable
 	{
 	private:
 		VkCommandBuffer buffer;
