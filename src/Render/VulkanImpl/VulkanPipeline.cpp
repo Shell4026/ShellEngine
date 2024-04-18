@@ -15,9 +15,9 @@ namespace sh::render::impl
 
 	VulkanPipeline::~VulkanPipeline()
 	{
-		Destroy();
+		Clean();
 	}
-	void VulkanPipeline::Destroy()
+	void VulkanPipeline::Clean()
 	{
 		if (pipeline)
 		{

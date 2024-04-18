@@ -37,7 +37,7 @@ namespace sh::render::impl
 		SH_RENDER_API ~VulkanPipeline();
 
 		SH_RENDER_API auto CreateGraphicsPipeline() -> VkResult;
-		SH_RENDER_API void Destroy();
+		SH_RENDER_API void Clean();
 
 		SH_RENDER_API auto GetRenderPass() const -> VkRenderPass;
 		SH_RENDER_API auto GetPipeline() const -> VkPipeline;
