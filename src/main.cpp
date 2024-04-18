@@ -39,17 +39,18 @@ public:
 
 int main(int arg, char* args[]) {
 	
-	Base a;
-	Derived b;
-	NoBase c;
-	Base* p = &b;
+	Base base;
+	Derived derived;
+	NoBase nobase;
+	Base* p = &derived;
+
+	std::cout << derived.GetTypeInfo().GetName() << "\n"; //Derived 출력
+	std::cout << Derived::Super::GetStaticTypeInfo().GetName() << "\n"; //Base 출력
 
 	auto real = sh::core::Util::Cast<Derived>(p);
 	assert(real != nullptr);
 	p->BaseFunction();
 	real->DerivedFunction();
-	
-	std::cout << a.GetTypeInfo().GetName() << "\n";
 
 	sh::window::Window window;
 	window.Create(u8"테스트", 1024, 768);
