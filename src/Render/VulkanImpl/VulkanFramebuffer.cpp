@@ -91,7 +91,7 @@ namespace sh::render::impl
 		}
 	}
 
-	auto VulkanFramebuffer::GetVkFramebuffer() -> VkFramebuffer
+	auto VulkanFramebuffer::GetVkFramebuffer() const -> VkFramebuffer
 	{
 		return framebuffer;
 	}

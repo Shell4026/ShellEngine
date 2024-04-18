@@ -30,6 +30,6 @@ namespace sh::render::impl
 		SH_RENDER_API auto Create(uint32_t width, uint32_t height, VkImageView img)->VkResult;
 		SH_RENDER_API void Clean();
 
-		SH_RENDER_API auto GetVkFramebuffer() -> VkFramebuffer;
+		SH_RENDER_API auto GetVkFramebuffer() const -> VkFramebuffer;
 	};
 }
