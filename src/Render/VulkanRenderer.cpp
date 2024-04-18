@@ -520,7 +520,7 @@ namespace sh::render {
 		return isInit;
 	}
 
-	void VulkanRenderer::Render()
+	void VulkanRenderer::Render(float deltaTime)
 	{
 		if (!isInit || bPause)
 			return;

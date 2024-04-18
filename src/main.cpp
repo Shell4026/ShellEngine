@@ -7,6 +7,7 @@
 #include "Core/Reflaction.hpp"
 #include <Core/Util.h>
 #include <cassert>
+#include <fmt/core.h>
 class Base {
 	SCLASS(Base)
 public:
@@ -62,18 +63,12 @@ int main(int arg, char* args[]) {
 	long long delta_time = 0;
 	while (window.IsOpen())
 	{
-		start = std::chrono::high_resolution_clock::now();
-		delta_time = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		std::this_thread::sleep_for(std::chrono::milliseconds(fps - delta_time));
-		end = std::chrono::high_resolution_clock::now();
-		delta_time += std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
-		//std::cout << delta_time << "ms\n";
-		//fmt::print("{}ms\n", delta_time);
+		window.ProcessFrame();
+		//fmt::print("deltaTime: {}s\n", window.GetDeltaTime());
 
 		sh::window::Event e;
 		while (window.PollEvent(e))
 		{
-			
 			switch (e.type)
 			{
 			case sh::window::Event::EventType::Close:
@@ -111,8 +106,7 @@ int main(int arg, char* args[]) {
 				break;
 			}
 		}
-
-		renderer.Render();
+		renderer.Render(window.GetDeltaTime());
 	}
 	return 0;
 }

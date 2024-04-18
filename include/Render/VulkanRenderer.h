@@ -98,7 +98,7 @@ namespace sh::render {
 
 		SH_RENDER_API bool IsInit() const override;
 
-		SH_RENDER_API void Render() override;
+		SH_RENDER_API void Render(float deltaTime) override;
 		SH_RENDER_API void Pause(bool b) override;
 
 	};

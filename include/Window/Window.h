@@ -7,6 +7,7 @@
 #include <memory>
 #include <string_view>
 #include <queue>
+#include <chrono>
 
 namespace sh::window {
 	class SH_WINDOW_API Window {
@@ -18,6 +19,12 @@ namespace sh::window {
 
 		std::queue<Event> events;
 
+		unsigned int fps;
+		unsigned int maxFrameMs;
+		std::chrono::steady_clock::time_point startTime, endTime;
+		float deltaTime;
+		unsigned int deltaTimeMs;
+
 		bool isOpen : 1;
 	public:
 		Window();
@@ -25,9 +32,18 @@ namespace sh::window {
 
 		void Create(const std::string& title, int wsize, int hsize);
 		bool PollEvent(Event& event);
-		bool IsOpen() const;
+		
 		void Close();
 
-		auto GetNativeHandle()->WinHandle;
+		/// 프레임 제한, 측정 함수
+		///
+		/// while문 안에 넣을 것
+		void ProcessFrame();
+
+		void SetFps(unsigned int fps);
+		auto GetDeltaTime() const -> float;
+		bool IsOpen() const;
+
+		auto GetNativeHandle() const -> WinHandle;
 	};
 }
