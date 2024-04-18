@@ -21,7 +21,7 @@ namespace sh::window {
 
 		unsigned int fps;
 		unsigned int maxFrameMs;
-		std::chrono::steady_clock::time_point startTime, endTime;
+		std::chrono::high_resolution_clock::time_point startTime, endTime;
 		float deltaTime;
 		unsigned int deltaTimeMs;
 
