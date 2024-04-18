@@ -23,6 +23,7 @@ namespace sh::render {
 		graphicsQueueIndex(-1), surfaceQueueIndex(-1),
 		graphicsQueue(nullptr), surfaceQueue(nullptr),
 		debugMessenger(nullptr), validationLayerName("VK_LAYER_KHRONOS_validation"),
+		currentFrame(0),
 		isInit(false), bPause(false), bFindValidationLayer(false), bEnableValidationLayers(sh::core::Util::IsDebug())
 	{
 	}
@@ -42,7 +43,8 @@ namespace sh::render {
 
 		DestroySyncObjects();
 
-		cmdBuffer->Reset();
+		for(auto& buffer : cmdBuffers)
+			buffer->Reset();
 		DestroyCommandPool();
 
 		framebuffers.clear();
@@ -312,29 +314,34 @@ namespace sh::render {
 		fenceInfo.flags = VkFenceCreateFlagBits::VK_FENCE_CREATE_SIGNALED_BIT; //시작부터 신호를 받음
 
 		VkResult result;
-		result = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore);
-		assert(result == VkResult::VK_SUCCESS);
-		if (result != VkResult::VK_SUCCESS)
-			return result;
+		for (int i = 0; i < MAX_FRAME_DRAW; ++i)
+		{
+			result = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore[i]);
+			assert(result == VkResult::VK_SUCCESS);
+			if (result != VkResult::VK_SUCCESS)
+				return result;
 
-		result = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore);
-		assert(result == VkResult::VK_SUCCESS);
-		if (result != VkResult::VK_SUCCESS)
-			return result;
+			result = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore[i]);
+			assert(result == VkResult::VK_SUCCESS);
+			if (result != VkResult::VK_SUCCESS)
+				return result;
 
-		result = vkCreateFence(device, &fenceInfo, nullptr, &inFlightFence);
-		assert(result == VkResult::VK_SUCCESS);
-		if (result != VkResult::VK_SUCCESS)
-			return result;
-
+			result = vkCreateFence(device, &fenceInfo, nullptr, &inFlightFence[i]);
+			assert(result == VkResult::VK_SUCCESS);
+			if (result != VkResult::VK_SUCCESS)
+				return result;
+		}
 		return result;
 	}
 
 	void VulkanRenderer::DestroySyncObjects()
 	{
-		vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
-		vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
-		vkDestroyFence(device, inFlightFence, nullptr);
+		for (int i = 0; i < MAX_FRAME_DRAW; ++i)
+		{
+			vkDestroySemaphore(device, imageAvailableSemaphore[i], nullptr);
+			vkDestroySemaphore(device, renderFinishedSemaphore[i], nullptr);
+			vkDestroyFence(device, inFlightFence[i], nullptr);
+		}
 	}
 
 	bool VulkanRenderer::Init(sh::window::Window& win)
@@ -451,9 +458,11 @@ namespace sh::render {
 		if (CreateCommandPool(graphicsQueueIndex)) 
 			return false;
 
-		cmdBuffer = std::make_unique<impl::VulkanCommandBuffer>(device, cmdPool);
-		cmdBuffer->Create();
-
+		for (auto& cmdBuffer : cmdBuffers)
+		{
+			cmdBuffer = std::make_unique<impl::VulkanCommandBuffer>(device, cmdPool);
+			cmdBuffer->Create();
+		}
 		//세마포어와 펜스 생성 (동기화 변수)
 		if (CreateSyncObjects() != VkResult::VK_SUCCESS)
 			return false;
@@ -525,23 +534,26 @@ namespace sh::render {
 		if (!isInit || bPause)
 			return;
 
-		vkWaitForFences(device, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
-		vkResetFences(device, 1, &inFlightFence);
+		vkWaitForFences(device, 1, &inFlightFence[currentFrame], VK_TRUE, UINT64_MAX);
 
 		uint32_t imgIdx;
-		VkResult result = vkAcquireNextImageKHR(device, surface->GetSwapChain(), UINT64_MAX, imageAvailableSemaphore, nullptr, &imgIdx);
-		assert(result == VkResult::VK_SUCCESS);
+		VkResult result = vkAcquireNextImageKHR(device, surface->GetSwapChain(), UINT64_MAX, imageAvailableSemaphore[currentFrame], nullptr, &imgIdx);
+		if (result == VkResult::VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
+		{
+			Resizing();
+			return;
+		}
+		vkResetFences(device, 1, &inFlightFence[currentFrame]);
 
-		cmdBuffer->Reset();
-		cmdBuffer->SetWaitSemaphore({ imageAvailableSemaphore });
-		cmdBuffer->SetSignalSemaphore({ renderFinishedSemaphore });
-		cmdBuffer->SetWaitStage({ VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT });
+		cmdBuffers[currentFrame]->Reset();
+		cmdBuffers[currentFrame]->SetWaitSemaphore({ imageAvailableSemaphore[currentFrame] });
+		cmdBuffers[currentFrame]->SetSignalSemaphore({ renderFinishedSemaphore[currentFrame] });
+		cmdBuffers[currentFrame]->SetWaitStage({ VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT });
 
-		VkCommandBuffer buffer = cmdBuffer->GetCommandBuffer();
+		VkCommandBuffer buffer = cmdBuffers[currentFrame]->GetCommandBuffer();
 
-
-		cmdBuffer->Submit(graphicsQueue, [&]()
-			{
+		cmdBuffers[currentFrame]->Submit(graphicsQueue, [&]()
+		{
 				VkRenderPassBeginInfo renderPassInfo{};
 				VkClearValue clearColor = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
 				renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -572,13 +584,13 @@ namespace sh::render {
 				vkCmdDraw(buffer, 3, 1, 0, 0);
 				vkCmdEndRenderPass(buffer);
 			},
-			inFlightFence
+			inFlightFence[currentFrame]
 		);
 
 		VkPresentInfoKHR presentInfo{};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = &renderFinishedSemaphore;
+		presentInfo.pWaitSemaphores = &renderFinishedSemaphore[currentFrame];
 		VkSwapchainKHR swapChains[] = { surface->GetSwapChain() };
 		presentInfo.swapchainCount = 1;
 		presentInfo.pSwapchains = swapChains;
@@ -586,6 +598,8 @@ namespace sh::render {
 		presentInfo.pResults = nullptr;
 
 		vkQueuePresentKHR(surfaceQueue, &presentInfo);
+
+		currentFrame = (currentFrame + 1) % MAX_FRAME_DRAW;
 	}
 
 	void VulkanRenderer::Pause(bool b)

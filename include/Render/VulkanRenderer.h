@@ -8,6 +8,7 @@
 
 #include <string>
 #include <vector>
+#include <array>
 #include <optional>
 #include <functional>
 #include <memory>
@@ -27,13 +28,15 @@ namespace sh::render {
 		sh::window::Window* window;
 		sh::window::WinHandle winHandle;
 
+		static constexpr int MAX_FRAME_DRAW = 2;
+
 		std::vector<const char*> requestedLayer;
 		std::vector<const char*> requestedExtension;
 
 		std::unique_ptr<impl::VulkanSurface> surface;
 		std::unique_ptr<impl::VulkanLayer> layers;
 		std::unique_ptr<impl::VulkanPipeline> pipeline;
-		std::unique_ptr<impl::VulkanCommandBuffer> cmdBuffer;
+		std::array<std::unique_ptr<impl::VulkanCommandBuffer>, MAX_FRAME_DRAW> cmdBuffers;
 
 		VkInstance instance;
 		VkPhysicalDevice gpu;
@@ -53,9 +56,11 @@ namespace sh::render {
 		VkQueue graphicsQueue;
 		VkQueue surfaceQueue;
 
-		VkSemaphore imageAvailableSemaphore;
-		VkSemaphore renderFinishedSemaphore;
-		VkFence inFlightFence;
+		std::array<VkSemaphore, MAX_FRAME_DRAW> imageAvailableSemaphore;
+		std::array<VkSemaphore, MAX_FRAME_DRAW> renderFinishedSemaphore;
+		std::array<VkFence, MAX_FRAME_DRAW> inFlightFence;
+
+		int currentFrame;
 
 		bool isInit : 1;
 		bool bPause : 1;
