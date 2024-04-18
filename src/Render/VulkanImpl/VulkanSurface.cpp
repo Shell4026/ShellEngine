@@ -26,7 +26,7 @@ namespace sh::render::impl
 	VulkanSurface::~VulkanSurface()
 	{
 		if(device)
-			DestroySwapChain(device);
+			DestroySwapChain();
 		DestroySurface();
 	}
 
@@ -114,9 +114,12 @@ namespace sh::render::impl
 		return VK_PRESENT_MODE_FIFO_KHR;
 	}
 
-	bool VulkanSurface::CreateSwapChain(VkDevice device, uint32_t graphicsQueueIdx, uint32_t surfaceQueueIdx)
+	bool VulkanSurface::CreateSwapChain(VkPhysicalDevice gpu, uint32_t graphicsQueueIdx, uint32_t surfaceQueueIdx)
 	{
+		assert(device);
+
 		this->device = device;
+		QuerySwapChainDetails(gpu);
 
 		VkSurfaceFormatKHR surfaceFormat = SelectFormat();
 		VkPresentModeKHR presentMode = SelectPresentMode();
@@ -199,8 +202,10 @@ namespace sh::render::impl
 		return true;
 	}
 
-	void VulkanSurface::DestroySwapChain(VkDevice device)
+	void VulkanSurface::DestroySwapChain()
 	{
+		assert(device);
+
 		for (auto imageView : swapChainImageViews) {
 			vkDestroyImageView(device, imageView, nullptr);
 		}
@@ -218,6 +223,11 @@ namespace sh::render::impl
 		QuerySwapChainDetails(gpu);
 
 		return !details.formats.empty() && !details.presentModes.empty();
+	}
+
+	void VulkanSurface::SetDevice(VkDevice device)
+	{
+		this->device = device;
 	}
 
 	auto VulkanSurface::GetDevice() const -> const VkDevice

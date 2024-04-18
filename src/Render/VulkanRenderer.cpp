@@ -345,6 +345,7 @@ namespace sh::render {
 		layers = std::make_unique<impl::VulkanLayer>();
 		surface = std::make_unique<impl::VulkanSurface>();
 
+		//표면 확장 탐색
 		if (layers->FindVulkanExtension(VK_KHR_SURFACE_EXTENSION_NAME))
 			requestedExtension.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 		else
@@ -372,18 +373,23 @@ namespace sh::render {
 		else
 			return false;
 #endif
+		//인스턴스 생성
 		if (CreateInstance(requestedLayer, requestedExtension) != VkResult::VK_SUCCESS)
 			return false;
 		
+		//디버그 모드일시 디버그 레이어 생성
 		if (bEnableValidationLayers)
 			InitDebugMessenger();
 
+		//표면 생성
 		if (!surface->CreateSurface(win, instance))
 			return false;
 
+		//GPU 목록을 가져온다.
 		if (GetPhysicalDevices() != VkResult::VK_SUCCESS)
 			return false;
 
+		//적당한 GPU 선택
 		auto suitableFunc
 		{
 			[&](VkPhysicalDevice _gpu) -> bool
@@ -395,23 +401,25 @@ namespace sh::render {
 		if (!gpu) 
 			return false;
 
+		//그래픽 큐와 화면 큐 선택
 		GetQueueFamilyProperties(gpu);
 		if (auto idx = SelectQueueFamily(VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT); !idx.has_value()) return false;
 		else graphicsQueueIndex = *idx;
-
 		if (auto idx = GetSurfaceQueueFamily(gpu); !idx.has_value()) return false;
 		else surfaceQueueIndex = *idx;
 
+		//가상 장치 생성
 		if (CreateDevice(gpu) != VkResult::VK_SUCCESS)
 			return false;
+		surface->SetDevice(device);
 
+		//가상 장치에서 큐를 가져온다.
 		vkGetDeviceQueue(device, graphicsQueueIndex, 0, &graphicsQueue);
 		assert(graphicsQueue);
 		vkGetDeviceQueue(device, surfaceQueueIndex, 0, &surfaceQueue);
 		assert(surfaceQueue);
 
-		surface->CreateSwapChain(device, graphicsQueueIndex, surfaceQueueIndex);
-
+		//셰이더 로드
 		VulkanShaderBuilder shaderBuilder{ device };
 		ShaderLoader loader{ &shaderBuilder };
 		auto shader = loader.LoadShader<VulkanShader>("vert.spv", "frag.spv");
@@ -419,32 +427,59 @@ namespace sh::render {
 		if (shader.get() == nullptr)
 			return false;
 
+		//스왑체인과 렌더패스 생성
+		surface->CreateSwapChain(gpu, graphicsQueueIndex, surfaceQueueIndex);
+
 		pipeline = std::make_unique<impl::VulkanPipeline>(*surface.get(), shader.get());
 		pipeline->AddShaderStage(impl::VulkanPipeline::ShaderStage::Vertex);
 		pipeline->AddShaderStage(impl::VulkanPipeline::ShaderStage::Fragment);
 		if (pipeline->CreateGraphicsPipeline() != VkResult::VK_SUCCESS)
 			return false;
 
+		//프레임버퍼 생성
 		auto& imgs = surface->GetSwapChainImageViews();
 		framebuffers.resize(imgs.size(), impl::VulkanFramebuffer{ *pipeline });
 		for (int i = 0; i < imgs.size(); ++i)
 		{
-			if (framebuffers[i].Create(surface->GetSwapChainSize().width, surface->GetSwapChainSize().height, imgs[i]) != VkResult::VK_SUCCESS)
+			VkResult result = framebuffers[i].Create(surface->GetSwapChainSize().width, surface->GetSwapChainSize().height, imgs[i]);
+			assert(result == VkResult::VK_SUCCESS);
+			if (result != VkResult::VK_SUCCESS)
 				return false;
 		}
 
+		//커맨드 풀과 커맨드 버퍼 생성
 		if (CreateCommandPool(graphicsQueueIndex)) 
 			return false;
 
 		cmdBuffer = std::make_unique<impl::VulkanCommandBuffer>(device, cmdPool);
 		cmdBuffer->Create();
 
+		//세마포어와 펜스 생성 (동기화 변수)
 		if (CreateSyncObjects() != VkResult::VK_SUCCESS)
 			return false;
 
 		isInit = true;
 		PrintLayer();
 
+		return true;
+	}
+
+	bool VulkanRenderer::Resizing()
+	{
+		framebuffers.clear();
+		surface->DestroySwapChain();
+
+		surface->CreateSwapChain(gpu, graphicsQueueIndex, surfaceQueueIndex);
+
+		auto& imgs = surface->GetSwapChainImageViews();
+		framebuffers.resize(imgs.size(), impl::VulkanFramebuffer{ *pipeline });
+		for (int i = 0; i < imgs.size(); ++i)
+		{
+			VkResult result = framebuffers[i].Create(surface->GetSwapChainSize().width, surface->GetSwapChainSize().height, imgs[i]);
+			assert(result == VkResult::VK_SUCCESS);
+			if (result != VkResult::VK_SUCCESS)
+				return false;
+		}
 		return true;
 	}
 

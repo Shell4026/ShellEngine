@@ -93,11 +93,13 @@ namespace sh::render {
 		SH_RENDER_API ~VulkanRenderer();
 
 		SH_RENDER_API bool Init(sh::window::Window& win) override;
+		SH_RENDER_API bool Resizing() override;
 		SH_RENDER_API void Clean() override;
 
 		SH_RENDER_API bool IsInit() const override;
 
 		SH_RENDER_API void Render() override;
 		SH_RENDER_API void Pause(bool b) override;
+
 	};
 }//namespace
