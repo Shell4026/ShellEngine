@@ -17,11 +17,11 @@ namespace sh::render::impl {
 	public:
 		struct SwapChainSupportDetails {
 			VkSurfaceCapabilitiesKHR capabilities;
-			std::vector<VkSurfaceFormatKHR> formats;
 			std::vector<VkPresentModeKHR> presentModes;
-
-			SwapChainSupportDetails(){}
-			~SwapChainSupportDetails(){}
+			std::vector<VkSurfaceFormatKHR> formats;
+			
+			SH_RENDER_API SwapChainSupportDetails();
+			SH_RENDER_API ~SwapChainSupportDetails();
 		};
 	private:
 		sh::window::Window* window;
@@ -48,7 +48,7 @@ namespace sh::render::impl {
 		SH_RENDER_API bool CreateSurface(sh::window::Window& window, VkInstance instance);
 		SH_RENDER_API void DestroySurface();
 
-		SH_RENDER_API bool CreateSwapChain(VkDevice device);
+		SH_RENDER_API bool CreateSwapChain(VkDevice device, uint32_t graphicsQueueIdx, uint32_t surfaceQueueIdx);
 		SH_RENDER_API void DestroySwapChain(VkDevice device);
 		
 		SH_RENDER_API bool IsSwapChainSupport(VkPhysicalDevice gpu);

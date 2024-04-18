@@ -54,7 +54,7 @@ namespace sh::render {
 			DestroyDebugMessenger();
 
 		DestroyInstance();
-
+		
 		isInit = false;
 		fmt::print("Clean VulkanRenderer\n");
 	}
@@ -410,7 +410,7 @@ namespace sh::render {
 		vkGetDeviceQueue(device, surfaceQueueIndex, 0, &surfaceQueue);
 		assert(surfaceQueue);
 
-		surface->CreateSwapChain(device);
+		surface->CreateSwapChain(device, graphicsQueueIndex, surfaceQueueIndex);
 
 		VulkanShaderBuilder shaderBuilder{ device };
 		ShaderLoader loader{ &shaderBuilder };

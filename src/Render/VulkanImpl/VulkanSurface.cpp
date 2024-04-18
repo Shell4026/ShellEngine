@@ -9,6 +9,14 @@
 
 namespace sh::render::impl
 {
+	VulkanSurface::SwapChainSupportDetails::SwapChainSupportDetails()
+	{
+	}
+
+	VulkanSurface::SwapChainSupportDetails::~SwapChainSupportDetails()
+	{
+	}
+
 	VulkanSurface::VulkanSurface() :
 		window(nullptr), device(nullptr),
 		swapChain(nullptr), surface(nullptr), instance(nullptr), details()
@@ -20,8 +28,6 @@ namespace sh::render::impl
 		if(device)
 			DestroySwapChain(device);
 		DestroySurface();
-
-		details.presentModes.clear();
 	}
 
 	void VulkanSurface::QuerySwapChainDetails(VkPhysicalDevice gpu)
@@ -108,7 +114,7 @@ namespace sh::render::impl
 		return VK_PRESENT_MODE_FIFO_KHR;
 	}
 
-	bool VulkanSurface::CreateSwapChain(VkDevice device)
+	bool VulkanSurface::CreateSwapChain(VkDevice device, uint32_t graphicsQueueIdx, uint32_t surfaceQueueIdx)
 	{
 		this->device = device;
 
@@ -133,12 +139,27 @@ namespace sh::render::impl
 		info.imageColorSpace = surfaceFormat.colorSpace;
 		info.imageExtent = swapChainSize;
 		info.imageArrayLayers = 1;
-		info.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; //VK_IMAGE_USAGE_TRANSFER_DST_BIT = 오프스크린 렌더링
+		info.imageUsage = VkImageUsageFlagBits::VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT; //VK_IMAGE_USAGE_TRANSFER_DST_BIT = 오프스크린 렌더링
 		info.preTransform = details.capabilities.currentTransform;
-		info.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+		info.compositeAlpha =  VkCompositeAlphaFlagBitsKHR::VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
 		info.presentMode = presentMode;
 		info.clipped = true;
 		info.oldSwapchain = nullptr;
+
+		uint32_t queueIdxs[] = { graphicsQueueIdx, surfaceQueueIdx };
+		if (graphicsQueueIdx == surfaceQueueIdx)
+		{
+			info.imageSharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE;
+			info.queueFamilyIndexCount = 0;
+			info.pQueueFamilyIndices = nullptr;
+		}
+		else
+		{
+			info.imageSharingMode = VkSharingMode::VK_SHARING_MODE_CONCURRENT;
+			info.queueFamilyIndexCount = 2;
+			info.pQueueFamilyIndices = queueIdxs;
+		}
+
 
 		VkResult result = vkCreateSwapchainKHR(device, &info, nullptr, &swapChain);
 		assert(result == VkResult::VK_SUCCESS);

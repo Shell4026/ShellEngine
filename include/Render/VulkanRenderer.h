@@ -49,8 +49,8 @@ namespace sh::render {
 		std::string validationLayerName;
 
 		uint32_t graphicsQueueIndex;
-		VkQueue graphicsQueue;
 		uint32_t surfaceQueueIndex;
+		VkQueue graphicsQueue;
 		VkQueue surfaceQueue;
 
 		VkSemaphore imageAvailableSemaphore;
