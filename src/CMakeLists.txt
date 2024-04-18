@@ -23,3 +23,7 @@ target_link_libraries(ShellEngine PUBLIC ShellEngineWindow)
 
 add_subdirectory(Render)
 target_link_libraries(ShellEngine PUBLIC ShellEngineRender)
+
+file(
+	COPY ${CMAKE_SOURCE_DIR}/resource/vert.spv ${CMAKE_SOURCE_DIR}/resource/frag.spv
+	DESTINATION ${CMAKE_BINARY_DIR}/bin)
