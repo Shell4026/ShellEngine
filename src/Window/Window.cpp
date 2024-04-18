@@ -32,9 +32,12 @@ namespace sh::window {
 	{
 		if (winImpl.get() == nullptr)
 			return false;
-		winImpl->ProcessEvent();
 
-		if (!winImpl->IsEmptyEvent())
+		if (winImpl->IsEmptyEvent())
+		{
+			winImpl->ProcessEvent();
+		}
+		else
 		{
 			event = winImpl->PopEvent();
 			return true;
