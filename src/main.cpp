@@ -8,6 +8,11 @@
 #include <Core/Util.h>
 #include <cassert>
 #include <fmt/core.h>
+#include "Game/World.h"
+#include "Game/GameObject.h"
+#include "Game/Component/Transform.h"
+
+#include <iostream>
 class Base {
 	SCLASS(Base)
 public:
@@ -37,7 +42,8 @@ public:
 	}
 };
 
-int main(int arg, char* args[]) {
+int main(int arg, char* args[]) 
+{
 	
 	Base base;
 	Derived derived;
@@ -51,6 +57,14 @@ int main(int arg, char* args[]) {
 	assert(real != nullptr);
 	p->BaseFunction();
 	real->DerivedFunction();
+
+	using namespace sh::game;
+	World world;
+	GameObject* obj = world.AddGameObject("Test");
+
+	Transform* trans = obj->AddComponent<Transform>();
+
+	world.Start();
 
 	sh::window::Window window;
 	window.Create(u8"테스트", 1024, 768);

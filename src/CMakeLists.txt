@@ -16,13 +16,16 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 FetchContent_MakeAvailable(Fmt)
 
 add_subdirectory(Core)
-target_link_libraries(ShellEngine PUBLIC ShellEngineCore)
+target_link_libraries(ShellEngine PUBLIC ShellEngine::Core)
 
 add_subdirectory(Window)
-target_link_libraries(ShellEngine PUBLIC ShellEngineWindow)
+target_link_libraries(ShellEngine PUBLIC ShellEngine::Window)
 
 add_subdirectory(Render)
-target_link_libraries(ShellEngine PUBLIC ShellEngineRender)
+target_link_libraries(ShellEngine PUBLIC ShellEngine::Render)
+
+add_subdirectory(Game)
+target_link_libraries(ShellEngine PUBLIC ShellEngine::Game)
 
 file(
 	COPY ${CMAKE_SOURCE_DIR}/resource/vert.spv ${CMAKE_SOURCE_DIR}/resource/frag.spv
