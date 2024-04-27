@@ -2,6 +2,22 @@
 
 namespace sh::render
 {
+	ShaderBuilder::ShaderBuilder()
+	{
+	}
+
+	ShaderBuilder::ShaderBuilder(const ShaderBuilder& other)
+	{
+		this->vertShaderData = other.vertShaderData;
+		this->fragShaderData = other.fragShaderData;
+	}
+
+	ShaderBuilder::ShaderBuilder(ShaderBuilder&& other) noexcept
+	{
+		this->vertShaderData = std::move(other.vertShaderData);
+		this->fragShaderData = std::move(other.fragShaderData);
+	}
+
 	void ShaderBuilder::SetData(shaderType type, const std::vector<unsigned char>& data)
 	{
 		if (type == shaderType::Vertex)
