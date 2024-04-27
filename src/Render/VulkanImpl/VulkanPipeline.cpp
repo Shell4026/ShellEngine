@@ -6,9 +6,9 @@
 #include <cassert>
 namespace sh::render::impl
 {
-	VulkanPipeline::VulkanPipeline(const VulkanSurface& surface, const VulkanShader* shader) :
-		surface(surface),
-		renderPass(nullptr), pipelineLayout(nullptr), pipeline(nullptr), device(surface.GetDevice()),
+	VulkanPipeline::VulkanPipeline(const VulkanSurface& surface, const VulkanShader* shader, VkRenderPass renderPass) :
+		surface(surface), renderPass(renderPass),
+		pipelineLayout(nullptr), pipeline(nullptr), device(surface.GetDevice()),
 		shader(shader)
 	{
 	}
@@ -31,60 +31,11 @@ namespace sh::render::impl
 			pipelineLayout = nullptr;
 		}
 
-		if (renderPass)
-		{
-			vkDestroyRenderPass(device, renderPass, nullptr);
-			renderPass = nullptr;
-		}
+		shaderStages.clear();
+		attributeDescriptions.clear();
 	}
 
-	void VulkanPipeline::CreateRenderPass()
-	{
-		VkAttachmentDescription colorAttachment{};
-		colorAttachment.format = surface.GetSwapChainImageFormat();
-		colorAttachment.samples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
-		colorAttachment.loadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR;
-		colorAttachment.storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE;
-		//스텐실
-		colorAttachment.stencilLoadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		colorAttachment.stencilStoreOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		colorAttachment.initialLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
-		colorAttachment.finalLayout = VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-		//픽셀 셰이더에서 출력되는 attachment
-		VkAttachmentReference colorAttachmentRef{};
-		colorAttachmentRef.attachment = 0;
-		colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		VkSubpassDescription subpass{};
-		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpass.colorAttachmentCount = 1;
-		subpass.pColorAttachments = &colorAttachmentRef;
-
-		VkSubpassDependency dependency{};
-		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-		dependency.dstSubpass = 0;
-		//색상 출력 단계에서 대기
-		dependency.srcStageMask = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.srcAccessMask = 0;
-		//색상 출력 단계에서 쓸 수 있을 때까지 서브 패스 전환X
-		dependency.dstStageMask = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.dstAccessMask = VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-		VkRenderPassCreateInfo renderPassInfo{};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		renderPassInfo.attachmentCount = 1;
-		renderPassInfo.pAttachments = &colorAttachment;
-		renderPassInfo.subpassCount = 1;
-		renderPassInfo.pSubpasses = &subpass;
-		renderPassInfo.dependencyCount = 1;
-		renderPassInfo.pDependencies = &dependency;
-
-		VkResult result = vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);
-		assert(result == VkResult::VK_SUCCESS);
-	}
-
-	void VulkanPipeline::AddShaderStage(ShaderStage stage)
+	auto VulkanPipeline::AddShaderStage(ShaderStage stage) -> VulkanPipeline&
 	{
 		assert(shader);
 
@@ -103,16 +54,39 @@ namespace sh::render::impl
 		vertShaderStageInfo.pName = "main";
 
 		shaderStages.push_back(vertShaderStageInfo);
+		
+		return *this;
 	}
 
-	auto VulkanPipeline::CreateGraphicsPipeline() -> VkResult
+	auto VulkanPipeline::ResetShaderStage() -> VulkanPipeline&
 	{
-		CreateRenderPass();
+		shaderStages.clear();
 
+		return *this;
+	}
+
+	auto VulkanPipeline::SetBindingDescription(const VkVertexInputBindingDescription& _bindingDescription) -> VulkanPipeline&
+	{
+		bindingDescription = _bindingDescription;
+
+		return *this;
+	}
+
+	auto VulkanPipeline::SetAttributeDescription(const std::initializer_list<VkVertexInputAttributeDescription>& attributeDescription) -> VulkanPipeline&
+	{
+		attributeDescriptions.clear();
+		for(auto& attr : attributeDescription)
+			attributeDescriptions.push_back(attr);
+
+		return *this;
+	}
+
+	auto VulkanPipeline::Build() -> VkResult
+	{
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 		vertexInputInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 		vertexInputInfo.vertexBindingDescriptionCount = 0;
-		vertexInputInfo.pVertexBindingDescriptions = nullptr; // Optional
+		vertexInputInfo.pVertexBindingDescriptions = nullptr; //버텍스 바인딩
 		vertexInputInfo.vertexAttributeDescriptionCount = 0;
 		vertexInputInfo.pVertexAttributeDescriptions = nullptr; // Optional
 
@@ -238,11 +212,6 @@ namespace sh::render::impl
 		result = vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineInfo, nullptr, &pipeline);
 		assert(result == VkResult::VK_SUCCESS);
 		return result;
-	}
-
-	auto VulkanPipeline::GetRenderPass() const -> VkRenderPass
-	{
-		return renderPass;
 	}
 
 	auto VulkanPipeline::GetPipeline() const -> VkPipeline

@@ -16,10 +16,11 @@
 #include <set>
 #include <cstdint>
 #include <limits>
+#include <exception>
 
 namespace sh::render {
 	VulkanRenderer::VulkanRenderer() :
-		instance(nullptr), gpu(nullptr), device(nullptr), cmdPool(nullptr), window(nullptr),
+		instance(nullptr), gpu(nullptr), device(nullptr), cmdPool(nullptr), renderPass(nullptr), window(nullptr),
 		graphicsQueueIndex(-1), surfaceQueueIndex(-1),
 		graphicsQueue(nullptr), surfaceQueue(nullptr),
 		debugMessenger(nullptr), validationLayerName("VK_LAYER_KHRONOS_validation"),
@@ -49,6 +50,7 @@ namespace sh::render {
 
 		framebuffers.clear();
 		pipeline.reset();
+		DestroyRenderPass();
 		surface.reset();
 		DestroyDevice();
 
@@ -275,6 +277,63 @@ namespace sh::render {
 		}
 	}
 
+	void VulkanRenderer::CreateRenderPass(VkFormat format)
+	{
+		VkAttachmentDescription colorAttachment{};
+		colorAttachment.format = format;
+		colorAttachment.samples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
+		colorAttachment.loadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR;
+		colorAttachment.storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE;
+		//스텐실
+		colorAttachment.stencilLoadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		colorAttachment.stencilStoreOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		colorAttachment.initialLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
+		colorAttachment.finalLayout = VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+		//픽셀 셰이더에서 출력되는 attachment
+		VkAttachmentReference colorAttachmentRef{};
+		colorAttachmentRef.attachment = 0;
+		colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		VkSubpassDescription subpass{};
+		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		subpass.colorAttachmentCount = 1;
+		subpass.pColorAttachments = &colorAttachmentRef;
+
+		VkSubpassDependency dependency{};
+		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+		dependency.dstSubpass = 0;
+		//색상 출력 단계에서 대기
+		dependency.srcStageMask = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		dependency.srcAccessMask = 0;
+		//색상 출력 단계에서 쓸 수 있을 때까지 서브 패스 전환X
+		dependency.dstStageMask = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		dependency.dstAccessMask = VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+		VkRenderPassCreateInfo renderPassInfo{};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		renderPassInfo.attachmentCount = 1;
+		renderPassInfo.pAttachments = &colorAttachment;
+		renderPassInfo.subpassCount = 1;
+		renderPassInfo.pSubpasses = &subpass;
+		renderPassInfo.dependencyCount = 1;
+		renderPassInfo.pDependencies = &dependency;
+
+		VkResult result = vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);
+		assert(result == VkResult::VK_SUCCESS);
+		if (result != VkResult::VK_SUCCESS)
+			throw std::exception{ "Can't create RenderPass" };
+	}
+
+	void VulkanRenderer::DestroyRenderPass()
+	{
+		if (renderPass)
+		{
+			vkDestroyRenderPass(device, renderPass, nullptr);
+			renderPass = nullptr;
+		}
+	}
+
 	auto VulkanRenderer::CreateCommandPool(uint32_t queue) -> VkResult
 	{
 		VkCommandPoolCreateInfo poolInfo = {};
@@ -428,6 +487,7 @@ namespace sh::render {
 
 		//셰이더 로드
 		VulkanShaderBuilder shaderBuilder{ device };
+
 		ShaderLoader loader{ &shaderBuilder };
 		auto shader = loader.LoadShader<VulkanShader>("vert.spv", "frag.spv");
 		assert(shader.get());
@@ -437,18 +497,21 @@ namespace sh::render {
 		//스왑체인과 렌더패스 생성
 		surface->CreateSwapChain(gpu, graphicsQueueIndex, surfaceQueueIndex);
 
-		pipeline = std::make_unique<impl::VulkanPipeline>(*surface.get(), shader.get());
-		pipeline->AddShaderStage(impl::VulkanPipeline::ShaderStage::Vertex);
-		pipeline->AddShaderStage(impl::VulkanPipeline::ShaderStage::Fragment);
-		if (pipeline->CreateGraphicsPipeline() != VkResult::VK_SUCCESS)
+		CreateRenderPass(surface->GetSwapChainImageFormat());
+
+		pipeline = std::make_unique<impl::VulkanPipeline>(*surface.get(), shader.get(), renderPass);
+		pipeline->
+			AddShaderStage(impl::VulkanPipeline::ShaderStage::Vertex).
+			AddShaderStage(impl::VulkanPipeline::ShaderStage::Fragment);
+		if (pipeline->Build() != VkResult::VK_SUCCESS)
 			return false;
 
 		//프레임버퍼 생성
 		auto& imgs = surface->GetSwapChainImageViews();
-		framebuffers.resize(imgs.size(), impl::VulkanFramebuffer{ *pipeline });
+		framebuffers.resize(imgs.size(), impl::VulkanFramebuffer{ device });
 		for (int i = 0; i < imgs.size(); ++i)
 		{
-			VkResult result = framebuffers[i].Create(surface->GetSwapChainSize().width, surface->GetSwapChainSize().height, imgs[i]);
+			VkResult result = framebuffers[i].Create(surface->GetSwapChainSize().width, surface->GetSwapChainSize().height, imgs[i], renderPass);
 			assert(result == VkResult::VK_SUCCESS);
 			if (result != VkResult::VK_SUCCESS)
 				return false;
@@ -481,10 +544,10 @@ namespace sh::render {
 		surface->CreateSwapChain(gpu, graphicsQueueIndex, surfaceQueueIndex);
 
 		auto& imgs = surface->GetSwapChainImageViews();
-		framebuffers.resize(imgs.size(), impl::VulkanFramebuffer{ *pipeline });
+		framebuffers.resize(imgs.size(), impl::VulkanFramebuffer{ device });
 		for (int i = 0; i < imgs.size(); ++i)
 		{
-			VkResult result = framebuffers[i].Create(surface->GetSwapChainSize().width, surface->GetSwapChainSize().height, imgs[i]);
+			VkResult result = framebuffers[i].Create(surface->GetSwapChainSize().width, surface->GetSwapChainSize().height, imgs[i], renderPass);
 			assert(result == VkResult::VK_SUCCESS);
 			if (result != VkResult::VK_SUCCESS)
 				return false;
@@ -557,7 +620,7 @@ namespace sh::render {
 				VkRenderPassBeginInfo renderPassInfo{};
 				VkClearValue clearColor = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
 				renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-				renderPassInfo.renderPass = pipeline->GetRenderPass();
+				renderPassInfo.renderPass = renderPass;
 				renderPassInfo.framebuffer = framebuffers[imgIdx].GetVkFramebuffer();
 				renderPassInfo.renderArea.offset = { 0, 0 };
 				renderPassInfo.renderArea.extent = surface->GetSwapChainSize();

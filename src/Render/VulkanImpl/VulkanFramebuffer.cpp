@@ -6,25 +6,25 @@
 
 namespace sh::render::impl
 {
-	VulkanFramebuffer::VulkanFramebuffer(const VulkanPipeline& pipeline) :
-		pipeline(pipeline),
+	VulkanFramebuffer::VulkanFramebuffer(VkDevice device) :
+		device(device), renderPass(nullptr),
 		framebuffer(nullptr), img(nullptr),
 		width(0), height(0)
 	{
 	}
 
 	VulkanFramebuffer::VulkanFramebuffer(const VulkanFramebuffer& other) :
-		pipeline(other.pipeline),
-		framebuffer(nullptr), img(other.img),
+		device(other.device),
+		framebuffer(nullptr), img(other.img), renderPass(other.renderPass),
 		width(other.width), height(other.height)
 	{
 		if (other.framebuffer)
-			Create(width, height, img);
+			Create(width, height, img, renderPass);
 	}
 
 	VulkanFramebuffer::VulkanFramebuffer(VulkanFramebuffer&& other) noexcept :
-		pipeline(other.pipeline), 
-		framebuffer(other.framebuffer), img(other.img),
+		device(other.device),
+		framebuffer(other.framebuffer), img(other.img), renderPass(other.renderPass),
 		width(other.width), height(other.height)
 	{
 		other.framebuffer = nullptr;
@@ -42,8 +42,9 @@ namespace sh::render::impl
 		width = other.width;
 		height = other.height;
 		img = other.img;
+		renderPass = other.renderPass;
 		if (other.framebuffer)
-			Create(width, height, img);
+			Create(width, height, img, renderPass);
 
 		return *this;
 	}
@@ -60,8 +61,12 @@ namespace sh::render::impl
 		return *this;
 	}
 
-	auto VulkanFramebuffer::Create(uint32_t width, uint32_t height, VkImageView img) -> VkResult
+	auto VulkanFramebuffer::Create(uint32_t width, uint32_t height, VkImageView img, VkRenderPass renderPass) -> VkResult
 	{
+		this->renderPass = renderPass;
+		this->img = img;
+		this->width = width;
+		this->height = height;
 		VkResult result;
 
 		VkImageView views[] = {
@@ -70,14 +75,15 @@ namespace sh::render::impl
 
 		VkFramebufferCreateInfo framebufferInfo{};
 		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-		framebufferInfo.renderPass = pipeline.GetRenderPass();
+		framebufferInfo.pNext = nullptr;
+		framebufferInfo.renderPass = renderPass;
 		framebufferInfo.attachmentCount = 1;
 		framebufferInfo.pAttachments = views;
 		framebufferInfo.width = width;
 		framebufferInfo.height = height;
 		framebufferInfo.layers = 1;
 
-		result = vkCreateFramebuffer(pipeline.GetDevice(), &framebufferInfo, nullptr, &framebuffer);
+		result = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffer);
 		assert(result == VkResult::VK_SUCCESS);
 		return result;
 	}
@@ -86,7 +92,7 @@ namespace sh::render::impl
 	{
 		if (framebuffer)
 		{
-			vkDestroyFramebuffer(pipeline.GetDevice(), framebuffer, nullptr);
+			vkDestroyFramebuffer(device, framebuffer, nullptr);
 			framebuffer = nullptr;
 		}
 	}
