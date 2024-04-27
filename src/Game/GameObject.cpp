@@ -2,7 +2,6 @@
 
 #include "SObject.h"
 #include "Component/Component.h"
-#include "World.h"
 
 namespace sh::game
 {

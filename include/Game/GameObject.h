@@ -4,6 +4,7 @@
 
 #include "SObject.h"
 #include "Component/Component.h"
+#include "World.h"
 
 #include "Core/Reflaction.hpp"
 #include "Core/Util.h"
@@ -13,8 +14,6 @@
 
 namespace sh::game
 {
-	class World;
-
 	class GameObject : public ISObject
 	{
 		SCLASS(GameObject)
