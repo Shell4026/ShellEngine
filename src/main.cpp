@@ -4,6 +4,7 @@
 
 #include "Window/Window.h"
 #include "Render/VulkanRenderer.h"
+#include "Render/Mesh.h"
 #include "Core/Reflaction.hpp"
 #include <Core/Util.h>
 #include <cassert>
@@ -11,6 +12,7 @@
 #include "Game/World.h"
 #include "Game/GameObject.h"
 #include "Game/Component/Transform.h"
+#include "Game/Component/MeshRenderer.h"
 
 #include <iostream>
 class Base {
@@ -58,24 +60,21 @@ int main(int arg, char* args[])
 	p->BaseFunction();
 	real->DerivedFunction();
 
-	using namespace sh::game;
-	World world;
-	GameObject* obj = world.AddGameObject("Test");
-
-	Transform* trans = obj->AddComponent<Transform>();
-
-	world.Start();
-
 	sh::window::Window window;
 	window.Create(u8"테스트", 1024, 768);
 	auto renderer = sh::render::VulkanRenderer{};
 	renderer.Init(window);
 	
-	constexpr long long fps = static_cast<long long>(1000.0f / 144.0f);
-	
-	auto start = std::chrono::high_resolution_clock::now();
-	auto end = std::chrono::high_resolution_clock::now();
-	long long delta_time = 0;
+	using namespace sh::game;
+	World world{ renderer };
+	GameObject* obj = world.AddGameObject("Test");
+
+	sh::render::Mesh mesh;
+
+	//auto meshRenderer = obj->AddComponent<MeshRenderer>();
+	//meshRenderer->SetMesh(mesh);
+
+	world.Start();
 	while (window.IsOpen())
 	{
 		window.ProcessFrame();
@@ -121,6 +120,7 @@ int main(int arg, char* args[])
 				break;
 			}
 		}
+		world.Update(window.GetDeltaTime());
 		renderer.Render(window.GetDeltaTime());
 	}
 	return 0;
