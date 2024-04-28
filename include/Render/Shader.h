@@ -23,32 +23,13 @@ namespace sh::render
 			SPIR,
 		};
 
-		struct Property
+		enum class PropertyType
 		{
-			enum class Type
-			{
-				Int, Float,
-				Vec2, Vec3, Vec4
-			};
-			Type type;
-
-			union Data
-			{
-				int intData;
-				float floatData;
-				glm::vec2 vec2Data;
-				glm::vec3 vec3Data;
-				glm::vec4 vec4Data;
-			};
-			Data data;
-
-			SH_RENDER_API Property();
-			SH_RENDER_API Property(const Property& other);
-
-			SH_RENDER_API void operator=(const Property& other);
+			Int, Float,
+			Vec2, Vec3, Vec4
 		};
 	private:
-		std::unordered_map<std::string, Property> properties;
+		std::unordered_map<std::string, PropertyType> _properties;
 	protected:
 		int id;
 
@@ -58,6 +39,8 @@ namespace sh::render
 		Shader(const Shader& other);
 		Shader(Shader&& other) noexcept;
 	public:
+		const std::unordered_map<std::string, PropertyType>& properties;
+	public:
 		SH_RENDER_API void operator=(const Shader& other);
 		SH_RENDER_API void operator=(Shader&& other) noexcept;
 		SH_RENDER_API auto operator==(const Shader& other) -> bool;
@@ -65,15 +48,9 @@ namespace sh::render
 
 		SH_RENDER_API virtual void Clean() = 0;
 
-		SH_RENDER_API void AddProperty(const std::string& name);
-
-		SH_RENDER_API void SetProperty(const std::string& name, int value);
-		SH_RENDER_API void SetProperty(const std::string& name, float value);
-		SH_RENDER_API void SetProperty(const std::string& name, const glm::vec2& value);
-		SH_RENDER_API void SetProperty(const std::string& name, const glm::vec3& value);
-		SH_RENDER_API void SetProperty(const std::string& name, const glm::vec4& value);
-
-		SH_RENDER_API auto GetProperty(const std::string& name) const -> std::optional<Property>;
+		SH_RENDER_API void AddProperty(const std::string& name, PropertyType type);
+		SH_RENDER_API auto HasProperty(const std::string& name) const -> bool;
+		SH_RENDER_API auto GetProperty(const std::string& name) const -> std::optional<PropertyType>;
 
 		SH_RENDER_API auto GetId() const -> int;
 	};
