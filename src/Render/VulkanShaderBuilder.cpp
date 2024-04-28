@@ -42,7 +42,7 @@ namespace sh::render
 		if (result != VkResult::VK_SUCCESS)
 			return nullptr;
 
-		std::unique_ptr<Shader> retShader = std::make_unique<VulkanShader>(device);
+		std::unique_ptr<Shader> retShader = std::unique_ptr<Shader>{ new VulkanShader{GetNextId(), device } };
 		static_cast<VulkanShader*>(retShader.get())->SetVertexShader(vertShader);
 		static_cast<VulkanShader*>(retShader.get())->SetFragmentShader(fragShader);
 

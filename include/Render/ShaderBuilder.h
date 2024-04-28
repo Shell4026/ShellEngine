@@ -16,9 +16,13 @@ namespace sh::render
 			Vertex,
 			Fragment
 		};
+	private:
+		static int idCount;
 	protected:
 		std::vector<unsigned char> vertShaderData;
 		std::vector<unsigned char> fragShaderData;
+	protected:
+		static auto GetNextId() -> int;
 	public:
 		SH_RENDER_API ShaderBuilder();
 		SH_RENDER_API ShaderBuilder(const ShaderBuilder& other);

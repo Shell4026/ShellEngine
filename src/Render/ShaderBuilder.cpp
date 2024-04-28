@@ -2,6 +2,8 @@
 
 namespace sh::render
 {
+	int ShaderBuilder::idCount = 0;
+
 	ShaderBuilder::ShaderBuilder()
 	{
 	}
@@ -16,6 +18,11 @@ namespace sh::render
 	{
 		this->vertShaderData = std::move(other.vertShaderData);
 		this->fragShaderData = std::move(other.fragShaderData);
+	}
+
+	auto ShaderBuilder::GetNextId() -> int
+	{
+		return idCount++;
 	}
 
 	void ShaderBuilder::SetData(shaderType type, const std::vector<unsigned char>& data)

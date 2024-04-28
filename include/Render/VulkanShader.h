@@ -4,20 +4,27 @@
 #include "VulkanConfig.h"
 #include "Shader.h"
 
+#include "Core/NonCopyable.h"
+
 #include <vector>
 
 namespace sh::render
 {
-	class VulkanShader : public Shader
+	class VulkanShader : public Shader, public sh::core::INonCopyable
 	{
 		SCLASS(VulkanShader)
+
+		friend class VulkanShaderBuilder;
 	private:
 		VkShaderModule vertShader;
 		VkShaderModule fragShader;
 
 		VkDevice device;
+
+	protected:
+		SH_RENDER_API VulkanShader(int id, VkDevice device);
 	public:
-		SH_RENDER_API VulkanShader(VkDevice device);
+		SH_RENDER_API VulkanShader(VulkanShader&& other) noexcept;
 		SH_RENDER_API ~VulkanShader();
 
 		SH_RENDER_API void SetVertexShader(VkShaderModule shader);

@@ -4,12 +4,23 @@
 
 namespace sh::render
 {
-	VulkanShader::VulkanShader(VkDevice device) :
-		Shader(ShaderType::SPIR),
+	VulkanShader::VulkanShader(int id, VkDevice device) :
+		Shader(id, ShaderType::SPIR),
 		vertShader(nullptr), fragShader(nullptr),
 		device(device)
 	{
 	}
+
+	VulkanShader::VulkanShader(VulkanShader&& other) noexcept :
+		Shader(std::move(other)),
+		vertShader(other.vertShader), fragShader(other.fragShader),
+		device(device)
+	{
+		other.vertShader = nullptr;
+		other.fragShader = nullptr;
+		other.device = nullptr;
+	}
+
 	VulkanShader::~VulkanShader()
 	{
 		Clean();
