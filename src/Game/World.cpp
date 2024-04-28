@@ -4,7 +4,9 @@
 
 namespace sh::game
 {
-	World::World()
+	World::World(sh::render::Renderer& renderer) :
+		renderer(renderer),
+		_deltaTime(0.0f), deltaTime(_deltaTime)
 	{
 
 	}
@@ -97,8 +99,10 @@ namespace sh::game
 			obj->Start();
 		}
 	}
-	void World::Update()
+	void World::Update(float deltaTime)
 	{
+		_deltaTime = deltaTime;
+
 		for (auto& obj : objs)
 		{
 			if (!obj->activeSelf)

@@ -7,6 +7,12 @@
 #include <unordered_map>
 #include <memory>
 #include <string_view>
+
+namespace sh::render
+{
+	class Renderer;
+}
+
 namespace sh::game
 {
 	class GameObject;
@@ -17,8 +23,13 @@ namespace sh::game
 		std::vector<std::unique_ptr<GameObject>> objs;
 		std::unordered_map<std::string, int> objsMap;
 		std::queue<int> objsEmptyIdx;
+
+		float _deltaTime;
 	public:
-		SH_GAME_API World();
+		const float& deltaTime;
+		sh::render::Renderer& renderer;
+	public:
+		SH_GAME_API World(sh::render::Renderer& renderer);
 		SH_GAME_API ~World();
 
 		SH_GAME_API auto AddGameObject(const std::string& name) -> GameObject*;
@@ -26,6 +37,6 @@ namespace sh::game
 		SH_GAME_API auto ChangeGameObjectName(const std::string& objName, const std::string& to) -> std::string;
 
 		SH_GAME_API void Start();
-		SH_GAME_API void Update();
+		SH_GAME_API void Update(float deltaTime);
 	};
 }
