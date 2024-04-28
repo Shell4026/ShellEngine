@@ -19,6 +19,10 @@ namespace sh::render::impl
 	}
 	void VulkanPipeline::Clean()
 	{
+		shaderStages.clear();
+		bindingDescriptions.clear();
+		attributeDescriptions.clear();
+
 		if (pipeline)
 		{
 			vkDestroyPipeline(device, pipeline, nullptr);
@@ -30,9 +34,6 @@ namespace sh::render::impl
 			vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
 			pipelineLayout = nullptr;
 		}
-
-		shaderStages.clear();
-		attributeDescriptions.clear();
 	}
 
 	auto VulkanPipeline::AddShaderStage(ShaderStage stage) -> VulkanPipeline&
@@ -65,18 +66,30 @@ namespace sh::render::impl
 		return *this;
 	}
 
-	auto VulkanPipeline::SetBindingDescription(const VkVertexInputBindingDescription& _bindingDescription) -> VulkanPipeline&
+	auto VulkanPipeline::AddBindingDescription(const VkVertexInputBindingDescription& bindingDescription) -> VulkanPipeline&
 	{
-		bindingDescription = _bindingDescription;
+		bindingDescriptions.push_back(bindingDescription);
 
 		return *this;
 	}
 
-	auto VulkanPipeline::SetAttributeDescription(const std::initializer_list<VkVertexInputAttributeDescription>& attributeDescription) -> VulkanPipeline&
+	auto VulkanPipeline::ResetBindingDescription() -> VulkanPipeline&
+	{
+		bindingDescriptions.clear();
+
+		return *this;
+	}
+
+	auto VulkanPipeline::AddAttributeDescription(const VkVertexInputAttributeDescription& attributeDescription) -> VulkanPipeline&
+	{
+		attributeDescriptions.push_back(attributeDescription);
+
+		return *this;
+	}
+
+	SH_RENDER_API auto VulkanPipeline::ResetAttributeDescription() -> VulkanPipeline&
 	{
 		attributeDescriptions.clear();
-		for(auto& attr : attributeDescription)
-			attributeDescriptions.push_back(attr);
 
 		return *this;
 	}
@@ -85,10 +98,10 @@ namespace sh::render::impl
 	{
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 		vertexInputInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		vertexInputInfo.vertexBindingDescriptionCount = 0;
-		vertexInputInfo.pVertexBindingDescriptions = nullptr; //버텍스 바인딩
-		vertexInputInfo.vertexAttributeDescriptionCount = 0;
-		vertexInputInfo.pVertexAttributeDescriptions = nullptr; // Optional
+		vertexInputInfo.vertexBindingDescriptionCount = bindingDescriptions.size();;
+		vertexInputInfo.pVertexBindingDescriptions = bindingDescriptions.data(); //버텍스 바인딩
+		vertexInputInfo.vertexAttributeDescriptionCount = attributeDescriptions.size();
+		vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data(); // 버텍스 어트리뷰트
 
 		VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
 		inputAssembly.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -217,10 +230,5 @@ namespace sh::render::impl
 	auto VulkanPipeline::GetPipeline() const -> VkPipeline
 	{
 		return pipeline;
-	}
-
-	auto VulkanPipeline::GetDevice() const -> VkDevice
-	{
-		return device;
 	}
 }

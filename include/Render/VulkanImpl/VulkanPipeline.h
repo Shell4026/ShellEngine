@@ -32,7 +32,7 @@ namespace sh::render::impl
 		const VulkanShader* shader;
 
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
-		VkVertexInputBindingDescription bindingDescription;
+		std::vector<VkVertexInputBindingDescription> bindingDescriptions;
 		std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
 	private:
 		void CreateRenderPass();
@@ -47,9 +47,11 @@ namespace sh::render::impl
 
 		SH_RENDER_API auto AddShaderStage(ShaderStage stage) -> VulkanPipeline&;
 		SH_RENDER_API auto ResetShaderStage() -> VulkanPipeline&;
-		SH_RENDER_API auto SetBindingDescription(const VkVertexInputBindingDescription& bindingDescription) -> VulkanPipeline&;
-		SH_RENDER_API auto SetAttributeDescription(const std::initializer_list<VkVertexInputAttributeDescription>& attributeDescription) -> VulkanPipeline&;
 
-		SH_RENDER_API auto GetDevice() const -> VkDevice;
+		SH_RENDER_API auto AddBindingDescription(const VkVertexInputBindingDescription& bindingDescription) -> VulkanPipeline&;
+		SH_RENDER_API auto ResetBindingDescription() -> VulkanPipeline&;
+
+		SH_RENDER_API auto AddAttributeDescription(const VkVertexInputAttributeDescription& attributeDescription) -> VulkanPipeline&;
+		SH_RENDER_API auto ResetAttributeDescription() -> VulkanPipeline&;
 	};
 }
