@@ -36,7 +36,7 @@ namespace sh::game
 	};
 
 	template<typename T>
-	struct IsComponent : std::bool_constant<std::is_base_of<Component, typename T>::value>
+	struct IsComponent : std::bool_constant<std::is_base_of<Component, T>::value>
 	{
 	};
 }

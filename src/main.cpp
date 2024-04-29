@@ -86,8 +86,6 @@ int main(int arg, char* args[])
 	auto meshRenderer = obj->AddComponent<MeshRenderer>();
 	meshRenderer->SetMesh(mesh);
 
-	char* a = "asdf";
-
 	world.Start();
 	while (window.IsOpen())
 	{

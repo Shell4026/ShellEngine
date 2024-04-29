@@ -28,5 +28,5 @@ add_subdirectory(Game)
 target_link_libraries(ShellEngine PUBLIC ShellEngine::Game)
 
 file(
-	COPY ${CMAKE_SOURCE_DIR}/resource/vert.spv ${CMAKE_SOURCE_DIR}/resource/frag.spv
+	COPY ${CMAKE_SOURCE_DIR}/resource/vert.spv ${CMAKE_SOURCE_DIR}/resource/frag.spv ${CMAKE_SOURCE_DIR}/resource/triangle.spv
 	DESTINATION ${CMAKE_BINARY_DIR}/bin)

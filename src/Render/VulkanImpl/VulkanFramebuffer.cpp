@@ -111,7 +111,7 @@ namespace sh::render::impl
 		VkResult result = vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);
 		assert(result == VkResult::VK_SUCCESS);
 		if (result != VkResult::VK_SUCCESS)
-			throw std::exception{ "Can't create RenderPass" };
+			throw std::exception();
 	}
 
 	auto VulkanFramebuffer::Create(uint32_t width, uint32_t height, VkImageView img, VkFormat format) -> VkResult
