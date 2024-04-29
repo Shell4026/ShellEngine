@@ -63,4 +63,19 @@ namespace sh::render
 	{
 		return verts.size();
 	}
+
+	void Mesh::AddMaterial(Material* mat)
+	{
+		return mats.push_back(mat);
+	}
+
+	auto Mesh::GetMaterial(int id) -> Material*
+	{
+		return mats[id];
+	}
+
+	auto Mesh::GetMaterials() -> std::vector<Material*>&
+	{
+		return mats;
+	}
 }

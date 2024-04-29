@@ -2,7 +2,7 @@
 
 namespace sh::render
 {
-	void Renderer::PushDrawAble(const IDrawable* drawable)
+	void Renderer::PushDrawAble(IDrawable* drawable)
 	{
 		if (drawable == nullptr)
 			return;

@@ -10,7 +10,7 @@ namespace sh::game
 	{
 	}
 
-	void MeshRenderer::SetMesh(const sh::render::Mesh& mesh)
+	void MeshRenderer::SetMesh(sh::render::Mesh& mesh)
 	{
 		this->mesh = &mesh;
 	}

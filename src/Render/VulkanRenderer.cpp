@@ -20,7 +20,7 @@
 
 namespace sh::render {
 	VulkanRenderer::VulkanRenderer() :
-		instance(nullptr), gpu(nullptr), device(nullptr), cmdPool(nullptr), renderPass(nullptr), window(nullptr),
+		instance(nullptr), gpu(nullptr), device(nullptr), cmdPool(nullptr), window(nullptr),
 		graphicsQueueIndex(-1), surfaceQueueIndex(-1),
 		graphicsQueue(nullptr), surfaceQueue(nullptr),
 		debugMessenger(nullptr), validationLayerName("VK_LAYER_KHRONOS_validation"),
@@ -49,8 +49,6 @@ namespace sh::render {
 		DestroyCommandPool();
 
 		framebuffers.clear();
-		pipeline.reset();
-		DestroyRenderPass();
 		surface.reset();
 		DestroyDevice();
 
@@ -277,63 +275,6 @@ namespace sh::render {
 		}
 	}
 
-	void VulkanRenderer::CreateRenderPass(VkFormat format)
-	{
-		VkAttachmentDescription colorAttachment{};
-		colorAttachment.format = format;
-		colorAttachment.samples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
-		colorAttachment.loadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR;
-		colorAttachment.storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE;
-		//스텐실
-		colorAttachment.stencilLoadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		colorAttachment.stencilStoreOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		colorAttachment.initialLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
-		colorAttachment.finalLayout = VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-		//픽셀 셰이더에서 출력되는 attachment
-		VkAttachmentReference colorAttachmentRef{};
-		colorAttachmentRef.attachment = 0;
-		colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-		VkSubpassDescription subpass{};
-		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-		subpass.colorAttachmentCount = 1;
-		subpass.pColorAttachments = &colorAttachmentRef;
-
-		VkSubpassDependency dependency{};
-		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-		dependency.dstSubpass = 0;
-		//색상 출력 단계에서 대기
-		dependency.srcStageMask = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.srcAccessMask = 0;
-		//색상 출력 단계에서 쓸 수 있을 때까지 서브 패스 전환X
-		dependency.dstStageMask = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-		dependency.dstAccessMask = VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-
-		VkRenderPassCreateInfo renderPassInfo{};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		renderPassInfo.attachmentCount = 1;
-		renderPassInfo.pAttachments = &colorAttachment;
-		renderPassInfo.subpassCount = 1;
-		renderPassInfo.pSubpasses = &subpass;
-		renderPassInfo.dependencyCount = 1;
-		renderPassInfo.pDependencies = &dependency;
-
-		VkResult result = vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);
-		assert(result == VkResult::VK_SUCCESS);
-		if (result != VkResult::VK_SUCCESS)
-			throw std::exception{ "Can't create RenderPass" };
-	}
-
-	void VulkanRenderer::DestroyRenderPass()
-	{
-		if (renderPass)
-		{
-			vkDestroyRenderPass(device, renderPass, nullptr);
-			renderPass = nullptr;
-		}
-	}
-
 	auto VulkanRenderer::CreateCommandPool(uint32_t queue) -> VkResult
 	{
 		VkCommandPoolCreateInfo poolInfo = {};
@@ -485,33 +426,16 @@ namespace sh::render {
 		vkGetDeviceQueue(device, surfaceQueueIndex, 0, &surfaceQueue);
 		assert(surfaceQueue);
 
-		//셰이더 로드
-		VulkanShaderBuilder shaderBuilder{ device };
 
-		ShaderLoader loader{ &shaderBuilder };
-		auto shader = loader.LoadShader<VulkanShader>("vert.spv", "frag.spv");
-		assert(shader.get());
-		if (shader.get() == nullptr)
-			return false;
-
-		//스왑체인과 렌더패스 생성
+		//스왑체인 생성
 		surface->CreateSwapChain(gpu, graphicsQueueIndex, surfaceQueueIndex);
 
-		CreateRenderPass(surface->GetSwapChainImageFormat());
-
-		pipeline = std::make_unique<impl::VulkanPipeline>(*surface.get(), shader.get(), renderPass);
-		pipeline->
-			AddShaderStage(impl::VulkanPipeline::ShaderStage::Vertex).
-			AddShaderStage(impl::VulkanPipeline::ShaderStage::Fragment);
-		if (pipeline->Build() != VkResult::VK_SUCCESS)
-			return false;
-
-		//프레임버퍼 생성
+		//프레임버퍼 생성 (렌더패스 생성 -> 프레임버퍼 생성)
 		auto& imgs = surface->GetSwapChainImageViews();
 		framebuffers.resize(imgs.size(), impl::VulkanFramebuffer{ device });
 		for (int i = 0; i < imgs.size(); ++i)
 		{
-			VkResult result = framebuffers[i].Create(surface->GetSwapChainSize().width, surface->GetSwapChainSize().height, imgs[i], renderPass);
+			VkResult result = framebuffers[i].Create(surface->GetSwapChainSize().width, surface->GetSwapChainSize().height, imgs[i], surface->GetSwapChainImageFormat());
 			assert(result == VkResult::VK_SUCCESS);
 			if (result != VkResult::VK_SUCCESS)
 				return false;
@@ -547,7 +471,7 @@ namespace sh::render {
 		framebuffers.resize(imgs.size(), impl::VulkanFramebuffer{ device });
 		for (int i = 0; i < imgs.size(); ++i)
 		{
-			VkResult result = framebuffers[i].Create(surface->GetSwapChainSize().width, surface->GetSwapChainSize().height, imgs[i], renderPass);
+			VkResult result = framebuffers[i].Create(surface->GetSwapChainSize().width, surface->GetSwapChainSize().height, imgs[i], surface->GetSwapChainImageFormat());
 			assert(result == VkResult::VK_SUCCESS);
 			if (result != VkResult::VK_SUCCESS)
 				return false;
@@ -620,7 +544,7 @@ namespace sh::render {
 				VkRenderPassBeginInfo renderPassInfo{};
 				VkClearValue clearColor = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
 				renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-				renderPassInfo.renderPass = renderPass;
+				renderPassInfo.renderPass = framebuffers[imgIdx].GetRenderPass();
 				renderPassInfo.framebuffer = framebuffers[imgIdx].GetVkFramebuffer();
 				renderPassInfo.renderArea.offset = { 0, 0 };
 				renderPassInfo.renderArea.extent = surface->GetSwapChainSize();
@@ -628,23 +552,30 @@ namespace sh::render {
 				renderPassInfo.pClearValues = &clearColor;
 
 				vkCmdBeginRenderPass(buffer, &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
-				vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetPipeline());
+				while (!drawList.empty())
+				{
+					auto drawObj = drawList.front();
+					drawList.pop();
 
-				VkViewport viewport{};
-				viewport.x = 0.0f;
-				viewport.y = 0.0f;
-				viewport.width = static_cast<float>(surface->GetSwapChainSize().width);
-				viewport.height = static_cast<float>(surface->GetSwapChainSize().height);
-				viewport.minDepth = 0.0f;
-				viewport.maxDepth = 1.0f;
-				vkCmdSetViewport(buffer, 0, 1, &viewport);
+					VulkanShader* shader = static_cast<VulkanShader*>(drawObj->GetMaterial(0)->GetShader());
+					vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, shader->GetPipeline()->GetPipeline());
 
-				VkRect2D scissor{};
-				scissor.offset = { 0, 0 };
-				scissor.extent = surface->GetSwapChainSize();
-				vkCmdSetScissor(buffer, 0, 1, &scissor);
+					VkViewport viewport{};
+					viewport.x = 0.0f;
+					viewport.y = 0.0f;
+					viewport.width = static_cast<float>(surface->GetSwapChainSize().width);
+					viewport.height = static_cast<float>(surface->GetSwapChainSize().height);
+					viewport.minDepth = 0.0f;
+					viewport.maxDepth = 1.0f;
+					vkCmdSetViewport(buffer, 0, 1, &viewport);
 
-				vkCmdDraw(buffer, 3, 1, 0, 0);
+					VkRect2D scissor{};
+					scissor.offset = { 0, 0 };
+					scissor.extent = surface->GetSwapChainSize();
+					vkCmdSetScissor(buffer, 0, 1, &scissor);
+
+					vkCmdDraw(buffer, 3, 1, 0, 0);
+				}
 				vkCmdEndRenderPass(buffer);
 			},
 			inFlightFence[currentFrame]
@@ -668,6 +599,16 @@ namespace sh::render {
 	void VulkanRenderer::Pause(bool b)
 	{
 		bPause = b;
+	}
+
+	auto VulkanRenderer::GetDevice() const -> VkDevice
+	{
+		return device;
+	}
+
+	auto VulkanRenderer::GetMainFramebuffer() -> Framebuffer*
+	{
+		return &framebuffers[0];
 	}
 }//namespace
 

@@ -6,9 +6,11 @@
 
 #include <queue>
 namespace sh::render {
+	class Framebuffer;
+
 	class Renderer {
 	protected:
-		std::queue<const IDrawable*> drawList;
+		std::queue<IDrawable*> drawList;
 	public:
 		SH_RENDER_API virtual ~Renderer() = default;
 
@@ -20,8 +22,9 @@ namespace sh::render {
 		SH_RENDER_API virtual void Pause(bool b) = 0;
 
 		SH_RENDER_API virtual bool IsInit() const = 0;
+		SH_RENDER_API virtual auto GetMainFramebuffer() -> Framebuffer* = 0;
 
 		SH_RENDER_API void ClearDrawList();
-		SH_RENDER_API void PushDrawAble(const IDrawable* drawable);
+		SH_RENDER_API void PushDrawAble(IDrawable* drawable);
 	};
 }

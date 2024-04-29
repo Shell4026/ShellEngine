@@ -35,14 +35,12 @@ namespace sh::render {
 
 		std::unique_ptr<impl::VulkanSurface> surface;
 		std::unique_ptr<impl::VulkanLayer> layers;
-		std::unique_ptr<impl::VulkanPipeline> pipeline;
 		std::array<std::unique_ptr<impl::VulkanCommandBuffer>, MAX_FRAME_DRAW> cmdBuffers;
 
 		VkInstance instance;
 		VkPhysicalDevice gpu;
 		VkDevice device; //논리적 장치
 		std::vector<impl::VulkanFramebuffer> framebuffers;
-		VkRenderPass renderPass;
 
 		VkCommandPool cmdPool;
 
@@ -86,9 +84,6 @@ namespace sh::render {
 		auto CreateDevice(VkPhysicalDevice gpu)->VkResult;
 		void DestroyDevice();
 
-		void CreateRenderPass(VkFormat format);
-		void DestroyRenderPass();
-
 		auto CreateCommandPool(uint32_t queue) -> VkResult;
 		void DestroyCommandPool();
 		auto ResetCommandPool(uint32_t queue) -> VkResult;
@@ -109,6 +104,9 @@ namespace sh::render {
 
 		SH_RENDER_API void Render(float deltaTime) override;
 		SH_RENDER_API void Pause(bool b) override;
+
+		SH_RENDER_API auto GetDevice() const -> VkDevice;
+		SH_RENDER_API auto GetMainFramebuffer() -> Framebuffer* override;
 
 	};
 }//namespace

@@ -13,6 +13,7 @@ namespace sh::render
 	{
 	private:
 		std::vector<glm::vec3> verts;
+		std::vector<Material*> mats;
 	public:
 		SH_RENDER_API Mesh();
 		SH_RENDER_API Mesh(const Mesh& other);
@@ -29,5 +30,9 @@ namespace sh::render
 		SH_RENDER_API auto GetVertexConst() const -> const std::vector<glm::vec3>&;
 
 		SH_RENDER_API auto GetVertexCount() const -> int override;
+
+		SH_RENDER_API void AddMaterial(Material* mat);
+		SH_RENDER_API auto GetMaterial(int id) -> Material* override;
+		SH_RENDER_API auto GetMaterials() -> std::vector<Material*>& override;
 	};
 }

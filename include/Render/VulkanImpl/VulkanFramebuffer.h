@@ -1,13 +1,14 @@
 ﻿#pragma once
 
 #include "Export.h"
+#include "Framebuffer.h"
 #include "VulkanImpl/VulkanConfig.h"
 
 #include <vector>
 
 namespace sh::render::impl
 {
-	class VulkanFramebuffer
+	class VulkanFramebuffer : public Framebuffer
 	{
 	private:
 		VkDevice device;
@@ -17,6 +18,9 @@ namespace sh::render::impl
 		VkRenderPass renderPass;
 
 		uint32_t width, height;
+		VkFormat format;
+	private:
+		void CreateRenderPass();
 	public:
 		SH_RENDER_API VulkanFramebuffer(VkDevice device);
 		SH_RENDER_API VulkanFramebuffer(const VulkanFramebuffer& other);
@@ -26,9 +30,10 @@ namespace sh::render::impl
 		SH_RENDER_API auto operator=(const VulkanFramebuffer& other) -> VulkanFramebuffer&;
 		SH_RENDER_API auto operator=(VulkanFramebuffer&& other) noexcept -> VulkanFramebuffer&;
 
-		SH_RENDER_API auto Create(uint32_t width, uint32_t height, VkImageView img, VkRenderPass renderPass)->VkResult;
+		SH_RENDER_API auto Create(uint32_t width, uint32_t height, VkImageView img, VkFormat format)->VkResult;
 		SH_RENDER_API void Clean();
 
+		SH_RENDER_API auto GetRenderPass() const -> VkRenderPass;
 		SH_RENDER_API auto GetVkFramebuffer() const -> VkFramebuffer;
 	};
 }

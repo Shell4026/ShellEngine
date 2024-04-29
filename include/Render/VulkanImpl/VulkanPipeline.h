@@ -21,23 +21,20 @@ namespace sh::render::impl
 			Fragment
 		};
 	private:
-		const VulkanSurface& surface;
+		VkDevice device;
 		VkRenderPass renderPass;
+		const VulkanShader* shader;
 
 		VkPipelineLayout pipelineLayout;
 		VkPipeline pipeline;
 
-		VkDevice device;
-
-		const VulkanShader* shader;
-
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 		std::vector<VkVertexInputBindingDescription> bindingDescriptions;
 		std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
-	private:
-		void CreateRenderPass();
+
+		int viewportX, viewportY;
 	public:
-		SH_RENDER_API VulkanPipeline(const VulkanSurface& surface, const VulkanShader* shader, VkRenderPass renderPass);
+		SH_RENDER_API VulkanPipeline(VkDevice device, VkRenderPass renderPass, const VulkanShader* shader);
 		SH_RENDER_API ~VulkanPipeline();
 
 		SH_RENDER_API auto Build() -> VkResult;

@@ -11,5 +11,8 @@ namespace sh::render
 		int id;
 
 		Shader* shader;
+	public:
+		SH_RENDER_API void SetShader(Shader* shader);
+		SH_RENDER_API auto GetShader() const -> Shader*;
 	};
 }

@@ -3,7 +3,11 @@
 #include <thread>
 
 #include "Window/Window.h"
+#include "Render/VulkanShader.h"
+#include "Render/VulkanShaderBuilder.h"
 #include "Render/VulkanRenderer.h"
+#include "Render/ShaderLoader.h"
+#include "Render/Material.h"
 #include "Render/Mesh.h"
 #include "Core/Reflaction.hpp"
 #include <Core/Util.h>
@@ -49,7 +53,7 @@ int main(int arg, char* args[])
 	
 	Base base;
 	Derived derived;
-	NoBase nobase;
+	NoBase nobase, nobase2;
 	Base* p = &derived;
 
 	std::cout << derived.GetTypeInfo().GetName() << "\n"; //Derived 출력
@@ -65,14 +69,24 @@ int main(int arg, char* args[])
 	auto renderer = sh::render::VulkanRenderer{};
 	renderer.Init(window);
 	
+	sh::render::VulkanShaderBuilder builder{ renderer };
+	sh::render::ShaderLoader loader{ &builder };
+	auto shader = loader.LoadShader<sh::render::VulkanShader>("triangle.spv", "frag.spv");
+
+	sh::render::Material mat{};
+	mat.SetShader(shader.get());
+
+	sh::render::Mesh mesh{};
+	mesh.AddMaterial(&mat);
+
 	using namespace sh::game;
 	World world{ renderer };
 	GameObject* obj = world.AddGameObject("Test");
 
-	sh::render::Mesh mesh;
+	auto meshRenderer = obj->AddComponent<MeshRenderer>();
+	meshRenderer->SetMesh(mesh);
 
-	//auto meshRenderer = obj->AddComponent<MeshRenderer>();
-	//meshRenderer->SetMesh(mesh);
+	char* a = "asdf";
 
 	world.Start();
 	while (window.IsOpen())

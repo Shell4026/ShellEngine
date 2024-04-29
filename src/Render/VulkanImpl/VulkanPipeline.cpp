@@ -6,10 +6,10 @@
 #include <cassert>
 namespace sh::render::impl
 {
-	VulkanPipeline::VulkanPipeline(const VulkanSurface& surface, const VulkanShader* shader, VkRenderPass renderPass) :
-		surface(surface), renderPass(renderPass),
-		pipelineLayout(nullptr), pipeline(nullptr), device(surface.GetDevice()),
-		shader(shader)
+	VulkanPipeline::VulkanPipeline(VkDevice device, VkRenderPass renderPass, const VulkanShader* shader) :
+		device(device), renderPass(renderPass), shader(shader),
+		pipelineLayout(nullptr), pipeline(nullptr), 
+		viewportX(0), viewportY(0)
 	{
 	}
 
@@ -111,14 +111,18 @@ namespace sh::render::impl
 		VkViewport viewport{};
 		viewport.x = 0.0f;
 		viewport.y = 0.0f;
-		viewport.width = static_cast<float>(surface.GetSwapChainSize().width);
-		viewport.height = static_cast<float>(surface.GetSwapChainSize().height);
+		viewport.width = static_cast<float>(viewportX);
+		viewport.height = static_cast<float>(viewportY);
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
 
+		VkExtent2D scissorExtend;
+		scissorExtend.width = viewportX;
+		scissorExtend.height = viewportY;
+
 		VkRect2D scissor{};
 		scissor.offset = { 0, 0 };
-		scissor.extent = surface.GetSwapChainSize();
+		scissor.extent = scissorExtend;
 
 		std::vector<VkDynamicState> dynamicStates =
 		{
@@ -142,7 +146,7 @@ namespace sh::render::impl
 		rasterizer.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 		rasterizer.depthClampEnable = VK_FALSE;
 		rasterizer.rasterizerDiscardEnable = VK_FALSE;
-		rasterizer.polygonMode = VkPolygonMode::VK_POLYGON_MODE_FILL;
+		rasterizer.polygonMode = VkPolygonMode::VK_POLYGON_MODE_FILL; //채우기
 		rasterizer.lineWidth = 1.0f;
 		rasterizer.cullMode = VkCullModeFlagBits::VK_CULL_MODE_BACK_BIT;
 		rasterizer.frontFace = VK_FRONT_FACE_CLOCKWISE;
