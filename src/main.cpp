@@ -19,45 +19,59 @@
 #include "Game/Component/MeshRenderer.h"
 
 #include <iostream>
-class Base {
-	SCLASS(Base)
-public:
-
-public:
-	void BaseFunction() 
-	{ 
-		std::cout << "Base!!\n"; 
-	}
-};
-
-class Derived : public Base
-{
-	SCLASS(Derived)
-public:
-	void DerivedFunction() 
-	{ 
-		std::cout << "Derived!!\n"; 
-	}
-};
-
 class NoBase {
 public:
+	int a = 123;
 	void NoBaseFunction()
 	{
 		std::cout << "NoBase!!\n";
 	}
 };
 
+class Base : public sh::core::ISObject {
+	SCLASS(Base)
+public:
+	void BaseFunction() 
+	{ 
+		std::cout << "Base!!\n"; 
+	}
+
+	void Awake() override {}
+	void Start() override  {}
+	void OnEnable() override {}
+	void Update() override {}
+	void LateUpdate() override {}
+};
+
+class Derived : public Base
+{
+	SCLASS(Derived)
+public:
+	PROPERTY(ptr)
+	Derived* ptr;
+
+	int a = 123;
+public:
+	void DerivedFunction() 
+	{
+		std::cout << "Derived!!\n"; 
+	}
+};
+
+
+
 int main(int arg, char* args[]) 
 {
-	
 	Base base;
-	Derived derived;
-	NoBase nobase, nobase2;
+	Derived derived, derived2;
+	NoBase nobase;
 	Base* p = &derived;
 
-	std::cout << derived.GetTypeInfo().GetName() << "\n"; //Derived 출력
-	std::cout << Derived::Super::GetStaticTypeInfo().GetName() << "\n"; //Base 출력
+	derived.ptr = &derived2;
+	Derived* ptr = Derived::GetStaticType().GetProperty("ptr")->Get<Derived*>(&derived);
+	int a = ptr->a;
+	std::cout << derived.GetType().GetName() << "\n"; //Derived 출력
+	std::cout << Derived::Super::GetStaticType().GetName() << "\n"; //Base 출력
 
 	auto real = sh::core::Util::Cast<Derived>(p);
 	assert(real != nullptr);

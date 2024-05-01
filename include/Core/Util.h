@@ -39,11 +39,11 @@ namespace sh::core {
 		/// 둘 다 SCLASS매크로가 선언 돼 있어야한다.
 		template<typename To, typename From>
 		static auto Cast(From* src) -> std::enable_if_t<
-			sh::core::Reflection::IsSClass<To>::value && 
-			sh::core::Reflection::IsSClass<From>::value, To*>
+			sh::core::reflection::IsSClass<To>::value && 
+			sh::core::reflection::IsSClass<From>::value, To*>
 		{
 			if (!src) return nullptr;
-			if (src->GetTypeInfo().IsChild(To::GetStaticTypeInfo()))
+			if (src->GetType().IsChild(To::GetStaticType()))
 				return reinterpret_cast<To*>(src);
 			return nullptr;
 		}

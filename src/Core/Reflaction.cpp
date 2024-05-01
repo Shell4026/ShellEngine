@@ -1,18 +1,18 @@
 ﻿#include "Reflaction.hpp"
 
-namespace sh::core
+namespace sh::core::reflection
 {
-	auto Reflection::TypeInfo::GetName() const -> const char*
+	auto TypeInfo::GetName() const -> const char*
 	{
 		return name;
 	}
 
-	auto Reflection::TypeInfo::GetSuper() const -> const TypeInfo*
+	auto TypeInfo::GetSuper() const -> const TypeInfo*
 	{
 		return super;
 	}
 
-	bool Reflection::TypeInfo::IsA(const TypeInfo& other) const
+	bool TypeInfo::IsA(const TypeInfo& other) const
 	{
 		if (this == &other)
 			return true;
@@ -20,7 +20,7 @@ namespace sh::core
 		return this->hash == other.hash;
 	}
 
-	bool Reflection::TypeInfo::IsChild(const TypeInfo& other) const
+	bool TypeInfo::IsChild(const TypeInfo& other) const
 	{
 		if (IsA(other))
 			return true;
@@ -34,4 +34,22 @@ namespace sh::core
 		}
 		return false;
 	}
-}
+
+	void TypeInfo::AddProperty(const std::string& name, const Property& prop)
+	{
+		properties.insert({ name, prop });
+	}
+
+	auto TypeInfo::GetProperty(const std::string& name) const -> const Property*
+	{
+		auto it = properties.find(name);
+		if (it == properties.end())
+			return nullptr;
+		return &it->second;
+	}
+
+	auto TypeInfo::GetProperties(const std::string& name) const -> const std::map<std::string, Property>&
+	{
+		return properties;
+	}
+;}

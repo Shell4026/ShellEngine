@@ -1,6 +1,5 @@
 ﻿#include "GameObject.h"
 
-#include "SObject.h"
 #include "Component/Component.h"
 
 namespace sh::game
