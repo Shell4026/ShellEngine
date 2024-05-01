@@ -49,7 +49,7 @@ class Derived : public Base
 public:
 	PROPERTY(ptr)
 	Derived* ptr;
-
+	PROPERTY(a)
 	int a = 123;
 public:
 	void DerivedFunction() 
@@ -68,8 +68,9 @@ int main(int arg, char* args[])
 	Base* p = &derived;
 
 	derived.ptr = &derived2;
-	Derived* ptr = Derived::GetStaticType().GetProperty("ptr")->Get<Derived*>(&derived);
-	int a = ptr->a;
+	auto property = Derived::GetStaticType().GetProperty("a");
+	property->Set(&derived, 256);
+
 	std::cout << derived.GetType().GetName() << "\n"; //Derived 출력
 	std::cout << Derived::Super::GetStaticType().GetName() << "\n"; //Base 출력
 

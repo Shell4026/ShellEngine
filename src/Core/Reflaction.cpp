@@ -40,7 +40,7 @@ namespace sh::core::reflection
 		properties.insert({ name, prop });
 	}
 
-	auto TypeInfo::GetProperty(const std::string& name) const -> const Property*
+	auto TypeInfo::GetProperty(const std::string& name) -> Property*
 	{
 		auto it = properties.find(name);
 		if (it == properties.end())

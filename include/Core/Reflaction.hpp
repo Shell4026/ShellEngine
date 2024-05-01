@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 #include "Export.h"
-#include "SObject.h"
 
 #include <cstddef>
 #include <typeinfo>
@@ -82,7 +81,7 @@ namespace sh::core::reflection
 		SH_CORE_API bool IsChild(const TypeInfo& other) const;
 
 		SH_CORE_API void AddProperty(const std::string& name, const Property& prop);
-		SH_CORE_API auto GetProperty(const std::string& name) const -> const Property*;
+		SH_CORE_API auto GetProperty(const std::string& name) -> Property*;
 		SH_CORE_API auto GetProperties(const std::string& name) const -> const std::map<std::string, Property>&;
 	};//TypeInfo
 
@@ -95,6 +94,7 @@ namespace sh::core::reflection
 	{
 	public:
 		virtual auto Get(void* sobject) const -> T& = 0;
+		virtual void Set(void* sobject, T value) = 0;
 	};
 
 	template<typename ThisType, typename T>
@@ -112,6 +112,11 @@ namespace sh::core::reflection
 		{
 			return static_cast<ThisType*>(sobject)->*ptr;
 		}
+
+		void Set(void* sobject, T value) override
+		{
+			static_cast<ThisType*>(sobject)->*ptr = value;
+		}
 	};
 
 	template<typename ThisType, typename T, typename VariablePointer, VariablePointer ptr>
@@ -125,10 +130,8 @@ namespace sh::core::reflection
 		PropertyInfo(const char* name) :
 			name(name), owner(ThisType::GetStaticType())
 		{
-
 			static PropertyData<ThisType, T> data{ ptr };
-			Property property{ &data };
-			owner.AddProperty(name, property);
+			owner.AddProperty(name, Property{ &data });
 		}
 	};
 
@@ -147,6 +150,11 @@ namespace sh::core::reflection
 		auto Get(ThisType* sobject) const -> T&
 		{
 			return static_cast<IPropertyData<T>*>(data)->Get(sobject);
+		}
+		template<typename T, typename ThisType>
+		void Set(ThisType* sobject, T value)
+		{
+			static_cast<IPropertyData<T>*>(data)->Set(sobject, value);
 		}
 	};
 
