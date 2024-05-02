@@ -35,8 +35,8 @@ struct _PropertyFactory_##variable_name\
 		static sh::core::reflection::PropertyInfo\
 			<This, \
 			decltype(variable_name), \
-			decltype(&This::##variable_name), \
-			&This::##variable_name> property_##variable_name{ #variable_name };\
+			decltype(&This::variable_name), \
+			&This::variable_name> property_##variable_name{ #variable_name };\
 	}\
 } _propertyFactory_##variable_name;\
 
@@ -44,6 +44,26 @@ namespace sh::core::reflection
 {
 	class TypeInfo;
 	class Property;
+	
+	//기본 HasSuper 구조체
+	template<typename T, typename U = void>
+	struct HasSuper :
+		std::bool_constant<false> {};
+	//T가 Super을 가지고 있다면 오버로딩 된다(SFINAE). 없으면 기본HasSuper
+	template<typename T>
+	struct HasSuper<T, std::void_t<typename T::Super>> :
+		std::bool_constant<!std::is_same_v<typename T::Super, void>> {};
+
+	template<typename T, typename CheckThis = void>
+	struct HasThis :
+		std::bool_constant<false> {};
+
+	template<typename T>
+	struct HasThis<T, std::void_t<typename T::This>> :
+		std::bool_constant<!std::is_same_v<typename T::This, void>> {};
+
+	template<typename T>
+	struct IsSClass : std::bool_constant<HasThis<T>::value> {};
 
 	template<typename T>
 	struct TypeInfoData
@@ -166,24 +186,4 @@ namespace sh::core::reflection
 	struct MakeSuper<T, std::void_t<typename T::This>> {
 		using type = typename T::This;
 	};
-
-	//기본 HasSuper 구조체
-	template<typename T, typename U = void>
-	struct HasSuper :
-		std::bool_constant<false> {};
-	//T가 Super을 가지고 있다면 오버로딩 된다(SFINAE). 없으면 기본HasSuper
-	template<typename T>
-	struct HasSuper<T, std::void_t<typename T::Super>> :
-		std::bool_constant<!std::is_same_v<typename T::Super, void>> {};
-
-	template<typename T, typename U = void>
-	struct HasThis :
-		std::bool_constant<false> {};
-
-	template<typename T>
-	struct HasThis<T, std::void_t<typename T::This>> :
-		std::bool_constant<!std::is_same_v<typename T::This, void>> {};
-
-	template<typename T>
-	struct IsSClass : std::bool_constant<HasThis<T>::value> {};
 }
