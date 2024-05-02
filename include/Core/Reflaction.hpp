@@ -102,6 +102,7 @@ namespace sh::core::reflection
 		const size_t hash;
 
 		std::map<std::string, Property> properties;
+		std::vector<Property*> pointers;
 	public:
 		template<typename T>
 		explicit TypeInfo(TypeInfoData<T> data) :
@@ -114,19 +115,32 @@ namespace sh::core::reflection
 		//현재 타입이 other의 자식인지
 		SH_CORE_API bool IsChild(const TypeInfo& other) const;
 
-		SH_CORE_API void AddProperty(const std::string& name, const Property& prop);
+		SH_CORE_API auto AddProperty(const std::string& name, const Property& prop) -> Property*;
+		SH_CORE_API void AddPointerProperty(Property* prop);
 		SH_CORE_API auto GetProperty(const std::string& name) -> Property*;
-		SH_CORE_API auto GetProperties(const std::string& name) const -> const std::map<std::string, Property>&;
+		SH_CORE_API auto GetProperties() const -> const std::map<std::string, Property>&;
+		SH_CORE_API auto GetPointerProperties() const -> const std::vector<Property*>&;
 	};//TypeInfo
 
 	class PropertyDataBase
 	{
+	public:
+		TypeInfo& type;
+	public:
+		PropertyDataBase(TypeInfo& type) :
+			type(type)
+		{
+		}
 	};
 
 	template<typename T>
 	class IPropertyData : public PropertyDataBase
 	{
 	public:
+		IPropertyData<T>(TypeInfo& type) :
+			PropertyDataBase(type)
+		{
+		}
 		virtual auto Get(void* sobject) const -> T& = 0;
 		virtual void Set(void* sobject, T value) = 0;
 	};
@@ -137,14 +151,15 @@ namespace sh::core::reflection
 	private:
 		T ThisType::* ptr; //맴버변수 포인터
 	public:
-		PropertyData(T ThisType::* ptr):
+		PropertyData(T ThisType::* ptr, TypeInfo& type):
+			IPropertyData<T>(type),
 			ptr(ptr)
 		{
 		}
 
 		auto Get(void* sobject) const -> T& override 
 		{
-			return static_cast<ThisType*>(sobject)->*ptr;
+			return reinterpret_cast<ThisType*>(sobject)->*ptr;
 		}
 
 		void Set(void* sobject, T value) override
@@ -164,8 +179,13 @@ namespace sh::core::reflection
 		PropertyInfo(const char* name) :
 			name(name), owner(ThisType::GetStaticType())
 		{
-			static PropertyData<ThisType, T> data{ ptr };
-			owner.AddProperty(name, Property{ &data });
+			static PropertyData<ThisType, T> data{ ptr, owner };
+			Property* prop = owner.AddProperty(name, Property{ &data });
+			if constexpr (std::is_pointer_v<T>)
+			{
+				if (prop != nullptr)
+					owner.AddPointerProperty(prop);
+			}
 		}
 	};
 
@@ -183,6 +203,8 @@ namespace sh::core::reflection
 		template<typename T, typename ThisType>
 		auto Get(ThisType* sobject) const -> T&
 		{
+			//if (data->type.IsChild())
+
 			return static_cast<IPropertyData<T>*>(data)->Get(sobject);
 		}
 		template<typename T, typename ThisType>

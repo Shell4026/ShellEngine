@@ -2,7 +2,7 @@
 
 #include "Export.h"
 
-#include "Core/SObject.h"
+#include "Object.h"
 #include "Component/Component.h"
 #include "World.h"
 
@@ -14,7 +14,7 @@
 
 namespace sh::game
 {
-	class GameObject : public sh::core::ISObject
+	class GameObject : public IObject
 	{
 		SCLASS(GameObject)
 	private:

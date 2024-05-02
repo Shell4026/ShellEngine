@@ -28,19 +28,13 @@ public:
 	}
 };
 
-class Base : public sh::core::ISObject {
+class Base : public sh::core::SObject {
 	SCLASS(Base)
 public:
 	void BaseFunction() 
 	{ 
 		std::cout << "Base!!\n"; 
 	}
-
-	void Awake() override {}
-	void Start() override  {}
-	void OnEnable() override {}
-	void Update() override {}
-	void LateUpdate() override {}
 };
 
 class Derived : public Base
@@ -48,11 +42,15 @@ class Derived : public Base
 	SCLASS(Derived)
 public:
 	PROPERTY(ptr)
-	Derived* ptr;
+	Derived* ptr = nullptr;
 	PROPERTY(a)
 	int a = 123;
+	PROPERTY(ptrNoBase)
+	NoBase* ptrNoBase = nullptr;
+
+	std::string name;
 public:
-	void DerivedFunction() 
+	void DerivedFunction()
 	{
 		std::cout << "Derived!!\n"; 
 	}
@@ -67,14 +65,22 @@ int main(int arg, char* args[])
 	NoBase nobase;
 	Base* p = &derived;
 
+	derived.name = "abc";
+	derived2.name = "def";
+
 	derived.ptr = &derived2;
+	derived.ptrNoBase = &nobase;
+	auto& type = Derived::GetStaticType();
 	auto property = Derived::GetStaticType().GetProperty("a");
 	property->Set(&derived, 256);
 
+	derived.UpdateRef();
+
+	derived2.Destroy();
 	std::cout << derived.GetType().GetName() << "\n"; //Derived 출력
 	std::cout << Derived::Super::GetStaticType().GetName() << "\n"; //Base 출력
 
-	auto real = sh::core::Util::Cast<Derived>(p);
+	auto real = sh::core::reflection::Cast<Derived>(p);
 	assert(real != nullptr);
 	p->BaseFunction();
 	real->DerivedFunction();

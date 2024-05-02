@@ -2,7 +2,7 @@
 
 #include "Game/Export.h"
 
-#include "Core/SObject.h"
+#include "Game/Object.h"
 
 #include "Core/Reflaction.hpp"
 #include "Core/Util.h"
@@ -13,7 +13,7 @@ namespace sh::game
 {
 	class GameObject;
 
-	class Component : public sh::core::ISObject
+	class Component : public IObject
 	{
 		SCLASS(Component)
 	private:
