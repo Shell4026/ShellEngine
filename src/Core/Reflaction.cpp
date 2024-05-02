@@ -20,6 +20,11 @@ namespace sh::core::reflection
 		return this->hash == other.hash;
 	}
 
+	bool TypeInfo::operator==(const TypeInfo& other) const
+	{
+		return IsA(other);
+	}
+
 	bool TypeInfo::IsChildOf(const TypeInfo& other) const
 	{
 		if (IsA(other))

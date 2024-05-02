@@ -54,7 +54,7 @@ namespace sh::core::reflection
 	template<typename T, typename U = void>
 	struct HasSuper :
 		std::bool_constant<false> {};
-	//T가 Super을 가지고 있다면 오버로딩 된다(SFINAE). 없으면 기본HasSuper
+	//T가 Super을 가지고 있다면 오버로딩 된다(SFINAE).
 	template<typename T>
 	struct HasSuper<T, std::void_t<typename T::Super>> :
 		std::bool_constant<!std::is_same_v<typename T::Super, void>> {};
@@ -69,6 +69,15 @@ namespace sh::core::reflection
 
 	template<typename T>
 	struct IsSClass : std::bool_constant<HasThis<T>::value> {};
+
+	template<typename T, typename U = void>
+	struct MakeSuper {
+		using type = U;
+	};
+	template<typename T>
+	struct MakeSuper<T, std::void_t<typename T::This>> {
+		using type = typename T::This;
+	};
 
 	/// \brief 빠른 다운 캐스팅.
 	///
@@ -117,6 +126,7 @@ namespace sh::core::reflection
 		SH_CORE_API auto GetSuper() const -> const TypeInfo*;
 		//other와 자신이 같은 타입인지
 		SH_CORE_API bool IsA(const TypeInfo& other) const;
+		SH_CORE_API bool operator==(const TypeInfo& other) const;
 		//현재 타입이 other의 자식인지
 		SH_CORE_API bool IsChildOf(const TypeInfo& other) const;
 
@@ -217,14 +227,5 @@ namespace sh::core::reflection
 		{
 			static_cast<IPropertyData<T>*>(data)->Set(sobject, value);
 		}
-	};
-
-	template<typename T, typename U = void>
-	struct MakeSuper {
-		using type = U;
-	};
-	template<typename T>
-	struct MakeSuper<T, std::void_t<typename T::This>> {
-		using type = typename T::This;
 	};
 }
