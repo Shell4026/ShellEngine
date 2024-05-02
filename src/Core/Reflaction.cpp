@@ -35,9 +35,17 @@ namespace sh::core::reflection
 		return false;
 	}
 
-	void TypeInfo::AddProperty(const std::string& name, const Property& prop)
+	auto TypeInfo::AddProperty(const std::string& name, const Property& prop) -> Property*
 	{
-		properties.insert({ name, prop });
+		auto it = properties.insert({ name, prop });
+		if (!it.second)
+			return nullptr;
+		return &it.first->second;
+	}
+
+	void TypeInfo::AddPointerProperty(Property* prop)
+	{
+		return pointers.push_back(prop);
 	}
 
 	auto TypeInfo::GetProperty(const std::string& name) -> Property*
@@ -48,8 +56,13 @@ namespace sh::core::reflection
 		return &it->second;
 	}
 
-	auto TypeInfo::GetProperties(const std::string& name) const -> const std::map<std::string, Property>&
+	auto TypeInfo::GetProperties() const -> const std::map<std::string, Property>&
 	{
 		return properties;
+	}
+
+	auto TypeInfo::GetPointerProperties() const -> const std::vector<Property*>&
+	{
+		return pointers;
 	}
 ;}

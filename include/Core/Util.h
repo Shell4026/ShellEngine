@@ -33,19 +33,5 @@ namespace sh::core {
 			return Platform::Unknown;
 #endif
 		}
-
-		/// \brief 빠른 다운 캐스팅.
-		///
-		/// 둘 다 SCLASS매크로가 선언 돼 있어야한다.
-		template<typename To, typename From>
-		static auto Cast(From* src) -> std::enable_if_t<
-			sh::core::reflection::IsSClass<To>::value && 
-			sh::core::reflection::IsSClass<From>::value, To*>
-		{
-			if (!src) return nullptr;
-			if (src->GetType().IsChild(To::GetStaticType()))
-				return reinterpret_cast<To*>(src);
-			return nullptr;
-		}
 	};
 }

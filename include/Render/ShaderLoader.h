@@ -3,7 +3,6 @@
 #include "Export.h"
 
 #include "Shader.h"
-#include "Core/Util.h"
 
 #include <vector>
 #include <string_view>
@@ -33,7 +32,7 @@ namespace sh::render
 			if (shader.get() == nullptr)
 				return nullptr;
 
-			T* shaderPtr = sh::core::Util::Cast<T>(shader.get());
+			T* shaderPtr = sh::core::reflection::Cast<T>(shader.get());
 			if (shaderPtr == nullptr)
 				return nullptr;
 
