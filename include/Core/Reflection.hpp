@@ -40,6 +40,11 @@ struct _PropertyFactory_##variable_name\
 	}\
 } _propertyFactory_##variable_name;\
 
+namespace sh::core
+{
+	class SObject;
+}
+
 namespace sh::core::reflection
 {
 	class TypeInfo;
@@ -74,7 +79,7 @@ namespace sh::core::reflection
 		IsSClass<From>::value, To*>
 	{
 		if (!src) return nullptr;
-		if (src->GetType().IsChild(To::GetStaticType()))
+		if (src->GetType().IsChildOf(To::GetStaticType()))
 			return reinterpret_cast<To*>(src);
 		return nullptr;
 	}
@@ -113,7 +118,7 @@ namespace sh::core::reflection
 		//other와 자신이 같은 타입인지
 		SH_CORE_API bool IsA(const TypeInfo& other) const;
 		//현재 타입이 other의 자식인지
-		SH_CORE_API bool IsChild(const TypeInfo& other) const;
+		SH_CORE_API bool IsChildOf(const TypeInfo& other) const;
 
 		SH_CORE_API auto AddProperty(const std::string& name, const Property& prop) -> Property*;
 		SH_CORE_API void AddPointerProperty(Property* prop);
@@ -159,7 +164,7 @@ namespace sh::core::reflection
 
 		auto Get(void* sobject) const -> T& override 
 		{
-			return reinterpret_cast<ThisType*>(sobject)->*ptr;
+			return static_cast<ThisType*>(sobject)->*ptr;
 		}
 
 		void Set(void* sobject, T value) override
@@ -181,7 +186,7 @@ namespace sh::core::reflection
 		{
 			static PropertyData<ThisType, T> data{ ptr, owner };
 			Property* prop = owner.AddProperty(name, Property{ &data });
-			if constexpr (std::is_pointer_v<T>)
+			if constexpr (std::is_pointer_v<T> && std::is_convertible_v<T, SObject*>)
 			{
 				if (prop != nullptr)
 					owner.AddPointerProperty(prop);

@@ -9,7 +9,7 @@
 #include "Render/ShaderLoader.h"
 #include "Render/Material.h"
 #include "Render/Mesh.h"
-#include "Core/Reflaction.hpp"
+#include "Core/Reflection.hpp"
 #include <Core/Util.h>
 #include <cassert>
 #include <fmt/core.h>

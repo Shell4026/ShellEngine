@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "Export.h"
-#include "Reflaction.hpp"
+#include "Reflection.hpp"
 
 #include <vector>
 #include <map>

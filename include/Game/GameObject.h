@@ -6,7 +6,7 @@
 #include "Component/Component.h"
 #include "World.h"
 
-#include "Core/Reflaction.hpp"
+#include "Core/Reflection.hpp"
 #include "Core/Util.h"
 
 #include <vector>

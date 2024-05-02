@@ -1,4 +1,4 @@
-﻿#include "Reflaction.hpp"
+﻿#include "Reflection.hpp"
 
 namespace sh::core::reflection
 {
@@ -20,7 +20,7 @@ namespace sh::core::reflection
 		return this->hash == other.hash;
 	}
 
-	bool TypeInfo::IsChild(const TypeInfo& other) const
+	bool TypeInfo::IsChildOf(const TypeInfo& other) const
 	{
 		if (IsA(other))
 			return true;
