@@ -134,7 +134,7 @@ namespace sh::core::reflection
 		SH_CORE_API void AddPointerProperty(Property* prop);
 		SH_CORE_API auto GetProperty(const std::string& name) -> Property*;
 		SH_CORE_API auto GetProperties() const -> const std::map<std::string, Property>&;
-		SH_CORE_API auto GetPointerProperties() const -> const std::vector<Property*>&;
+		SH_CORE_API auto GetSObjectPtrProperties() const -> const std::vector<Property*>&;
 	};//TypeInfo
 
 	class PropertyDataBase

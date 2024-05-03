@@ -11,6 +11,7 @@
 #include "Render/Mesh.h"
 #include "Core/Reflection.hpp"
 #include <Core/Util.h>
+#include <Core/GC.h>
 #include <cassert>
 #include <fmt/core.h>
 #include "Game/World.h"
@@ -61,22 +62,24 @@ public:
 int main(int arg, char* args[]) 
 {
 	Base base;
-	Derived derived, derived2;
+	Derived derived;
 	NoBase nobase;
 	Base* p = &derived;
 
+	sh::core::GC gc;
+	derived.SetGC(gc);
 	derived.name = "abc";
-	derived2.name = "def";
 
-	derived.ptr = &derived2;
-	derived.ptrNoBase = &nobase;
 	auto& type = Derived::GetStaticType();
 	auto property = Derived::GetStaticType().GetProperty("a");
-	property->Set(&derived, 256);
-
-	derived.UpdateRef();
-
-	derived2.Destroy();
+	{
+		Derived* derived2 = new Derived;
+		derived2->SetGC(gc);
+		derived.ptr = derived2;
+		delete derived2; //derived.ptr = nullptr이 된다.
+	}
+	
+	//std::cout << derived.ptr->name << '\n';
 	std::cout << derived.GetType().GetName() << "\n"; //Derived 출력
 	std::cout << Derived::Super::GetStaticType().GetName() << "\n"; //Base 출력
 

@@ -17,6 +17,7 @@ namespace sh::core::reflection
 		if (this == &other)
 			return true;
 
+		//다른 dll 영역에 올라갈 경우 같은 클래스여도 주소가 다르다. 따라서 Hash값으로 비교한다.
 		return this->hash == other.hash;
 	}
 
@@ -66,7 +67,7 @@ namespace sh::core::reflection
 		return properties;
 	}
 
-	auto TypeInfo::GetPointerProperties() const -> const std::vector<Property*>&
+	auto TypeInfo::GetSObjectPtrProperties() const -> const std::vector<Property*>&
 	{
 		return pointers;
 	}

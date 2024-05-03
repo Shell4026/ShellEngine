@@ -1,39 +1,29 @@
 ﻿#include "SObject.h"
 
+#include "GC.h"
+
 namespace sh::core
 {
-	auto SObject::IsPendingKill() const -> bool
+	SObject::SObject(GC* gc) :
+		gc(gc)
 	{
-		return isPendingKill;
-	}
-
-	bool IsValid(SObject* obj)
-	{
-		return obj;
-	}
-
-	void SObject::UpdateRef()
-	{
-		auto& props = GetType().GetPointerProperties();
-		for (int i = 0; i < props.size(); ++i)
+		if (gc != nullptr)
 		{
-			auto ptr = props[i]->Get<SObject*>(this);
-			if (ptr == nullptr)
-				return;
-
-			if (ptr->refThis.find(this) == ptr->refThis.end())
-			{
-				ptr->refThis.insert({ this, i });
-			}
+			gc->AddObject(this);
 		}
 	}
 
-	void SObject::Destroy()
+	SObject::~SObject()
 	{
-		for (auto& other : refThis)
+		if (gc != nullptr)
 		{
-			auto& pointers = other.first->GetType().GetPointerProperties();
-			pointers[other.second]->Set<SObject*>(other.first, nullptr);
+			gc->DeleteObject(this);
 		}
+	}
+
+	void SObject::SetGC(GC& gc)
+	{
+		this->gc = &gc;
+		gc.AddObject(this);
 	}
 }
