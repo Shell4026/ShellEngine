@@ -31,7 +31,9 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/Perlmint/glew-cmake
   GIT_TAG        glew-cmake-2.2.0
   )
+set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
 FetchContent_MakeAvailable(GLEW)
+
 
 #GLEW 라이브러리 출력 파일 위치 지정
 set_target_properties(libglew_shared PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)

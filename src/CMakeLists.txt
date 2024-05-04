@@ -3,6 +3,8 @@
 target_include_directories(ShellEngine PUBLIC ${CMAKE_SOURCE_DIR}/include)
 #target_precompile_headers(ShellEngine PUBLIC ${CMAKE_SOURCE_DIR}/include/Engine.h)
 
+message(STATUS "[ShellEngine] Compiler: ${CMAKE_CXX_COMPILER_ID}")
+
 # FetchContent 를 사용하기 위해 include.
 include(FetchContent)
 
