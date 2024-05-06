@@ -32,7 +32,10 @@ namespace sh::game
 		{
 			objs.push_back(std::make_unique<GameObject>(*this, objName));
 			objsMap.insert(std::make_pair(objName, objs.size() - 1));
-			return objs[objs.size() - 1].get();
+			auto obj = objs[objs.size() - 1].get();
+			obj->SetGC(gc);
+
+			return obj;
 		}
 		else
 		{
@@ -40,7 +43,11 @@ namespace sh::game
 			objsMap.insert(std::make_pair(objName, idx));
 			objs[idx] = std::make_unique<GameObject>(*this, objName);
 			objsEmptyIdx.pop();
-			return objs[idx].get();
+
+			auto obj = objs[idx].get();
+			obj->SetGC(gc);
+
+			return obj;
 		}
 	}
 

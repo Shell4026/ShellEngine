@@ -23,11 +23,11 @@ namespace sh::core
 			auto& props = obj->GetType().GetSObjectPtrProperties();
 			for (auto prop : props)
 			{
-				if (prop->Get<SObject*>(obj) == _obj)
-				{
+				auto ptr = prop->Get<SObject*>(obj);
+				if (ptr == _obj)
 					prop->Set<SObject*>(obj, nullptr);
-				}
 			}
+
 		}
 	}
 }

@@ -3,14 +3,18 @@
 #include "Export.h"
 #include "IDrawable.h"
 
+#include "Core/SObject.h"
+#include "Core/Reflection.hpp"
+
 #include <glm/glm.hpp>
 #include <vector>
 #include <initializer_list>
 
 namespace sh::render
 {
-	class Mesh : public IDrawable
+	class Mesh : public sh::core::SObject, public IDrawable
 	{
+		SCLASS(Mesh)
 	private:
 		std::vector<glm::vec3> verts;
 		std::vector<Material*> mats;

@@ -2,6 +2,7 @@
 
 #include "Export.h"
 
+#include "Core/SObject.h"
 #include "Core/Reflection.hpp"
 #include <glm/vec2.hpp>
 #include <glm/vec3.hpp>
@@ -13,7 +14,7 @@
 
 namespace sh::render
 {
-	class Shader
+	class Shader : public sh::core::SObject
 	{
 		SCLASS(Shader)
 	public:

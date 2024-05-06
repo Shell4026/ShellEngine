@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Export.h"
+#include "Core/GC.h"
 
 #include <string>
 #include <vector>
@@ -8,6 +9,7 @@
 #include <unordered_map>
 #include <memory>
 #include <string_view>
+
 
 namespace sh::render
 {
@@ -24,6 +26,8 @@ namespace sh::game
 		std::vector<std::unique_ptr<GameObject>> objs;
 		std::unordered_map<std::string, int> objsMap;
 		std::queue<int> objsEmptyIdx;
+
+		sh::core::GC gc;
 
 		float _deltaTime;
 	public:
