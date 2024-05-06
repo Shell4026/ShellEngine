@@ -9,6 +9,10 @@
 #include <vector>
 #include <map>
 #include <string>
+#include <string_view>
+#include <iostream>
+#include <cassert>
+#include <memory>
 
 #define SCLASS(class_name)\
 public:\
@@ -79,6 +83,20 @@ namespace sh::core::reflection
 		using type = typename T::This;
 	};
 
+	template<typename T, typename Check = void>
+	struct IsContainer : std::bool_constant<false> {};
+	template<typename T>
+	struct IsContainer<T, std::void_t<decltype(std::declval<T>().begin()), decltype(std::declval<T>().end())>> : std::bool_constant<true> {};
+
+	template<typename T>
+	struct IsVector : std::bool_constant<false>{};
+	template<typename T>
+	struct IsVector<std::vector<T>> : std::bool_constant<true> {};
+
+	template<typename T, typename U = void>
+	struct IsMap : std::bool_constant<false> {};
+	template<typename T, typename U>
+	struct IsMap<std::map<T, U>, void> : std::bool_constant<true> {};
 	/// \brief 빠른 다운 캐스팅.
 	///
 	/// 둘 다 SCLASS매크로가 선언 돼 있어야한다.
@@ -94,10 +112,34 @@ namespace sh::core::reflection
 	}
 
 	template<typename T>
+	constexpr auto GetTypeName()
+	{
+
+#ifdef __clang__
+		std::string_view prefix = "auto sh::core::reflection::GetTypeName() [T = ";
+		std::string_view suffix = "]";
+		std::string_view str = __PRETTY_FUNCTION__;
+#elif __GNUC__
+		std::string_view prefix = "constexpr auto sh::core::reflection::GetTypeName() [with T = ";
+		std::string_view suffix = "]";
+		std::string_view str = __PRETTY_FUNCTION__;
+#elif _MSC_VER
+		std::string_view prefix = "auto __cdecl sh::core::reflection::GetTypeName<";
+		std::string_view suffix = ">(void)";
+		std::string_view str = __FUNCSIG__;
+#endif
+		str.remove_prefix(prefix.size());
+		str.remove_suffix(suffix.size());
+
+		return str;
+	}
+
+	template<typename T>
 	struct TypeInfoData
 	{
 		const char* name;
 		const TypeInfo* super;
+		using Type = T;
 
 		TypeInfoData(const char* name) :
 			name(name), super(nullptr)
@@ -117,10 +159,13 @@ namespace sh::core::reflection
 
 		std::map<std::string, Property> properties;
 		std::vector<Property*> pointers;
+		std::vector<Property*> containers;
 	public:
 		template<typename T>
 		explicit TypeInfo(TypeInfoData<T> data) :
-			name(data.name), super(data.super), hash(typeid(T).hash_code()) {}
+			name(data.name), super(data.super), hash(typeid(T).hash_code()) 
+		{
+		}
 
 		SH_CORE_API auto GetName() const -> const char*;
 		SH_CORE_API auto GetSuper() const -> const TypeInfo*;
@@ -131,21 +176,138 @@ namespace sh::core::reflection
 		SH_CORE_API bool IsChildOf(const TypeInfo& other) const;
 
 		SH_CORE_API auto AddProperty(const std::string& name, const Property& prop) -> Property*;
-		SH_CORE_API void AddPointerProperty(Property* prop);
 		SH_CORE_API auto GetProperty(const std::string& name) -> Property*;
 		SH_CORE_API auto GetProperties() const -> const std::map<std::string, Property>&;
+
+		SH_CORE_API void AddSObjectPtrProperty(Property* prop);
 		SH_CORE_API auto GetSObjectPtrProperties() const -> const std::vector<Property*>&;
+
+		SH_CORE_API void AddSObjectContainerProperty(Property* prop);
+		SH_CORE_API auto GetSObjectContainerProperties() const -> const std::vector<Property*>&;
 	};//TypeInfo
+
+	//자료형과 컨테이너를 숨긴 프로퍼티 반복자 인터페이스//
+	struct IPropertyIteratorBase
+	{
+		virtual void operator++() = 0;
+		virtual auto operator==(const IPropertyIteratorBase& other) -> bool = 0;
+		virtual auto operator!=(const IPropertyIteratorBase& other) -> bool = 0;
+	};
+
+	//컨테이너를 숨긴 프로퍼티 반복자 인터페이스//
+	template<typename T>
+	struct IPropertyIterator : IPropertyIteratorBase
+	{
+		virtual void Begin() = 0;
+		virtual void End() = 0;
+		virtual auto Get() -> T* = 0;
+	};
+
+	//실질적인 프로퍼티 반복자 데이터//
+	template<typename TContainer, typename T = typename TContainer::value_type>
+	class PropertyIteratorData : public IPropertyIterator<T>
+	{
+	private:
+		TContainer* container;
+		typename TContainer::iterator it;
+	public:
+		PropertyIteratorData(TContainer* container) :
+			container(container)
+		{
+		}
+
+		void Begin() override
+		{
+			assert(container);
+			it = container->begin();
+		}
+
+		void End() override
+		{
+			assert(container);
+			it = container->end();
+		}
+
+		auto Get() -> T* override
+		{
+			return &(*it);
+		}
+
+		auto operator==(const IPropertyIteratorBase& other) -> bool override
+		{
+			return static_cast<const PropertyIteratorData<TContainer, T>*>(&other)->it == it;
+		}
+
+		auto operator!=(const IPropertyIteratorBase& other) -> bool override
+		{
+			return static_cast<const PropertyIteratorData<TContainer, T>*>(&other)->it != it;
+		}
+
+		void operator++() override
+		{
+			++it;
+		}
+	};
+
+	//추상화된 프로퍼티 반복자
+	class PropertyIterator
+	{
+	private:
+		std::unique_ptr<IPropertyIteratorBase> iteratorData;
+	public:
+		PropertyIterator() :
+			iteratorData()
+		{
+		}
+
+		PropertyIterator(std::unique_ptr<IPropertyIteratorBase>&& iteratorData, bool end = false) :
+			iteratorData(std::move(iteratorData))
+		{
+		}
+
+		auto operator==(const PropertyIterator& other) -> bool
+		{
+			return *iteratorData.get() == *other.iteratorData.get();
+		}
+
+		auto operator!=(const PropertyIterator& other) -> bool
+		{
+			return *iteratorData.get() != *other.iteratorData.get();
+		}
+
+		auto operator++() -> PropertyIterator&
+		{
+			++(*iteratorData.get());
+			return *this;
+		}
+
+		template<typename T>
+		auto Get() -> T*
+		{
+			//컨테이너 클래스가 아닌경우를 뜻한다.
+			if (iteratorData.get() == nullptr) 
+				return nullptr;
+
+			IPropertyIterator<T>* it = static_cast<IPropertyIterator<T>*>(iteratorData.get());
+			return it->Get();
+		}
+	};
 
 	class PropertyDataBase
 	{
+	protected:
+		std::string_view typeName;
 	public:
 		TypeInfo& type;
 	public:
 		PropertyDataBase(TypeInfo& type) :
-			type(type)
+			type(type), typeName("")
 		{
 		}
+
+		auto GetTypeName() const -> std::string_view;
+		virtual auto Begin(void* sobject) const->PropertyIterator = 0;
+		virtual auto End(void* sobject) const->PropertyIterator = 0;
 	};
 
 	template<typename T>
@@ -159,20 +321,19 @@ namespace sh::core::reflection
 		virtual auto Get(void* sobject) const -> T& = 0;
 		virtual void Set(void* sobject, T value) = 0;
 	};
-
-	template<typename ThisType, typename T>
+	
+	//클래스의 변수마다 static영역에 하나씩 존재하는 클래스
+	template<typename ThisType, typename T, typename VariablePointer, VariablePointer ptr>
 	class PropertyData : public IPropertyData<T>
 	{
-	private:
-		T ThisType::* ptr; //맴버변수 포인터
 	public:
-		PropertyData(T ThisType::* ptr, TypeInfo& type):
-			IPropertyData<T>(type),
-			ptr(ptr)
+		PropertyData(TypeInfo& type) :
+			IPropertyData<T>(type)
 		{
+			PropertyDataBase::typeName = sh::core::reflection::GetTypeName<T>();
 		}
 
-		auto Get(void* sobject) const -> T& override 
+		auto Get(void* sobject) const -> T & override
 		{
 			return static_cast<ThisType*>(sobject)->*ptr;
 		}
@@ -181,25 +342,52 @@ namespace sh::core::reflection
 		{
 			static_cast<ThisType*>(sobject)->*ptr = value;
 		}
+
+		auto Begin(void* sobject) const -> PropertyIterator override
+		{
+			if constexpr (IsVector<T>())
+			{
+				T& container = static_cast<ThisType*>(sobject)->*ptr;
+				std::unique_ptr<PropertyIteratorData<T>> data = std::make_unique<PropertyIteratorData<T>>(&container);
+				data->Begin();
+				return PropertyIterator{ std::move(data) };
+			}
+			return PropertyIterator{};
+		}
+
+		auto End(void* sobject) const -> PropertyIterator override
+		{
+			if constexpr (IsVector<T>())
+			{
+				T& container = static_cast<ThisType*>(sobject)->*ptr;
+				std::unique_ptr<PropertyIteratorData<T>> data = std::make_unique<PropertyIteratorData<T>>(&container);
+				data->End();
+				return PropertyIterator{ std::move(data) };
+			}
+			return PropertyIterator{};
+		}
 	};
 
 	template<typename ThisType, typename T, typename VariablePointer, VariablePointer ptr>
 	class PropertyInfo
 	{
 	private:
-		const char* name;
 		TypeInfo& owner;
-		VariablePointer test;
+
+		const char* name;
 	public:
 		PropertyInfo(const char* name) :
 			name(name), owner(ThisType::GetStaticType())
 		{
-			static PropertyData<ThisType, T> data{ ptr, owner };
-			Property* prop = owner.AddProperty(name, Property{ &data });
-			if constexpr (std::is_pointer_v<T> && std::is_convertible_v<T, SObject*>)
+			static PropertyData<ThisType, T, VariablePointer, ptr> data{ owner };
+			Property* prop = owner.AddProperty(name, Property{ &data, name, false });
+
+			if (prop != nullptr)
 			{
-				if (prop != nullptr)
-					owner.AddPointerProperty(prop);
+				if constexpr (std::is_pointer_v<T> && std::is_convertible_v<T, SObject*>)
+					owner.AddSObjectPtrProperty(prop);
+				if constexpr (IsContainer<T>())
+					owner.AddSObjectContainerProperty(prop);
 			}
 		}
 	};
@@ -208,9 +396,13 @@ namespace sh::core::reflection
 	{
 	private:
 		PropertyDataBase* data;
+
+		const char* name;
 	public:
-		Property(PropertyDataBase* data) :
-			data(data)
+		const bool isContainer;
+	public:
+		Property(PropertyDataBase* data, const char* name, bool isContainer) :
+			data(data), name(name), isContainer(isContainer)
 		{
 
 		}
@@ -218,8 +410,6 @@ namespace sh::core::reflection
 		template<typename T, typename ThisType>
 		auto Get(ThisType* sobject) const -> T&
 		{
-			//if (data->type.IsChild())
-
 			return static_cast<IPropertyData<T>*>(data)->Get(sobject);
 		}
 		template<typename T, typename ThisType>
@@ -227,5 +417,9 @@ namespace sh::core::reflection
 		{
 			static_cast<IPropertyData<T>*>(data)->Set(sobject, value);
 		}
+		SH_CORE_API auto Begin(SObject* SObject) -> PropertyIterator;
+		SH_CORE_API auto End(SObject* SObject) -> PropertyIterator;
+		SH_CORE_API auto GetName() const -> const char*;
+		SH_CORE_API auto GetTypeName() const -> std::string_view;
 	};
 }

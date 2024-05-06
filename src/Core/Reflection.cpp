@@ -49,11 +49,6 @@ namespace sh::core::reflection
 		return &it.first->second;
 	}
 
-	void TypeInfo::AddPointerProperty(Property* prop)
-	{
-		return pointers.push_back(prop);
-	}
-
 	auto TypeInfo::GetProperty(const std::string& name) -> Property*
 	{
 		auto it = properties.find(name);
@@ -67,8 +62,46 @@ namespace sh::core::reflection
 		return properties;
 	}
 
+	void TypeInfo::AddSObjectPtrProperty(Property* prop)
+	{
+		pointers.push_back(prop);
+	}
 	auto TypeInfo::GetSObjectPtrProperties() const -> const std::vector<Property*>&
 	{
 		return pointers;
+	}
+
+	void TypeInfo::AddSObjectContainerProperty(Property* prop)
+	{
+		containers.push_back(prop);
+	}
+	auto TypeInfo::GetSObjectContainerProperties() const -> const std::vector<Property*>&
+	{
+		return containers;
+	}
+
+	auto PropertyDataBase::GetTypeName() const -> std::string_view
+	{
+		return typeName;
+	}
+
+	auto Property::GetName() const -> const char*
+	{
+		return name;
+	}
+
+	auto Property::GetTypeName() const -> std::string_view
+	{
+		return data->GetTypeName();
+	}
+
+	auto Property::Begin(SObject* sobject) -> PropertyIterator
+	{
+		return data->Begin(sobject);
+	}
+
+	auto Property::End(SObject* sobject) -> PropertyIterator
+	{
+		return data->End(sobject);
 	}
 ;}
