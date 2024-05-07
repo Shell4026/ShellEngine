@@ -18,14 +18,15 @@ namespace sh::core
 	{
 		RemoveObject(_obj);
 
+		//O(NM)
 		for (auto obj : objs)
 		{
 			auto& props = obj->GetType().GetSObjectPtrProperties();
 			for (auto prop : props)
 			{
 				auto ptr = prop->Get<SObject*>(obj);
-				if (ptr == _obj)
-					prop->Set<SObject*>(obj, nullptr);
+				if (*ptr == _obj)
+					*ptr = nullptr;
 			}
 
 		}

@@ -92,7 +92,7 @@ namespace sh::core::reflection
 
 	auto Property::GetTypeName() const -> std::string_view
 	{
-		return data->GetTypeName();
+		return typeName;
 	}
 
 	auto Property::Begin(SObject* sobject) -> PropertyIterator
