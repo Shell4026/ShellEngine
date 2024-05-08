@@ -2,7 +2,7 @@
 
 namespace sh::core::reflection
 {
-	auto TypeInfo::GetName() const -> const char*
+	auto TypeInfo::GetName() const -> std::string_view
 	{
 		return name;
 	}

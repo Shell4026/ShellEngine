@@ -19,7 +19,7 @@ namespace sh::core
 		GC* gc;
 	public:
 		SH_CORE_API SObject(GC* gc = nullptr);
-		SH_CORE_API ~SObject();
+		SH_CORE_API virtual ~SObject();
 
 		SH_CORE_API void SetGC(GC& gc);
 	};

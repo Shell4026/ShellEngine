@@ -137,11 +137,11 @@ namespace sh::core::reflection
 	template<typename T>
 	struct TypeInfoData
 	{
-		const char* name;
+		std::string_view name;
 		const TypeInfo* super;
 		using Type = T;
 
-		TypeInfoData(const char* name) :
+		TypeInfoData(std::string_view name) :
 			name(name), super(nullptr)
 		{
 			if constexpr (HasSuper<T>())
@@ -153,7 +153,7 @@ namespace sh::core::reflection
 
 	class TypeInfo {
 	private:
-		const char* name;
+		std::string_view name;
 		const TypeInfo* super;
 		const size_t hash;
 
@@ -161,13 +161,15 @@ namespace sh::core::reflection
 		std::vector<Property*> pointers;
 		std::vector<Property*> containers;
 	public:
+		const bool isPointer;
+	public:
 		template<typename T>
 		explicit TypeInfo(TypeInfoData<T> data) :
-			name(data.name), super(data.super), hash(typeid(T).hash_code()) 
+			name(data.name), super(data.super), hash(typeid(T).hash_code()), isPointer(std::is_pointer_v<T>)
 		{
 		}
 
-		SH_CORE_API auto GetName() const -> const char*;
+		SH_CORE_API auto GetName() const -> std::string_view;
 		SH_CORE_API auto GetSuper() const -> const TypeInfo*;
 		//other와 자신이 같은 타입인지
 		SH_CORE_API bool IsA(const TypeInfo& other) const;
@@ -186,11 +188,14 @@ namespace sh::core::reflection
 		SH_CORE_API auto GetSObjectContainerProperties() const -> const std::vector<Property*>&;
 	};//TypeInfo
 
+
 	//자료형과 컨테이너를 숨긴 프로퍼티 반복자 인터페이스//
 	class IPropertyIteratorBase
 	{
 	public:
 		std::string_view typeName;
+	public:
+		virtual ~IPropertyIteratorBase() = default;
 		virtual void operator++() = 0;
 		virtual auto operator==(const IPropertyIteratorBase& other) -> bool = 0;
 		virtual auto operator!=(const IPropertyIteratorBase& other) -> bool = 0;
@@ -203,7 +208,7 @@ namespace sh::core::reflection
 	public:
 		virtual void Begin() = 0;
 		virtual void End() = 0;
-		virtual auto Get() -> T* = 0;
+		virtual auto Get() -> T& = 0;
 	};
 
 	//실질적인 프로퍼티 반복자 데이터//
@@ -232,9 +237,9 @@ namespace sh::core::reflection
 			it = container->end();
 		}
 
-		auto Get() -> T* override
+		auto Get() -> T& override
 		{
-			return &(*it);
+			return *it;
 		}
 
 		auto operator==(const IPropertyIteratorBase& other) -> bool override
@@ -277,7 +282,7 @@ namespace sh::core::reflection
 				return nullptr;
 
 			IPropertyIterator<T>* it = static_cast<IPropertyIterator<T>*>(iteratorData.get());
-			return it->Get();
+			return &it->Get();
 		}
 	};
 
@@ -373,10 +378,13 @@ namespace sh::core::reflection
 
 			if (prop != nullptr)
 			{
-				if constexpr (std::is_pointer_v<T> && std::is_convertible_v<T, SObject*>)
+				if constexpr (std::is_convertible_v<T, SObject*>)
 					owner.AddSObjectPtrProperty(prop);
 				if constexpr (IsContainer<T>())
-					owner.AddSObjectContainerProperty(prop);
+				{
+					if constexpr (std::is_convertible_v<typename T::value_type, SObject*>)
+						owner.AddSObjectContainerProperty(prop);
+				}
 			}
 		}
 	};
