@@ -140,4 +140,9 @@ namespace sh::core::reflection
 		++(*iteratorData.get());
 		return *this;
 	}
+
+	auto PropertyIterator::GetTypeName() const -> std::string_view
+	{
+		return iteratorData->typeName;
+	}
 ;}

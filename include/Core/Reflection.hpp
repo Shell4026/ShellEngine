@@ -267,6 +267,8 @@ namespace sh::core::reflection
 		SH_CORE_API auto operator!=(const PropertyIterator& other) -> bool;
 		SH_CORE_API auto operator++() -> PropertyIterator&;
 
+		auto GetTypeName() const -> std::string_view;
+
 		template<typename T>
 		auto Get() -> T*
 		{
