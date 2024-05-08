@@ -85,6 +85,12 @@ namespace sh::core::reflection
 		return typeName;
 	}
 
+	Property::Property(PropertyDataBase * data, const char* name, bool isContainer) :
+		data(data), name(name), typeName(typeName), isContainer(isContainer)
+	{
+
+	}
+
 	auto Property::GetName() const -> const char*
 	{
 		return name;
@@ -103,5 +109,35 @@ namespace sh::core::reflection
 	auto Property::End(SObject* sobject) -> PropertyIterator
 	{
 		return data->End(sobject);
+	}
+
+	PropertyIterator::PropertyIterator()
+	{
+	}
+
+	PropertyIterator::PropertyIterator(PropertyIterator&& other) noexcept :
+		iteratorData(std::move(other.iteratorData))
+	{
+	}
+
+	PropertyIterator::PropertyIterator(std::unique_ptr<IPropertyIteratorBase>&& iteratorData) :
+		iteratorData(std::move(iteratorData))
+	{
+	}
+
+	auto PropertyIterator::operator==(const PropertyIterator & other) -> bool
+	{
+		return *iteratorData.get() == *other.iteratorData.get();
+	}
+
+	auto PropertyIterator::operator!=(const PropertyIterator& other) -> bool
+	{
+		return *iteratorData.get() != *other.iteratorData.get();
+	}
+
+	auto PropertyIterator::operator++() -> PropertyIterator&
+	{
+		++(*iteratorData.get());
+		return *this;
 	}
 ;}

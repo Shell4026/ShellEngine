@@ -52,16 +52,13 @@ public:
 	int a = 123;
 	PROPERTY(ptrNoBase)
 	NoBase* ptrNoBase = nullptr;
-	//PROPERTY(mapPtr)
-	//std::map<Derived*, int> mapPtr;
+	PROPERTY(mapPtr)
+	std::map<int, Derived*> mapPtr;
 
 	std::string name;
 public:
 	void DerivedFunction()
 	{
-		sh::core::reflection::IsContainer<std::vector<Derived*>>::value;
-		int Derived::* ptr = &Derived::a;
-		auto a = this->*ptr;
 		std::cout << "Derived!!\n"; 
 	}
 };
@@ -79,7 +76,6 @@ int main(int arg, char* args[])
 	derived.SetGC(gc);
 	derived.name = "abc";
 
-	//sh::core::reflection::IsMap<std::map<int, bool>>::value;
 
 	auto& type = Derived::GetStaticType();
 	auto& props = Derived::GetStaticType().GetProperties();
@@ -88,10 +84,31 @@ int main(int arg, char* args[])
 	derived2.a = 2;
 
 	auto prop = type.GetProperty("a");
-	int a1 = prop->Get<int>(&derived);
-	int a2 = prop->Get<int>(&derived2);
+	
+	for (auto& props : Derived::GetStaticType().GetProperties())
+	{
+		std::string name = props.first;
+		sh::core::reflection::Property prop = props.second;
 
-	auto property = Derived::GetStaticType().GetProperty("a");
+		std::string_view propertyTypeName = prop.GetTypeName();
+	}
+
+	int a1 = *prop->Get<int>(&derived);
+	int a2 = *prop->Get<int>(&derived2);
+
+
+
+	derived.mapPtr.insert({ 1, &derived2 });
+	derived.mapPtr.insert({ 2, &derived});
+
+	auto property = Derived::GetStaticType().GetProperty("mapPtr");
+	for (auto it = property->Begin(&derived); it != property->End(&derived); ++it)
+	{
+		auto pair = it.Get<std::pair<const int, Derived*>>();
+		std::cout << pair->first << ", " << pair->second << '\n';
+	}
+
+	property = Derived::GetStaticType().GetProperty("a");
 	{
 		Derived* derivedTemp = new Derived;
 		derivedTemp->SetGC(gc);
@@ -108,13 +125,12 @@ int main(int arg, char* args[])
 		auto vproperty = Derived::GetStaticType().GetProperty("ptrs");
 		for (auto it = vproperty->Begin(&derived); it != vproperty->End(&derived); ++it)
 		{
-			std::cout << (*it.Get<Derived*>())->name << '\n';
+			auto ptr = *it.Get<Derived*>();
+			std::cout << ptr->name << '\n';
 		}
 		delete derivedTemp; //derived.ptr = nullptr, derived.ptrs[0] = nullptr이 된다.
 		delete derivedTemp2;
 	}
-	
-	std::string_view str = sh::core::reflection::GetTypeName<const int*>();
 
 	std::cout << derived.GetType().GetName() << "\n"; //Derived 출력
 	std::cout << Derived::Super::GetStaticType().GetName() << "\n"; //Base 출력
