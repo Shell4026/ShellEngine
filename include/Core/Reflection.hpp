@@ -88,6 +88,11 @@ namespace sh::core::reflection
 	template<typename T>
 	struct IsContainer<T, std::void_t<decltype(std::declval<T>().begin()), decltype(std::declval<T>().end())>> : std::bool_constant<true> {};
 
+	template<typename T, typename Check = void>
+	struct IsPair : std::bool_constant<false> {};
+	template<typename T>
+	struct IsPair<T, std::void_t<typename T::first_type, typename T::second_type>> : std::bool_constant<true> {};
+
 	template<typename T>
 	struct IsVector : std::bool_constant<false>{};
 	template<typename T>
@@ -97,6 +102,30 @@ namespace sh::core::reflection
 	struct IsMap : std::bool_constant<false> {};
 	template<typename T, typename U>
 	struct IsMap<std::map<T, U>, void> : std::bool_constant<true> {};
+
+	template<typename T>
+	struct GetContainerNestedCount : std::integral_constant<int, 0> {};
+	template<typename T>
+	struct GetContainerNestedCount<std::vector<T>> : std::integral_constant<int, GetContainerNestedCount<T>::value + 1> {};
+	template<typename T, typename U>
+	struct GetContainerNestedCount<std::map<T, U>> : std::integral_constant<int, GetContainerNestedCount<U>::value + 1> {};
+
+	template<typename T>
+	struct GetContainerLastType
+	{
+		using type = T;
+	};
+	template<typename T>
+	struct GetContainerLastType<std::vector<T>>
+	{
+		using type = typename GetContainerLastType<T>::type;
+	};
+	template<typename T, typename U>
+	struct GetContainerLastType<std::map<T, U>>
+	{
+		using type = typename GetContainerLastType<U>::type;
+	};
+
 	/// \brief 빠른 다운 캐스팅.
 	///
 	/// 둘 다 SCLASS매크로가 선언 돼 있어야한다.
