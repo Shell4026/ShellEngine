@@ -30,14 +30,14 @@ namespace sh::game
 		std::unordered_map<std::string, int> objsMap;
 		std::queue<int> objsEmptyIdx;
 
-		std::unique_ptr<sh::core::GC> gc;
+		sh::core::GC& gc;
 
 		float _deltaTime;
 	public:
 		const float& deltaTime;
 		sh::render::Renderer& renderer;
 	public:
-		SH_GAME_API World(sh::render::Renderer& renderer);
+		SH_GAME_API World(sh::render::Renderer& renderer, sh::core::GC& gc);
 		SH_GAME_API ~World();
 
 		SH_GAME_API auto AddGameObject(const std::string& name) -> GameObject*;

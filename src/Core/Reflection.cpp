@@ -85,8 +85,8 @@ namespace sh::core::reflection
 		return typeName;
 	}
 
-	Property::Property(PropertyDataBase * data, const char* name, bool isContainer) :
-		data(data), name(name), typeName(typeName), isContainer(isContainer)
+	Property::Property(PropertyDataBase * data, const char* name, bool isContainer, uint32_t containerNestedLevel) :
+		data(data), name(name), typeName(typeName), isContainer(isContainer), containerNestedLevel(containerNestedLevel)
 	{
 
 	}
@@ -144,5 +144,20 @@ namespace sh::core::reflection
 	auto PropertyIterator::GetTypeName() const -> std::string_view
 	{
 		return iteratorData->typeName;
+	}
+
+	auto PropertyIterator::GetNestedBegin() -> PropertyIterator
+	{
+		return iteratorData->GetNestedBegin();
+	}
+
+	auto PropertyIterator::GetNestedEnd() -> PropertyIterator
+	{
+		return iteratorData->GetNestedEnd();
+	}
+
+	auto PropertyIterator::IsPair() const -> bool
+	{
+		return iteratorData->IsPair();
 	}
 ;}

@@ -6,16 +6,14 @@
 
 namespace sh::game
 {
-	World::World(sh::render::Renderer& renderer) :
-		renderer(renderer),
+	World::World(sh::render::Renderer& renderer, sh::core::GC& gc) :
+		renderer(renderer),gc(gc),
 		_deltaTime(0.0f), deltaTime(_deltaTime)
 	{
-		gc = std::make_unique<sh::core::GC>();
 	}
 	World::~World()
 	{
 		objs.clear();
-		gc.reset();
 	}
 
 	auto World::AddGameObject(const std::string& name) -> GameObject*
@@ -36,7 +34,7 @@ namespace sh::game
 			objs.push_back(std::make_unique<GameObject>(*this, objName));
 			objsMap.insert(std::make_pair(objName, objs.size() - 1));
 			auto obj = objs[objs.size() - 1].get();
-			obj->SetGC(*gc.get());
+			obj->SetGC(gc);
 
 			return obj;
 		}
@@ -48,7 +46,7 @@ namespace sh::game
 			objsEmptyIdx.pop();
 
 			auto obj = objs[idx].get();
-			obj->SetGC(*gc.get());
+			obj->SetGC(gc);
 
 			return obj;
 		}

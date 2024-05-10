@@ -1,4 +1,5 @@
 ﻿#include "Util.h"
+#include "SObject.h"
 
 namespace sh::core {
 	auto Util::U8StringToWstring(const std::string& u8str) -> std::wstring
@@ -43,5 +44,12 @@ namespace sh::core {
 			}
 		}
 		return result;
+	}
+
+	bool sh::core::IsValid(SObject* obj)
+	{
+		if (obj == nullptr)
+			return false;
+		return !obj->IsPendingKill();
 	}
 }

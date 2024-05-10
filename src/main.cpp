@@ -20,6 +20,20 @@
 #include "Game/Component/MeshRenderer.h"
 
 #include <iostream>
+
+template<typename T>
+struct VectorDepth
+{
+	static const int value = 0;
+};
+
+template<typename T>
+struct VectorDepth<std::vector<T>>
+{
+	static const int value = VectorDepth<T>::value + 1;
+};
+
+
 class NoBase {
 public:
 	int a = 123;
@@ -44,19 +58,13 @@ class Derived : public Base
 public:
 	PROPERTY(ptr)
 	Derived* ptr;
-	PROPERTY(ptrs)
-	std::vector<Derived*> ptrs;
-	PROPERTY(ptrs2)
-	std::vector<Derived*> ptrs2;
-	PROPERTY(a)
-	int a = 123;
-	PROPERTY(ptrNoBase)
-	NoBase* ptrNoBase = nullptr;
-	PROPERTY(mapPtr)
-	std::map<int, Derived*> mapPtr;
 
 	std::string name;
 public:
+	Derived(std::string_view name) :
+		name(name)
+	{
+	}
 	void DerivedFunction()
 	{
 		std::cout << "Derived!!\n"; 
@@ -67,80 +75,7 @@ public:
 
 int main(int arg, char* args[]) 
 {
-	Base base;
-	Derived derived, derived2;
-	NoBase nobase;
-	Base* p = &derived;
-
 	sh::core::GC gc;
-	derived.SetGC(gc);
-	derived.name = "abc";
-
-
-	auto& type = Derived::GetStaticType();
-	auto& props = Derived::GetStaticType().GetProperties();
-
-	derived.a = 1;
-	derived2.a = 2;
-
-	auto prop = type.GetProperty("a");
-	
-	for (auto& props : Derived::GetStaticType().GetProperties())
-	{
-		std::string name = props.first;
-		sh::core::reflection::Property prop = props.second;
-
-		std::string_view propertyTypeName = prop.GetTypeName();
-	}
-
-	int a1 = *prop->Get<int>(&derived);
-	int a2 = *prop->Get<int>(&derived2);
-
-
-
-	derived.mapPtr.insert({ 1, &derived2 });
-	derived.mapPtr.insert({ 2, &derived});
-
-	auto property = Derived::GetStaticType().GetProperty("mapPtr");
-	for (auto it = property->Begin(&derived); it != property->End(&derived); ++it)
-	{
-		auto pair = it.Get<std::pair<const int, Derived*>>();
-		std::cout << pair->first << ", " << pair->second << '\n';
-	}
-
-	property = Derived::GetStaticType().GetProperty("a");
-	{
-		Derived* derivedTemp = new Derived;
-		derivedTemp->SetGC(gc);
-		derivedTemp->name = "garbage";
-
-		Derived* derivedTemp2 = new Derived;
-		derivedTemp2->SetGC(gc);
-		derivedTemp2->name = "garbage2";
-
-		derived.ptr = derivedTemp;
-		derived.ptrs.push_back(derivedTemp);
-		derived.ptrs.push_back(derivedTemp2);
-
-		auto vproperty = Derived::GetStaticType().GetProperty("ptrs");
-		for (auto it = vproperty->Begin(&derived); it != vproperty->End(&derived); ++it)
-		{
-			auto ptr = *it.Get<Derived*>();
-			std::cout << ptr->name << '\n';
-		}
-		delete derivedTemp; //derived.ptr = nullptr, derived.ptrs[0] = nullptr이 된다.
-		delete derivedTemp2;
-	}
-
-	std::cout << derived.GetType().GetName() << "\n"; //Derived 출력
-	std::cout << Derived::Super::GetStaticType().GetName() << "\n"; //Base 출력
-
-	std::vector<int> v;
-
-	auto real = sh::core::reflection::Cast<Derived>(p);
-	assert(real != nullptr);
-	p->BaseFunction();
-	real->DerivedFunction();
 
 	sh::window::Window window;
 	window.Create(u8"테스트", 1024, 768);
@@ -158,13 +93,21 @@ int main(int arg, char* args[])
 	mesh.AddMaterial(&mat);
 
 	using namespace sh::game;
-	World world{ renderer };
+	World world{ renderer, gc };
 	GameObject* obj = world.AddGameObject("Test");
 
 	auto meshRenderer = obj->AddComponent<MeshRenderer>();
 	meshRenderer->SetMesh(mesh);
 
 	world.Start();
+
+	Derived derived{ "good" };
+	derived.SetGC(gc);
+
+	Derived* temp = new Derived{ "trash" };
+	temp->SetGC(gc);
+
+	derived.ptr = temp;
 	while (window.IsOpen())
 	{
 		window.ProcessFrame();
@@ -197,8 +140,8 @@ int main(int arg, char* args[])
 				std::cout << sh::window::Event::MouseWheelScrolled::delta << '\n';
 				break;
 			case sh::window::Event::EventType::KeyDown:
-				if (e.keyType == sh::window::Event::KeyType::Left)
-					std::cout << "Left\n";
+				if (e.keyType == sh::window::Event::KeyType::Enter)
+					delete temp;
 				break;
 			case sh::window::Event::EventType::WindowFocus:
 				renderer.Pause(false);
@@ -210,8 +153,14 @@ int main(int arg, char* args[])
 				break;
 			}
 		}
+		if(sh::core::IsValid(derived.ptr))
+			std::cout << derived.ptr->name << '\n';
+		else
+			std::cout << "Delete!!!" << '\n';
+
 		world.Update(window.GetDeltaTime());
 		renderer.Render(window.GetDeltaTime());
+		gc.Update();
 	}
 	return 0;
 }

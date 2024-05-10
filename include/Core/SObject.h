@@ -17,10 +17,16 @@ namespace sh::core
 		SCLASS(SObject)
 	private:
 		GC* gc;
+
+		bool bPendingKill;
+		int a = 4;
 	public:
 		SH_CORE_API SObject(GC* gc = nullptr);
 		SH_CORE_API virtual ~SObject();
-
+		SH_CORE_API void operator delete(void* ptr, size_t size) noexcept;
+		SH_CORE_API void* operator new[](std::size_t size) = delete;
+		SH_CORE_API void operator delete[](void* ptr, size_t size) = delete;
 		SH_CORE_API void SetGC(GC& gc);
+		SH_CORE_API auto IsPendingKill() const -> bool;
 	};
 }
