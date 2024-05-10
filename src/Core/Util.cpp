@@ -46,7 +46,7 @@ namespace sh::core {
 		return result;
 	}
 
-	bool sh::core::IsValid(SObject* obj)
+	bool IsValid(SObject* obj)
 	{
 		if (obj == nullptr)
 			return false;

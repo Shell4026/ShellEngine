@@ -25,6 +25,8 @@ namespace sh::core
 		//컨테이너를 재귀로 순회하면서 포인터를 검사하는 함수
 		void DFSIteratorCheckPtr(int depth, int maxDepth, sh::core::reflection::PropertyIterator& it);
 	public:
+		SH_CORE_API ~GC();
+
 		SH_CORE_API void AddObject(SObject* obj);
 		SH_CORE_API auto RemoveObject(SObject* obj) -> bool;
 		SH_CORE_API void DeleteObject(SObject* obj);

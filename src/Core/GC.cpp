@@ -4,6 +4,11 @@
 
 namespace sh::core
 {
+	GC::~GC()
+	{
+		Update();
+	}
+
 	void GC::AddObject(SObject* obj)
 	{
 		objs.insert(obj);

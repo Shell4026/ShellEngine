@@ -220,6 +220,9 @@ namespace sh::core::reflection
 	};//TypeInfo
 
 	class IPropertyIteratorBase;
+	template<typename T>
+	class IPropertyIterator;
+
 	//추상화된 프로퍼티 반복자
 	class PropertyIterator
 	{
@@ -237,21 +240,9 @@ namespace sh::core::reflection
 		SH_CORE_API auto GetTypeName() const->std::string_view;
 
 		template<typename T>
-		auto Get() -> T*
-		{
-			//컨테이너 클래스가 아닌경우를 뜻한다.
-			if (iteratorData.get() == nullptr)
-				return nullptr;
-
-			IPropertyIterator<T>* it = static_cast<IPropertyIterator<T>*>(iteratorData.get());
-			return &it->Get();
-		}
-
+		auto Get() -> T*;
 		template<typename T>
-		auto GetPairSecond() -> T*
-		{
-			return reinterpret_cast<T*>(iteratorData->GetPairSecond());
-		}
+		auto GetPairSecond() -> T*;
 
 		SH_CORE_API auto GetNestedBegin() -> PropertyIterator;
 		SH_CORE_API auto GetNestedEnd() -> PropertyIterator;
@@ -404,6 +395,23 @@ namespace sh::core::reflection
 	};
 
 	template<typename T>
+	auto PropertyIterator::Get() -> T*
+	{
+		//컨테이너 클래스가 아닌경우를 뜻한다.
+		if (iteratorData.get() == nullptr)
+			return nullptr;
+
+		IPropertyIterator<T>* it = static_cast<IPropertyIterator<T>*>(iteratorData.get());
+		return &it->Get();
+	}
+
+	template<typename T>
+	auto PropertyIterator::GetPairSecond() -> T*
+	{
+		return reinterpret_cast<T*>(iteratorData->GetPairSecond());
+	}
+
+	template<typename T>
 	class IPropertyData : public PropertyDataBase
 	{
 	public:
@@ -481,7 +489,7 @@ namespace sh::core::reflection
 			}
 			else if (IsContainer<T>())
 			{
-				using type = GetContainerLastType<T>::type;
+				using type = typename GetContainerLastType<T>::type;
 				if constexpr (std::is_convertible_v<type, SObject*>)
 				{
 					Property* prop = owner.AddProperty(name, Property{ &data, name, true, GetContainerNestedCount<T>::value });
