@@ -8,6 +8,7 @@
 #include <string_view>
 #include <optional>
 #include <memory>
+#include <type_traits>
 
 namespace sh::core { class FileLoader; }
 
@@ -26,7 +27,7 @@ namespace sh::render
 
 		SH_RENDER_API auto LoadShader(std::string_view vertexShader, std::string_view fragShader) -> std::unique_ptr<Shader>;
 		template<typename T>
-		auto LoadShader(std::string_view vertexShader, std::string_view fragShader) -> std::unique_ptr<T>
+		auto LoadShader(std::string_view vertexShader, std::string_view fragShader) -> std::enable_if_t<std::is_base_of_v<Shader, T>, std::unique_ptr<T>>
 		{
 			std::unique_ptr<Shader> shader{ LoadShader(vertexShader, fragShader) };
 			if (shader.get() == nullptr)
