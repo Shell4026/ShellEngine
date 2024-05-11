@@ -78,7 +78,7 @@ public:
 int main(int arg, char* args[]) 
 {
 	sh::core::GC gc;
-
+	
 	sh::window::Window window;
 	window.Create(u8"테스트", 1024, 768);
 
@@ -120,6 +120,7 @@ int main(int arg, char* args[])
 				resources.Clean();
 				renderer.Clean();
 				window.Close();
+				world.Clean();
 				break;
 			case sh::window::Event::EventType::MousePressed:
 				if (e.mouseType == sh::window::Event::MouseType::Left)
@@ -158,6 +159,5 @@ int main(int arg, char* args[])
 		gc.Update();
 		renderer.Render(window.GetDeltaTime());
 	}
-	world.Clean();
 	return 0;
 }

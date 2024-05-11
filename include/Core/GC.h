@@ -21,6 +21,7 @@ namespace sh::core
 	private:
 		std::unordered_set<SObject*> objs;
 		std::vector<SObject*> deletedObjs;
+		std::vector<SObject*> deletedHeapObjs;
 	private:
 		//컨테이너를 재귀로 순회하면서 포인터를 검사하는 함수
 		void DFSIteratorCheckPtr(int depth, int maxDepth, sh::core::reflection::PropertyIterator& it);
@@ -29,7 +30,7 @@ namespace sh::core
 
 		SH_CORE_API void AddObject(SObject* obj);
 		SH_CORE_API auto RemoveObject(SObject* obj) -> bool;
-		SH_CORE_API void DeleteObject(SObject* obj);
+		SH_CORE_API void DeleteObject(SObject* obj, bool heap = true);
 		SH_CORE_API void Update();
 	};
 }

@@ -43,10 +43,14 @@ namespace sh::core
 		}
 	}
 
-	void GC::DeleteObject(SObject* obj)
+	void GC::DeleteObject(SObject* obj, bool heap)
 	{
-		if(RemoveObject(obj))
+		if (RemoveObject(obj))
+		{
 			deletedObjs.push_back(obj);
+			if (heap)
+				deletedHeapObjs.push_back(obj);
+		}
 	}
 
 	void GC::Update()
@@ -77,8 +81,9 @@ namespace sh::core
 				}
 			}
 		}
-		for (auto objs : deletedObjs)
-			free(objs);
+		for (auto obj : deletedHeapObjs)
+			free(obj);
+		deletedHeapObjs.clear();
 		deletedObjs.clear();
 	}
 }

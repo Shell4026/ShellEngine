@@ -1,11 +1,12 @@
 ﻿#include "SObject.h"
 
 #include "GC.h"
+#include <iostream>
 
 namespace sh::core
 {
 	SObject::SObject(GC* gc) :
-		gc(gc), bPendingKill(false)
+		gc(gc), bPendingKill(false), isHeap(_heapCheck == 'h' ? true : false)
 	{
 		if (gc != nullptr)
 		{
@@ -17,18 +18,28 @@ namespace sh::core
 	{
 		if (gc != nullptr)
 		{
-			gc->DeleteObject(this);
+			if (isHeap)
+				gc->DeleteObject(this);
+			else
+				gc->DeleteObject(this, false);
 		}
+		else
+		{
+			if (isHeap)
+				free(this);
+		}
+	}
+
+	auto SObject::operator new(std::size_t size) -> void*
+	{
+		SObject* obj = reinterpret_cast<SObject*>(::operator new(size));
+		obj->_heapCheck = 'h';
+		return obj;
 	}
 
 	void SObject::operator delete(void* ptr, size_t size) noexcept
 	{
 		SObject* sobj = static_cast<SObject*>(ptr);
-		if (sobj->gc == nullptr)
-		{
-			free(ptr);
-			return;
-		}
 		sobj->bPendingKill = true;
 		//free는 gc에서 수행
 	}
