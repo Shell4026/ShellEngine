@@ -14,10 +14,12 @@
 #include <Core/GC.h>
 #include <cassert>
 #include <fmt/core.h>
+#include "Game/ResourceManager.h"
 #include "Game/World.h"
 #include "Game/GameObject.h"
 #include "Game/Component/Transform.h"
 #include "Game/Component/MeshRenderer.h"
+
 
 #include <iostream>
 
@@ -79,35 +81,31 @@ int main(int arg, char* args[])
 
 	sh::window::Window window;
 	window.Create(u8"테스트", 1024, 768);
+
 	auto renderer = sh::render::VulkanRenderer{};
 	renderer.Init(window);
+
+	using namespace sh::game;
+
+	ResourceManager resources{gc};
+	World world{ renderer, gc };
 	
 	sh::render::VulkanShaderBuilder builder{ renderer };
 	sh::render::ShaderLoader loader{ &builder };
-	auto shader = loader.LoadShader<sh::render::VulkanShader>("triangle.spv", "frag.spv");
 
-	sh::render::Material mat{};
-	mat.SetShader(shader.get());
+	auto shader = resources.AddShader("Triangle", loader.LoadShader<sh::render::VulkanShader>("triangle.spv", "frag.spv"));
+	auto mat = resources.AddMaterial("Material", sh::render::Material{ shader });
 
 	sh::render::Mesh mesh{};
-	mesh.AddMaterial(&mat);
+	mesh.SetGC(gc);
+	mesh.AddMaterial(mat);
 
-	using namespace sh::game;
-	World world{ renderer, gc };
 	GameObject* obj = world.AddGameObject("Test");
 
 	auto meshRenderer = obj->AddComponent<MeshRenderer>();
 	meshRenderer->SetMesh(mesh);
 
 	world.Start();
-
-	Derived derived{ "good" };
-	derived.SetGC(gc);
-
-	Derived* temp = new Derived{ "trash" };
-	temp->SetGC(gc);
-
-	derived.ptr = temp;
 	while (window.IsOpen())
 	{
 		window.ProcessFrame();
@@ -119,6 +117,7 @@ int main(int arg, char* args[])
 			switch (e.type)
 			{
 			case sh::window::Event::EventType::Close:
+				resources.Clean();
 				renderer.Clean();
 				window.Close();
 				break;
@@ -141,7 +140,9 @@ int main(int arg, char* args[])
 				break;
 			case sh::window::Event::EventType::KeyDown:
 				if (e.keyType == sh::window::Event::KeyType::Enter)
-					delete temp;
+				{
+					resources.DestroyMaterial("Material");
+				}
 				break;
 			case sh::window::Event::EventType::WindowFocus:
 				renderer.Pause(false);
@@ -153,14 +154,10 @@ int main(int arg, char* args[])
 				break;
 			}
 		}
-		if(sh::core::IsValid(derived.ptr))
-			std::cout << derived.ptr->name << '\n';
-		else
-			std::cout << "Delete!!!" << '\n';
-
 		world.Update(window.GetDeltaTime());
-		renderer.Render(window.GetDeltaTime());
 		gc.Update();
+		renderer.Render(window.GetDeltaTime());
 	}
+	world.Clean();
 	return 0;
 }
