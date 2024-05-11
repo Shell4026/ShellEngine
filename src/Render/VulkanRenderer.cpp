@@ -557,7 +557,12 @@ namespace sh::render {
 					auto drawObj = drawList.front();
 					drawList.pop();
 
-					VulkanShader* shader = static_cast<VulkanShader*>(drawObj->GetMaterial(0)->GetShader());
+					sh::render::Material* mat = drawObj->GetMaterial(0);
+					if (!sh::core::IsValid(mat)) continue;
+
+					VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
+					if (!sh::core::IsValid(shader)) continue;
+
 					vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, shader->GetPipeline()->GetPipeline());
 
 					VkViewport viewport{};

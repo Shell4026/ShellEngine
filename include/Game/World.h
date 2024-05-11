@@ -40,6 +40,8 @@ namespace sh::game
 		SH_GAME_API World(sh::render::Renderer& renderer, sh::core::GC& gc);
 		SH_GAME_API ~World();
 
+		SH_GAME_API void Clean();
+
 		SH_GAME_API auto AddGameObject(const std::string& name) -> GameObject*;
 		SH_GAME_API void DestroyGameObject(const std::string& name);
 		SH_GAME_API auto ChangeGameObjectName(const std::string& objName, const std::string& to) -> std::string;

@@ -17,6 +17,7 @@ namespace sh::render
 		SCLASS(Mesh)
 	private:
 		std::vector<glm::vec3> verts;
+		PROPERTY(mats)
 		std::vector<Material*> mats;
 	public:
 		SH_RENDER_API Mesh();

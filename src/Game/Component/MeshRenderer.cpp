@@ -3,6 +3,8 @@
 
 #include "GameObject.h"
 
+#include "Core/Util.h"
+
 namespace sh::game
 {
 	MeshRenderer::MeshRenderer(GameObject& owner) :
@@ -22,6 +24,7 @@ namespace sh::game
 
 	void MeshRenderer::Update()
 	{
-		gameObject.world.renderer.PushDrawAble(mesh);
+		if(sh::core::IsValid(mesh))
+			gameObject.world.renderer.PushDrawAble(mesh);
 	}
 }

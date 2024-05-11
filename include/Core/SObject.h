@@ -19,7 +19,6 @@ namespace sh::core
 		GC* gc;
 
 		bool bPendingKill;
-		int a = 4;
 	public:
 		SH_CORE_API SObject(GC* gc = nullptr);
 		SH_CORE_API virtual ~SObject();

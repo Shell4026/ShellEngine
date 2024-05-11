@@ -3,6 +3,7 @@
 #include "GameObject.h"
 
 #include "Core/GC.h"
+#include "Core/Util.h"
 
 namespace sh::game
 {
@@ -13,6 +14,13 @@ namespace sh::game
 	}
 	World::~World()
 	{
+		objs.clear();
+	}
+
+	void World::Clean()
+	{
+		objsEmptyIdx = std::queue<int>{};
+		objsMap.clear();
 		objs.clear();
 	}
 
@@ -113,12 +121,16 @@ namespace sh::game
 
 		for (auto& obj : objs)
 		{
+			if (!sh::core::IsValid(obj.get()))
+				continue;
 			if (!obj->activeSelf)
 				continue;
 			obj->Update();
 		}
 		for (auto& obj : objs)
 		{
+			if (!sh::core::IsValid(obj.get()))
+				continue;
 			if (!obj->activeSelf)
 				continue;
 			obj->LateUpdate();

@@ -51,6 +51,9 @@ namespace sh::core
 
 	void GC::Update()
 	{
+		if (deletedObjs.size() == 0)
+			return;
+
 		//O(NM)
 		for (auto obj : objs)
 		{

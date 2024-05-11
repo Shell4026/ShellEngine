@@ -39,6 +39,8 @@ namespace sh::game
 		SH_GAME_API void Update() override;
 		SH_GAME_API void LateUpdate() override;
 		
+		SH_GAME_API void Destroy();
+
 		SH_GAME_API void SetActive(bool b);
 		SH_GAME_API void SetName(const std::string& name);
 

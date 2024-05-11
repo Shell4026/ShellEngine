@@ -30,6 +30,7 @@ namespace sh::core
 			return;
 		}
 		sobj->bPendingKill = true;
+		//free는 gc에서 수행
 	}
 
 	void SObject::SetGC(GC& gc)

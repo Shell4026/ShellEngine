@@ -60,6 +60,11 @@ namespace sh::game
 		}
 	}
 
+	void GameObject::Destroy()
+	{
+		world.DestroyGameObject(name);
+	}
+
 	void GameObject::SetActive(bool b)
 	{
 		bEnable = true;
