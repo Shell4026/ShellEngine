@@ -50,7 +50,8 @@ namespace sh::game
 		auto AddComponent() -> std::enable_if_t<IsComponent<T>::value, T*>
 		{
 			components.push_back(std::make_unique<T>(*this));
-			return static_cast<T*>(components[components.size() - 1].get());
+			components.back()->SetGC(world.gc);
+			return static_cast<T*>(components.back().get());
 		}
 		template<typename T>
 		auto GetComponent() const -> T*
