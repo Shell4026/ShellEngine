@@ -2,7 +2,12 @@
 
 namespace sh::render
 {
-	void Renderer::PushDrawAble(IDrawable* drawable)
+	Renderer::Renderer(RenderAPI api) :
+		apiType(api)
+	{
+
+	}
+	void Renderer::PushDrawAble(Mesh* drawable)
 	{
 		if (drawable == nullptr)
 			return;

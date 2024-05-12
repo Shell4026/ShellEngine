@@ -23,7 +23,7 @@ namespace sh::render::impl
 	private:
 		VkDevice device;
 		VkRenderPass renderPass;
-		const VulkanShader* shader;
+		VulkanShader* shader;
 
 		VkPipelineLayout pipelineLayout;
 		VkPipeline pipeline;
@@ -34,7 +34,7 @@ namespace sh::render::impl
 
 		int viewportX, viewportY;
 	public:
-		SH_RENDER_API VulkanPipeline(VkDevice device, VkRenderPass renderPass, const VulkanShader* shader);
+		SH_RENDER_API VulkanPipeline(VkDevice device, VkRenderPass renderPass);
 		SH_RENDER_API ~VulkanPipeline();
 
 		SH_RENDER_API auto Build() -> VkResult;
@@ -50,5 +50,7 @@ namespace sh::render::impl
 
 		SH_RENDER_API auto AddAttributeDescription(const VkVertexInputAttributeDescription& attributeDescription) -> VulkanPipeline&;
 		SH_RENDER_API auto ResetAttributeDescription() -> VulkanPipeline&;
+
+		SH_RENDER_API auto SetShader(VulkanShader* shader) -> VulkanPipeline&;
 	};
 }

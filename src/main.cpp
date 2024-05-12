@@ -93,12 +93,16 @@ int main(int arg, char* args[])
 	sh::render::VulkanShaderBuilder builder{ renderer };
 	sh::render::ShaderLoader loader{ &builder };
 
-	auto shader = resources.AddShader("Triangle", loader.LoadShader<sh::render::VulkanShader>("triangle.spv", "frag.spv"));
+	auto shader = resources.AddShader("Triangle", loader.LoadShader<sh::render::VulkanShader>("vert.spv", "frag.spv"));
 	auto mat = resources.AddMaterial("Material", sh::render::Material{ shader });
+
+	shader->AddProperty("verts", 0, sh::render::Shader::PropertyType::Vec3);
 
 	sh::render::Mesh mesh{};
 	mesh.SetGC(gc);
 	mesh.AddMaterial(mat);
+	mesh.SetVertex({ glm::vec3{0.0f, 0.5f, 0.0f}, glm::vec3{-0.5f, -0.5f, 0.0f}, glm::vec3{0.5f, -0.5f, 0.0f} });
+	mesh.Build(renderer);
 
 	GameObject* obj = world.AddGameObject("Test");
 
@@ -119,8 +123,8 @@ int main(int arg, char* args[])
 			case sh::window::Event::EventType::Close:
 				resources.Clean();
 				renderer.Clean();
-				window.Close();
 				world.Clean();
+				window.Close();
 				break;
 			case sh::window::Event::EventType::MousePressed:
 				if (e.mouseType == sh::window::Event::MouseType::Left)

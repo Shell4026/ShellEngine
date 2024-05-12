@@ -1,17 +1,25 @@
 ﻿#pragma once
 
-#include "IDrawable.h"
 #include "Export.h"
 #include "../Window/Window.h"
 
 #include <queue>
 namespace sh::render {
+	enum class RenderAPI
+	{
+		OpenGL,
+		Vulkan
+	};
+	class Mesh;
 	class Framebuffer;
 
 	class Renderer {
 	protected:
-		std::queue<IDrawable*> drawList;
+		std::queue<Mesh*> drawList;
 	public:
+		const RenderAPI apiType;
+	public:
+		SH_RENDER_API Renderer(RenderAPI api);
 		SH_RENDER_API virtual ~Renderer() = default;
 
 		SH_RENDER_API virtual bool Init(sh::window::Window& win) = 0;
@@ -22,9 +30,9 @@ namespace sh::render {
 		SH_RENDER_API virtual void Pause(bool b) = 0;
 
 		SH_RENDER_API virtual bool IsInit() const = 0;
-		SH_RENDER_API virtual auto GetMainFramebuffer() -> Framebuffer* = 0;
+		SH_RENDER_API virtual auto GetMainFramebuffer() const -> const Framebuffer* = 0;
 
 		SH_RENDER_API void ClearDrawList();
-		SH_RENDER_API void PushDrawAble(IDrawable* drawable);
+		SH_RENDER_API void PushDrawAble(Mesh* drawable);
 	};
 }

@@ -2,6 +2,7 @@
 
 #include "Export.h"
 #include "IDrawable.h"
+#include "Renderer.h"
 
 #include "Core/SObject.h"
 #include "Core/Reflection.hpp"
@@ -12,13 +13,16 @@
 
 namespace sh::render
 {
-	class Mesh : public sh::core::SObject, public IDrawable
+	class Material;
+
+	class Mesh : public sh::core::SObject
 	{
 		SCLASS(Mesh)
 	private:
 		std::vector<glm::vec3> verts;
 		PROPERTY(mats)
 		std::vector<Material*> mats;
+		std::unique_ptr<IDrawable> drawable;
 	public:
 		SH_RENDER_API Mesh();
 		SH_RENDER_API Mesh(const Mesh& other);
@@ -34,10 +38,13 @@ namespace sh::render
 		SH_RENDER_API auto GetVertex() -> std::vector<glm::vec3>&;
 		SH_RENDER_API auto GetVertexConst() const -> const std::vector<glm::vec3>&;
 
-		SH_RENDER_API auto GetVertexCount() const -> int override;
+		SH_RENDER_API auto GetVertexCount() const -> int;
 
 		SH_RENDER_API void AddMaterial(Material* mat);
-		SH_RENDER_API auto GetMaterial(int id) -> Material* override;
-		SH_RENDER_API auto GetMaterials() -> std::vector<Material*>& override;
+		SH_RENDER_API auto GetMaterial(int id) -> Material*;
+		SH_RENDER_API auto GetMaterials() -> std::vector<Material*>&;
+
+		SH_RENDER_API auto GetDrawable() const -> IDrawable*;
+		SH_RENDER_API void Build(const Renderer& renderer);
 	};
 }

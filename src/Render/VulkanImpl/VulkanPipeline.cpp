@@ -6,9 +6,9 @@
 #include <cassert>
 namespace sh::render::impl
 {
-	VulkanPipeline::VulkanPipeline(VkDevice device, VkRenderPass renderPass, const VulkanShader* shader) :
-		device(device), renderPass(renderPass), shader(shader),
-		pipelineLayout(nullptr), pipeline(nullptr), 
+	VulkanPipeline::VulkanPipeline(VkDevice device, VkRenderPass renderPass) :
+		device(device), renderPass(renderPass),
+		pipelineLayout(nullptr), pipeline(nullptr), shader(nullptr),
 		viewportX(0), viewportY(0)
 	{
 	}
@@ -17,6 +17,7 @@ namespace sh::render::impl
 	{
 		Clean();
 	}
+
 	void VulkanPipeline::Clean()
 	{
 		shaderStages.clear();
@@ -34,6 +35,12 @@ namespace sh::render::impl
 			vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
 			pipelineLayout = nullptr;
 		}
+	}
+
+	auto VulkanPipeline::SetShader(VulkanShader* shader) -> VulkanPipeline&
+	{
+		this->shader = shader;
+		return *this;
 	}
 
 	auto VulkanPipeline::AddShaderStage(ShaderStage stage) -> VulkanPipeline&
@@ -96,6 +103,18 @@ namespace sh::render::impl
 
 	auto VulkanPipeline::Build() -> VkResult
 	{
+		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+		pipelineLayoutInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		pipelineLayoutInfo.setLayoutCount = 0; // Optional
+		pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
+		pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
+		pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+
+		VkResult result = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout);
+		assert(result == VkResult::VK_SUCCESS);
+		if (result != VkResult::VK_SUCCESS)
+			return result;
+
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 		vertexInputInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 		vertexInputInfo.vertexBindingDescriptionCount = bindingDescriptions.size();;
@@ -195,18 +214,6 @@ namespace sh::render::impl
 		colorBlending.blendConstants[1] = 0.0f; // Optional
 		colorBlending.blendConstants[2] = 0.0f; // Optional
 		colorBlending.blendConstants[3] = 0.0f; // Optional
-
-		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-		pipelineLayoutInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = 0; // Optional
-		pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
-		pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-		pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
-
-		VkResult result = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout);
-		assert(result == VkResult::VK_SUCCESS);
-		if(result != VkResult::VK_SUCCESS)
-			return result;
 		
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;

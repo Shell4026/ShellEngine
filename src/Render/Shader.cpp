@@ -3,17 +3,17 @@
 namespace sh::render
 {
 	Shader::Shader(int id, ShaderType type) :
-		id(id), type(type), properties(_properties)
+		id(id), type(type), properties(props)
 	{
 	}
 
 	Shader::Shader(const Shader& other) :
-		id(other.id), type(other.type), _properties(other._properties), properties(_properties)
+		id(other.id), type(other.type), props(other.props), properties(props)
 	{
 	}
 
 	Shader::Shader(Shader&& other) noexcept :
-		id(other.id), type(other.type), _properties(std::move(other._properties)), properties(_properties)
+		id(other.id), type(other.type), props(std::move(other.props)), properties(props)
 	{
 	}
 
@@ -26,14 +26,14 @@ namespace sh::render
 	{
 		id = other.id;
 
-		_properties = other._properties;
+		props = other.props;
 	}
 
 	void Shader::operator=(Shader&& other) noexcept
 	{
 		id = other.id;
 
-		_properties = std::move(other._properties);
+		props = std::move(other.props);
 	}
 
 	auto Shader::operator==(const Shader& other) -> bool
@@ -46,22 +46,48 @@ namespace sh::render
 		return id;
 	}
 
-	void Shader::AddProperty(const std::string& name, PropertyType type)
+	bool Shader::AddProperty(const std::string& name, uint32_t loc, PropertyType type)
 	{
-		_properties.insert({ name, type });
+		if (propIdx.find(name) == propIdx.end())
+			return false;
+
+		if (props.size() < loc + 1)
+			props.resize(loc + 1, PropertyType::None);
+		props[loc] = type;
+		propIdx.insert({ name, loc });
+
+		return true;
 	}
 
 	auto Shader::HasProperty(const std::string& name) const -> bool
 	{
-		return _properties.find(name) != _properties.end();
+		return propIdx.find(name) != propIdx.end();
 	}
 
-	auto Shader::GetProperty(const std::string& name) const -> std::optional<PropertyType>
+	auto Shader::GetPropertyType(const std::string& name) const -> std::optional<PropertyType>
 	{
-		auto it = _properties.find(name);
-		if (it == _properties.end())
+		auto it = propIdx.find(name);
+		if (it == propIdx.end())
 			return {};
 
+		return props[it->second];
+	}
+
+	auto Shader::GetPropertyType(uint32_t idx) const -> std::optional<PropertyType>
+	{
+		if (idx + 1 > props.size())
+			return {};
+		if (props[idx] == PropertyType::None)
+			return {};
+
+		return props[idx];
+	}
+
+	auto Shader::GetPropertyIdx(std::string_view name) const -> std::optional<uint32_t>
+	{
+		auto it = propIdx.find(std::string{ name });
+		if (it == propIdx.end())
+			return {};
 		return it->second;
 	}
 }

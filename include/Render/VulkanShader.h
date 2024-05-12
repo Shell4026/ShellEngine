@@ -15,18 +15,13 @@ namespace sh::render
 	class VulkanShader : public Shader, public sh::core::INonCopyable
 	{
 		SCLASS(VulkanShader)
-
-		friend class VulkanShaderBuilder;
 	private:
 		VkDevice device;
 
 		VkShaderModule vertShader;
 		VkShaderModule fragShader;
-
-		std::unique_ptr<impl::VulkanPipeline> pipeline;
-	protected:
-		SH_RENDER_API VulkanShader(int id, VkDevice device);
 	public:
+		SH_RENDER_API VulkanShader(int id, VkDevice device);
 		SH_RENDER_API VulkanShader(VulkanShader&& other) noexcept;
 		SH_RENDER_API ~VulkanShader();
 		
@@ -37,7 +32,5 @@ namespace sh::render
 
 		SH_RENDER_API auto GetVertexShader() const -> const VkShaderModule;
 		SH_RENDER_API auto GetFragmentShader() const -> const VkShaderModule;
-
-		SH_RENDER_API auto GetPipeline() const->impl::VulkanPipeline*;
 	};
 }

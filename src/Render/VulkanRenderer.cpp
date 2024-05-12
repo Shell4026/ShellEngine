@@ -8,9 +8,12 @@
 #include "VulkanImpl/VulkanCommandBuffer.h"
 #include "VulkanImpl/VulkanFramebuffer.h"
 
+#include "Mesh.h"
+#include "Material.h"
 #include "VulkanShader.h"
 #include "ShaderLoader.h"
 #include "VulkanShaderBuilder.h"
+#include "VulkanDrawable.h"
 
 #include <cassert>
 #include <set>
@@ -25,7 +28,8 @@ namespace sh::render {
 		graphicsQueue(nullptr), surfaceQueue(nullptr),
 		debugMessenger(nullptr), validationLayerName("VK_LAYER_KHRONOS_validation"),
 		currentFrame(0),
-		isInit(false), bPause(false), bFindValidationLayer(false), bEnableValidationLayers(sh::core::Util::IsDebug())
+		isInit(false), bPause(false), bFindValidationLayer(false), bEnableValidationLayers(sh::core::Util::IsDebug()),
+		Renderer(RenderAPI::Vulkan)
 	{
 	}
 
@@ -554,7 +558,7 @@ namespace sh::render {
 				vkCmdBeginRenderPass(buffer, &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
 				while (!drawList.empty())
 				{
-					auto drawObj = drawList.front();
+					Mesh* drawObj = drawList.front();
 					drawList.pop();
 
 					sh::render::Material* mat = drawObj->GetMaterial(0);
@@ -563,7 +567,11 @@ namespace sh::render {
 					VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
 					if (!sh::core::IsValid(shader)) continue;
 
-					vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, shader->GetPipeline()->GetPipeline());
+					VulkanDrawable* drawable = static_cast<VulkanDrawable*>(drawObj->GetDrawable());
+
+					vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, drawable->GetPipeline()->GetPipeline());
+
+					
 
 					VkViewport viewport{};
 					viewport.x = 0.0f;
@@ -579,7 +587,10 @@ namespace sh::render {
 					scissor.extent = surface->GetSwapChainSize();
 					vkCmdSetScissor(buffer, 0, 1, &scissor);
 
-					vkCmdDraw(buffer, 3, 1, 0, 0);
+					VkBuffer vertexBuffers[] = { drawable->GetVertexBuffer() };
+					VkDeviceSize offsets[] = { 0 };
+					vkCmdBindVertexBuffers(buffer, 0, 1, vertexBuffers, offsets);
+					vkCmdDraw(buffer, drawObj->GetVertexCount(), 1, 0, 0);
 				}
 				vkCmdEndRenderPass(buffer);
 			},
@@ -611,9 +622,14 @@ namespace sh::render {
 		return device;
 	}
 
-	auto VulkanRenderer::GetMainFramebuffer() -> Framebuffer*
+	auto VulkanRenderer::GetMainFramebuffer() const -> const Framebuffer*
 	{
 		return &framebuffers[0];
+	}
+
+	auto VulkanRenderer::GetGPU() const -> VkPhysicalDevice
+	{
+		return gpu;
 	}
 }//namespace
 

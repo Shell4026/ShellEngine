@@ -4,6 +4,7 @@
 #include "Render/VulkanShaderBuilder.h"
 #include "Render/ShaderBuilder.h"
 #include "Render/ShaderLoader.h"
+#include "Render/Material.h"
 
 namespace sh::game
 {

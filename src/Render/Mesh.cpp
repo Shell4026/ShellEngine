@@ -1,4 +1,7 @@
 ﻿#include "Mesh.h"
+#include "VulkanDrawable.h"
+
+#include "VulkanRenderer.h"
 
 namespace sh::render
 {
@@ -77,5 +80,19 @@ namespace sh::render
 	auto Mesh::GetMaterials() -> std::vector<Material*>&
 	{
 		return mats;
+	}
+
+	auto Mesh::GetDrawable() const -> IDrawable*
+	{
+		return drawable.get();
+	}
+
+	void Mesh::Build(const Renderer& renderer)
+	{
+		if (renderer.apiType == RenderAPI::Vulkan)
+		{
+			drawable = std::make_unique<VulkanDrawable>(static_cast<const VulkanRenderer&>(renderer));
+			drawable->Build(GetMaterial(0), this);
+		}
 	}
 }

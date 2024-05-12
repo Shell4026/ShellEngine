@@ -13,7 +13,7 @@ namespace sh::render
 	VulkanShader::VulkanShader(VulkanShader&& other) noexcept :
 		Shader(std::move(other)),
 		vertShader(other.vertShader), fragShader(other.fragShader),
-		device(device), pipeline(std::move(other.pipeline))
+		device(device)
 	{
 		other.vertShader = nullptr;
 		other.fragShader = nullptr;
@@ -48,8 +48,6 @@ namespace sh::render
 			vkDestroyShaderModule(device, fragShader, nullptr);
 			fragShader = nullptr;
 		}
-
-		pipeline.reset(nullptr);
 	}
 
 	auto VulkanShader::GetVertexShader() const -> const VkShaderModule
@@ -60,10 +58,5 @@ namespace sh::render
 	auto VulkanShader::GetFragmentShader() const -> const VkShaderModule
 	{
 		return fragShader;
-	}
-
-	auto VulkanShader::GetPipeline() const -> impl::VulkanPipeline*
-	{
-		return pipeline.get();
 	}
 }
