@@ -30,6 +30,7 @@ namespace sh::game
 
 		std::unordered_map<std::string, std::unique_ptr<sh::render::Shader>> shaders;
 		std::unordered_map<std::string, std::unique_ptr<sh::render::Material>> mats;
+		std::unordered_map<std::string, std::unique_ptr<sh::render::Mesh>> meshes;
 	private:
 		auto LoadShader(std::string_view dir) -> sh::render::Shader*;
 	public:
@@ -45,5 +46,10 @@ namespace sh::game
 		SH_GAME_API auto AddMaterial(std::string_view name, std::unique_ptr<sh::render::Material>&& mat) -> sh::render::Material*;
 		SH_GAME_API bool DestroyMaterial(std::string_view name);
 		SH_GAME_API auto GetMaterial(std::string_view name) -> sh::render::Material*;
+
+		SH_GAME_API auto AddMesh(std::string_view name) -> sh::render::Mesh*;
+		SH_GAME_API auto AddMesh(std::string_view name, sh::render::Mesh&& mesh) -> sh::render::Mesh*;
+		SH_GAME_API bool DestroyMesh(std::string_view name);
+		SH_GAME_API auto GetMesh(std::string_view name) -> sh::render::Mesh*;
 	};
 }

@@ -5,6 +5,7 @@
 #include "Render/ShaderBuilder.h"
 #include "Render/ShaderLoader.h"
 #include "Render/Material.h"
+#include "Render/Mesh.h"
 
 namespace sh::game
 {
@@ -105,6 +106,59 @@ namespace sh::game
 	{
 		auto it = mats.find(std::string{ name });
 		if (it == mats.end())
+			return nullptr;
+
+		return it->second.get();
+	}
+
+	auto ResourceManager::AddMesh(std::string_view _name) -> sh::render::Mesh*
+	{
+		std::string name{ _name };
+		int idx = 0;
+		auto it = meshes.find(name);
+		while (it != meshes.end())
+		{
+			name += std::to_string(idx);
+			it = meshes.find(name);
+		}
+
+		auto ptr = std::make_unique<sh::render::Mesh>();
+		ptr->SetGC(gc);
+		return meshes.insert({ name, std::move(ptr) }).first->second.get();
+	}
+
+	auto ResourceManager::AddMesh(std::string_view _name, sh::render::Mesh&& mesh) -> sh::render::Mesh*
+	{
+		std::string name{ _name };
+		int idx = 0;
+		auto it = meshes.find(name);
+		while (it != meshes.end())
+		{
+			name += std::to_string(idx);
+			it = meshes.find(name);
+		}
+
+		auto ptr = std::make_unique<sh::render::Mesh>();
+		*ptr.get() = std::move(mesh);
+		ptr->SetGC(gc);
+		return meshes.insert({ name, std::move(ptr)}).first->second.get();
+	}
+
+	bool ResourceManager::DestroyMesh(std::string_view name)
+	{
+		auto it = meshes.find(std::string{ name });
+		if (it == meshes.end())
+			return false;
+
+		it->second.reset();
+
+		return true;
+	}
+
+	auto ResourceManager::GetMesh(std::string_view name) -> sh::render::Mesh*
+	{
+		auto it = meshes.find(std::string{ name });
+		if (it == meshes.end())
 			return nullptr;
 
 		return it->second.get();

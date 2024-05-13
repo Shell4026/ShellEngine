@@ -11,6 +11,7 @@ namespace sh::game
 	{
 		SCLASS(MeshRenderer)
 	private:
+		PROPERTY(mesh)
 		sh::render::Mesh* mesh;
 	public:
 		SH_GAME_API MeshRenderer(GameObject& owner);
