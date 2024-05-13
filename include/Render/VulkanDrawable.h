@@ -4,6 +4,7 @@
 #include "IDrawable.h"
 #include "VulkanImpl/VulkanPipeline.h"
 #include "VulkanImpl/VulkanBuffer.h"
+#include "VulkanImpl/VulkanCommandBuffer.h"
 
 #include <memory>
 
@@ -17,6 +18,7 @@ namespace sh::render
 		std::unique_ptr<impl::VulkanPipeline> pipeline;
 
 		impl::VulkanBuffer vertexBuffer;
+		impl::VulkanCommandBuffer cmd;
 
 		const VulkanRenderer& renderer;
 

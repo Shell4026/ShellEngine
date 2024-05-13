@@ -11,10 +11,14 @@
 namespace sh::render
 {
 	VulkanDrawable::VulkanDrawable(const VulkanRenderer& renderer) :
-		renderer(renderer), vertexBuffer(renderer.GetDevice(), renderer.GetGPU())
+		renderer(renderer), 
+		vertexBuffer(renderer.GetDevice(), renderer.GetGPU()),
+		cmd(renderer.GetDevice(), renderer.GetCommandPool())
 	{
 		auto frameBuffer = static_cast<const impl::VulkanFramebuffer*>(renderer.GetMainFramebuffer());
 		pipeline = std::make_unique<impl::VulkanPipeline>(renderer.GetDevice(), frameBuffer->GetRenderPass());
+
+		cmd.Create();
 	}
 
 	VulkanDrawable::~VulkanDrawable()
@@ -52,9 +56,31 @@ namespace sh::render
 			Build();
 
 		size_t size = sizeof(glm::vec3) * mesh->GetVertexCount();
-		int flag = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-		vertexBuffer.Create(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, flag);
-		vertexBuffer.SetData(mesh->GetVertex().data());
+
+		impl::VulkanBuffer stagingBuffer{ renderer.GetDevice(), renderer.GetGPU() };
+		stagingBuffer.Create(size, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT, 
+			VK_SHARING_MODE_EXCLUSIVE, 
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		stagingBuffer.SetData(mesh->GetVertex().data());
+
+		vertexBuffer.Create(size, 
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, 
+			VK_SHARING_MODE_EXCLUSIVE, 
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		VkCommandBufferBeginInfo info{};
+		info.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		cmd.Submit(renderer.GetGraphicsQueue(), [&]() {
+			VkBufferCopy cpy{};
+			cpy.srcOffset = 0; // Optional
+			cpy.dstOffset = 0; // Optional
+			cpy.size = size;
+			vkCmdCopyBuffer(cmd.GetCommandBuffer(), stagingBuffer.GetBuffer(), vertexBuffer.GetBuffer(), 1, &cpy);
+		}, &info);
+
+		cmd.Clean();
 	}
 
 	auto VulkanDrawable::GetVertexBuffer() const -> const impl::VulkanBuffer&
@@ -64,6 +90,6 @@ namespace sh::render
 
 	void VulkanDrawable::Update()
 	{
-		vertexBuffer.SetData(mesh->GetVertex().data());
+		//vertexBuffer.SetData(mesh->GetVertex().data());
 	}
 }

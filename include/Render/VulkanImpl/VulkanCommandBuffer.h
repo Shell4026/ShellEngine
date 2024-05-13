@@ -32,10 +32,11 @@ namespace sh::render::impl {
 		SH_RENDER_API void SetWaitSemaphore(const std::initializer_list<VkSemaphore> s);
 		SH_RENDER_API void SetSignalSemaphore(const std::initializer_list<VkSemaphore> s);
 
-		SH_RENDER_API auto Submit(VkQueue queue, const std::function<void()>& commands, VkFence fence = nullptr) -> VkResult;
+		SH_RENDER_API auto Submit(VkQueue queue, const std::function<void()>& commands, VkCommandBufferBeginInfo* beginInfo = nullptr, VkFence fence = nullptr) -> VkResult;
 
 		SH_RENDER_API auto Create(const VkCommandBufferAllocateInfo* info = nullptr) -> VkResult;
 		SH_RENDER_API auto Reset() -> VkResult;
+		SH_RENDER_API void Clean();
 
 		SH_RENDER_API auto GetCommandBuffer() const-> VkCommandBuffer;
 	};

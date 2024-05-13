@@ -11,6 +11,7 @@ namespace sh::render::impl {
 
 	VulkanCommandBuffer::~VulkanCommandBuffer()
 	{
+		Clean();
 	}
 
 	auto VulkanCommandBuffer::Create(const VkCommandBufferAllocateInfo* info)->VkResult
@@ -48,6 +49,7 @@ namespace sh::render::impl {
 		{
 			result = vkBeginCommandBuffer(buffer, info);
 			assert(result == VkResult::VK_SUCCESS);
+			return result;
 		}
 
 		VkCommandBufferInheritanceInfo inheritInfo{};
@@ -103,10 +105,10 @@ namespace sh::render::impl {
 			signalSemaphores[idx++] = i;
 	}
 
-	auto VulkanCommandBuffer::Submit(VkQueue queue, const std::function<void()>& commands, VkFence fence) -> VkResult
+	auto VulkanCommandBuffer::Submit(VkQueue queue, const std::function<void()>& commands, VkCommandBufferBeginInfo* beginInfo, VkFence fence) -> VkResult
 	{
 		VkResult result;
-		if (result = Begin(); result != VkResult::VK_SUCCESS) return result;
+		if (result = Begin(beginInfo); result != VkResult::VK_SUCCESS) return result;
 		commands();
 		if (result = End(); result != VkResult::VK_SUCCESS) return result;
 
@@ -140,6 +142,17 @@ namespace sh::render::impl {
 		}
 
 		return VkResult::VK_ERROR_UNKNOWN;
+	}
+
+	void VulkanCommandBuffer::Clean()
+	{
+		waitSemaphores.clear();
+		signalSemaphores.clear();
+		if (buffer)
+		{
+			vkFreeCommandBuffers(device, cmdPool, 1, &buffer);
+			buffer = nullptr;
+		}
 	}
 
 	auto VulkanCommandBuffer::GetCommandBuffer() const -> VkCommandBuffer

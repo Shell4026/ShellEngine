@@ -28,11 +28,11 @@ namespace sh::render::impl
 		}
 	}
 
-	auto VulkanBuffer::Create(size_t size, VkBufferUsageFlagBits usage, VkSharingMode sharing, int memPropFlagBits) -> VkResult
+	auto VulkanBuffer::Create(size_t size, int usageBits, VkSharingMode sharing, int memPropFlagBits) -> VkResult
 	{
 		bufferInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 		bufferInfo.size = size;
-		bufferInfo.usage = usage;
+		bufferInfo.usage = usageBits;
 		bufferInfo.sharingMode = sharing;
 
 		VkResult result = vkCreateBuffer(device, &bufferInfo, nullptr, &buffer);

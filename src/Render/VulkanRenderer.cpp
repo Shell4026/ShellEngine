@@ -592,7 +592,7 @@ namespace sh::render {
 				}
 				vkCmdEndRenderPass(buffer);
 			},
-			inFlightFence[currentFrame]
+			nullptr, inFlightFence[currentFrame]
 		);
 
 		VkPresentInfoKHR presentInfo{};
@@ -628,6 +628,16 @@ namespace sh::render {
 	auto VulkanRenderer::GetGPU() const -> VkPhysicalDevice
 	{
 		return gpu;
+	}
+
+	auto VulkanRenderer::GetCommandPool() const -> VkCommandPool
+	{
+		return cmdPool;
+	}
+
+	auto VulkanRenderer::GetGraphicsQueue() const -> VkQueue
+	{
+		return graphicsQueue;
 	}
 }//namespace
 

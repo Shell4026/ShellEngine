@@ -107,6 +107,8 @@ namespace sh::render {
 
 		SH_RENDER_API auto GetDevice() const -> VkDevice;
 		SH_RENDER_API auto GetGPU() const -> VkPhysicalDevice;
+		SH_RENDER_API auto GetCommandPool() const -> VkCommandPool;
+		SH_RENDER_API auto GetGraphicsQueue() const -> VkQueue;
 		SH_RENDER_API auto GetMainFramebuffer() const -> const Framebuffer* override;
 
 	};

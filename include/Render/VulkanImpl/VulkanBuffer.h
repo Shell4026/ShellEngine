@@ -20,7 +20,7 @@ namespace sh::render
 			SH_RENDER_API VulkanBuffer(VkDevice device, VkPhysicalDevice gpu);
 			SH_RENDER_API ~VulkanBuffer();
 
-			SH_RENDER_API auto Create(size_t size, VkBufferUsageFlagBits usage, VkSharingMode sharing, int memPropFlagBits) -> VkResult;
+			SH_RENDER_API auto Create(size_t size, int usageBits, VkSharingMode sharing, int memPropFlagBits) -> VkResult;
 			SH_RENDER_API void Clean();
 			SH_RENDER_API void SetData(void* data);
 			SH_RENDER_API auto GetBuffer() const -> VkBuffer;
