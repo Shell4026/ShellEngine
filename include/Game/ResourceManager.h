@@ -42,6 +42,7 @@ namespace sh::game
 		SH_GAME_API bool DestroyShader(std::string_view name);
 		SH_GAME_API auto GetShader(std::string_view name) -> sh::render::Shader*;
 
+		SH_GAME_API auto AddMaterial(std::string_view name) -> sh::render::Material*;
 		SH_GAME_API auto AddMaterial(std::string_view name, sh::render::Material&& mat) -> sh::render::Material*;
 		SH_GAME_API auto AddMaterial(std::string_view name, std::unique_ptr<sh::render::Material>&& mat) -> sh::render::Material*;
 		SH_GAME_API bool DestroyMaterial(std::string_view name);

@@ -571,8 +571,6 @@ namespace sh::render {
 
 					vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, drawable->GetPipeline()->GetPipeline());
 
-					
-
 					VkViewport viewport{};
 					viewport.x = 0.0f;
 					viewport.y = 0.0f;

@@ -58,6 +58,22 @@ namespace sh::game
 		return it->second.get();
 	}
 
+	auto ResourceManager::AddMaterial(std::string_view _name) -> sh::render::Material*
+	{
+		std::string name{ _name };
+		int idx = 0;
+		auto it = mats.find(name);
+		while (it != mats.end())
+		{
+			name += std::to_string(idx);
+			it = mats.find(name);
+		}
+
+		auto ptr = std::make_unique<sh::render::Material>();
+		ptr->SetGC(gc);
+		return mats.insert({ name, std::move(ptr) }).first->second.get();
+	}
+
 	auto ResourceManager::AddMaterial(std::string_view _name, sh::render::Material&& mat) -> sh::render::Material*
 	{
 		std::string name{ _name };
