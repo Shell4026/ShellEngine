@@ -6,6 +6,8 @@
 #include "VulkanShader.h"
 #include "VulkanImpl/VulkanFramebuffer.h"
 
+#include <cstring>
+
 namespace sh::render
 {
 	VulkanDrawable::VulkanDrawable(const VulkanRenderer& renderer) :
@@ -94,7 +96,7 @@ namespace sh::render
 
 		void* data;
 		vkMapMemory(device, vertexBufferMem, 0, bufferInfo.size, 0, &data);
-		memcpy(data, mesh->GetVertex().data(), (size_t)bufferInfo.size);
+		std::memcpy(data, mesh->GetVertex().data(), (size_t)bufferInfo.size);
 		vkUnmapMemory(device, vertexBufferMem);
 	}
 

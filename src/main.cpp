@@ -101,7 +101,7 @@ int main(int arg, char* args[])
 	sh::render::Mesh mesh{};
 	mesh.SetGC(gc);
 	mesh.AddMaterial(mat);
-	mesh.SetVertex({ glm::vec3{0.0f, 0.5f, 0.0f}, glm::vec3{-0.5f, -0.5f, 0.0f}, glm::vec3{0.5f, -0.5f, 0.0f} });
+	mesh.SetVertex({ glm::vec3{0.0f, -0.5f, 0.0f}, glm::vec3{0.5f, 0.5f, 0.0f}, glm::vec3{-0.5f, 0.5f, 0.0f} });
 	mesh.Build(renderer);
 
 	GameObject* obj = world.AddGameObject("Test");

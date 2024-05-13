@@ -26,7 +26,7 @@ namespace sh::render
 
 		enum class PropertyType
 		{
-			None,
+			Null,
 			Int, Float,
 			Vec2, Vec3, Vec4
 		};

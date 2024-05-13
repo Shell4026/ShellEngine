@@ -52,7 +52,7 @@ namespace sh::render
 			return false;
 
 		if (props.size() < loc + 1)
-			props.resize(loc + 1, PropertyType::None);
+			props.resize(loc + 1, PropertyType::Null);
 		props[loc] = type;
 		propIdx.insert({ name, loc });
 
@@ -77,7 +77,7 @@ namespace sh::render
 	{
 		if (idx + 1 > props.size())
 			return {};
-		if (props[idx] == PropertyType::None)
+		if (props[idx] == PropertyType::Null)
 			return {};
 
 		return props[idx];
