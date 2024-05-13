@@ -99,7 +99,15 @@ int main(int arg, char* args[])
 	shader->AddProperty("verts", 0, sh::render::Shader::PropertyType::Vec3);
 
 	mesh->AddMaterial(mat);
-	mesh->SetVertex({ glm::vec3{0.0f, -0.5f, 0.0f}, glm::vec3{0.5f, 0.5f, 0.0f}, glm::vec3{-0.5f, 0.5f, 0.0f} });
+	mesh->SetVertex({ 
+		{-0.5f, -0.5f, 0.0f}, 
+		{0.5f, -0.5f, 0.0f}, 
+		{0.5f, 0.5f, 0.0f},
+		{-0.5f, 0.5f, 0.0f}
+	});
+	mesh->SetIndices({
+		0, 1, 2, 2, 3, 0
+	});
 	mesh->Build(renderer);
 
 	GameObject* obj = world.AddGameObject("Test");

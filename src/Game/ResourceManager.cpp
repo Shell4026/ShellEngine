@@ -17,8 +17,9 @@ namespace sh::game
 
 	void ResourceManager::Clean()
 	{
-		shaders.clear();
+		meshes.clear();
 		mats.clear();
+		shaders.clear();
 	}
 
 	auto ResourceManager::AddShader(std::string_view _name, std::unique_ptr<sh::render::Shader>&& shader) -> sh::render::Shader*

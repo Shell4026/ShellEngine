@@ -16,6 +16,7 @@ namespace sh::render::impl {
 
 	auto VulkanCommandBuffer::Create(const VkCommandBufferAllocateInfo* info)->VkResult
 	{
+		Clean();
 		VkResult result;
 		if (info)
 		{
@@ -146,12 +147,13 @@ namespace sh::render::impl {
 
 	void VulkanCommandBuffer::Clean()
 	{
-		waitSemaphores.clear();
-		signalSemaphores.clear();
 		if (buffer)
 		{
 			vkFreeCommandBuffers(device, cmdPool, 1, &buffer);
 			buffer = nullptr;
+
+			waitSemaphores.clear();
+			signalSemaphores.clear();
 		}
 	}
 

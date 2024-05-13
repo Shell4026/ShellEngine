@@ -49,7 +49,7 @@ namespace sh::render {
 		DestroySyncObjects();
 
 		for(auto& buffer : cmdBuffers)
-			buffer->Reset();
+			buffer->Clean();
 		DestroyCommandPool();
 
 		framebuffers.clear();
@@ -588,7 +588,8 @@ namespace sh::render {
 					VkBuffer vertexBuffers[] = { drawable->GetVertexBuffer().GetBuffer()};
 					VkDeviceSize offsets[] = { 0 };
 					vkCmdBindVertexBuffers(buffer, 0, 1, vertexBuffers, offsets);
-					vkCmdDraw(buffer, drawObj->GetVertexCount(), 1, 0, 0);
+					vkCmdBindIndexBuffer(buffer, drawable->GetIndexBuffer().GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
+					vkCmdDrawIndexed(buffer, drawObj->GetIndices().size(), 1, 0, 0, 0);
 				}
 				vkCmdEndRenderPass(buffer);
 			},

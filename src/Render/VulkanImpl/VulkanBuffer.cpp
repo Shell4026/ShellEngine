@@ -30,6 +30,7 @@ namespace sh::render::impl
 
 	auto VulkanBuffer::Create(size_t size, int usageBits, VkSharingMode sharing, int memPropFlagBits) -> VkResult
 	{
+		Clean();
 		bufferInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 		bufferInfo.size = size;
 		bufferInfo.usage = usageBits;
@@ -67,7 +68,7 @@ namespace sh::render::impl
 		vkBindBufferMemory(device, buffer, bufferMem, 0);
 	}
 
-	void VulkanBuffer::SetData(void* data)
+	void VulkanBuffer::SetData(const void* data)
 	{
 		assert(buffer);
 		if (buffer == nullptr)

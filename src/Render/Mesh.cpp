@@ -67,6 +67,31 @@ namespace sh::render
 		return verts.size();
 	}
 
+	void Mesh::SetIndices(const std::vector<uint32_t>& indices)
+	{
+		this->indices = indices;
+	}
+
+	void Mesh::SetIndices(std::vector<uint32_t>&& indices)
+	{
+		this->indices = std::move(indices);
+	}
+
+	void Mesh::SetIndices(const std::initializer_list<uint32_t>& indices)
+	{
+		this->indices.clear();
+		this->indices.resize(indices.size());
+		for (int i = 0; i < indices.size(); ++i)
+		{
+			this->indices[i] = *(indices.begin() + i);
+		}
+	}
+
+	auto Mesh::GetIndices() -> const std::vector<uint32_t>&
+	{
+		return indices;
+	}
+
 	void Mesh::AddMaterial(Material* mat)
 	{
 		return mats.push_back(mat);

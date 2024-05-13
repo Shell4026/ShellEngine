@@ -18,6 +18,7 @@ namespace sh::render
 		std::unique_ptr<impl::VulkanPipeline> pipeline;
 
 		impl::VulkanBuffer vertexBuffer;
+		impl::VulkanBuffer indexBuffer;
 		impl::VulkanCommandBuffer cmd;
 
 		const VulkanRenderer& renderer;
@@ -31,6 +32,7 @@ namespace sh::render
 		SH_RENDER_API auto GetPipeline() const->impl::VulkanPipeline*;
 
 		SH_RENDER_API auto GetVertexBuffer() const -> const impl::VulkanBuffer&;
+		SH_RENDER_API auto GetIndexBuffer() const -> const impl::VulkanBuffer&;
 		SH_RENDER_API void Build(Material* mat, Mesh* mesh) override;
 		SH_RENDER_API void Update() override;
 	};

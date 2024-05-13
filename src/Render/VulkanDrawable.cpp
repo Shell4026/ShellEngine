@@ -13,6 +13,7 @@ namespace sh::render
 	VulkanDrawable::VulkanDrawable(const VulkanRenderer& renderer) :
 		renderer(renderer), 
 		vertexBuffer(renderer.GetDevice(), renderer.GetGPU()),
+		indexBuffer(renderer.GetDevice(), renderer.GetGPU()),
 		cmd(renderer.GetDevice(), renderer.GetCommandPool())
 	{
 		auto frameBuffer = static_cast<const impl::VulkanFramebuffer*>(renderer.GetMainFramebuffer());
@@ -80,12 +81,39 @@ namespace sh::render
 			vkCmdCopyBuffer(cmd.GetCommandBuffer(), stagingBuffer.GetBuffer(), vertexBuffer.GetBuffer(), 1, &cpy);
 		}, &info);
 
+		cmd.Reset();
+		stagingBuffer.Clean();
+
+		stagingBuffer.Create(size, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+			VK_SHARING_MODE_EXCLUSIVE,
+			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+		stagingBuffer.SetData(mesh->GetIndices().data());
+
+		size = sizeof(uint32_t) * mesh->GetIndices().size();
+		indexBuffer.Create(size,
+			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+			VK_SHARING_MODE_EXCLUSIVE,
+			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+
+		cmd.Submit(renderer.GetGraphicsQueue(), [&]() {
+			VkBufferCopy cpy{};
+			cpy.srcOffset = 0; // Optional
+			cpy.dstOffset = 0; // Optional
+			cpy.size = size;
+			vkCmdCopyBuffer(cmd.GetCommandBuffer(), stagingBuffer.GetBuffer(), indexBuffer.GetBuffer(), 1, &cpy);
+		}, &info);
+
 		cmd.Clean();
 	}
 
 	auto VulkanDrawable::GetVertexBuffer() const -> const impl::VulkanBuffer&
 	{
 		return vertexBuffer;
+	}
+
+	auto VulkanDrawable::GetIndexBuffer() const -> const impl::VulkanBuffer&
+	{
+		return indexBuffer;
 	}
 
 	void VulkanDrawable::Update()

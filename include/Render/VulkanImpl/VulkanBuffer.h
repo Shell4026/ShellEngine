@@ -22,7 +22,7 @@ namespace sh::render
 
 			SH_RENDER_API auto Create(size_t size, int usageBits, VkSharingMode sharing, int memPropFlagBits) -> VkResult;
 			SH_RENDER_API void Clean();
-			SH_RENDER_API void SetData(void* data);
+			SH_RENDER_API void SetData(const void* data);
 			SH_RENDER_API auto GetBuffer() const -> VkBuffer;
 			SH_RENDER_API auto GetBufferMemory() const -> VkDeviceMemory;
 		};

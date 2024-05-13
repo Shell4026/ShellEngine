@@ -20,6 +20,7 @@ namespace sh::render
 		SCLASS(Mesh)
 	private:
 		std::vector<glm::vec3> verts;
+		std::vector<uint32_t> indices;
 		PROPERTY(mats)
 		std::vector<Material*> mats;
 		std::unique_ptr<IDrawable> drawable;
@@ -39,6 +40,11 @@ namespace sh::render
 		SH_RENDER_API auto GetVertexConst() const -> const std::vector<glm::vec3>&;
 
 		SH_RENDER_API auto GetVertexCount() const -> int;
+
+		SH_RENDER_API void SetIndices(const std::vector<uint32_t >&indices);
+		SH_RENDER_API void SetIndices(std::vector<uint32_t>&& indices);
+		SH_RENDER_API void SetIndices(const std::initializer_list<uint32_t>& indices);
+		SH_RENDER_API auto GetIndices() -> const std::vector<uint32_t>&;
 
 		SH_RENDER_API void AddMaterial(Material* mat);
 		SH_RENDER_API auto GetMaterial(int id) -> Material*;

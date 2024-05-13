@@ -12,6 +12,7 @@ namespace sh::render
 	class IDrawable
 	{
 	public:
+		SH_RENDER_API virtual ~IDrawable() = default;
 		SH_RENDER_API virtual void Build(Material* mat, Mesh* mesh) = 0;
 		SH_RENDER_API virtual void Update() = 0;
 	};
