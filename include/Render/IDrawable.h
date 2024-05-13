@@ -13,5 +13,6 @@ namespace sh::render
 	{
 	public:
 		SH_RENDER_API virtual void Build(Material* mat, Mesh* mesh) = 0;
+		SH_RENDER_API virtual void Update() = 0;
 	};
 }

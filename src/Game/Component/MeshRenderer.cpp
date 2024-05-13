@@ -24,7 +24,10 @@ namespace sh::game
 
 	void MeshRenderer::Update()
 	{
-		if(sh::core::IsValid(mesh))
+		if (sh::core::IsValid(mesh))
+		{
+			mesh->GetDrawable()->Update();
 			gameObject.world.renderer.PushDrawAble(mesh);
+		}
 	}
 }

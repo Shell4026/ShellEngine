@@ -11,7 +11,7 @@
 namespace sh::render
 {
 	VulkanDrawable::VulkanDrawable(const VulkanRenderer& renderer) :
-		renderer(renderer)
+		renderer(renderer), vertexBuffer(renderer.GetDevice(), renderer.GetGPU())
 	{
 		auto frameBuffer = static_cast<const impl::VulkanFramebuffer*>(renderer.GetMainFramebuffer());
 		pipeline = std::make_unique<impl::VulkanPipeline>(renderer.GetDevice(), frameBuffer->GetRenderPass());
@@ -19,13 +19,7 @@ namespace sh::render
 
 	VulkanDrawable::~VulkanDrawable()
 	{
-		if (vertexBuffer != nullptr)
-		{
-			vkDestroyBuffer(renderer.GetDevice(), vertexBuffer, nullptr);
-			vertexBuffer = nullptr;
-		}
-
-		vkFreeMemory(renderer.GetDevice(), vertexBufferMem, nullptr);
+		
 	}
 
 	auto VulkanDrawable::GetPipeline() const -> impl::VulkanPipeline*
@@ -35,6 +29,8 @@ namespace sh::render
 
 	void VulkanDrawable::Build(Material* mat, Mesh* mesh)
 	{
+		this->mat = mat;
+		this->mesh = mesh;
 		VkVertexInputBindingDescription bindingDesc{};
 		bindingDesc.binding = 0;
 		bindingDesc.stride = sizeof(glm::vec3);
@@ -55,53 +51,19 @@ namespace sh::render
 			AddAttributeDescription(attrDesc).
 			Build();
 
-		VkDevice device = renderer.GetDevice();
-
-		VkBufferCreateInfo bufferInfo{};
-		bufferInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = sizeof(glm::vec3) * mesh->GetVertexCount();
-		bufferInfo.usage = VkBufferUsageFlagBits::VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-		bufferInfo.sharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE;
-
-		if (vkCreateBuffer(device, &bufferInfo, nullptr, &vertexBuffer) != VK_SUCCESS) {
-			throw std::runtime_error("failed to create vertex buffer!");
-		}
-
-		VkMemoryRequirements memRequirements;
-		vkGetBufferMemoryRequirements(device, vertexBuffer, &memRequirements);
-
-		VkPhysicalDeviceMemoryProperties memProperties;
-		vkGetPhysicalDeviceMemoryProperties(renderer.GetGPU(), &memProperties);
-
-		auto flag = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-
-		uint32_t idx = 0;
-		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-			if ((memRequirements.memoryTypeBits & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & flag) == flag) {
-				idx = i;
-				break;
-			}
-		}
-
-		VkMemoryAllocateInfo allocInfo{};
-		allocInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		allocInfo.allocationSize = memRequirements.size;
-		allocInfo.memoryTypeIndex = idx;
-
-		if (vkAllocateMemory(device, &allocInfo, nullptr, &vertexBufferMem) != VK_SUCCESS) {
-			throw std::runtime_error("failed to allocate vertex buffer memory!");
-		}
-
-		vkBindBufferMemory(device, vertexBuffer, vertexBufferMem, 0);
-
-		void* data;
-		vkMapMemory(device, vertexBufferMem, 0, bufferInfo.size, 0, &data);
-		std::memcpy(data, mesh->GetVertex().data(), (size_t)bufferInfo.size);
-		vkUnmapMemory(device, vertexBufferMem);
+		size_t size = sizeof(glm::vec3) * mesh->GetVertexCount();
+		int flag = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+		vertexBuffer.Create(size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT, VK_SHARING_MODE_EXCLUSIVE, flag);
+		vertexBuffer.SetData(mesh->GetVertex().data());
 	}
 
-	auto VulkanDrawable::GetVertexBuffer() const -> VkBuffer
+	auto VulkanDrawable::GetVertexBuffer() const -> const impl::VulkanBuffer&
 	{
 		return vertexBuffer;
+	}
+
+	void VulkanDrawable::Update()
+	{
+		vertexBuffer.SetData(mesh->GetVertex().data());
 	}
 }

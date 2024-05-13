@@ -587,7 +587,7 @@ namespace sh::render {
 					scissor.extent = surface->GetSwapChainSize();
 					vkCmdSetScissor(buffer, 0, 1, &scissor);
 
-					VkBuffer vertexBuffers[] = { drawable->GetVertexBuffer() };
+					VkBuffer vertexBuffers[] = { drawable->GetVertexBuffer().GetBuffer()};
 					VkDeviceSize offsets[] = { 0 };
 					vkCmdBindVertexBuffers(buffer, 0, 1, vertexBuffers, offsets);
 					vkCmdDraw(buffer, drawObj->GetVertexCount(), 1, 0, 0);
