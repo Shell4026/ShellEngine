@@ -6,6 +6,7 @@
 
 #include "Core/SObject.h"
 #include "Core/Reflection.hpp"
+#include "Core/NonCopyable.h"
 
 #include <glm/glm.hpp>
 #include <vector>
@@ -15,7 +16,7 @@ namespace sh::render
 {
 	class Material;
 
-	class Mesh : public sh::core::SObject
+	class Mesh : public sh::core::SObject, public sh::core::INonCopyable
 	{
 		SCLASS(Mesh)
 	private:
@@ -26,11 +27,9 @@ namespace sh::render
 		std::unique_ptr<IDrawable> drawable;
 	public:
 		SH_RENDER_API Mesh();
-		SH_RENDER_API Mesh(const Mesh& other);
 		SH_RENDER_API Mesh(Mesh&& other) noexcept;
 		SH_RENDER_API ~Mesh();
 
-		SH_RENDER_API auto operator=(const Mesh& other) -> Mesh&;
 		SH_RENDER_API auto operator=(Mesh&& other) noexcept -> Mesh&;
 
 		SH_RENDER_API void SetVertex(const std::vector<glm::vec3>& verts);

@@ -9,29 +9,24 @@ namespace sh::render
 	{
 
 	}
-	Mesh::Mesh(const Mesh& other)
-	{
-		verts = other.verts;
-	}
-	Mesh::Mesh(Mesh&& other) noexcept
+	Mesh::Mesh(Mesh&& other) noexcept :
+		drawable(std::move(other.drawable)),
+		mats(std::move(other.mats))
 	{
 		verts = std::move(other.verts);
+		indices = std::move(other.indices);
 	}
 	Mesh::~Mesh()
 	{
 
 	}
 
-	auto Mesh::operator=(const Mesh& other)->Mesh&
-	{
-		verts = other.verts;
-
-		return *this;
-	}
 	auto Mesh::operator=(Mesh&& other) noexcept -> Mesh&
 	{
 		verts = std::move(other.verts);
-
+		indices = std::move(other.indices);
+		mats = std::move(other.mats);
+		drawable = std::move(other.drawable);
 		return *this;
 	}
 
