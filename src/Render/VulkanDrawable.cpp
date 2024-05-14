@@ -111,6 +111,8 @@ namespace sh::render
 		cmd.Clean();
 
 		cmd.Create();
+
+		int idx = 1;
 		for (auto& attr : mesh->attributes)
 		{
 			auto shaderAttr = shader->GetAttribute(attr.first);
@@ -164,12 +166,12 @@ namespace sh::render
 			}
 
 			VkVertexInputBindingDescription bindingDesc{};
-			bindingDesc.binding = 1;
+			bindingDesc.binding = idx;
 			bindingDesc.stride = sizeof(glm::vec4);
 			bindingDesc.inputRate = VkVertexInputRate::VK_VERTEX_INPUT_RATE_VERTEX;
 
 			VkVertexInputAttributeDescription attrDesc{};
-			attrDesc.binding = 1;
+			attrDesc.binding = idx;
 			attrDesc.location = shaderAttr->idx;
 			attrDesc.format = format;
 			attrDesc.offset = 0;
@@ -185,7 +187,7 @@ namespace sh::render
 			stagingBuffer.SetData(data);
 
 			vertexBuffers.push_back(impl::VulkanBuffer{renderer.GetDevice(), renderer.GetGPU()});
-			vertexBuffers[1].Create(size,
+			vertexBuffers.back().Create(size,
 				VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 				VK_SHARING_MODE_EXCLUSIVE,
 				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
@@ -199,8 +201,10 @@ namespace sh::render
 				cpy.srcOffset = 0; // Optional
 				cpy.dstOffset = 0; // Optional
 				cpy.size = size;
-				vkCmdCopyBuffer(cmd.GetCommandBuffer(), stagingBuffer.GetBuffer(), vertexBuffers[1].GetBuffer(), 1, &cpy);
+				vkCmdCopyBuffer(cmd.GetCommandBuffer(), stagingBuffer.GetBuffer(), vertexBuffers.back().GetBuffer(), 1, &cpy);
 				}, &info);
+
+			++idx;
 		}
 		pipeline->
 			SetShader(static_cast<VulkanShader*>(shader)).
