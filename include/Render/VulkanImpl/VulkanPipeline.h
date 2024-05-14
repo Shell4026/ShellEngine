@@ -35,6 +35,7 @@ namespace sh::render::impl
 		int viewportX, viewportY;
 	public:
 		SH_RENDER_API VulkanPipeline(VkDevice device, VkRenderPass renderPass);
+		SH_RENDER_API VulkanPipeline(VulkanPipeline&& other) noexcept;
 		SH_RENDER_API ~VulkanPipeline();
 
 		SH_RENDER_API auto Build() -> VkResult;

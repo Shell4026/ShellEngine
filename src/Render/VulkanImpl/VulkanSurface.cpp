@@ -23,6 +23,14 @@ namespace sh::render::impl
 	{
 	}
 
+	VulkanSurface::VulkanSurface(VulkanSurface&& other) noexcept :
+		swapChain(other.swapChain), surface(other.surface),
+		swapChainImages(std::move(swapChainImages)), swapChainImageViews(std::move(swapChainImageViews))
+	{
+		other.swapChain = nullptr;
+		other.surface = nullptr;
+	}
+
 	VulkanSurface::~VulkanSurface()
 	{
 		if(device)

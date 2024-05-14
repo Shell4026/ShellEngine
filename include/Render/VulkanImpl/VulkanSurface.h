@@ -26,9 +26,9 @@ namespace sh::render::impl {
 	private:
 		sh::window::Window* window;
 		VkDevice device;
+		VkInstance instance;
 
 		VkSurfaceKHR surface;
-		VkInstance instance;
 		VkSwapchainKHR swapChain;
 		std::vector<VkImage> swapChainImages;
 		std::vector<VkImageView> swapChainImageViews;
@@ -43,6 +43,7 @@ namespace sh::render::impl {
 		auto SelectPresentMode()->VkPresentModeKHR;
 	public:
 		SH_RENDER_API VulkanSurface();
+		SH_RENDER_API VulkanSurface(VulkanSurface&& other) noexcept;
 		SH_RENDER_API ~VulkanSurface();
 
 		SH_RENDER_API bool CreateSurface(sh::window::Window& window, VkInstance instance);

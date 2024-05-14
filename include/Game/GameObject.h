@@ -31,6 +31,7 @@ namespace sh::game
 		World& world;
 	public:
 		SH_GAME_API GameObject(World& world, const std::string& name);
+		SH_GAME_API GameObject(GameObject&& other) noexcept;
 		SH_GAME_API ~GameObject();
 
 		SH_GAME_API void Awake() override;

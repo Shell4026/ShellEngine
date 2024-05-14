@@ -9,6 +9,13 @@ namespace sh::render::impl {
 
 	}
 
+	VulkanCommandBuffer::VulkanCommandBuffer(VulkanCommandBuffer&& other) noexcept :
+		buffer(other.buffer), device(other.device), cmdPool(other.cmdPool), waitStage(other.waitStage),
+		waitSemaphores(std::move(other.waitSemaphores)), signalSemaphores(std::move(other.signalSemaphores))
+	{
+		other.buffer = nullptr;
+	}
+
 	VulkanCommandBuffer::~VulkanCommandBuffer()
 	{
 		Clean();

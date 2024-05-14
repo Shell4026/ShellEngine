@@ -29,6 +29,7 @@ namespace sh::render::impl
 	{
 		other.renderPass = nullptr;
 		other.framebuffer = nullptr;
+		other.img = nullptr;
 	}
 
 	VulkanFramebuffer::~VulkanFramebuffer()

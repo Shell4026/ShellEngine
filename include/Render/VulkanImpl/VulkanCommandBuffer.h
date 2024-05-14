@@ -25,6 +25,7 @@ namespace sh::render::impl {
 		auto End() -> VkResult;
 	public:
 		SH_RENDER_API VulkanCommandBuffer(VkDevice device, VkCommandPool pool);
+		SH_RENDER_API VulkanCommandBuffer(VulkanCommandBuffer&& other) noexcept;
 		SH_RENDER_API ~VulkanCommandBuffer();
 
 		SH_RENDER_API void SetWaitStage(const std::initializer_list<VkPipelineStageFlagBits> stages);

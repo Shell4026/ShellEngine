@@ -10,6 +10,14 @@ namespace sh::game
 	{
 	}
 
+	GameObject::GameObject(GameObject&& other) noexcept :
+		world(other.world), objName(std::move(other.objName)), name(objName),
+		bInit(other.bInit), bEnable(other.bEnable), activeSelf(bEnable),
+		components(std::move(other.components))
+	{
+
+	}
+
 	GameObject::~GameObject()
 	{
 	}
