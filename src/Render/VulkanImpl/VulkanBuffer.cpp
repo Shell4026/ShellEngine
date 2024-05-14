@@ -12,6 +12,16 @@ namespace sh::render::impl
 
 	}
 
+	VulkanBuffer::VulkanBuffer(VulkanBuffer&& other) noexcept :
+		device(other.device), gpu(other.gpu),
+		buffer(other.buffer), bufferMem(other.bufferMem), bufferInfo(other.bufferInfo)
+	{
+		other.device = nullptr;
+		other.gpu = nullptr;
+		other.buffer = nullptr;
+		other.bufferMem = nullptr;
+	}
+
 	VulkanBuffer::~VulkanBuffer()
 	{
 		Clean();

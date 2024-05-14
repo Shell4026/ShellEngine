@@ -87,7 +87,7 @@ int main(int arg, char* args[])
 
 	using namespace sh::game;
 
-	ResourceManager resources{gc};
+	ResourceManager resources{gc, renderer};
 	World world{ renderer, gc };
 	
 	sh::render::VulkanShaderBuilder builder{ renderer };
@@ -96,9 +96,9 @@ int main(int arg, char* args[])
 	auto shader = resources.AddShader("Triangle", loader.LoadShader<sh::render::VulkanShader>("vert.spv", "frag.spv"));
 	auto mat = resources.AddMaterial("Material", sh::render::Material{ shader });
 	auto mesh = resources.AddMesh("Mesh");
-	shader->AddProperty("verts", 0, sh::render::Shader::PropertyType::Vec3);
 
-	mesh->AddMaterial(mat);
+	shader->AddAttribute("color", 1, sh::render::Shader::PropertyType::Vec4);
+
 	mesh->SetVertex({ 
 		{-0.5f, -0.5f, 0.0f}, 
 		{0.5f, -0.5f, 0.0f}, 
@@ -108,7 +108,13 @@ int main(int arg, char* args[])
 	mesh->SetIndices({
 		0, 1, 2, 2, 3, 0
 	});
-	mesh->Build(renderer);
+	mesh->SetAttribute("color", {
+		{1.0f, 0.0f, 0.0f, 1.0f},
+		{0.0f, 1.0f, 0.0f, 1.0f},
+		{0.0f, 0.0f, 1.0f, 1.0f},
+		{0.0f, 0.0f, 0.0f, 1.0f}
+	});
+	mesh->SetMaterial(0, mat);
 
 	GameObject* obj = world.AddGameObject("Test");
 

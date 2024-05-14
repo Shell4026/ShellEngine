@@ -5,13 +5,18 @@
 
 namespace sh::render
 {
-	Mesh::Mesh()
+	Mesh::Mesh(const Renderer& renderer) :
+		renderer(renderer),
+		attributes(attrs)
 	{
 
 	}
 	Mesh::Mesh(Mesh&& other) noexcept :
 		drawable(std::move(other.drawable)),
-		mats(std::move(other.mats))
+		mats(std::move(other.mats)),
+		renderer(other.renderer),
+		attrs(other.attrs),
+		attributes(attrs)
 	{
 		verts = std::move(other.verts);
 		indices = std::move(other.indices);
@@ -83,9 +88,56 @@ namespace sh::render
 		return indices;
 	}
 
+	void Mesh::SetAttribute(std::string_view _name, const std::vector<glm::vec4>& attr)
+	{
+		std::string name{ _name };
+		auto it = attrs.find(name);
+		if (it == attrs.end())
+			attrs.insert({ name, attr });
+		else
+			it->second = attr;
+	}
+
+	void Mesh::SetAttribute(std::string_view _name, std::vector<glm::vec4>&& attr)
+	{
+		std::string name{ _name };
+		auto it = attrs.find(name);
+		if (it == attrs.end())
+			attrs.insert({ name, std::move(attr) });
+		else
+			it->second = std::move(attr);
+	}
+
+	void Mesh::SetAttribute(std::string_view _name, const std::initializer_list<glm::vec4>& _attr)
+	{
+		std::vector<glm::vec4> attr;
+		attr.resize(_attr.size());
+		for (int i = 0; i < attr.size(); ++i)
+		{
+			attr[i] = *(_attr.begin() + i);
+		}
+
+		std::string name{ _name };
+		auto it = attrs.find(name);
+		if (it == attrs.end())
+			attrs.insert({ name, std::move(attr) });
+		else
+			it->second = std::move(attr);
+	}
+
+	void Mesh::SetMaterial(int id, Material* mat)
+	{
+		if (mats.size() < id + 1)
+			mats.resize(id + 1);
+		mats[id] = mat;
+
+		Build();
+	}
+
 	void Mesh::AddMaterial(Material* mat)
 	{
-		return mats.push_back(mat);
+		mats.push_back(mat);
+		Build();
 	}
 
 	auto Mesh::GetMaterial(int id) -> Material*
@@ -103,7 +155,7 @@ namespace sh::render
 		return drawable.get();
 	}
 
-	void Mesh::Build(const Renderer& renderer)
+	void Mesh::Build()
 	{
 		if (renderer.apiType == RenderAPI::Vulkan)
 		{

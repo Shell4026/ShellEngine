@@ -22,6 +22,11 @@ namespace sh::game
 		return *mesh;
 	}
 
+	void MeshRenderer::Start()
+	{
+
+	}
+
 	void MeshRenderer::Update()
 	{
 		if (sh::core::IsValid(mesh))

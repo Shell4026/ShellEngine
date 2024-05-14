@@ -585,9 +585,14 @@ namespace sh::render {
 					scissor.extent = surface->GetSwapChainSize();
 					vkCmdSetScissor(buffer, 0, 1, &scissor);
 
-					VkBuffer vertexBuffers[] = { drawable->GetVertexBuffer().GetBuffer()};
-					VkDeviceSize offsets[] = { 0 };
-					vkCmdBindVertexBuffers(buffer, 0, 1, vertexBuffers, offsets);
+					std::vector<VkBuffer> vertexBuffers;
+					std::vector<VkDeviceSize> offsets;
+					for (auto& buffer : drawable->buffers)
+					{
+						vertexBuffers.push_back(buffer.GetBuffer());
+						offsets.push_back(0);
+					}
+					vkCmdBindVertexBuffers(buffer, 0, vertexBuffers.size(), vertexBuffers.data(), offsets.data());
 					vkCmdBindIndexBuffer(buffer, drawable->GetIndexBuffer().GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
 					vkCmdDrawIndexed(buffer, drawObj->GetIndices().size(), 1, 0, 0, 0);
 				}

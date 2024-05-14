@@ -3,17 +3,13 @@
 namespace sh::render
 {
 	Shader::Shader(int id, ShaderType type) :
-		id(id), type(type), properties(props)
+		id(id), type(type), attributes(attrs)
 	{
 	}
 
-	Shader::Shader(const Shader& other) :
-		id(other.id), type(other.type), props(other.props), properties(props)
-	{
-	}
 
 	Shader::Shader(Shader&& other) noexcept :
-		id(other.id), type(other.type), props(std::move(other.props)), properties(props)
+		id(other.id), type(other.type), attrs(std::move(other.attrs)), attridx(other.attridx), attributes(attrs)
 	{
 	}
 
@@ -22,18 +18,12 @@ namespace sh::render
 		return type;
 	}
 
-	void Shader::operator=(const Shader& other)
-	{
-		id = other.id;
-
-		props = other.props;
-	}
-
 	void Shader::operator=(Shader&& other) noexcept
 	{
 		id = other.id;
 
-		props = std::move(other.props);
+		attrs = std::move(other.attrs);
+		attridx = std::move(other.attridx);
 	}
 
 	auto Shader::operator==(const Shader& other) -> bool
@@ -46,48 +36,41 @@ namespace sh::render
 		return id;
 	}
 
-	bool Shader::AddProperty(const std::string& name, uint32_t loc, PropertyType type)
+	bool Shader::AddAttribute(const std::string& name, uint32_t loc, PropertyType type)
 	{
-		if (propIdx.find(name) == propIdx.end())
+		auto it = attridx.find(name);
+		if (it != attridx.end())
 			return false;
 
-		if (props.size() < loc + 1)
-			props.resize(loc + 1, PropertyType::Null);
-		props[loc] = type;
-		propIdx.insert({ name, loc });
+		if (attrs.size() < loc + 1)
+		{
+			attrs.resize(loc + 1);
+		}
+		Attribute attr;
+		attr.idx = loc;
+		attr.name = name;
+		attr.type = type;
+
+		attrs[loc] = attr;
+		attridx.insert({ name, loc });
 
 		return true;
 	}
 
-	auto Shader::HasProperty(const std::string& name) const -> bool
+	bool Shader::HasAttribute(const std::string& name) const
 	{
-		return propIdx.find(name) != propIdx.end();
+		auto it = attridx.find(name);
+		if (it == attridx.end())
+			return false;
+		return true;
 	}
 
-	auto Shader::GetPropertyType(const std::string& name) const -> std::optional<PropertyType>
+	auto Shader::GetAttribute(const std::string& name) const -> std::optional<Attribute>
 	{
-		auto it = propIdx.find(name);
-		if (it == propIdx.end())
+		auto it = attridx.find(name);
+		if (it == attridx.end())
 			return {};
-
-		return props[it->second];
-	}
-
-	auto Shader::GetPropertyType(uint32_t idx) const -> std::optional<PropertyType>
-	{
-		if (idx + 1 > props.size())
-			return {};
-		if (props[idx] == PropertyType::Null)
-			return {};
-
-		return props[idx];
-	}
-
-	auto Shader::GetPropertyIdx(std::string_view name) const -> std::optional<uint32_t>
-	{
-		auto it = propIdx.find(std::string{ name });
-		if (it == propIdx.end())
-			return {};
-		return it->second;
+		
+		return attrs[it->second];
 	}
 }

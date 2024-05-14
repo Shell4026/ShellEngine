@@ -4,11 +4,13 @@
 
 #include "Render/Export.h"
 
+#include "Core/NonCopyable.h"
+
 namespace sh::render
 {
 	namespace impl
 	{
-		class VulkanBuffer
+		class VulkanBuffer : public sh::core::INonCopyable
 		{
 		private:
 			VkDevice device;
@@ -18,6 +20,7 @@ namespace sh::render
 			VkBufferCreateInfo bufferInfo;
 		public:
 			SH_RENDER_API VulkanBuffer(VkDevice device, VkPhysicalDevice gpu);
+			SH_RENDER_API VulkanBuffer(VulkanBuffer&& other) noexcept;
 			SH_RENDER_API ~VulkanBuffer();
 
 			SH_RENDER_API auto Create(size_t size, int usageBits, VkSharingMode sharing, int memPropFlagBits) -> VkResult;

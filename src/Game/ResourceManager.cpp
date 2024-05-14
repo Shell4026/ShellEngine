@@ -9,8 +9,8 @@
 
 namespace sh::game
 {
-	ResourceManager::ResourceManager(sh::core::GC& gc) :
-		gc(gc)
+	ResourceManager::ResourceManager(sh::core::GC& gc, sh::render::Renderer& renderer) :
+		gc(gc), renderer(renderer)
 	{
 
 	}
@@ -139,7 +139,7 @@ namespace sh::game
 			it = meshes.find(name);
 		}
 
-		auto ptr = std::make_unique<sh::render::Mesh>();
+		auto ptr = std::make_unique<sh::render::Mesh>(renderer);
 		ptr->SetGC(gc);
 		return meshes.insert({ name, std::move(ptr) }).first->second.get();
 	}
@@ -155,7 +155,7 @@ namespace sh::game
 			it = meshes.find(name);
 		}
 
-		auto ptr = std::make_unique<sh::render::Mesh>();
+		auto ptr = std::make_unique<sh::render::Mesh>(renderer);
 		*ptr.get() = std::move(mesh);
 		ptr->SetGC(gc);
 		return meshes.insert({ name, std::move(ptr)}).first->second.get();

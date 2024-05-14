@@ -27,6 +27,7 @@ namespace sh::game
 	{
 	private:
 		sh::core::GC& gc;
+		sh::render::Renderer& renderer;
 
 		std::unordered_map<std::string, std::unique_ptr<sh::render::Shader>> shaders;
 		std::unordered_map<std::string, std::unique_ptr<sh::render::Material>> mats;
@@ -34,7 +35,7 @@ namespace sh::game
 	private:
 		auto LoadShader(std::string_view dir) -> sh::render::Shader*;
 	public:
-		SH_GAME_API ResourceManager(sh::core::GC& gc);
+		SH_GAME_API ResourceManager(sh::core::GC& gc, sh::render::Renderer& renderer);
 
 		SH_GAME_API void Clean();
 
