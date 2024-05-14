@@ -150,10 +150,6 @@ int main(int arg, char* args[])
 				std::cout << sh::window::Event::MouseWheelScrolled::delta << '\n';
 				break;
 			case sh::window::Event::EventType::KeyDown:
-				if (e.keyType == sh::window::Event::KeyType::Left)
-					mesh->GetVertex()[0] = { mesh->GetVertex()[0].x - 1 * window.GetDeltaTime(), mesh->GetVertex()[0].y, mesh->GetVertex()[0].z};
-				if (e.keyType == sh::window::Event::KeyType::Right)
-					mesh->GetVertex()[0] = { mesh->GetVertex()[0].x + 1 * window.GetDeltaTime(), mesh->GetVertex()[0].y, mesh->GetVertex()[0].z };
 				if (e.keyType == sh::window::Event::KeyType::Enter)
 				{
 					resources.DestroyMaterial("Material");
