@@ -20,7 +20,7 @@ namespace sh::core
 
 		bool bPendingKill;
 		
-		char _heapCheck;
+		const char* _heapCheck;
 	public:
 		bool isHeap;
 

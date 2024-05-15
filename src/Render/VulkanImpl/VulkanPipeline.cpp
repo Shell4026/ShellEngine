@@ -153,16 +153,16 @@ namespace sh::render::impl
 		scissor.offset = { 0, 0 };
 		scissor.extent = scissorExtend;
 
-		std::vector<VkDynamicState> dynamicStates =
-		{
+		VkDynamicState dynamicStates[] = {
 			VkDynamicState::VK_DYNAMIC_STATE_VIEWPORT,
 			VkDynamicState::VK_DYNAMIC_STATE_SCISSOR,
+			//VkDynamicState::VK_DYNAMIC_STATE_VERTEX_INPUT_BINDING_STRIDE
 		};
 
 		VkPipelineDynamicStateCreateInfo dynamicState{};
 		dynamicState.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-		dynamicState.dynamicStateCount = static_cast<uint32_t>(dynamicStates.size());
-		dynamicState.pDynamicStates = dynamicStates.data();
+		dynamicState.dynamicStateCount = 2;
+		dynamicState.pDynamicStates = dynamicStates;
 		
 		VkPipelineViewportStateCreateInfo viewportState{};
 		viewportState.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;

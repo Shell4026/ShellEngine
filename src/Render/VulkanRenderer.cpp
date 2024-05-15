@@ -587,10 +587,12 @@ namespace sh::render {
 
 					std::vector<VkBuffer> vertexBuffers;
 					std::vector<VkDeviceSize> offsets;
-					for (auto& buffer : drawable->buffers)
+					vertexBuffers.resize(drawable->buffers.size());
+					offsets.resize(drawable->buffers.size());
+					for (int i = 0; i < vertexBuffers.size(); ++i)
 					{
-						vertexBuffers.push_back(buffer.GetBuffer());
-						offsets.push_back(0);
+						vertexBuffers[i] = drawable->buffers[i].GetBuffer();
+						offsets[i] = 0;
 					}
 					vkCmdBindVertexBuffers(buffer, 0, vertexBuffers.size(), vertexBuffers.data(), offsets.data());
 					vkCmdBindIndexBuffer(buffer, drawable->GetIndexBuffer().GetBuffer(), 0, VK_INDEX_TYPE_UINT32);

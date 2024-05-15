@@ -6,7 +6,7 @@
 namespace sh::core
 {
 	SObject::SObject(GC* gc) :
-		gc(gc), bPendingKill(false), isHeap(_heapCheck == 'h' ? true : false)
+		gc(gc), bPendingKill(false), isHeap(_heapCheck == "heap" ? true : false)
 	{
 		if (gc != nullptr)
 		{
@@ -33,7 +33,7 @@ namespace sh::core
 	auto SObject::operator new(std::size_t size) -> void*
 	{
 		SObject* obj = reinterpret_cast<SObject*>(::operator new(size));
-		obj->_heapCheck = 'h';
+		obj->_heapCheck = "heap";
 		return obj;
 	}
 
