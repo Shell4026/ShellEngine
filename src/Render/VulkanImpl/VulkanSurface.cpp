@@ -25,7 +25,7 @@ namespace sh::render::impl
 
 	VulkanSurface::VulkanSurface(VulkanSurface&& other) noexcept :
 		swapChain(other.swapChain), surface(other.surface),
-		swapChainImages(std::move(swapChainImages)), swapChainImageViews(std::move(swapChainImageViews))
+		swapChainImages(std::move(other.swapChainImages)), swapChainImageViews(std::move(other.swapChainImageViews))
 	{
 		other.swapChain = nullptr;
 		other.surface = nullptr;
@@ -126,7 +126,6 @@ namespace sh::render::impl
 	{
 		assert(device);
 
-		this->device = device;
 		QuerySwapChainDetails(gpu);
 
 		VkSurfaceFormatKHR surfaceFormat = SelectFormat();

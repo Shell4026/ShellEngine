@@ -75,7 +75,9 @@ namespace sh::render::impl
 		if (result != VK_SUCCESS)
 			return result;
 
-		vkBindBufferMemory(device, buffer, bufferMem, 0);
+		result = vkBindBufferMemory(device, buffer, bufferMem, 0);
+		assert(result == VkResult::VK_SUCCESS);
+		return result;
 	}
 
 	void VulkanBuffer::SetData(const void* data)

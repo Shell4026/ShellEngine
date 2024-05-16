@@ -15,9 +15,9 @@ namespace sh::render::impl
 
 	VulkanPipeline::VulkanPipeline(VulkanPipeline&& other) noexcept :
 		pipelineLayout(other.pipelineLayout), pipeline(other.pipeline),
-		shaderStages(std::move(shaderStages)),
-		bindingDescriptions(std::move(bindingDescriptions)),
-		attributeDescriptions(std::move(attributeDescriptions))
+		shaderStages(std::move(other.shaderStages)),
+		bindingDescriptions(std::move(other.bindingDescriptions)),
+		attributeDescriptions(std::move(other.attributeDescriptions))
 	{
 		other.pipelineLayout = nullptr;
 		other.pipeline = nullptr;
