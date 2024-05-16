@@ -97,7 +97,7 @@ int main(int arg, char* args[])
 	auto mat = resources.AddMaterial("Material", sh::render::Material{ shader });
 	auto mesh = resources.AddMesh("Mesh");
 
-	shader->AddAttribute("color", 1, sh::render::Shader::PropertyType::Vec4);
+	shader->AddAttribute("color", 1, sh::render::Shader::AttributeType::Vec4);
 
 	mesh->SetVertex({ 
 		{-0.5f, -0.5f, 0.0f}, 
@@ -108,12 +108,12 @@ int main(int arg, char* args[])
 	mesh->SetIndices({
 		0, 1, 2, 2, 3, 0
 	});
-	mesh->SetAttribute("color", {
+	mesh->SetAttribute(sh::render::ShaderAttribute<glm::vec4>{"color", {
 		{1.0f, 0.0f, 0.0f, 1.0f},
 		{0.0f, 1.0f, 0.0f, 1.0f},
 		{0.0f, 0.0f, 1.0f, 1.0f},
 		{0.0f, 0.0f, 0.0f, 1.0f}
-	});
+	}});
 	mesh->SetMaterial(0, mat);
 
 	GameObject* obj = world.AddGameObject("Test");

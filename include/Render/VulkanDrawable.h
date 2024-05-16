@@ -15,18 +15,17 @@ namespace sh::render
 	class VulkanDrawable : public IDrawable
 	{
 	private:
+		const VulkanRenderer& renderer;
+		Material* mat;
+		Mesh* mesh;
+
 		std::unique_ptr<impl::VulkanPipeline> pipeline;
 
 		impl::VulkanBuffer indexBuffer;
 		std::vector<impl::VulkanBuffer> vertexBuffers;
 		impl::VulkanCommandBuffer cmd;
-
-		const VulkanRenderer& renderer;
-
-		Material* mat;
-		Mesh* mesh;
 	private:
-		SH_RENDER_API void CreateVertexBuffer();
+		void CreateVertexBuffer();
 	public:
 		const std::vector<impl::VulkanBuffer>& buffers;
 	public:

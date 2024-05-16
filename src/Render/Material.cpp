@@ -29,14 +29,6 @@ namespace sh::render
 		if (!sh::core::IsValid(shader))
 			return false;
 
-		auto attr = shader->GetAttribute(name);
-		if (!attr)
-			return false;
-
-		using Type = Shader::PropertyType;
-		if (attr->type != Type::Vec2 && attr->type != Type::Vec3 && attr->type != Type::Vec4)
-			return false;
-
 		auto it = vectorArrs.find(name);
 		if (it == vectorArrs.end())
 			vectorArrs.insert({ name, value });

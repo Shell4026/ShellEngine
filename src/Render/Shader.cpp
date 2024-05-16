@@ -36,7 +36,7 @@ namespace sh::render
 		return id;
 	}
 
-	bool Shader::AddAttribute(const std::string& name, uint32_t loc, PropertyType type)
+	bool Shader::AddAttribute(const std::string& name, uint32_t loc, AttributeType type)
 	{
 		auto it = attridx.find(name);
 		if (it != attridx.end())

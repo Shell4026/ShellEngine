@@ -26,7 +26,7 @@ namespace sh::render
 			SPIR,
 		};
 
-		enum class PropertyType
+		enum class AttributeType
 		{
 			Null,
 			Int, Float,
@@ -36,7 +36,7 @@ namespace sh::render
 		struct Attribute
 		{
 			uint32_t idx;
-			PropertyType type;
+			AttributeType type;
 			std::string name;
 		};
 	private:
@@ -60,7 +60,7 @@ namespace sh::render
 
 		SH_RENDER_API virtual void Clean() = 0;
 
-		SH_RENDER_API bool AddAttribute(const std::string& name, uint32_t loc, PropertyType type);
+		SH_RENDER_API bool AddAttribute(const std::string& name, uint32_t loc, AttributeType type);
 		SH_RENDER_API bool HasAttribute(const std::string& name) const;
 		SH_RENDER_API auto GetAttribute(const std::string& name) const -> std::optional<Attribute>;
 		SH_RENDER_API auto GetId() const -> int;

@@ -15,7 +15,7 @@ namespace sh::render
 		drawable(std::move(other.drawable)),
 		mats(std::move(other.mats)),
 		renderer(other.renderer),
-		attrs(other.attrs),
+		attrs(std::move(other.attrs)),
 		attributes(attrs)
 	{
 		verts = std::move(other.verts);
@@ -58,7 +58,7 @@ namespace sh::render
 		return verts;
 	}
 
-	auto Mesh::GetVertexCount() const -> int
+	auto Mesh::GetVertexCount() const -> size_t
 	{
 		return verts.size();
 	}
@@ -86,43 +86,6 @@ namespace sh::render
 	auto Mesh::GetIndices() -> const std::vector<uint32_t>&
 	{
 		return indices;
-	}
-
-	void Mesh::SetAttribute(std::string_view _name, const std::vector<glm::vec4>& attr)
-	{
-		std::string name{ _name };
-		auto it = attrs.find(name);
-		if (it == attrs.end())
-			attrs.insert({ name, attr });
-		else
-			it->second = attr;
-	}
-
-	void Mesh::SetAttribute(std::string_view _name, std::vector<glm::vec4>&& attr)
-	{
-		std::string name{ _name };
-		auto it = attrs.find(name);
-		if (it == attrs.end())
-			attrs.insert({ name, std::move(attr) });
-		else
-			it->second = std::move(attr);
-	}
-
-	void Mesh::SetAttribute(std::string_view _name, const std::initializer_list<glm::vec4>& _attr)
-	{
-		std::vector<glm::vec4> attr;
-		attr.resize(_attr.size());
-		for (int i = 0; i < attr.size(); ++i)
-		{
-			attr[i] = *(_attr.begin() + i);
-		}
-
-		std::string name{ _name };
-		auto it = attrs.find(name);
-		if (it == attrs.end())
-			attrs.insert({ name, std::move(attr) });
-		else
-			it->second = std::move(attr);
 	}
 
 	void Mesh::SetMaterial(int id, Material* mat)

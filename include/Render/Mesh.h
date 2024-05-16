@@ -3,6 +3,7 @@
 #include "Export.h"
 #include "IDrawable.h"
 #include "Renderer.h"
+#include "ShaderAttribute.h"
 
 #include "Core/SObject.h"
 #include "Core/Reflection.hpp"
@@ -13,6 +14,7 @@
 #include <unordered_map>
 #include <string_view>
 #include <initializer_list>
+#include <memory>
 
 namespace sh::render
 {
@@ -22,16 +24,18 @@ namespace sh::render
 	{
 		SCLASS(Mesh)
 	private:
-		std::unordered_map<std::string, std::vector<glm::vec4>> attrs;
-		std::vector<glm::vec3> verts;
-		std::vector<uint32_t> indices;
+		const Renderer& renderer;
 		PROPERTY(mats)
 		std::vector<Material*> mats;
-		std::unique_ptr<IDrawable> drawable;
 
-		const Renderer& renderer;
+		std::vector<glm::vec3> verts;
+		std::vector<uint32_t> indices;
+
+		std::vector<std::unique_ptr<ShaderAttributeBase>> attrs;
+
+		std::unique_ptr<IDrawable> drawable;
 	public:
-		std::unordered_map<std::string, std::vector<glm::vec4>>& attributes;
+		const std::vector< std::unique_ptr<ShaderAttributeBase>>& attributes;
 	public:
 		SH_RENDER_API Mesh(const Renderer& renderer);
 		SH_RENDER_API Mesh(Mesh&& other) noexcept;
@@ -44,16 +48,17 @@ namespace sh::render
 		SH_RENDER_API void SetVertex(const std::initializer_list<glm::vec3>& verts);
 		SH_RENDER_API auto GetVertex() const -> const std::vector<glm::vec3>&;
 
-		SH_RENDER_API auto GetVertexCount() const -> int;
+		SH_RENDER_API auto GetVertexCount() const -> size_t;
 
 		SH_RENDER_API void SetIndices(const std::vector<uint32_t >&indices);
 		SH_RENDER_API void SetIndices(std::vector<uint32_t>&& indices);
 		SH_RENDER_API void SetIndices(const std::initializer_list<uint32_t>& indices);
 		SH_RENDER_API auto GetIndices() -> const std::vector<uint32_t>&;
 
-		SH_RENDER_API void SetAttribute(std::string_view name, const std::vector<glm::vec4>& attr);
-		SH_RENDER_API void SetAttribute(std::string_view name, std::vector<glm::vec4>&& attr);
-		SH_RENDER_API void SetAttribute(std::string_view name, const std::initializer_list<glm::vec4>& attr);
+		template<typename T>
+		void SetAttribute(const ShaderAttribute<T>& attr);
+		template<typename T>
+		void SetAttribute(ShaderAttribute<T>&& attr);
 
 		SH_RENDER_API void AddMaterial(Material* mat);
 		SH_RENDER_API void SetMaterial(int id, Material* mat);
@@ -63,4 +68,15 @@ namespace sh::render
 		SH_RENDER_API auto GetDrawable() const -> IDrawable*;
 		SH_RENDER_API void Build();
 	};
+
+	template<typename T>
+	inline void Mesh::SetAttribute(const ShaderAttribute<T>& attr)
+	{
+		attrs.push_back(std::make_unique<ShaderAttribute<T>>(attr));
+	}
+	template<typename T>
+	inline void Mesh::SetAttribute(ShaderAttribute<T>&& attr)
+	{
+		attrs.push_back(std::make_unique<ShaderAttribute<T>>(std::move(attr)));
+	}
 }

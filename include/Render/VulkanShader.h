@@ -12,7 +12,7 @@
 
 namespace sh::render
 {
-	class VulkanShader : public Shader, public sh::core::INonCopyable
+	class VulkanShader : public Shader
 	{
 		SCLASS(VulkanShader)
 	private:

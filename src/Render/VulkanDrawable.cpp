@@ -115,59 +115,52 @@ namespace sh::render
 		int idx = 1;
 		for (auto& attr : mesh->attributes)
 		{
-			auto shaderAttr = shader->GetAttribute(attr.first);
+			auto shaderAttr = shader->GetAttribute(attr->name);
 			if (!shaderAttr)
 				continue;
 
-			uint32_t stride = 0;
-			VkFormat format = VkFormat::VK_FORMAT_R32_SINT;
-			size_t size = 0;
-			const void* data;
-			switch (shaderAttr->type)
+			VkFormat format = VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT;
+			size_t size = attr->GetSize();
+			const void* data = attr->GetData();
+
+			switch (attr->GetStride())
 			{
-			case sh::render::Shader::PropertyType::Int:
-				stride = sizeof(int);
-				format = VkFormat::VK_FORMAT_R32_SINT;
+			case 4:
+				if (attr->isInteger)
+				{
+					if (shaderAttr->type != Shader::AttributeType::Int)
+						continue;
+					format = VkFormat::VK_FORMAT_R32_SINT;
+				}
+				else
+				{
+					if (shaderAttr->type != Shader::AttributeType::Float)
+						continue;
+					format = VkFormat::VK_FORMAT_R32_SFLOAT;
+				}
 				break;
-			case sh::render::Shader::PropertyType::Float:
-				stride = sizeof(float);
-				format = VkFormat::VK_FORMAT_R32_SFLOAT;
-				break;
-			case sh::render::Shader::PropertyType::Vec2:
-			{
-				stride = sizeof(glm::vec4);
+			case 8:
+				if (shaderAttr->type != Shader::AttributeType::Vec2)
+					continue;
 				format = VkFormat::VK_FORMAT_R32G32_SFLOAT;
-
-				auto& vec = attr.second;
-				size = sizeof(glm::vec4) * vec.size();
-				data = vec.data();
 				break;
-			}
-			case sh::render::Shader::PropertyType::Vec3:
-			{
-				stride = sizeof(glm::vec4);
+			case 12:
+				if (shaderAttr->type != Shader::AttributeType::Vec3)
+					continue;
 				format = VkFormat::VK_FORMAT_R32G32B32_SFLOAT;
-
-				auto& vec = attr.second;
-				size = sizeof(glm::vec4) * vec.size();
-				data = vec.data();
 				break;
-			}
-			case sh::render::Shader::PropertyType::Vec4:
-			{
-				stride = sizeof(glm::vec4);
+			case 16:
+				if (shaderAttr->type != Shader::AttributeType::Vec4)
+					continue;
 				format = VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT;
-
-				auto& vec = attr.second;
-				size = sizeof(glm::vec4) * vec.size();
-				data = vec.data();
 				break;
-			}
+			default:
+				continue;
 			}
 
 			VkVertexInputBindingDescription bindingDesc{};
 			bindingDesc.binding = idx;
-			bindingDesc.stride = sizeof(glm::vec4);
+			bindingDesc.stride = static_cast<uint32_t>(attr->GetStride());
 			bindingDesc.inputRate = VkVertexInputRate::VK_VERTEX_INPUT_RATE_VERTEX;
 
 			VkVertexInputAttributeDescription attrDesc{};
