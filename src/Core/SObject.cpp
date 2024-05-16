@@ -1,12 +1,12 @@
 ﻿#include "SObject.h"
 
 #include "GC.h"
-#include <iostream>
+#include <cstring>
 
 namespace sh::core
 {
 	SObject::SObject(GC* gc) :
-		gc(gc), bPendingKill(false), isHeap(_heapCheck == "heap" ? true : false)
+		gc(gc), bPendingKill(false), isHeap(std::strcmp(_heapCheck, "heap") == 0 ? true : false)
 	{
 		if (gc != nullptr)
 		{
