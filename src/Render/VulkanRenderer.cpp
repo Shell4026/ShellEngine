@@ -558,16 +558,16 @@ namespace sh::render {
 				vkCmdBeginRenderPass(buffer, &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
 				while (!drawList.empty())
 				{
-					Mesh* drawObj = drawList.front();
+					Mesh* mesh = drawList.front();
 					drawList.pop();
 
-					sh::render::Material* mat = drawObj->GetMaterial(0);
+					sh::render::Material* mat = mesh->GetMaterial(0);
 					if (!sh::core::IsValid(mat)) continue;
 
 					VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
 					if (!sh::core::IsValid(shader)) continue;
 
-					VulkanDrawable* drawable = static_cast<VulkanDrawable*>(drawObj->GetDrawable());
+					VulkanDrawable* drawable = static_cast<VulkanDrawable*>(mesh->GetDrawable());
 
 					vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, drawable->GetPipeline()->GetPipeline());
 
@@ -596,7 +596,7 @@ namespace sh::render {
 					}
 					vkCmdBindVertexBuffers(buffer, 0, vertexBuffers.size(), vertexBuffers.data(), offsets.data());
 					vkCmdBindIndexBuffer(buffer, drawable->GetIndexBuffer().GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
-					vkCmdDrawIndexed(buffer, drawObj->GetIndices().size(), 1, 0, 0, 0);
+					vkCmdDrawIndexed(buffer, mesh->GetIndices().size(), 1, 0, 0, 0);
 				}
 				vkCmdEndRenderPass(buffer);
 			},
