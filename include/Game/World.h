@@ -1,6 +1,13 @@
 ﻿#pragma once
 
 #include "Export.h"
+#include "ResourceManager.hpp"
+
+#include "Core/NonCopyable.h"
+
+#include "Render/Shader.h"
+#include "Render/Material.h"
+#include "Render/Mesh.h"
 
 #include <string>
 #include <vector>
@@ -23,7 +30,7 @@ namespace sh::game
 {
 	class GameObject;
 
-	class World
+	class World : sh::core::INonCopyable
 	{
 	private:
 		std::vector<std::unique_ptr<GameObject>> objs;
@@ -32,11 +39,16 @@ namespace sh::game
 
 		float _deltaTime;
 	public:
-		const float& deltaTime;
 		sh::render::Renderer& renderer;
 		sh::core::GC& gc;
+		const float& deltaTime;
+
+		sh::game::ResourceManager<sh::render::Shader> shaders;
+		sh::game::ResourceManager<sh::render::Material> materials;
+		sh::game::ResourceManager<sh::render::Mesh> meshes;
 	public:
 		SH_GAME_API World(sh::render::Renderer& renderer, sh::core::GC& gc);
+		SH_GAME_API World(World&& other) noexcept;
 		SH_GAME_API ~World();
 
 		SH_GAME_API void Clean();

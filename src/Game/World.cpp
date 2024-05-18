@@ -8,17 +8,29 @@
 namespace sh::game
 {
 	World::World(sh::render::Renderer& renderer, sh::core::GC& gc) :
-		renderer(renderer),gc(gc),
-		_deltaTime(0.0f), deltaTime(_deltaTime)
+		renderer(renderer),gc(gc), deltaTime(_deltaTime),
+		_deltaTime(0.0f), 
+		shaders(gc, renderer), materials(gc, renderer), meshes(gc, renderer)
 	{
+	}
+	World::World(World&& other) noexcept :
+		renderer(other.renderer), gc(other.gc), deltaTime(_deltaTime),
+		_deltaTime(other._deltaTime),
+		shaders(std::move(other.shaders)), materials(std::move(other.materials)), meshes(std::move(other.meshes))
+	{
+
 	}
 	World::~World()
 	{
-		objs.clear();
+		Clean();
 	}
 
 	void World::Clean()
 	{
+		meshes.Clean();
+		materials.Clean();
+		shaders.Clean();
+
 		objsEmptyIdx = std::queue<int>{};
 		objsMap.clear();
 		objs.clear();

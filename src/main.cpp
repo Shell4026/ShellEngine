@@ -14,7 +14,7 @@
 #include <Core/GC.h>
 #include <cassert>
 #include <fmt/core.h>
-#include "Game/ResourceManager.h"
+#include "Game/ResourceManager.hpp"
 #include "Game/World.h"
 #include "Game/GameObject.h"
 #include "Game/Component/Transform.h"
@@ -87,17 +87,17 @@ int main(int arg, char* args[])
 
 	using namespace sh::game;
 
-	ResourceManager resources{gc, renderer};
 	World world{ renderer, gc };
 	
 	sh::render::VulkanShaderBuilder builder{ renderer };
 	sh::render::ShaderLoader loader{ &builder };
 
-	auto shader = resources.AddShader("Triangle", loader.LoadShader<sh::render::VulkanShader>("vert.spv", "frag.spv"));
-	auto mat = resources.AddMaterial("Material", sh::render::Material{ shader });
-	auto mesh = resources.AddMesh("Mesh");
+	auto shader = world.shaders.AddResource("Triangle", loader.LoadShader<sh::render::VulkanShader>("vert.spv", "frag.spv"));
+	auto mat = world.materials.AddResource("Material", sh::render::Material{ renderer, shader });
+	auto mesh = world.meshes.AddResource("Mesh", sh::render::Mesh{ renderer });
 
 	shader->AddAttribute("color", 1, sh::render::Shader::AttributeType::Vec4);
+	mat->Build();
 
 	mesh->SetVertex({ 
 		{-0.5f, -0.5f, 0.0f}, 
@@ -112,7 +112,7 @@ int main(int arg, char* args[])
 		{1.0f, 0.0f, 0.0f, 1.0f},
 		{0.0f, 1.0f, 0.0f, 1.0f},
 		{0.0f, 0.0f, 1.0f, 1.0f},
-		{0.0f, 0.0f, 0.0f, 1.0f}
+		{1.0f, 1.0f, 1.0f, 1.0f}
 	}});
 	mesh->SetMaterial(0, mat);
 
@@ -133,9 +133,8 @@ int main(int arg, char* args[])
 			switch (e.type)
 			{
 			case sh::window::Event::EventType::Close:
-				resources.Clean();
-				renderer.Clean();
 				world.Clean();
+				renderer.Clean();
 				window.Close();
 				break;
 			case sh::window::Event::EventType::MousePressed:
@@ -158,7 +157,7 @@ int main(int arg, char* args[])
 			case sh::window::Event::EventType::KeyDown:
 				if (e.keyType == sh::window::Event::KeyType::Enter)
 				{
-					resources.DestroyMaterial("Material");
+					world.meshes.DestroyResource("Mesh");
 				}
 				break;
 			case sh::window::Event::EventType::WindowFocus:
