@@ -4,6 +4,9 @@
 
 #include "Core/NonCopyable.h"
 #include "Core/SObject.h"
+#include "Core/GC.h"
+
+#include "Render/Renderer.h"
 
 #include <vector>
 #include <memory>
@@ -13,17 +16,6 @@
 #include <functional>
 #include <type_traits>
 
-namespace sh::core
-{
-	class GC;
-}
-namespace sh::render
-{
-	class Renderer;
-	class Shader;
-	class Material;
-	class Mesh;
-}
 namespace sh::game
 {
 	template<typename T, 
