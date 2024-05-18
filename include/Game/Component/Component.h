@@ -23,7 +23,9 @@ namespace sh::game
 		const bool& active;
 	public:
 		SH_GAME_API Component(GameObject& owner);
-		SH_GAME_API ~Component() = default;
+		SH_GAME_API virtual ~Component() = default;
+		SH_GAME_API Component(const Component& other);
+		SH_GAME_API Component(Component&& other) noexcept;
 
 		SH_GAME_API void SetActive(bool b);
 
