@@ -420,7 +420,6 @@ namespace sh::core::reflection
 		{
 		}
 		virtual auto Get(void* sobject) const -> T& = 0;
-		virtual void Set(void* sobject, T value) = 0;
 	};
 	
 	//클래스의 맴버 변수마다 static영역에 하나씩 존재하는 클래스
@@ -436,22 +435,30 @@ namespace sh::core::reflection
 
 		auto Get(void* sobject) const -> T & override
 		{
-			return static_cast<ThisType*>(sobject)->*ptr;
-		}
-
-		void Set(void* sobject, T value) override
-		{
-			static_cast<ThisType*>(sobject)->*ptr = value;
+			if constexpr (std::is_member_pointer_v<VariablePointer>)
+				return static_cast<ThisType*>(sobject)->*ptr;
+			else
+				return *ptr;
 		}
 
 		auto Begin(void* sobject) const -> PropertyIterator override
 		{
 			if constexpr (IsContainer<T>())
 			{
-				T& container = static_cast<ThisType*>(sobject)->*ptr;
-				std::unique_ptr<PropertyIteratorData<T>> data = std::make_unique<PropertyIteratorData<T>>(&container);
-				data->Begin();
-				return PropertyIterator{ std::move(data) };
+				if constexpr (std::is_member_pointer_v<VariablePointer>)
+				{
+					T& container = static_cast<ThisType*>(sobject)->*ptr;
+					std::unique_ptr<PropertyIteratorData<T>> data = std::make_unique<PropertyIteratorData<T>>(&container);
+					data->Begin();
+					return PropertyIterator{ std::move(data) };
+				}
+				else
+				{
+					T& container = *ptr;
+					std::unique_ptr<PropertyIteratorData<T>> data = std::make_unique<PropertyIteratorData<T>>(&container);
+					data->Begin();
+					return PropertyIterator{ std::move(data) };
+				}
 			}
 			return PropertyIterator{};
 		}
@@ -460,10 +467,20 @@ namespace sh::core::reflection
 		{
 			if constexpr (IsContainer<T>())
 			{
-				T& container = static_cast<ThisType*>(sobject)->*ptr;
-				std::unique_ptr<PropertyIteratorData<T>> data = std::make_unique<PropertyIteratorData<T>>(&container);
-				data->End();
-				return PropertyIterator{ std::move(data) };
+				if constexpr (std::is_member_pointer_v<VariablePointer>)
+				{
+					T& container = static_cast<ThisType*>(sobject)->*ptr;
+					std::unique_ptr<PropertyIteratorData<T>> data = std::make_unique<PropertyIteratorData<T>>(&container);
+					data->End();
+					return PropertyIterator{ std::move(data) };
+				}
+				else
+				{
+					T& container = *ptr;
+					std::unique_ptr<PropertyIteratorData<T>> data = std::make_unique<PropertyIteratorData<T>>(&container);
+					data->End();
+					return PropertyIterator{ std::move(data) };
+				}
 			}
 			return PropertyIterator{};
 		}
