@@ -25,7 +25,6 @@ namespace sh::render::impl
 		VkRenderPass renderPass;
 		VulkanShader* shader;
 
-		VkPipelineLayout pipelineLayout;
 		VkPipeline pipeline;
 
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
@@ -38,7 +37,7 @@ namespace sh::render::impl
 		SH_RENDER_API VulkanPipeline(VulkanPipeline&& other) noexcept;
 		SH_RENDER_API ~VulkanPipeline();
 
-		SH_RENDER_API auto Build() -> VkResult;
+		SH_RENDER_API auto Build(VkPipelineLayout layout) -> VkResult;
 		SH_RENDER_API void Clean();
 
 		SH_RENDER_API auto GetPipeline() const -> VkPipeline;

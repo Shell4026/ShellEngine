@@ -1,22 +1,17 @@
 ﻿#include "Mesh.h"
-#include "VulkanDrawable.h"
 
 #include "VulkanRenderer.h"
 
 namespace sh::render
 {
-	Mesh::Mesh(const Renderer& renderer) :
-		renderer(renderer),
+	Mesh::Mesh() :
 		attributes(attrs)
 	{
 
 	}
 	Mesh::Mesh(Mesh&& other) noexcept :
-		drawable(std::move(other.drawable)),
-		mats(std::move(other.mats)),
-		renderer(other.renderer),
-		attrs(std::move(other.attrs)),
-		attributes(attrs)
+		attributes(attrs),
+		attrs(std::move(other.attrs))
 	{
 		verts = std::move(other.verts);
 		indices = std::move(other.indices);
@@ -30,8 +25,6 @@ namespace sh::render
 	{
 		verts = std::move(other.verts);
 		indices = std::move(other.indices);
-		mats = std::move(other.mats);
-		drawable = std::move(other.drawable);
 		return *this;
 	}
 
@@ -86,44 +79,5 @@ namespace sh::render
 	auto Mesh::GetIndices() -> const std::vector<uint32_t>&
 	{
 		return indices;
-	}
-
-	void Mesh::SetMaterial(int id, Material* mat)
-	{
-		if (mats.size() < id + 1)
-			mats.resize(id + 1);
-		mats[id] = mat;
-
-		Build();
-	}
-
-	void Mesh::AddMaterial(Material* mat)
-	{
-		mats.push_back(mat);
-		Build();
-	}
-
-	auto Mesh::GetMaterial(int id) -> Material*
-	{
-		return mats[id];
-	}
-
-	auto Mesh::GetMaterials() -> std::vector<Material*>&
-	{
-		return mats;
-	}
-
-	auto Mesh::GetDrawable() const -> IDrawable*
-	{
-		return drawable.get();
-	}
-
-	void Mesh::Build()
-	{
-		if (renderer.apiType == RenderAPI::Vulkan)
-		{
-			drawable = std::make_unique<VulkanDrawable>(static_cast<const VulkanRenderer&>(renderer));
-			drawable->Build(GetMaterial(0), this);
-		}
 	}
 }

@@ -14,6 +14,7 @@
 #include "ShaderLoader.h"
 #include "VulkanShaderBuilder.h"
 #include "VulkanDrawable.h"
+#include "VulkanUniform.h"
 
 #include <cassert>
 #include <set>
@@ -43,6 +44,8 @@ namespace sh::render {
 	{
 		if (!device)
 			return;
+
+		DestroyDescriptorPool();
 
 		vkDeviceWaitIdle(device);
 
@@ -411,6 +414,8 @@ namespace sh::render {
 		gpu = SelectPhysicalDevice(suitableFunc);
 		if (!gpu) 
 			return false;
+		vkGetPhysicalDeviceProperties(gpu, &gpuProp);
+		fmt::print("GPU: {}\n", gpuProp.deviceName);
 
 		//그래픽 큐와 화면 큐 선택
 		GetQueueFamilyProperties(gpu);
@@ -458,10 +463,40 @@ namespace sh::render {
 		if (CreateSyncObjects() != VkResult::VK_SUCCESS)
 			return false;
 
+		//디스크립터 풀 생성
+		if (CreateDescriptorPool() != VkResult::VK_SUCCESS)
+			return false;
+
 		isInit = true;
 		PrintLayer();
 
 		return true;
+	}
+
+	auto VulkanRenderer::CreateDescriptorPool() -> VkResult
+	{
+		VkDescriptorPoolSize poolSize{};
+		poolSize.type = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAME_DRAW);
+
+		VkDescriptorPoolCreateInfo poolInfo{};
+		poolInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		poolInfo.poolSizeCount = 1;
+		poolInfo.pPoolSizes = &poolSize;
+		poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAME_DRAW);
+
+		auto result = vkCreateDescriptorPool(device, &poolInfo, nullptr, &descPool);
+		assert(result == VK_SUCCESS);
+		return result;
+	}
+
+	void VulkanRenderer::DestroyDescriptorPool()
+	{
+		if (descPool)
+		{
+			vkDestroyDescriptorPool(device, descPool, nullptr);
+			descPool = nullptr;
+		}
 	}
 
 	bool VulkanRenderer::Resizing()
@@ -558,16 +593,18 @@ namespace sh::render {
 				vkCmdBeginRenderPass(buffer, &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
 				while (!drawList.empty())
 				{
-					Mesh* mesh = drawList.front();
+					VulkanDrawable* drawable = static_cast<VulkanDrawable*>(drawList.front());
 					drawList.pop();
 
-					sh::render::Material* mat = mesh->GetMaterial(0);
-					if (!sh::core::IsValid(mat)) continue;
+					Mesh* mesh = drawable->GetMesh();
+					Material* mat = drawable->GetMaterial();
+
+					assert(mesh);
+					assert(mat);
+					if (!sh::core::IsValid(mesh) || !sh::core::IsValid(mat)) continue;
 
 					VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
 					if (!sh::core::IsValid(shader)) continue;
-
-					VulkanDrawable* drawable = static_cast<VulkanDrawable*>(mesh->GetDrawable());
 
 					vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, drawable->GetPipeline()->GetPipeline());
 
@@ -596,6 +633,11 @@ namespace sh::render {
 					}
 					vkCmdBindVertexBuffers(buffer, 0, vertexBuffers.size(), vertexBuffers.data(), offsets.data());
 					vkCmdBindIndexBuffer(buffer, drawable->GetIndexBuffer().GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
+					VkDescriptorSet descriptorSets[] = { drawable->GetDescriptorSet(currentFrame) };
+					vkCmdBindDescriptorSets(buffer,
+						VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, 
+						drawable->GetPipelineLayout(), 0, 1, 
+						descriptorSets, 0, nullptr);
 					vkCmdDrawIndexed(buffer, mesh->GetIndices().size(), 1, 0, 0, 0);
 				}
 				vkCmdEndRenderPass(buffer);
@@ -646,6 +688,15 @@ namespace sh::render {
 	auto VulkanRenderer::GetGraphicsQueue() const -> VkQueue
 	{
 		return graphicsQueue;
+	}
+
+	auto VulkanRenderer::GetDescriptorPool() const -> VkDescriptorPool
+	{
+		return descPool;
+	}
+	auto VulkanRenderer::GetCurrentFrame() const -> int
+	{
+		return currentFrame;
 	}
 }//namespace
 

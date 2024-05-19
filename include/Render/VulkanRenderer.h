@@ -24,11 +24,11 @@ namespace sh::render {
 	}
 	class VulkanRenderer :
 		public Renderer, public sh::core::INonCopyable{
+	public:
+		static constexpr int MAX_FRAME_DRAW = 2;
 	private:
 		sh::window::Window* window;
 		sh::window::WinHandle winHandle;
-
-		static constexpr int MAX_FRAME_DRAW = 2;
 
 		std::vector<const char*> requestedLayer;
 		std::vector<const char*> requestedExtension;
@@ -38,11 +38,13 @@ namespace sh::render {
 		std::array<std::unique_ptr<impl::VulkanCommandBuffer>, MAX_FRAME_DRAW> cmdBuffers;
 
 		VkInstance instance;
+		VkPhysicalDeviceProperties gpuProp;
 		VkPhysicalDevice gpu;
 		VkDevice device; //논리적 장치
 		std::vector<impl::VulkanFramebuffer> framebuffers;
 
 		VkCommandPool cmdPool;
+		VkDescriptorPool descPool;
 
 		std::vector<VkPhysicalDevice> gpus;
 		std::vector<VkQueueFamilyProperties> queueFamilies;
@@ -88,8 +90,11 @@ namespace sh::render {
 		void DestroyCommandPool();
 		auto ResetCommandPool(uint32_t queue) -> VkResult;
 
-		auto CreateSyncObjects()->VkResult;
+		auto CreateSyncObjects() -> VkResult;
 		void DestroySyncObjects();
+
+		auto CreateDescriptorPool() -> VkResult;
+		void DestroyDescriptorPool();
 
 		void PrintLayer();
 	public:
@@ -110,6 +115,8 @@ namespace sh::render {
 		SH_RENDER_API auto GetCommandPool() const -> VkCommandPool;
 		SH_RENDER_API auto GetGraphicsQueue() const -> VkQueue;
 		SH_RENDER_API auto GetMainFramebuffer() const -> const Framebuffer* override;
+		SH_RENDER_API auto GetDescriptorPool() const -> VkDescriptorPool;
+		SH_RENDER_API auto GetCurrentFrame() const -> int;
 
 	};
 }//namespace

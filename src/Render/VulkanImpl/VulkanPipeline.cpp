@@ -8,18 +8,18 @@ namespace sh::render::impl
 {
 	VulkanPipeline::VulkanPipeline(VkDevice device, VkRenderPass renderPass) :
 		device(device), renderPass(renderPass),
-		pipelineLayout(nullptr), pipeline(nullptr), shader(nullptr),
+		pipeline(nullptr), shader(nullptr),
 		viewportX(0), viewportY(0)
 	{
 	}
 
 	VulkanPipeline::VulkanPipeline(VulkanPipeline&& other) noexcept :
-		pipelineLayout(other.pipelineLayout), pipeline(other.pipeline),
+		pipeline(other.pipeline),
+		device(other.device), renderPass(other.renderPass), shader(other.shader),
 		shaderStages(std::move(other.shaderStages)),
 		bindingDescriptions(std::move(other.bindingDescriptions)),
 		attributeDescriptions(std::move(other.attributeDescriptions))
 	{
-		other.pipelineLayout = nullptr;
 		other.pipeline = nullptr;
 	}
 
@@ -38,12 +38,6 @@ namespace sh::render::impl
 		{
 			vkDestroyPipeline(device, pipeline, nullptr);
 			pipeline = nullptr;
-		}
-
-		if (pipelineLayout)
-		{
-			vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
-			pipelineLayout = nullptr;
 		}
 	}
 
@@ -111,20 +105,8 @@ namespace sh::render::impl
 		return *this;
 	}
 
-	auto VulkanPipeline::Build() -> VkResult
+	auto VulkanPipeline::Build(VkPipelineLayout layout) -> VkResult
 	{
-		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-		pipelineLayoutInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = 0; // Optional
-		pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
-		pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-		pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
-
-		VkResult result = vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout);
-		assert(result == VkResult::VK_SUCCESS);
-		if (result != VkResult::VK_SUCCESS)
-			return result;
-
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 		vertexInputInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 		vertexInputInfo.vertexBindingDescriptionCount = bindingDescriptions.size();;
@@ -237,13 +219,13 @@ namespace sh::render::impl
 		pipelineInfo.pDepthStencilState = nullptr; // Optional
 		pipelineInfo.pColorBlendState = &colorBlending;
 		pipelineInfo.pDynamicState = &dynamicState;
-		pipelineInfo.layout = pipelineLayout;
+		pipelineInfo.layout = layout;
 		pipelineInfo.renderPass = renderPass;
 		pipelineInfo.subpass = 0;
 		pipelineInfo.basePipelineHandle = nullptr; // Optional
 		pipelineInfo.basePipelineIndex = -1; // Optional
 
-		result = vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineInfo, nullptr, &pipeline);
+		auto result = vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineInfo, nullptr, &pipeline);
 		assert(result == VkResult::VK_SUCCESS);
 		return result;
 	}

@@ -10,12 +10,12 @@ namespace sh::render {
 		OpenGL,
 		Vulkan
 	};
-	class Mesh;
+	class IDrawable;
 	class Framebuffer;
 
 	class Renderer {
 	protected:
-		std::queue<Mesh*> drawList;
+		std::queue<IDrawable*> drawList;
 	public:
 		const RenderAPI apiType;
 	public:
@@ -33,6 +33,6 @@ namespace sh::render {
 		SH_RENDER_API virtual auto GetMainFramebuffer() const -> const Framebuffer* = 0;
 
 		SH_RENDER_API void ClearDrawList();
-		SH_RENDER_API void PushDrawAble(Mesh* drawable);
+		SH_RENDER_API void PushDrawAble(IDrawable* drawable);
 	};
 }

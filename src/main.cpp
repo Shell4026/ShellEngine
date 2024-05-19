@@ -19,6 +19,7 @@
 #include "Game/GameObject.h"
 #include "Game/Component/Transform.h"
 #include "Game/Component/MeshRenderer.h"
+#include "Game/Component/UniformTest.h"
 
 
 #include <iostream>
@@ -81,6 +82,7 @@ int main(int arg, char* args[])
 	
 	sh::window::Window window;
 	window.Create(u8"테스트", 1024, 768);
+	window.SetFps(144);
 
 	auto renderer = sh::render::VulkanRenderer{};
 	renderer.Init(window);
@@ -94,10 +96,11 @@ int main(int arg, char* args[])
 
 	auto shader = world.shaders.AddResource("Triangle", loader.LoadShader<sh::render::VulkanShader>("vert.spv", "frag.spv"));
 	auto mat = world.materials.AddResource("Material", sh::render::Material{ renderer, shader });
-	auto mesh = world.meshes.AddResource("Mesh", sh::render::Mesh{ renderer });
+	auto mesh = world.meshes.AddResource("Mesh", sh::render::Mesh{});
 
-	shader->AddAttribute("color", 1, sh::render::Shader::AttributeType::Vec4);
-	mat->Build();
+	shader->AddAttribute("color", 1, sh::render::Shader::DataType::Vec4);
+	shader->AddUniform("offset", 0, sh::render::Shader::DataType::Vec3);
+	mat->SetVector("offset", glm::vec4{0.0f});
 
 	mesh->SetVertex({ 
 		{-0.5f, -0.5f, 0.0f}, 
@@ -114,12 +117,17 @@ int main(int arg, char* args[])
 		{0.0f, 0.0f, 1.0f, 1.0f},
 		{1.0f, 1.0f, 1.0f, 1.0f}
 	}});
-	mesh->SetMaterial(0, mat);
 
 	GameObject* obj = world.AddGameObject("Test");
 
+	auto transform = obj->transform;
+
 	auto meshRenderer = obj->AddComponent<MeshRenderer>();
 	meshRenderer->SetMesh(*mesh);
+	meshRenderer->SetMaterial(*mat);
+
+	auto uniformTest = obj->AddComponent<UniformTest>();
+	uniformTest->SetMaterial(*mat);
 
 	world.Start();
 	while (window.IsOpen())

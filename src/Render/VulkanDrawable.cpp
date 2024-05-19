@@ -5,6 +5,7 @@
 #include "Mesh.h"
 #include "VulkanShader.h"
 #include "VulkanImpl/VulkanFramebuffer.h"
+#include "VulkanUniform.h"
 
 #include <cstring>
 
@@ -15,7 +16,8 @@ namespace sh::render
 		indexBuffer(renderer.GetDevice(), renderer.GetGPU()),
 		cmd(renderer.GetDevice(), renderer.GetCommandPool()),
 		buffers(vertexBuffers),
-		mat(nullptr), mesh(nullptr)
+		pipelineLayout(nullptr), mat(nullptr), mesh(nullptr),
+		descriptorSetLayout(nullptr)
 	{
 		auto frameBuffer = static_cast<const impl::VulkanFramebuffer*>(renderer.GetMainFramebuffer());
 		pipeline = std::make_unique<impl::VulkanPipeline>(renderer.GetDevice(), frameBuffer->GetRenderPass());
@@ -23,7 +25,22 @@ namespace sh::render
 
 	VulkanDrawable::~VulkanDrawable()
 	{
-		
+		pipeline.reset();
+		if (pipelineLayout)
+		{
+			vkDestroyPipelineLayout(renderer.GetDevice(), pipelineLayout, nullptr);
+			pipelineLayout = nullptr;
+		}
+		if (descriptorSetLayout)
+		{
+			vkDestroyDescriptorSetLayout(renderer.GetDevice(), descriptorSetLayout, nullptr);
+			descriptorSetLayout = nullptr;
+		}
+	}
+
+	auto VulkanDrawable::GetPipelineLayout() const -> VkPipelineLayout
+	{
+		return pipelineLayout;
 	}
 
 	auto VulkanDrawable::GetPipeline() const -> impl::VulkanPipeline*
@@ -91,8 +108,40 @@ namespace sh::render
 			}, &info);
 	}
 
+	auto VulkanDrawable::CreatePipelineLayout() -> VkResult
+	{
+		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+		pipelineLayoutInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		pipelineLayoutInfo.setLayoutCount = 1;
+		pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
+		pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
+		pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
+
+		return vkCreatePipelineLayout(renderer.GetDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout);
+	}
+
+	auto VulkanDrawable::CreateDescriptorLayout(uint32_t binding) -> VkResult
+	{
+		VkDescriptorSetLayoutBinding layoutBinding{};
+		layoutBinding.binding = binding;
+		layoutBinding.descriptorCount = 1;
+		layoutBinding.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		layoutBinding.pImmutableSamplers = nullptr;
+		layoutBinding.stageFlags = VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT;
+
+		VkDescriptorSetLayoutCreateInfo info{};
+		info.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		info.bindingCount = 1;
+		info.pBindings = &layoutBinding;
+
+		return vkCreateDescriptorSetLayout(renderer.GetDevice(), &info, nullptr, &descriptorSetLayout);
+	}
+
 	void VulkanDrawable::Build(Material* mat, Mesh* mesh)
 	{
+		assert(mat);
+		assert(mesh);
+
 		this->mat = mat;
 		this->mesh = mesh;
 
@@ -128,29 +177,29 @@ namespace sh::render
 			case 4:
 				if (attr->isInteger)
 				{
-					if (shaderAttr->type != Shader::AttributeType::Int)
+					if (shaderAttr->type != Shader::DataType::Int)
 						continue;
 					format = VkFormat::VK_FORMAT_R32_SINT;
 				}
 				else
 				{
-					if (shaderAttr->type != Shader::AttributeType::Float)
+					if (shaderAttr->type != Shader::DataType::Float)
 						continue;
 					format = VkFormat::VK_FORMAT_R32_SFLOAT;
 				}
 				break;
 			case 8:
-				if (shaderAttr->type != Shader::AttributeType::Vec2)
+				if (shaderAttr->type != Shader::DataType::Vec2)
 					continue;
 				format = VkFormat::VK_FORMAT_R32G32_SFLOAT;
 				break;
 			case 12:
-				if (shaderAttr->type != Shader::AttributeType::Vec3)
+				if (shaderAttr->type != Shader::DataType::Vec3)
 					continue;
 				format = VkFormat::VK_FORMAT_R32G32B32_SFLOAT;
 				break;
 			case 16:
-				if (shaderAttr->type != Shader::AttributeType::Vec4)
+				if (shaderAttr->type != Shader::DataType::Vec4)
 					continue;
 				format = VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT;
 				break;
@@ -199,13 +248,64 @@ namespace sh::render
 
 			++idx;
 		}
+
+		auto result = CreateDescriptorLayout(0);
+		assert(result == VkResult::VK_SUCCESS);
+		result = CreatePipelineLayout();
+		assert(result == VkResult::VK_SUCCESS);
+
+		std::vector<VkDescriptorSetLayout> layouts(VulkanRenderer::MAX_FRAME_DRAW, descriptorSetLayout);
+		VkDescriptorSetAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocInfo.descriptorPool = renderer.GetDescriptorPool();
+		allocInfo.descriptorSetCount = static_cast<uint32_t>(VulkanRenderer::MAX_FRAME_DRAW);
+		allocInfo.pSetLayouts = layouts.data();
+
+		descriptorSets.resize(VulkanRenderer::MAX_FRAME_DRAW);
+		result = vkAllocateDescriptorSets(renderer.GetDevice(), &allocInfo, descriptorSets.data());
+		assert(result == VkResult::VK_SUCCESS);
+
+		for (int i = 0; i < VulkanRenderer::MAX_FRAME_DRAW; ++i)
+		{
+			uniformBuffers.push_back(impl::VulkanBuffer{ renderer.GetDevice(), renderer.GetGPU() });
+			result = uniformBuffers.back().Create(sizeof(glm::vec4),
+				VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+				VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
+				VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+				true);
+			assert(result == VkResult::VK_SUCCESS);
+
+			VkDescriptorBufferInfo bufferInfo{};
+			bufferInfo.buffer = uniformBuffers[i].GetBuffer();
+			bufferInfo.offset = 0;
+			bufferInfo.range = sizeof(glm::vec4);
+
+			VkWriteDescriptorSet descriptorWrite{};
+			descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrite.dstSet = descriptorSets[i];
+			descriptorWrite.dstBinding = 0;
+			descriptorWrite.dstArrayElement = 0;
+			descriptorWrite.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrite.descriptorCount = 1;
+			descriptorWrite.pBufferInfo = &bufferInfo;
+			descriptorWrite.pImageInfo = nullptr; // Optional
+			descriptorWrite.pTexelBufferView = nullptr; // Optional
+
+			vkUpdateDescriptorSets(renderer.GetDevice(), 1, &descriptorWrite, 0, nullptr);
+		}
+
 		pipeline->
 			SetShader(static_cast<VulkanShader*>(shader)).
 			AddShaderStage(impl::VulkanPipeline::ShaderStage::Vertex).
 			AddShaderStage(impl::VulkanPipeline::ShaderStage::Fragment).
-			Build();
+			Build(pipelineLayout);
 
 		cmd.Clean();
+	}
+
+	void VulkanDrawable::SetUniformData(int frame, const void* data)
+	{
+		uniformBuffers[frame].SetData(data);
 	}
 
 	auto VulkanDrawable::GetVertexBuffer() const -> const impl::VulkanBuffer&
@@ -218,8 +318,18 @@ namespace sh::render
 		return indexBuffer;
 	}
 
-	void VulkanDrawable::Update()
+	auto VulkanDrawable::GetMaterial() const -> Material*
 	{
-		//vertexBuffer.SetData(mesh->GetVertex().data());
+		return mat;
+	}
+
+	auto VulkanDrawable::GetMesh() const -> Mesh*
+	{
+		return mesh;
+	}
+
+	auto VulkanDrawable::GetDescriptorSet(int frame) -> VkDescriptorSet
+	{
+		return descriptorSets[frame];
 	}
 }

@@ -26,22 +26,24 @@ namespace sh::render
 			SPIR,
 		};
 
-		enum class AttributeType
+		enum class DataType
 		{
 			Null,
 			Int, Float,
 			Vec2, Vec3, Vec4
 		};
 
-		struct Attribute
+		struct Data
 		{
 			uint32_t idx;
-			AttributeType type;
+			DataType type;
 			std::string name;
 		};
 	private:
-		std::vector<Attribute> attrs;
+		std::vector<Data> attrs;
 		std::unordered_map<std::string, uint32_t> attridx;
+		std::vector<Data> _uniforms;
+		std::unordered_map<std::string, uint32_t> uniformIdx;
 	protected:
 		int id;
 
@@ -51,7 +53,8 @@ namespace sh::render
 		Shader(const Shader& other);
 		Shader(Shader&& other) noexcept;
 	public:
-		const std::vector<Attribute>& attributes;
+		const std::vector<Data>& attributes;
+		const std::vector<Data>& uniforms;
 	public:
 		SH_RENDER_API virtual ~Shader() = default;
 		SH_RENDER_API void operator=(Shader&& other) noexcept;
@@ -60,9 +63,14 @@ namespace sh::render
 
 		SH_RENDER_API virtual void Clean() = 0;
 
-		SH_RENDER_API bool AddAttribute(const std::string& name, uint32_t loc, AttributeType type);
+		SH_RENDER_API bool AddAttribute(const std::string& name, uint32_t loc, DataType type);
 		SH_RENDER_API bool HasAttribute(const std::string& name) const;
-		SH_RENDER_API auto GetAttribute(const std::string& name) const -> std::optional<Attribute>;
+		SH_RENDER_API auto GetAttribute(const std::string& name) const -> std::optional<Data>;
+
+		SH_RENDER_API bool AddUniform(const std::string& name, uint32_t loc, DataType type);
+		SH_RENDER_API bool HasUniform(const std::string& name) const;
+		SH_RENDER_API auto GetUniform(const std::string& name) const->std::optional<Data>;
+
 		SH_RENDER_API auto GetId() const -> int;
 	};
 }

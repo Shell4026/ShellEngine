@@ -85,7 +85,7 @@ namespace sh::game
 			resourcePtr->SetGC(gc);
 			return resources.insert({ name, std::move(resourcePtr) }).first->second.get();
 		}
-		auto AddResource(std::string_view name, const T& resource) -> T*
+		auto AddResource(std::string_view _name, const T& resource) -> T*
 		{
 			std::string name{ _name };
 
