@@ -4,6 +4,7 @@
 
 #include "Object.h"
 #include "Component/Component.h"
+#include "Component/Transform.h"
 #include "World.h"
 
 #include "Core/Reflection.hpp"
@@ -19,6 +20,7 @@ namespace sh::game
 		SCLASS(GameObject)
 	private:
 		std::vector<std::unique_ptr<Component>> components;
+		
 
 		std::string objName;
 
@@ -26,9 +28,11 @@ namespace sh::game
 
 		bool bInit : 1;
 	public:
+		World& world;
+		Transform* transform;
+
 		const bool& activeSelf;
 		const std::string& name;
-		World& world;
 	public:
 		SH_GAME_API GameObject(World& world, const std::string& name);
 		SH_GAME_API GameObject(GameObject&& other) noexcept;

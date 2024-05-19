@@ -5,17 +5,19 @@
 namespace sh::game
 {
 	GameObject::GameObject(World& world, const std::string& name) :
-		world(world), objName(name), name(objName),
+		world(world),
+		objName(name), name(objName),
 		bInit(false), bEnable(true), activeSelf(bEnable)
 	{
+		transform = AddComponent<Transform>();
 	}
 
 	GameObject::GameObject(GameObject&& other) noexcept :
 		world(other.world), objName(std::move(other.objName)), name(objName),
 		bInit(other.bInit), bEnable(other.bEnable), activeSelf(bEnable),
-		components(std::move(other.components))
+		components(std::move(other.components)), transform(other.transform)
 	{
-
+		other.transform = nullptr;
 	}
 
 	GameObject::~GameObject()
