@@ -26,18 +26,12 @@ namespace sh::render
 			SPIR,
 		};
 
-		enum class DataType
-		{
-			Null,
-			Int, Float,
-			Vec2, Vec3, Vec4
-		};
-
 		struct Data
 		{
 			uint32_t idx;
-			DataType type;
+			std::string_view typeName;
 			std::string name;
+			size_t size;
 		};
 	private:
 		std::vector<Data> attrs;
@@ -63,14 +57,61 @@ namespace sh::render
 
 		SH_RENDER_API virtual void Clean() = 0;
 
-		SH_RENDER_API bool AddAttribute(const std::string& name, uint32_t loc, DataType type);
+		template<typename T>
+		bool AddAttribute(const std::string& name, uint32_t loc);
 		SH_RENDER_API bool HasAttribute(const std::string& name) const;
 		SH_RENDER_API auto GetAttribute(const std::string& name) const -> std::optional<Data>;
 
-		SH_RENDER_API bool AddUniform(const std::string& name, uint32_t loc, DataType type);
+		template<typename T>
+		bool AddUniform(const std::string& name, uint32_t loc);
 		SH_RENDER_API bool HasUniform(const std::string& name) const;
 		SH_RENDER_API auto GetUniform(const std::string& name) const->std::optional<Data>;
 
 		SH_RENDER_API auto GetId() const -> int;
 	};
+
+	template<typename T>
+	inline bool Shader::AddAttribute(const std::string& name, uint32_t loc)
+	{
+		auto it = attridx.find(name);
+		if (it != attridx.end())
+			return false;
+
+		if (attrs.size() < loc + 1)
+		{
+			attrs.resize(loc + 1);
+		}
+		Data attr;
+		attr.idx = loc;
+		attr.name = name;
+		attr.typeName = sh::core::reflection::GetTypeName<T>();
+		attr.size = sizeof(T);
+
+		attrs[loc] = attr;
+		attridx.insert({ name, loc });
+
+		return true;
+	}
+
+	template<typename T>
+	inline bool Shader::AddUniform(const std::string& name, uint32_t loc)
+	{
+		auto it = uniformIdx.find(name);
+		if (it != uniformIdx.end())
+			return false;
+
+		if (_uniforms.size() < loc + 1)
+		{
+			_uniforms.resize(loc + 1);
+		}
+		Data uniform;
+		uniform.idx = loc;
+		uniform.name = name;
+		uniform.typeName = sh::core::reflection::GetTypeName<T>();
+		uniform.size = sizeof(T);
+		_uniforms[loc] = uniform;
+		uniformIdx.insert({ name, loc });
+
+		return true;
+	}
 }

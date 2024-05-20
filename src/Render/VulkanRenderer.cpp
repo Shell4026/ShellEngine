@@ -16,6 +16,8 @@
 #include "VulkanDrawable.h"
 #include "VulkanUniform.h"
 
+#include "glm/gtc/matrix_transform.hpp"
+
 #include <cassert>
 #include <set>
 #include <cstdint>
@@ -24,13 +26,13 @@
 
 namespace sh::render {
 	VulkanRenderer::VulkanRenderer() :
+		Renderer(RenderAPI::Vulkan),
 		instance(nullptr), gpu(nullptr), device(nullptr), cmdPool(nullptr), window(nullptr),
 		graphicsQueueIndex(-1), surfaceQueueIndex(-1),
 		graphicsQueue(nullptr), surfaceQueue(nullptr),
 		debugMessenger(nullptr), validationLayerName("VK_LAYER_KHRONOS_validation"),
 		currentFrame(0),
-		isInit(false), bPause(false), bFindValidationLayer(false), bEnableValidationLayers(sh::core::Util::IsDebug()),
-		Renderer(RenderAPI::Vulkan)
+		isInit(false), bPause(false), bFindValidationLayer(false), bEnableValidationLayers(sh::core::Util::IsDebug())
 	{
 	}
 
@@ -236,7 +238,6 @@ namespace sh::render {
 		assert(gpu);
 		VkResult result;
 
-		std::vector<const char*> requestedExtension = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 		VkPhysicalDeviceFeatures deviceFeatures{};
 
 		assert(graphicsQueueIndex != -1);
@@ -265,8 +266,8 @@ namespace sh::render {
 		deviceInfo.pQueueCreateInfos = queueInfos.data();
 		deviceInfo.enabledLayerCount = 0;
 		deviceInfo.ppEnabledLayerNames = nullptr;
-		deviceInfo.enabledExtensionCount = requestedExtension.size();
-		deviceInfo.ppEnabledExtensionNames = requestedExtension.data();
+		deviceInfo.enabledExtensionCount = requestedDeviceExtension.size();
+		deviceInfo.ppEnabledExtensionNames = requestedDeviceExtension.data();
 		deviceInfo.pEnabledFeatures = &deviceFeatures;
 
 		result = vkCreateDevice(gpu, &deviceInfo, nullptr, &device);
@@ -361,7 +362,7 @@ namespace sh::render {
 
 		//표면 확장 탐색
 		if (layers->FindVulkanExtension(VK_KHR_SURFACE_EXTENSION_NAME))
-			requestedExtension.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
+			requestedInstanceExtension.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 		else
 			return false;
 
@@ -371,14 +372,14 @@ namespace sh::render {
 			{
 				bFindValidationLayer = true;
 				requestedLayer.push_back(validationLayerName.c_str());
-				requestedExtension.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-				requestedExtension.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+				requestedInstanceExtension.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+				requestedInstanceExtension.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 			}
 		}
 
 #if _WIN32
 		if (layers->FindVulkanExtension(VK_KHR_WIN32_SURFACE_EXTENSION_NAME))
-			requestedExtension.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
+			requestedInstanceExtension.push_back(VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 		else
 			return false;
 #elif __linux__
@@ -388,7 +389,7 @@ namespace sh::render {
 			return false;
 #endif
 		//인스턴스 생성
-		if (CreateInstance(requestedLayer, requestedExtension) != VkResult::VK_SUCCESS)
+		if (CreateInstance(requestedLayer, requestedInstanceExtension) != VkResult::VK_SUCCESS)
 			return false;
 		
 		//디버그 모드일시 디버그 레이어 생성
@@ -424,6 +425,8 @@ namespace sh::render {
 		if (auto idx = GetSurfaceQueueFamily(gpu); !idx.has_value()) return false;
 		else surfaceQueueIndex = *idx;
 
+		//VK_KHR_MAINTENANCE1_EXTENSION_NAME는 뷰포트 뒤집기 위한 확장
+		requestedDeviceExtension = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_MAINTENANCE1_EXTENSION_NAME };
 		//가상 장치 생성
 		if (CreateDevice(gpu) != VkResult::VK_SUCCESS)
 			return false;
@@ -610,9 +613,9 @@ namespace sh::render {
 
 					VkViewport viewport{};
 					viewport.x = 0.0f;
-					viewport.y = 0.0f;
+					viewport.y = static_cast<float>(surface->GetSwapChainSize().height);
 					viewport.width = static_cast<float>(surface->GetSwapChainSize().width);
-					viewport.height = static_cast<float>(surface->GetSwapChainSize().height);
+					viewport.height = -static_cast<float>(surface->GetSwapChainSize().height);
 					viewport.minDepth = 0.0f;
 					viewport.maxDepth = 1.0f;
 					vkCmdSetViewport(buffer, 0, 1, &viewport);
@@ -697,6 +700,14 @@ namespace sh::render {
 	auto VulkanRenderer::GetCurrentFrame() const -> int
 	{
 		return currentFrame;
+	}
+	auto VulkanRenderer::GetWidth() const -> uint32_t
+	{
+		return surface->GetSwapChainSize().width;
+	}
+	auto VulkanRenderer::GetHeight() const -> uint32_t
+	{
+		return surface->GetSwapChainSize().height;
 	}
 }//namespace
 

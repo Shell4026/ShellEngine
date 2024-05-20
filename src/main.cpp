@@ -20,7 +20,7 @@
 #include "Game/Component/Transform.h"
 #include "Game/Component/MeshRenderer.h"
 #include "Game/Component/UniformTest.h"
-
+#include "Game/Component/Camera.h"
 
 #include <iostream>
 
@@ -82,7 +82,7 @@ int main(int arg, char* args[])
 	
 	sh::window::Window window;
 	window.Create(u8"테스트", 1024, 768);
-	window.SetFps(144);
+	window.SetFps(60);
 
 	auto renderer = sh::render::VulkanRenderer{};
 	renderer.Init(window);
@@ -98,15 +98,14 @@ int main(int arg, char* args[])
 	auto mat = world.materials.AddResource("Material", sh::render::Material{ renderer, shader });
 	auto mesh = world.meshes.AddResource("Mesh", sh::render::Mesh{});
 
-	shader->AddAttribute("color", 1, sh::render::Shader::DataType::Vec4);
-	shader->AddUniform("offset", 0, sh::render::Shader::DataType::Vec3);
-	mat->SetVector("offset", glm::vec4{0.0f});
+	shader->AddAttribute<glm::vec4>("color", 1);
+	shader->AddUniform<glm::mat4[3]>("mvp", 0);
 
 	mesh->SetVertex({ 
-		{-0.5f, -0.5f, 0.0f}, 
-		{0.5f, -0.5f, 0.0f}, 
-		{0.5f, 0.5f, 0.0f},
-		{-0.5f, 0.5f, 0.0f}
+		{-0.5f, 0.0f, -0.5f}, 
+		{0.5f, 0.0f, -0.5f},
+		{0.5f, 0.0f, 0.5f},
+		{-0.5f, 0.0f, 0.5f}
 	});
 	mesh->SetIndices({
 		0, 1, 2, 2, 3, 0
@@ -128,6 +127,12 @@ int main(int arg, char* args[])
 
 	auto uniformTest = obj->AddComponent<UniformTest>();
 	uniformTest->SetMaterial(*mat);
+
+	GameObject* cam = world.AddGameObject("Camera");
+	cam->transform->SetPosition(glm::vec3(2.f, 2.f, 2.f));
+	Camera* cameraComponent = cam->AddComponent<Camera>();
+
+	world.mainCamera = cameraComponent;
 
 	world.Start();
 	while (window.IsOpen())

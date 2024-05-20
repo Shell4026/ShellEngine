@@ -1,5 +1,7 @@
 ﻿#include "Component/MeshRenderer.h"
 
+#include "Component/Camera.h"
+
 #include "GameObject.h"
 
 #include "Core/Util.h"
@@ -87,11 +89,19 @@ namespace sh::game
 			if (drawable == nullptr)
 				return;
 
+			Camera* cam = gameObject.world.mainCamera;
+			if (!sh::core::IsValid(cam))
+				return;
+
+			ubo.proj = cam->GetProjMatrix();
+			ubo.view = cam->GetViewMatrix();
+			ubo.model = gameObject.transform->localToWorldMatrix;
+
 			sh::render::Renderer* renderer = &gameObject.world.renderer;
 			if (renderer->apiType == sh::render::RenderAPI::Vulkan)
 			{
 				int frameIdx = static_cast<sh::render::VulkanRenderer*>(renderer)->GetCurrentFrame();
-				static_cast<sh::render::VulkanDrawable*>(drawable)->SetUniformData(frameIdx, mat->GetVector("offset"));
+				static_cast<sh::render::VulkanDrawable*>(drawable)->SetUniformData(frameIdx, &ubo);
 			}
 			gameObject.world.renderer.PushDrawAble(drawable);
 		}

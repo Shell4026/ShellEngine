@@ -6,6 +6,8 @@
 #include <Core/NonCopyable.h>
 #include "VulkanImpl/VulkanConfig.h"
 
+#include "glm/mat4x4.hpp"
+
 #include <string>
 #include <vector>
 #include <array>
@@ -31,7 +33,8 @@ namespace sh::render {
 		sh::window::WinHandle winHandle;
 
 		std::vector<const char*> requestedLayer;
-		std::vector<const char*> requestedExtension;
+		std::vector<const char*> requestedInstanceExtension;
+		std::vector<const char*> requestedDeviceExtension;
 
 		std::unique_ptr<impl::VulkanSurface> surface;
 		std::unique_ptr<impl::VulkanLayer> layers;
@@ -117,6 +120,7 @@ namespace sh::render {
 		SH_RENDER_API auto GetMainFramebuffer() const -> const Framebuffer* override;
 		SH_RENDER_API auto GetDescriptorPool() const -> VkDescriptorPool;
 		SH_RENDER_API auto GetCurrentFrame() const -> int;
-
+		SH_RENDER_API auto GetWidth() const -> uint32_t override;
+		SH_RENDER_API auto GetHeight() const -> uint32_t override;
 	};
 }//namespace

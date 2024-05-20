@@ -7,6 +7,8 @@
 #include "VulkanImpl/VulkanFramebuffer.h"
 #include "VulkanUniform.h"
 
+#include "Core/Reflection.hpp"
+
 #include <cstring>
 
 namespace sh::render
@@ -177,29 +179,29 @@ namespace sh::render
 			case 4:
 				if (attr->isInteger)
 				{
-					if (shaderAttr->type != Shader::DataType::Int)
+					if (shaderAttr->typeName != sh::core::reflection::GetTypeName<int>())
 						continue;
 					format = VkFormat::VK_FORMAT_R32_SINT;
 				}
 				else
 				{
-					if (shaderAttr->type != Shader::DataType::Float)
+					if (shaderAttr->typeName != sh::core::reflection::GetTypeName<float>())
 						continue;
 					format = VkFormat::VK_FORMAT_R32_SFLOAT;
 				}
 				break;
 			case 8:
-				if (shaderAttr->type != Shader::DataType::Vec2)
+				if (shaderAttr->typeName != sh::core::reflection::GetTypeName<glm::vec2>())
 					continue;
 				format = VkFormat::VK_FORMAT_R32G32_SFLOAT;
 				break;
 			case 12:
-				if (shaderAttr->type != Shader::DataType::Vec3)
+				if (shaderAttr->typeName != sh::core::reflection::GetTypeName<glm::vec3>())
 					continue;
 				format = VkFormat::VK_FORMAT_R32G32B32_SFLOAT;
 				break;
 			case 16:
-				if (shaderAttr->type != Shader::DataType::Vec4)
+				if (shaderAttr->typeName != sh::core::reflection::GetTypeName<glm::vec4>())
 					continue;
 				format = VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT;
 				break;
@@ -268,7 +270,7 @@ namespace sh::render
 		for (int i = 0; i < VulkanRenderer::MAX_FRAME_DRAW; ++i)
 		{
 			uniformBuffers.push_back(impl::VulkanBuffer{ renderer.GetDevice(), renderer.GetGPU() });
-			result = uniformBuffers.back().Create(sizeof(glm::vec4),
+			result = uniformBuffers.back().Create(sizeof(glm::mat4[3]),
 				VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 				VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 				VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -278,7 +280,7 @@ namespace sh::render
 			VkDescriptorBufferInfo bufferInfo{};
 			bufferInfo.buffer = uniformBuffers[i].GetBuffer();
 			bufferInfo.offset = 0;
-			bufferInfo.range = sizeof(glm::vec4);
+			bufferInfo.range = sizeof(glm::mat4[3]);
 
 			VkWriteDescriptorSet descriptorWrite{};
 			descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

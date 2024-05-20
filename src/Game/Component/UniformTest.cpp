@@ -19,11 +19,9 @@ namespace sh::game
 
 	void UniformTest::Update()
 	{
-		t += 45.0f * gameObject.world.deltaTime;
-		if (t > 360.f)
-			t -= 360.f;
-		glm::vec4& offset = *mat->GetVector("offset");
-
-		mat->SetVector("offset", glm::vec4{ 0.5 * glm::cos(glm::radians(t)), 0.5 * glm::sin(glm::radians(t)), 0.0f, 0.0f});
+		glm::vec3 pos = gameObject.transform->position;
+		glm::vec3 rot = gameObject.transform->rotation;
+		gameObject.transform->SetRotation(rot + glm::vec3(0.0f, 45 * gameObject.world.deltaTime, 0.0f));
+		//gameObject.transform->SetPosition(pos + glm::vec3(0.f, 0.2 * gameObject.world.deltaTime, 0.f));
 	}
 }

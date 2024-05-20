@@ -4,6 +4,8 @@
 #include "ResourceManager.hpp"
 
 #include "Core/NonCopyable.h"
+#include "Core/SObject.h"
+#include "Core/Reflection.hpp"
 
 #include "Render/Shader.h"
 #include "Render/Material.h"
@@ -29,9 +31,11 @@ namespace sh::render
 namespace sh::game
 {
 	class GameObject;
+	class Camera;
 
-	class World : sh::core::INonCopyable
+	class World : public sh::core::SObject, public sh::core::INonCopyable
 	{
+		SCLASS(World)
 	private:
 		std::vector<std::unique_ptr<GameObject>> objs;
 		std::unordered_map<std::string, int> objsMap;
@@ -46,6 +50,9 @@ namespace sh::game
 		sh::game::ResourceManager<sh::render::Shader> shaders;
 		sh::game::ResourceManager<sh::render::Material> materials;
 		sh::game::ResourceManager<sh::render::Mesh> meshes;
+
+		PROPERTY(mainCamera)
+		Camera* mainCamera;
 	public:
 		SH_GAME_API World(sh::render::Renderer& renderer, sh::core::GC& gc);
 		SH_GAME_API World(World&& other) noexcept;

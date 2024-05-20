@@ -10,15 +10,19 @@ namespace sh::game
 	World::World(sh::render::Renderer& renderer, sh::core::GC& gc) :
 		renderer(renderer),gc(gc), deltaTime(_deltaTime),
 		_deltaTime(0.0f), 
-		shaders(gc, renderer), materials(gc, renderer), meshes(gc, renderer)
+		shaders(gc, renderer), materials(gc, renderer), meshes(gc, renderer),
+		mainCamera(nullptr)
 	{
+		gc.AddObject(this);
 	}
 	World::World(World&& other) noexcept :
 		renderer(other.renderer), gc(other.gc), deltaTime(_deltaTime),
 		_deltaTime(other._deltaTime),
-		shaders(std::move(other.shaders)), materials(std::move(other.materials)), meshes(std::move(other.meshes))
+		shaders(std::move(other.shaders)), materials(std::move(other.materials)), meshes(std::move(other.meshes)),
+		mainCamera(nullptr)
 	{
-
+		gc.RemoveObject(&other);
+		gc.AddObject(this);
 	}
 	World::~World()
 	{

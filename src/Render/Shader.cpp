@@ -40,27 +40,6 @@ namespace sh::render
 		return id;
 	}
 
-	bool Shader::AddAttribute(const std::string& name, uint32_t loc, DataType type)
-	{
-		auto it = attridx.find(name);
-		if (it != attridx.end())
-			return false;
-
-		if (attrs.size() < loc + 1)
-		{
-			attrs.resize(loc + 1);
-		}
-		Data attr;
-		attr.idx = loc;
-		attr.name = name;
-		attr.type = type;
-
-		attrs[loc] = attr;
-		attridx.insert({ name, loc });
-
-		return true;
-	}
-
 	bool Shader::HasAttribute(const std::string& name) const
 	{
 		auto it = attridx.find(name);
@@ -76,27 +55,6 @@ namespace sh::render
 			return {};
 		
 		return attrs[it->second];
-	}
-
-	bool Shader::AddUniform(const std::string& name, uint32_t loc, DataType type)
-	{
-		auto it = uniformIdx.find(name);
-		if (it != uniformIdx.end())
-			return false;
-
-		if (_uniforms.size() < loc + 1)
-		{
-			_uniforms.resize(loc + 1);
-		}
-		Data uniform;
-		uniform.idx = loc;
-		uniform.name = name;
-		uniform.type = type;
-
-		_uniforms[loc] = uniform;
-		uniformIdx.insert({ name, loc });
-
-		return true;
 	}
 
 	bool Shader::HasUniform(const std::string& name) const

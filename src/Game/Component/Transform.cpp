@@ -10,7 +10,7 @@ namespace sh::game
 
 		localPosition(),
 		vPosition(glm::vec3(0.f, 0.f, 0.f)), vScale(glm::vec3(1.0f, 1.0f, 1.0f)), vRot(glm::vec3(0.f, 0.f, 0.f)),
-		matModel(), quat(vRot),
+		matModel(), quat(glm::radians(vRot)),
 		updateMatrix(false)
 	{
 		matModel = glm::translate(glm::mat4{1.0f}, vPosition) * glm::mat4_cast(quat) * glm::scale(glm::mat4{ 1.0f }, vScale);
@@ -78,6 +78,12 @@ namespace sh::game
 	void Transform::SetRotation(const glm::vec3& rot)
 	{
 		vRot = rot;
+		if (vRot.x >= 360)
+			vRot.x -= 360;
+		if (vRot.y >= 360)
+			vRot.y -= 360;
+		if (vRot.z >= 360)
+			vRot.z -= 360;
 		quat = glm::quat{ glm::radians(vRot) };
 		updateMatrix = true;
 	}

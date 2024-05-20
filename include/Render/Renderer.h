@@ -32,6 +32,9 @@ namespace sh::render {
 		SH_RENDER_API virtual bool IsInit() const = 0;
 		SH_RENDER_API virtual auto GetMainFramebuffer() const -> const Framebuffer* = 0;
 
+		SH_RENDER_API virtual auto GetWidth() const -> uint32_t = 0;
+		SH_RENDER_API virtual auto GetHeight() const -> uint32_t = 0;
+
 		SH_RENDER_API void ClearDrawList();
 		SH_RENDER_API void PushDrawAble(IDrawable* drawable);
 	};
