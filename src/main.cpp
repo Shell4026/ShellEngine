@@ -159,6 +159,7 @@ int main(int arg, char* args[])
 		sh::window::Event e;
 		while (window.PollEvent(e))
 		{
+			Input::Update(e);
 			switch (e.type)
 			{
 			case sh::window::Event::EventType::Close:
