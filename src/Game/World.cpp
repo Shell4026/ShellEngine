@@ -5,6 +5,9 @@
 #include "Core/GC.h"
 #include "Core/Util.h"
 
+#include <utility>
+#include <cstdint>
+
 namespace sh::game
 {
 	World::World(sh::render::Renderer& renderer, sh::core::GC& gc) :
@@ -56,7 +59,7 @@ namespace sh::game
 		if (objsEmptyIdx.empty())
 		{
 			objs.push_back(std::make_unique<GameObject>(*this, objName));
-			objsMap.insert(std::make_pair(objName, objs.size() - 1));
+			objsMap.insert(std::make_pair(objName, static_cast<uint32_t>(objs.size() - 1)));
 			auto obj = objs[objs.size() - 1].get();
 			obj->SetGC(gc);
 

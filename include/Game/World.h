@@ -38,7 +38,7 @@ namespace sh::game
 		SCLASS(World)
 	private:
 		std::vector<std::unique_ptr<GameObject>> objs;
-		std::unordered_map<std::string, int> objsMap;
+		std::unordered_map<std::string, uint32_t> objsMap;
 		std::queue<int> objsEmptyIdx;
 
 		float _deltaTime;
