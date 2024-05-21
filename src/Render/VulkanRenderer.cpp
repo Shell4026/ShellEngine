@@ -95,7 +95,7 @@ namespace sh::render {
 		appInfo.applicationVersion = 1;
 		appInfo.pEngineName = "ShellEngine";
 		appInfo.engineVersion = 1;
-		appInfo.apiVersion = VK_API_VERSION_1_0;
+		appInfo.apiVersion = VK_API_VERSION_1_3;
 
 		VkInstanceCreateInfo instanceInfo = {};
 		instanceInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -384,7 +384,7 @@ namespace sh::render {
 			return false;
 #elif __linux__
 		if (layers->FindVulkanExtension(VK_KHR_XLIB_SURFACE_EXTENSION_NAME))
-			requestedExtension.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+			requestedInstanceExtension.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
 		else
 			return false;
 #endif
@@ -425,8 +425,7 @@ namespace sh::render {
 		if (auto idx = GetSurfaceQueueFamily(gpu); !idx.has_value()) return false;
 		else surfaceQueueIndex = *idx;
 
-		//VK_KHR_MAINTENANCE1_EXTENSION_NAME는 뷰포트 뒤집기 위한 확장
-		requestedDeviceExtension = { VK_KHR_SWAPCHAIN_EXTENSION_NAME, VK_KHR_MAINTENANCE1_EXTENSION_NAME };
+		requestedDeviceExtension = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 		//가상 장치 생성
 		if (CreateDevice(gpu) != VkResult::VK_SUCCESS)
 			return false;

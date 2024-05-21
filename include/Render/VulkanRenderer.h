@@ -65,6 +65,7 @@ namespace sh::render {
 		std::array<VkFence, MAX_FRAME_DRAW> inFlightFence;
 
 		int currentFrame;
+		uint32_t descriptorPoolSize;
 
 		bool isInit : 1;
 		bool bPause : 1;

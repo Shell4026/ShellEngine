@@ -99,7 +99,15 @@ int main(int arg, char* args[])
 	auto mesh = world.meshes.AddResource("Mesh", sh::render::Mesh{});
 
 	shader->AddAttribute<glm::vec4>("color", 1);
-	shader->AddUniform<glm::mat4[3]>("mvp", 0);
+
+	shader->AddUniform<glm::mat4>("model", 0);
+	shader->AddUniform<glm::mat4>("view", 0);
+	shader->AddUniform<glm::mat4>("proj", 0);
+	shader->AddUniform<glm::vec3>("offset", 0);
+	shader->AddUniform<float>("offset2", 0);
+
+	mat->SetVector("offset", glm::vec4(0.f, 0.5f, 0.f, 0.f));
+	mat->SetFloat("offset2", 0.f);
 
 	mesh->SetVertex({ 
 		{-0.5f, 0.0f, -0.5f}, 

@@ -18,11 +18,13 @@ namespace sh::game
 	{
 		SCLASS(MeshRenderer)
 	private:
-		struct Ubo
+		struct alignas(16) Ubo
 		{
 			glm::mat4 model;
 			glm::mat4 view;
 			glm::mat4 proj;
+			glm::vec3 offset;
+			float offset2;
 		} ubo;
 	private:
 		PROPERTY(mesh)

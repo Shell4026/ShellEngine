@@ -40,6 +40,27 @@ namespace sh::render
 		return shader;
 	}
 
+	bool Material::SetFloat(std::string_view _name, float value)
+	{
+		std::string name{ _name };
+
+		auto it = floats.find(name);
+		if (it == floats.end())
+			floats.insert({ name, value });
+		else
+			it->second = value;
+
+		return true;
+	}
+
+	auto Material::GetFloat(std::string_view _name) -> float
+	{
+		auto it = floats.find(std::string{ _name });
+		if (it == floats.end())
+			return 0.f;
+		return it->second;
+	}
+
 	bool Material::SetVector(std::string_view _name, const glm::vec4& value)
 	{
 		std::string name{ _name };
@@ -52,11 +73,30 @@ namespace sh::render
 
 		return true;
 	}
-
-	auto Material::GetVector(std::string_view name) -> glm::vec4*
+	auto Material::GetVector(std::string_view name) -> const glm::vec4*
 	{
 		auto it = vectors.find(std::string{ name });
 		if (it == vectors.end())
+			return nullptr;
+		return &it->second;
+	}
+
+	bool Material::SetMatrix(std::string_view _name, const glm::mat4& value)
+	{
+		std::string name{ _name };
+
+		auto it = mats.find(name);
+		if (it == mats.end())
+			mats.insert({ name, value });
+		else
+			it->second = value;
+
+		return true;
+	}
+	auto Material::GetMatrix(std::string_view _name) -> const glm::mat4*
+	{
+		auto it = mats.find(std::string{ _name });
+		if (it == mats.end())
 			return nullptr;
 		return &it->second;
 	}

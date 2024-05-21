@@ -33,10 +33,19 @@ namespace sh::render
 			std::string name;
 			size_t size;
 		};
+
+		struct UniformData
+		{
+			uint32_t binding;
+			std::string name;
+			std::string_view typeName;
+			size_t offset;
+			size_t size;
+		};
 	private:
 		std::vector<Data> attrs;
 		std::unordered_map<std::string, uint32_t> attridx;
-		std::vector<Data> _uniforms;
+		std::vector<std::vector<UniformData>> _uniforms;
 		std::unordered_map<std::string, uint32_t> uniformIdx;
 	protected:
 		int id;
@@ -48,7 +57,7 @@ namespace sh::render
 		Shader(Shader&& other) noexcept;
 	public:
 		const std::vector<Data>& attributes;
-		const std::vector<Data>& uniforms;
+		const std::vector<std::vector<UniformData>>& uniforms;
 	public:
 		SH_RENDER_API virtual ~Shader() = default;
 		SH_RENDER_API void operator=(Shader&& other) noexcept;
@@ -63,9 +72,7 @@ namespace sh::render
 		SH_RENDER_API auto GetAttribute(const std::string& name) const -> std::optional<Data>;
 
 		template<typename T>
-		bool AddUniform(const std::string& name, uint32_t loc);
-		SH_RENDER_API bool HasUniform(const std::string& name) const;
-		SH_RENDER_API auto GetUniform(const std::string& name) const->std::optional<Data>;
+		void AddUniform(const std::string& name, uint32_t binding);
 
 		SH_RENDER_API auto GetId() const -> int;
 	};
@@ -93,25 +100,43 @@ namespace sh::render
 		return true;
 	}
 
+	//
+	//유니폼을 추가하는 함수
+	//반드시 셰이더의 유니폼과 같은 순서로 호출하여 넣을 것.
+	//
 	template<typename T>
-	inline bool Shader::AddUniform(const std::string& name, uint32_t loc)
+	inline void Shader::AddUniform(const std::string& name, uint32_t binding)
 	{
-		auto it = uniformIdx.find(name);
-		if (it != uniformIdx.end())
-			return false;
+		if (_uniforms.size() < binding + 1)
+			_uniforms.resize(binding + 1);
 
-		if (_uniforms.size() < loc + 1)
-		{
-			_uniforms.resize(loc + 1);
-		}
-		Data uniform;
-		uniform.idx = loc;
+		UniformData uniform;
+		uniform.binding = binding;
 		uniform.name = name;
 		uniform.typeName = sh::core::reflection::GetTypeName<T>();
 		uniform.size = sizeof(T);
-		_uniforms[loc] = uniform;
-		uniformIdx.insert({ name, loc });
 
-		return true;
+		if (_uniforms[binding].size() == 0)
+			uniform.offset = 0;
+		else
+		{
+			/*
+			16바이트 메모리 정렬을 맞추는 코드
+			*/
+			uint32_t next = _uniforms[binding].back().offset + _uniforms[binding].back().size; //68
+			uint32_t emptySpace = 16 - next % 16; //12
+			if (emptySpace == 0)
+				uniform.offset = next;
+			else
+			{
+				//남은 공간이 사이즈 보다 클 경우는 그냥 넣는다.
+				if (emptySpace - uniform.size >= 0)
+					uniform.offset = next;
+				//남은 공간이 사이즈 보다 작을 경우 다음 오프셋에 넣는다.
+				else
+					uniform.offset = next + emptySpace;
+			}
+		}
+		_uniforms[binding].push_back(uniform);
 	}
 }

@@ -25,7 +25,9 @@ namespace sh::render
 		PROPERTY(shader)
 		Shader* shader;
 
+		std::unordered_map<std::string, float> floats;
 		std::unordered_map<std::string, glm::vec4> vectors;
+		std::unordered_map<std::string, glm::mat4> mats;
 		std::unordered_map<std::string, std::vector<glm::vec4>> vectorArrs;
 	public:
 		SH_RENDER_API Material(const Renderer& renderer);
@@ -36,8 +38,12 @@ namespace sh::render
 		SH_RENDER_API void SetShader(Shader* shader);
 		SH_RENDER_API auto GetShader() const -> Shader*;
 
+		SH_RENDER_API bool SetFloat(std::string_view name, float value);
+		SH_RENDER_API auto GetFloat(std::string_view name) -> float;
 		SH_RENDER_API bool SetVector(std::string_view name, const glm::vec4& value);
-		SH_RENDER_API auto GetVector(std::string_view name) -> glm::vec4*;
+		SH_RENDER_API auto GetVector(std::string_view name) -> const glm::vec4*;
+		SH_RENDER_API bool SetMatrix(std::string_view name, const glm::mat4& value);
+		SH_RENDER_API auto GetMatrix(std::string_view name) -> const glm::mat4*;
 		SH_RENDER_API bool SetVectorArray(std::string_view name, const std::vector<glm::vec4>& value);
 		SH_RENDER_API auto GetVectorArray(std::string_view name) -> const std::vector<glm::vec4>*;
 	};

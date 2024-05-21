@@ -256,6 +256,7 @@ namespace sh::render
 		result = CreatePipelineLayout();
 		assert(result == VkResult::VK_SUCCESS);
 
+		//디스크립터 생성
 		std::vector<VkDescriptorSetLayout> layouts(VulkanRenderer::MAX_FRAME_DRAW, descriptorSetLayout);
 		VkDescriptorSetAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -270,7 +271,8 @@ namespace sh::render
 		for (int i = 0; i < VulkanRenderer::MAX_FRAME_DRAW; ++i)
 		{
 			uniformBuffers.push_back(impl::VulkanBuffer{ renderer.GetDevice(), renderer.GetGPU() });
-			result = uniformBuffers.back().Create(sizeof(glm::mat4[3]),
+			size_t size = mat->GetShader()->uniforms[0].back().offset + mat->GetShader()->uniforms[0].back().size;
+			result = uniformBuffers.back().Create(size,
 				VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 				VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 				VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -280,7 +282,7 @@ namespace sh::render
 			VkDescriptorBufferInfo bufferInfo{};
 			bufferInfo.buffer = uniformBuffers[i].GetBuffer();
 			bufferInfo.offset = 0;
-			bufferInfo.range = sizeof(glm::mat4[3]);
+			bufferInfo.range =  size;
 
 			VkWriteDescriptorSet descriptorWrite{};
 			descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

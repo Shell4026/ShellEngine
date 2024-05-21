@@ -20,6 +20,13 @@ namespace sh::render::impl
 			Vertex,
 			Fragment
 		};
+
+		 enum class CullMode
+		 {
+			 Off,
+			 Front,
+			 Back
+		 };
 	private:
 		VkDevice device;
 		VkRenderPass renderPass;
@@ -32,6 +39,8 @@ namespace sh::render::impl
 		std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
 
 		int viewportX, viewportY;
+
+		CullMode cullMode;
 	public:
 		SH_RENDER_API VulkanPipeline(VkDevice device, VkRenderPass renderPass);
 		SH_RENDER_API VulkanPipeline(VulkanPipeline&& other) noexcept;
@@ -52,5 +61,7 @@ namespace sh::render::impl
 		SH_RENDER_API auto ResetAttributeDescription() -> VulkanPipeline&;
 
 		SH_RENDER_API auto SetShader(VulkanShader* shader) -> VulkanPipeline&;
+
+		SH_RENDER_API auto SetCullMode(CullMode mode) -> VulkanPipeline&;
 	};
 }

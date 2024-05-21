@@ -9,7 +9,8 @@ namespace sh::render::impl
 	VulkanPipeline::VulkanPipeline(VkDevice device, VkRenderPass renderPass) :
 		device(device), renderPass(renderPass),
 		pipeline(nullptr), shader(nullptr),
-		viewportX(0), viewportY(0)
+		viewportX(0), viewportY(0),
+		cullMode(CullMode::Back)
 	{
 	}
 
@@ -18,7 +19,8 @@ namespace sh::render::impl
 		device(other.device), renderPass(other.renderPass), shader(other.shader),
 		shaderStages(std::move(other.shaderStages)),
 		bindingDescriptions(std::move(other.bindingDescriptions)),
-		attributeDescriptions(std::move(other.attributeDescriptions))
+		attributeDescriptions(std::move(other.attributeDescriptions)),
+		cullMode(other.cullMode)
 	{
 		other.pipeline = nullptr;
 	}
@@ -159,12 +161,23 @@ namespace sh::render::impl
 		rasterizer.rasterizerDiscardEnable = VK_FALSE;
 		rasterizer.polygonMode = VkPolygonMode::VK_POLYGON_MODE_FILL; //채우기
 		rasterizer.lineWidth = 1.0f;
-		rasterizer.cullMode = VkCullModeFlagBits::VK_CULL_MODE_BACK_BIT;
 		rasterizer.frontFace = VkFrontFace::VK_FRONT_FACE_CLOCKWISE;
 		rasterizer.depthBiasEnable = VK_FALSE;
 		rasterizer.depthBiasConstantFactor = 0.0f; // Optional
 		rasterizer.depthBiasClamp = 0.0f; // Optional
 		rasterizer.depthBiasSlopeFactor = 0.0f; // Optional
+		switch (cullMode)
+		{
+		case CullMode::Off:
+			rasterizer.cullMode = VkCullModeFlagBits::VK_CULL_MODE_NONE;
+			break;
+		case CullMode::Front:
+			rasterizer.cullMode = VkCullModeFlagBits::VK_CULL_MODE_FRONT_BIT;
+			break;
+		case CullMode::Back:
+			rasterizer.cullMode = VkCullModeFlagBits::VK_CULL_MODE_BACK_BIT;
+			break;
+		}
 
 		VkPipelineMultisampleStateCreateInfo multisampling{};
 		multisampling.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
@@ -233,5 +246,11 @@ namespace sh::render::impl
 	auto VulkanPipeline::GetPipeline() const -> VkPipeline
 	{
 		return pipeline;
+	}
+
+	auto VulkanPipeline::SetCullMode(CullMode mode) -> VulkanPipeline&
+	{
+		cullMode = mode;
+		return *this;
 	}
 }

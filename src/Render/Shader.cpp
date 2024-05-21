@@ -56,21 +56,4 @@ namespace sh::render
 		
 		return attrs[it->second];
 	}
-
-	bool Shader::HasUniform(const std::string& name) const
-	{
-		auto it = uniformIdx.find(name);
-		if (it == uniformIdx.end())
-			return false;
-		return true;
-	}
-
-	auto Shader::GetUniform(const std::string& name) const -> std::optional<Data>
-	{
-		auto it = uniformIdx.find(name);
-		if (it == uniformIdx.end())
-			return {};
-
-		return _uniforms[it->second];
-	}
 }
