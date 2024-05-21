@@ -23,18 +23,19 @@ namespace sh::window {
 	using WinHandle = std::pair<_XDisplay*, XWindow>;
 #endif
 
-	class SH_WINDOW_API WindowImpl {
+	class WindowImpl {
 	private:
 		std::queue<Event> events;
 	public:
-		virtual ~WindowImpl();
+		SH_WINDOW_API virtual ~WindowImpl();
 
-		void PushEvent(const Event& e);
-		Event PopEvent();
-		bool IsEmptyEvent() const;
+		SH_WINDOW_API void PushEvent(const Event& e);
+		SH_WINDOW_API Event PopEvent();
+		SH_WINDOW_API bool IsEmptyEvent() const;
 
-		virtual auto Create(const std::string& title, int wsize, int hsize) -> WinHandle = 0;
-		virtual void Close() = 0;
-		virtual void ProcessEvent() = 0;
+		SH_WINDOW_API virtual auto Create(const std::string& title, int wsize, int hsize) -> WinHandle = 0;
+		SH_WINDOW_API virtual void Close() = 0;
+		SH_WINDOW_API virtual void ProcessEvent() = 0;
+		SH_WINDOW_API virtual void SetTitle(std::string_view title) = 0;
 	};
 }

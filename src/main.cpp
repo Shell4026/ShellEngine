@@ -14,6 +14,7 @@
 #include <Core/GC.h>
 #include <cassert>
 #include <fmt/core.h>
+#include "Game/Input.h"
 #include "Game/ResourceManager.hpp"
 #include "Game/World.h"
 #include "Game/GameObject.h"
@@ -82,7 +83,7 @@ int main(int arg, char* args[])
 	
 	sh::window::Window window;
 	window.Create(u8"테스트", 1024, 768);
-	window.SetFps(60);
+	window.SetFps(144);
 
 	auto renderer = sh::render::VulkanRenderer{};
 	renderer.Init(window);
@@ -106,7 +107,7 @@ int main(int arg, char* args[])
 	shader->AddUniform<glm::vec3>("offset", 0);
 	shader->AddUniform<float>("offset2", 0);
 
-	mat->SetVector("offset", glm::vec4(0.f, 0.5f, 0.f, 0.f));
+	mat->SetVector("offset", glm::vec4(0.f, 0.0f, 0.f, 0.f));
 	mat->SetFloat("offset2", 0.f);
 
 	mesh->SetVertex({ 
@@ -126,12 +127,17 @@ int main(int arg, char* args[])
 	}});
 
 	GameObject* obj = world.AddGameObject("Test");
+	GameObject* obj2 = world.AddGameObject("Test2");
 
 	auto transform = obj->transform;
 
 	auto meshRenderer = obj->AddComponent<MeshRenderer>();
 	meshRenderer->SetMesh(*mesh);
 	meshRenderer->SetMaterial(*mat);
+
+	auto meshRenderer2 = obj2->AddComponent<MeshRenderer>();
+	meshRenderer2->SetMesh(*mesh);
+	meshRenderer2->SetMaterial(*mat);
 
 	auto uniformTest = obj->AddComponent<UniformTest>();
 	uniformTest->SetMaterial(*mat);
@@ -147,7 +153,9 @@ int main(int arg, char* args[])
 	{
 		window.ProcessFrame();
 		//fmt::print("deltaTime: {}s\n", window.GetDeltaTime());
-
+		std::string deltaTime = std::to_string(window.GetDeltaTime());
+		deltaTime.erase(deltaTime.begin() + 5, deltaTime.end());
+		window.SetTitle("ShellEngine [DeltaTime:" + deltaTime + "ms]");
 		sh::window::Event e;
 		while (window.PollEvent(e))
 		{
@@ -161,11 +169,11 @@ int main(int arg, char* args[])
 			case sh::window::Event::EventType::MousePressed:
 				if (e.mouseType == sh::window::Event::MouseType::Left)
 				{
-					std::cout << "Left\n";
+
 				}
 				else if (e.mouseType == sh::window::Event::MouseType::Right)
 				{
-					std::cout << "Right\n";
+
 				}
 				else
 				{

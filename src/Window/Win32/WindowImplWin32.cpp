@@ -1,7 +1,8 @@
 ﻿#include "Win32/WindowImplWin32.h"
 
-#include <iostream>
 #include <../Core/Util.h>
+
+#include <iostream>
 
 namespace sh::window {
 	WindowImplWin32::WindowImplWin32() :
@@ -273,5 +274,11 @@ namespace sh::window {
 			return Event::KeyType::NumLock;
 		}
 		return Event::KeyType::Unknown;
+	}
+
+	void WindowImplWin32::SetTitle(std::string_view title)
+	{
+		std::wstring wtitle = sh::core::Util::U8StringToWstring(std::string{ title });
+		SetWindowTextW(window, wtitle.c_str());
 	}
 }

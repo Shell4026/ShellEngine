@@ -90,4 +90,9 @@ namespace sh::window {
 	{
 		return handle;
 	}
+
+	void Window::SetTitle(std::string_view title)
+	{
+		winImpl->SetTitle(title);
+	}
 }
