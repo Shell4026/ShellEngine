@@ -6,6 +6,8 @@
 
 #include "Core/NonCopyable.h"
 
+#include "../vma-src/include/vk_mem_alloc.h"
+
 namespace sh::render
 {
 	namespace impl
@@ -15,8 +17,10 @@ namespace sh::render
 		private:
 			VkDevice device;
 			VkPhysicalDevice gpu;
+			VmaAllocator allocator;
+
 			VkBuffer buffer;
-			VkDeviceMemory bufferMem;
+			VmaAllocation bufferMem;
 			VkBufferCreateInfo bufferInfo;
 
 			void* data;
@@ -24,7 +28,7 @@ namespace sh::render
 		private:
 			auto FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) -> uint32_t;
 		public:
-			SH_RENDER_API VulkanBuffer(VkDevice device, VkPhysicalDevice gpu);
+			SH_RENDER_API VulkanBuffer(VkDevice device, VkPhysicalDevice gpu, VmaAllocator allocator);
 			SH_RENDER_API VulkanBuffer(VulkanBuffer&& other) noexcept;
 			SH_RENDER_API ~VulkanBuffer();
 
@@ -32,7 +36,7 @@ namespace sh::render
 			SH_RENDER_API void Clean();
 			SH_RENDER_API void SetData(const void* data);
 			SH_RENDER_API auto GetBuffer() const -> VkBuffer;
-			SH_RENDER_API auto GetBufferMemory() const -> VkDeviceMemory;
+			SH_RENDER_API auto GetBufferMemory() const -> VmaAllocation;
 		};
 	}
 }

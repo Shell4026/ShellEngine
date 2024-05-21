@@ -51,27 +51,8 @@ namespace sh::game
 		if (mesh == nullptr)
 			return;
 
-		auto it = drawables.find(mesh);
-		if (it == drawables.end())
-		{
-			gameObject.world.meshes.RegisterDestroyNotify(mesh, [&]() {
-				drawables.erase(mesh);
-			});
-
-			if (gameObject.world.renderer.apiType == sh::render::RenderAPI::Vulkan)
-			{
-				auto result = drawables.insert({mesh,
-					std::make_unique<sh::render::VulkanDrawable>
-					(static_cast<const sh::render::VulkanRenderer&>(gameObject.world.renderer)) 
-				});
-
-				auto drawable = static_cast<sh::render::VulkanDrawable*>(result.first->second.get());
-				drawable->Build(mat, mesh);
-				this->drawable = drawable;
-			}
-		}
-		else
-			this->drawable = it->second.get();
+		drawable = std::make_unique<sh::render::VulkanDrawable>(static_cast<render::VulkanRenderer&>(gameObject.world.renderer));
+		drawable->Build(mat, mesh);
 	}
 
 	void MeshRenderer::Awake()
@@ -100,45 +81,39 @@ namespace sh::game
 		if (!sh::core::IsValid(cam))
 			return;
 
-		ubo.proj = cam->GetProjMatrix();
-		ubo.view = cam->GetViewMatrix();
-		ubo.model = gameObject.transform->localToWorldMatrix;
-
 		sh::render::Renderer* renderer = &gameObject.world.renderer;
 		if (renderer->apiType == sh::render::RenderAPI::Vulkan)
 		{
-			std::vector<unsigned char> data;
-			
 			size_t size = mat->GetShader()->uniforms[0].back().offset + mat->GetShader()->uniforms[0].back().size;
-			data.resize(size);
+			uniformCopyData.resize(size);
 			for (const auto& uniform : mat->GetShader()->uniforms[0])
 			{
 				if (uniform.typeName == sh::core::reflection::GetTypeName<glm::mat4>())
 				{
 					auto& m = cam->GetProjMatrix();
 					if (uniform.name == "proj")
-						std::memcpy(data.data() + uniform.offset, &cam->GetProjMatrix()[0], sizeof(glm::mat4));
+						std::memcpy(uniformCopyData.data() + uniform.offset, &cam->GetProjMatrix()[0], sizeof(glm::mat4));
 					else if (uniform.name == "view")
-						std::memcpy(data.data() + uniform.offset, &cam->GetViewMatrix()[0], sizeof(glm::mat4));
+						std::memcpy(uniformCopyData.data() + uniform.offset, &cam->GetViewMatrix()[0], sizeof(glm::mat4));
 					else if (uniform.name == "model")
-						std::memcpy(data.data() + uniform.offset, &gameObject.transform->localToWorldMatrix[0], sizeof(glm::mat4));
+						std::memcpy(uniformCopyData.data() + uniform.offset, &gameObject.transform->localToWorldMatrix[0], sizeof(glm::mat4));
 				}
 				else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec4>())
-					std::memcpy(data.data() + uniform.offset, mat->GetVector(uniform.name), sizeof(glm::vec4));
+					std::memcpy(uniformCopyData.data() + uniform.offset, mat->GetVector(uniform.name), sizeof(glm::vec4));
 				else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec3>())
-					std::memcpy(data.data() + uniform.offset, mat->GetVector(uniform.name), sizeof(glm::vec3));
+					std::memcpy(uniformCopyData.data() + uniform.offset, mat->GetVector(uniform.name), sizeof(glm::vec3));
 				else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec2>())
-					std::memcpy(data.data() + uniform.offset, mat->GetVector(uniform.name), sizeof(glm::vec2));
+					std::memcpy(uniformCopyData.data() + uniform.offset, mat->GetVector(uniform.name), sizeof(glm::vec2));
 				else if (uniform.typeName == sh::core::reflection::GetTypeName<float>())
 				{
 					float value = mat->GetFloat(uniform.name);
-					std::memcpy(data.data() + uniform.offset, &value, sizeof(float));
+					std::memcpy(uniformCopyData.data() + uniform.offset, &value, sizeof(float));
 				}
 			}
 
 			int frameIdx = static_cast<sh::render::VulkanRenderer*>(renderer)->GetCurrentFrame();
-			static_cast<sh::render::VulkanDrawable*>(drawable)->SetUniformData(frameIdx, data.data());
+			static_cast<sh::render::VulkanDrawable*>(drawable.get())->SetUniformData(frameIdx, uniformCopyData.data());
 		}
-		gameObject.world.renderer.PushDrawAble(drawable);
+		gameObject.world.renderer.PushDrawAble(drawable.get());
 	}
 }

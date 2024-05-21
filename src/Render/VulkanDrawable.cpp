@@ -15,7 +15,7 @@ namespace sh::render
 {
 	VulkanDrawable::VulkanDrawable(const VulkanRenderer& renderer) :
 		renderer(renderer), 
-		indexBuffer(renderer.GetDevice(), renderer.GetGPU()),
+		indexBuffer(renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator()),
 		cmd(renderer.GetDevice(), renderer.GetCommandPool()),
 		buffers(vertexBuffers),
 		pipelineLayout(nullptr), mat(nullptr), mesh(nullptr),
@@ -68,7 +68,7 @@ namespace sh::render
 			AddAttributeDescription(attrDesc);
 
 		size_t size = sizeof(glm::vec3) * mesh->GetVertexCount();
-		impl::VulkanBuffer stagingBuffer1{ renderer.GetDevice(), renderer.GetGPU() };
+		impl::VulkanBuffer stagingBuffer1{ renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() };
 		stagingBuffer1.Create(size, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VK_SHARING_MODE_EXCLUSIVE,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -80,7 +80,7 @@ namespace sh::render
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 		size_t sizeIndices = sizeof(uint32_t) * mesh->GetIndices().size();
-		impl::VulkanBuffer stagingBuffer2{ renderer.GetDevice(), renderer.GetGPU() };
+		impl::VulkanBuffer stagingBuffer2{ renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() };
 		stagingBuffer2.Create(sizeIndices, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VK_SHARING_MODE_EXCLUSIVE,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -157,7 +157,7 @@ namespace sh::render
 		vertexBuffers.clear();
 		indexBuffer.Clean();
 
-		vertexBuffers.push_back(impl::VulkanBuffer{ renderer.GetDevice(), renderer.GetGPU() });
+		vertexBuffers.push_back(impl::VulkanBuffer{ renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() });
 		CreateVertexBuffer();
 		cmd.Clean();
 
@@ -224,13 +224,13 @@ namespace sh::render
 				AddBindingDescription(bindingDesc).
 				AddAttributeDescription(attrDesc);
 			
-			impl::VulkanBuffer stagingBuffer{ renderer.GetDevice(), renderer.GetGPU() };
+			impl::VulkanBuffer stagingBuffer{ renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() };
 			stagingBuffer.Create(size, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 				VK_SHARING_MODE_EXCLUSIVE,
 				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 			stagingBuffer.SetData(data);
 
-			vertexBuffers.push_back(impl::VulkanBuffer{renderer.GetDevice(), renderer.GetGPU()});
+			vertexBuffers.push_back(impl::VulkanBuffer{renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() });
 			vertexBuffers.back().Create(size,
 				VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 				VK_SHARING_MODE_EXCLUSIVE,
@@ -270,7 +270,7 @@ namespace sh::render
 
 		for (int i = 0; i < VulkanRenderer::MAX_FRAME_DRAW; ++i)
 		{
-			uniformBuffers.push_back(impl::VulkanBuffer{ renderer.GetDevice(), renderer.GetGPU() });
+			uniformBuffers.push_back(impl::VulkanBuffer{ renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() });
 			size_t size = mat->GetShader()->uniforms[0].back().offset + mat->GetShader()->uniforms[0].back().size;
 			result = uniformBuffers.back().Create(size,
 				VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,

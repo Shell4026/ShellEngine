@@ -22,5 +22,6 @@ namespace sh::window {
 		auto Create(const std::string& title, int wsize, int hsize) -> WinHandle override;
 		void Close() override;
 		void ProcessEvent() override;
+		void SetTitle(std::string_view title) override;
 	};
 }

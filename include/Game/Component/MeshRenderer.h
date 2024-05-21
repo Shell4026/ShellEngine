@@ -18,22 +18,14 @@ namespace sh::game
 	{
 		SCLASS(MeshRenderer)
 	private:
-		struct alignas(16) Ubo
-		{
-			glm::mat4 model;
-			glm::mat4 view;
-			glm::mat4 proj;
-			glm::vec3 offset;
-			float offset2;
-		} ubo;
-	private:
 		PROPERTY(mesh)
 		sh::render::Mesh* mesh;
 		PROPERTY(mat)
 		sh::render::Material* mat;
-		static std::unordered_map<sh::render::Mesh*, std::unique_ptr<sh::render::IDrawable>> drawables;
 
-		sh::render::IDrawable* drawable;
+		std::unique_ptr<sh::render::IDrawable> drawable;
+
+		std::vector<unsigned char> uniformCopyData;
 	private:
 		void CreateDrawable();
 	public:
@@ -50,6 +42,4 @@ namespace sh::game
 		SH_GAME_API void Start() override;
 		SH_GAME_API void Update() override;
 	};
-
-	std::unordered_map<sh::render::Mesh*, std::unique_ptr<sh::render::IDrawable>> MeshRenderer::drawables{};
 }

@@ -6,6 +6,7 @@
 #include <Core/NonCopyable.h>
 #include "VulkanImpl/VulkanConfig.h"
 
+#include "../vma-src/include/vk_mem_alloc.h"
 #include "glm/mat4x4.hpp"
 
 #include <string>
@@ -67,6 +68,8 @@ namespace sh::render {
 		int currentFrame;
 		uint32_t descriptorPoolSize;
 
+		VmaAllocator allocator;
+
 		bool isInit : 1;
 		bool bPause : 1;
 		bool bFindValidationLayer : 1;
@@ -100,6 +103,9 @@ namespace sh::render {
 		auto CreateDescriptorPool() -> VkResult;
 		void DestroyDescriptorPool();
 
+		void CreateAllocator();
+		void DestroyAllocator();
+
 		void PrintLayer();
 	public:
 		SH_RENDER_API VulkanRenderer();
@@ -123,5 +129,6 @@ namespace sh::render {
 		SH_RENDER_API auto GetCurrentFrame() const -> int;
 		SH_RENDER_API auto GetWidth() const -> uint32_t override;
 		SH_RENDER_API auto GetHeight() const -> uint32_t override;
+		SH_RENDER_API auto GetAllocator() const -> VmaAllocator;
 	};
 }//namespace

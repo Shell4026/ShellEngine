@@ -60,7 +60,7 @@ namespace sh::render
 
 		for (int i = 0; i < VulkanRenderer::MAX_FRAME_DRAW; ++i)
 		{
-			uniformBuffers.push_back(impl::VulkanBuffer{ renderer.GetDevice(), renderer.GetGPU() });
+			uniformBuffers.push_back(impl::VulkanBuffer{ renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() });
 			result = uniformBuffers.back().Create(dataSize,
 				VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
 				VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,

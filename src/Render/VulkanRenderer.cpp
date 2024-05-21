@@ -59,6 +59,7 @@ namespace sh::render {
 
 		framebuffers.clear();
 		surface.reset();
+		DestroyAllocator();
 		DestroyDevice();
 
 		if (bEnableValidationLayers)
@@ -352,6 +353,28 @@ namespace sh::render {
 		}
 	}
 
+	void VulkanRenderer::CreateAllocator()
+	{
+		VmaAllocatorCreateInfo info{};
+		info.instance = instance;
+		info.device = device;
+		info.physicalDevice = gpu;
+		info.flags = VmaAllocatorCreateFlagBits::VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
+		info.preferredLargeHeapBlockSize = 0;
+		info.vulkanApiVersion = VK_API_VERSION_1_3;
+		auto result = vmaCreateAllocator(&info, &allocator);
+		assert(result == VkResult::VK_SUCCESS);
+	}
+
+	void VulkanRenderer::DestroyAllocator()
+	{
+		if (allocator)
+		{
+			vmaDestroyAllocator(allocator);
+			allocator = nullptr;
+		}
+	}
+
 	bool VulkanRenderer::Init(sh::window::Window& win)
 	{
 		window = &win;
@@ -437,6 +460,8 @@ namespace sh::render {
 		vkGetDeviceQueue(device, surfaceQueueIndex, 0, &surfaceQueue);
 		assert(surfaceQueue);
 
+		//메모리 할당자 생성(VMA라이브러리)
+		CreateAllocator();
 
 		//스왑체인 생성
 		surface->CreateSwapChain(gpu, graphicsQueueIndex, surfaceQueueIndex);
@@ -485,7 +510,7 @@ namespace sh::render {
 		poolInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 		poolInfo.poolSizeCount = 1;
 		poolInfo.pPoolSizes = &poolSize;
-		poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAME_DRAW);
+		poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAME_DRAW) * 2;
 
 		auto result = vkCreateDescriptorPool(device, &poolInfo, nullptr, &descPool);
 		assert(result == VK_SUCCESS);
@@ -707,6 +732,10 @@ namespace sh::render {
 	auto VulkanRenderer::GetHeight() const -> uint32_t
 	{
 		return surface->GetSwapChainSize().height;
+	}
+	auto VulkanRenderer::GetAllocator() const -> VmaAllocator
+	{
+		return allocator;
 	}
 }//namespace
 
