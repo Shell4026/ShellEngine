@@ -10,7 +10,7 @@
 #include "Render/VulkanRenderer.h"
 #include "Render/VulkanDrawable.h"
 
-#include <iostream>
+#include <cstring>
 #include <algorithm>
 
 namespace sh::game
