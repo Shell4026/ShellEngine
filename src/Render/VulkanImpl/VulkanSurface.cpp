@@ -57,7 +57,7 @@ namespace sh::render::impl
 		result = vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, surface, &presentCount, nullptr);
 		assert(result == VkResult::VK_SUCCESS);
 
-		details.presentModes.resize(formatCount);
+		details.presentModes.resize(presentCount);
 		result = vkGetPhysicalDeviceSurfacePresentModesKHR(gpu, surface, &presentCount, details.presentModes.data());
 		assert(result == VkResult::VK_SUCCESS);
 	}
