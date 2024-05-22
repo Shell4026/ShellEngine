@@ -35,6 +35,21 @@ namespace sh::core {
 			return Platform::Unknown;
 #endif
 		}
+
+		static inline auto CombineHash(size_t v1, size_t v2) -> size_t
+		{
+			return v1 ^= v2 + 0x9e3779b9 + (v1 << 6) + (v1 >> 2);
+		}
+
+		struct PairHash {
+			template <class T1, class T2>
+			std::size_t operator () (const std::pair<T1, T2>& p) const {
+				auto h1 = std::hash<T1>{}(p.first);
+				auto h2 = std::hash<T2>{}(p.second);
+
+				return CombineHash(h1, h2);
+			}
+		};
 	};
 
 	SH_CORE_API bool IsValid(SObject* obj);
