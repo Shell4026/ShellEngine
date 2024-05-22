@@ -25,19 +25,6 @@
 
 #include <iostream>
 
-template<typename T>
-struct VectorDepth
-{
-	static const int value = 0;
-};
-
-template<typename T>
-struct VectorDepth<std::vector<T>>
-{
-	static const int value = VectorDepth<T>::value + 1;
-};
-
-
 class NoBase {
 public:
 	int a = 123;
@@ -69,13 +56,15 @@ public:
 		name(name)
 	{
 	}
+	~Derived()
+	{
+
+	}
 	void DerivedFunction()
 	{
 		std::cout << "Derived!!\n"; 
 	}
 };
-
-
 
 int main(int arg, char* args[]) 
 {
@@ -96,7 +85,7 @@ int main(int arg, char* args[])
 	sh::render::ShaderLoader loader{ &builder };
 
 	auto shader = world.shaders.AddResource("Triangle", loader.LoadShader<sh::render::VulkanShader>("vert.spv", "frag.spv"));
-	auto mat = world.materials.AddResource("Material", sh::render::Material{ renderer, shader });
+	auto mat = world.materials.AddResource("Material", sh::render::Material{ shader });
 	auto mesh = world.meshes.AddResource("Mesh", sh::render::Mesh{});
 
 	shader->AddAttribute<glm::vec4>("color", 1);

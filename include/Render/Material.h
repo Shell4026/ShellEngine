@@ -20,8 +20,6 @@ namespace sh::render
 	{
 		SCLASS(Material)
 	private:
-		const Renderer& renderer;
-
 		PROPERTY(shader)
 		Shader* shader;
 
@@ -30,8 +28,8 @@ namespace sh::render
 		std::unordered_map<std::string, glm::mat4> mats;
 		std::unordered_map<std::string, std::vector<glm::vec4>> vectorArrs;
 	public:
-		SH_RENDER_API Material(const Renderer& renderer);
-		SH_RENDER_API Material(const Renderer& renderer, Shader* shader);
+		SH_RENDER_API Material();
+		SH_RENDER_API Material(Shader* shader);
 		SH_RENDER_API ~Material();
 		SH_RENDER_API Material(Material&& other) noexcept;
 

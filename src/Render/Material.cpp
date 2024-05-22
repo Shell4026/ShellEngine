@@ -7,13 +7,11 @@
 
 namespace sh::render
 {
-	Material::Material(const Renderer& renderer) : 
-		renderer(renderer),
+	Material::Material() : 
 		shader(nullptr)
 	{
 	}
-	Material::Material(const Renderer& renderer, Shader* shader) :
-		renderer(renderer),
+	Material::Material(Shader* shader) :
 		shader(shader)
 	{
 	}
@@ -23,7 +21,6 @@ namespace sh::render
 	}
 
 	Material::Material(Material&& other) noexcept :
-		renderer(other.renderer),
 		shader(other.shader),
 		vectors(std::move(other.vectors)),
 		vectorArrs(std::move(other.vectorArrs))
