@@ -114,6 +114,7 @@ int main(int arg, char* args[])
 		{0.0f, 0.0f, 1.0f, 1.0f},
 		{1.0f, 1.0f, 1.0f, 1.0f}
 	}});
+	mesh->Build(renderer);
 
 	GameObject* obj = world.AddGameObject("Test");
 	GameObject* obj2 = world.AddGameObject("Test2");

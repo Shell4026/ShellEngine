@@ -28,7 +28,7 @@ namespace sh::game
 
 		std::unordered_map<std::string, std::unique_ptr<T>> resources;
 
-		std::unordered_map<T*, std::vector<std::function<void()>>> resourceDestroyNotifies;
+		std::unordered_map<T*, std::unordered_map<void*, std::vector<std::function<void()>>>> resourceDestroyNotifies;
 	public:
 		ResourceManager(sh::core::GC& gc, sh::render::Renderer& renderer) :
 			gc(gc), renderer(renderer)
@@ -47,8 +47,11 @@ namespace sh::game
 		{
 			for (auto& resourceNotify : resourceDestroyNotifies)
 			{
-				for (auto& notify : resourceNotify.second)
-					notify();
+				for (auto requester : resourceNotify.second)
+				{
+					for (auto& notify : requester.second)
+						notify();
+				}
 			}
 			resources.clear();
 			resourceDestroyNotifies.clear();
@@ -112,11 +115,13 @@ namespace sh::game
 			auto itNotify = resourceDestroyNotifies.find(it->second.get());
 			if (itNotify != resourceDestroyNotifies.end())
 			{
-				for (auto& func : itNotify->second)
-					func();
+				for (auto requester : itNotify->second)
+				{
+					for(auto& func : requester.second)
+						func();
+				}
 			}
 			resourceDestroyNotifies.erase(itNotify);
-			it->second.reset();
 			resources.erase(it);
 
 			return true;
@@ -131,13 +136,39 @@ namespace sh::game
 			return it->second.get();
 		}
 
-		void RegisterDestroyNotify(T* resource, const std::function<void()>& func)
+		void RegisterDestroyNotify(void* requester, T* resource, const std::function<void()>& func)
 		{
 			auto it = resourceDestroyNotifies.find(resource);
 			if (it == resourceDestroyNotifies.end())
 			{
-				resourceDestroyNotifies.insert({ resource, std::vector<std::function<void()>>{func} });
+				std::unordered_map<void*, std::vector<std::function<void()>>> requesters;
+				requesters.insert({ requester, std::vector<std::function<void()>>{func} });
+				resourceDestroyNotifies.insert({ resource, std::move(requesters)});
 			}
+			else
+			{
+				auto requsterIt = it->second.find(requester);
+				if (requsterIt == it->second.end())
+				{
+					it->second.insert({ requester, std::vector<std::function<void()>>{func} });
+				}
+				else
+				{
+					requsterIt->second.push_back(func);
+				}
+			}
+		}
+		void DestroyNotify(void* requester, T* resource)
+		{
+			auto it = resourceDestroyNotifies.find(resource);
+			if (it == resourceDestroyNotifies.end())
+				return;
+
+			auto requesterIt = it->second.find(requester);
+			if (requesterIt == it->second.end())
+				return;
+
+			requesterIt->second.clear();
 		}
 	};
 }

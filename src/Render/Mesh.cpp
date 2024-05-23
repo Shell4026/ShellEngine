@@ -1,6 +1,7 @@
 ﻿#include "Mesh.h"
 
 #include "VulkanRenderer.h"
+#include "VulkanVertexBuffer.h"
 
 namespace sh::render
 {
@@ -76,8 +77,22 @@ namespace sh::render
 		}
 	}
 
-	auto Mesh::GetIndices() -> const std::vector<uint32_t>&
+	auto Mesh::GetIndices() const -> const std::vector<uint32_t>&
 	{
 		return indices;
+	}
+
+	void Mesh::Build(const Renderer& renderer)
+	{
+		if (renderer.apiType == RenderAPI::Vulkan)
+		{
+			buffer = std::make_unique<VulkanVertexBuffer>(static_cast<const VulkanRenderer&>(renderer));
+			buffer->Create(*this);
+		}
+	}
+
+	auto Mesh::GetVertexBuffer() const -> VertexBuffer*
+	{
+		return buffer.get();
 	}
 }

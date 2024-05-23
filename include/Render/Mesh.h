@@ -16,6 +16,9 @@
 
 namespace sh::render
 {
+	class Renderer;
+	class VertexBuffer;
+
 	class Mesh : public sh::core::SObject, public sh::core::INonCopyable
 	{
 		SCLASS(Mesh)
@@ -24,6 +27,8 @@ namespace sh::render
 		std::vector<uint32_t> indices;
 
 		std::vector<std::unique_ptr<ShaderAttributeBase>> attrs;
+
+		std::unique_ptr<VertexBuffer> buffer;
 	public:
 		const std::vector< std::unique_ptr<ShaderAttributeBase>>& attributes;
 	public:
@@ -43,7 +48,11 @@ namespace sh::render
 		SH_RENDER_API void SetIndices(const std::vector<uint32_t >&indices);
 		SH_RENDER_API void SetIndices(std::vector<uint32_t>&& indices);
 		SH_RENDER_API void SetIndices(const std::initializer_list<uint32_t>& indices);
-		SH_RENDER_API auto GetIndices() -> const std::vector<uint32_t>&;
+		SH_RENDER_API auto GetIndices() const -> const std::vector<uint32_t>&;
+
+		SH_RENDER_API void Build(const Renderer& renderer);
+
+		SH_RENDER_API auto GetVertexBuffer() const -> VertexBuffer*;
 
 		template<typename T>
 		void SetAttribute(const ShaderAttribute<T>& attr);

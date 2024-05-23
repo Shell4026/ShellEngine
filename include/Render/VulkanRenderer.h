@@ -74,6 +74,7 @@ namespace sh::render {
 		bool bPause : 1;
 		bool bFindValidationLayer : 1;
 		const bool bEnableValidationLayers : 1;
+		bool bReCreateDescriptorPool : 1;
 	private:
 		auto CreateInstance(const std::vector<const char*>& requestedLayer, const std::vector<const char*>& requestedExtension)->VkResult;
 		void DestroyInstance();
@@ -120,9 +121,12 @@ namespace sh::render {
 		SH_RENDER_API void Render(float deltaTime) override;
 		SH_RENDER_API void Pause(bool b) override;
 
+		SH_RENDER_API void ReAllocateDesriptorPool();
+
 		SH_RENDER_API auto GetDevice() const -> VkDevice;
 		SH_RENDER_API auto GetGPU() const -> VkPhysicalDevice;
 		SH_RENDER_API auto GetCommandPool() const -> VkCommandPool;
+		SH_RENDER_API auto GetCommandBuffer() const -> VkCommandBuffer;
 		SH_RENDER_API auto GetGraphicsQueue() const -> VkQueue;
 		SH_RENDER_API auto GetMainFramebuffer() const -> const Framebuffer* override;
 		SH_RENDER_API auto GetDescriptorPool() const -> VkDescriptorPool;

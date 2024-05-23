@@ -2,6 +2,8 @@
 
 #include "Export.h"
 
+#include "Core/Reflection.hpp"
+
 #include <initializer_list>
 #include <vector>
 #include <string>
@@ -14,8 +16,11 @@ namespace sh::render
 	{
 	private:
 		std::string attributeName;
+	protected:
+		std::string mTypeName;
 	public:
 		const std::string& name;
+		const std::string& typeName;
 		const bool isInteger;
 	public:
 		SH_RENDER_API ShaderAttributeBase(std::string_view name, bool isInteger = false);
@@ -58,6 +63,7 @@ namespace sh::render
 		ShaderAttributeBase(name, std::is_integral_v<T>), 
 		stride(sizeof(T))
 	{
+		mTypeName = core::reflection::GetTypeName<T>();
 	}
 	template<typename T>
 	inline ShaderAttribute<T>::ShaderAttribute(std::string_view name, std::initializer_list<T>&& datas) :
@@ -65,30 +71,35 @@ namespace sh::render
 		stride(sizeof(T))
 	{
 		SetData(datas);
+		mTypeName = core::reflection::GetTypeName<T>();
 	}
 	template<typename T>
 	inline ShaderAttribute<T>::ShaderAttribute(std::string_view name, const std::vector<T>& data) :
 		ShaderAttributeBase(name, std::is_integral_v<T>),
 		data(data), stride(sizeof(T))
 	{
+		mTypeName = core::reflection::GetTypeName<T>();
 	}
 	template<typename T>
 	inline ShaderAttribute<T>::ShaderAttribute(std::string_view name, std::vector<T>&& data) :
 		ShaderAttributeBase(name, std::is_integral_v<T>),
 		data(std::move(data)), stride(sizeof(T))
 	{
+		mTypeName = core::reflection::GetTypeName<T>();
 	}
 	template<typename T>
 	inline ShaderAttribute<T>::ShaderAttribute(const ShaderAttribute& other) :
 		ShaderAttributeBase(other),
 		data(other.data), stride(sizeof(T))
 	{
+		mTypeName = other.typeName;
 	}
 	template<typename T>
 	inline ShaderAttribute<T>::ShaderAttribute(ShaderAttribute&& other) noexcept :
 		ShaderAttributeBase(std::move(other)),
 		data(std::move(other.data)), stride(sizeof(T))
 	{
+		mTypeName = std::move(other.typeName);
 	}
 	template<typename T>
 	inline void ShaderAttribute<T>::SetData(std::initializer_list<T>&& datas)

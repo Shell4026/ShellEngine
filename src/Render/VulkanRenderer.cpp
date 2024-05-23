@@ -32,7 +32,9 @@ namespace sh::render {
 		graphicsQueue(nullptr), surfaceQueue(nullptr),
 		debugMessenger(nullptr), validationLayerName("VK_LAYER_KHRONOS_validation"),
 		currentFrame(0),
-		isInit(false), bPause(false), bFindValidationLayer(false), bEnableValidationLayers(sh::core::Util::IsDebug())
+		isInit(false), bPause(false), bFindValidationLayer(false), bEnableValidationLayers(sh::core::Util::IsDebug()),
+		allocator(nullptr), 
+		descPool(nullptr), descriptorPoolSize(MAX_FRAME_DRAW)
 	{
 	}
 
@@ -510,7 +512,7 @@ namespace sh::render {
 		poolInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
 		poolInfo.poolSizeCount = 1;
 		poolInfo.pPoolSizes = &poolSize;
-		poolInfo.maxSets = static_cast<uint32_t>(MAX_FRAME_DRAW) * 2;
+		poolInfo.maxSets = descriptorPoolSize;
 
 		auto result = vkCreateDescriptorPool(device, &poolInfo, nullptr, &descPool);
 		assert(result == VK_SUCCESS);
@@ -622,6 +624,10 @@ namespace sh::render {
 				{
 					VulkanDrawable* drawable = static_cast<VulkanDrawable*>(drawList.front());
 					drawList.pop();
+					if (bReCreateDescriptorPool == true)
+					{
+						drawable->Build(drawable->GetMesh(), drawable->GetMaterial());
+					}
 
 					Mesh* mesh = drawable->GetMesh();
 					Material* mat = drawable->GetMaterial();
@@ -649,17 +655,8 @@ namespace sh::render {
 					scissor.extent = surface->GetSwapChainSize();
 					vkCmdSetScissor(buffer, 0, 1, &scissor);
 
-					std::vector<VkBuffer> vertexBuffers;
-					std::vector<VkDeviceSize> offsets;
-					vertexBuffers.resize(drawable->buffers.size());
-					offsets.resize(drawable->buffers.size());
-					for (int i = 0; i < vertexBuffers.size(); ++i)
-					{
-						vertexBuffers[i] = drawable->buffers[i].GetBuffer();
-						offsets[i] = 0;
-					}
-					vkCmdBindVertexBuffers(buffer, 0, vertexBuffers.size(), vertexBuffers.data(), offsets.data());
-					vkCmdBindIndexBuffer(buffer, drawable->GetIndexBuffer().GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
+					mesh->GetVertexBuffer()->Bind();
+
 					VkDescriptorSet descriptorSets[] = { drawable->GetDescriptorSet(currentFrame) };
 					vkCmdBindDescriptorSets(buffer,
 						VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, 
@@ -685,11 +682,20 @@ namespace sh::render {
 		vkQueuePresentKHR(surfaceQueue, &presentInfo);
 
 		currentFrame = (currentFrame + 1) % MAX_FRAME_DRAW;
+		bReCreateDescriptorPool = false;
 	}
 
 	void VulkanRenderer::Pause(bool b)
 	{
 		bPause = b;
+	}
+
+	void VulkanRenderer::ReAllocateDesriptorPool()
+	{
+		descriptorPoolSize *= 2;
+		DestroyDescriptorPool();
+		CreateDescriptorPool();
+		bReCreateDescriptorPool = true;
 	}
 
 	auto VulkanRenderer::GetDevice() const -> VkDevice
@@ -710,6 +716,10 @@ namespace sh::render {
 	auto VulkanRenderer::GetCommandPool() const -> VkCommandPool
 	{
 		return cmdPool;
+	}
+	auto VulkanRenderer::GetCommandBuffer() const -> VkCommandBuffer
+	{
+		return cmdBuffers[currentFrame]->GetCommandBuffer();
 	}
 
 	auto VulkanRenderer::GetGraphicsQueue() const -> VkQueue

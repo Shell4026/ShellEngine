@@ -6,6 +6,7 @@ namespace sh::render
 		attributes(attrs), uniforms(_uniforms),
 		id(id), type(type) 
 	{
+		AddAttribute<glm::vec3>("vertex", 0);
 	}
 
 

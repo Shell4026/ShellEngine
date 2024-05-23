@@ -8,6 +8,8 @@
 #include "Render/Material.h"
 #include "Render/Mesh.h"
 
+#include "Core/Util.h"
+
 #include "glm/mat4x4.hpp"
 #include <unordered_map>
 #include <memory>
@@ -18,11 +20,9 @@ namespace sh::game
 	{
 		SCLASS(MeshRenderer)
 	private:
-		PROPERTY(mesh)
 		sh::render::Mesh* mesh;
-		PROPERTY(mat)
 		sh::render::Material* mat;
-
+		
 		std::unique_ptr<sh::render::IDrawable> drawable;
 
 		std::vector<unsigned char> uniformCopyData;

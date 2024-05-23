@@ -4,7 +4,6 @@
 
 #include "GameObject.h"
 
-#include "Core/Util.h"
 #include "Core/Reflection.hpp"
 
 #include "Render/VulkanRenderer.h"
@@ -23,11 +22,16 @@ namespace sh::game
 
 	MeshRenderer::~MeshRenderer()
 	{
-
+		if (core::IsValid(this->mesh))
+			gameObject.world.meshes.DestroyNotify(this, this->mesh);
+		if (core::IsValid(this->mat))
+			gameObject.world.materials.DestroyNotify(this, this->mat);
 	}
 
 	void MeshRenderer::SetMesh(sh::render::Mesh& mesh)
 	{
+		if(core::IsValid(this->mesh))
+			gameObject.world.meshes.DestroyNotify(this, this->mesh);
 		this->mesh = &mesh;
 	}
 
@@ -38,6 +42,8 @@ namespace sh::game
 
 	void MeshRenderer::SetMaterial(sh::render::Material& mat)
 	{
+		if (core::IsValid(this->mat))
+			gameObject.world.materials.DestroyNotify(this, this->mat);
 		this->mat = &mat;
 	}
 
@@ -48,11 +54,31 @@ namespace sh::game
 
 	void MeshRenderer::CreateDrawable()
 	{
-		if (mesh == nullptr)
+		if (!core::IsValid(mesh))
+		{
+			mesh = nullptr;
 			return;
+		}
+		if (!core::IsValid(mat))
+		{
+			mat = nullptr;
+			return;
+		}
 
-		drawable = std::make_unique<sh::render::VulkanDrawable>(static_cast<render::VulkanRenderer&>(gameObject.world.renderer));
-		drawable->Build(mat, mesh);
+		if (gameObject.world.renderer.apiType == sh::render::RenderAPI::Vulkan)
+		{
+			render::VulkanRenderer& renderer = static_cast<render::VulkanRenderer&>(gameObject.world.renderer);
+			drawable = std::make_unique<sh::render::VulkanDrawable>(renderer);
+			drawable->Build(mesh, mat);
+		}
+		gameObject.world.meshes.RegisterDestroyNotify(this, mesh, [&]()
+		{
+			drawable.reset();
+		});
+		gameObject.world.materials.RegisterDestroyNotify(this, mat, [&]()
+		{
+			drawable.reset();
+		});
 	}
 
 	void MeshRenderer::Awake()
@@ -73,7 +99,6 @@ namespace sh::game
 			return;
 		if (!sh::core::IsValid(mat->GetShader()))
 			return;
-
 		if (drawable == nullptr)
 			return;
 
