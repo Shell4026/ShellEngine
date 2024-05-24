@@ -2,7 +2,7 @@
 
 #include "Export.h"
 
-#include "Shader.h"
+#include "Render/Shader.h"
 
 #include <vector>
 #include <string_view>
@@ -12,7 +12,7 @@
 
 namespace sh::core { class FileLoader; }
 
-namespace sh::render 
+namespace sh::game 
 {
 	class ShaderBuilder;
 
@@ -22,14 +22,14 @@ namespace sh::render
 
 		ShaderBuilder* builder;
 	public:
-		SH_RENDER_API ShaderLoader(ShaderBuilder* builder);
-		SH_RENDER_API ~ShaderLoader();
+		SH_GAME_API ShaderLoader(ShaderBuilder* builder);
+		SH_GAME_API ~ShaderLoader();
 
-		SH_RENDER_API auto LoadShader(std::string_view vertexShader, std::string_view fragShader) -> std::unique_ptr<Shader>;
+		SH_GAME_API auto LoadShader(std::string_view vertexShader, std::string_view fragShader) -> std::unique_ptr<render::Shader>;
 		template<typename T>
-		auto LoadShader(std::string_view vertexShader, std::string_view fragShader) -> std::enable_if_t<std::is_base_of_v<Shader, T>, std::unique_ptr<T>>
+		auto LoadShader(std::string_view vertexShader, std::string_view fragShader) -> std::enable_if_t<std::is_base_of_v<render::Shader, T>, std::unique_ptr<T>>
 		{
-			std::unique_ptr<Shader> shader{ LoadShader(vertexShader, fragShader) };
+			std::unique_ptr<render::Shader> shader{ LoadShader(vertexShader, fragShader) };
 			if (shader.get() == nullptr)
 				return nullptr;
 

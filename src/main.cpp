@@ -4,9 +4,7 @@
 
 #include "Window/Window.h"
 #include "Render/VulkanShader.h"
-#include "Render/VulkanShaderBuilder.h"
 #include "Render/VulkanRenderer.h"
-#include "Render/ShaderLoader.h"
 #include "Render/Material.h"
 #include "Render/Mesh.h"
 #include "Core/Reflection.hpp"
@@ -16,6 +14,9 @@
 #include <fmt/core.h>
 #include "Game/Input.h"
 #include "Game/ResourceManager.hpp"
+#include "Game/VulkanShaderBuilder.h"
+#include "Game/ShaderLoader.h"
+#include "Game/TextureLoader.h"
 #include "Game/World.h"
 #include "Game/GameObject.h"
 #include "Game/Component/Transform.h"
@@ -81,12 +82,16 @@ int main(int arg, char* args[])
 
 	World world{ renderer, gc };
 	
-	sh::render::VulkanShaderBuilder builder{ renderer };
-	sh::render::ShaderLoader loader{ &builder };
+	VulkanShaderBuilder builder{ renderer };
+	ShaderLoader loader{ &builder };
+	TextureLoader texLoader;
 
 	auto shader = world.shaders.AddResource("Triangle", loader.LoadShader<sh::render::VulkanShader>("vert.spv", "frag.spv"));
 	auto mat = world.materials.AddResource("Material", sh::render::Material{ shader });
 	auto mesh = world.meshes.AddResource("Mesh", sh::render::Mesh{});
+	auto tex = world.textures.AddResource("Texture0", texLoader.Load("textures/버터고양이.jpg"));
+
+	tex->Build(renderer);
 
 	shader->AddAttribute<glm::vec4>("color", 1);
 

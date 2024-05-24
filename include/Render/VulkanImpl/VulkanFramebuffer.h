@@ -1,8 +1,9 @@
 ﻿#pragma once
 
 #include "Export.h"
-#include "Framebuffer.h"
-#include "VulkanImpl/VulkanConfig.h"
+#include "VulkanConfig.h"
+
+#include "Render/Framebuffer.h"
 
 #include <vector>
 

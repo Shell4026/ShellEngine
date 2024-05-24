@@ -1,15 +1,15 @@
 ﻿#include "VulkanShaderBuilder.h"
 
-#include "VulkanRenderer.h"
-#include "VulkanShader.h"
-#include "VulkanPipeline.h"
-#include "VulkanImpl/VulkanFramebuffer.h"
+#include "Render/VulkanRenderer.h"
+#include "Render/VulkanShader.h"
+#include "Render/VulkanImpl/VulkanPipeline.h"
+#include "Render/VulkanImpl/VulkanFramebuffer.h"
 
 #include <cassert>
 
-namespace sh::render
+namespace sh::game
 {
-	VulkanShaderBuilder::VulkanShaderBuilder(VulkanRenderer& renderer) :
+	VulkanShaderBuilder::VulkanShaderBuilder(render::VulkanRenderer& renderer) :
 		renderer(renderer)
 	{
 	}
@@ -18,7 +18,7 @@ namespace sh::render
 	{
 	}
 
-	auto VulkanShaderBuilder::Build() -> std::unique_ptr<Shader>
+	auto VulkanShaderBuilder::Build() -> std::unique_ptr<render::Shader>
 	{
 		assert(renderer.GetDevice() != nullptr);
 		VkShaderModule vertShader{ nullptr }, fragShader{ nullptr };
@@ -45,9 +45,9 @@ namespace sh::render
 		if (result != VkResult::VK_SUCCESS)
 			return nullptr;
 
-		auto retShader = std::make_unique<VulkanShader>(GetNextId(), renderer.GetDevice());
+		auto retShader = std::make_unique<render::VulkanShader>(GetNextId(), renderer.GetDevice());
 
-		VulkanShader* shader = static_cast<VulkanShader*>(retShader.get());
+		render::VulkanShader* shader = static_cast<render::VulkanShader*>(retShader.get());
 		shader->SetVertexShader(vertShader);
 		shader->SetFragmentShader(fragShader);
 

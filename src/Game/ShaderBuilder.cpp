@@ -1,6 +1,6 @@
 ﻿#include "ShaderBuilder.h"
 
-namespace sh::render
+namespace sh::game
 {
 	int ShaderBuilder::idCount = 0;
 

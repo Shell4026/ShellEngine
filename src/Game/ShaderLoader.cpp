@@ -1,10 +1,12 @@
 ﻿#include "ShaderLoader.h"
 
-#include "Core/FileLoader.h"
-#include "VulkanShader.h"
 #include "ShaderBuilder.h"
 
-namespace sh::render
+#include "Core/FileLoader.h"
+
+#include "render/VulkanShader.h"
+
+namespace sh::game
 {
 	ShaderLoader::ShaderLoader(ShaderBuilder* builder) :
 		builder(builder)
@@ -15,7 +17,7 @@ namespace sh::render
 	{
 	}
 
-	auto ShaderLoader::LoadShader(std::string_view vertexShader, std::string_view fragShader) -> std::unique_ptr<Shader>
+	auto ShaderLoader::LoadShader(std::string_view vertexShader, std::string_view fragShader) -> std::unique_ptr<render::Shader>
 	{
 		if (!builder)
 			return nullptr;

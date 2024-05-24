@@ -11,8 +11,6 @@
 #include "Mesh.h"
 #include "Material.h"
 #include "VulkanShader.h"
-#include "ShaderLoader.h"
-#include "VulkanShaderBuilder.h"
 #include "VulkanDrawable.h"
 #include "VulkanUniform.h"
 

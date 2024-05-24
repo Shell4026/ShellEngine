@@ -10,6 +10,7 @@
 #include "Render/Shader.h"
 #include "Render/Material.h"
 #include "Render/Mesh.h"
+#include "Render/Texture.h"
 
 #include <string>
 #include <vector>
@@ -50,6 +51,7 @@ namespace sh::game
 		sh::game::ResourceManager<sh::render::Shader> shaders;
 		sh::game::ResourceManager<sh::render::Material> materials;
 		sh::game::ResourceManager<sh::render::Mesh> meshes;
+		sh::game::ResourceManager<sh::render::Texture> textures;
 
 		PROPERTY(mainCamera)
 		Camera* mainCamera;
