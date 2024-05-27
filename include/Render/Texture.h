@@ -35,7 +35,7 @@ namespace sh::render
 	public:
 		SH_RENDER_API Texture(TextureFormat format, uint32_t width, uint32_t height);
 		SH_RENDER_API Texture(Texture&& other) noexcept;
-		SH_RENDER_API virtual ~Texture() = default;
+		SH_RENDER_API ~Texture();
 
 		SH_RENDER_API void SetPixelData(void* data);
 		SH_RENDER_API auto GetPixelData() const -> const std::vector<Byte>&;

@@ -17,6 +17,9 @@ namespace sh::render
 		pixels(std::move(other.pixels)), buffer(std::move(other.buffer))
 	{
 	}
+	Texture::~Texture()
+	{
+	}
 
 	void Texture::SetPixelData(void* data)
 	{

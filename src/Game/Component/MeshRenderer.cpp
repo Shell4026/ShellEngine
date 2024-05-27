@@ -23,15 +23,15 @@ namespace sh::game
 	MeshRenderer::~MeshRenderer()
 	{
 		if (core::IsValid(this->mesh))
-			gameObject.world.meshes.DestroyNotify(this, this->mesh);
+			gameObject.world.meshes.DestroyNotifies(this, this->mesh);
 		if (core::IsValid(this->mat))
-			gameObject.world.materials.DestroyNotify(this, this->mat);
+			gameObject.world.materials.DestroyNotifies(this, this->mat);
 	}
 
 	void MeshRenderer::SetMesh(sh::render::Mesh& mesh)
 	{
 		if(core::IsValid(this->mesh))
-			gameObject.world.meshes.DestroyNotify(this, this->mesh);
+			gameObject.world.meshes.DestroyNotifies(this, this->mesh);
 		this->mesh = &mesh;
 	}
 
@@ -43,7 +43,7 @@ namespace sh::game
 	void MeshRenderer::SetMaterial(sh::render::Material& mat)
 	{
 		if (core::IsValid(this->mat))
-			gameObject.world.materials.DestroyNotify(this, this->mat);
+			gameObject.world.materials.DestroyNotifies(this, this->mat);
 		this->mat = &mat;
 	}
 

@@ -158,7 +158,7 @@ namespace sh::game
 				}
 			}
 		}
-		void DestroyNotify(void* requester, T* resource)
+		void DestroyNotifies(void* requester, T* resource)
 		{
 			auto it = resourceDestroyNotifies.find(resource);
 			if (it == resourceDestroyNotifies.end())
