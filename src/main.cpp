@@ -94,6 +94,7 @@ int main(int arg, char* args[])
 	tex->Build(renderer);
 
 	shader->AddAttribute<glm::vec4>("color", 1);
+	shader->AddAttribute<glm::vec2>("uvs", 2);
 
 	shader->AddUniform<glm::mat4>("model", 0, sh::render::Shader::ShaderStage::Vertex);
 	shader->AddUniform<glm::mat4>("view", 0, sh::render::Shader::ShaderStage::Vertex);
@@ -101,9 +102,11 @@ int main(int arg, char* args[])
 
 	shader->AddUniform<glm::vec3>("offset1", 1, sh::render::Shader::ShaderStage::Vertex);
 	shader->AddUniform<float>("offset2", 1, sh::render::Shader::ShaderStage::Vertex);
+	shader->AddUniform<sh::render::Texture>("tex", 2, sh::render::Shader::ShaderStage::Fragment);
 
 	mat->SetVector("offset1", glm::vec4(0.f, 0.0f, 0.f, 0.f));
 	mat->SetFloat("offset2", 0.f);
+	mat->SetTexture("tex", tex);
 
 	mesh->SetVertex({ 
 		{-0.5f, 0.0f, -0.5f}, 
@@ -119,6 +122,12 @@ int main(int arg, char* args[])
 		{0.0f, 1.0f, 0.0f, 1.0f},
 		{0.0f, 0.0f, 1.0f, 1.0f},
 		{1.0f, 1.0f, 1.0f, 1.0f}
+	}});
+	mesh->SetAttribute(sh::render::ShaderAttribute<glm::vec2>{"uvs", {
+		{0.0f, 0.0f},
+		{1.0f, 0.0f},
+		{1.0f, 1.0f},
+		{0.0f, 1.0f}
 	}});
 	mesh->Build(renderer);
 

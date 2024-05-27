@@ -32,7 +32,8 @@ namespace sh::render {
 		currentFrame(0),
 		isInit(false), bPause(false), bFindValidationLayer(false), bEnableValidationLayers(sh::core::Util::IsDebug()),
 		allocator(nullptr), 
-		descPool(nullptr), descriptorPoolSize(MAX_FRAME_DRAW)
+		descPool(nullptr),
+		descriptorPoolSize(MAX_FRAME_DRAW)
 	{
 	}
 
@@ -502,14 +503,16 @@ namespace sh::render {
 
 	auto VulkanRenderer::CreateDescriptorPool() -> VkResult
 	{
-		VkDescriptorPoolSize poolSize{};
-		poolSize.type = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		poolSize.descriptorCount = static_cast<uint32_t>(MAX_FRAME_DRAW);
+		std::array<VkDescriptorPoolSize, 2> poolSizes{};
+		poolSizes[0].type = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAME_DRAW);
+		poolSizes[1].type = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAME_DRAW);
 
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		poolInfo.poolSizeCount = 1;
-		poolInfo.pPoolSizes = &poolSize;
+		poolInfo.poolSizeCount = poolSizes.size();
+		poolInfo.pPoolSizes = poolSizes.data();
 		poolInfo.maxSets = descriptorPoolSize;
 
 		auto result = vkCreateDescriptorPool(device, &poolInfo, nullptr, &descPool);

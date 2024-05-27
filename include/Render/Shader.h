@@ -59,9 +59,8 @@ namespace sh::render
 		std::unordered_map<std::string, uint32_t> attridx;
 		std::map<uint32_t, std::vector<UniformData>> _vertexUniforms;
 		std::map<uint32_t, std::vector<UniformData>> _fragmentUniforms;
-		std::vector<UniformData> _samplerVertexUniforms;
-		std::vector<UniformData> _samplerFragmentUniforms;
-		std::unordered_map<std::string, uint32_t> uniformIdx;
+		std::map<uint32_t, UniformData> _samplerVertexUniforms;
+		std::map<uint32_t, UniformData> _samplerFragmentUniforms;
 	protected:
 		int id;
 
@@ -73,6 +72,7 @@ namespace sh::render
 	public:
 		const std::vector<Data>& attributes;
 		const std::map<uint32_t, std::vector<UniformData>>& vertexUniforms;
+		const std::map<uint32_t, UniformData>& samplerFragmentUniforms;
 	public:
 		SH_RENDER_API virtual ~Shader() = default;
 		SH_RENDER_API void operator=(Shader&& other) noexcept;
@@ -170,6 +170,20 @@ namespace sh::render
 	template<>
 	inline void Shader::AddUniform<Texture>(const std::string& name, uint32_t binding, ShaderStage stage)
 	{
+		UniformData uniform;
+		uniform.binding = binding;
+		uniform.name = name;
+		uniform.typeName = sh::core::reflection::GetTypeName<Texture>();
+		uniform.size = 0;
+		uniform.offset = 0;
 
+		if (stage == ShaderStage::Vertex)
+		{
+			_samplerVertexUniforms.insert({ binding, std::move(uniform) });
+		}
+		else if (stage == ShaderStage::Fragment)
+		{
+			_samplerFragmentUniforms.insert({ binding, std::move(uniform) });
+		}
 	}
 }

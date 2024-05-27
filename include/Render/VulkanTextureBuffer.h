@@ -27,5 +27,7 @@ namespace sh::render
 
 		SH_RENDER_API void Create(const VulkanRenderer& renderer, const void* data, uint32_t width, uint32_t height, Texture::TextureFormat format) override;
 		SH_RENDER_API void Bind() override;
+
+		SH_RENDER_API auto GetImageBuffer() const -> impl::VulkanImageBuffer*;
 	};
 }

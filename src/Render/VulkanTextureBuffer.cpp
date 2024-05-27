@@ -54,7 +54,7 @@ namespace sh::render
 		barrier.newLayout = newLayout;
 		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.image = buffer->GetNative();
+		barrier.image = buffer->GetImage();
 		barrier.subresourceRange.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
 		barrier.subresourceRange.baseMipLevel = 0;
 		barrier.subresourceRange.levelCount = 1;
@@ -122,12 +122,12 @@ namespace sh::render
 		cmd = std::make_unique<impl::VulkanCommandBuffer>(renderer.GetDevice(), renderer.GetCommandPool());
 		cmd->Create();
 
-		TransitionImageLayout(renderer.GetGraphicsQueue(), buffer->GetNative(), 
+		TransitionImageLayout(renderer.GetGraphicsQueue(), buffer->GetImage(),
 			vkformat,
 			VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED, 
 			VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-		CopyBufferToImage(renderer.GetGraphicsQueue(), stagingBuffer.GetBuffer(), buffer->GetNative(), width, height);
-		TransitionImageLayout(renderer.GetGraphicsQueue(), buffer->GetNative(),
+		CopyBufferToImage(renderer.GetGraphicsQueue(), stagingBuffer.GetBuffer(), buffer->GetImage(), width, height);
+		TransitionImageLayout(renderer.GetGraphicsQueue(), buffer->GetImage(),
 			vkformat,
 			VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -136,5 +136,10 @@ namespace sh::render
 	void VulkanTextureBuffer::Bind()
 	{
 		
+	}
+
+	auto VulkanTextureBuffer::GetImageBuffer() const -> impl::VulkanImageBuffer*
+	{
+		return buffer.get();
 	}
 }

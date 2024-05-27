@@ -21,7 +21,6 @@ namespace sh::render
 
 		VkDescriptorSetLayout descriptorSetLayout;
 		std::vector<VkDescriptorSet> descriptorSets;
-		
 
 		std::vector<impl::VulkanBuffer> uniformBuffers;
 	private:

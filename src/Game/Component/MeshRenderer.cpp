@@ -107,40 +107,43 @@ namespace sh::game
 			return;
 
 		sh::render::Renderer* renderer = &gameObject.world.renderer;
-		if (renderer->apiType == sh::render::RenderAPI::Vulkan)
+		for (auto& uniforms : mat->GetShader()->vertexUniforms)
 		{
-			for (auto& uniforms : mat->GetShader()->vertexUniforms)
+			size_t size = uniforms.second.back().offset + uniforms.second.back().size;
+			uniformCopyData.resize(size);
+			for (const auto& uniform : uniforms.second)
 			{
-				size_t size = uniforms.second.back().offset + uniforms.second.back().size;
-				uniformCopyData.resize(size);
-				for (const auto& uniform : uniforms.second)
+				if (uniform.typeName == sh::core::reflection::GetTypeName<glm::mat4>())
 				{
-					if (uniform.typeName == sh::core::reflection::GetTypeName<glm::mat4>())
-					{
-						auto& m = cam->GetProjMatrix();
-						if (uniform.name == "proj")
-							std::memcpy(uniformCopyData.data() + uniform.offset, &cam->GetProjMatrix()[0], sizeof(glm::mat4));
-						else if (uniform.name == "view")
-							std::memcpy(uniformCopyData.data() + uniform.offset, &cam->GetViewMatrix()[0], sizeof(glm::mat4));
-						else if (uniform.name == "model")
-							std::memcpy(uniformCopyData.data() + uniform.offset, &gameObject.transform->localToWorldMatrix[0], sizeof(glm::mat4));
-					}
-					else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec4>())
-						std::memcpy(uniformCopyData.data() + uniform.offset, mat->GetVector(uniform.name), sizeof(glm::vec4));
-					else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec3>())
-						std::memcpy(uniformCopyData.data() + uniform.offset, mat->GetVector(uniform.name), sizeof(glm::vec3));
-					else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec2>())
-						std::memcpy(uniformCopyData.data() + uniform.offset, mat->GetVector(uniform.name), sizeof(glm::vec2));
-					else if (uniform.typeName == sh::core::reflection::GetTypeName<float>())
-					{
-						float value = mat->GetFloat(uniform.name);
-						std::memcpy(uniformCopyData.data() + uniform.offset, &value, sizeof(float));
-					}
+					auto& m = cam->GetProjMatrix();
+					if (uniform.name == "proj")
+						std::memcpy(uniformCopyData.data() + uniform.offset, &cam->GetProjMatrix()[0], sizeof(glm::mat4));
+					else if (uniform.name == "view")
+						std::memcpy(uniformCopyData.data() + uniform.offset, &cam->GetViewMatrix()[0], sizeof(glm::mat4));
+					else if (uniform.name == "model")
+						std::memcpy(uniformCopyData.data() + uniform.offset, &gameObject.transform->localToWorldMatrix[0], sizeof(glm::mat4));
 				}
-
-				int frameIdx = static_cast<sh::render::VulkanRenderer*>(renderer)->GetCurrentFrame();
-				static_cast<sh::render::VulkanDrawable*>(drawable.get())->SetUniformData(uniforms.first, frameIdx, uniformCopyData.data());
+				else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec4>())
+					std::memcpy(uniformCopyData.data() + uniform.offset, mat->GetVector(uniform.name), sizeof(glm::vec4));
+				else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec3>())
+					std::memcpy(uniformCopyData.data() + uniform.offset, mat->GetVector(uniform.name), sizeof(glm::vec3));
+				else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec2>())
+					std::memcpy(uniformCopyData.data() + uniform.offset, mat->GetVector(uniform.name), sizeof(glm::vec2));
+				else if (uniform.typeName == sh::core::reflection::GetTypeName<float>())
+				{
+					float value = mat->GetFloat(uniform.name);
+					std::memcpy(uniformCopyData.data() + uniform.offset, &value, sizeof(float));
+				}
 			}
+
+			int frameIdx = static_cast<sh::render::VulkanRenderer*>(renderer)->GetCurrentFrame();
+			drawable->SetUniformData(uniforms.first, frameIdx, uniformCopyData.data());
+		}
+		for (auto& sampler : mat->GetShader()->samplerFragmentUniforms)
+		{
+			auto tex = mat->GetTexture(sampler.second.name);
+			if (tex != nullptr)
+				drawable->SetTextureData(sampler.first, tex);
 		}
 		gameObject.world.renderer.PushDrawAble(drawable.get());
 	}

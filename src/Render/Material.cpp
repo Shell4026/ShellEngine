@@ -118,4 +118,24 @@ namespace sh::render
 			return nullptr;
 		return &it->second;
 	}
+
+	bool Material::SetTexture(std::string_view _name, Texture* tex)
+	{
+		std::string name{ _name };
+
+		auto it = textures.find(name);
+		if (it == textures.end())
+			textures.insert({ name, tex });
+		else
+			it->second = tex;
+
+		return true;
+	}
+	auto Material::GetTexture(std::string_view name) -> Texture*
+	{
+		auto it = textures.find(std::string{ name });
+		if (it == textures.end())
+			return nullptr;
+		return it->second;
+	}
 }

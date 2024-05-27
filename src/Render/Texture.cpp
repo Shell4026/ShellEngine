@@ -39,4 +39,9 @@ namespace sh::render
 			buffer->Create(renderer, pixels.data(), width, height, format);
 		}
 	}
+
+	auto Texture::GetBuffer() -> ITextureBuffer*
+	{
+		return buffer.get();
+	}
 }

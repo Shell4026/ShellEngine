@@ -41,5 +41,7 @@ namespace sh::render
 		SH_RENDER_API auto GetPixelData() const -> const std::vector<Byte>&;
 
 		SH_RENDER_API void Build(const VulkanRenderer& renderer);
+
+		SH_RENDER_API auto GetBuffer() -> ITextureBuffer*;
 	};
 }

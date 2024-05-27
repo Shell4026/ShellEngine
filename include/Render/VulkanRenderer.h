@@ -122,6 +122,7 @@ namespace sh::render {
 		SH_RENDER_API void Pause(bool b) override;
 
 		SH_RENDER_API void ReAllocateDesriptorPool();
+		SH_RENDER_API void ReAllocateSamplerDesriptorPool();
 
 		SH_RENDER_API auto GetDevice() const -> VkDevice;
 		SH_RENDER_API auto GetGPU() const -> VkPhysicalDevice;
