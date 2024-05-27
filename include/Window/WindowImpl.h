@@ -5,6 +5,7 @@
 #include "Event.h"
 
 #include <string>
+#include <string_view>
 #include <queue>
 
 #ifdef _WIN32

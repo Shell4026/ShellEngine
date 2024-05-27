@@ -95,6 +95,14 @@ namespace sh::window {
 				PushEvent(evt);
 				break;
 			}
+			case KeyRelease:
+			{
+				XKeyEvent* keyEvent = reinterpret_cast<XKeyEvent*>(&e);
+				evt.type = Event::EventType::KeyUp;
+				evt.keyType = CovertKeyCode(keyEvent->keycode);
+				PushEvent(evt);
+				break;
+			}
 			//Mouse
 			case ButtonPress:
 			{
@@ -195,5 +203,13 @@ namespace sh::window {
 		case XK_Num_Lock : return Event::KeyType::NumLock;
 		}
 		return Event::KeyType::Unknown;
+	}
+
+	void WindowImplUnix::SetTitle(std::string_view title)
+	{
+		Atom netWmName = XInternAtom(display, "_NET_WM_NAME", false);
+		Atom utf8String = XInternAtom(display, "UTF8_STRING", false);
+		XChangeProperty(display, win, netWmName, utf8String, 8, PropModeReplace,
+			(const unsigned char*)title.data(), 4);
 	}
 }//namespace

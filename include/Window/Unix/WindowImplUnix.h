@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "../WindowImpl.h"
+
 #include <X11/Xlib.h>
 namespace sh::window {
 	class WindowImplUnix : public WindowImpl
@@ -25,5 +26,6 @@ namespace sh::window {
 		void ProcessEvent() override;
 
 		auto GetDisplay() -> Display*;
+		void SetTitle(std::string_view title) override;
 	};
 }
