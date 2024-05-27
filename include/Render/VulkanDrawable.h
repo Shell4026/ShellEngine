@@ -3,6 +3,7 @@
 #include "Export.h"
 #include "IDrawable.h"
 #include "VulkanVertexBuffer.h"
+#include "VulkanRenderer.h"
 
 #include "VulkanImpl/VulkanPipeline.h"
 #include "VulkanImpl/VulkanBuffer.h"
@@ -13,8 +14,6 @@
 
 namespace sh::render
 {
-	class VulkanRenderer;
-
 	class VulkanDrawable : public IDrawable
 	{
 	private:
@@ -27,12 +26,14 @@ namespace sh::render
 
 		impl::VulkanCommandBuffer cmd;
 
+		std::vector<VkDescriptorSetLayoutBinding> descriptorBindings;
 		VkDescriptorSetLayout descriptorSetLayout;
-		std::vector<VkDescriptorSet> descriptorSets;
-		std::vector<impl::VulkanBuffer> uniformBuffers;
+		std::array<VkDescriptorSet, VulkanRenderer::MAX_FRAME_DRAW> descriptorSets;
+		std::map<uint32_t, std::vector<impl::VulkanBuffer>> uniformBuffers;
 	private:
+		void AddDescriptorBinding(uint32_t binding, VkDescriptorType type, VkShaderStageFlagBits stage);
 		auto CreatePipelineLayout() -> VkResult;
-		auto CreateDescriptorLayout(uint32_t binding) -> VkResult;
+		auto CreateDescriptorLayout() -> VkResult;
 	public:
 		SH_RENDER_API VulkanDrawable(VulkanRenderer& renderer);
 		SH_RENDER_API ~VulkanDrawable();
@@ -47,7 +48,7 @@ namespace sh::render
 		SH_RENDER_API auto GetMaterial() const -> Material* override;
 		SH_RENDER_API auto GetMesh() const-> Mesh* override;
 
-		SH_RENDER_API void SetUniformData(int frame, const void* data);
+		SH_RENDER_API void SetUniformData(uint32_t binding, int frame, const void* data);
 
 		SH_RENDER_API auto CreateDescriptorSet() -> VkResult;
 		SH_RENDER_API auto GetDescriptorSet(int frame) -> VkDescriptorSet;

@@ -134,5 +134,6 @@ namespace sh::render {
 		SH_RENDER_API auto GetWidth() const -> uint32_t override;
 		SH_RENDER_API auto GetHeight() const -> uint32_t override;
 		SH_RENDER_API auto GetAllocator() const -> VmaAllocator;
+		SH_RENDER_API auto GetGPUProperty() const -> const VkPhysicalDeviceProperties&;
 	};
 }//namespace

@@ -3,7 +3,7 @@
 namespace sh::render
 {
 	Shader::Shader(int id, ShaderType type) :
-		attributes(attrs), uniforms(_uniforms),
+		attributes(attrs), vertexUniforms(_vertexUniforms),
 		id(id), type(type) 
 	{
 		AddAttribute<glm::vec3>("vertex", 0);
@@ -11,10 +11,10 @@ namespace sh::render
 
 
 	Shader::Shader(Shader&& other) noexcept :
-		attributes(attrs), uniforms(_uniforms),
+		attributes(attrs), vertexUniforms(_vertexUniforms),
 		id(other.id), type(other.type), 
 		attrs(std::move(other.attrs)), attridx(std::move(other.attridx)), 
-		_uniforms(std::move(other._uniforms)), uniformIdx(std::move(other.uniformIdx))
+		_vertexUniforms(std::move(other._vertexUniforms)), uniformIdx(std::move(other.uniformIdx))
 	{
 	}
 
@@ -56,5 +56,17 @@ namespace sh::render
 			return {};
 		
 		return attrs[it->second];
+	}
+
+	Shader::UniformData::UniformData(const UniformData& other) :
+		binding(other.binding), offset(other.offset), size(other.size),
+		name(other.name), typeName(other.typeName)
+	{
+	}
+
+	Shader::UniformData::UniformData(UniformData&& other) noexcept :
+		binding(other.binding), offset(other.offset), size(other.size),
+		name(std::move(other.name)), typeName(other.typeName)
+	{
 	}
 }

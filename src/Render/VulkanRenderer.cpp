@@ -745,5 +745,9 @@ namespace sh::render {
 	{
 		return allocator;
 	}
+	auto VulkanRenderer::GetGPUProperty() const -> const VkPhysicalDeviceProperties&
+	{
+		return gpuProp;
+	}
 }//namespace
 

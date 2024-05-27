@@ -23,6 +23,8 @@ namespace sh::render
 			VmaAllocation bufferMem;
 			VkBufferCreateInfo bufferInfo;
 
+			size_t size;
+
 			void* data;
 			bool persistentMapping;
 		private:
@@ -37,6 +39,7 @@ namespace sh::render
 			SH_RENDER_API void SetData(const void* data);
 			SH_RENDER_API auto GetBuffer() const -> VkBuffer;
 			SH_RENDER_API auto GetBufferMemory() const -> VmaAllocation;
+			SH_RENDER_API auto GetSize() const -> size_t;
 		};
 	}
 }

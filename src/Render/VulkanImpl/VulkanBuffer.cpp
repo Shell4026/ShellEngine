@@ -10,7 +10,8 @@ namespace sh::render::impl
 		device(device), gpu(gpu), allocator(allocator),
 		buffer(nullptr), bufferMem(nullptr), data(nullptr),
 		bufferInfo(),
-		persistentMapping(false)
+		persistentMapping(false),
+		size(0)
 	{
 
 	}
@@ -19,7 +20,8 @@ namespace sh::render::impl
 		device(other.device), gpu(other.gpu), allocator(other.allocator),
 		buffer(other.buffer), bufferMem(other.bufferMem), data(other.data),
 		bufferInfo(other.bufferInfo),
-		persistentMapping(other.persistentMapping)
+		persistentMapping(other.persistentMapping),
+		size(other.size)
 	{
 		other.device = nullptr;
 		other.gpu = nullptr;
@@ -66,6 +68,7 @@ namespace sh::render::impl
 
 	auto VulkanBuffer::Create(size_t size, VkBufferUsageFlags usageBits, VkSharingMode sharing, VkMemoryPropertyFlags memPropFlagBits, bool persistentMapping) -> VkResult
 	{
+		this->size = size;
 		this->persistentMapping = persistentMapping;
 
 		Clean();
@@ -139,5 +142,9 @@ namespace sh::render::impl
 	auto VulkanBuffer::GetBufferMemory() const -> VmaAllocation
 	{
 		return bufferMem;
+	}
+	auto VulkanBuffer::GetSize() const -> size_t
+	{
+		return size;
 	}
 }
