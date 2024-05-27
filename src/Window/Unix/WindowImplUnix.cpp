@@ -210,6 +210,6 @@ namespace sh::window {
 		Atom netWmName = XInternAtom(display, "_NET_WM_NAME", false);
 		Atom utf8String = XInternAtom(display, "UTF8_STRING", false);
 		XChangeProperty(display, win, netWmName, utf8String, 8, PropModeReplace,
-			(const unsigned char*)title.data(), 4);
+			(const unsigned char*)title.data(), title.size());
 	}
 }//namespace
