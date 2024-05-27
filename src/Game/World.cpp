@@ -37,6 +37,7 @@ namespace sh::game
 		meshes.Clean();
 		materials.Clean();
 		shaders.Clean();
+		textures.Clean();
 
 		objsEmptyIdx = std::queue<int>{};
 		objsMap.clear();
