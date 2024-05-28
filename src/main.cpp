@@ -24,6 +24,7 @@
 #include "Game/Component/UniformTest.h"
 #include "Game/Component/Camera.h"
 #include "Game/ImGUI.h"
+#include "Game/EditorUI.h"
 
 #include <iostream>
 
@@ -158,6 +159,8 @@ int main(int arg, char* args[])
 	world.Start();
 
 	ImGUI gui(window, renderer);
+	EditorUI editorUi(world);
+
 	gui.Init();
 	while (window.IsOpen())
 	{
@@ -214,6 +217,8 @@ int main(int arg, char* args[])
 				break;
 			}
 		}
+		editorUi.Update();
+
 		world.Update(window.GetDeltaTime());
 		gc.Update();
 		gui.Render();

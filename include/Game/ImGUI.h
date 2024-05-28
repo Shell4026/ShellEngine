@@ -18,7 +18,7 @@ namespace sh::game
 		window::Window& window;
 		render::VulkanRenderer& renderer;
 
-		bool bInit = false;
+		static bool bInit;
 	public:
 		SH_GAME_API ImGUI(window::Window& window, render::VulkanRenderer& renderer);
 		SH_GAME_API ~ImGUI();
@@ -28,5 +28,7 @@ namespace sh::game
 		SH_GAME_API void ProcessEvent(window::Event event);
 		SH_GAME_API void Update();
 		SH_GAME_API void Render();
+
+		SH_GAME_API static bool IsInit();
 	};
 }

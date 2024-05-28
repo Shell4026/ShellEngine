@@ -4,6 +4,8 @@
 
 namespace sh::game
 {
+	bool ImGUI::bInit = false;
+
 	static void check_vk_result(VkResult err)
 	{
 		if (err == 0)
@@ -247,5 +249,9 @@ namespace sh::game
 		if (!bInit)
 			return;
 		ImGui::Render();
+	}
+	bool ImGUI::IsInit()
+	{
+		return bInit;
 	}
 }
