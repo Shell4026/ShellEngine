@@ -3,8 +3,6 @@
 #include "VulkanConfig.h"
 #include "Render/Export.h"
 
-#include "../vma-src/include/vk_mem_alloc.h"
-
 #include <cstdint>
 
 namespace sh::render::impl

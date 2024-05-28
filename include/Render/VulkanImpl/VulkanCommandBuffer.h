@@ -3,7 +3,7 @@
 #include "Export.h"
 #include "Core/NonCopyable.h"
 
-#include <vulkan/vulkan.h>
+#include "VulkanConfig.h"
 
 #include <functional>
 #include <initializer_list>

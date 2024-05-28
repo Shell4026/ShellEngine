@@ -6,7 +6,6 @@
 #include <Core/NonCopyable.h>
 #include "VulkanImpl/VulkanConfig.h"
 
-#include "../vma-src/include/vk_mem_alloc.h"
 #include "glm/mat4x4.hpp"
 
 #include <string>

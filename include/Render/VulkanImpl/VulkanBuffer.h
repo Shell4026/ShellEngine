@@ -6,8 +6,6 @@
 
 #include "Core/NonCopyable.h"
 
-#include "../vma-src/include/vk_mem_alloc.h"
-
 namespace sh::render
 {
 	namespace impl

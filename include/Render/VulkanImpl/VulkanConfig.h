@@ -6,3 +6,6 @@
 #define VK_USE_PLATFORM_XLIB_KHR
 #endif
 #include <vulkan/vulkan.h>
+
+#define VMA_VULKAN_VERSION 1003000
+#include "../vma-src/include/vk_mem_alloc.h"
