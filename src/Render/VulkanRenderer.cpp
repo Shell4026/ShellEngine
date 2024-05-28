@@ -33,7 +33,7 @@ namespace sh::render {
 		isInit(false), bPause(false), bFindValidationLayer(false), bEnableValidationLayers(sh::core::Util::IsDebug()),
 		allocator(nullptr), 
 		descPool(nullptr),
-		descriptorPoolSize(MAX_FRAME_DRAW)
+		descriptorPoolSize(MAX_FRAME_DRAW * 10)
 	{
 	}
 
@@ -495,6 +495,8 @@ namespace sh::render {
 		if (CreateDescriptorPool() != VkResult::VK_SUCCESS)
 			return false;
 
+		
+
 		isInit = true;
 		PrintLayer();
 
@@ -514,6 +516,7 @@ namespace sh::render {
 		poolInfo.poolSizeCount = poolSizes.size();
 		poolInfo.pPoolSizes = poolSizes.data();
 		poolInfo.maxSets = descriptorPoolSize;
+		poolInfo.flags = VkDescriptorPoolCreateFlagBits::VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
 
 		auto result = vkCreateDescriptorPool(device, &poolInfo, nullptr, &descPool);
 		assert(result == VK_SUCCESS);
@@ -588,6 +591,11 @@ namespace sh::render {
 	void VulkanRenderer::WaitForCurrentFrame()
 	{
 		vkWaitForFences(device, 1, &inFlightFence[currentFrame], VK_TRUE, UINT64_MAX);
+	}
+
+	void VulkanRenderer::AddDrawCall(const std::function<void()>& func)
+	{
+		drawCalls.push_back(func);
 	}
 
 	void VulkanRenderer::Render(float deltaTime)
@@ -670,6 +678,8 @@ namespace sh::render {
 						descriptorSets, 0, nullptr);
 					vkCmdDrawIndexed(buffer, mesh->GetIndices().size(), 1, 0, 0, 0);
 				}
+				for (auto& func : drawCalls)
+					func();
 				vkCmdEndRenderPass(buffer);
 			},
 			nullptr, inFlightFence[currentFrame]
@@ -704,6 +714,10 @@ namespace sh::render {
 		bReCreateDescriptorPool = true;
 	}
 
+	auto VulkanRenderer::GetInstance() const -> VkInstance
+	{
+		return instance;
+	}
 	auto VulkanRenderer::GetDevice() const -> VkDevice
 	{
 		return device;
@@ -731,6 +745,10 @@ namespace sh::render {
 	auto VulkanRenderer::GetGraphicsQueue() const -> VkQueue
 	{
 		return graphicsQueue;
+	}
+	auto VulkanRenderer::GetGraphicsQueueIdx() const -> uint32_t
+	{
+		return graphicsQueueIndex;
 	}
 
 	auto VulkanRenderer::GetDescriptorPool() const -> VkDescriptorPool

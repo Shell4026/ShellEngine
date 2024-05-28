@@ -70,6 +70,8 @@ namespace sh::render {
 
 		VmaAllocator allocator;
 
+		std::vector<std::function<void()>> drawCalls;
+
 		bool isInit : 1;
 		bool bPause : 1;
 		bool bFindValidationLayer : 1;
@@ -126,11 +128,15 @@ namespace sh::render {
 
 		SH_RENDER_API void WaitForCurrentFrame();
 
+		SH_RENDER_API void AddDrawCall(const std::function<void()>& func);
+
+		SH_RENDER_API auto GetInstance() const -> VkInstance;
 		SH_RENDER_API auto GetDevice() const -> VkDevice;
 		SH_RENDER_API auto GetGPU() const -> VkPhysicalDevice;
 		SH_RENDER_API auto GetCommandPool() const -> VkCommandPool;
 		SH_RENDER_API auto GetCommandBuffer() const -> VkCommandBuffer;
 		SH_RENDER_API auto GetGraphicsQueue() const -> VkQueue;
+		SH_RENDER_API auto GetGraphicsQueueIdx() const -> uint32_t;
 		SH_RENDER_API auto GetMainFramebuffer() const -> const Framebuffer* override;
 		SH_RENDER_API auto GetDescriptorPool() const -> VkDescriptorPool;
 		SH_RENDER_API auto GetCurrentFrame() const -> int;

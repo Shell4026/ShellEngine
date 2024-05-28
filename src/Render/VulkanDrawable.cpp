@@ -229,11 +229,12 @@ namespace sh::render
 		}
 
 
-		pipeline->
+		result = pipeline->
 			SetShader(static_cast<VulkanShader*>(shader)).
 			AddShaderStage(impl::VulkanPipeline::ShaderStage::Vertex).
 			AddShaderStage(impl::VulkanPipeline::ShaderStage::Fragment).
 			Build(pipelineLayout);
+		assert(result == VkResult::VK_SUCCESS);
 
 		cmd.Clean();
 	}

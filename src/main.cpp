@@ -23,6 +23,7 @@
 #include "Game/Component/MeshRenderer.h"
 #include "Game/Component/UniformTest.h"
 #include "Game/Component/Camera.h"
+#include "Game/ImGUI.h"
 
 #include <iostream>
 
@@ -90,8 +91,9 @@ int main(int arg, char* args[])
 	auto mat = world.materials.AddResource("Material", sh::render::Material{ shader });
 	auto mesh = world.meshes.AddResource("Mesh", sh::render::Mesh{});
 	auto tex = world.textures.AddResource("Texture0", texLoader.Load("textures/버터고양이.jpg"));
-
+	auto tex2 = world.textures.AddResource("Texture1", texLoader.Load("textures/cat.jpg"));
 	tex->Build(renderer);
+	tex2->Build(renderer);
 
 	shader->AddAttribute<glm::vec4>("color", 1);
 	shader->AddAttribute<glm::vec2>("uvs", 2);
@@ -154,9 +156,13 @@ int main(int arg, char* args[])
 	world.mainCamera = cameraComponent;
 
 	world.Start();
+
+	ImGUI gui(window, renderer);
+	gui.Init();
 	while (window.IsOpen())
 	{
 		window.ProcessFrame();
+		gui.Update();
 		//fmt::print("deltaTime: {}s\n", window.GetDeltaTime());
 		std::string deltaTime = std::to_string(window.GetDeltaTime());
 		deltaTime.erase(deltaTime.begin() + 5, deltaTime.end());
@@ -165,9 +171,12 @@ int main(int arg, char* args[])
 		while (window.PollEvent(e))
 		{
 			Input::Update(e);
+			gui.ProcessEvent(e);
+
 			switch (e.type)
 			{
 			case sh::window::Event::EventType::Close:
+				gui.Clean();
 				world.Clean();
 				renderer.Clean();
 				window.Close();
@@ -175,11 +184,11 @@ int main(int arg, char* args[])
 			case sh::window::Event::EventType::MousePressed:
 				if (e.mouseType == sh::window::Event::MouseType::Left)
 				{
-
+					mat->SetTexture("tex", tex);
 				}
 				else if (e.mouseType == sh::window::Event::MouseType::Right)
 				{
-
+					mat->SetTexture("tex", tex2);
 				}
 				else
 				{
@@ -207,6 +216,7 @@ int main(int arg, char* args[])
 		}
 		world.Update(window.GetDeltaTime());
 		gc.Update();
+		gui.Render();
 		renderer.Render(window.GetDeltaTime());
 	}
 	return 0;

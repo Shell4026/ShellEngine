@@ -8,5 +8,7 @@ add_library(ShellEngine::Game ALIAS ShellEngineGame)
 target_link_libraries(ShellEngineGame PUBLIC ShellEngine::Core)
 target_link_libraries(ShellEngineGame PUBLIC ShellEngine::Window)
 target_link_libraries(ShellEngineGame PUBLIC ShellEngine::Render)
+target_link_libraries(ShellEngineGame PUBLIC IMGUI)
 
 target_include_directories(ShellEngineGame PRIVATE ${CMAKE_SOURCE_DIR}/include/Game)
+target_include_directories(ShellEngineGame PRIVATE ${CMAKE_SOURCE_DIR}/include/external)
