@@ -27,6 +27,7 @@ namespace sh::render {
 	class VulkanRenderer :
 		public Renderer, public sh::core::INonCopyable{
 	public:
+		static constexpr int VULKAN_API_VER = VK_API_VERSION_1_1;
 		static constexpr int MAX_FRAME_DRAW = 2;
 	private:
 		sh::window::Window* window;
@@ -122,6 +123,8 @@ namespace sh::render {
 
 		SH_RENDER_API void ReAllocateDesriptorPool();
 		SH_RENDER_API void ReAllocateSamplerDesriptorPool();
+
+		SH_RENDER_API void WaitForCurrentFrame();
 
 		SH_RENDER_API auto GetDevice() const -> VkDevice;
 		SH_RENDER_API auto GetGPU() const -> VkPhysicalDevice;

@@ -97,7 +97,7 @@ namespace sh::render {
 		appInfo.applicationVersion = 1;
 		appInfo.pEngineName = "ShellEngine";
 		appInfo.engineVersion = 1;
-		appInfo.apiVersion = VK_API_VERSION_1_3;
+		appInfo.apiVersion = VULKAN_API_VER;
 
 		VkInstanceCreateInfo instanceInfo = {};
 		instanceInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
@@ -362,7 +362,7 @@ namespace sh::render {
 		info.physicalDevice = gpu;
 		info.flags = VmaAllocatorCreateFlagBits::VMA_ALLOCATOR_CREATE_EXT_MEMORY_BUDGET_BIT;
 		info.preferredLargeHeapBlockSize = 0;
-		info.vulkanApiVersion = VK_API_VERSION_1_3;
+		info.vulkanApiVersion = VULKAN_API_VER;
 		auto result = vmaCreateAllocator(&info, &allocator);
 		assert(result == VkResult::VK_SUCCESS);
 	}
@@ -585,12 +585,17 @@ namespace sh::render {
 		return isInit;
 	}
 
+	void VulkanRenderer::WaitForCurrentFrame()
+	{
+		vkWaitForFences(device, 1, &inFlightFence[currentFrame], VK_TRUE, UINT64_MAX);
+	}
+
 	void VulkanRenderer::Render(float deltaTime)
 	{
 		if (!isInit || bPause)
 			return;
 
-		vkWaitForFences(device, 1, &inFlightFence[currentFrame], VK_TRUE, UINT64_MAX);
+		WaitForCurrentFrame();
 
 		uint32_t imgIdx;
 		VkResult result = vkAcquireNextImageKHR(device, surface->GetSwapChain(), UINT64_MAX, imageAvailableSemaphore[currentFrame], nullptr, &imgIdx);
