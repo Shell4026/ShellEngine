@@ -12,7 +12,7 @@
 namespace sh::render
 {
 	class ITextureBuffer;
-	class VulkanRenderer;
+	class Renderer;
 
 	class Texture : public core::SObject, public core::INonCopyable
 	{
@@ -40,7 +40,7 @@ namespace sh::render
 		SH_RENDER_API void SetPixelData(void* data);
 		SH_RENDER_API auto GetPixelData() const -> const std::vector<Byte>&;
 
-		SH_RENDER_API void Build(const VulkanRenderer& renderer);
+		SH_RENDER_API void Build(const Renderer& renderer);
 
 		SH_RENDER_API auto GetBuffer() -> ITextureBuffer*;
 	};

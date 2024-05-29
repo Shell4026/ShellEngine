@@ -35,4 +35,5 @@ file(
 	${CMAKE_SOURCE_DIR}/resource/frag.spv 
 	${CMAKE_SOURCE_DIR}/resource/triangle.spv
 	${CMAKE_SOURCE_DIR}/resource/textures
+	${CMAKE_SOURCE_DIR}/resource/model
 	DESTINATION ${CMAKE_BINARY_DIR}/bin)

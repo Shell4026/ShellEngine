@@ -31,12 +31,12 @@ namespace sh::render
 		return pixels;
 	}
 
-	void Texture::Build(const VulkanRenderer& renderer)
+	void Texture::Build(const Renderer& renderer)
 	{
 		if (renderer.apiType == RenderAPI::Vulkan)
 		{
 			buffer = std::make_unique<VulkanTextureBuffer>();
-			buffer->Create(renderer, pixels.data(), width, height, format);
+			buffer->Create(static_cast<const VulkanRenderer&>(renderer), pixels.data(), width, height, format);
 		}
 	}
 

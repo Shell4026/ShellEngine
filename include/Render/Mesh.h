@@ -24,6 +24,7 @@ namespace sh::render
 		SCLASS(Mesh)
 	private:
 		std::vector<glm::vec3> verts;
+		std::vector<glm::vec2> uvs;
 		std::vector<uint32_t> indices;
 
 		std::vector<std::unique_ptr<ShaderAttributeBase>> attrs;
@@ -42,7 +43,6 @@ namespace sh::render
 		SH_RENDER_API void SetVertex(std::vector<glm::vec3>&& verts);
 		SH_RENDER_API void SetVertex(const std::initializer_list<glm::vec3>& verts);
 		SH_RENDER_API auto GetVertex() const -> const std::vector<glm::vec3>&;
-
 		SH_RENDER_API auto GetVertexCount() const -> size_t;
 
 		SH_RENDER_API void SetIndices(const std::vector<uint32_t >&indices);

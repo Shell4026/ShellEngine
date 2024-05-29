@@ -161,7 +161,7 @@ namespace sh::render::impl
 		rasterizer.rasterizerDiscardEnable = VK_FALSE;
 		rasterizer.polygonMode = VkPolygonMode::VK_POLYGON_MODE_FILL; //채우기
 		rasterizer.lineWidth = 1.0f;
-		rasterizer.frontFace = VkFrontFace::VK_FRONT_FACE_CLOCKWISE;
+		rasterizer.frontFace = VkFrontFace::VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rasterizer.depthBiasEnable = VK_FALSE;
 		rasterizer.depthBiasConstantFactor = 0.0f; // Optional
 		rasterizer.depthBiasClamp = 0.0f; // Optional

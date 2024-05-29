@@ -4,6 +4,11 @@
 
 namespace sh::game
 {
+	TextureLoader::TextureLoader(const render::Renderer& renderer) :
+		renderer(renderer)
+	{
+	}
+
 	auto TextureLoader::Load(std::string_view filename) -> std::unique_ptr<render::Texture>
 	{
 		int width, height, channel;
@@ -20,6 +25,8 @@ namespace sh::game
 		std::unique_ptr<render::Texture> texture = std::make_unique<render::Texture>(format, width, height);
 		texture->SetPixelData(pixels);
 		stbi_image_free(pixels);
+
+		texture->Build(renderer);
 
 		return texture;
 	}
