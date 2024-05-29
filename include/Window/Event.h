@@ -14,6 +14,7 @@ namespace sh::window {
 			MousePressed,
 			MouseReleased,
 			MouseWheelScrolled,
+			MouseMove,
 			WindowFocus,
 			WindowFocusOut,
 			Unknown
@@ -55,8 +56,15 @@ namespace sh::window {
 			static float delta;
 		};
 
+		struct SH_WINDOW_API MousePosition
+		{
+			static int mouseX;
+			static int mouseY;
+		};
+
 		EventType type;
 		MouseType mouseType;
 		KeyType keyType;
+
 	};
 }//namespace

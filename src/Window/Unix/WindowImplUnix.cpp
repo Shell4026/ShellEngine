@@ -104,6 +104,14 @@ namespace sh::window {
 				break;
 			}
 			//Mouse
+			case MotionNotify: //move
+			{
+				Event::MousePosition::mouseX = e.xmotion.x;
+				Event::MousePosition::mouseY = e.xmotion.y;
+				evt.type = Event::EventType::MouseMove;
+				PushEvent(evt);
+				break;
+			}
 			case ButtonPress:
 			{
 				XButtonEvent* buttonEvent = reinterpret_cast<XButtonEvent*>(&e);
@@ -129,6 +137,30 @@ namespace sh::window {
 				case Button5:
 					evt.type = Event::EventType::MouseWheelScrolled;
 					Event::MouseWheelScrolled::delta = (buttonEvent->button == Button4) ? 1.0f : -1.0f;
+					PushEvent(evt);
+					break;
+				}
+				break;
+			}
+			case ButtonRelease:
+			{
+				XButtonEvent* buttonEvent = reinterpret_cast<XButtonEvent*>(&e);
+
+				switch (buttonEvent->button)
+				{
+				case Button1:
+					evt.type = Event::EventType::MouseReleased;
+					evt.mouseType = Event::MouseType::Left;
+					PushEvent(evt);
+					break;
+				case Button2:
+					evt.type = Event::EventType::MouseReleased;
+					evt.mouseType = Event::MouseType::Middle;
+					PushEvent(evt);
+					break;
+				case Button3:
+					evt.type = Event::EventType::MouseReleased;
+					evt.mouseType = Event::MouseType::Right;
 					PushEvent(evt);
 					break;
 				}

@@ -144,6 +144,18 @@ namespace sh::window {
 			break;
 
 		//mouse
+		case WM_MOUSEMOVE:
+		{
+			const int x = static_cast<std::int16_t>(LOWORD(lParam));
+			const int y = static_cast<std::int16_t>(HIWORD(lParam));
+
+			Event::MousePosition::mouseX = x;
+			Event::MousePosition::mouseY = y;
+
+			e.type = Event::EventType::MouseMove;
+			PushEvent(e);
+			break;
+		}
 		case WM_LBUTTONDOWN:
 			e.type = Event::EventType::MousePressed;
 			e.mouseType = Event::MouseType::Left;
