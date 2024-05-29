@@ -9,6 +9,7 @@
 #include <queue>
 #include <chrono>
 #include <string_view>
+#include <stdint.h>
 
 namespace sh::window {
 	class Window {
@@ -26,7 +27,13 @@ namespace sh::window {
 		float deltaTime;
 		unsigned int deltaTimeMs;
 
+		uint32_t wsize;
+		uint32_t hsize;
+
 		bool isOpen : 1;
+	public:
+		const uint32_t& width;
+		const uint32_t& height;
 	public:
 		SH_WINDOW_API Window();
 		SH_WINDOW_API ~Window();

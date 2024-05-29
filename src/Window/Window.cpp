@@ -6,8 +6,11 @@
 #include <thread>
 namespace sh::window {
 	Window::Window() :
+		width(wsize), height(hsize),
+
 		isOpen(false),
-		fps(60), maxFrameMs(1000.0f / static_cast<float>(fps)), deltaTimeMs(0), deltaTime(0.0f)
+		fps(60), maxFrameMs(1000.0f / static_cast<float>(fps)), deltaTimeMs(0), deltaTime(0.0f),
+		wsize(0), hsize(0)
 	{
 		startTime = std::chrono::high_resolution_clock::now();
 		endTime = startTime;
@@ -28,6 +31,9 @@ namespace sh::window {
 
 		winImpl = WindowFactory::CreateWindowImpl();
 		handle = winImpl->Create(title, wsize, hsize);
+
+		this->wsize = wsize;
+		this->hsize = hsize;
 
 		isOpen = true;
 	}

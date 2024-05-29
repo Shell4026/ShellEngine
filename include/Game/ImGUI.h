@@ -3,7 +3,6 @@
 #include "Export.h"
 
 #include "External/imgui/imgui.h"
-#include "External/imgui/backends/imgui_impl_win32.h"
 #include "External/imgui/backends/imgui_impl_vulkan.h"
 
 #include "Window/Window.h"
@@ -19,6 +18,8 @@ namespace sh::game
 		render::VulkanRenderer& renderer;
 
 		static bool bInit;
+	private:
+		void WindowInit();
 	public:
 		SH_GAME_API ImGUI(window::Window& window, render::VulkanRenderer& renderer);
 		SH_GAME_API ~ImGUI();
