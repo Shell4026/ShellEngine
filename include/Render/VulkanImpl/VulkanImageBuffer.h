@@ -28,7 +28,9 @@ namespace sh::render::impl
 
 		SH_RENDER_API void UseAnisotropy(bool bUse);
 
-		SH_RENDER_API auto Create(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, VkPhysicalDeviceProperties* gpuProp = nullptr) -> VkResult;
+		SH_RENDER_API auto Create(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, 
+			VkImageAspectFlags aspectFlag = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT,
+			VkPhysicalDeviceProperties* gpuProp = nullptr) -> VkResult;
 		SH_RENDER_API void Clean();
 
 		SH_RENDER_API auto GetImage() const ->VkImage;

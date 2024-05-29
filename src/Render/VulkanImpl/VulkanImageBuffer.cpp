@@ -53,7 +53,7 @@ namespace sh::render::impl
 		bUseAnisotropy = bUse;
 	}
 
-	auto VulkanImageBuffer::Create(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, VkPhysicalDeviceProperties* gpuProp) -> VkResult
+	auto VulkanImageBuffer::Create(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspectFlag, VkPhysicalDeviceProperties* gpuProp) -> VkResult
 	{
 		VkImageCreateInfo info{};
 		info.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -84,7 +84,7 @@ namespace sh::render::impl
 		viewCreateInfo.image = img;
 		viewCreateInfo.viewType = VkImageViewType::VK_IMAGE_VIEW_TYPE_2D;
 		viewCreateInfo.format = format;
-		viewCreateInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		viewCreateInfo.subresourceRange.aspectMask = aspectFlag;
 		viewCreateInfo.subresourceRange.baseMipLevel = 0;
 		viewCreateInfo.subresourceRange.levelCount = 1;
 		viewCreateInfo.subresourceRange.baseArrayLayer = 0;

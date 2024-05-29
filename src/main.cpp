@@ -166,7 +166,6 @@ int main(int arg, char* args[])
 	{
 		window.ProcessFrame();
 		gui.Update();
-		//fmt::print("deltaTime: {}s\n", window.GetDeltaTime());
 		std::string deltaTime = std::to_string(window.GetDeltaTime());
 		deltaTime.erase(deltaTime.begin() + 5, deltaTime.end());
 		window.SetTitle("ShellEngine [DeltaTime:" + deltaTime + "ms]");

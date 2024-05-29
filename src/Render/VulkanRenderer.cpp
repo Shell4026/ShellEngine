@@ -469,7 +469,7 @@ namespace sh::render {
 
 		//프레임버퍼 생성 (렌더패스 생성 -> 프레임버퍼 생성)
 		auto& imgs = surface->GetSwapChainImageViews();
-		framebuffers.resize(imgs.size(), impl::VulkanFramebuffer{ device });
+		framebuffers.resize(imgs.size(), impl::VulkanFramebuffer{ device, gpu, allocator });
 		for (int i = 0; i < imgs.size(); ++i)
 		{
 			VkResult result = framebuffers[i].Create(surface->GetSwapChainSize().width, surface->GetSwapChainSize().height, imgs[i], surface->GetSwapChainImageFormat());
@@ -540,7 +540,7 @@ namespace sh::render {
 		surface->CreateSwapChain(gpu, graphicsQueueIndex, surfaceQueueIndex);
 
 		auto& imgs = surface->GetSwapChainImageViews();
-		framebuffers.resize(imgs.size(), impl::VulkanFramebuffer{ device });
+		framebuffers.resize(imgs.size(), impl::VulkanFramebuffer{ device, gpu, allocator });
 		for (int i = 0; i < imgs.size(); ++i)
 		{
 			VkResult result = framebuffers[i].Create(surface->GetSwapChainSize().width, surface->GetSwapChainSize().height, imgs[i], surface->GetSwapChainImageFormat());
@@ -624,14 +624,17 @@ namespace sh::render {
 		cmdBuffers[currentFrame]->Submit(graphicsQueue, [&]()
 		{
 				VkRenderPassBeginInfo renderPassInfo{};
-				VkClearValue clearColor = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
+				std::array<VkClearValue, 2> clear;
+				clear[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+				clear[1].depthStencil = { 1.0f, 0 };
+
 				renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 				renderPassInfo.renderPass = framebuffers[imgIdx].GetRenderPass();
 				renderPassInfo.framebuffer = framebuffers[imgIdx].GetVkFramebuffer();
 				renderPassInfo.renderArea.offset = { 0, 0 };
 				renderPassInfo.renderArea.extent = surface->GetSwapChainSize();
-				renderPassInfo.clearValueCount = 1;
-				renderPassInfo.pClearValues = &clearColor;
+				renderPassInfo.clearValueCount = static_cast<uint32_t>(clear.size());
+				renderPassInfo.pClearValues = clear.data();
 
 				vkCmdBeginRenderPass(buffer, &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
 				while (!drawList.empty())

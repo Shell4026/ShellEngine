@@ -219,6 +219,18 @@ namespace sh::render::impl
 		colorBlending.blendConstants[1] = 0.0f; // Optional
 		colorBlending.blendConstants[2] = 0.0f; // Optional
 		colorBlending.blendConstants[3] = 0.0f; // Optional
+
+		VkPipelineDepthStencilStateCreateInfo depthStencil{};
+		depthStencil.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+		depthStencil.depthTestEnable = true;
+		depthStencil.depthWriteEnable = true;
+		depthStencil.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS;
+		depthStencil.depthBoundsTestEnable = false;
+		depthStencil.minDepthBounds = 0.0f; // Optional
+		depthStencil.maxDepthBounds = 1.0f; // Optional
+		depthStencil.stencilTestEnable = false;
+		depthStencil.front = {}; // Optional
+		depthStencil.back = {}; // Optional
 		
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -229,7 +241,7 @@ namespace sh::render::impl
 		pipelineInfo.pViewportState = &viewportState;
 		pipelineInfo.pRasterizationState = &rasterizer;
 		pipelineInfo.pMultisampleState = &multisampling;
-		pipelineInfo.pDepthStencilState = nullptr; // Optional
+		pipelineInfo.pDepthStencilState = &depthStencil;
 		pipelineInfo.pColorBlendState = &colorBlending;
 		pipelineInfo.pDynamicState = &dynamicState;
 		pipelineInfo.layout = layout;
