@@ -22,7 +22,7 @@ namespace sh::render
 		SCLASS(Material)
 	private:
 		PROPERTY(shader)
-			Shader* shader;
+		Shader* shader;
 
 		std::unordered_map<std::string, float> floats;
 		std::unordered_map<std::string, glm::vec4> vectors;

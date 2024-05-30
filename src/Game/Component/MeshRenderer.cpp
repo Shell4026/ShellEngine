@@ -64,6 +64,8 @@ namespace sh::game
 			mat = nullptr;
 			return;
 		}
+		if (!core::IsValid(mat->GetShader()))
+			return;
 
 		if (gameObject.world.renderer.apiType == sh::render::RenderAPI::Vulkan)
 		{

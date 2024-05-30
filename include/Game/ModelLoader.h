@@ -2,6 +2,14 @@
 
 #include "Export.h"
 
+#include "Core/Util.h"
+
+#include "glm/vec3.hpp"
+#include "glm/vec2.hpp"
+
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/hash.hpp>
+
 #include <memory>
 #include <string_view>
 
