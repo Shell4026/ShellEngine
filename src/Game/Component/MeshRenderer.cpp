@@ -117,20 +117,58 @@ namespace sh::game
 			{
 				if (uniform.typeName == sh::core::reflection::GetTypeName<glm::mat4>())
 				{
-					auto& m = cam->GetProjMatrix();
 					if (uniform.name == "proj")
 						std::memcpy(uniformCopyData.data() + uniform.offset, &cam->GetProjMatrix()[0], sizeof(glm::mat4));
 					else if (uniform.name == "view")
 						std::memcpy(uniformCopyData.data() + uniform.offset, &cam->GetViewMatrix()[0], sizeof(glm::mat4));
 					else if (uniform.name == "model")
 						std::memcpy(uniformCopyData.data() + uniform.offset, &gameObject.transform->localToWorldMatrix[0], sizeof(glm::mat4));
+					else
+					{
+						auto matrix = mat->GetMatrix(uniform.name);
+						if (matrix == nullptr)
+						{
+							glm::mat4 defaultMat{ 0.f };
+							std::memcpy(uniformCopyData.data() + uniform.offset, &defaultMat[0], sizeof(glm::mat4));
+						}
+						else
+							std::memcpy(uniformCopyData.data() + uniform.offset, &matrix[0], sizeof(glm::mat4));
+					}
 				}
 				else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec4>())
-					std::memcpy(uniformCopyData.data() + uniform.offset, mat->GetVector(uniform.name), sizeof(glm::vec4));
+				{
+					auto vec = mat->GetVector(uniform.name);
+					if (vec == nullptr)
+					{
+						glm::vec4 defaultVec{ 0.f };
+						std::memcpy(uniformCopyData.data() + uniform.offset, &defaultVec, sizeof(glm::vec4));
+					}
+					else
+						std::memcpy(uniformCopyData.data() + uniform.offset, vec, sizeof(glm::vec4));
+				}	
 				else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec3>())
-					std::memcpy(uniformCopyData.data() + uniform.offset, mat->GetVector(uniform.name), sizeof(glm::vec3));
+				{
+					auto vec = mat->GetVector(uniform.name);
+					if (vec == nullptr)
+					{
+						glm::vec3 defaultVec{ 0.f };
+						std::memcpy(uniformCopyData.data() + uniform.offset, &defaultVec, sizeof(glm::vec3));
+					}
+					else
+						std::memcpy(uniformCopyData.data() + uniform.offset, vec, sizeof(glm::vec3));
+				}
+					
 				else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec2>())
-					std::memcpy(uniformCopyData.data() + uniform.offset, mat->GetVector(uniform.name), sizeof(glm::vec2));
+				{
+					auto vec = mat->GetVector(uniform.name);
+					if (vec == nullptr)
+					{
+						glm::vec2 defaultVec{ 0.f };
+						std::memcpy(uniformCopyData.data() + uniform.offset, &defaultVec, sizeof(glm::vec2));
+					}
+					else
+						std::memcpy(uniformCopyData.data() + uniform.offset, vec, sizeof(glm::vec2));
+				}
 				else if (uniform.typeName == sh::core::reflection::GetTypeName<float>())
 				{
 					float value = mat->GetFloat(uniform.name);

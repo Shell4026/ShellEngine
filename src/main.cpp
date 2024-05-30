@@ -115,8 +115,6 @@ int main(int arg, char* args[])
 	mat->SetTexture("tex", tex);
 
 	mat2->SetTexture("tex", tex3);
-	mat2->SetVector("offset1", glm::vec4(0.f, 0.0f, 0.f, 0.f));
-	mat2->SetFloat("offset2", 0.f);
 
 	mesh->SetVertex({ 
 		{-0.5f, 0.0f, -0.5f}, 
