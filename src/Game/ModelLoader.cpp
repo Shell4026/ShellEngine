@@ -30,6 +30,7 @@ namespace sh::game
 
 		std::unordered_map<glm::vec3, uint32_t> uniqueVerts;
 		std::vector<glm::vec3> verts;
+		std::vector<glm::vec3> normals;
 		std::vector<glm::vec2> uvs;
 		std::vector<uint32_t> indices;
 		for (const auto& shape : shapes)
@@ -37,17 +38,24 @@ namespace sh::game
 			uint32_t n = 0;
 			for (const auto& index : shape.mesh.indices) 
 			{
-				glm::vec3 vert{
+				glm::vec3 vert
+				{
 					attrib.vertices[3 * index.vertex_index + 0],
 					attrib.vertices[3 * index.vertex_index + 1],
 					attrib.vertices[3 * index.vertex_index + 2]
+				};
+				glm::vec3 normal
+				{
+					attrib.normals[3 * index.normal_index + 0],
+					attrib.normals[3 * index.normal_index + 1],
+					attrib.normals[3 * index.normal_index + 2]
 				};
 				glm::vec2 uv
 				{
 					attrib.texcoords[2 * index.texcoord_index + 0],
 					1 - attrib.texcoords[2 * index.texcoord_index + 1],
 				};
-
+				
 				auto it = uniqueVerts.find(vert);
 				if (it == uniqueVerts.end())
 				{
@@ -55,6 +63,7 @@ namespace sh::game
 
 					verts.push_back(vert);
 					uvs.push_back(uv);
+					normals.push_back(normal);
 					indices.push_back(n++);
 				}
 				else
@@ -64,6 +73,7 @@ namespace sh::game
 
 		mesh->SetVertex(std::move(verts));
 		mesh->SetAttribute(render::ShaderAttribute<glm::vec2>{"uvs", std::move(uvs)});
+		mesh->SetAttribute(render::ShaderAttribute<glm::vec3>{"normals", std::move(normals)});
 		mesh->SetIndices(std::move(indices));
 
 		mesh->Build(renderer);
