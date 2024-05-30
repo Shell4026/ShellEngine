@@ -677,7 +677,7 @@ namespace sh::render {
 					VkDescriptorSet descriptorSets[] = { drawable->GetDescriptorSet(currentFrame) };
 					vkCmdBindDescriptorSets(buffer,
 						VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, 
-						drawable->GetPipelineLayout(), 0, 1, 
+						shader->GetPipelineLayout(), 0, 1, 
 						descriptorSets, 0, nullptr);
 					vkCmdDrawIndexed(buffer, mesh->GetIndices().size(), 1, 0, 0, 0);
 				}

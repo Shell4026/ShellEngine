@@ -20,6 +20,17 @@ namespace sh::render
 
 		VkShaderModule vertShader;
 		VkShaderModule fragShader;
+
+		std::vector<VkDescriptorSetLayoutBinding> descriptorBindings;
+		VkDescriptorSetLayout descriptorSetLayout;
+
+		VkPipelineLayout pipelineLayout;
+	private:
+		void AddDescriptorBinding(uint32_t binding, VkDescriptorType type, VkShaderStageFlagBits stage);
+		auto CreateDescriptorLayout() -> VkResult;
+		auto CreatePipelineLayout() -> VkResult;
+
+		void CleanDescriptors();
 	public:
 		SH_RENDER_API VulkanShader(int id, VkDevice device);
 		SH_RENDER_API VulkanShader(VulkanShader&& other) noexcept;
@@ -32,5 +43,10 @@ namespace sh::render
 
 		SH_RENDER_API auto GetVertexShader() const -> const VkShaderModule;
 		SH_RENDER_API auto GetFragmentShader() const -> const VkShaderModule;
+
+		SH_RENDER_API void Build();
+
+		SH_RENDER_API auto GetDescriptorSetLayout() const -> VkDescriptorSetLayout;
+		SH_RENDER_API auto GetPipelineLayout() const -> VkPipelineLayout;
 	};
 }

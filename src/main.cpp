@@ -108,6 +108,7 @@ int main(int arg, char* args[])
 	shader->AddUniform<glm::vec3>("offset1", 1, sh::render::Shader::ShaderStage::Vertex);
 	shader->AddUniform<float>("offset2", 1, sh::render::Shader::ShaderStage::Vertex);
 	shader->AddUniform<sh::render::Texture>("tex", 2, sh::render::Shader::ShaderStage::Fragment);
+	shader->Build();
 
 	mat->SetVector("offset1", glm::vec4(0.f, 0.0f, 0.f, 0.f));
 	mat->SetFloat("offset2", 0.f);

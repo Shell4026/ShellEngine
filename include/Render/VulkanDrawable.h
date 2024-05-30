@@ -21,22 +21,15 @@ namespace sh::render
 		Material* mat;
 		Mesh* mesh;
 
-		VkPipelineLayout pipelineLayout;
 		std::unique_ptr<impl::VulkanPipeline> pipeline;
 
 		impl::VulkanCommandBuffer cmd;
 
-		std::vector<VkDescriptorSetLayoutBinding> descriptorBindings;
-		VkDescriptorSetLayout descriptorSetLayout;
 		std::array<VkDescriptorSet, VulkanRenderer::MAX_FRAME_DRAW> descriptorSets;
 
 		std::map<uint32_t, std::vector<impl::VulkanBuffer>> uniformBuffers;
 		std::map<uint32_t, Texture*> textures;
 	private:
-		void AddDescriptorBinding(uint32_t binding, VkDescriptorType type, VkShaderStageFlagBits stage);
-		auto CreatePipelineLayout() -> VkResult;
-		auto CreateDescriptorLayout() -> VkResult;
-
 		auto CreateDescriptorSet() -> VkResult;
 	public:
 		SH_RENDER_API VulkanDrawable(VulkanRenderer& renderer);
@@ -46,9 +39,6 @@ namespace sh::render
 
 		SH_RENDER_API void Clean();
 
-		SH_RENDER_API auto GetPipelineLayout() const -> VkPipelineLayout;
-		SH_RENDER_API auto GetPipeline() const->impl::VulkanPipeline*;
-
 		SH_RENDER_API void Build(Mesh* mesh, Material* mat) override;
 
 		SH_RENDER_API auto GetMaterial() const -> Material* override;
@@ -57,6 +47,7 @@ namespace sh::render
 		SH_RENDER_API void SetUniformData(uint32_t binding, int frame, const void* data) override;
 		SH_RENDER_API void SetTextureData(uint32_t binding, Texture* tex) override;
 
+		SH_RENDER_API auto GetPipeline() const->impl::VulkanPipeline*;
 		SH_RENDER_API auto GetDescriptorSet(int frame) -> VkDescriptorSet;
 	};
 }

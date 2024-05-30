@@ -80,6 +80,7 @@ namespace sh::render
 		SH_RENDER_API auto GetShaderType() const -> ShaderType;
 
 		SH_RENDER_API virtual void Clean() = 0;
+		SH_RENDER_API virtual void Build() = 0;
 
 		template<typename T>
 		bool AddAttribute(const std::string& name, uint32_t loc);

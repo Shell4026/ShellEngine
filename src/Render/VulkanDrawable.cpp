@@ -17,8 +17,7 @@ namespace sh::render
 	VulkanDrawable::VulkanDrawable(VulkanRenderer& renderer) :
 		renderer(renderer), 
 		cmd(renderer.GetDevice(), renderer.GetCommandPool()),
-		pipelineLayout(nullptr), mat(nullptr), mesh(nullptr),
-		descriptorSetLayout(nullptr)
+		mat(nullptr), mesh(nullptr)
 	{
 	}
 
@@ -29,69 +28,16 @@ namespace sh::render
 
 	void VulkanDrawable::Clean()
 	{
-		descriptorBindings.clear();
 		uniformBuffers.clear();
 		cmd.Clean();
 		pipeline.reset();
-		if (pipelineLayout)
-		{
-			vkDestroyPipelineLayout(renderer.GetDevice(), pipelineLayout, nullptr);
-			pipelineLayout = nullptr;
-		}
-		if (descriptorSetLayout)
-		{
-			vkDestroyDescriptorSetLayout(renderer.GetDevice(), descriptorSetLayout, nullptr);
-			descriptorSetLayout = nullptr;
-		}
-	}
-
-	auto VulkanDrawable::GetPipelineLayout() const -> VkPipelineLayout
-	{
-		return pipelineLayout;
-	}
-
-	auto VulkanDrawable::GetPipeline() const -> impl::VulkanPipeline*
-	{
-		return pipeline.get();
-	}
-
-	auto VulkanDrawable::CreatePipelineLayout() -> VkResult
-	{
-		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
-		pipelineLayoutInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = 1;
-		pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
-		pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-		pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
-
-		return vkCreatePipelineLayout(renderer.GetDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout);
-	}
-
-	void VulkanDrawable::AddDescriptorBinding(uint32_t binding, VkDescriptorType type, VkShaderStageFlagBits stage)
-	{
-		VkDescriptorSetLayoutBinding layoutBinding{};
-		layoutBinding.binding = binding;
-		layoutBinding.descriptorCount = 1;
-		layoutBinding.descriptorType = type;
-		layoutBinding.pImmutableSamplers = nullptr;
-		layoutBinding.stageFlags = stage;
-		descriptorBindings.push_back(layoutBinding);
-	}
-
-	auto VulkanDrawable::CreateDescriptorLayout() -> VkResult
-	{
-		VkDescriptorSetLayoutCreateInfo info{};
-		info.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		info.bindingCount = descriptorBindings.size();
-		info.pBindings = descriptorBindings.data();
-
-		return vkCreateDescriptorSetLayout(renderer.GetDevice(), &info, nullptr, &descriptorSetLayout);
 	}
 
 	auto VulkanDrawable::CreateDescriptorSet() -> VkResult
 	{
+		VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
 		//디스크립터 생성
-		std::vector<VkDescriptorSetLayout> layouts(VulkanRenderer::MAX_FRAME_DRAW, descriptorSetLayout);
+		std::vector<VkDescriptorSetLayout> layouts(VulkanRenderer::MAX_FRAME_DRAW, shader->GetDescriptorSetLayout());
 		VkDescriptorSetAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		allocInfo.descriptorPool = renderer.GetDescriptorPool();
@@ -106,7 +52,7 @@ namespace sh::render
 		this->mat = mat;
 		this->mesh = mesh;
 
-		Shader* shader = mat->GetShader();
+		VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
 
 		Clean();
 
@@ -152,29 +98,17 @@ namespace sh::render
 				arr.push_back(std::move(buffer));
 			}
 			uniformBuffers.insert({ uniform.first, std::move(arr) });
-
-			AddDescriptorBinding(uniform.first,
-				VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT);
 		}
 		for (auto& uniform : shader->samplerFragmentUniforms)
 		{
-			AddDescriptorBinding(uniform.first,
-				VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT);
 			Texture* tex = mat->GetTexture(uniform.second.name);
 			if (tex != nullptr)
 			{
 				textures.insert({ uniform.first, tex });
 			}
 		}
-		auto result = CreateDescriptorLayout();
-		assert(result == VkResult::VK_SUCCESS);
 
-		result = CreatePipelineLayout();
-		assert(result == VkResult::VK_SUCCESS);
-
-		result = CreateDescriptorSet();
+		auto result = CreateDescriptorSet();
 		if (result == VkResult::VK_ERROR_OUT_OF_POOL_MEMORY)
 		{
 			renderer.ReAllocateDesriptorPool();
@@ -228,12 +162,11 @@ namespace sh::render
 			}
 		}
 
-
 		result = pipeline->
 			SetShader(static_cast<VulkanShader*>(shader)).
 			AddShaderStage(impl::VulkanPipeline::ShaderStage::Vertex).
 			AddShaderStage(impl::VulkanPipeline::ShaderStage::Fragment).
-			Build(pipelineLayout);
+			Build(shader->GetPipelineLayout());
 		assert(result == VkResult::VK_SUCCESS);
 
 		cmd.Clean();
@@ -258,6 +191,10 @@ namespace sh::render
 		return mesh;
 	}
 
+	auto VulkanDrawable::GetPipeline() const -> impl::VulkanPipeline*
+	{
+		return pipeline.get();
+	}
 	auto VulkanDrawable::GetDescriptorSet(int frame) -> VkDescriptorSet
 	{
 		return descriptorSets[frame];
