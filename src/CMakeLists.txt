@@ -29,11 +29,11 @@ target_link_libraries(ShellEngine PUBLIC ShellEngine::Render)
 add_subdirectory(Game)
 target_link_libraries(ShellEngine PUBLIC ShellEngine::Game)
 
+file(GLOB_RECURSE spvFiles "${CMAKE_SOURCE_DIR}/resource/shaders/*.spv")
+
+file(COPY ${spvFiles} DESTINATION ${CMAKE_BINARY_DIR}/bin/shaders)
 file(
 	COPY 
-	${CMAKE_SOURCE_DIR}/resource/vert.spv 
-	${CMAKE_SOURCE_DIR}/resource/frag.spv 
-	${CMAKE_SOURCE_DIR}/resource/triangle.spv
 	${CMAKE_SOURCE_DIR}/resource/textures
 	${CMAKE_SOURCE_DIR}/resource/model
 	DESTINATION ${CMAKE_BINARY_DIR}/bin)
