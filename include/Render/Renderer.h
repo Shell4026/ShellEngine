@@ -3,6 +3,8 @@
 #include "Export.h"
 #include "../Window/Window.h"
 
+#include "glm/vec2.hpp"
+
 #include <queue>
 namespace sh::render {
 	enum class RenderAPI
@@ -18,6 +20,9 @@ namespace sh::render {
 		std::queue<IDrawable*> drawList;
 	public:
 		const RenderAPI apiType;
+
+		glm::vec2 viewportPos;
+		glm::vec2 viewportSize;
 	public:
 		SH_RENDER_API Renderer(RenderAPI api);
 		SH_RENDER_API virtual ~Renderer() = default;

@@ -4,7 +4,6 @@
 #include "../Core/Util.h"
 #include "VulkanImpl/VulkanLayer.h"
 #include "VulkanImpl/VulkanSurface.h"
-#include "VulkanImpl/VulkanPipeline.h"
 #include "VulkanImpl/VulkanCommandBuffer.h"
 #include "VulkanImpl/VulkanFramebuffer.h"
 
@@ -12,15 +11,11 @@
 #include "Material.h"
 #include "VulkanShader.h"
 #include "VulkanDrawable.h"
-#include "VulkanUniform.h"
-
-#include "glm/gtc/matrix_transform.hpp"
 
 #include <cassert>
 #include <set>
 #include <cstdint>
-#include <limits>
-#include <exception>
+#include <utility>
 
 namespace sh::render {
 	VulkanRenderer::VulkanRenderer() :
@@ -659,10 +654,10 @@ namespace sh::render {
 					vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, drawable->GetPipeline()->GetPipeline());
 
 					VkViewport viewport{};
-					viewport.x = 0.0f;
-					viewport.y = static_cast<float>(surface->GetSwapChainSize().height);
-					viewport.width = static_cast<float>(surface->GetSwapChainSize().width);
-					viewport.height = -static_cast<float>(surface->GetSwapChainSize().height);
+					viewport.x = viewportPos.x;
+					viewport.y = static_cast<float>(surface->GetSwapChainSize().height) - viewportPos.y;
+					viewport.width = std::min(viewportSize.x, static_cast<float>(surface->GetSwapChainSize().width));
+					viewport.height = -std::min(viewportSize.y, static_cast<float>(surface->GetSwapChainSize().height));
 					viewport.minDepth = 0.0f;
 					viewport.maxDepth = 1.0f;
 					vkCmdSetViewport(buffer, 0, 1, &viewport);

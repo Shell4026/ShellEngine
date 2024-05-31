@@ -3,7 +3,8 @@
 namespace sh::render
 {
 	Renderer::Renderer(RenderAPI api) :
-		apiType(api)
+		apiType(api),
+		viewportPos(0.f), viewportSize(100.f)
 	{
 
 	}
