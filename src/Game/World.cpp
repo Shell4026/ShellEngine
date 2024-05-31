@@ -11,7 +11,9 @@
 namespace sh::game
 {
 	World::World(sh::render::Renderer& renderer, sh::core::GC& gc) :
-		renderer(renderer),gc(gc), deltaTime(_deltaTime),
+		renderer(renderer), gc(gc), 
+		deltaTime(_deltaTime), gameObjects(objs),
+		
 		_deltaTime(0.0f), 
 		shaders(gc, renderer), materials(gc, renderer), meshes(gc, renderer), textures(gc, renderer),
 		mainCamera(nullptr)
@@ -19,8 +21,11 @@ namespace sh::game
 		gc.AddObject(this);
 	}
 	World::World(World&& other) noexcept :
-		renderer(other.renderer), gc(other.gc), deltaTime(_deltaTime),
+		renderer(other.renderer), gc(other.gc), 
+		deltaTime(_deltaTime), gameObjects(objs),
+		
 		_deltaTime(other._deltaTime),
+		objs(std::move(other.objs)), objsMap(std::move(objsMap)), objsEmptyIdx(std::move(other.objsEmptyIdx)),
 		shaders(std::move(other.shaders)), materials(std::move(other.materials)), meshes(std::move(other.meshes)), textures(std::move(other.textures)),
 		mainCamera(nullptr)
 	{
@@ -112,6 +117,13 @@ namespace sh::game
 		objsMap.erase(it);
 
 		return name;
+	}
+	auto World::GetGameObject(std::string_view name) const -> GameObject*
+	{
+		auto it = objsMap.find(std::string{ name });
+		if (it == objsMap.end())
+			return nullptr;
+		return objs[it->second].get();
 	}
 
 	void World::Start()
