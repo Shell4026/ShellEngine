@@ -13,6 +13,7 @@
 #include <string_view>
 #include <initializer_list>
 #include <memory>
+#include <array>
 
 namespace sh::render
 {
@@ -22,10 +23,17 @@ namespace sh::render
 	class Mesh : public sh::core::SObject, public sh::core::INonCopyable
 	{
 		SCLASS(Mesh)
+	public:
+		struct Face
+		{
+			std::array<uint32_t, 3> vertexIdx;
+		};
 	private:
 		std::vector<glm::vec3> verts;
 		std::vector<glm::vec2> uvs;
+		std::vector<glm::vec3> normals;
 		std::vector<uint32_t> indices;
+		std::vector<Face> faces;
 
 		std::vector<std::unique_ptr<ShaderAttributeBase>> attrs;
 
@@ -49,6 +57,8 @@ namespace sh::render
 		SH_RENDER_API void SetIndices(std::vector<uint32_t>&& indices);
 		SH_RENDER_API void SetIndices(const std::initializer_list<uint32_t>& indices);
 		SH_RENDER_API auto GetIndices() const -> const std::vector<uint32_t>&;
+
+		SH_RENDER_API auto GetFaces() const -> const std::vector<Face>&;
 
 		SH_RENDER_API void Build(const Renderer& renderer);
 

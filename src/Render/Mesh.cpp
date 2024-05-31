@@ -82,8 +82,22 @@ namespace sh::render
 		return indices;
 	}
 
+	auto Mesh::GetFaces() const -> const std::vector<Face>&
+	{
+		return faces;
+	}
+
 	void Mesh::Build(const Renderer& renderer)
 	{
+		for (int i = 0; i < indices.size(); i += 3)
+		{
+			Face face;
+			face.vertexIdx[0] = indices[i + 0];
+			face.vertexIdx[1] = indices[i + 1];
+			face.vertexIdx[2] = indices[i + 2];
+			faces.push_back(face);
+		}
+		
 		if (renderer.apiType == RenderAPI::Vulkan)
 		{
 			buffer = std::make_unique<VulkanVertexBuffer>(static_cast<const VulkanRenderer&>(renderer));
