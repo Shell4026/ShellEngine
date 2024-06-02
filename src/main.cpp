@@ -75,22 +75,25 @@ int main(int arg, char* args[])
 	sh::core::GC gc;
 	
 	sh::window::Window window;
-	window.Create(u8"테스트", 1024, 768);
+	window.Create(u8"테스트", 1920, 1080);
 	window.SetFps(144);
 
 	auto renderer = sh::render::VulkanRenderer{};
 	renderer.Init(window);
+	renderer.viewportPos = {0.f, 0.f};
+	renderer.viewportSize = { 1920.f, 1080.f };
 
 	using namespace sh::game;
 
 	World world{ renderer, gc };
 	
 	VulkanShaderBuilder builder{ renderer };
+
 	ShaderLoader loader{ &builder };
 	TextureLoader texLoader{ renderer };
 	ModelLoader modelLoader{ renderer };
 
-	auto shader = world.shaders.AddResource("Triangle", loader.LoadShader<sh::render::VulkanShader>("vert.spv", "frag.spv"));
+	auto shader = world.shaders.AddResource("Triangle", loader.LoadShader<sh::render::VulkanShader>("shaders/vert.spv", "shaders/frag.spv"));
 	auto mat = world.materials.AddResource("Material", sh::render::Material{ shader });
 	auto mat2 = world.materials.AddResource("Material2", sh::render::Material{ shader });
 	auto mesh = world.meshes.AddResource("Mesh", sh::render::Mesh{});
