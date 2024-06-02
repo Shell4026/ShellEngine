@@ -1,9 +1,15 @@
 ﻿#include "EditorUI.h"
 
+#include "GameObject.h"
+
 namespace sh::game
 {
 	EditorUI::EditorUI(World& world) :
 		world(world)
+	{
+	}
+
+	void EditorUI::DrawViewport()
 	{
 	}
 
@@ -16,7 +22,15 @@ namespace sh::game
 		
 		ImGui::SetNextWindowPos(ImVec2{ 0, 20 });
 		ImGui::SetNextWindowSize(ImVec2{150, 768});
+
 		ImGui::Begin("Hierarchy", nullptr, style);
+		
+		for (auto& obj : world.gameObjects)
+		{
+			ImGui::Selectable(obj->name.c_str(), &selectedObj.select);
+		}
+		
+
 		ImGui::End();
 	}
 

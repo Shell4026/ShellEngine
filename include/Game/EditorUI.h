@@ -11,7 +11,14 @@ namespace sh::game
 	{
 	private:
 		World& world;
+
+		struct SelectedObj
+		{
+			GameObject* obj = nullptr;
+			bool select = false;
+		} selectedObj;
 	private:
+		void DrawViewport();
 		void DrawHierarchy();
 	public:
 		SH_GAME_API EditorUI(World& world);
