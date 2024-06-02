@@ -10,7 +10,8 @@ namespace sh::render::impl
 		device(device), renderPass(renderPass),
 		pipeline(nullptr), shader(nullptr),
 		viewportX(0), viewportY(0),
-		cullMode(CullMode::Back)
+		cullMode(CullMode::Back),
+		topology(Topology::Triangle)
 	{
 	}
 
@@ -20,7 +21,8 @@ namespace sh::render::impl
 		shaderStages(std::move(other.shaderStages)),
 		bindingDescriptions(std::move(other.bindingDescriptions)),
 		attributeDescriptions(std::move(other.attributeDescriptions)),
-		cullMode(other.cullMode)
+		cullMode(other.cullMode),
+		topology(other.topology)
 	{
 		other.pipeline = nullptr;
 	}
@@ -120,7 +122,16 @@ namespace sh::render::impl
 		inputAssembly.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
 		inputAssembly.topology = VkPrimitiveTopology::VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST;
 		inputAssembly.primitiveRestartEnable = VK_FALSE;
-
+		switch (topology)
+		{
+		case Topology::Point:
+			inputAssembly.topology = VkPrimitiveTopology::VK_PRIMITIVE_TOPOLOGY_POINT_LIST;
+			break;
+		case Topology::Line:
+			inputAssembly.topology = VkPrimitiveTopology::VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
+			break;
+		}
+		
 		VkViewport viewport{};
 		viewport.x = 0.0f;
 		viewport.y = 0.0f;
@@ -264,5 +275,14 @@ namespace sh::render::impl
 	{
 		cullMode = mode;
 		return *this;
+	}
+	auto VulkanPipeline::SetTopology(Topology topology) -> VulkanPipeline&
+	{
+		this->topology = topology;
+		return *this;
+	}
+	auto VulkanPipeline::GetTopology() const -> Topology
+	{
+		return topology;
 	}
 }

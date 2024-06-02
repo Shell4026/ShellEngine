@@ -63,6 +63,19 @@ namespace sh::render
 		auto& bindings = static_cast<VulkanVertexBuffer*>(mesh->GetVertexBuffer())->bindingDescriptions;
 		auto& attrs = static_cast<VulkanVertexBuffer*>(mesh->GetVertexBuffer())->attribDescriptions;
 		
+		//토폴리지
+		impl::VulkanPipeline::Topology topology = impl::VulkanPipeline::Topology::Triangle;
+		switch (shader->GetTopology())
+		{
+		case Shader::Topology::Point:
+			topology = impl::VulkanPipeline::Topology::Point;
+			break;
+		case Shader::Topology::Line:
+			topology = impl::VulkanPipeline::Topology::Line;
+			break;
+		}
+		pipeline->SetTopology(topology);
+
 		//Attribute
 		pipeline->AddBindingDescription(bindings[0]);
 		pipeline->AddAttributeDescription(attrs[0]);

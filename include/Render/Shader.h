@@ -34,6 +34,13 @@ namespace sh::render
 			Fragment
 		};
 
+		enum class Topology
+		{
+			Point,
+			Line,
+			Triangle
+		};
+
 		struct Data
 		{
 			uint32_t idx;
@@ -61,10 +68,11 @@ namespace sh::render
 		std::map<uint32_t, std::vector<UniformData>> _fragmentUniforms;
 		std::map<uint32_t, UniformData> _samplerVertexUniforms;
 		std::map<uint32_t, UniformData> _samplerFragmentUniforms;
-	protected:
-		int id;
 
 		ShaderType type;
+		Topology topology = Topology::Triangle;
+	protected:
+		int id;
 	protected:
 		Shader(int id, ShaderType type);
 		Shader(const Shader& other);
@@ -78,6 +86,9 @@ namespace sh::render
 		SH_RENDER_API void operator=(Shader&& other) noexcept;
 		SH_RENDER_API auto operator==(const Shader& other) -> bool;
 		SH_RENDER_API auto GetShaderType() const -> ShaderType;
+
+		SH_RENDER_API void SetTopology(Topology topology);
+		SH_RENDER_API auto GetTopology() const -> Topology;
 
 		SH_RENDER_API virtual void Clean() = 0;
 		SH_RENDER_API virtual void Build() = 0;

@@ -27,6 +27,13 @@ namespace sh::render::impl
 			 Front,
 			 Back
 		 };
+
+		 enum class Topology
+		 {
+			 Point,
+			 Line,
+			 Triangle
+		 };
 	private:
 		VkDevice device;
 		VkRenderPass renderPass;
@@ -41,6 +48,7 @@ namespace sh::render::impl
 		int viewportX, viewportY;
 
 		CullMode cullMode;
+		Topology topology;
 	public:
 		SH_RENDER_API VulkanPipeline(VkDevice device, VkRenderPass renderPass);
 		SH_RENDER_API VulkanPipeline(VulkanPipeline&& other) noexcept;
@@ -63,5 +71,8 @@ namespace sh::render::impl
 		SH_RENDER_API auto SetShader(VulkanShader* shader) -> VulkanPipeline&;
 
 		SH_RENDER_API auto SetCullMode(CullMode mode) -> VulkanPipeline&;
+
+		SH_RENDER_API auto SetTopology(Topology topology) -> VulkanPipeline&;
+		SH_RENDER_API auto GetTopology() const -> Topology;
 	};
 }
