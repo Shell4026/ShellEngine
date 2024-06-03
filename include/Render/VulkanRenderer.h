@@ -75,7 +75,7 @@ namespace sh::render {
 		bool isInit : 1;
 		bool bPause : 1;
 		bool bFindValidationLayer : 1;
-		const bool bEnableValidationLayers : 1;
+		bool bEnableValidationLayers : 1;
 		bool bReCreateDescriptorPool : 1;
 	private:
 		auto CreateInstance(const std::vector<const char*>& requestedLayer, const std::vector<const char*>& requestedExtension)->VkResult;

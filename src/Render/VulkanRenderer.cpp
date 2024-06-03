@@ -140,7 +140,11 @@ namespace sh::render {
 	void VulkanRenderer::InitDebugMessenger()
 	{
 		auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-		assert(func != nullptr);
+		if (func == nullptr)
+		{
+			bEnableValidationLayers = false;
+			return;
+		}
 
 		auto info = CreateDebugInfo();
 
