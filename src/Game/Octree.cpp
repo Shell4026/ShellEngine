@@ -4,7 +4,7 @@
 
 namespace sh::game
 {
-	Octree::Octree(glm::vec3 min, glm::vec3 max, int capacity = 100) :
+	Octree::Octree(glm::vec3 min, glm::vec3 max, int capacity) :
 		capacity(capacity), minSize(2), min(min), max(max), childs(), objs(), hasChild(false)
 	{
 	}
