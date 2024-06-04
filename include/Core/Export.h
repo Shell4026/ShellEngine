@@ -1,4 +1,4 @@
-﻿#pragma
+﻿#pragma once
 
 #include "Config.h"
 #ifdef ShellEngineCore_EXPORTS
