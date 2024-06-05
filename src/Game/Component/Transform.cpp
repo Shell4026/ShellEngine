@@ -4,8 +4,7 @@
 
 namespace sh::game
 {
-	Transform::Transform(GameObject& owner) :
-		Component(owner),
+	Transform::Transform() :
 		position(vPosition), scale(vScale), rotation(vRot), localToWorldMatrix(matModel),
 
 		localPosition(),
@@ -68,6 +67,13 @@ namespace sh::game
 	void Transform::SetPosition(const glm::vec3& pos)
 	{
 		vPosition = pos;
+		updateMatrix = true;
+	}
+	void Transform::SetPosition(float x, float y, float z)
+	{
+		vPosition.x = x;
+		vPosition.y = y;
+		vPosition.z = z;
 		updateMatrix = true;
 	}
 	void Transform::SetScale(const glm::vec3& scale)

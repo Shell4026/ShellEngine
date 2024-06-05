@@ -95,4 +95,11 @@ namespace sh::game
 	{
 		return components;
 	}
+
+	void GameObject::AddComponent(std::unique_ptr<Component>&& component)
+	{
+		component->SetOwner(*this);
+		component->SetGC(world.gc);
+		components.push_back(std::move(component));
+	}
 }

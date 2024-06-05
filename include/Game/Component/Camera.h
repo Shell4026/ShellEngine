@@ -9,7 +9,7 @@ namespace sh::game
 {
 	class Camera : public Component
 	{
-		SCLASS(Camera)
+		SCOMPONENT(Camera)
 	private:
 		glm::mat4 matProj;
 		glm::mat4 matView;
@@ -20,7 +20,7 @@ namespace sh::game
 
 		const glm::mat4& worldToCameraMatrix;
 	public:
-		SH_GAME_API Camera(GameObject& owner);
+		SH_GAME_API Camera();
 		SH_GAME_API ~Camera() = default;
 		
 		SH_GAME_API void Start() override;

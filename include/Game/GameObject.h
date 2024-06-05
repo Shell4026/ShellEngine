@@ -50,11 +50,14 @@ namespace sh::game
 		SH_GAME_API void SetName(const std::string& name);
 
 		SH_GAME_API auto GetComponents() const -> const std::vector<std::unique_ptr<Component>>&;
+
+		SH_GAME_API void AddComponent(std::unique_ptr<Component>&& component);
 	public:
 		template<typename T>
 		auto AddComponent() -> std::enable_if_t<IsComponent<T>::value, T*>
 		{
-			components.push_back(std::make_unique<T>(*this));
+			components.push_back(std::make_unique<T>());
+			components.back()->SetOwner(*this);
 			components.back()->SetGC(world.gc);
 			return static_cast<T*>(components.back().get());
 		}

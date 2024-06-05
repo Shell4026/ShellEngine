@@ -2,8 +2,9 @@
 
 namespace sh::game
 {
-	Component::Component(GameObject& owner) :
-		gameObject(owner), bInit(false), bEnable(true), active(bEnable)
+	Component::Component() :
+		active(bEnable),
+		gameObject(nullptr), bInit(false), bEnable(true)
 	{
 	}
 
@@ -30,6 +31,10 @@ namespace sh::game
 				Awake();
 			OnEnable();
 		}
+	}
+	void Component::SetOwner(GameObject& object)
+	{
+		gameObject = &object;
 	}
 
 	void Component::Awake()

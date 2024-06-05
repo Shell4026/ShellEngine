@@ -18,7 +18,7 @@ namespace sh::game
 {
 	class MeshRenderer : public Component
 	{
-		SCLASS(MeshRenderer)
+		SCOMPONENT(MeshRenderer)
 	private:
 		sh::render::Mesh* mesh;
 		sh::render::Material* mat;
@@ -29,7 +29,7 @@ namespace sh::game
 	private:
 		void CreateDrawable();
 	public:
-		SH_GAME_API MeshRenderer(GameObject& owner);
+		SH_GAME_API MeshRenderer();
 		SH_GAME_API ~MeshRenderer();
 
 		SH_GAME_API void SetMesh(sh::render::Mesh& mesh);

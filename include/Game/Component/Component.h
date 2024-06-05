@@ -8,25 +8,33 @@
 
 #include <type_traits>
 
+#define SCOMPONENT(name) SCLASS(name)\
+public:\
+	virtual auto New() -> std::unique_ptr<Component>\
+	{\
+		return std::unique_ptr<Component>(new name);\
+	}
+
 namespace sh::game
 {
 	class GameObject;
 
 	class Component : public IObject
 	{
-		SCLASS(Component)
+		SCOMPONENT(Component)
 	private:
 		bool bEnable;
 		bool bInit : 1;
 	public:
-		GameObject& gameObject;
+		GameObject* gameObject;
 		const bool& active;
 	public:
-		SH_GAME_API Component(GameObject& owner);
+		SH_GAME_API Component();
 		SH_GAME_API virtual ~Component() = default;
 		SH_GAME_API Component(const Component& other);
 		SH_GAME_API Component(Component&& other) noexcept;
 
+		SH_GAME_API void SetOwner(GameObject& object);
 		SH_GAME_API void SetActive(bool b);
 
 		SH_GAME_API void Awake() override;
