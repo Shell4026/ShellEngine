@@ -26,7 +26,7 @@ namespace sh::game
 		const render::Renderer& renderer;
 	public:
 		SH_GAME_API ModelLoader(const render::Renderer& renderer);
-
-		SH_GAME_API auto Load(std::string_view filename) -> std::unique_ptr<render::Mesh>;
+		SH_GAME_API virtual ~ModelLoader() = default;
+		SH_GAME_API virtual auto Load(std::string_view filename) -> std::unique_ptr<render::Mesh>;
 	};
 }
