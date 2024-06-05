@@ -210,7 +210,7 @@ namespace sh::game
 				break;
 			case window::Event::KeyType::Period:
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_Period, keyDown);
-				if (keyDown) io.AddInputCharacter('`');
+				if (keyDown) io.AddInputCharacter('.');
 				break;
 			case window::Event::KeyType::Semicolon:
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_Semicolon, keyDown);
@@ -234,7 +234,7 @@ namespace sh::game
 				break;
 			case window::Event::KeyType::Grave:
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_GraveAccent, keyDown);
-				if (keyDown) io.AddInputCharacter('.');
+				if (keyDown) io.AddInputCharacter('`');
 				break;
 			case window::Event::KeyType::Slash:
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_Slash, keyDown);
