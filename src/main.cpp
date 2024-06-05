@@ -10,6 +10,7 @@
 #include "Core/Reflection.hpp"
 #include <Core/Util.h>
 #include <Core/GC.h>
+#include "Core/ModuleLoader.h"
 #include <cassert>
 #include <fmt/core.h>
 #include "Game/Input.h"
@@ -24,6 +25,7 @@
 #include "Game/Component/MeshRenderer.h"
 #include "Game/Component/UniformTest.h"
 #include "Game/Component/Camera.h"
+#include "Game/ComponentModule.h"
 #include "Game/ImGUI.h"
 #include "Game/EditorUI.h"
 
@@ -72,16 +74,24 @@ public:
 
 int main(int arg, char* args[]) 
 {
+	sh::core::ModuleLoader moduleLoader;
+	void* modulePtr = moduleLoader.Load("ShellEngineUser");
+	sh::game::ComponentModule* componentModule = reinterpret_cast<sh::game::ComponentModule*>(modulePtr);
+	for (auto& components : componentModule->GetComponents())
+	{
+		fmt::print("Load Component: {}\n", components.first);
+	}
+
 	sh::core::GC gc;
 	
 	sh::window::Window window;
-	window.Create(u8"테스트", 1920, 1080);
+	window.Create(u8"테스트", 1024, 768);
 	window.SetFps(144);
 
 	auto renderer = sh::render::VulkanRenderer{};
 	renderer.Init(window);
 	renderer.viewportPos = {0.f, 0.f};
-	renderer.viewportSize = { 1920.f, 1080.f };
+	renderer.viewportSize = { 1024.f, 768.f };
 
 	using namespace sh::game;
 
@@ -138,6 +148,8 @@ int main(int arg, char* args[])
 
 	GameObject* obj = world.AddGameObject("Test");
 	GameObject* obj2 = world.AddGameObject("Test2");
+
+	obj2->AddComponent(componentModule->GetComponent("ComponentTest")->New());
 
 	auto transform = obj->transform;
 	transform->SetRotation({ -90.f, 0.f, 0.f });
