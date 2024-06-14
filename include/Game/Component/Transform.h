@@ -14,8 +14,11 @@ namespace sh::game
 		SCOMPONENT(Transform)
 	private:
 		glm::vec3 localPosition;
+		PROPERTY(vPosition)
 		glm::vec3 vPosition;
+		PROPERTY(vScale)
 		glm::vec3 vScale;
+		PROPERTY(vRot)
 		glm::vec3 vRot;
 
 		glm::mat4 matModel;

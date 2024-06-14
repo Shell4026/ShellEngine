@@ -52,15 +52,18 @@ namespace sh::game
 
 	void Transform::Update()
 	{
-		if (updateMatrix)
-		{
-			UpdateMatrix();
-			updateMatrix = false;
-		}
+		UpdateMatrix();
 	}
 
 	void Transform::UpdateMatrix()
 	{
+		if (vRot.x >= 360)
+			vRot.x -= 360;
+		if (vRot.y >= 360)
+			vRot.y -= 360;
+		if (vRot.z >= 360)
+			vRot.z -= 360;
+		quat = glm::quat{ glm::radians(vRot) };
 		matModel = glm::translate(glm::mat4{ 1.0f }, vPosition) * glm::mat4_cast(quat) * glm::scale(glm::mat4{ 1.0f }, vScale);
 	}
 
