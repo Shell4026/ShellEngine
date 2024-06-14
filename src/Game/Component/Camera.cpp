@@ -20,6 +20,14 @@ namespace sh::game
 			nearPlane, farPlane);
 		matView = glm::lookAt(gameObject->transform->position, glm::vec3(0.f), glm::vec3(0.f, 1.0f, 0.f));
 	}
+	void Camera::Update()
+	{
+		matProj = glm::perspectiveFov(fov,
+			static_cast<float>(gameObject->world.renderer.GetWidth()),
+			static_cast<float>(gameObject->world.renderer.GetHeight()),
+			nearPlane, farPlane);
+		matView = glm::lookAt(gameObject->transform->position, glm::vec3(0.f), glm::vec3(0.f, 1.0f, 0.f));
+	}
 
 	auto Camera::GetProjMatrix() const -> const glm::mat4&
 	{
