@@ -10,8 +10,8 @@
 
 namespace sh::game
 {
-	World::World(sh::render::Renderer& renderer, sh::core::GC& gc) :
-		renderer(renderer), gc(gc), 
+	World::World(sh::render::Renderer& renderer, sh::core::GC& gc, const ComponentModule& componentModule) :
+		renderer(renderer), gc(gc), componentModule(componentModule),
 		deltaTime(_deltaTime), gameObjects(objs),
 		
 		_deltaTime(0.0f), 
@@ -21,10 +21,10 @@ namespace sh::game
 		gc.AddObject(this);
 	}
 	World::World(World&& other) noexcept :
-		renderer(other.renderer), gc(other.gc), 
+		renderer(other.renderer), gc(other.gc), componentModule(other.componentModule),
 		deltaTime(_deltaTime), gameObjects(objs),
 		
-		_deltaTime(other._deltaTime),
+		_deltaTime(other._deltaTime), 
 		objs(std::move(other.objs)), objsMap(std::move(objsMap)), objsEmptyIdx(std::move(other.objsEmptyIdx)),
 		shaders(std::move(other.shaders)), materials(std::move(other.materials)), meshes(std::move(other.meshes)), textures(std::move(other.textures)),
 		mainCamera(nullptr)

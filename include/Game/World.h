@@ -2,6 +2,7 @@
 
 #include "Export.h"
 #include "ResourceManager.hpp"
+#include "ComponentModule.h"
 
 #include "Core/NonCopyable.h"
 #include "Core/SObject.h"
@@ -56,9 +57,10 @@ namespace sh::game
 		PROPERTY(mainCamera)
 		Camera* mainCamera;
 	public:
+		const ComponentModule& componentModule;
 		const std::vector<std::unique_ptr<GameObject>>& gameObjects;
 	public:
-		SH_GAME_API World(sh::render::Renderer& renderer, sh::core::GC& gc);
+		SH_GAME_API World(sh::render::Renderer& renderer, sh::core::GC& gc, const ComponentModule& componentModule);
 		SH_GAME_API World(World&& other) noexcept;
 		SH_GAME_API virtual ~World();
 

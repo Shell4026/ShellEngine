@@ -95,7 +95,7 @@ int main(int arg, char* args[])
 
 	using namespace sh::game;
 
-	World world{ renderer, gc };
+	World world{ renderer, gc, *componentModule };
 	
 	VulkanShaderBuilder builder{ renderer };
 
@@ -149,7 +149,7 @@ int main(int arg, char* args[])
 	GameObject* obj = world.AddGameObject("Test");
 	GameObject* obj2 = world.AddGameObject("Test2");
 
-	obj2->AddComponent(componentModule->GetComponent("ComponentTest")->New());
+	//obj2->AddComponent(componentModule->GetComponent("ComponentTest")->New());
 
 	auto transform = obj->transform;
 	transform->SetRotation({ -90.f, 0.f, 0.f });
@@ -161,9 +161,6 @@ int main(int arg, char* args[])
 	auto meshRenderer2 = obj2->AddComponent<MeshRenderer>();
 	meshRenderer2->SetMesh(*mesh);
 	meshRenderer2->SetMaterial(*mat);
-
-	auto uniformTest = obj->AddComponent<UniformTest>();
-	uniformTest->SetMaterial(*mat);
 
 	GameObject* cam = world.AddGameObject("Camera");
 	cam->transform->SetPosition(glm::vec3(2.f, 2.f, 2.f));
