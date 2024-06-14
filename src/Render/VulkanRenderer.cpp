@@ -377,6 +377,8 @@ namespace sh::render {
 
 	bool VulkanRenderer::Init(sh::window::Window& win)
 	{
+		Renderer::Init(win);
+
 		window = &win;
 		winHandle = win.GetNativeHandle();
 
@@ -658,10 +660,14 @@ namespace sh::render {
 					vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, drawable->GetPipeline()->GetPipeline());
 
 					VkViewport viewport{};
-					viewport.x = viewportPos.x;
-					viewport.y = static_cast<float>(surface->GetSwapChainSize().height) - viewportPos.y;
-					viewport.width = std::min(viewportSize.x, static_cast<float>(surface->GetSwapChainSize().width));
-					viewport.height = -std::min(viewportSize.y, static_cast<float>(surface->GetSwapChainSize().height));
+					float width = viewportEnd.x - viewportStart.x;
+					float height = viewportEnd.y - viewportStart.y;
+					float surfWidth = static_cast<float>(surface->GetSwapChainSize().width);
+					float surfHeight = static_cast<float>(surface->GetSwapChainSize().height);
+					viewport.x = viewportStart.x;
+					viewport.y = viewportEnd.y;
+					viewport.width = std::min(width, surfWidth);
+					viewport.height = -std::min(height, surfHeight);
 					viewport.minDepth = 0.0f;
 					viewport.maxDepth = 1.0f;
 					vkCmdSetViewport(buffer, 0, 1, &viewport);
@@ -714,6 +720,12 @@ namespace sh::render {
 		DestroyDescriptorPool();
 		CreateDescriptorPool();
 		bReCreateDescriptorPool = true;
+	}
+
+	SH_RENDER_API void VulkanRenderer::SetViewport(const glm::vec2& start, const glm::vec2& end)
+	{
+		viewportStart = start;
+		viewportEnd = end;
 	}
 
 	auto VulkanRenderer::GetInstance() const -> VkInstance

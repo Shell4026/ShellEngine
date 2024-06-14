@@ -6,6 +6,7 @@
 #include "glm/vec2.hpp"
 
 #include <queue>
+#include <utility>
 namespace sh::render {
 	enum class RenderAPI
 	{
@@ -16,18 +17,20 @@ namespace sh::render {
 	class Framebuffer;
 
 	class Renderer {
+	private:
+		sh::window::Window* window;
 	protected:
 		std::queue<IDrawable*> drawList;
+
+		glm::vec2 viewportStart;
+		glm::vec2 viewportEnd;
 	public:
 		const RenderAPI apiType;
-
-		glm::vec2 viewportPos;
-		glm::vec2 viewportSize;
 	public:
 		SH_RENDER_API Renderer(RenderAPI api);
 		SH_RENDER_API virtual ~Renderer() = default;
 
-		SH_RENDER_API virtual bool Init(sh::window::Window& win) = 0;
+		SH_RENDER_API virtual bool Init(sh::window::Window& win);
 		SH_RENDER_API virtual bool Resizing() = 0;
 		SH_RENDER_API virtual void Clean() = 0;
 
@@ -40,7 +43,13 @@ namespace sh::render {
 		SH_RENDER_API virtual auto GetWidth() const -> uint32_t = 0;
 		SH_RENDER_API virtual auto GetHeight() const -> uint32_t = 0;
 
+		SH_RENDER_API virtual void SetViewport(const glm::vec2& start, const glm::vec2& end) = 0;
+		SH_RENDER_API auto GetViewportStart() const -> const glm::vec2&;
+		SH_RENDER_API auto GetViewportEnd() const -> const glm::vec2&;
+
 		SH_RENDER_API void ClearDrawList();
 		SH_RENDER_API void PushDrawAble(IDrawable* drawable);
+
+		SH_RENDER_API auto GetWindow() -> sh::window::Window&;
 	};
 }

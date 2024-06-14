@@ -90,8 +90,7 @@ int main(int arg, char* args[])
 
 	auto renderer = sh::render::VulkanRenderer{};
 	renderer.Init(window);
-	renderer.viewportPos = {0.f, 0.f};
-	renderer.viewportSize = { 1024.f, 768.f };
+	renderer.SetViewport({ 150.f, 0.f }, { window.width - 150.f, window.height - 180});
 
 	using namespace sh::game;
 

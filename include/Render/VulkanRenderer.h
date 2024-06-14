@@ -130,6 +130,8 @@ namespace sh::render {
 
 		SH_RENDER_API void AddDrawCall(const std::function<void()>& func);
 
+		SH_RENDER_API void SetViewport(const glm::vec2& start, const glm::vec2& end) override;
+
 		SH_RENDER_API auto GetInstance() const -> VkInstance;
 		SH_RENDER_API auto GetDevice() const -> VkDevice;
 		SH_RENDER_API auto GetGPU() const -> VkPhysicalDevice;
