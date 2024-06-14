@@ -27,7 +27,8 @@
 #include "Game/Component/Camera.h"
 #include "Game/ComponentModule.h"
 #include "Game/ImGUI.h"
-#include "Game/EditorUI.h"
+
+#include "Editor/EditorUI.h"
 
 #include <iostream>
 
@@ -173,9 +174,9 @@ int main(int arg, char* args[])
 	world.Start();
 
 	ImGUI gui(window, renderer);
-	EditorUI editorUi(world);
-
 	gui.Init();
+
+	sh::editor::EditorUI editorUi(world, gui);
 	while (window.IsOpen())
 	{
 		window.ProcessFrame();
