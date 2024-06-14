@@ -527,7 +527,6 @@ namespace sh::core::reflection
 		PropertyDataBase* data;
 
 		const char* name;
-		std::string_view typeName;
 	public:
 		const bool isContainer;
 		const int containerNestedLevel;
