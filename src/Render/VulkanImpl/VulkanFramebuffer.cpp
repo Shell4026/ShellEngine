@@ -26,7 +26,7 @@ namespace sh::render::impl
 	}
 
 	VulkanFramebuffer::VulkanFramebuffer(VulkanFramebuffer&& other) noexcept :
-		device(other.device),
+		device(other.device), gpu(other.gpu), alloc(other.alloc),
 		framebuffer(other.framebuffer), img(other.img), renderPass(other.renderPass),
 		depthImg(std::move(other.depthImg)),
 		width(other.width), height(other.height), format(other.format)
