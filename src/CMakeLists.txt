@@ -29,6 +29,9 @@ target_link_libraries(ShellEngine PUBLIC ShellEngine::Render)
 add_subdirectory(Game)
 target_link_libraries(ShellEngine PUBLIC ShellEngine::Game)
 
+add_subdirectory(Editor)
+target_link_libraries(ShellEngine PUBLIC ShellEngine::Editor)
+
 file(GLOB_RECURSE spvFiles "${CMAKE_SOURCE_DIR}/resource/shaders/*.spv")
 
 file(COPY ${spvFiles} DESTINATION ${CMAKE_BINARY_DIR}/bin/shaders)
