@@ -1,4 +1,4 @@
-﻿set(SH_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include" CACHE STRINGS "Engine include directory")
+﻿set(SH_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include" CACHE STRING "Engine include directory")
 
 file(GLOB_RECURSE SRC CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 

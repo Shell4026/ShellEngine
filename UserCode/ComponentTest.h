@@ -14,6 +14,8 @@ class ComponentTest : public Component
 private:
 	PROPERTY(height)
 	float height;
+	PROPERTY(height2)
+	float height2;
 public:
 	SH_USER_API ComponentTest();
 	SH_USER_API ~ComponentTest();

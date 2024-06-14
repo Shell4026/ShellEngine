@@ -5,7 +5,7 @@
 #include <iostream>
 
 ComponentTest::ComponentTest() :
-	height(1.0f)
+	height(1.0f), height2(2.0f)
 {
 }
 
