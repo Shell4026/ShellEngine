@@ -113,12 +113,15 @@ namespace sh::render::impl
 
 	auto VulkanSurface::SelectPresentMode() -> VkPresentModeKHR
 	{
-		for (const auto& mode : details.presentModes) {
-			if (mode == VK_PRESENT_MODE_MAILBOX_KHR) {
+		for (const auto& mode : details.presentModes) 
+		{
+			//삼중 버퍼링
+			if (mode == VK_PRESENT_MODE_MAILBOX_KHR) 
+			{
 				return mode;
 			}
 		}
-
+		//수직 동기화
 		return VK_PRESENT_MODE_FIFO_KHR;
 	}
 
@@ -137,6 +140,7 @@ namespace sh::render::impl
 
 		//스왑 체인에 쓸 이미지 갯수
 		//최소값이면 렌더링할 다른 이미지를 확보하기 전에 드라이버가 내부 작업을 완료할 때까지 기다려야 하는 경우가 있다. 따라서 +1
+		//버퍼링?
 		uint32_t imageCount = details.capabilities.minImageCount + 1;
 		if (details.capabilities.maxImageCount > 0 && imageCount > details.capabilities.maxImageCount)
 			imageCount = details.capabilities.maxImageCount;
