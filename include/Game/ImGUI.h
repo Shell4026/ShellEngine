@@ -3,6 +3,7 @@
 #include "Export.h"
 
 #include "External/imgui/imgui.h"
+#include "External/imgui/imgui_internal.h"
 #include "External/imgui/backends/imgui_impl_vulkan.h"
 
 #include "Window/Window.h"
@@ -17,7 +18,7 @@ namespace sh::game
 		window::Window& window;
 		render::VulkanRenderer& renderer;
 
-		static bool bInit;
+		bool bInit;
 	private:
 		void WindowInit();
 	public:
@@ -30,6 +31,8 @@ namespace sh::game
 		SH_GAME_API void Update();
 		SH_GAME_API void Render();
 
-		SH_GAME_API static bool IsInit();
+		SH_GAME_API bool IsInit() const;
+
+		SH_GAME_API auto GetContext() const -> ImGuiContext*;
 	};
 }

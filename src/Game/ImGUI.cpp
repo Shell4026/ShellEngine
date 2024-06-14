@@ -6,8 +6,6 @@
 
 namespace sh::game
 {
-	bool ImGUI::bInit = false;
-
 	static void check_vk_result(VkResult err)
 	{
 		if (err == 0)
@@ -41,6 +39,7 @@ namespace sh::game
 		io.BackendFlags |= ImGuiBackendFlags_::ImGuiBackendFlags_HasMouseCursors;
 		io.BackendPlatformName = "ShellEngine";
 		io.DisplaySize = ImVec2{ static_cast<float>(window.width), static_cast<float>(window.height) };
+		io.ConfigFlags |= ImGuiConfigFlags_::ImGuiConfigFlags_DockingEnable;
 	}
 
 	void ImGUI::Init()
@@ -252,7 +251,7 @@ namespace sh::game
 		ImGui_ImplVulkan_NewFrame();
 		//ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();
-		ImGui::ShowDemoWindow();
+		//ImGui::ShowDemoWindow();
 	}
 	void ImGUI::Render()
 	{
@@ -260,8 +259,12 @@ namespace sh::game
 			return;
 		ImGui::Render();
 	}
-	bool ImGUI::IsInit()
+	bool ImGUI::IsInit() const
 	{
 		return bInit;
+	}
+	auto ImGUI::GetContext() const -> ImGuiContext*
+	{
+		return ImGui::GetCurrentContext();
 	}
 }
