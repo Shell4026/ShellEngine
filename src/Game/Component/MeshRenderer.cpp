@@ -84,6 +84,7 @@ namespace sh::game
 
 	void MeshRenderer::Awake()
 	{
+		Super::Awake();
 		CreateDrawable();
 	}
 
