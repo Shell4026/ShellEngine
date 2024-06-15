@@ -21,7 +21,7 @@ namespace sh::window {
 		this->Close();
 	}
 
-	void Window::Create(const std::string& title, int wsize, int hsize)
+	void Window::Create(const std::string& title, int wsize, int hsize, StyleFlag style)
 	{
 		if (isOpen)
 			return;
@@ -30,7 +30,7 @@ namespace sh::window {
 		this->title = title;
 
 		winImpl = WindowFactory::CreateWindowImpl();
-		handle = winImpl->Create(title, wsize, hsize);
+		handle = winImpl->Create(title, wsize, hsize, style);
 
 		this->wsize = wsize;
 		this->hsize = hsize;
@@ -50,6 +50,11 @@ namespace sh::window {
 		else
 		{
 			event = winImpl->PopEvent();
+			if (event.type == Event::EventType::Resize)
+			{
+				wsize = GetWidth();
+				hsize = GetHeight();
+			}
 			return true;
 		}
 		return false;
@@ -100,5 +105,14 @@ namespace sh::window {
 	void Window::SetTitle(std::string_view title)
 	{
 		winImpl->SetTitle(title);
+	}
+
+	auto Window::GetWidth() const -> uint32_t
+	{
+		return winImpl->GetWidth();
+	}
+	auto Window::GetHeight() const -> uint32_t
+	{
+		return winImpl->GetHeight();
 	}
 }

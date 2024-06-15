@@ -86,7 +86,7 @@ int main(int arg, char* args[])
 	sh::core::GC gc;
 	
 	sh::window::Window window;
-	window.Create(u8"테스트", 1024, 768);
+	window.Create(u8"테스트", 1024, 768, sh::window::Window::Style::Default);
 	window.SetFps(144);
 
 	auto renderer = sh::render::VulkanRenderer{};
@@ -194,6 +194,10 @@ int main(int arg, char* args[])
 				world.Clean();
 				renderer.Clean();
 				window.Close();
+				break;
+			case sh::window::Event::EventType::Resize:
+				renderer.SetViewport({ 150.f, 0.f }, { window.width - 150.f, window.height - 180 });
+				gui.Resize();
 				break;
 			case sh::window::Event::EventType::MousePressed:
 				if (e.mouseType == sh::window::Event::MouseType::Left)

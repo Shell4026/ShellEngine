@@ -36,7 +36,8 @@ namespace sh::game
 	void ImGUI::WindowInit()
 	{
 		ImGuiIO& io = ImGui::GetIO();
-		io.BackendFlags |= ImGuiBackendFlags_::ImGuiBackendFlags_HasMouseCursors;
+		io.BackendFlags |= 
+			ImGuiBackendFlags_::ImGuiBackendFlags_HasMouseCursors;
 		io.BackendPlatformName = "ShellEngine";
 		io.DisplaySize = ImVec2{ static_cast<float>(window.width), static_cast<float>(window.height) };
 		io.ConfigFlags |= ImGuiConfigFlags_::ImGuiConfigFlags_DockingEnable;
@@ -74,6 +75,12 @@ namespace sh::game
 		});
 
 		bInit = true;
+	}
+
+	void ImGUI::Resize()
+	{
+		ImGuiIO& io = ImGui::GetIO();
+		io.DisplaySize = ImVec2{ static_cast<float>(window.width), static_cast<float>(window.height) };
 	}
 
 	void ImGUI::ProcessEvent(window::Event event)
@@ -161,7 +168,25 @@ namespace sh::game
 			{
 				int keyDif = static_cast<int>(event.keyType) - static_cast<int>(window::Event::KeyType::Num0);
 				io.AddKeyEvent(static_cast<ImGuiKey>(ImGuiKey::ImGuiKey_0 + keyDif), keyDown);
-				if (keyDown) io.AddInputCharacter('0' + keyDif);
+				if (keyDown) 
+					io.AddInputCharacter('0' + keyDif);
+				break;
+			}
+			case window::Event::KeyType::Numpad0: [[fallthrough]];
+			case window::Event::KeyType::Numpad1: [[fallthrough]];
+			case window::Event::KeyType::Numpad2: [[fallthrough]];
+			case window::Event::KeyType::Numpad3: [[fallthrough]];
+			case window::Event::KeyType::Numpad4: [[fallthrough]];
+			case window::Event::KeyType::Numpad5: [[fallthrough]];
+			case window::Event::KeyType::Numpad6: [[fallthrough]];
+			case window::Event::KeyType::Numpad7: [[fallthrough]];
+			case window::Event::KeyType::Numpad8: [[fallthrough]];
+			case window::Event::KeyType::Numpad9:
+			{
+				int keyDif = static_cast<int>(event.keyType) - static_cast<int>(window::Event::KeyType::Numpad0);
+				io.AddKeyEvent(static_cast<ImGuiKey>(ImGuiKey::ImGuiKey_Keypad0 + keyDif), keyDown);
+				if (keyDown)
+					io.AddInputCharacter('0' + keyDif);
 				break;
 			}
 			case window::Event::KeyType::Left:
@@ -251,7 +276,7 @@ namespace sh::game
 		ImGui_ImplVulkan_NewFrame();
 		//ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();
-		//ImGui::ShowDemoWindow();
+		ImGui::ShowDemoWindow();
 	}
 	void ImGUI::Render()
 	{

@@ -34,11 +34,19 @@ namespace sh::window {
 	public:
 		const uint32_t& width;
 		const uint32_t& height;
+
+		using StyleFlag = uint32_t;
+		enum Style
+		{
+			Default = 0b0000,
+			Resize = 0b0001,
+			Full = 0b0010
+		};
 	public:
 		SH_WINDOW_API Window();
 		SH_WINDOW_API ~Window();
 
-		SH_WINDOW_API void Create(const std::string& title, int wsize, int hsize);
+		SH_WINDOW_API void Create(const std::string& title, int wsize, int hsize, StyleFlag style = Style::Default);
 		SH_WINDOW_API bool PollEvent(Event& event);
 		
 		SH_WINDOW_API void Close();
@@ -55,5 +63,8 @@ namespace sh::window {
 		SH_WINDOW_API auto GetNativeHandle() const -> WinHandle;
 
 		SH_WINDOW_API void SetTitle(std::string_view title);
+
+		SH_WINDOW_API auto GetWidth() const -> uint32_t;
+		SH_WINDOW_API auto GetHeight() const -> uint32_t;
 	};
 }

@@ -3,11 +3,12 @@
 #include "Export.h"
 
 namespace sh::window {
-	class SH_WINDOW_API Event {
+	class Event {
 	public:
 		enum class EventType
 		{
 			Close,
+			Resize,
 			Move,
 			KeyDown,
 			KeyUp,
@@ -51,15 +52,15 @@ namespace sh::window {
 			Unknown
 		};
 
-		struct SH_WINDOW_API MouseWheelScrolled
+		struct MouseWheelScrolled
 		{
-			static float delta;
+			SH_WINDOW_API static float delta;
 		};
 
-		struct SH_WINDOW_API MousePosition
+		struct MousePosition
 		{
-			static int mouseX;
-			static int mouseY;
+			SH_WINDOW_API static int mouseX;
+			SH_WINDOW_API static int mouseY;
 		};
 
 		EventType type;

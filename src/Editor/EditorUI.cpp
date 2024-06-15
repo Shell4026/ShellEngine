@@ -3,6 +3,8 @@
 #include "game/GameObject.h"
 #include "game/World.h"
 
+#include <cstring>
+
 namespace sh::editor
 {
 	using namespace sh::game;
@@ -12,6 +14,7 @@ namespace sh::editor
 
 		hierarchyWidth(0), hierarchyHeight(0),
 		selected(-1),
+		bViewportDocking(false), bHierarchyDocking(false),
 		bAddComponent(false)
 	{
 		ImGui::SetCurrentContext(imgui.GetContext());
@@ -19,6 +22,8 @@ namespace sh::editor
 
 	void EditorUI::DrawViewport()
 	{
+		ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
+		/*
 		static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
 
 		ImGuiWindowFlags style =
@@ -29,8 +34,7 @@ namespace sh::editor
 			ImGuiWindowFlags_::ImGuiWindowFlags_NoResize |
 			ImGuiWindowFlags_::ImGuiWindowFlags_NoNavFocus |
 			//ImGuiWindowFlags_::ImGuiWindowFlags_NoBackground |
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoCollapse |
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoDocking;
+			ImGuiWindowFlags_::ImGuiWindowFlags_NoCollapse;
 
 		float windowWidth = world.renderer.GetWindow().width;
 		float windowHeight = world.renderer.GetWindow().height;
@@ -39,18 +43,22 @@ namespace sh::editor
 		ImGui::SetNextWindowSize({ windowWidth, windowHeight }, ImGuiCond_::ImGuiCond_Once);
 
 		ImGui::Begin("Viewport", nullptr, style);
-		ImGuiID dockspace_id = ImGui::GetID("MyDockSpace2");
-		ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+		bViewportDocking = ImGui::IsWindowDocked();
+		//ImGuiID dockspace_id = ImGui::GetID("MyDockSpace2");
+		//ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
 		ImGui::End();
+		*/
 	}
 
 	void EditorUI::DrawHierarchy()
 	{
 		ImGuiWindowFlags style =
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoTitleBar |
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoMove |
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoBringToFrontOnFocus;
+			//ImGuiWindowFlags_::ImGuiWindowFlags_NoBringToFrontOnFocus |
+			ImGuiWindowFlags_::ImGuiWindowFlags_NoCollapse;
 		
+		if (bHierarchyDocking)
+			style |= ImGuiWindowFlags_::ImGuiWindowFlags_NoMove;
+
 		uint32_t windowWidth = world.renderer.GetWindow().width;
 		uint32_t windowHeight = world.renderer.GetWindow().height;
 
@@ -58,7 +66,7 @@ namespace sh::editor
 		ImGui::SetNextWindowSize(ImVec2{ 150, windowHeight - 200.f }, ImGuiCond_::ImGuiCond_Once);
 
 		ImGui::Begin("Hierarchy", nullptr, style);
-
+		bHierarchyDocking = ImGui::IsWindowDocked();
 		for (int i = 0; i < world.gameObjects.size(); ++i)
 		{
 			auto& obj = world.gameObjects[i];

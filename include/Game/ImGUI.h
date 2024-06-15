@@ -27,6 +27,7 @@ namespace sh::game
 		SH_GAME_API void Clean();
 
 		SH_GAME_API void Init();
+		SH_GAME_API void Resize();
 		SH_GAME_API void ProcessEvent(window::Event event);
 		SH_GAME_API void Update();
 		SH_GAME_API void Render();

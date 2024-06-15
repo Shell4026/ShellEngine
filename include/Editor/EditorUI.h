@@ -19,6 +19,8 @@ namespace sh::editor
 
 		int selected;
 
+		bool bViewportDocking : 1;
+		bool bHierarchyDocking : 1;
 		bool bAddComponent : 1;
 	private:
 		inline void DrawViewport();

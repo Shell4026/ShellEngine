@@ -1,4 +1,5 @@
 ﻿#include "Win32/WindowImplWin32.h"
+#include "Window.h"
 
 #include <../Core/Util.h>
 
@@ -35,14 +36,16 @@ namespace sh::window {
 		RegisterClassW(&wc);
 	}
 
-	WinHandle WindowImplWin32::Create(const std::string& title, int wsize, int hsize)
+	WinHandle WindowImplWin32::Create(const std::string& title, int wsize, int hsize, uint32_t style)
 	{
 		std::cout << "WindowImplWin32::Create()\n";
 		RegisterWindow();
 
-		unsigned long style = WS_VISIBLE | WS_MINIMIZEBOX | WS_CAPTION | WS_SYSMENU;
+		unsigned long winStyle = WS_VISIBLE | WS_MINIMIZEBOX | WS_CAPTION | WS_SYSMENU;
+		if ((style & Window::Style::Resize) == 0b0001)
+			winStyle |= WS_THICKFRAME;
 		std::wstring wtitle = sh::core::Util::U8StringToWstring(title);
-		window = CreateWindowExW(0, className, wtitle.c_str(), style, 0, 0, wsize, hsize, nullptr, nullptr, GetModuleHandleW(nullptr), this);
+		window = CreateWindowExW(0, className, wtitle.c_str(), winStyle, 0, 0, wsize, hsize, nullptr, nullptr, GetModuleHandleW(nullptr), this);
 		return window;
 	}
 
@@ -128,7 +131,10 @@ namespace sh::window {
 			e.type = Event::EventType::WindowFocusOut;
 			PushEvent(e);
 			break;
-
+		case WM_SIZE:
+			e.type = Event::EventType::Resize;
+			PushEvent(e);
+			break;
 		//keyboard
 		case WM_SYSKEYDOWN: //alt, f10
 		case WM_KEYDOWN:
@@ -292,5 +298,18 @@ namespace sh::window {
 	{
 		std::wstring wtitle = sh::core::Util::U8StringToWstring(std::string{ title });
 		SetWindowTextW(window, wtitle.c_str());
+	}
+
+	auto WindowImplWin32::GetWidth() const -> uint32_t
+	{
+		RECT rect;
+		GetClientRect(window, &rect);
+		return rect.right - rect.left;
+	}
+	auto WindowImplWin32::GetHeight() const -> uint32_t
+	{
+		RECT rect;
+		GetClientRect(window, &rect);
+		return rect.bottom - rect.top;
 	}
 }

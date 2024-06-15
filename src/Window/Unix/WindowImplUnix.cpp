@@ -1,4 +1,5 @@
 ﻿#include "Unix/WindowImplUnix.h"
+#include "Window.h"
 
 #include <X11/Xutil.h>
 #include <X11/Xos.h>
@@ -7,6 +8,7 @@
 #include <X11/keysym.h>
 
 #include <iostream>
+#include <string_view>
 
 namespace sh::window {
 	WindowImplUnix::~WindowImplUnix()
@@ -14,7 +16,7 @@ namespace sh::window {
 		Close();
 	}
 
-	auto WindowImplUnix::Create(const std::string& title, int wsize, int hsize) -> WinHandle
+	auto WindowImplUnix::Create(const std::string& title, int wsize, int hsize, uint32_t style) -> WinHandle
 	{
 		std::cout << "WindowImplUnix::Create()\n";
 
@@ -32,6 +34,9 @@ namespace sh::window {
 			CopyFromParent, InputOutput, CopyFromParent,
 			CWBackPixel | CWEventMask, &attrs);
 
+		widthPrevious = wsize;
+		heightPrevious = hsize;
+
 		//창 제목 설정
 		Atom netWmName = XInternAtom(display, "_NET_WM_NAME", false);
 		Atom utf8String = XInternAtom(display, "UTF8_STRING", false);
@@ -44,6 +49,58 @@ namespace sh::window {
 		//창 닫는 이벤트 등록
 		wmDeleteMessage = XInternAtom(display, "WM_DELETE_WINDOW", false); 
 		XSetWMProtocols(display, win, &wmDeleteMessage, 1);
+
+		//////////////////////////////////창 스타일////////////////////////////////////
+		Atom windowHints = XInternAtom(display, "_MOTIF_WM_HINTS", false);
+
+		struct MwmHints {
+			unsigned long flags;
+			unsigned long functions;
+			unsigned long decorations;
+			long inputMode;
+			unsigned long status;
+		};
+
+		static const unsigned long MWM_HINTS_FUNCTIONS = 1 << 0;
+		static const unsigned long MWM_HINTS_DECORATIONS = 1 << 1;
+
+		static const unsigned long MWM_DECOR_BORDER = 1 << 1;
+		static const unsigned long MWM_DECOR_RESIZEH = 1 << 2;
+		static const unsigned long MWM_DECOR_TITLE = 1 << 3;
+		static const unsigned long MWM_DECOR_MENU = 1 << 4;
+		static const unsigned long MWM_DECOR_MINIMIZE = 1 << 5;
+		static const unsigned long MWM_DECOR_MAXIMIZE = 1 << 6;
+
+		static const unsigned long MWM_FUNC_RESIZE = 1 << 1;
+		static const unsigned long MWM_FUNC_MOVE = 1 << 2;
+		static const unsigned long MWM_FUNC_MINIMIZE = 1 << 3;
+		static const unsigned long MWM_FUNC_MAXIMIZE = 1 << 4;
+		static const unsigned long MWM_FUNC_CLOSE = 1 << 5;
+
+		struct MwmHints hints;
+		hints.flags = MWM_HINTS_FUNCTIONS | MWM_HINTS_DECORATIONS;
+		hints.decorations = MWM_DECOR_BORDER | MWM_DECOR_TITLE | MWM_DECOR_MINIMIZE | MWM_DECOR_MENU;
+		hints.functions = MWM_FUNC_MOVE | MWM_FUNC_MINIMIZE | MWM_FUNC_CLOSE;
+		if (style & Window::Style::Resize)
+		{
+			hints.decorations |= MWM_DECOR_MAXIMIZE | MWM_DECOR_RESIZEH;
+			hints.functions |= MWM_FUNC_MAXIMIZE | MWM_FUNC_RESIZE;
+		}
+
+		XChangeProperty(display, win, windowHints, windowHints, 32,
+			PropModeReplace, (unsigned char*)&hints, 5);
+
+		if (!(style & Window::Style::Resize))
+		{
+			XSizeHints sizeHints{};
+			sizeHints.flags = PMinSize | PMaxSize | USPosition;
+			sizeHints.min_width = sizeHints.max_width = static_cast<int>(wsize);
+			sizeHints.min_height = sizeHints.max_height = static_cast<int>(hsize);
+			sizeHints.x = 0;
+			sizeHints.y = 0;
+			XSetWMNormalHints(display, win, &sizeHints);
+		}
+		/////////////////////////////////////////////////////////////////////////////////
 
 		XMapWindow(display, win);
 		XFlush(display);
@@ -59,7 +116,7 @@ namespace sh::window {
 
 	//현재 윈도우에서 발생한 이벤트인가?
 	auto WindowImplUnix::CheckEvent(Display*, XEvent* evt, XPointer userData) -> int {
-		return evt->xany.window == reinterpret_cast<Window>(userData);
+		return evt->xany.window == reinterpret_cast<::Window>(userData);
 	}
 
 	void WindowImplUnix::ProcessEvent()
@@ -84,6 +141,15 @@ namespace sh::window {
 			case FocusOut:
 				evt.type = Event::EventType::WindowFocusOut;
 				PushEvent(evt);
+				break;
+			case ConfigureNotify: //resize
+				if (e.xconfigure.width != widthPrevious || e.xconfigure.height != heightPrevious)
+				{
+					evt.type = Event::EventType::Resize;
+					PushEvent(evt);
+					widthPrevious = e.xconfigure.width;
+					heightPrevious = e.xconfigure.height;
+				}
 				break;
 
 				//Keyboard
@@ -244,4 +310,18 @@ namespace sh::window {
 		XChangeProperty(display, win, netWmName, utf8String, 8, PropModeReplace,
 			(const unsigned char*)title.data(), title.size());
 	}
+
+	auto WindowImplUnix::GetWidth() const -> uint32_t
+	{
+		XWindowAttributes attributes;
+		XGetWindowAttributes(display, win, &attributes);
+		return attributes.width;
+	}
+	auto WindowImplUnix::GetHeight() const -> uint32_t
+	{
+		XWindowAttributes attributes;
+		XGetWindowAttributes(display, win, &attributes);
+		return attributes.height;
+	}
+
 }//namespace

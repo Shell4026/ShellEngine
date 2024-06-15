@@ -535,6 +535,11 @@ namespace sh::render {
 
 	bool VulkanRenderer::Resizing()
 	{
+		vkDeviceWaitIdle(device);
+
+		DestroySyncObjects();
+		CreateSyncObjects();
+
 		framebuffers.clear();
 		surface->DestroySwapChain();
 

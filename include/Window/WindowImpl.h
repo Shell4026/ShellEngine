@@ -34,9 +34,11 @@ namespace sh::window {
 		SH_WINDOW_API Event PopEvent();
 		SH_WINDOW_API bool IsEmptyEvent() const;
 
-		SH_WINDOW_API virtual auto Create(const std::string& title, int wsize, int hsize) -> WinHandle = 0;
+		SH_WINDOW_API virtual auto Create(const std::string& title, int wsize, int hsize, uint32_t style) -> WinHandle = 0;
 		SH_WINDOW_API virtual void Close() = 0;
 		SH_WINDOW_API virtual void ProcessEvent() = 0;
 		SH_WINDOW_API virtual void SetTitle(std::string_view title) = 0;
+		SH_WINDOW_API virtual auto GetWidth() const->uint32_t = 0;
+		SH_WINDOW_API virtual auto GetHeight() const->uint32_t = 0;
 	};
 }

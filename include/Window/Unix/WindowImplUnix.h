@@ -14,6 +14,9 @@ namespace sh::window {
 		XEvent e;
 
 		Atom wmDeleteMessage;
+
+		int widthPrevious;
+		int heightPrevious;
 	private:
 		auto CovertKeyCode(unsigned int keycode) -> Event::KeyType;
 
@@ -21,11 +24,14 @@ namespace sh::window {
 	public:
 		~WindowImplUnix() override;
 
-		auto Create(const std::string& title, int wsize, int hsize) -> WinHandle override;
+		auto Create(const std::string& title, int wsize, int hsize, uint32_t style) -> WinHandle override;
 		void Close() override;
 		void ProcessEvent() override;
 
 		auto GetDisplay() -> Display*;
 		void SetTitle(std::string_view title) override;
+
+		auto GetWidth() const->uint32_t override;
+		auto GetHeight() const->uint32_t override;
 	};
 }

@@ -19,9 +19,11 @@ namespace sh::window {
 		WindowImplWin32();
 		~WindowImplWin32();
 
-		auto Create(const std::string& title, int wsize, int hsize) -> WinHandle override;
+		auto Create(const std::string& title, int wsize, int hsize, uint32_t style) -> WinHandle override;
 		void Close() override;
 		void ProcessEvent() override;
 		void SetTitle(std::string_view title) override;
+		auto GetWidth() const -> uint32_t override;
+		auto GetHeight() const->uint32_t override;
 	};
 }
