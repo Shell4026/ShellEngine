@@ -22,7 +22,7 @@ namespace sh::editor
 
 	void EditorUI::DrawViewport()
 	{
-		ImGui::DockSpaceOverViewport(0, ImGui::GetMainViewport());
+		
 		/*
 		static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
 
@@ -52,18 +52,10 @@ namespace sh::editor
 
 	void EditorUI::DrawHierarchy()
 	{
+
 		ImGuiWindowFlags style =
 			//ImGuiWindowFlags_::ImGuiWindowFlags_NoBringToFrontOnFocus |
 			ImGuiWindowFlags_::ImGuiWindowFlags_NoCollapse;
-		
-		if (bHierarchyDocking)
-			style |= ImGuiWindowFlags_::ImGuiWindowFlags_NoMove;
-
-		uint32_t windowWidth = world.renderer.GetWindow().width;
-		uint32_t windowHeight = world.renderer.GetWindow().height;
-
-		ImGui::SetNextWindowPos(ImVec2{ 0, 20 }, ImGuiCond_::ImGuiCond_Once);
-		ImGui::SetNextWindowSize(ImVec2{ 150, windowHeight - 200.f }, ImGuiCond_::ImGuiCond_Once);
 
 		ImGui::Begin("Hierarchy", nullptr, style);
 		bHierarchyDocking = ImGui::IsWindowDocked();
@@ -82,15 +74,13 @@ namespace sh::editor
 	void EditorUI::DrawInspector()
 	{
 		ImGuiWindowFlags style =
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoTitleBar |
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoMove |
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoBringToFrontOnFocus;
+			ImGuiWindowFlags_::ImGuiWindowFlags_NoCollapse;
 
-		float windowWidth = world.renderer.GetWindow().width;
-		float windowHeight = world.renderer.GetWindow().height;
+		//float windowWidth = world.renderer.GetWindow().width;
+		//float windowHeight = world.renderer.GetWindow().height;
 
-		ImGui::SetNextWindowPos(ImVec2{ windowWidth - 220, 20 }, ImGuiCond_Once);
-		ImGui::SetNextWindowSize(ImVec2{ 200, windowHeight - 200.f }, ImGuiCond_Once);
+		//ImGui::SetNextWindowPos(ImVec2{ windowWidth - 220, 20 }, ImGuiCond_Once);
+		//ImGui::SetNextWindowSize(ImVec2{ 200, windowHeight - 200.f }, ImGuiCond_Once);
 
 		ImGui::Begin("Inspector", nullptr, style);
 
@@ -178,15 +168,7 @@ namespace sh::editor
 	void EditorUI::DrawProject()
 	{
 		static ImGuiWindowFlags style =
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoTitleBar |
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_::ImGuiWindowFlags_NoBringToFrontOnFocus;
-
-		float windowWidth = world.renderer.GetWindow().width;
-		float windowHeight = world.renderer.GetWindow().height;
-
-		ImGui::SetNextWindowPos({ 0, windowHeight - 180.f }, ImGuiCond_Once);
-		ImGui::SetNextWindowSize({ windowWidth, windowHeight }, ImGuiCond_Once);
 
 		ImGui::Begin("Project", nullptr, style);
 
@@ -198,6 +180,47 @@ namespace sh::editor
 		if (!imgui.IsInit())
 			return;
 
+		ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_::ImGuiDockNodeFlags_PassthruCentralNode;
+		ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+
+		ImGuiViewport* viewport = ImGui::GetMainViewport();
+		ImGui::SetNextWindowPos(viewport->Pos);
+		ImGui::SetNextWindowSize(viewport->Size);
+		ImGui::SetNextWindowViewport(viewport->ID);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+		window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+		window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+
+		if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
+			window_flags |= ImGuiWindowFlags_NoBackground;
+
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+		ImGui::Begin("DockSpace", nullptr, window_flags);
+		ImGui::PopStyleVar();
+		ImGui::PopStyleVar(2);
+
+		ImGuiID dockspaceId = ImGui::GetID("MyDockSpace");
+		ImGui::DockSpace(dockspaceId, ImVec2(0.0f, 0.0f), dockspace_flags);
+
+		static bool first = true;
+		if (first)
+		{
+			first = false;
+			ImGui::DockBuilderRemoveNode(dockspaceId); // clear any previous layout
+			ImGui::DockBuilderAddNode(dockspaceId, dockspace_flags | ImGuiDockNodeFlags_DockSpace);
+			ImGui::DockBuilderSetNodeSize(dockspaceId, viewport->Size);
+
+			auto dockDown = ImGui::DockBuilderSplitNode(dockspaceId, ImGuiDir_Down, 0.25f, nullptr, &dockspaceId);
+			auto dockLeft = ImGui::DockBuilderSplitNode(dockspaceId, ImGuiDir_Left, 0.2f, nullptr, &dockspaceId);
+			auto dockRight = ImGui::DockBuilderSplitNode(dockspaceId, ImGuiDir_Right, 0.25f, nullptr, &dockspaceId);
+			ImGui::DockBuilderDockWindow("Hierarchy", dockLeft);
+			ImGui::DockBuilderDockWindow("Inspector", dockRight); 
+			ImGui::DockBuilderDockWindow("Project", dockDown);
+			ImGui::DockBuilderFinish(dockspaceId);
+		}
+
+		ImGui::End();
 		//DrawViewport();
 		DrawHierarchy();
 		DrawInspector();

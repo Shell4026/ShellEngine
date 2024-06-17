@@ -131,6 +131,7 @@ namespace sh::game
 			case window::Event::KeyType::F: [[fallthrough]];
 			case window::Event::KeyType::G: [[fallthrough]];
 			case window::Event::KeyType::H: [[fallthrough]];
+			case window::Event::KeyType::I: [[fallthrough]];
 			case window::Event::KeyType::J: [[fallthrough]];
 			case window::Event::KeyType::K: [[fallthrough]];
 			case window::Event::KeyType::L: [[fallthrough]];
@@ -166,10 +167,14 @@ namespace sh::game
 			case window::Event::KeyType::Num8: [[fallthrough]];
 			case window::Event::KeyType::Num9:
 			{
+				static char upperChars[] = { ')', '!', '@', '#', '$', '%', '^', '&', '*', '(' };
 				int keyDif = static_cast<int>(event.keyType) - static_cast<int>(window::Event::KeyType::Num0);
 				io.AddKeyEvent(static_cast<ImGuiKey>(ImGuiKey::ImGuiKey_0 + keyDif), keyDown);
 				if (keyDown) 
-					io.AddInputCharacter('0' + keyDif);
+					if(!io.KeyShift)
+						io.AddInputCharacter('0' + keyDif);
+					else
+						io.AddInputCharacter(upperChars[keyDif]);
 				break;
 			}
 			case window::Event::KeyType::Numpad0: [[fallthrough]];
@@ -221,49 +226,167 @@ namespace sh::game
 			case window::Event::KeyType::Delete:
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_Delete, keyDown);
 				break;
+			case window::Event::KeyType::Home:
+				io.AddKeyEvent(ImGuiKey::ImGuiKey_Home, keyDown);
+				break;
+			case window::Event::KeyType::Insert:
+				io.AddKeyEvent(ImGuiKey::ImGuiKey_Insert, keyDown);
+				break;
+			case window::Event::KeyType::End:
+				io.AddKeyEvent(ImGuiKey::ImGuiKey_End, keyDown);
+				break;
+			case window::Event::KeyType::PageUp:
+				io.AddKeyEvent(ImGuiKey::ImGuiKey_PageUp, keyDown);
+				break;
+			case window::Event::KeyType::PageDown:
+				io.AddKeyEvent(ImGuiKey::ImGuiKey_PageDown, keyDown);
+				break;
+			case window::Event::KeyType::Print:
+				io.AddKeyEvent(ImGuiKey::ImGuiKey_PrintScreen, keyDown);
+				break;
+			case window::Event::KeyType::Scroll:
+				io.AddKeyEvent(ImGuiKey::ImGuiKey_ScrollLock, keyDown);
+				break;
+			case window::Event::KeyType::Pause:
+				io.AddKeyEvent(ImGuiKey::ImGuiKey_Pause, keyDown);
+				break;
 			case window::Event::KeyType::Shift:
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_ModShift, keyDown);
 				break;
 			case window::Event::KeyType::Minus:
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_Minus, keyDown);
-				if (keyDown) io.AddInputCharacter('-');
+				if (keyDown) 
+					if(!io.KeyShift)
+						io.AddInputCharacter('-');
+					else
+						io.AddInputCharacter('_');
 				break;
 			case window::Event::KeyType::Equal:
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_Equal, keyDown);
-				if (keyDown) io.AddInputCharacter('=');
+				if (keyDown) 
+					if (!io.KeyShift)
+						io.AddInputCharacter('=');
+					else
+						io.AddInputCharacter('+');
 				break;
 			case window::Event::KeyType::Period:
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_Period, keyDown);
-				if (keyDown) io.AddInputCharacter('.');
+				if (keyDown) 
+					if(!io.KeyShift)
+						io.AddInputCharacter('.');
+					else
+						io.AddInputCharacter('>');
 				break;
 			case window::Event::KeyType::Semicolon:
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_Semicolon, keyDown);
-				if (keyDown) io.AddInputCharacter(';');
+				if (keyDown) 
+					if (!io.KeyShift)
+						io.AddInputCharacter(';');
+					else
+						io.AddInputCharacter(':');
 				break;
 			case window::Event::KeyType::Colon:
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_Apostrophe, keyDown);
-				if (keyDown) io.AddInputCharacter('\'');
+				if (keyDown) 
+					if (!io.KeyShift)
+						io.AddInputCharacter('\'');
+					else
+						io.AddInputCharacter('"');
 				break;
 			case window::Event::KeyType::Comma:
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_Comma, keyDown);
-				if (keyDown) io.AddInputCharacter(',');
+				if (keyDown) 
+					if(!io.KeyShift)
+						io.AddInputCharacter(',');
+					else
+						io.AddInputCharacter('<');
 				break;
 			case window::Event::KeyType::LBracket:
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_LeftBracket, keyDown);
-				if (keyDown) io.AddInputCharacter('[');
+				if (keyDown) 
+					if (!io.KeyShift) 
+						io.AddInputCharacter('[');
+					else 
+						io.AddInputCharacter('{');
 				break;
 			case window::Event::KeyType::RBracket:
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_RightBracket, keyDown);
-				if (keyDown) io.AddInputCharacter(']');
+				if (keyDown) 
+					if (!io.KeyShift) 
+						io.AddInputCharacter(']');
+					else 
+						io.AddInputCharacter('}');
 				break;
 			case window::Event::KeyType::Grave:
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_GraveAccent, keyDown);
-				if (keyDown) io.AddInputCharacter('`');
+				if (keyDown) 
+					if(!io.KeyShift)
+						io.AddInputCharacter('`');
+					else
+						io.AddInputCharacter('~');
 				break;
 			case window::Event::KeyType::Slash:
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_Slash, keyDown);
-				if (keyDown) io.AddInputCharacter('/');
+				if (keyDown) 
+					if(!io.KeyShift)
+						io.AddInputCharacter('/');
+					else 
+						io.AddInputCharacter('?');
 				break;
+			case window::Event::KeyType::NumpadAdd:
+				io.AddKeyEvent(ImGuiKey::ImGuiKey_KeypadAdd, keyDown);
+				if(keyDown)
+					io.AddInputCharacter('+');
+				break;
+			case window::Event::KeyType::NumpadSubtract:
+				io.AddKeyEvent(ImGuiKey::ImGuiKey_KeypadSubtract, keyDown);
+				if (keyDown)
+					io.AddInputCharacter('-');
+				break;
+			case window::Event::KeyType::NumpadMultiply:
+				io.AddKeyEvent(ImGuiKey::ImGuiKey_KeypadMultiply, keyDown);
+				if (keyDown)
+					io.AddInputCharacter('*');
+				break;
+			case window::Event::KeyType::NumpadDivide:
+				io.AddKeyEvent(ImGuiKey::ImGuiKey_KeypadDivide, keyDown);
+				if (keyDown)
+					io.AddInputCharacter('/');
+				break;
+			case window::Event::KeyType::NumpadDecimal:
+				io.AddKeyEvent(ImGuiKey::ImGuiKey_KeypadDecimal, keyDown);
+				if (keyDown)
+					io.AddInputCharacter('.');
+				break;
+			case window::Event::KeyType::LCtrl:
+				io.AddKeyEvent(ImGuiKey::ImGuiKey_LeftCtrl, keyDown);
+				break;
+			case window::Event::KeyType::RCtrl:
+				io.AddKeyEvent(ImGuiKey::ImGuiKey_RightCtrl, keyDown);
+				break;
+			case window::Event::KeyType::LAlt:
+				io.AddKeyEvent(ImGuiKey::ImGuiKey_LeftAlt, keyDown);
+				break;
+			case window::Event::KeyType::RAlt:
+				io.AddKeyEvent(ImGuiKey::ImGuiKey_RightAlt, keyDown);
+				break;
+			case window::Event::KeyType::F1: [[fallthrough]];
+			case window::Event::KeyType::F2: [[fallthrough]];
+			case window::Event::KeyType::F3: [[fallthrough]];
+			case window::Event::KeyType::F4: [[fallthrough]];
+			case window::Event::KeyType::F5: [[fallthrough]];
+			case window::Event::KeyType::F6: [[fallthrough]];
+			case window::Event::KeyType::F7: [[fallthrough]];
+			case window::Event::KeyType::F8: [[fallthrough]];
+			case window::Event::KeyType::F9: [[fallthrough]];
+			case window::Event::KeyType::F10: [[fallthrough]];
+			case window::Event::KeyType::F11: [[fallthrough]];
+			case window::Event::KeyType::F12:
+			{
+				int keyDif = static_cast<int>(event.keyType) - static_cast<int>(window::Event::KeyType::F1);
+				io.AddKeyEvent(static_cast<ImGuiKey>(ImGuiKey::ImGuiKey_F1 + keyDif), keyDown);
+				break;
+			}
 			}
 			break;
 		}

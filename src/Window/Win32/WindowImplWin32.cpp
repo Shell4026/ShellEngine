@@ -290,6 +290,8 @@ namespace sh::window {
 			return Event::KeyType::Pause;
 		case VK_NUMLOCK:
 			return Event::KeyType::NumLock;
+		case VK_OEM_3:
+			return Event::KeyType::Grave;
 		}
 		return Event::KeyType::Unknown;
 	}
