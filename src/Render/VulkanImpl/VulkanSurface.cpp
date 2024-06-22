@@ -18,12 +18,13 @@ namespace sh::render::impl
 	}
 
 	VulkanSurface::VulkanSurface() :
-		window(nullptr), device(nullptr),
-		swapChain(nullptr), surface(nullptr), instance(nullptr), details()
+		window(nullptr), device(nullptr), instance(nullptr),
+		swapChain(nullptr), surface(nullptr), details()
 	{
 	}
 
 	VulkanSurface::VulkanSurface(VulkanSurface&& other) noexcept :
+		window(other.window), device(other.device), instance(other.instance),
 		swapChain(other.swapChain), surface(other.surface),
 		swapChainImages(std::move(other.swapChainImages)), swapChainImageViews(std::move(other.swapChainImageViews))
 	{

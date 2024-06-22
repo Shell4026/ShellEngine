@@ -1,8 +1,10 @@
 ﻿#pragma once
 
+#include "Core/NonCopyable.h"
+
 namespace sh::render
 {
-	class Framebuffer
+	class Framebuffer : public core::INonCopyable
 	{
 
 	};

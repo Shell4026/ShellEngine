@@ -10,25 +10,15 @@ namespace sh::render::impl
 		device(device), gpu(gpu), alloc(alloc),
 		renderPass(nullptr),
 		framebuffer(nullptr), img(nullptr),
-		depthImg(device, gpu, alloc),
+		colorImg(nullptr), depthImg(nullptr),
 		width(0), height(0), format(VkFormat::VK_FORMAT_R8G8B8A8_SRGB)
 	{
-	}
-
-	VulkanFramebuffer::VulkanFramebuffer(const VulkanFramebuffer& other) :
-		device(other.device), gpu(other.gpu), alloc(other.alloc),
-		framebuffer(nullptr), img(other.img), renderPass(nullptr),
-		depthImg(other.device, other.gpu, other.alloc),
-		width(other.width), height(other.height), format(other.format)
-	{
-		if (other.framebuffer)
-			Create(width, height, img, format);
 	}
 
 	VulkanFramebuffer::VulkanFramebuffer(VulkanFramebuffer&& other) noexcept :
 		device(other.device), gpu(other.gpu), alloc(other.alloc),
 		framebuffer(other.framebuffer), img(other.img), renderPass(other.renderPass),
-		depthImg(std::move(other.depthImg)),
+		colorImg(std::move(other.colorImg)), depthImg(std::move(other.depthImg)),
 		width(other.width), height(other.height), format(other.format)
 	{
 		other.renderPass = nullptr;
@@ -41,27 +31,21 @@ namespace sh::render::impl
 		Clean();
 	}
 
-	auto VulkanFramebuffer::operator=(const VulkanFramebuffer& other)->VulkanFramebuffer&
-	{
-		Clean();
-
-		width = other.width;
-		height = other.height;
-		img = other.img;
-		format = other.format;
-		if (other.framebuffer)
-			Create(width, height, img, format);
-
-		return *this;
-	}
-
 	auto VulkanFramebuffer::operator=(VulkanFramebuffer&& other) noexcept -> VulkanFramebuffer&
 	{
 		Clean();
+
+		device = other.device;
+		gpu = other.gpu;
+		alloc = other.alloc;
+
 		framebuffer = other.framebuffer;
 		renderPass = other.renderPass;
 		other.framebuffer = nullptr;
 		other.renderPass = nullptr;
+
+		colorImg = std::move(other.colorImg);
+		depthImg = std::move(other.depthImg);
 
 		width = other.width;
 		height = other.height;
@@ -78,16 +62,15 @@ namespace sh::render::impl
 		colorAttachment.samples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
 		colorAttachment.loadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR;
 		colorAttachment.storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE;
-		//스텐실
 		colorAttachment.stencilLoadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		colorAttachment.stencilStoreOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		//초기 레이아웃
 		colorAttachment.initialLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
-		colorAttachment.finalLayout = VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-		//픽셀 셰이더에서 출력되는 attachment
-		VkAttachmentReference colorAttachmentRef{};
-		colorAttachmentRef.attachment = 0;
-		colorAttachmentRef.layout = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		//최종 레이아웃
+		if (colorImg == nullptr)
+			colorAttachment.finalLayout = VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; //화면 출력용
+		else //offscreen
+			colorAttachment.finalLayout = VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; //셰이더 읽기용
 
 		//깊이 버퍼
 		VkAttachmentDescription depthAttachment{};
@@ -100,31 +83,84 @@ namespace sh::render::impl
 		depthAttachment.initialLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
 		depthAttachment.finalLayout = VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
+		//렌더패스 중 ColorAttachment는 색상 첨부 전용 최적화 레이아웃이 된다. (픽셀 셰이더 출력)
+		VkAttachmentReference colorAttachmentRef{};
+		colorAttachmentRef.attachment = 0;
+		colorAttachmentRef.layout = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		//깊이 attachment
 		VkAttachmentReference depthAttachmentRef{};
 		depthAttachmentRef.attachment = 1;
 		depthAttachmentRef.layout = VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
+		//서브패스
 		VkSubpassDescription subpass{};
-		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+		subpass.pipelineBindPoint = VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS;
 		subpass.colorAttachmentCount = 1;
 		subpass.pColorAttachments = &colorAttachmentRef;
 		subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
-		VkSubpassDependency dependency{};
-		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
-		dependency.dstSubpass = 0;
-		//색상 출력, 깊이 테스트 단계에서 대기
-		dependency.srcStageMask = 
-			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | 
-			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-		dependency.srcAccessMask = 0;
-		//색상 출력, 깊이 테스트 단계에서 쓸 수 있을 때까지 서브 패스 전환X
-		dependency.dstStageMask = 
-			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | 
-			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
-		dependency.dstAccessMask = 
-			VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | 
-			VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+		std::vector<VkSubpassDependency> dependencies;
+		if (colorImg == nullptr)
+		{
+			VkSubpassDependency dependency{};
+			dependency.srcSubpass = VK_SUBPASS_EXTERNAL; //렌더 패스 전 단계
+			dependency.dstSubpass = 0;
+			//대기 스테이지
+			//렌더 패스는 색상 출력, 깊이 테스트 단계에서 대기한다. (이미지를 얻기 전이므로)
+			dependency.srcStageMask =
+				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+			//대기 할 작업 (없음)
+			dependency.srcAccessMask = 
+				VkAccessFlagBits::VK_ACCESS_NONE_KHR;
+			//색상 출력, 깊이 테스트 단계에서 쓸 수 있을 때까지 전환X
+			dependency.dstStageMask =
+				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+			dependency.dstAccessMask =
+				VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+				VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+			dependencies.push_back(dependency);
+		}
+		else //offscreen 렌더링
+		{
+			dependencies.resize(2);
+			
+			dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
+			dependencies[0].dstSubpass = 0;
+			dependencies[0].srcStageMask = 
+				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+			dependencies[0].srcAccessMask = 
+				VkAccessFlagBits::VK_ACCESS_NONE_KHR;
+			dependencies[0].dstStageMask = 
+				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | 
+				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | 
+				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+			dependencies[0].dstAccessMask = 
+				VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | 
+				VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | 
+				VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | 
+				VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			dependencies[0].dependencyFlags = VkDependencyFlagBits::VK_DEPENDENCY_BY_REGION_BIT;
+
+			dependencies[1].srcSubpass = 0;
+			dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
+			dependencies[1].srcStageMask = 
+				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | 
+				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | 
+				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+			dependencies[1].srcAccessMask = 
+				VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | 
+				VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | 
+				VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | 
+				VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+			dependencies[1].dstStageMask = 
+				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+			dependencies[1].dstAccessMask = 
+				VkAccessFlagBits::VK_ACCESS_MEMORY_READ_BIT;
+			dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
+		}
 
 		std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
 		VkRenderPassCreateInfo renderPassInfo{};
@@ -133,8 +169,8 @@ namespace sh::render::impl
 		renderPassInfo.pAttachments = attachments.data();
 		renderPassInfo.subpassCount = 1;
 		renderPassInfo.pSubpasses = &subpass;
-		renderPassInfo.dependencyCount = 1;
-		renderPassInfo.pDependencies = &dependency;
+		renderPassInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
+		renderPassInfo.pDependencies = dependencies.data();
 
 		VkResult result = vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);
 		assert(result == VkResult::VK_SUCCESS);
@@ -159,16 +195,6 @@ namespace sh::render::impl
 		throw std::runtime_error("Failed to find supported Depth format!");
 	}
 
-	auto VulkanFramebuffer::CreateDepthBuffer()
-	{
-		VkFormat depthFormat = FindSupportedDepthFormat();
-		auto result = depthImg.Create(width, height, depthFormat,
-			VkImageUsageFlagBits::VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT, 
-			VkImageAspectFlagBits::VK_IMAGE_ASPECT_DEPTH_BIT);
-		assert(result == VkResult::VK_SUCCESS);
-
-	}
-
 	auto VulkanFramebuffer::Create(uint32_t width, uint32_t height, VkImageView img, VkFormat format) -> VkResult
 	{
 		this->format = format;
@@ -182,7 +208,7 @@ namespace sh::render::impl
 		VkResult result;
 
 		std::array<VkImageView, 2> views = {
-			img, depthImg.GetImageView()
+			img, depthImg->GetImageView()
 		};
 
 		VkFramebufferCreateInfo framebufferInfo{};
@@ -200,9 +226,33 @@ namespace sh::render::impl
 		return result;
 	}
 
+	auto VulkanFramebuffer::CreateOffScreen(uint32_t width, uint32_t height)
+	{
+		colorImg = std::make_unique<VulkanImageBuffer>(device, gpu, alloc);
+		auto result = colorImg->Create(width, height, VkFormat::VK_FORMAT_R8G8B8_SRGB,
+			VkImageUsageFlagBits::VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VkImageUsageFlagBits::VK_IMAGE_USAGE_SAMPLED_BIT,
+			VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT);
+		assert(result == VkResult::VK_SUCCESS);
+
+		CreateDepthBuffer();
+		CreateRenderPass();
+	}
+
+	void VulkanFramebuffer::CreateDepthBuffer()
+	{
+		VkFormat depthFormat = FindSupportedDepthFormat();
+		depthImg = std::make_unique<VulkanImageBuffer>(device, gpu, alloc);
+		auto result = depthImg->Create(width, height, depthFormat,
+			VkImageUsageFlagBits::VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+			VkImageAspectFlagBits::VK_IMAGE_ASPECT_DEPTH_BIT);
+		assert(result == VkResult::VK_SUCCESS);
+
+	}
+
 	void VulkanFramebuffer::Clean()
 	{
-		depthImg.Clean();
+		depthImg.reset();
+		colorImg.reset();
 
 		if (framebuffer)
 		{

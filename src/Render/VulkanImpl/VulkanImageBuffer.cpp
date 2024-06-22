@@ -23,6 +23,26 @@ namespace sh::render::impl
 		other.imgView = nullptr;
 		other.sampler = nullptr;
 	}
+	auto VulkanImageBuffer::operator=(VulkanImageBuffer&& other) noexcept -> VulkanImageBuffer&
+	{
+		device = other.device;
+		gpu = other.gpu;
+		allocator = other.allocator;
+
+		img = other.img;
+		imgMem = other.imgMem;
+		imgView = other.imgView;
+		sampler = other.sampler;
+
+		other.img = nullptr;
+		other.imgMem = nullptr;
+		other.imgView = nullptr;
+		other.sampler = nullptr;
+
+		bUseAnisotropy = other.bUseAnisotropy;
+
+		return *this;
+	}
 
 	VulkanImageBuffer::~VulkanImageBuffer()
 	{

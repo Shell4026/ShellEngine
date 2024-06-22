@@ -3,11 +3,13 @@
 #include "VulkanConfig.h"
 #include "Render/Export.h"
 
+#include "Core/NonCopyable.h"
+
 #include <cstdint>
 
 namespace sh::render::impl
 {
-	class VulkanImageBuffer
+	class VulkanImageBuffer : public core::INonCopyable
 	{
 	private:
 		VkDevice device;
@@ -25,6 +27,8 @@ namespace sh::render::impl
 		SH_RENDER_API VulkanImageBuffer(VkDevice device, VkPhysicalDevice gpu, VmaAllocator allocator);
 		SH_RENDER_API VulkanImageBuffer(VulkanImageBuffer&& other) noexcept;
 		SH_RENDER_API ~VulkanImageBuffer();
+
+		SH_RENDER_API auto operator=(VulkanImageBuffer&& other) noexcept -> VulkanImageBuffer&;
 
 		SH_RENDER_API void UseAnisotropy(bool bUse);
 
