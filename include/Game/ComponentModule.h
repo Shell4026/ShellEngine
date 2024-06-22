@@ -4,14 +4,19 @@
 
 #include "Component/Component.h"
 
+#include "Core/Singleton.hpp"
+
 #include <string>
 #include <string_view>
 #include <unordered_map>
 #include <memory>
 
+#define REGISTER_COMPONENT(component) \
+ComponentModule::GetInstance()->RegisterComponent<component>(#component)
+
 namespace sh::game
 {
-	class ComponentModule
+	class ComponentModule : public core::Singleton<ComponentModule>
 	{
 	private:
 		std::unordered_map<std::string, std::unique_ptr<Component>> components;

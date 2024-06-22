@@ -7,19 +7,17 @@
 
 #include <iostream>
 
-static sh::game::ComponentModule module;
-
 extern "C"
 {
 	SH_USER_API void Init()
 	{
 		std::cout << "Init User module.\n";
 
-		module.RegisterComponent<ComponentTest>("ComponentTest");
-		module.RegisterComponent<RotateObject>("RotateObject");
+		REGISTER_COMPONENT(ComponentTest);
+		REGISTER_COMPONENT(RotateObject);
 	}
 	SH_USER_API auto GetModule() -> sh::game::ComponentModule*
 	{
-		return &module;
+		return ComponentModule::GetInstance();
 	}
 }
