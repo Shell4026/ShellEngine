@@ -470,9 +470,10 @@ namespace sh::render {
 
 		//프레임버퍼 생성 (렌더패스 생성 -> 프레임버퍼 생성)
 		auto& imgs = surface->GetSwapChainImageViews();
-		framebuffers.resize(imgs.size(), impl::VulkanFramebuffer{ device, gpu, allocator });
-		for (int i = 0; i < imgs.size(); ++i)
+		framebuffers.reserve(imgs.size());
+		for (size_t i = 0; i < imgs.size(); ++i)
 		{
+			framebuffers.push_back(impl::VulkanFramebuffer{ device, gpu, allocator });
 			VkResult result = framebuffers[i].Create(surface->GetSwapChainSize().width, surface->GetSwapChainSize().height, imgs[i], surface->GetSwapChainImageFormat());
 			assert(result == VkResult::VK_SUCCESS);
 			if (result != VkResult::VK_SUCCESS)
@@ -546,9 +547,10 @@ namespace sh::render {
 		surface->CreateSwapChain(gpu, graphicsQueueIndex, surfaceQueueIndex);
 
 		auto& imgs = surface->GetSwapChainImageViews();
-		framebuffers.resize(imgs.size(), impl::VulkanFramebuffer{ device, gpu, allocator });
-		for (int i = 0; i < imgs.size(); ++i)
+		framebuffers.reserve(imgs.size());
+		for (size_t i = 0; i < imgs.size(); ++i)
 		{
+			framebuffers.push_back(impl::VulkanFramebuffer{ device, gpu, allocator });
 			VkResult result = framebuffers[i].Create(surface->GetSwapChainSize().width, surface->GetSwapChainSize().height, imgs[i], surface->GetSwapChainImageFormat());
 			assert(result == VkResult::VK_SUCCESS);
 			if (result != VkResult::VK_SUCCESS)

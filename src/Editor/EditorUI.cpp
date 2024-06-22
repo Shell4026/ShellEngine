@@ -1,4 +1,5 @@
 ﻿#include "EditorUI.h"
+#include "Project.h"
 
 #include "game/GameObject.h"
 #include "game/World.h"
@@ -10,19 +11,69 @@ namespace sh::editor
 	using namespace sh::game;
 
 	EditorUI::EditorUI(World& world, const game::ImGUI& imgui) :
-		world(world), imgui(imgui),
+		UI(imgui),
+		world(world),
 
 		hierarchyWidth(0), hierarchyHeight(0),
 		selected(-1),
+		explorer(imgui),
 		bViewportDocking(false), bHierarchyDocking(false),
-		bAddComponent(false)
+		bAddComponent(false), bOpenExplorer(false)
 	{
-		ImGui::SetCurrentContext(imgui.GetContext());
+		
+	}
+
+	void EditorUI::SetDockNode()
+	{
+		ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_::ImGuiDockNodeFlags_PassthruCentralNode;
+		ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
+
+		ImGuiViewport* viewport = ImGui::GetMainViewport();
+		ImGui::SetNextWindowPos(viewport->Pos);
+		ImGui::SetNextWindowSize(viewport->Size);
+		ImGui::SetNextWindowViewport(viewport->ID);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+		window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+		window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+
+		if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
+			window_flags |= ImGuiWindowFlags_NoBackground;
+
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+		ImGui::Begin("DockSpace", nullptr, window_flags);
+		ImGui::PopStyleVar();
+		ImGui::PopStyleVar(2);
+
+		dockspaceId = ImGui::GetID("MyDockSpace");
+		ImGui::DockSpace(dockspaceId, ImVec2(0.0f, 0.0f), dockspace_flags);
+
+		static bool first = true;
+		if (first)
+		{
+			first = false;
+			ImGui::DockBuilderRemoveNode(dockspaceId); // clear any previous layout
+			ImGui::DockBuilderAddNode(dockspaceId, dockspace_flags | ImGuiDockNodeFlags_DockSpace);
+			ImGui::DockBuilderSetNodeSize(dockspaceId, viewport->Size);
+
+			auto dockDown = ImGui::DockBuilderSplitNode(dockspaceId, ImGuiDir_Down, 0.25f, nullptr, &dockspaceId);
+			auto dockLeft = ImGui::DockBuilderSplitNode(dockspaceId, ImGuiDir_Left, 0.2f, nullptr, &dockspaceId);
+			auto dockRight = ImGui::DockBuilderSplitNode(dockspaceId, ImGuiDir_Right, 0.25f, nullptr, &dockspaceId);
+			ImGui::DockBuilderDockWindow("Hierarchy", dockLeft);
+			ImGui::DockBuilderDockWindow("Inspector", dockRight);
+			ImGui::DockBuilderDockWindow("Project", dockDown);
+			ImGui::DockBuilderFinish(dockspaceId);
+		}
+		ImGui::End();
 	}
 
 	void EditorUI::DrawViewport()
 	{
-		
+		auto a = ImGui::GetCurrentWindow();
+		ImGui::Begin("Viewport");
+		//world.textures.ge
+		//ImGui::Image();
+		ImGui::End();
 		/*
 		static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
 
@@ -180,63 +231,27 @@ namespace sh::editor
 		if (!imgui.IsInit())
 			return;
 
-		ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_::ImGuiDockNodeFlags_PassthruCentralNode;
-		ImGuiWindowFlags window_flags = ImGuiWindowFlags_MenuBar | ImGuiWindowFlags_NoDocking;
-
-		ImGuiViewport* viewport = ImGui::GetMainViewport();
-		ImGui::SetNextWindowPos(viewport->Pos);
-		ImGui::SetNextWindowSize(viewport->Size);
-		ImGui::SetNextWindowViewport(viewport->ID);
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-		window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
-		window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-
-		if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
-			window_flags |= ImGuiWindowFlags_NoBackground;
-
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-		ImGui::Begin("DockSpace", nullptr, window_flags);
-		ImGui::PopStyleVar();
-		ImGui::PopStyleVar(2);
-
-		ImGuiID dockspaceId = ImGui::GetID("MyDockSpace");
-		ImGui::DockSpace(dockspaceId, ImVec2(0.0f, 0.0f), dockspace_flags);
-
-		static bool first = true;
-		if (first)
-		{
-			first = false;
-			ImGui::DockBuilderRemoveNode(dockspaceId); // clear any previous layout
-			ImGui::DockBuilderAddNode(dockspaceId, dockspace_flags | ImGuiDockNodeFlags_DockSpace);
-			ImGui::DockBuilderSetNodeSize(dockspaceId, viewport->Size);
-
-			auto dockDown = ImGui::DockBuilderSplitNode(dockspaceId, ImGuiDir_Down, 0.25f, nullptr, &dockspaceId);
-			auto dockLeft = ImGui::DockBuilderSplitNode(dockspaceId, ImGuiDir_Left, 0.2f, nullptr, &dockspaceId);
-			auto dockRight = ImGui::DockBuilderSplitNode(dockspaceId, ImGuiDir_Right, 0.25f, nullptr, &dockspaceId);
-			ImGui::DockBuilderDockWindow("Hierarchy", dockLeft);
-			ImGui::DockBuilderDockWindow("Inspector", dockRight); 
-			ImGui::DockBuilderDockWindow("Project", dockDown);
-			ImGui::DockBuilderFinish(dockspaceId);
-		}
-
-		ImGui::End();
-		//DrawViewport();
+		SetDockNode();
 		DrawHierarchy();
 		DrawInspector();
 		DrawProject();
+		DrawViewport();
 
 		if (ImGui::BeginMainMenuBar())
 		{
 			if (ImGui::BeginMenu("File"))
 			{
-				if (ImGui::MenuItem("Open", "Ctrl+O"))
+				if (ImGui::MenuItem("OpenProject", "Ctrl+O"))
 				{
-
+					bOpenExplorer = true;
 				}
 				ImGui::EndMenu();
 			}
 			ImGui::EndMainMenuBar();
 		}
+		
+		std::cout << bOpenExplorer << '\n';
+		if (bOpenExplorer)
+			explorer.Update();
 	}
 }

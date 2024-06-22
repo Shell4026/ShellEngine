@@ -29,6 +29,7 @@
 #include "Game/ImGUI.h"
 
 #include "Editor/EditorUI.h"
+#include "Editor/Project.h"
 
 #include <iostream>
 

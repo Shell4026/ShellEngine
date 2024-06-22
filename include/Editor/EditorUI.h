@@ -1,28 +1,34 @@
 ﻿#pragma once
 
 #include "Export.h"
+#include "UI.h"
+#include "ExplorerUI.h"
 
-#include "Game/ImGUI.h"
 #include "Game/World.h"
 
 #include <vector>
 namespace sh::editor
 {
-	class EditorUI
+	class EditorUI : public UI
 	{
 	private:
 		game::World& world;
-		const game::ImGUI& imgui;
 
 		float hierarchyWidth;
 		float hierarchyHeight;
 
 		int selected;
 
+		ImGuiID dockspaceId;
+
+		ExplorerUI explorer;
+
 		bool bViewportDocking : 1;
 		bool bHierarchyDocking : 1;
 		bool bAddComponent : 1;
+		bool bOpenExplorer : 1;
 	private:
+		inline void SetDockNode();
 		inline void DrawViewport();
 		inline void DrawHierarchy();
 		inline void DrawInspector();
