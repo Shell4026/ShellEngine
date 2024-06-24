@@ -13,6 +13,7 @@
 #include <iostream>
 #include <cassert>
 #include <memory>
+#include <cstring>
 
 #define SCLASS(class_name)\
 public:\
@@ -31,7 +32,7 @@ public:\
 	private:\
 		inline static sh::core::reflection::TypeInfo& typeInfo = GetStaticType();
 
-#define PROPERTY(variable_name)\
+#define PROPERTY(variable_name, ...)\
 struct _PropertyFactory_##variable_name\
 {\
 	_PropertyFactory_##variable_name()\
@@ -40,7 +41,7 @@ struct _PropertyFactory_##variable_name\
 			<This, \
 			decltype(variable_name), \
 			decltype(&This::variable_name), \
-			&This::variable_name> property_##variable_name{ #variable_name };\
+			&This::variable_name> property_##variable_name{ #variable_name, std::string_view{#__VA_ARGS__} };\
 	}\
 } _propertyFactory_##variable_name;\
 
@@ -383,6 +384,9 @@ namespace sh::core::reflection
 		std::string_view typeName;
 	public:
 		TypeInfo& ownerType;
+
+		bool isConst = false;
+		bool bVisible = true;
 	public:
 		PropertyDataBase(TypeInfo& ownerType) :
 			ownerType(ownerType), typeName("")
@@ -494,11 +498,41 @@ namespace sh::core::reflection
 		TypeInfo& owner;
 
 		const char* name;
+
+		struct Option
+		{
+			bool isConst = false;
+			bool bVisible = true;
+		};
+	private:
+		constexpr static auto ParseOption(std::string_view option) -> Option
+		{
+			Option retOption{};
+			size_t start = 0;
+			for (size_t i = 0; i <= option.size(); ++i) {
+				if (i == option.size() || option[i] == ' ' || option[i] == ',') {
+					std::string_view token = option.substr(start, i - start);
+					if (token == "const")
+						retOption.isConst = true;
+					else if (token == "invisible")
+						retOption.bVisible = false;
+					start = i + 1;
+				}
+			}
+			
+			return retOption;
+		}
 	public:
-		PropertyInfo(const char* name) :
+		PropertyInfo(const char* name, std::string_view option) :
 			name(name), owner(ThisType::GetStaticType())
 		{
+			Option options = ParseOption(option);
+
 			static PropertyData<ThisType, T, VariablePointer, ptr> data{ owner };
+			data.isConst = options.isConst;
+			data.bVisible = options.bVisible;
+			
+
 			if constexpr (std::is_convertible_v<T, SObject*>)
 			{
 				Property* prop = owner.AddProperty(name, Property{ &data, name });
@@ -516,7 +550,9 @@ namespace sh::core::reflection
 					Property* prop = owner.AddProperty(name, Property{ &data, name });
 			}
 			else
+			{
 				Property* prop = owner.AddProperty(name, Property{ &data, name });
+			}
 		}
 	};
 
@@ -530,6 +566,8 @@ namespace sh::core::reflection
 	public:
 		const bool isContainer;
 		const int containerNestedLevel;
+		const bool isConst;
+		const bool bVisible;
 	public:
 		SH_CORE_API Property(PropertyDataBase* data, const char* name, bool isContainer = false, uint32_t containerNestedLevel = 0);
 			

@@ -164,24 +164,34 @@ namespace sh::editor
 					auto& props = component->GetType().GetProperties();
 					for (auto& prop : props)
 					{
+						if (prop.second.bVisible == false)
+							continue;
 						auto type = prop.second.GetTypeName();
 						if (type == core::reflection::GetTypeName<glm::vec3>())
 						{
 							glm::vec3* parameter = prop.second.Get<glm::vec3>(component.get());
+							float v[3] = { parameter->x, parameter->y, parameter->z };
 							ImGui::LabelText(("##" + prop.first).c_str(), prop.first.c_str());
-							ImGui::SetNextItemWidth(50);
-							ImGui::InputFloat(("##" + prop.first + "x").c_str(), &parameter->x);
-							ImGui::SameLine();
-							ImGui::SetNextItemWidth(50);
-							ImGui::InputFloat(("##" + prop.first + "y").c_str(), &parameter->y);
-							ImGui::SameLine();
-							ImGui::SetNextItemWidth(50);
-							ImGui::InputFloat(("##" + prop.first + "z").c_str(), &parameter->z);
+							if (ImGui::InputFloat3(("##" + prop.first + "x").c_str(), v))
+							{
+								parameter->x = v[0];
+								parameter->y = v[1];
+								parameter->z = v[2];
+							}
 						}
 						else if (type == core::reflection::GetTypeName<float>())
 						{
 							float* parameter = prop.second.Get<float>(component.get());
 							ImGui::InputFloat(prop.first.c_str(), parameter);
+						}
+						else if (type == core::reflection::GetTypeName<uint32_t>())
+						{
+							uint32_t* parameter = prop.second.Get<uint32_t>(component.get());
+							ImGui::LabelText(("##" + prop.first).c_str(), prop.first.c_str());
+							if (prop.second.isConst)
+								ImGui::InputInt(("##Input_" + prop.first).c_str(), reinterpret_cast<int*>(parameter), 0, 0, ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
+							else
+								ImGui::InputInt(("##Input_" + prop.first).c_str(), reinterpret_cast<int*>(parameter));
 						}
 					}
 				}
@@ -250,7 +260,6 @@ namespace sh::editor
 			ImGui::EndMainMenuBar();
 		}
 		
-		std::cout << bOpenExplorer << '\n';
 		if (bOpenExplorer)
 			explorer.Update();
 	}
