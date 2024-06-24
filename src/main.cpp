@@ -197,8 +197,16 @@ int main(int arg, char* args[])
 				window.Close();
 				break;
 			case sh::window::Event::EventType::Resize:
-				renderer.SetViewport({ 150.f, 0.f }, { window.width - 150.f, window.height - 180 });
-				gui.Resize();
+				if (window.width == 0)
+				{
+					renderer.Pause(true);
+				}
+				else
+				{
+					renderer.Pause(false);
+					renderer.SetViewport({ 150.f, 0.f }, { window.width - 150.f, window.height - 180 });
+					gui.Resize();
+				}
 				break;
 			case sh::window::Event::EventType::MousePressed:
 				if (e.mouseType == sh::window::Event::MouseType::Left)
@@ -224,11 +232,11 @@ int main(int arg, char* args[])
 				}
 				break;
 			case sh::window::Event::EventType::WindowFocus:
-				renderer.Pause(false);
+				//renderer.Pause(false);
 				std::cout << "FocusIn\n";
 				break;
 			case sh::window::Event::EventType::WindowFocusOut:
-				renderer.Pause(true);
+				//renderer.Pause(true);
 				std::cout << "FocusOut\n";
 				break;
 			}

@@ -25,7 +25,7 @@ namespace sh::render {
 		graphicsQueue(nullptr), surfaceQueue(nullptr),
 		debugMessenger(nullptr), validationLayerName("VK_LAYER_KHRONOS_validation"),
 		currentFrame(0),
-		isInit(false), bPause(false), bFindValidationLayer(false), bEnableValidationLayers(sh::core::Util::IsDebug()),
+		isInit(false), bFindValidationLayer(false), bEnableValidationLayers(sh::core::Util::IsDebug()),
 		allocator(nullptr), 
 		descPool(nullptr),
 		descriptorPoolSize(MAX_FRAME_DRAW * 10)
@@ -714,11 +714,6 @@ namespace sh::render {
 
 		currentFrame = (currentFrame + 1) % MAX_FRAME_DRAW;
 		bReCreateDescriptorPool = false;
-	}
-
-	void VulkanRenderer::Pause(bool b)
-	{
-		bPause = b;
 	}
 
 	void VulkanRenderer::ReAllocateDesriptorPool()

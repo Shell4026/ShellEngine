@@ -109,6 +109,10 @@ namespace sh::game
 			return;
 
 		sh::render::Renderer* renderer = &gameObject->world.renderer;
+		if (renderer->isPause)
+			return;
+
+		//셰이더 유니폼 값 전달
 		for (auto& uniforms : mat->GetShader()->vertexUniforms)
 		{
 			size_t size = uniforms.second.back().offset + uniforms.second.back().size;
@@ -179,6 +183,7 @@ namespace sh::game
 			int frameIdx = static_cast<sh::render::VulkanRenderer*>(renderer)->GetCurrentFrame();
 			drawable->SetUniformData(uniforms.first, frameIdx, uniformCopyData.data());
 		}
+		//텍스쳐
 		for (auto& sampler : mat->GetShader()->samplerFragmentUniforms)
 		{
 			auto tex = mat->GetTexture(sampler.second.name);

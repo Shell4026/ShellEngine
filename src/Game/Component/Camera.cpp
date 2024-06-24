@@ -22,9 +22,10 @@ namespace sh::game
 	}
 	void Camera::Update()
 	{
+		auto size = gameObject->world.renderer.GetViewportEnd() - gameObject->world.renderer.GetViewportStart();
 		matProj = glm::perspectiveFov(fov,
-			static_cast<float>(gameObject->world.renderer.GetWidth()),
-			static_cast<float>(gameObject->world.renderer.GetHeight()),
+			static_cast<float>(size.x),
+			static_cast<float>(size.y),
 			nearPlane, farPlane);
 		matView = glm::lookAt(gameObject->transform->position, glm::vec3(0.f), glm::vec3(0.f, 1.0f, 0.f));
 	}

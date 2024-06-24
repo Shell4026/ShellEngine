@@ -5,8 +5,11 @@ namespace sh::render
 {
 	Renderer::Renderer(RenderAPI api) :
 		window(nullptr),
+		isPause(bPause),
+
 		apiType(api),
-		viewportStart(0.f), viewportEnd(100.f)
+		viewportStart(0.f), viewportEnd(100.f),
+		bPause(false)
 	{
 
 	}
@@ -42,5 +45,9 @@ namespace sh::render
 	{
 		assert(window);
 		return *window;
+	}
+	void Renderer::Pause(bool b)
+	{
+		bPause = b;
 	}
 }

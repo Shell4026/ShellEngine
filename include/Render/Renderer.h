@@ -24,8 +24,11 @@ namespace sh::render {
 
 		glm::vec2 viewportStart;
 		glm::vec2 viewportEnd;
+
+		bool bPause;
 	public:
 		const RenderAPI apiType;
+		const bool& isPause;
 	public:
 		SH_RENDER_API Renderer(RenderAPI api);
 		SH_RENDER_API virtual ~Renderer() = default;
@@ -35,7 +38,7 @@ namespace sh::render {
 		SH_RENDER_API virtual void Clean() = 0;
 
 		SH_RENDER_API virtual void Render(float deltaTime) = 0;
-		SH_RENDER_API virtual void Pause(bool b) = 0;
+		SH_RENDER_API virtual void Pause(bool b);
 
 		SH_RENDER_API virtual bool IsInit() const = 0;
 		SH_RENDER_API virtual auto GetMainFramebuffer() const -> const Framebuffer* = 0;

@@ -73,7 +73,6 @@ namespace sh::render {
 		std::vector<std::function<void()>> drawCalls;
 
 		bool isInit : 1;
-		bool bPause : 1;
 		bool bFindValidationLayer : 1;
 		bool bEnableValidationLayers : 1;
 		bool bReCreateDescriptorPool : 1;
@@ -121,7 +120,6 @@ namespace sh::render {
 		SH_RENDER_API bool IsInit() const override;
 
 		SH_RENDER_API void Render(float deltaTime) override;
-		SH_RENDER_API void Pause(bool b) override;
 
 		SH_RENDER_API void ReAllocateDesriptorPool();
 		SH_RENDER_API void ReAllocateSamplerDesriptorPool();
