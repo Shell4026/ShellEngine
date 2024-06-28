@@ -1,4 +1,6 @@
-﻿add_executable(ShellEngine main.cpp)
+﻿set(SH_EDITOR TRUE CACHE BOOL "Is Editor?")
+
+add_executable(ShellEngine main.cpp)
 
 target_include_directories(ShellEngine PUBLIC ${CMAKE_SOURCE_DIR}/include)
 #target_precompile_headers(ShellEngine PUBLIC ${CMAKE_SOURCE_DIR}/include/Engine.h)
@@ -17,6 +19,7 @@ FetchContent_Declare(
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 FetchContent_MakeAvailable(Fmt)
 
+
 add_subdirectory(Core)
 target_link_libraries(ShellEngine PUBLIC ShellEngine::Core)
 
@@ -29,8 +32,11 @@ target_link_libraries(ShellEngine PUBLIC ShellEngine::Render)
 add_subdirectory(Game)
 target_link_libraries(ShellEngine PUBLIC ShellEngine::Game)
 
+if(SH_EDITOR)
+target_compile_definitions(ShellEngineCore PUBLIC SH_EDITOR)
 add_subdirectory(Editor)
 target_link_libraries(ShellEngine PUBLIC ShellEngine::Editor)
+endif()
 
 file(GLOB_RECURSE spvFiles "${CMAKE_SOURCE_DIR}/resource/shaders/*.spv")
 
