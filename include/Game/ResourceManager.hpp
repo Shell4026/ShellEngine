@@ -120,8 +120,8 @@ namespace sh::game
 					for(auto& func : requester.second)
 						func();
 				}
+				resourceDestroyNotifies.erase(itNotify);
 			}
-			resourceDestroyNotifies.erase(itNotify);
 			resources.erase(it);
 
 			return true;
