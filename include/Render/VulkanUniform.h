@@ -20,9 +20,9 @@ namespace sh::render
 		const VulkanRenderer& renderer;
 
 		VkDescriptorSetLayout descriptorSetLayout;
-		std::vector<VkDescriptorSet> descriptorSets;
+		VkDescriptorSet descriptorSet;
 
-		std::vector<impl::VulkanBuffer> uniformBuffers;
+		impl::VulkanBuffer uniformBuffer;
 	private:
 		
 		

@@ -22,6 +22,6 @@ namespace sh::game
 	public:
 		SH_GAME_API TextureLoader(const render::Renderer& renderer);
 		SH_GAME_API ~TextureLoader() = default;
-		SH_GAME_API auto Load(std::string_view filename) -> std::unique_ptr<render::Texture>;
+		SH_GAME_API auto Load(std::string_view filename, bool bGenerateMipmap = true) -> std::unique_ptr<render::Texture>;
 	};
 }

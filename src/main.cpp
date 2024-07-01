@@ -7,6 +7,7 @@
 #include "Render/VulkanRenderer.h"
 #include "Render/Material.h"
 #include "Render/Mesh.h"
+#include "Render/RenderTexture.h"
 #include "Core/Reflection.hpp"
 #include <Core/Util.h>
 #include <Core/GC.h>
@@ -32,6 +33,8 @@
 #include "Editor/Project.h"
 
 #include <iostream>
+#include <thread>
+#include <mutex>
 
 class NoBase {
 public:
@@ -87,7 +90,7 @@ int main(int arg, char* args[])
 	sh::core::GC gc;
 	
 	sh::window::Window window;
-	window.Create(u8"테스트", 1024, 768, sh::window::Window::Style::Default);
+	window.Create(u8"테스트", 1024, 768, sh::window::Window::Style::Resize);
 	window.SetFps(144);
 
 	auto renderer = sh::render::VulkanRenderer{};
@@ -112,6 +115,8 @@ int main(int arg, char* args[])
 	auto tex = world.textures.AddResource("Texture0", texLoader.Load("textures/버터고양이.jpg"));
 	auto tex2 = world.textures.AddResource("Texture1", texLoader.Load("textures/cat.jpg"));
 	auto tex3 = world.textures.AddResource("Texture2", texLoader.Load("textures/viking_room.png"));
+	auto renderTex = world.textures.AddResource("RenderTexture", std::make_unique<sh::render::RenderTexture>());
+	renderTex->Build(renderer);
 
 	shader->AddAttribute<glm::vec2>("uvs", 1);
 
@@ -166,19 +171,40 @@ int main(int arg, char* args[])
 	GameObject* cam = world.AddGameObject("Camera");
 	cam->transform->SetPosition(glm::vec3(2.f, 2.f, 2.f));
 	Camera* cameraComponent = cam->AddComponent<Camera>();
-
-	world.mainCamera = cameraComponent;
+	cameraComponent->renderTexture = sh::core::reflection::Cast<sh::render::RenderTexture>(renderTex);
+	
+	GameObject* cam2 = world.AddGameObject("Camera2");
+	cam2->transform->SetPosition(glm::vec3(-2.f, 2.f, -2.f));
+	cam2->AddComponent<Camera>()->renderTexture = sh::core::reflection::Cast<sh::render::RenderTexture>(renderTex);
+	cam2->GetComponent<Camera>()->SetDepth(-2);
 
 	world.Start();
+	world.SetMainCamera(cameraComponent);
 
 	ImGUI gui(window, renderer);
 	gui.Init();
 
 	sh::editor::EditorUI editorUi(world, gui);
+	std::mutex mu;
+	std::condition_variable cv;
+	bool bStopRenderThread = false;
+
+	//renderer.SetMutex(mu);
+	std::thread renderThread([&]()
+	{
+		while (!bStopRenderThread)
+		{
+			std::unique_lock<std::mutex> lock(mu);
+			cv.wait(lock);
+			gui.Update();
+			editorUi.Render();
+			gui.Render();
+			renderer.Render(window.GetDeltaTime());
+		}
+	});
 	while (window.IsOpen())
 	{
 		window.ProcessFrame();
-		gui.Update();
 		std::string deltaTime = std::to_string(window.GetDeltaTime());
 		deltaTime.erase(deltaTime.begin() + 5, deltaTime.end());
 		window.SetTitle("ShellEngine [DeltaTime:" + deltaTime + "ms]");
@@ -191,10 +217,13 @@ int main(int arg, char* args[])
 			switch (e.type)
 			{
 			case sh::window::Event::EventType::Close:
+				bStopRenderThread = true;
+				if(renderThread.joinable())
+					renderThread.join();
 				gui.Clean();
 				world.Clean();
-				renderer.Clean();
 				window.Close();
+				renderer.Clean();
 				break;
 			case sh::window::Event::EventType::Resize:
 				if (window.width == 0)
@@ -206,6 +235,7 @@ int main(int arg, char* args[])
 					renderer.Pause(false);
 					renderer.SetViewport({ 150.f, 0.f }, { window.width - 150.f, window.height - 180 });
 					gui.Resize();
+					cv.notify_all();
 				}
 				break;
 			case sh::window::Event::EventType::MousePressed:
@@ -232,21 +262,21 @@ int main(int arg, char* args[])
 				}
 				break;
 			case sh::window::Event::EventType::WindowFocus:
-				//renderer.Pause(false);
+				window.SetFps(144);
 				std::cout << "FocusIn\n";
 				break;
 			case sh::window::Event::EventType::WindowFocusOut:
-				//renderer.Pause(true);
+				window.SetFps(30);
 				std::cout << "FocusOut\n";
 				break;
 			}
 		}
 		editorUi.Update();
-
 		world.Update(window.GetDeltaTime());
 		gc.Update();
-		gui.Render();
-		renderer.Render(window.GetDeltaTime());
+		cv.notify_all();
 	}
+	if(renderThread.joinable())
+		renderThread.join();
 	return 0;
 }

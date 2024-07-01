@@ -16,11 +16,10 @@ namespace sh::render
 {
 	VulkanDrawable::VulkanDrawable(VulkanRenderer& renderer) :
 		renderer(renderer), 
-		cmd(renderer.GetDevice(), renderer.GetCommandPool()),
-		mat(nullptr), mesh(nullptr)
+		mat(nullptr), mesh(nullptr),
+		descriptorSet(nullptr), framebuffer(nullptr)
 	{
 	}
-
 	VulkanDrawable::~VulkanDrawable()
 	{
 		Clean();
@@ -29,7 +28,6 @@ namespace sh::render
 	void VulkanDrawable::Clean()
 	{
 		uniformBuffers.clear();
-		cmd.Clean();
 		pipeline.reset();
 	}
 
@@ -37,14 +35,14 @@ namespace sh::render
 	{
 		VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
 		//디스크립터 생성
-		std::vector<VkDescriptorSetLayout> layouts(VulkanRenderer::MAX_FRAME_DRAW, shader->GetDescriptorSetLayout());
+		VkDescriptorSetLayout layouts = shader->GetDescriptorSetLayout();
 		VkDescriptorSetAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		allocInfo.descriptorPool = renderer.GetDescriptorPool();
-		allocInfo.descriptorSetCount = static_cast<uint32_t>(VulkanRenderer::MAX_FRAME_DRAW);
-		allocInfo.pSetLayouts = layouts.data();
+		allocInfo.descriptorSetCount = 1;
+		allocInfo.pSetLayouts = &layouts;
 
-		return vkAllocateDescriptorSets(renderer.GetDevice(), &allocInfo, descriptorSets.data());
+		return vkAllocateDescriptorSets(renderer.GetDevice(), &allocInfo, &descriptorSet);
 	}
 
 	void VulkanDrawable::Build(Mesh* mesh, Material* mat)
@@ -56,9 +54,14 @@ namespace sh::render
 
 		Clean();
 
-		auto frameBuffer = static_cast<const impl::VulkanFramebuffer*>(renderer.GetMainFramebuffer());
-		pipeline = std::make_unique<impl::VulkanPipeline>(renderer.GetDevice(), frameBuffer->GetRenderPass());
-		cmd.Create();
+		const impl::VulkanFramebuffer* vkFrameBuffer = nullptr;
+		if (framebuffer == nullptr)
+			vkFrameBuffer = static_cast<const impl::VulkanFramebuffer*>(renderer.GetMainFramebuffer());
+		else
+			vkFrameBuffer = static_cast<const impl::VulkanFramebuffer*>(framebuffer);
+
+		pipeline = std::make_unique<impl::VulkanPipeline>(renderer.GetDevice(), vkFrameBuffer->GetRenderPass());
+
 
 		auto& bindings = static_cast<VulkanVertexBuffer*>(mesh->GetVertexBuffer())->bindingDescriptions;
 		auto& attrs = static_cast<VulkanVertexBuffer*>(mesh->GetVertexBuffer())->attribDescriptions;
@@ -98,19 +101,16 @@ namespace sh::render
 		for (auto& uniform : shader->vertexUniforms)
 		{
 			size_t size = uniform.second.back().offset + uniform.second.back().size;
-			std::vector<impl::VulkanBuffer> arr{};
-			for (int i = 0; i < VulkanRenderer::MAX_FRAME_DRAW; ++i)
-			{
-				impl::VulkanBuffer buffer { renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() };
-				auto result = buffer.Create(size,
-					VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-					VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
-					VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-					true);
-				assert(result == VkResult::VK_SUCCESS);
-				arr.push_back(std::move(buffer));
-			}
-			uniformBuffers.insert({ uniform.first, std::move(arr) });
+
+			impl::VulkanBuffer buffer{ renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() };
+			auto result = buffer.Create(size,
+				VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+				VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
+				VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+				true);
+			assert(result == VkResult::VK_SUCCESS);
+
+			uniformBuffers.insert({ uniform.first, std::move(buffer) });
 		}
 		for (auto& uniform : shader->samplerFragmentUniforms)
 		{
@@ -130,49 +130,43 @@ namespace sh::render
 
 		for (auto& buffer : uniformBuffers)
 		{
-			for (int i = 0; i < VulkanRenderer::MAX_FRAME_DRAW; ++i)
-			{
-				VkDescriptorBufferInfo bufferInfo{};
-				bufferInfo.buffer = buffer.second[i].GetBuffer();
-				bufferInfo.offset = 0;
-				bufferInfo.range = buffer.second[i].GetSize();
+			VkDescriptorBufferInfo bufferInfo{};
+			bufferInfo.buffer = buffer.second.GetBuffer();
+			bufferInfo.offset = 0;
+			bufferInfo.range = buffer.second.GetSize();
 
-				VkWriteDescriptorSet descriptorWrite{};
-				descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-				descriptorWrite.dstSet = descriptorSets[i];
-				descriptorWrite.dstBinding = buffer.first;
-				descriptorWrite.dstArrayElement = 0;
-				descriptorWrite.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-				descriptorWrite.descriptorCount = 1;
-				descriptorWrite.pBufferInfo = &bufferInfo;
-				descriptorWrite.pImageInfo = nullptr;
-				descriptorWrite.pTexelBufferView = nullptr;
+			VkWriteDescriptorSet descriptorWrite{};
+			descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrite.dstSet = descriptorSet;
+			descriptorWrite.dstBinding = buffer.first;
+			descriptorWrite.dstArrayElement = 0;
+			descriptorWrite.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrite.descriptorCount = 1;
+			descriptorWrite.pBufferInfo = &bufferInfo;
+			descriptorWrite.pImageInfo = nullptr;
+			descriptorWrite.pTexelBufferView = nullptr;
 
-				vkUpdateDescriptorSets(renderer.GetDevice(), 1, &descriptorWrite, 0, nullptr);
-			}
+			vkUpdateDescriptorSets(renderer.GetDevice(), 1, &descriptorWrite, 0, nullptr);
 		}
 		for (auto& tex : textures)
 		{
-			for (int i = 0; i < VulkanRenderer::MAX_FRAME_DRAW; ++i)
-			{
-				VkDescriptorImageInfo  imgInfo{};
-				imgInfo.imageLayout = VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-				imgInfo.imageView = static_cast<VulkanTextureBuffer*>(tex.second->GetBuffer())->GetImageBuffer()->GetImageView();
-				imgInfo.sampler = static_cast<VulkanTextureBuffer*>(tex.second->GetBuffer())->GetImageBuffer()->GetSampler();
+			VkDescriptorImageInfo  imgInfo{};
+			imgInfo.imageLayout = VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			imgInfo.imageView = static_cast<VulkanTextureBuffer*>(tex.second->GetBuffer())->GetImageBuffer()->GetImageView();
+			imgInfo.sampler = static_cast<VulkanTextureBuffer*>(tex.second->GetBuffer())->GetImageBuffer()->GetSampler();
 
-				VkWriteDescriptorSet descriptorWrite{};
-				descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-				descriptorWrite.dstSet = descriptorSets[i];
-				descriptorWrite.dstBinding = tex.first;
-				descriptorWrite.dstArrayElement = 0;
-				descriptorWrite.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-				descriptorWrite.descriptorCount = 1;
-				descriptorWrite.pBufferInfo = nullptr;
-				descriptorWrite.pImageInfo = &imgInfo;
-				descriptorWrite.pTexelBufferView = nullptr;
+			VkWriteDescriptorSet descriptorWrite{};
+			descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrite.dstSet = descriptorSet;
+			descriptorWrite.dstBinding = tex.first;
+			descriptorWrite.dstArrayElement = 0;
+			descriptorWrite.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			descriptorWrite.descriptorCount = 1;
+			descriptorWrite.pBufferInfo = nullptr;
+			descriptorWrite.pImageInfo = &imgInfo;
+			descriptorWrite.pTexelBufferView = nullptr;
 
-				vkUpdateDescriptorSets(renderer.GetDevice(), 1, &descriptorWrite, 0, nullptr);
-			}
+			vkUpdateDescriptorSets(renderer.GetDevice(), 1, &descriptorWrite, 0, nullptr);
 		}
 
 		result = pipeline->
@@ -181,13 +175,15 @@ namespace sh::render
 			AddShaderStage(impl::VulkanPipeline::ShaderStage::Fragment).
 			Build(shader->GetPipelineLayout());
 		assert(result == VkResult::VK_SUCCESS);
-
-		cmd.Clean();
 	}
 
-	void VulkanDrawable::SetUniformData(uint32_t binding, int frame, const void* data)
+	void VulkanDrawable::SetUniformData(uint32_t binding, const void* data)
 	{
-		uniformBuffers[binding][frame].SetData(data);
+		auto it = uniformBuffers.find(binding);
+		if (it == uniformBuffers.end())
+			return;
+		
+		it->second.SetData(data);
 	}
 	void VulkanDrawable::SetTextureData(uint32_t binding, Texture* tex)
 	{
@@ -208,8 +204,17 @@ namespace sh::render
 	{
 		return pipeline.get();
 	}
-	auto VulkanDrawable::GetDescriptorSet(int frame) -> VkDescriptorSet
+	auto VulkanDrawable::GetDescriptorSet() const -> VkDescriptorSet
 	{
-		return descriptorSets[frame];
+		return descriptorSet;
+	}
+
+	void VulkanDrawable::SetFramebuffer(Framebuffer& framebuffer)
+	{
+		this->framebuffer = &framebuffer;
+	}
+	auto VulkanDrawable::GetFramebuffer() const -> const Framebuffer*
+	{
+		return framebuffer;
 	}
 }

@@ -16,18 +16,22 @@
 
 namespace sh::game
 {
+	class Camera;
+
 	class MeshRenderer : public Component
 	{
-		SCOMPONENT(MeshRenderer)
+		SCOMPONENT(MeshRenderer);
 	private:
+		PROPERTY(mesh);
 		sh::render::Mesh* mesh;
+		PROPERTY(mat);
 		sh::render::Material* mat;
 		
-		std::unique_ptr<sh::render::IDrawable> drawable;
+		std::unordered_map<Camera*, std::unique_ptr<sh::render::IDrawable>> drawables;
 
 		std::vector<unsigned char> uniformCopyData;
 	private:
-		void CreateDrawable();
+		void CreateDrawable(Camera* camera);
 	public:
 		SH_GAME_API MeshRenderer();
 		SH_GAME_API ~MeshRenderer();

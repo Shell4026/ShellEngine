@@ -1,5 +1,9 @@
 ﻿#pragma once
 
+#ifndef GLM_FORCE_SSE2
+#define GLM_FORCE_SSE2
+#endif
+
 #include "../Core/Config.h"
 
 #ifdef ShellEngineRender_EXPORTS

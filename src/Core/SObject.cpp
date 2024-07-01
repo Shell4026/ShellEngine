@@ -54,4 +54,7 @@ namespace sh::core
 	{
 		return bPendingKill;
 	}
+	void SObject::OnPropertyChanged(const reflection::Property& prop)
+	{
+	}
 }

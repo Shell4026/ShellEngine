@@ -10,7 +10,7 @@ namespace sh::game
 		localPosition(),
 		vPosition(glm::vec3(0.f, 0.f, 0.f)), vScale(glm::vec3(1.0f, 1.0f, 1.0f)), vRot(glm::vec3(0.f, 0.f, 0.f)),
 		matModel(), quat(glm::radians(vRot)),
-		updateMatrix(false)
+		bUpdateMatrix(false)
 	{
 		matModel = glm::translate(glm::mat4{1.0f}, vPosition) * glm::mat4_cast(quat) * glm::scale(glm::mat4{ 1.0f }, vScale);
 	}
@@ -26,7 +26,7 @@ namespace sh::game
 		localPosition(other.localPosition),
 		vPosition(other.vPosition), vScale(other.vScale), vRot(other.vRot),
 		matModel(other.matModel), quat(other.quat),
-		updateMatrix(other.updateMatrix)
+		bUpdateMatrix(other.bUpdateMatrix)
 	{
 	}
 
@@ -37,7 +37,7 @@ namespace sh::game
 		localPosition(std::move(other.localPosition)),
 		vPosition(std::move(other.vPosition)), vScale(std::move(other.vScale)), vRot(std::move(other.vRot)),
 		matModel(std::move(other.matModel)), quat(std::move(other.quat)),
-		updateMatrix(other.updateMatrix)
+		bUpdateMatrix(other.bUpdateMatrix)
 	{
 	}
 
@@ -52,7 +52,11 @@ namespace sh::game
 
 	void Transform::Update()
 	{
-		UpdateMatrix();
+		if (bUpdateMatrix)
+		{
+			UpdateMatrix();
+			bUpdateMatrix = false;
+		}
 	}
 
 	void Transform::UpdateMatrix()
@@ -70,19 +74,19 @@ namespace sh::game
 	void Transform::SetPosition(const glm::vec3& pos)
 	{
 		vPosition = pos;
-		updateMatrix = true;
+		bUpdateMatrix = true;
 	}
 	void Transform::SetPosition(float x, float y, float z)
 	{
 		vPosition.x = x;
 		vPosition.y = y;
 		vPosition.z = z;
-		updateMatrix = true;
+		bUpdateMatrix = true;
 	}
 	void Transform::SetScale(const glm::vec3& scale)
 	{
 		vScale = scale;
-		updateMatrix = true;
+		bUpdateMatrix = true;
 	}
 	void Transform::SetRotation(const glm::vec3& rot)
 	{
@@ -94,12 +98,19 @@ namespace sh::game
 		if (vRot.z >= 360)
 			vRot.z -= 360;
 		quat = glm::quat{ glm::radians(vRot) };
-		updateMatrix = true;
+		bUpdateMatrix = true;
 	}
 	void Transform::SetRotation(const glm::quat& rot)
 	{
 		vRot = glm::degrees(glm::eulerAngles(quat));
 		quat = rot;
-		updateMatrix = true;
+		bUpdateMatrix = true;
 	}
+
+#if SH_EDITOR
+	void Transform::OnPropertyChanged(const core::reflection::Property& property)
+	{
+		bUpdateMatrix = true;
+	}
+#endif
 }

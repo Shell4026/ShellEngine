@@ -28,7 +28,7 @@ namespace sh::render {
 		isInit(false), bFindValidationLayer(false), bEnableValidationLayers(sh::core::Util::IsDebug()),
 		allocator(nullptr), 
 		descPool(nullptr),
-		descriptorPoolSize(MAX_FRAME_DRAW * 10)
+		descriptorPoolSize(10)
 	{
 	}
 
@@ -43,14 +43,13 @@ namespace sh::render {
 		if (!device)
 			return;
 
-		DestroyDescriptorPool();
-
 		vkDeviceWaitIdle(device);
+
+		DestroyDescriptorPool();
 
 		DestroySyncObjects();
 
-		for(auto& buffer : cmdBuffers)
-			buffer->Clean();
+		cmdBuffer->Clean();
 		DestroyCommandPool();
 
 		framebuffers.clear();
@@ -323,34 +322,29 @@ namespace sh::render {
 		fenceInfo.flags = VkFenceCreateFlagBits::VK_FENCE_CREATE_SIGNALED_BIT; //시작부터 신호를 받음
 
 		VkResult result;
-		for (int i = 0; i < MAX_FRAME_DRAW; ++i)
-		{
-			result = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore[i]);
-			assert(result == VkResult::VK_SUCCESS);
-			if (result != VkResult::VK_SUCCESS)
-				return result;
+		result = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &imageAvailableSemaphore);
+		assert(result == VkResult::VK_SUCCESS);
+		if (result != VkResult::VK_SUCCESS)
+			return result;
 
-			result = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore[i]);
-			assert(result == VkResult::VK_SUCCESS);
-			if (result != VkResult::VK_SUCCESS)
-				return result;
+		result = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &renderFinishedSemaphore);
+		assert(result == VkResult::VK_SUCCESS);
+		if (result != VkResult::VK_SUCCESS)
+			return result;
 
-			result = vkCreateFence(device, &fenceInfo, nullptr, &inFlightFence[i]);
-			assert(result == VkResult::VK_SUCCESS);
-			if (result != VkResult::VK_SUCCESS)
-				return result;
-		}
+		result = vkCreateFence(device, &fenceInfo, nullptr, &inFlightFence);
+		assert(result == VkResult::VK_SUCCESS);
+		if (result != VkResult::VK_SUCCESS)
+			return result;
+
 		return result;
 	}
 
 	void VulkanRenderer::DestroySyncObjects()
 	{
-		for (int i = 0; i < MAX_FRAME_DRAW; ++i)
-		{
-			vkDestroySemaphore(device, imageAvailableSemaphore[i], nullptr);
-			vkDestroySemaphore(device, renderFinishedSemaphore[i], nullptr);
-			vkDestroyFence(device, inFlightFence[i], nullptr);
-		}
+		vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
+		vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
+		vkDestroyFence(device, inFlightFence, nullptr);
 	}
 
 	void VulkanRenderer::CreateAllocator()
@@ -484,11 +478,8 @@ namespace sh::render {
 		if (CreateCommandPool(graphicsQueueIndex)) 
 			return false;
 
-		for (auto& cmdBuffer : cmdBuffers)
-		{
-			cmdBuffer = std::make_unique<impl::VulkanCommandBuffer>(device, cmdPool);
-			cmdBuffer->Create();
-		}
+		cmdBuffer = std::make_unique<impl::VulkanCommandBuffer>(device, cmdPool);
+		cmdBuffer->Create();
 		//세마포어와 펜스 생성 (동기화 변수)
 		if (CreateSyncObjects() != VkResult::VK_SUCCESS)
 			return false;
@@ -509,9 +500,9 @@ namespace sh::render {
 	{
 		std::array<VkDescriptorPoolSize, 2> poolSizes{};
 		poolSizes[0].type = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		poolSizes[0].descriptorCount = static_cast<uint32_t>(MAX_FRAME_DRAW);
+		poolSizes[0].descriptorCount = 1;
 		poolSizes[1].type = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[1].descriptorCount = static_cast<uint32_t>(MAX_FRAME_DRAW);
+		poolSizes[1].descriptorCount = 1;
 
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -598,7 +589,7 @@ namespace sh::render {
 
 	void VulkanRenderer::WaitForCurrentFrame()
 	{
-		vkWaitForFences(device, 1, &inFlightFence[currentFrame], VK_TRUE, UINT64_MAX);
+		vkWaitForFences(device, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
 	}
 
 	void VulkanRenderer::AddDrawCall(const std::function<void()>& func)
@@ -610,61 +601,125 @@ namespace sh::render {
 	{
 		if (!isInit || bPause)
 			return;
+		if (drawList.empty())
+			return;
+		if (camHandles[mainCamera] == nullptr)
+			return;
+		if (drawList[*camHandles[mainCamera]].empty())
+			return;
+		//std::cout << "Render Start\n";
+		//std::cout << "main: " << mainCamera << '\n';
+		//mu->lock();
 
 		WaitForCurrentFrame();
 
 		uint32_t imgIdx;
-		VkResult result = vkAcquireNextImageKHR(device, surface->GetSwapChain(), UINT64_MAX, imageAvailableSemaphore[currentFrame], nullptr, &imgIdx);
+		VkResult result = vkAcquireNextImageKHR(device, surface->GetSwapChain(), UINT64_MAX, imageAvailableSemaphore, nullptr, &imgIdx);
 		if (result == VkResult::VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
 		{
 			Resizing();
 			return;
 		}
-		vkResetFences(device, 1, &inFlightFence[currentFrame]);
+		vkResetFences(device, 1, &inFlightFence);
 
-		cmdBuffers[currentFrame]->Reset();
-		cmdBuffers[currentFrame]->SetWaitSemaphore({ imageAvailableSemaphore[currentFrame] });
-		cmdBuffers[currentFrame]->SetSignalSemaphore({ renderFinishedSemaphore[currentFrame] });
-		cmdBuffers[currentFrame]->SetWaitStage({ VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT });
+		cmdBuffer->Reset();
+		cmdBuffer->SetWaitSemaphore({ imageAvailableSemaphore });
+		cmdBuffer->SetSignalSemaphore({ renderFinishedSemaphore });
+		cmdBuffer->SetWaitStage({ VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT });
 
-		VkCommandBuffer buffer = cmdBuffers[currentFrame]->GetCommandBuffer();
-
-		cmdBuffers[currentFrame]->Submit(graphicsQueue, [&]()
+		VkCommandBuffer buffer = cmdBuffer->GetCommandBuffer();
+		cmdBuffer->Submit(graphicsQueue, [&]()
 		{
-				VkRenderPassBeginInfo renderPassInfo{};
-				std::array<VkClearValue, 2> clear;
-				clear[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-				clear[1].depthStencil = { 1.0f, 0 };
+			bool mainPass = false;
+			for (auto& draws : drawList)
+			{
+				const Camera& cam = draws.first;
+				auto& drawQueue = draws.second;
 
-				renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-				renderPassInfo.renderPass = framebuffers[imgIdx].GetRenderPass();
-				renderPassInfo.framebuffer = framebuffers[imgIdx].GetVkFramebuffer();
-				renderPassInfo.renderArea.offset = { 0, 0 };
-				renderPassInfo.renderArea.extent = surface->GetSwapChainSize();
-				renderPassInfo.clearValueCount = static_cast<uint32_t>(clear.size());
-				renderPassInfo.pClearValues = clear.data();
+				if (drawQueue.empty())
+					continue;
 
-				vkCmdBeginRenderPass(buffer, &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
-				while (!drawList.empty())
+				auto framebuffer = drawQueue.front()->GetFramebuffer();
+				if(framebuffer != nullptr)
 				{
-					VulkanDrawable* drawable = static_cast<VulkanDrawable*>(drawList.front());
-					drawList.pop();
-					if (bReCreateDescriptorPool == true)
+					auto& framebuffer = static_cast<const impl::VulkanFramebuffer&>(*drawQueue.front()->GetFramebuffer());
+					std::array<VkClearValue, 2> clear;
+					clear[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+					clear[1].depthStencil = { 1.0f, 0 };
+
+					VkRenderPassBeginInfo renderPassInfo{};
+					renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+					renderPassInfo.renderPass = framebuffer.GetRenderPass();
+					renderPassInfo.framebuffer = framebuffer.GetVkFramebuffer();
+					renderPassInfo.renderArea.offset = { 0, 0 };
+					renderPassInfo.renderArea.extent = { framebuffer.GetWidth(), framebuffer.GetHeight() };
+					renderPassInfo.clearValueCount = static_cast<uint32_t>(clear.size());
+					renderPassInfo.pClearValues = clear.data();
+					vkCmdBeginRenderPass(buffer, &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
+
+					VkViewport viewport{};
+					viewport.x = 0;
+					viewport.y = framebuffer.GetHeight();
+					viewport.width = framebuffer.GetWidth();
+					viewport.height = -static_cast<float>(framebuffer.GetHeight());
+					viewport.minDepth = 0.0f;
+					viewport.maxDepth = 1.0f;
+					vkCmdSetViewport(buffer, 0, 1, &viewport);
+
+					while (!drawQueue.empty())
 					{
-						drawable->Build(drawable->GetMesh(), drawable->GetMaterial());
+						VulkanDrawable* drawable = static_cast<VulkanDrawable*>(drawQueue.front());
+						drawQueue.pop();
+						if (bReCreateDescriptorPool == true)
+						{
+							drawable->Build(drawable->GetMesh(), drawable->GetMaterial());
+						}
+
+						Mesh* mesh = drawable->GetMesh();
+						Material* mat = drawable->GetMaterial();
+
+						assert(mesh);
+						assert(mat);
+						if (!sh::core::IsValid(mesh) || !sh::core::IsValid(mat)) continue;
+
+						VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
+						if (!sh::core::IsValid(shader)) continue;
+
+						vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, drawable->GetPipeline()->GetPipeline());
+
+						VkRect2D scissor{};
+						scissor.offset = { 0, 0 };
+						scissor.extent = { framebuffer.GetWidth(), framebuffer.GetHeight() };
+						vkCmdSetScissor(buffer, 0, 1, &scissor);
+
+						mesh->GetVertexBuffer()->Bind();
+
+						VkDescriptorSet descriptorSets[] = { drawable->GetDescriptorSet() };
+						vkCmdBindDescriptorSets(buffer,
+							VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS,
+							shader->GetPipelineLayout(), 0, 1,
+							descriptorSets, 0, nullptr);
+						vkCmdDrawIndexed(buffer, mesh->GetIndices().size(), 1, 0, 0, 0);
 					}
+					vkCmdEndRenderPass(buffer);
+				}
+				//MainPass
+				else
+				{
+					mainPass = true;
+					VkRenderPassBeginInfo renderPassInfo{};
+					std::array<VkClearValue, 2> clear;
+					clear[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+					clear[1].depthStencil = { 1.0f, 0 };
 
-					Mesh* mesh = drawable->GetMesh();
-					Material* mat = drawable->GetMaterial();
-
-					assert(mesh);
-					assert(mat);
-					if (!sh::core::IsValid(mesh) || !sh::core::IsValid(mat)) continue;
-
-					VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
-					if (!sh::core::IsValid(shader)) continue;
-
-					vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, drawable->GetPipeline()->GetPipeline());
+					renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+					renderPassInfo.renderPass = framebuffers[imgIdx].GetRenderPass();
+					renderPassInfo.framebuffer = framebuffers[imgIdx].GetVkFramebuffer();
+					renderPassInfo.renderArea.offset = { 0, 0 };
+					renderPassInfo.renderArea.extent = surface->GetSwapChainSize();
+					renderPassInfo.clearValueCount = static_cast<uint32_t>(clear.size());
+					renderPassInfo.pClearValues = clear.data();
+					vkCmdBeginRenderPass(buffer, &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
 
 					VkViewport viewport{};
 					float width = viewportEnd.x - viewportStart.x;
@@ -679,31 +734,89 @@ namespace sh::render {
 					viewport.maxDepth = 1.0f;
 					vkCmdSetViewport(buffer, 0, 1, &viewport);
 
-					VkRect2D scissor{};
-					scissor.offset = { 0, 0 };
-					scissor.extent = surface->GetSwapChainSize();
-					vkCmdSetScissor(buffer, 0, 1, &scissor);
+					while (!drawQueue.empty())
+					{
+						VulkanDrawable* drawable = static_cast<VulkanDrawable*>(drawQueue.front());
+						drawQueue.pop();
+						if (bReCreateDescriptorPool == true)
+						{
+							drawable->Build(drawable->GetMesh(), drawable->GetMaterial());
+						}
 
-					mesh->GetVertexBuffer()->Bind();
+						Mesh* mesh = drawable->GetMesh();
+						Material* mat = drawable->GetMaterial();
 
-					VkDescriptorSet descriptorSets[] = { drawable->GetDescriptorSet(currentFrame) };
-					vkCmdBindDescriptorSets(buffer,
-						VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, 
-						shader->GetPipelineLayout(), 0, 1, 
-						descriptorSets, 0, nullptr);
-					vkCmdDrawIndexed(buffer, mesh->GetIndices().size(), 1, 0, 0, 0);
+						assert(mesh);
+						assert(mat);
+						if (!sh::core::IsValid(mesh) || !sh::core::IsValid(mat)) continue;
+
+						VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
+						if (!sh::core::IsValid(shader)) continue;
+
+						vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, drawable->GetPipeline()->GetPipeline());
+
+						VkRect2D scissor{};
+						scissor.offset = { 0, 0 };
+						scissor.extent = surface->GetSwapChainSize();
+						vkCmdSetScissor(buffer, 0, 1, &scissor);
+
+						mesh->GetVertexBuffer()->Bind();
+
+						VkDescriptorSet descriptorSets[] = { drawable->GetDescriptorSet() };
+						vkCmdBindDescriptorSets(buffer,
+							VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS,
+							shader->GetPipelineLayout(), 0, 1,
+							descriptorSets, 0, nullptr);
+						vkCmdDrawIndexed(buffer, mesh->GetIndices().size(), 1, 0, 0, 0);
+					}
+
+					for (auto& func : drawCalls)
+						func();
+
+					vkCmdEndRenderPass(buffer);
 				}
+			}
+			//모든 카메라에 프레임 버퍼가 존재하는 특수한 경우
+			if (mainPass == false)
+			{
+				VkRenderPassBeginInfo renderPassInfo{};
+				std::array<VkClearValue, 2> clear;
+				clear[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+				clear[1].depthStencil = { 1.0f, 0 };
+
+				renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+				renderPassInfo.renderPass = framebuffers[imgIdx].GetRenderPass();
+				renderPassInfo.framebuffer = framebuffers[imgIdx].GetVkFramebuffer();
+				renderPassInfo.renderArea.offset = { 0, 0 };
+				renderPassInfo.renderArea.extent = surface->GetSwapChainSize();
+				renderPassInfo.clearValueCount = static_cast<uint32_t>(clear.size());
+				renderPassInfo.pClearValues = clear.data();
+				vkCmdBeginRenderPass(buffer, &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
+
+				VkViewport viewport{};
+				float width = viewportEnd.x - viewportStart.x;
+				float height = viewportEnd.y - viewportStart.y;
+				float surfWidth = static_cast<float>(surface->GetSwapChainSize().width);
+				float surfHeight = static_cast<float>(surface->GetSwapChainSize().height);
+				viewport.x = viewportStart.x;
+				viewport.y = viewportEnd.y;
+				viewport.width = std::min(width, surfWidth);
+				viewport.height = -std::min(height, surfHeight);
+				viewport.minDepth = 0.0f;
+				viewport.maxDepth = 1.0f;
+				vkCmdSetViewport(buffer, 0, 1, &viewport);
+
 				for (auto& func : drawCalls)
 					func();
+
 				vkCmdEndRenderPass(buffer);
-			},
-			nullptr, inFlightFence[currentFrame]
-		);
+			}
+		}, nullptr, inFlightFence); //submitEnd
 
 		VkPresentInfoKHR presentInfo{};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = &renderFinishedSemaphore[currentFrame];
+		presentInfo.pWaitSemaphores = &renderFinishedSemaphore;
 		VkSwapchainKHR swapChains[] = { surface->GetSwapChain() };
 		presentInfo.swapchainCount = 1;
 		presentInfo.pSwapchains = swapChains;
@@ -711,9 +824,8 @@ namespace sh::render {
 		presentInfo.pResults = nullptr;
 
 		vkQueuePresentKHR(surfaceQueue, &presentInfo);
-
-		currentFrame = (currentFrame + 1) % MAX_FRAME_DRAW;
 		bReCreateDescriptorPool = false;
+		//mu->unlock();
 	}
 
 	void VulkanRenderer::ReAllocateDesriptorPool()
@@ -755,7 +867,7 @@ namespace sh::render {
 	}
 	auto VulkanRenderer::GetCommandBuffer() const -> VkCommandBuffer
 	{
-		return cmdBuffers[currentFrame]->GetCommandBuffer();
+		return cmdBuffer->GetCommandBuffer();
 	}
 
 	auto VulkanRenderer::GetGraphicsQueue() const -> VkQueue

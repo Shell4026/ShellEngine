@@ -16,6 +16,8 @@ namespace sh::editor
 
 		float hierarchyWidth;
 		float hierarchyHeight;
+		float viewportWidthLast;
+		float viewportHeightLast;
 
 		int selected;
 
@@ -23,18 +25,23 @@ namespace sh::editor
 
 		ExplorerUI explorer;
 
+		VkDescriptorSet viewportDescSet;
+
 		bool bViewportDocking : 1;
 		bool bHierarchyDocking : 1;
 		bool bAddComponent : 1;
 		bool bOpenExplorer : 1;
+		bool bChangedViewportSize : 1;
 	private:
 		inline void SetDockNode();
 		inline void DrawViewport();
 		inline void DrawHierarchy();
 		inline void DrawInspector();
 		inline void DrawProject();
+		inline void ChangedViewportSize();
 	public:
 		SH_EDITOR_API EditorUI(game::World& world, const game::ImGUI& imgui);
 		SH_EDITOR_API void Update();
+		SH_EDITOR_API void Render();
 	};
 }

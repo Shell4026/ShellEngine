@@ -16,6 +16,7 @@ namespace sh::render
 
 	class Texture : public core::SObject, public core::INonCopyable
 	{
+		SCLASS(Texture)
 	public:
 		enum class TextureFormat
 		{
@@ -24,10 +25,9 @@ namespace sh::render
 		};
 
 		using Byte = unsigned char;
-	private:
-		std::vector<Byte> pixels;
-
+	protected:
 		std::unique_ptr<ITextureBuffer> buffer;
+		std::vector<Byte> pixels;
 	public:
 		const uint32_t width;
 		const uint32_t height;
@@ -35,12 +35,12 @@ namespace sh::render
 	public:
 		SH_RENDER_API Texture(TextureFormat format, uint32_t width, uint32_t height);
 		SH_RENDER_API Texture(Texture&& other) noexcept;
-		SH_RENDER_API ~Texture();
+		SH_RENDER_API virtual ~Texture();
 
 		SH_RENDER_API void SetPixelData(void* data);
-		SH_RENDER_API auto GetPixelData() const -> const std::vector<Byte>&;
+		SH_RENDER_API virtual auto GetPixelData() const -> const std::vector<Byte>&;
 
-		SH_RENDER_API void Build(const Renderer& renderer);
+		SH_RENDER_API virtual void Build(const Renderer& renderer);
 
 		SH_RENDER_API auto GetBuffer() -> ITextureBuffer*;
 	};

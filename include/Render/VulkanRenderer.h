@@ -14,6 +14,7 @@
 #include <optional>
 #include <functional>
 #include <memory>
+#include <atomic>
 
 namespace sh::render {
 	namespace impl
@@ -28,7 +29,6 @@ namespace sh::render {
 		public Renderer, public sh::core::INonCopyable{
 	public:
 		static constexpr int VULKAN_API_VER = VK_API_VERSION_1_1;
-		static constexpr int MAX_FRAME_DRAW = 2;
 	private:
 		sh::window::Window* window;
 		sh::window::WinHandle winHandle;
@@ -39,7 +39,7 @@ namespace sh::render {
 
 		std::unique_ptr<impl::VulkanSurface> surface;
 		std::unique_ptr<impl::VulkanLayer> layers;
-		std::array<std::unique_ptr<impl::VulkanCommandBuffer>, MAX_FRAME_DRAW> cmdBuffers;
+		std::unique_ptr<impl::VulkanCommandBuffer> cmdBuffer;
 
 		VkInstance instance;
 		VkPhysicalDeviceProperties gpuProp;
@@ -61,9 +61,9 @@ namespace sh::render {
 		VkQueue graphicsQueue;
 		VkQueue surfaceQueue;
 
-		std::array<VkSemaphore, MAX_FRAME_DRAW> imageAvailableSemaphore;
-		std::array<VkSemaphore, MAX_FRAME_DRAW> renderFinishedSemaphore;
-		std::array<VkFence, MAX_FRAME_DRAW> inFlightFence;
+		VkSemaphore imageAvailableSemaphore;
+		VkSemaphore renderFinishedSemaphore;
+		VkFence inFlightFence;
 
 		int currentFrame;
 		uint32_t descriptorPoolSize;

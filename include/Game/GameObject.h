@@ -66,7 +66,7 @@ namespace sh::game
 		{
 			for (auto& component : components)
 			{
-				if (T* casting = sh::core::reflection::Cast<T>(&component) != nullptr)
+				if (T* casting = sh::core::reflection::Cast<T>(component.get()); casting != nullptr)
 					return casting;
 			}
 			return nullptr;

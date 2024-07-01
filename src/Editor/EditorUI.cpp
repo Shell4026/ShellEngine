@@ -4,6 +4,9 @@
 #include "game/GameObject.h"
 #include "game/World.h"
 
+#include "Render/VulkanTextureBuffer.h"
+#include "Render/RenderTexture.h"
+
 #include <cstring>
 
 namespace sh::editor
@@ -17,8 +20,11 @@ namespace sh::editor
 		hierarchyWidth(0), hierarchyHeight(0),
 		selected(-1),
 		explorer(imgui),
+		viewportWidthLast(0.f), viewportHeightLast(0.f),
+		viewportDescSet(nullptr),
+
 		bViewportDocking(false), bHierarchyDocking(false),
-		bAddComponent(false), bOpenExplorer(false)
+		bAddComponent(false), bOpenExplorer(false), bChangedViewportSize(false)
 	{
 		
 	}
@@ -62,6 +68,7 @@ namespace sh::editor
 			ImGui::DockBuilderDockWindow("Hierarchy", dockLeft);
 			ImGui::DockBuilderDockWindow("Inspector", dockRight);
 			ImGui::DockBuilderDockWindow("Project", dockDown);
+			ImGui::DockBuilderDockWindow("Viewport", dockspaceId);
 			ImGui::DockBuilderFinish(dockspaceId);
 		}
 		ImGui::End();
@@ -69,36 +76,17 @@ namespace sh::editor
 
 	void EditorUI::DrawViewport()
 	{
-		auto a = ImGui::GetCurrentWindow();
 		ImGui::Begin("Viewport");
-		//world.textures.ge
-		//ImGui::Image();
+		float width = ImGui::GetContentRegionAvail().x;
+		float height = ImGui::GetContentRegionAvail().y;
+		if (viewportWidthLast != width || viewportHeightLast != height)
+		{
+			viewportWidthLast = width;
+			viewportHeightLast = height;
+			bChangedViewportSize = true;
+		}
+		ImGui::Image((ImTextureID)viewportDescSet, { width, height });
 		ImGui::End();
-		/*
-		static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
-
-		ImGuiWindowFlags style =
-			//ImGuiWindowFlags_::ImGuiWindowFlags_MenuBar |
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoTitleBar |
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoMove |
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoBringToFrontOnFocus |
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoResize |
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoNavFocus |
-			//ImGuiWindowFlags_::ImGuiWindowFlags_NoBackground |
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoCollapse;
-
-		float windowWidth = world.renderer.GetWindow().width;
-		float windowHeight = world.renderer.GetWindow().height;
-
-		ImGui::SetNextWindowPos({0.f, 0.f}, ImGuiCond_::ImGuiCond_Once);
-		ImGui::SetNextWindowSize({ windowWidth, windowHeight }, ImGuiCond_::ImGuiCond_Once);
-
-		ImGui::Begin("Viewport", nullptr, style);
-		bViewportDocking = ImGui::IsWindowDocked();
-		//ImGuiID dockspace_id = ImGui::GetID("MyDockSpace2");
-		//ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
-		ImGui::End();
-		*/
 	}
 
 	void EditorUI::DrawHierarchy()
@@ -126,12 +114,6 @@ namespace sh::editor
 	{
 		ImGuiWindowFlags style =
 			ImGuiWindowFlags_::ImGuiWindowFlags_NoCollapse;
-
-		//float windowWidth = world.renderer.GetWindow().width;
-		//float windowHeight = world.renderer.GetWindow().height;
-
-		//ImGui::SetNextWindowPos(ImVec2{ windowWidth - 220, 20 }, ImGuiCond_Once);
-		//ImGui::SetNextWindowSize(ImVec2{ 200, windowHeight - 200.f }, ImGuiCond_Once);
 
 		ImGui::Begin("Inspector", nullptr, style);
 
@@ -177,12 +159,24 @@ namespace sh::editor
 								parameter->x = v[0];
 								parameter->y = v[1];
 								parameter->z = v[2];
+								component->OnPropertyChanged(prop.second);
 							}
 						}
 						else if (type == core::reflection::GetTypeName<float>())
 						{
 							float* parameter = prop.second.Get<float>(component.get());
-							ImGui::InputFloat(prop.first.c_str(), parameter);
+							if (ImGui::InputFloat(prop.first.c_str(), parameter))
+								component->OnPropertyChanged(prop.second);
+						}
+						else if (type == core::reflection::GetTypeName<int>())
+						{
+							int* parameter = prop.second.Get<int>(component.get());
+							ImGui::LabelText(("##" + prop.first).c_str(), prop.first.c_str());
+							if (prop.second.isConst)
+								ImGui::InputInt(("##Input_" + prop.first).c_str(), parameter, 0, 0, ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
+							else
+								if (ImGui::InputInt(("##Input_" + prop.first).c_str(), parameter))
+									component->OnPropertyChanged(prop.second);
 						}
 						else if (type == core::reflection::GetTypeName<uint32_t>())
 						{
@@ -191,7 +185,8 @@ namespace sh::editor
 							if (prop.second.isConst)
 								ImGui::InputInt(("##Input_" + prop.first).c_str(), reinterpret_cast<int*>(parameter), 0, 0, ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
 							else
-								ImGui::InputInt(("##Input_" + prop.first).c_str(), reinterpret_cast<int*>(parameter));
+								if(ImGui::InputInt(("##Input_" + prop.first).c_str(), reinterpret_cast<int*>(parameter)))
+									component->OnPropertyChanged(prop.second);
 						}
 					}
 				}
@@ -238,6 +233,28 @@ namespace sh::editor
 
 	void EditorUI::Update()
 	{
+		if (bChangedViewportSize)
+		{
+			bChangedViewportSize = false;
+			if (auto tex = world.textures.GetResource("RenderTexture"); tex != nullptr)
+			{
+				ImGui_ImplVulkan_RemoveTexture(viewportDescSet);
+				viewportDescSet = nullptr;
+				static_cast<render::RenderTexture*>(tex)->SetSize(viewportWidthLast, viewportHeightLast);
+			}
+		}
+		if (viewportDescSet == nullptr)
+		{
+			if (auto tex = world.textures.GetResource("RenderTexture"); tex != nullptr)
+			{
+				auto vkTexBuffer = static_cast<render::VulkanTextureBuffer*>(tex->GetBuffer());
+				auto imgBuffer = vkTexBuffer->GetImageBuffer();
+				viewportDescSet = ImGui_ImplVulkan_AddTexture(imgBuffer->GetSampler(), imgBuffer->GetImageView(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			}
+		}
+	}
+	void EditorUI::Render()
+	{
 		if (!imgui.IsInit())
 			return;
 
@@ -259,7 +276,7 @@ namespace sh::editor
 			}
 			ImGui::EndMainMenuBar();
 		}
-		
+
 		if (bOpenExplorer)
 			explorer.Update();
 	}

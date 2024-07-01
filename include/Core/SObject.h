@@ -32,5 +32,8 @@ namespace sh::core
 		SH_CORE_API void operator delete[](void* ptr, size_t size) = delete;
 		SH_CORE_API void SetGC(GC& gc);
 		SH_CORE_API auto IsPendingKill() const -> bool;
+#if SH_EDITOR
+		SH_CORE_API virtual void OnPropertyChanged(const reflection::Property& prop);
+#endif
 	};
 }

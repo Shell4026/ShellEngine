@@ -62,6 +62,7 @@ namespace sh::window {
 		{
 			TranslateMessage(&msg);
 			DispatchMessageW(&msg);
+			
 		}
 	}
 
@@ -132,6 +133,7 @@ namespace sh::window {
 			PushEvent(e);
 			break;
 		case WM_SIZE:
+		case WM_SIZING:
 			e.type = Event::EventType::Resize;
 			PushEvent(e);
 			break;

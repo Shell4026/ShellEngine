@@ -1,6 +1,7 @@
 ﻿#include "World.h"
 
 #include "GameObject.h"
+#include "Component/Camera.h"
 
 #include "Core/GC.h"
 #include "Core/Util.h"
@@ -167,5 +168,32 @@ namespace sh::game
 				continue;
 			obj->LateUpdate();
 		}
+	}
+
+	void World::RegisterCamera(Camera* cam)
+	{
+		if(core::IsValid(cam))
+			cameras.insert(cam);
+	}
+	void World::UnRegisterCamera(Camera* cam)
+	{
+		if (core::IsValid(cam))
+			cameras.erase(cam);
+	}
+	auto World::GetCameras() const -> const std::set<Camera*>&
+	{
+		return cameras;
+	}
+	void World::SetMainCamera(Camera* cam)
+	{
+		if (core::IsValid(cam))
+		{
+			mainCamera = cam;
+			renderer.SetMainCamera(cam->GetCameraHandle());
+		}
+	}
+	auto World::GetMainCamera() const -> Camera*
+	{
+		return mainCamera;
 	}
 }

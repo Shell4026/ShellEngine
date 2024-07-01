@@ -14,6 +14,7 @@
 
 namespace sh::render
 {
+	class Framebuffer;
 	class VulkanDrawable : public IDrawable
 	{
 	private:
@@ -21,19 +22,18 @@ namespace sh::render
 		Material* mat;
 		Mesh* mesh;
 
-		std::unique_ptr<impl::VulkanPipeline> pipeline;
+		std::shared_ptr<impl::VulkanPipeline> pipeline;
 
-		impl::VulkanCommandBuffer cmd;
+		VkDescriptorSet descriptorSet;
 
-		std::array<VkDescriptorSet, VulkanRenderer::MAX_FRAME_DRAW> descriptorSets;
-
-		std::map<uint32_t, std::vector<impl::VulkanBuffer>> uniformBuffers;
+		std::map<uint32_t, impl::VulkanBuffer> uniformBuffers;
 		std::map<uint32_t, Texture*> textures;
+
+		Framebuffer* framebuffer;
 	private:
 		auto CreateDescriptorSet() -> VkResult;
 	public:
 		SH_RENDER_API VulkanDrawable(VulkanRenderer& renderer);
-		SH_RENDER_API VulkanDrawable(const VulkanDrawable& other) = delete;
 		SH_RENDER_API VulkanDrawable(VulkanDrawable&& other) = delete;
 		SH_RENDER_API ~VulkanDrawable();
 
@@ -44,10 +44,13 @@ namespace sh::render
 		SH_RENDER_API auto GetMaterial() const -> Material* override;
 		SH_RENDER_API auto GetMesh() const-> Mesh* override;
 
-		SH_RENDER_API void SetUniformData(uint32_t binding, int frame, const void* data) override;
+		SH_RENDER_API void SetUniformData(uint32_t binding, const void* data) override;
 		SH_RENDER_API void SetTextureData(uint32_t binding, Texture* tex) override;
 
 		SH_RENDER_API auto GetPipeline() const->impl::VulkanPipeline*;
-		SH_RENDER_API auto GetDescriptorSet(int frame) -> VkDescriptorSet;
+		SH_RENDER_API auto GetDescriptorSet() const -> VkDescriptorSet;
+
+		SH_RENDER_API void SetFramebuffer(Framebuffer& framebuffer) override;
+		SH_RENDER_API auto GetFramebuffer() const -> const Framebuffer* override;
 	};
 }

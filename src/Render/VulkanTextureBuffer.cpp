@@ -2,17 +2,31 @@
 
 #include "VulkanRenderer.h"
 #include "VulkanImpl/VulkanBuffer.h"
+#include "VulkanImpl/VulkanFramebuffer.h"
 
 #include <stdexcept>
 
 namespace sh::render
 {
-	VulkanTextureBuffer::VulkanTextureBuffer()
+	VulkanTextureBuffer::VulkanTextureBuffer() :
+		isRenderTexture(false), framebuffer(nullptr)
 	{
 	}
 	VulkanTextureBuffer::VulkanTextureBuffer(VulkanTextureBuffer&& other) noexcept :
-		buffer(std::move(other.buffer)), cmd(std::move(other.cmd))
+		buffer(std::move(other.buffer)), cmd(std::move(other.cmd)),
+		isRenderTexture(other.isRenderTexture), framebuffer(other.framebuffer)
 	{
+		other.framebuffer = nullptr;
+	}
+	VulkanTextureBuffer::~VulkanTextureBuffer()
+	{
+	}
+	void VulkanTextureBuffer::Clean()
+	{
+		isRenderTexture = false;
+		buffer.reset();
+		cmd.reset();
+		framebuffer = nullptr;
 	}
 
 	void VulkanTextureBuffer::CopyBufferToImage(VkQueue queue, VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
@@ -104,6 +118,8 @@ namespace sh::render
 
 	void VulkanTextureBuffer::Create(const VulkanRenderer& renderer, const void* data, uint32_t width, uint32_t height, Texture::TextureFormat format)
 	{
+		isRenderTexture = false;
+
 		buffer = std::make_unique<impl::VulkanImageBuffer>(renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator());
 		
 		VkFormat vkformat = VkFormat::VK_FORMAT_R8G8B8A8_SRGB;
@@ -132,14 +148,17 @@ namespace sh::render
 			VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 	}
-
-	void VulkanTextureBuffer::Bind()
+	void VulkanTextureBuffer::Create(const Framebuffer& framebuffer)
 	{
-		
+		isRenderTexture = true;
+		this->framebuffer = &framebuffer;
 	}
 
 	auto VulkanTextureBuffer::GetImageBuffer() const -> impl::VulkanImageBuffer*
 	{
-		return buffer.get();
+		if(!isRenderTexture)
+			return buffer.get();
+		else
+			static_cast<const impl::VulkanFramebuffer*>(framebuffer)->GetColorImg();
 	}
 }

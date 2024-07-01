@@ -1,12 +1,16 @@
 ﻿#pragma once
 
 #include "Export.h"
+
 #include "../Window/Window.h"
 
 #include "glm/vec2.hpp"
 
+#include <map>
 #include <queue>
+#include <set>
 #include <utility>
+#include <mutex>
 namespace sh::render {
 	enum class RenderAPI
 	{
@@ -17,13 +21,27 @@ namespace sh::render {
 	class Framebuffer;
 
 	class Renderer {
+	public:
+		using CameraHandle = uint32_t;
+		struct Camera
+		{
+			CameraHandle id;
+			int depth;
+
+			bool operator<(const Camera& other) const;
+		};
 	private:
 		sh::window::Window* window;
+		uint32_t nextCameraId;
 	protected:
-		std::queue<IDrawable*> drawList;
+		std::queue<CameraHandle> emptyHandle;
+		std::vector<const Camera*> camHandles;
+		std::map<Camera, std::queue<IDrawable*>> drawList;
 
 		glm::vec2 viewportStart;
 		glm::vec2 viewportEnd;
+
+		CameraHandle mainCamera;
 
 		bool bPause;
 	public:
@@ -51,8 +69,13 @@ namespace sh::render {
 		SH_RENDER_API auto GetViewportEnd() const -> const glm::vec2&;
 
 		SH_RENDER_API void ClearDrawList();
-		SH_RENDER_API void PushDrawAble(IDrawable* drawable);
+		SH_RENDER_API void PushDrawAble(IDrawable* drawable, CameraHandle camHandle = 0);
 
 		SH_RENDER_API auto GetWindow() -> sh::window::Window&;
+
+		SH_RENDER_API auto AddCamera(int depth = 0) -> CameraHandle;
+		SH_RENDER_API void DeleteCamera(CameraHandle cam);
+		SH_RENDER_API void SetMainCamera(CameraHandle cam);
+		SH_RENDER_API void SetCameraDepth(CameraHandle, int depth);
 	};
 }

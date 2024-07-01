@@ -2,6 +2,8 @@
 
 #include "TextureLoader.h"
 
+#include <glm/ext.hpp>
+
 namespace sh::game
 {
 	TextureLoader::TextureLoader(const render::Renderer& renderer) :
@@ -9,7 +11,7 @@ namespace sh::game
 	{
 	}
 
-	auto TextureLoader::Load(std::string_view filename) -> std::unique_ptr<render::Texture>
+	auto TextureLoader::Load(std::string_view filename, bool bGenerateMipmap) -> std::unique_ptr<render::Texture>
 	{
 		int width, height, channel;
 		int info = stbi_info(filename.data(), &width, &height, &channel);
@@ -21,6 +23,8 @@ namespace sh::game
 		render::Texture::TextureFormat format;
 		if (channel == 3)
 			format = render::Texture::TextureFormat::RGB24;
+
+		//int mip = glm::log2
 
 		std::unique_ptr<render::Texture> texture = std::make_unique<render::Texture>(format, width, height);
 		texture->SetPixelData(pixels);

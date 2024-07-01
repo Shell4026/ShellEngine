@@ -32,6 +32,7 @@ namespace sh::render::impl
 	private:
 		void CreateRenderPass();
 		auto FindSupportedDepthFormat() -> VkFormat;
+		void CreateDepthBuffer();
 	public:
 		SH_RENDER_API VulkanFramebuffer(VkDevice device, VkPhysicalDevice gpu, VmaAllocator alloc);
 		SH_RENDER_API VulkanFramebuffer(VulkanFramebuffer&& other) noexcept;
@@ -39,12 +40,17 @@ namespace sh::render::impl
 
 		SH_RENDER_API auto operator=(VulkanFramebuffer&& other) noexcept -> VulkanFramebuffer&;
 
-		SH_RENDER_API auto Create(uint32_t width, uint32_t height, VkImageView img, VkFormat format)->VkResult;
-		SH_RENDER_API auto CreateOffScreen(uint32_t width, uint32_t height);
-		SH_RENDER_API void CreateDepthBuffer();
+		SH_RENDER_API auto Create(uint32_t width, uint32_t height, VkImageView img, VkFormat format) -> VkResult;
+		SH_RENDER_API auto CreateOffScreen(uint32_t width, uint32_t height) -> VkResult;
 		SH_RENDER_API void Clean();
 
 		SH_RENDER_API auto GetRenderPass() const -> VkRenderPass;
 		SH_RENDER_API auto GetVkFramebuffer() const -> VkFramebuffer;
+
+		SH_RENDER_API auto GetColorImg() const -> VulkanImageBuffer*;
+		SH_RENDER_API auto GetDepthImg() const -> VulkanImageBuffer*;
+
+		SH_RENDER_API auto GetWidth() const -> uint32_t override;
+		SH_RENDER_API auto GetHeight() const->uint32_t override;
 	};
 }

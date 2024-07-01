@@ -25,7 +25,7 @@ namespace sh::game
 
 		glm::quat quat;
 
-		bool updateMatrix;
+		bool bUpdateMatrix;
 	private:
 		void UpdateMatrix();
 	public:
@@ -48,5 +48,8 @@ namespace sh::game
 		SH_GAME_API void SetScale(const glm::vec3& scale);
 		SH_GAME_API void SetRotation(const glm::vec3& rot);
 		SH_GAME_API void SetRotation(const glm::quat& rot);
+#if SH_EDITOR
+		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& property) override;
+#endif
 	};
 }

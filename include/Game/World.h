@@ -15,6 +15,7 @@
 
 #include <string>
 #include <vector>
+#include <set>
 #include <queue>
 #include <unordered_map>
 #include <memory>
@@ -40,10 +41,13 @@ namespace sh::game
 		SCLASS(World)
 	private:
 		std::vector<std::unique_ptr<GameObject>> objs;
+		std::set<Camera*> cameras;
 		std::unordered_map<std::string, uint32_t> objsMap;
 		std::queue<int> objsEmptyIdx;
 
 		float _deltaTime;
+
+		Camera* mainCamera;
 	public:
 		sh::render::Renderer& renderer;
 		sh::core::GC& gc;
@@ -53,9 +57,6 @@ namespace sh::game
 		sh::game::ResourceManager<sh::render::Material> materials;
 		sh::game::ResourceManager<sh::render::Mesh> meshes;
 		sh::game::ResourceManager<sh::render::Texture> textures;
-
-		PROPERTY(mainCamera)
-		Camera* mainCamera;
 	public:
 		const ComponentModule& componentModule;
 		const std::vector<std::unique_ptr<GameObject>>& gameObjects;
@@ -70,6 +71,12 @@ namespace sh::game
 		SH_GAME_API void DestroyGameObject(const std::string& name);
 		SH_GAME_API auto ChangeGameObjectName(const std::string& objName, const std::string& to) -> std::string;
 		SH_GAME_API auto GetGameObject(std::string_view name) const -> GameObject*;
+
+		SH_GAME_API void RegisterCamera(Camera* cam);
+		SH_GAME_API void UnRegisterCamera(Camera* cam);
+		SH_GAME_API auto GetCameras() const -> const std::set<Camera*>&;
+		SH_GAME_API void SetMainCamera(Camera* cam);
+		SH_GAME_API	auto GetMainCamera() const -> Camera*;
 
 		SH_GAME_API void Start();
 		SH_GAME_API void Update(float deltaTime);
