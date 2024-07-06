@@ -95,6 +95,8 @@
 #pragma warning (disable: 4127) // condition expression is constant
 #endif
 
+#include "../../Render/VulkanImpl/VulkanDescriptorPool.h"
+
 // Forward Declarations
 struct ImGui_ImplVulkan_FrameRenderBuffers;
 struct ImGui_ImplVulkan_WindowRenderBuffers;
@@ -1164,13 +1166,15 @@ VkDescriptorSet ImGui_ImplVulkan_AddTexture(VkSampler sampler, VkImageView image
     // Create Descriptor Set:
     VkDescriptorSet descriptor_set;
     {
-        VkDescriptorSetAllocateInfo alloc_info = {};
+        /*VkDescriptorSetAllocateInfo alloc_info = {};
         alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         alloc_info.descriptorPool = v->DescriptorPool;
         alloc_info.descriptorSetCount = 1;
         alloc_info.pSetLayouts = &bd->DescriptorSetLayout;
         VkResult err = vkAllocateDescriptorSets(v->Device, &alloc_info, &descriptor_set);
-        check_vk_result(err);
+        check_vk_result(err);*/
+
+        descriptor_set = v->DescriptorPool->AllocateDescriptorSet(bd->DescriptorSetLayout, 1);
     }
 
     // Update the Descriptor Set:
@@ -1194,7 +1198,8 @@ void ImGui_ImplVulkan_RemoveTexture(VkDescriptorSet descriptor_set)
 {
     ImGui_ImplVulkan_Data* bd = ImGui_ImplVulkan_GetBackendData();
     ImGui_ImplVulkan_InitInfo* v = &bd->VulkanInitInfo;
-    vkFreeDescriptorSets(v->Device, v->DescriptorPool, 1, &descriptor_set);
+    //vkFreeDescriptorSets(v->Device, v->DescriptorPool, 1, &descriptor_set);
+    v->DescriptorPool->FreeDescriptorSet(descriptor_set);
 }
 
 void ImGui_ImplVulkan_DestroyFrameRenderBuffers(VkDevice device, ImGui_ImplVulkan_FrameRenderBuffers* buffers, const VkAllocationCallbacks* allocator)

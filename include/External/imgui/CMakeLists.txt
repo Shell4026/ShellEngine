@@ -6,7 +6,7 @@ set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_library(IMGUI STATIC ${SRC})
 
 find_package(Vulkan)
-target_link_libraries(IMGUI PRIVATE Vulkan::Vulkan)
+target_link_libraries(IMGUI PRIVATE ShellEngine::Render)
 
 target_include_directories(IMGUI PUBLIC ${CMAKE_CURRENT_LIST_DIR})
 

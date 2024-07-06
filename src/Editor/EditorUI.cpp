@@ -20,7 +20,7 @@ namespace sh::editor
 		hierarchyWidth(0), hierarchyHeight(0),
 		selected(-1),
 		explorer(imgui),
-		viewportWidthLast(0.f), viewportHeightLast(0.f),
+		viewportWidthLast(100.f), viewportHeightLast(100.f),
 		viewportDescSet(nullptr),
 
 		bViewportDocking(false), bHierarchyDocking(false),
@@ -240,7 +240,8 @@ namespace sh::editor
 			{
 				ImGui_ImplVulkan_RemoveTexture(viewportDescSet);
 				viewportDescSet = nullptr;
-				static_cast<render::RenderTexture*>(tex)->SetSize(viewportWidthLast, viewportHeightLast);
+				if(viewportWidthLast != 0.f && viewportHeightLast != 0.f)
+					static_cast<render::RenderTexture*>(tex)->SetSize(viewportWidthLast, viewportHeightLast);
 			}
 		}
 		if (viewportDescSet == nullptr)

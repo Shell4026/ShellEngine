@@ -6,6 +6,7 @@
 #include "VulkanImpl/VulkanSurface.h"
 #include "VulkanImpl/VulkanCommandBuffer.h"
 #include "VulkanImpl/VulkanFramebuffer.h"
+#include "VulkanImpl/VulkanDescriptorPool.h"
 
 #include "Mesh.h"
 #include "Material.h"
@@ -45,7 +46,7 @@ namespace sh::render {
 
 		vkDeviceWaitIdle(device);
 
-		DestroyDescriptorPool();
+		descPool.reset();
 
 		DestroySyncObjects();
 
@@ -485,44 +486,12 @@ namespace sh::render {
 			return false;
 
 		//디스크립터 풀 생성
-		if (CreateDescriptorPool() != VkResult::VK_SUCCESS)
-			return false;
-
-		
+		descPool = std::make_unique<impl::VulkanDescriptorPool>(device, 16);
 
 		isInit = true;
 		PrintLayer();
 
 		return true;
-	}
-
-	auto VulkanRenderer::CreateDescriptorPool() -> VkResult
-	{
-		std::array<VkDescriptorPoolSize, 2> poolSizes{};
-		poolSizes[0].type = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		poolSizes[0].descriptorCount = 1;
-		poolSizes[1].type = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[1].descriptorCount = 1;
-
-		VkDescriptorPoolCreateInfo poolInfo{};
-		poolInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		poolInfo.poolSizeCount = poolSizes.size();
-		poolInfo.pPoolSizes = poolSizes.data();
-		poolInfo.maxSets = descriptorPoolSize;
-		poolInfo.flags = VkDescriptorPoolCreateFlagBits::VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
-
-		auto result = vkCreateDescriptorPool(device, &poolInfo, nullptr, &descPool);
-		assert(result == VK_SUCCESS);
-		return result;
-	}
-
-	void VulkanRenderer::DestroyDescriptorPool()
-	{
-		if (descPool)
-		{
-			vkDestroyDescriptorPool(device, descPool, nullptr);
-			descPool = nullptr;
-		}
 	}
 
 	bool VulkanRenderer::Resizing()
@@ -670,10 +639,6 @@ namespace sh::render {
 					{
 						VulkanDrawable* drawable = static_cast<VulkanDrawable*>(drawQueue.front());
 						drawQueue.pop();
-						if (bReCreateDescriptorPool == true)
-						{
-							drawable->Build(drawable->GetMesh(), drawable->GetMaterial());
-						}
 
 						Mesh* mesh = drawable->GetMesh();
 						Material* mat = drawable->GetMaterial();
@@ -738,10 +703,6 @@ namespace sh::render {
 					{
 						VulkanDrawable* drawable = static_cast<VulkanDrawable*>(drawQueue.front());
 						drawQueue.pop();
-						if (bReCreateDescriptorPool == true)
-						{
-							drawable->Build(drawable->GetMesh(), drawable->GetMaterial());
-						}
 
 						Mesh* mesh = drawable->GetMesh();
 						Material* mat = drawable->GetMaterial();
@@ -824,16 +785,6 @@ namespace sh::render {
 		presentInfo.pResults = nullptr;
 
 		vkQueuePresentKHR(surfaceQueue, &presentInfo);
-		bReCreateDescriptorPool = false;
-		//mu->unlock();
-	}
-
-	void VulkanRenderer::ReAllocateDesriptorPool()
-	{
-		descriptorPoolSize *= 2;
-		DestroyDescriptorPool();
-		CreateDescriptorPool();
-		bReCreateDescriptorPool = true;
 	}
 
 	SH_RENDER_API void VulkanRenderer::SetViewport(const glm::vec2& start, const glm::vec2& end)
@@ -879,9 +830,9 @@ namespace sh::render {
 		return graphicsQueueIndex;
 	}
 
-	auto VulkanRenderer::GetDescriptorPool() const -> VkDescriptorPool
+	auto VulkanRenderer::GetDescriptorPool() const -> impl::VulkanDescriptorPool&
 	{
-		return descPool;
+		return *descPool.get();
 	}
 	auto VulkanRenderer::GetCurrentFrame() const -> int
 	{

@@ -56,7 +56,7 @@ namespace sh::game
 		initInfo.Device = renderer.GetDevice();
 		initInfo.QueueFamily = renderer.GetGraphicsQueueIdx();
 		initInfo.Queue = renderer.GetGraphicsQueue();
-		initInfo.DescriptorPool = renderer.GetDescriptorPool();
+		initInfo.DescriptorPool = &renderer.GetDescriptorPool();
 		initInfo.RenderPass = static_cast<const render::impl::VulkanFramebuffer*>(renderer.GetMainFramebuffer())->GetRenderPass();
 		initInfo.MinImageCount = 2;
 		initInfo.ImageCount = 2;

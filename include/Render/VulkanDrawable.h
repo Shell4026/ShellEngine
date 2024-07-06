@@ -31,7 +31,7 @@ namespace sh::render
 
 		Framebuffer* framebuffer;
 	private:
-		auto CreateDescriptorSet() -> VkResult;
+		void CreateDescriptorSet();
 	public:
 		SH_RENDER_API VulkanDrawable(VulkanRenderer& renderer);
 		SH_RENDER_API VulkanDrawable(VulkanDrawable&& other) = delete;

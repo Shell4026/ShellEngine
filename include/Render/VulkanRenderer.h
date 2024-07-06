@@ -24,6 +24,7 @@ namespace sh::render {
 		class VulkanPipeline;
 		class VulkanCommandBuffer;
 		class VulkanFramebuffer;
+		class VulkanDescriptorPool;
 	}
 	class VulkanRenderer :
 		public Renderer, public sh::core::INonCopyable{
@@ -40,6 +41,7 @@ namespace sh::render {
 		std::unique_ptr<impl::VulkanSurface> surface;
 		std::unique_ptr<impl::VulkanLayer> layers;
 		std::unique_ptr<impl::VulkanCommandBuffer> cmdBuffer;
+		std::unique_ptr<impl::VulkanDescriptorPool> descPool;
 
 		VkInstance instance;
 		VkPhysicalDeviceProperties gpuProp;
@@ -48,7 +50,6 @@ namespace sh::render {
 		std::vector<impl::VulkanFramebuffer> framebuffers;
 
 		VkCommandPool cmdPool;
-		VkDescriptorPool descPool;
 
 		std::vector<VkPhysicalDevice> gpus;
 		std::vector<VkQueueFamilyProperties> queueFamilies;
@@ -75,7 +76,6 @@ namespace sh::render {
 		bool isInit : 1;
 		bool bFindValidationLayer : 1;
 		bool bEnableValidationLayers : 1;
-		bool bReCreateDescriptorPool : 1;
 	private:
 		auto CreateInstance(const std::vector<const char*>& requestedLayer, const std::vector<const char*>& requestedExtension)->VkResult;
 		void DestroyInstance();
@@ -102,9 +102,6 @@ namespace sh::render {
 		auto CreateSyncObjects() -> VkResult;
 		void DestroySyncObjects();
 
-		auto CreateDescriptorPool() -> VkResult;
-		void DestroyDescriptorPool();
-
 		void CreateAllocator();
 		void DestroyAllocator();
 
@@ -121,9 +118,6 @@ namespace sh::render {
 
 		SH_RENDER_API void Render(float deltaTime) override;
 
-		SH_RENDER_API void ReAllocateDesriptorPool();
-		SH_RENDER_API void ReAllocateSamplerDesriptorPool();
-
 		SH_RENDER_API void WaitForCurrentFrame();
 
 		SH_RENDER_API void AddDrawCall(const std::function<void()>& func);
@@ -138,7 +132,7 @@ namespace sh::render {
 		SH_RENDER_API auto GetGraphicsQueue() const -> VkQueue;
 		SH_RENDER_API auto GetGraphicsQueueIdx() const -> uint32_t;
 		SH_RENDER_API auto GetMainFramebuffer() const -> const Framebuffer* override;
-		SH_RENDER_API auto GetDescriptorPool() const -> VkDescriptorPool;
+		SH_RENDER_API auto GetDescriptorPool() const -> impl::VulkanDescriptorPool&;
 		SH_RENDER_API auto GetCurrentFrame() const -> int;
 		SH_RENDER_API auto GetWidth() const -> uint32_t override;
 		SH_RENDER_API auto GetHeight() const -> uint32_t override;

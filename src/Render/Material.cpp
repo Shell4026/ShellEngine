@@ -1,8 +1,6 @@
 ﻿#include "Material.h"
 
 #include "VulkanRenderer.h"
-#include "VulkanUniform.h"
-
 #include "Core/Util.h"
 
 namespace sh::render

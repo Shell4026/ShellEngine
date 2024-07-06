@@ -35,6 +35,7 @@
 #include <iostream>
 #include <thread>
 #include <mutex>
+#include <condition_variable>
 
 class NoBase {
 public:
@@ -218,8 +219,11 @@ int main(int arg, char* args[])
 			{
 			case sh::window::Event::EventType::Close:
 				bStopRenderThread = true;
-				if(renderThread.joinable())
+				if (renderThread.joinable())
+				{
+					cv.notify_all();
 					renderThread.join();
+				}
 				gui.Clean();
 				world.Clean();
 				window.Close();

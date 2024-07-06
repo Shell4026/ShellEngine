@@ -4,9 +4,9 @@
 #include "Material.h"
 #include "Mesh.h"
 #include "VulkanShader.h"
-#include "VulkanImpl/VulkanFramebuffer.h"
-#include "VulkanUniform.h"
 #include "VulkanTextureBuffer.h"
+#include "VulkanImpl/VulkanFramebuffer.h"
+#include "VulkanImpl/VulkanDescriptorPool.h"
 
 #include "Core/Reflection.hpp"
 
@@ -31,18 +31,10 @@ namespace sh::render
 		pipeline.reset();
 	}
 
-	auto VulkanDrawable::CreateDescriptorSet() -> VkResult
+	void VulkanDrawable::CreateDescriptorSet()
 	{
 		VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
-		//디스크립터 생성
-		VkDescriptorSetLayout layouts = shader->GetDescriptorSetLayout();
-		VkDescriptorSetAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.descriptorPool = renderer.GetDescriptorPool();
-		allocInfo.descriptorSetCount = 1;
-		allocInfo.pSetLayouts = &layouts;
-
-		return vkAllocateDescriptorSets(renderer.GetDevice(), &allocInfo, &descriptorSet);
+		descriptorSet = renderer.GetDescriptorPool().AllocateDescriptorSet(shader->GetDescriptorSetLayout(), 1);
 	}
 
 	void VulkanDrawable::Build(Mesh* mesh, Material* mat)
@@ -121,12 +113,7 @@ namespace sh::render
 			}
 		}
 
-		auto result = CreateDescriptorSet();
-		if (result == VkResult::VK_ERROR_OUT_OF_POOL_MEMORY)
-		{
-			renderer.ReAllocateDesriptorPool();
-			return;
-		}
+		CreateDescriptorSet();
 
 		for (auto& buffer : uniformBuffers)
 		{
@@ -169,7 +156,7 @@ namespace sh::render
 			vkUpdateDescriptorSets(renderer.GetDevice(), 1, &descriptorWrite, 0, nullptr);
 		}
 
-		result = pipeline->
+		auto result = pipeline->
 			SetShader(static_cast<VulkanShader*>(shader)).
 			AddShaderStage(impl::VulkanPipeline::ShaderStage::Vertex).
 			AddShaderStage(impl::VulkanPipeline::ShaderStage::Fragment).
