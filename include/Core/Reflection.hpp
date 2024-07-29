@@ -29,7 +29,7 @@ public:\
 	{\
 		return typeInfo;\
 	}\
-	private:\
+private:\
 		inline static sh::core::reflection::TypeInfo& typeInfo = GetStaticType();
 
 #define PROPERTY(variable_name, ...)\
@@ -142,7 +142,7 @@ namespace sh::core::reflection
 	}
 
 	template<typename T>
-	constexpr auto GetTypeName()
+	constexpr auto GetTypeName() -> std::string_view
 	{
 
 #ifdef __clang__

@@ -18,3 +18,4 @@ project (
 add_subdirectory (src)
 add_subdirectory (include/External/imgui)
 add_subdirectory (UserCode)
+add_subdirectory (Test)
