@@ -1,4 +1,5 @@
 ﻿#include "ReflectionTest.hpp"
+#include "ObserverTest.hpp"
 
 #include <gtest/gtest.h>
 
