@@ -17,6 +17,7 @@ namespace sh::core
 		SCLASS(SObject)
 	private:
 		GC* gc;
+		std::unordered_set<Observer*> destroyObservers;
 
 		bool bPendingKill;
 	public:
@@ -30,6 +31,8 @@ namespace sh::core
 		SH_CORE_API void operator delete[](void* ptr, size_t size) = delete;
 		SH_CORE_API void SetGC(GC& gc);
 		SH_CORE_API auto IsPendingKill() const -> bool;
+		SH_CORE_API void RegisterDestroyNotify(Observer& observer);
+		SH_CORE_API void UnRegeisterDestroyNotify(Observer& observer);
 #if SH_EDITOR
 		SH_CORE_API virtual void OnPropertyChanged(const reflection::Property& prop);
 #endif

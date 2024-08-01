@@ -1,6 +1,7 @@
 ﻿#include "SObject.h"
 
 #include "GC.h"
+#include "Observer.h"
 #include "TrackingAllocator.hpp"
 
 #include <cstring>
@@ -20,6 +21,9 @@ namespace sh::core
 
 	SObject::~SObject()
 	{
+		for (auto observer : destroyObservers)
+			observer->Notify();
+
 		if (gc != nullptr)
 		{
 			if (isHeap)
@@ -58,5 +62,14 @@ namespace sh::core
 	}
 	void SObject::OnPropertyChanged(const reflection::Property& prop)
 	{
+	}
+
+	void SObject::RegisterDestroyNotify(Observer& observer)
+	{
+		destroyObservers.insert(&observer);
+	}
+	void SObject::UnRegeisterDestroyNotify(Observer& observer)
+	{
+		destroyObservers.erase(&observer);
 	}
 }
