@@ -599,7 +599,7 @@ namespace sh::render {
 		VkCommandBuffer buffer = cmdBuffer->GetCommandBuffer();
 		cmdBuffer->Submit(graphicsQueue, [&]()
 		{
-			bool mainPass = false;
+			bool mainPassProcessed = false;
 			for (auto& draws : drawList)
 			{
 				const Camera& cam = draws.first;
@@ -671,7 +671,7 @@ namespace sh::render {
 				//MainPass
 				else
 				{
-					mainPass = true;
+					mainPassProcessed = true;
 					VkRenderPassBeginInfo renderPassInfo{};
 					std::array<VkClearValue, 2> clear;
 					clear[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
@@ -738,7 +738,7 @@ namespace sh::render {
 				}
 			}
 			//모든 카메라에 프레임 버퍼가 존재하는 특수한 경우
-			if (mainPass == false)
+			if (mainPassProcessed == false)
 			{
 				VkRenderPassBeginInfo renderPassInfo{};
 				std::array<VkClearValue, 2> clear;
