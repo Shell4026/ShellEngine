@@ -159,6 +159,6 @@ namespace sh::render
 		if(!isRenderTexture)
 			return buffer.get();
 		else
-			static_cast<const impl::VulkanFramebuffer*>(framebuffer)->GetColorImg();
+			return static_cast<const impl::VulkanFramebuffer*>(framebuffer)->GetColorImg();
 	}
 }
