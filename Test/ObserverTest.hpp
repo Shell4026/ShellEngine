@@ -28,22 +28,26 @@ public:
 	}
 };
 
-TEST(ObserverTest, NotifyTest) {
+TEST(ObserverTest, NotifyTest) 
+{
 	int value = 0;
 
 	sh::core::Observer observer{};
 	Target target{ &observer };
 
 	sh::core::Observer::EventHandle handle1 =
-	observer.RegisterEvent([&] {
+	observer.RegisterEvent([&] 
+	{
 		value = target.GetNumber() - 1;
 	}, -1);
 	sh::core::Observer::EventHandle handle2 = 
-	observer.RegisterEvent([&] {
+	observer.RegisterEvent([&] 
+	{
 		value = target.GetNumber();
 	}, 2);
 	sh::core::Observer::EventHandle handle3 =
-	observer.RegisterEvent([&] {
+	observer.RegisterEvent([&] 
+	{
 		value = target.GetNumber() + 1;
 	}, 1);
 

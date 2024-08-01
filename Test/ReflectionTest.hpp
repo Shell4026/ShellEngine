@@ -7,11 +7,13 @@
 
 #include <string_view>
 
-class Base : public sh::core::SObject {
+class Base : public sh::core::SObject 
+{
     SCLASS(Base)
 };
 
-class Derived : public Base {
+class Derived : public Base 
+{
     SCLASS(Derived)
 public:
     PROPERTY(number, "const")
@@ -20,7 +22,8 @@ public:
         std::vector<int> numbers;
 };
 
-TEST(ReflectionTest, TypeInfoTest) {
+TEST(ReflectionTest, TypeInfoTest) 
+{
     Base base;
     Derived derived;
 
@@ -31,7 +34,8 @@ TEST(ReflectionTest, TypeInfoTest) {
     EXPECT_TRUE(derived.GetType().IsChildOf(Base::GetStaticType()));
 }
 
-TEST(ReflectionTest, PropertyTest) {
+TEST(ReflectionTest, PropertyTest) 
+{
     Derived derived;
     derived.number = 42;
     derived.numbers = { 1, 2, 3 };
@@ -49,7 +53,8 @@ TEST(ReflectionTest, PropertyTest) {
     auto end = numbersProperty->End(&derived);
 
     std::vector<int> expected = { 1, 2, 3 };
-    for (size_t i = 0; begin != end; ++begin, ++i) {
+    for (size_t i = 0; begin != end; ++begin, ++i) 
+    {
         EXPECT_EQ(*begin.Get<int>(), expected[i]);
     }
 }
