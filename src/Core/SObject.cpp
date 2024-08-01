@@ -1,17 +1,21 @@
 ﻿#include "SObject.h"
 
 #include "GC.h"
+#include "TrackingAllocator.hpp"
+
 #include <cstring>
 
 namespace sh::core
 {
 	SObject::SObject(GC* gc) :
-		gc(gc), bPendingKill(false), isHeap(_heapCheck == "heap" ? true : false)
+		gc(gc), bPendingKill(false)
 	{
 		if (gc != nullptr)
 		{
 			gc->AddObject(this);
 		}
+
+		isHeap = TrackingAllocator<SObject>::GetInstance()->IsHeapAllocated(this);
 	}
 
 	SObject::~SObject()
@@ -23,24 +27,22 @@ namespace sh::core
 			else
 				gc->DeleteObject(this, false);
 		}
-		else
-		{
-			if (isHeap)
-				free(this);
-		}
 	}
 
 	auto SObject::operator new(std::size_t size) -> void*
 	{
-		SObject* obj = reinterpret_cast<SObject*>(::operator new(size));
-		obj->_heapCheck = "heap";
+		SObject* obj = TrackingAllocator<SObject>::GetInstance()->Allocate(size);
+		//SObject* obj = static_cast<SObject*>(::operator new(size));
 		return obj;
 	}
 
-	void SObject::operator delete(void* ptr, size_t size) noexcept
+	void SObject::operator delete(void* ptr) noexcept
 	{
 		SObject* sobj = static_cast<SObject*>(ptr);
 		sobj->bPendingKill = true;
+		if (sobj->gc == nullptr)
+			TrackingAllocator<SObject>::GetInstance()->DeAllocate(static_cast<SObject*>(ptr));
+			//::operator delete(ptr, size);
 		//free는 gc에서 수행
 	}
 

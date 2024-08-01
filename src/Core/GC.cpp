@@ -1,6 +1,7 @@
 ﻿#include "GC.h"
 
 #include "SObject.h"
+#include "TrackingAllocator.hpp"
 
 namespace sh::core
 {
@@ -82,7 +83,9 @@ namespace sh::core
 			}
 		}
 		for (auto obj : deletedHeapObjs)
-			free(obj);
+		{
+			TrackingAllocator<SObject>::GetInstance()->DeAllocate(obj);
+		}
 		deletedHeapObjs.clear();
 		deletedObjs.clear();
 	}
