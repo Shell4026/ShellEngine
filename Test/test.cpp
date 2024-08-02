@@ -1,6 +1,7 @@
 ﻿#include "ReflectionTest.hpp"
 #include "ObserverTest.hpp"
 #include "GCTest.hpp"
+#include "SingletonTest.hpp"
 
 #include <gtest/gtest.h>
 
