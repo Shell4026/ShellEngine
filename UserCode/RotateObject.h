@@ -8,7 +8,7 @@ using namespace sh::game;
 
 class RotateObject : public Component
 {
-	SCOMPONENT(RotateObject)
+	SCLASS(RotateObject)
 private:
 	PROPERTY(speed)
 	float speed;

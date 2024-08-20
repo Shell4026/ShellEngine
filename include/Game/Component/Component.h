@@ -1,19 +1,11 @@
 ﻿#pragma once
 
 #include "Game/Export.h"
-
 #include "Game/Object.h"
 
 #include "Core/Util.h"
 
 #include <type_traits>
-
-#define SCOMPONENT(name) SCLASS(name)\
-public:\
-	virtual auto New() -> std::unique_ptr<Component>\
-	{\
-		return std::unique_ptr<Component>(new name);\
-	}
 
 namespace sh::game
 {
@@ -21,7 +13,7 @@ namespace sh::game
 
 	class Component : public IObject
 	{
-		SCOMPONENT(Component)
+		SCLASS(Component)
 	private:
 		bool bEnable;
 		bool bInit : 1;

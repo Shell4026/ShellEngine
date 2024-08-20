@@ -10,7 +10,7 @@ namespace sh::game
 {
 	class UniformTest : public Component
 	{
-		SCOMPONENT(UniformTest)
+		SCLASS(UniformTest)
 	private:
 		PROPERTY(mat)
 		sh::render::Material* mat;

@@ -10,7 +10,7 @@ using namespace sh::game;
 
 class ComponentTest : public Component
 {
-	SCOMPONENT(ComponentTest)
+	SCLASS(ComponentTest)
 private:
 	PROPERTY(height)
 	float height;

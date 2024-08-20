@@ -11,7 +11,7 @@ namespace sh::game
 {
 	class Transform : public Component
 	{
-		SCOMPONENT(Transform)
+		SCLASS(Transform)
 	private:
 		glm::vec3 localPosition;
 		PROPERTY(vPosition)

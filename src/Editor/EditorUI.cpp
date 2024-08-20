@@ -208,7 +208,7 @@ namespace sh::editor
 				ImGui::SetNextItemWidth(-FLT_MIN);
 				if (ImGui::ListBox("##Components", &current, items.data(), items.size()))
 				{
-					obj->AddComponent(components.at(items[current])->New());
+					obj->AddComponent(components.at(items[current])->Create());
 					bAddComponent = false;
 				}
 				

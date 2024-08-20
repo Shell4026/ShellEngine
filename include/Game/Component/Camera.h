@@ -15,7 +15,7 @@ namespace sh::game
 {
 	class Camera : public Component
 	{
-		SCOMPONENT(Camera)
+		SCLASS(Camera)
 	private:
 		glm::mat4 matProj;
 		glm::mat4 matView;
