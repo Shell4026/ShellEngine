@@ -7,6 +7,7 @@
 #include "Core/NonCopyable.h"
 #include "Core/SObject.h"
 #include "Core/Reflection.hpp"
+#include "Core/SContainer.hpp"
 
 #include "Render/Shader.h"
 #include "Render/Material.h"
@@ -23,9 +24,8 @@
 
 namespace sh::core
 {
-	class GC;
+	class GarbageCollection;
 }
-
 namespace sh::render
 {
 	class Renderer;
@@ -40,17 +40,17 @@ namespace sh::game
 	{
 		SCLASS(World)
 	private:
-		std::vector<std::unique_ptr<GameObject>> objs;
-		std::set<Camera*> cameras;
-		std::unordered_map<std::string, uint32_t> objsMap;
+		core::SVector<std::unique_ptr<GameObject>> objs;
+		core::SSet<Camera*> cameras;
+		core::SHashMap<std::string, uint32_t> objsMap;
 		std::queue<int> objsEmptyIdx;
 
 		float _deltaTime;
 
 		Camera* mainCamera;
+		core::GarbageCollection* gc;
 	public:
 		sh::render::Renderer& renderer;
-		sh::core::GC& gc;
 		const float& deltaTime;
 
 		sh::game::ResourceManager<sh::render::Shader> shaders;
@@ -59,9 +59,9 @@ namespace sh::game
 		sh::game::ResourceManager<sh::render::Texture> textures;
 	public:
 		const ComponentModule& componentModule;
-		const std::vector<std::unique_ptr<GameObject>>& gameObjects;
+		const core::SVector<std::unique_ptr<GameObject>>& gameObjects;
 	public:
-		SH_GAME_API World(sh::render::Renderer& renderer, sh::core::GC& gc, const ComponentModule& componentModule);
+		SH_GAME_API World(sh::render::Renderer& renderer, const ComponentModule& componentModule);
 		SH_GAME_API World(World&& other) noexcept;
 		SH_GAME_API virtual ~World();
 
@@ -74,7 +74,7 @@ namespace sh::game
 
 		SH_GAME_API void RegisterCamera(Camera* cam);
 		SH_GAME_API void UnRegisterCamera(Camera* cam);
-		SH_GAME_API auto GetCameras() const -> const std::set<Camera*>&;
+		SH_GAME_API auto GetCameras() const -> const core::SSet<Camera*>&;
 		SH_GAME_API void SetMainCamera(Camera* cam);
 		SH_GAME_API	auto GetMainCamera() const -> Camera*;
 

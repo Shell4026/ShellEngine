@@ -19,78 +19,94 @@ namespace sh::core::memory
 	private:
 		using Super = MemoryPool<T, size>;
 
+#if defined(_WIN32)
 		SAllocator* copyAllocator = nullptr;
-		std::unique_ptr<std::allocator<T>> rebindAllocator = nullptr;
+		std::allocator<T>* rebindAllocator = nullptr;
+#endif
 	public:
-		using value_type = T;
+		using size_type = std::size_t ;
+		using difference_type = std::ptrdiff_t ;
 		using pointer = T*;
 		using const_pointer = const T*;
 		using reference = T&;
 		using const_reference = const T&;
-		using size_type = std::size_t;
-		using difference_type = std::ptrdiff_t;
+		using value_type = T;
 
-		template <typename U>
+		template <class U>
 		struct rebind
 		{
-			using other = SAllocator<U, size>;
+			typedef SAllocator<U, size> other;
 		};
 	public:
+#if defined(_WIN32)
 		SAllocator() = default;
+
 		SAllocator(SAllocator& allocator) :
 			copyAllocator(&allocator)
 		{
 		}
+
 		template <class U>
 		SAllocator(const SAllocator<U, size>& other)
 		{
-			if constexpr (!std::is_same<T, U>::value)
-				rebindAllocator = std::make_unique<std::allocator<T>>();
-		}
-		~SAllocator() noexcept
-		{
+			if (!std::is_same<T, U>::value)
+				rebindAllocator = new std::allocator<T>();
 		}
 
-		/// @brief 메모리 풀에서 메모리 할당
-		/// @param n 쓰이지 않음
-		/// @param hint 쓰이지 않음
-		/// @return 할당된 메모리 포인터
-		auto allocate(size_t n, const void* hint = nullptr) -> T*
+		~SAllocator()
 		{
+			delete rebindAllocator;
+		}
+#endif
+
+		auto allocate(size_type n, const void* hint = 0) -> pointer
+		{
+#if defined(_WIN32)
 			if (copyAllocator)
 				return copyAllocator->allocate(n, hint);
+
 			if (rebindAllocator)
 				return rebindAllocator->allocate(n, hint);
+#endif
+
+			if (n != 1 || hint)
+				throw std::bad_alloc();
 
 			return Super::Allocate();
 		}
-		
-		void deallocate(T* ptr, std::size_t n) noexcept
+
+		void deallocate(pointer p, size_type n)
 		{
+#if defined(_WIN32)
 			if (copyAllocator) 
 			{
-				copyAllocator->deallocate(ptr, n);
+				copyAllocator->deallocate(p, n);
 				return;
 			}
 
 			if (rebindAllocator) 
 			{
-				rebindAllocator->deallocate(ptr, n);
+				rebindAllocator->deallocate(p, n);
 				return;
 			}
+#endif
 
-			Super::DeAllocate(ptr);
+			Super::DeAllocate(p);
 		}
 
-		void construct(T* ptr, const_reference val)
+		void construct(pointer p, const_reference val)
 		{
-			//placement new - 포인터 위치에 val을 복사해서 T타입의 객체 생성
-			new (ptr) T(val);
+			new (p) T(val);
+		}
+		template< class U, class... Args >
+		void construct(U* ptr, Args&&... args)
+		{
+			new((void*)ptr) U(std::forward<Args>(args)...);
 		}
 
-		void destroy(T* ptr) noexcept
+		void destroy(pointer p)
 		{
-			ptr->~T();
+			p->~T();
 		}
 	};
 }

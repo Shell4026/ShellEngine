@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "../include/Core/Container/SContainer.hpp"
+#include "../include/Core/SContainer.hpp"
 #include "../include/Core/SObject.h"
 
 #include <gtest/gtest.h>
@@ -16,7 +16,7 @@ TEST(ContainerTest, VectorTest)
 		TestClass() = default;
 	};
 
-	using namespace sh::core::container;
+	using namespace sh::core;
 
 	SSet<int, 128> container1;
 	std::set<int> container2;

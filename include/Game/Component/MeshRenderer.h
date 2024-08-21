@@ -9,6 +9,7 @@
 #include "Render/Mesh.h"
 
 #include "Core/Util.h"
+#include "Core/SContainer.hpp"
 
 #include "glm/mat4x4.hpp"
 #include <unordered_map>
@@ -27,9 +28,9 @@ namespace sh::game
 		PROPERTY(mat);
 		sh::render::Material* mat;
 		
-		std::unordered_map<Camera*, std::unique_ptr<sh::render::IDrawable>> drawables;
+		core::SHashMap<Camera*, std::unique_ptr<sh::render::IDrawable>> drawables;
 
-		std::vector<unsigned char> uniformCopyData;
+		core::SVector<unsigned char> uniformCopyData;
 	private:
 		void CreateDrawable(Camera* camera);
 	public:

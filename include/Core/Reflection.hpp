@@ -75,6 +75,9 @@ namespace sh::core::reflection
 	template<typename T>
 	struct IsSClass : std::bool_constant<HasThis<T>::value> {};
 
+	template<typename T>
+	struct IsSObject : std::bool_constant<std::is_base_of_v<SObject, T>> {};
+
 	template<typename T, typename U = void>
 	struct MakeSuper {
 		using type = U;
@@ -571,6 +574,13 @@ namespace sh::core::reflection
 	public:
 		SH_CORE_API Property(PropertyDataBase* data, const char* name, bool isContainer = false, uint32_t containerNestedLevel = 0);
 			
+		/// @brief 프로퍼티가 가지고 있는 값을 반환하는 함수.
+		/// 
+		/// 주의: 타입 검사를 하지 않음.
+		/// @tparam T 반환 타입
+		/// @tparam ThisType SObject의 타입
+		/// @param sobject 해당 프로퍼티를 가지고 있는 SObject객체
+		/// @return 실제 값
 		template<typename T, typename ThisType>
 		auto Get(ThisType* sobject) const -> T*
 		{

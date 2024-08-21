@@ -7,6 +7,7 @@
 #include "Component/Transform.h"
 #include "World.h"
 
+#include "Core/GarbageCollection.h"
 #include "Core/Reflection.hpp"
 #include "Core/Util.h"
 
@@ -20,7 +21,6 @@ namespace sh::game
 		SCLASS(GameObject)
 	private:
 		std::vector<std::unique_ptr<Component>> components;
-		
 
 		std::string objName;
 
@@ -58,7 +58,7 @@ namespace sh::game
 		{
 			components.push_back(std::make_unique<T>());
 			components.back()->SetOwner(*this);
-			components.back()->SetGC(world.gc);
+			core::GarbageCollection::GetInstance()->SetRootSet(components.back().get());
 			return static_cast<T*>(components.back().get());
 		}
 		template<typename T>

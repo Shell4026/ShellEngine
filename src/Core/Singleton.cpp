@@ -4,7 +4,7 @@
 namespace sh::core
 {
 	std::mutex ISingleton::mu{};
-	container::SMap<uint64_t, void*> ISingleton::instance{};
+	SMap<uint64_t, void*> ISingleton::instance{};
 
 	auto ISingleton::CreateInstance(uint64_t hash, std::size_t size) -> Result
 	{

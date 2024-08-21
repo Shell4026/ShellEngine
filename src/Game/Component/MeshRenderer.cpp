@@ -68,6 +68,8 @@ namespace sh::game
 		{
 			render::VulkanRenderer& renderer = static_cast<render::VulkanRenderer&>(gameObject->world.renderer);
 			auto drawable = std::make_unique<sh::render::VulkanDrawable>(renderer);
+			gc->SetRootSet(drawable.get());
+
 			if (camera->renderTexture != nullptr)
 				drawable->SetFramebuffer(*camera->renderTexture->GetFramebuffer());
 

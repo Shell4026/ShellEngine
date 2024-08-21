@@ -10,7 +10,7 @@
 #include "Render/RenderTexture.h"
 #include "Core/Reflection.hpp"
 #include <Core/Util.h>
-#include <Core/GC.h>
+#include <Core/GarbageCollection.h>
 #include "Core/ModuleLoader.h"
 #include <cassert>
 #include <fmt/core.h>
@@ -87,8 +87,8 @@ int main(int arg, char* args[])
 	{
 		fmt::print("Load Component: {}\n", components.first);
 	}
-
-	sh::core::GC gc;
+	//GC초기화
+	auto gc = sh::core::GarbageCollection::GetInstance();
 	
 	sh::window::Window window;
 	window.Create(u8"테스트", 1024, 768, sh::window::Window::Style::Resize);
@@ -100,7 +100,7 @@ int main(int arg, char* args[])
 
 	using namespace sh::game;
 
-	World world{ renderer, gc, *componentModule };
+	World world{ renderer, *componentModule };
 	
 	VulkanShaderBuilder builder{ renderer };
 
@@ -186,23 +186,7 @@ int main(int arg, char* args[])
 	gui.Init();
 
 	sh::editor::EditorUI editorUi(world, gui);
-	std::mutex mu;
-	std::condition_variable cv;
-	bool bStopRenderThread = false;
 
-	//renderer.SetMutex(mu);
-	std::thread renderThread([&]()
-	{
-		while (!bStopRenderThread)
-		{
-			std::unique_lock<std::mutex> lock(mu);
-			cv.wait(lock);
-			gui.Update();
-			editorUi.Render();
-			gui.Render();
-			renderer.Render(window.GetDeltaTime());
-		}
-	});
 	while (window.IsOpen())
 	{
 		window.ProcessFrame();
@@ -218,12 +202,6 @@ int main(int arg, char* args[])
 			switch (e.type)
 			{
 			case sh::window::Event::EventType::Close:
-				bStopRenderThread = true;
-				if (renderThread.joinable())
-				{
-					cv.notify_all();
-					renderThread.join();
-				}
 				gui.Clean();
 				world.Clean();
 				window.Close();
@@ -239,7 +217,6 @@ int main(int arg, char* args[])
 					renderer.Pause(false);
 					renderer.SetViewport({ 150.f, 0.f }, { window.width - 150.f, window.height - 180 });
 					gui.Resize();
-					cv.notify_all();
 				}
 				break;
 			case sh::window::Event::EventType::MousePressed:
@@ -277,10 +254,17 @@ int main(int arg, char* args[])
 		}
 		editorUi.Update();
 		world.Update(window.GetDeltaTime());
-		gc.Update();
-		cv.notify_all();
+
+		gui.Update();
+		editorUi.Render();
+		gui.Render();
+		renderer.Render(window.GetDeltaTime());
+
+		auto start = std::chrono::high_resolution_clock::now();
+		gc->Update();
+		auto end = std::chrono::high_resolution_clock::now();
+		auto time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+		std::cout << time << '\n';
 	}
-	if(renderThread.joinable())
-		renderThread.join();
 	return 0;
 }

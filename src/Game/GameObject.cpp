@@ -99,7 +99,7 @@ namespace sh::game
 	void GameObject::AddComponent(std::unique_ptr<Component>&& component)
 	{
 		component->SetOwner(*this);
-		component->SetGC(world.gc);
+		gc->SetRootSet(component.get());
 		components.push_back(std::move(component));
 	}
 }

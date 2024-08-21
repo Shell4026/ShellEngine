@@ -1,65 +1,64 @@
 ﻿#include "SObject.h"
 
-#include "GC.h"
+#include "GarbageCollection.h"
 #include "Observer.h"
-#include "TrackingAllocator.hpp"
 
 #include <cstring>
 
 namespace sh::core
 {
-	SObject::SObject(GC* gc) :
-		gc(gc), bPendingKill(false)
+	SObject::SObject() :
+		gc(GarbageCollection::GetInstance()),
+		bPendingKill(false), bMark(false), 
+		destroyObservers()
 	{
-		if (gc != nullptr)
-		{
-			gc->AddObject(this);
-		}
-
-		isHeap = TrackingAllocator<SObject>::GetInstance()->IsHeapAllocated(this);
 	}
-
+	SObject::SObject(const SObject& other) :
+		gc(other.gc), 
+		bPendingKill(other.bPendingKill.load(std::memory_order::memory_order_relaxed)),
+		bMark(other.bMark),
+		destroyObservers(other.destroyObservers)
+	{
+	}
+	SObject::SObject(SObject&& other) noexcept :
+		gc(other.gc),
+		bPendingKill(other.bPendingKill.load(std::memory_order::memory_order_relaxed)),
+		bMark(other.bMark),
+		destroyObservers(std::move(other.destroyObservers))
+	{
+	}
 	SObject::~SObject()
 	{
 		for (auto observer : destroyObservers)
 			observer->Notify();
 
-		if (gc != nullptr)
-		{
-			if (isHeap)
-				gc->DeleteObject(this);
-			else
-				gc->DeleteObject(this, false);
-		}
+		if (!bPendingKill.load(std::memory_order::memory_order_acquire))
+			gc->RemoveObject(this);
 	}
 
 	auto SObject::operator new(std::size_t size) -> void*
 	{
-		SObject* obj = TrackingAllocator<SObject>::GetInstance()->Allocate(size);
-		//SObject* obj = static_cast<SObject*>(::operator new(size));
-		return obj;
+		SObject* ptr = static_cast<SObject*>(::operator new(size));
+		GarbageCollection::GetInstance()->AddObject(static_cast<SObject*>(ptr));
+		return ptr;
 	}
 
-	void SObject::operator delete(void* ptr) noexcept
+	void SObject::operator delete(void* ptr, std::size_t size)
 	{
-		SObject* sobj = static_cast<SObject*>(ptr);
-		sobj->bPendingKill = true;
-		if (sobj->gc == nullptr)
-			TrackingAllocator<SObject>::GetInstance()->DeAllocate(static_cast<SObject*>(ptr));
-			//::operator delete(ptr, size);
-		//free는 gc에서 수행
-	}
-
-	void SObject::SetGC(GC& gc)
-	{
-		this->gc = &gc;
-		gc.AddObject(this);
+		SObject* obj = static_cast<SObject*>(ptr);
+		GarbageCollection::GetInstance()->DeleteObject(obj);
+		::operator delete(obj);
 	}
 
 	auto SObject::IsPendingKill() const -> bool
 	{
-		return bPendingKill;
+		return bPendingKill.load(std::memory_order::memory_order_acquire);
 	}
+	auto SObject::IsMark() const -> bool
+	{
+		return bMark;
+	}
+
 	void SObject::OnPropertyChanged(const reflection::Property& prop)
 	{
 	}
@@ -71,5 +70,10 @@ namespace sh::core
 	void SObject::UnRegeisterDestroyNotify(Observer& observer)
 	{
 		destroyObservers.erase(&observer);
+	}
+
+	void SObject::Destroy()
+	{
+		bPendingKill.store(true, std::memory_order::memory_order_release);
 	}
 }

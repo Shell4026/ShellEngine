@@ -3,7 +3,7 @@
 #include "NonCopyable.h"
 #include "Export.h"
 
-#include "Container/SContainer.hpp"
+#include "SContainer.hpp"
 
 #include <atomic>
 #include <mutex>
@@ -16,7 +16,7 @@ namespace sh::core
 	{
 	private:
 		static std::mutex mu;
-		static container::SMap<uint64_t, void*> instance;
+		static SMap<uint64_t, void*> instance;
 	protected:
 		struct Result
 		{
@@ -38,7 +38,7 @@ namespace sh::core
 		static std::atomic<T*> instance;
 		static std::mutex mu;
 	protected:
-		Singleton() = default;
+		Singleton() {}
 	public:
 		static auto GetInstance()->T*;
 		static void Destroy();
@@ -50,7 +50,7 @@ namespace sh::core
 	private:
 		static std::atomic<T*> instance;
 	protected:
-		Singleton() = default;
+		Singleton() {}
 	public:
 		static auto GetInstance() -> T*;
 		static void Destroy();
@@ -70,7 +70,6 @@ namespace sh::core
 	/// 
 	/// @tparam T 타입
 	/// @tparam shareDLL DLL간 메모리 영역을 공유할지
-	/// @param ...args 초기화시 전달 할 인자
 	/// @return 객체 포인터
 	template<typename T, bool shareDLL>
 	auto Singleton<T, shareDLL>::GetInstance() -> T*

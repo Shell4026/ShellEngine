@@ -2,6 +2,8 @@
 
 #include "Export.h"
 
+#include "SContainer.hpp"
+
 #include <string_view>
 #include <functional>
 #include <map>
@@ -26,8 +28,8 @@ namespace sh::core
 
 			bool operator<(const Event& other) const;
 		};
-		std::set<Event> events;
-		std::map<int, const Event*> eventMap;
+		core::SSet<Event> events;
+		core::SMap<int, const Event*> eventMap;
 
 		uint32_t nextHandle;
 	public:

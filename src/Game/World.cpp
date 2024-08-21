@@ -3,7 +3,7 @@
 #include "GameObject.h"
 #include "Component/Camera.h"
 
-#include "Core/GC.h"
+#include "Core/GarbageCollection.h"
 #include "Core/Util.h"
 
 #include <utility>
@@ -11,15 +11,17 @@
 
 namespace sh::game
 {
-	World::World(sh::render::Renderer& renderer, sh::core::GC& gc, const ComponentModule& componentModule) :
-		renderer(renderer), gc(gc), componentModule(componentModule),
+	World::World(sh::render::Renderer& renderer, const ComponentModule& componentModule) :
+		renderer(renderer), componentModule(componentModule),
 		deltaTime(_deltaTime), gameObjects(objs),
 		
 		_deltaTime(0.0f), 
-		shaders(gc, renderer), materials(gc, renderer), meshes(gc, renderer), textures(gc, renderer),
+		shaders(renderer), materials(renderer), meshes(renderer), textures(renderer),
 		mainCamera(nullptr)
 	{
-		gc.AddObject(this);
+		gc = core::GarbageCollection::GetInstance();
+
+		gc->SetRootSet(this);
 	}
 	World::World(World&& other) noexcept :
 		renderer(other.renderer), gc(other.gc), componentModule(other.componentModule),
@@ -30,8 +32,8 @@ namespace sh::game
 		shaders(std::move(other.shaders)), materials(std::move(other.materials)), meshes(std::move(other.meshes)), textures(std::move(other.textures)),
 		mainCamera(nullptr)
 	{
-		gc.RemoveObject(&other);
-		gc.AddObject(this);
+		gc->RemoveRootSet(&other);
+		gc->SetRootSet(this);
 	}
 	World::~World()
 	{
@@ -68,7 +70,7 @@ namespace sh::game
 			objs.push_back(std::make_unique<GameObject>(*this, objName));
 			objsMap.insert(std::make_pair(objName, static_cast<uint32_t>(objs.size() - 1)));
 			auto obj = objs[objs.size() - 1].get();
-			obj->SetGC(gc);
+			gc->SetRootSet(obj);
 
 			return obj;
 		}
@@ -80,7 +82,7 @@ namespace sh::game
 			objsEmptyIdx.pop();
 
 			auto obj = objs[idx].get();
-			obj->SetGC(gc);
+			gc->SetRootSet(obj);
 
 			return obj;
 		}
@@ -95,7 +97,8 @@ namespace sh::game
 		int id = it->second;
 		objsMap.erase(it);
 		objsEmptyIdx.push(id);
-		objs[id].reset();
+		objs[id]->Destroy();
+		objs[id].release();
 	}
 
 	auto World::ChangeGameObjectName(const std::string& objName, const std::string& to) -> std::string
@@ -180,7 +183,7 @@ namespace sh::game
 		if (core::IsValid(cam))
 			cameras.erase(cam);
 	}
-	auto World::GetCameras() const -> const std::set<Camera*>&
+	auto World::GetCameras() const -> const core::SSet<Camera*>&
 	{
 		return cameras;
 	}

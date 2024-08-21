@@ -4,7 +4,8 @@
 
 #include "Core/NonCopyable.h"
 #include "Core/SObject.h"
-#include "Core/GC.h"
+#include "Core/GarbageCollection.h"
+#include "Core/SContainer.hpp"
 
 #include "Render/Renderer.h"
 
@@ -19,25 +20,30 @@
 namespace sh::game
 {
 	template<typename T, 
-		typename Condition = std::void_t<std::enable_if_t<std::is_base_of_v<sh::core::SObject, T>>>>
+		typename Condition = std::enable_if_t<std::is_base_of_v<sh::core::SObject, T>>>
 	class ResourceManager : public sh::core::INonCopyable
 	{
 	private:
-		sh::core::GC& gc;
-		sh::render::Renderer& renderer;
+		core::GarbageCollection& gc;
+		render::Renderer& renderer;
 
-		std::unordered_map<std::string, std::unique_ptr<T>> resources;
+		core::SHashMap<std::string, std::unique_ptr<T>> resources;
 
-		std::unordered_map<T*, std::unordered_map<void*, std::vector<std::function<void()>>>> resourceDestroyNotifies;
+		core::SHashMap<T*, core::SHashMap<void*, std::vector<std::function<void()>>>> resourceDestroyNotifies;
 	public:
-		ResourceManager(sh::core::GC& gc, sh::render::Renderer& renderer) :
-			gc(gc), renderer(renderer)
-		{}
+		ResourceManager(sh::render::Renderer& renderer) :
+			renderer(renderer), gc(*core::GarbageCollection::GetInstance())
+		{
+		}
 		ResourceManager(ResourceManager&& other) noexcept :
-			gc(other.gc), renderer(other.renderer),
+			gc(other.gc),
+			renderer(other.renderer),
 			resources(std::move(other.resources)),
 			resourceDestroyNotifies(std::move(other.resourceDestroyNotifies))
-		{}
+		{
+
+		
+		}
 		~ResourceManager()
 		{
 			Clean();
@@ -69,7 +75,7 @@ namespace sh::game
 				it = resources.find(name);
 			}
 
-			resource->SetGC(gc);
+			gc.SetRootSet(resource.get());
 			return resources.insert({ name, std::move(resource) }).first->second.get();
 		}
 		auto AddResource(std::string_view _name, T&& resource) -> T*
@@ -85,7 +91,7 @@ namespace sh::game
 			}
 
 			auto resourcePtr = std::make_unique<T>(std::move(resource));
-			resourcePtr->SetGC(gc);
+			gc.SetRootSet(resourcePtr.get());
 			return resources.insert({ name, std::move(resourcePtr) }).first->second.get();
 		}
 		auto AddResource(std::string_view _name, const T& resource) -> T*
@@ -101,7 +107,7 @@ namespace sh::game
 			}
 
 			auto resourcePtr = std::make_unique<T>(resource);
-			resourcePtr->SetGC(gc);
+			gc.SetRootSet(resourcePtr.get());
 			return resources.insert({ name, std::move(resourcePtr) }).first->second.get();
 		}
 
@@ -112,6 +118,7 @@ namespace sh::game
 			if (it == resources.end())
 				return false;
 
+			//notify
 			auto itNotify = resourceDestroyNotifies.find(it->second.get());
 			if (itNotify != resourceDestroyNotifies.end())
 			{
@@ -122,6 +129,8 @@ namespace sh::game
 				}
 				resourceDestroyNotifies.erase(itNotify);
 			}
+			it->second->Destroy();
+			it->second.release();
 			resources.erase(it);
 
 			return true;

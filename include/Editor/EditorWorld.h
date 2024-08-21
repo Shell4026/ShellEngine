@@ -9,7 +9,7 @@ namespace sh::editor
 	class EditorWorld : public game::World
 	{
 	public:
-		EditorWorld(render::Renderer& renderer, core::GC& gc, const game::ComponentModule& module);
+		EditorWorld(render::Renderer&, const game::ComponentModule& module);
 		~EditorWorld();
 	};
 }
