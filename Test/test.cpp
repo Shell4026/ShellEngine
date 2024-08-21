@@ -2,6 +2,7 @@
 #include "ObserverTest.hpp"
 #include "GCTest.hpp"
 #include "SingletonTest.hpp"
+#include "ContainerTest.hpp"
 #include "AllocatorTest.hpp"
 
 #include <gtest/gtest.h>
