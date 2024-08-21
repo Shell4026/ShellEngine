@@ -21,6 +21,14 @@ public:
 	}
 };
 
+TEST(SingletonTest, GetInstancingTesting)
+{
+	SingleClass* instance = SingleClass::GetInstance();
+	instance->num = 4;
+	EXPECT_EQ(instance->num, 4);
+	instance->Destroy();
+}
+
 TEST(SingletonTest, MultiThreadTesting)
 {
 	SingleClass* ptr1 = nullptr;
