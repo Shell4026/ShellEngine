@@ -4,8 +4,9 @@
 #include "VulkanConfig.h"
 
 #include "Core/NonCopyable.h"
+#include "Core/SContainer.hpp"
 
-#include <vector>
+#include <stack>
 #include <unordered_map>
 
 namespace sh::render::impl
@@ -14,18 +15,40 @@ namespace sh::render::impl
 	{
 	private:
 		VkDevice device;
+
+		struct Pool
+		{
+			VkDescriptorPool pool;
+			bool full;
+
+			bool operator==(const Pool& other) const
+			{
+				return pool == other.pool;
+			}
+		};
+
+		struct PoolHasher
+		{
+			std::size_t operator()(const Pool& p) const noexcept
+			{
+				std::size_t h1 = std::hash<VkDescriptorPool>{}(p.pool);
+				std::size_t h2 = std::hash<bool>{}(p.full);
+				return h1 ^ (h2 << 1);
+			}
+		};
+
 	private:
 		size_t initialSize;
 		size_t size;
 
-		std::vector<VkDescriptorPool> fullPool;
-		std::vector<VkDescriptorPool> readyPool;
+		core::SHashSet<Pool, 32, PoolHasher> fullPool;
+		std::stack<Pool> readyPool;
 
-		std::unordered_map<VkDescriptorSet, VkDescriptorPool> allocated;
+		core::SHashMap<VkDescriptorSet, Pool> allocated;
 	private:
-		auto GetPool() -> VkDescriptorPool;
+		auto GetPool() -> Pool&;
 	public:
-		SH_RENDER_API VulkanDescriptorPool(VkDevice device, size_t size = 16);
+		SH_RENDER_API VulkanDescriptorPool(VkDevice device, size_t size = 32);
 		SH_RENDER_API VulkanDescriptorPool(VulkanDescriptorPool&& other) noexcept;
 		SH_RENDER_API ~VulkanDescriptorPool();
 

@@ -1,7 +1,8 @@
 ﻿#include "VulkanDescriptorPool.h"
 
 #include <array>
-#include <cassert>
+#include <stdexcept>
+
 namespace sh::render::impl
 {
 	VulkanDescriptorPool::VulkanDescriptorPool(VkDevice device, size_t size) :
@@ -16,13 +17,16 @@ namespace sh::render::impl
 		initialSize(other.initialSize), size(other.size),
 		readyPool(std::move(other.readyPool)), fullPool(std::move(other.fullPool))
 	{
+		other.device = VK_NULL_HANDLE;
+		other.size = 0;
+		other.initialSize = 0;
 	}
 	VulkanDescriptorPool::~VulkanDescriptorPool()
 	{
 		Clean();
 	}
 
-	auto VulkanDescriptorPool::GetPool() -> VkDescriptorPool
+	auto VulkanDescriptorPool::GetPool() -> Pool&
 	{
 		if (readyPool.empty())
 		{
@@ -42,36 +46,41 @@ namespace sh::render::impl
 			VkDescriptorPool descPool;
 			auto result = vkCreateDescriptorPool(device, &poolInfo, nullptr, &descPool);
 			assert(result == VK_SUCCESS);
-			readyPool.push_back(descPool);
+			readyPool.push(Pool{ descPool, false });
 
-			size *= 1.5f;
+			size = static_cast<std::size_t>(size * 1.5f);
 			if (size > 4096) 
 				size = 4096;
 
-			return readyPool.back();
+			return readyPool.top();
 		}
-		return readyPool.back();
+		return readyPool.top();
 	}
 
 	auto VulkanDescriptorPool::AllocateDescriptorSet(VkDescriptorSetLayout layouts, uint32_t count) -> VkDescriptorSet
 	{
-		VkDescriptorPool pool = GetPool();
+		Pool pool = GetPool();
 		VkDescriptorSetAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.descriptorPool = pool;
-		allocInfo.descriptorSetCount = 1;
+		allocInfo.descriptorPool = pool.pool;
+		allocInfo.descriptorSetCount = count;
 		allocInfo.pSetLayouts = &layouts;
 
 		VkDescriptorSet descriptorSet;
 		auto result = vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet);
 		if (result == VK_ERROR_OUT_OF_POOL_MEMORY || result == VK_ERROR_FRAGMENTED_POOL)
 		{
-			readyPool.pop_back();
-			fullPool.push_back(pool);
+			pool.full = true;
+			readyPool.pop();
+			fullPool.insert(pool);
+
 			pool = GetPool();
-			allocInfo.descriptorPool = pool;
+			allocInfo.descriptorPool = pool.pool;
 			result = vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet);
-			assert(result == VkResult::VK_SUCCESS);
+			if (result != VkResult::VK_SUCCESS)
+			{
+				throw std::runtime_error("Failed to create descriptor pool.");
+			}
 		}
 
 		allocated.insert({ descriptorSet, pool });
@@ -83,13 +92,15 @@ namespace sh::render::impl
 	{
 		allocated.clear();
 		size = initialSize;
-		for (auto pool : fullPool)
-			vkDestroyDescriptorPool(device, pool, nullptr);
+		for (auto& pool : fullPool)
+			vkDestroyDescriptorPool(device, pool.pool, nullptr);
 		fullPool.clear();
 
-		for (auto pool : readyPool)
-			vkDestroyDescriptorPool(device, pool, nullptr);
-		readyPool.clear();
+		while (!readyPool.empty())
+		{
+			vkDestroyDescriptorPool(device, readyPool.top().pool, nullptr);
+			readyPool.pop();
+		}
 	}
 	void VulkanDescriptorPool::FreeDescriptorSet(VkDescriptorSet descSet)
 	{
@@ -97,6 +108,12 @@ namespace sh::render::impl
 		if (it == allocated.end())
 			return;
 
-		vkFreeDescriptorSets(device, it->second, 1, &it->first);
+		vkFreeDescriptorSets(device, it->second.pool, 1, &it->first);
+		if (it->second.full)
+		{
+			it->second.full = false;
+			readyPool.push(it->second);
+			fullPool.erase(it->second);
+		}
 	}
 }
