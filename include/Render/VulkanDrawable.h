@@ -1,5 +1,4 @@
-﻿#pragma once
-
+﻿
 #include "Export.h"
 #include "IDrawable.h"
 #include "VulkanVertexBuffer.h"
@@ -17,16 +16,20 @@ namespace sh::render
 	class Framebuffer;
 	class VulkanDrawable : public IDrawable
 	{
+		SCLASS(VulkanDrawable)
 	private:
 		VulkanRenderer& renderer;
+		PROPERTY(mat)
 		Material* mat;
+		PROPERTY(mesh)
 		Mesh* mesh;
 
-		std::shared_ptr<impl::VulkanPipeline> pipeline;
+		std::unique_ptr<impl::VulkanPipeline> pipeline;
 
 		VkDescriptorSet descriptorSet;
 
 		std::map<uint32_t, impl::VulkanBuffer> uniformBuffers;
+		PROPERTY(mesh)
 		std::map<uint32_t, Texture*> textures;
 
 		Framebuffer* framebuffer;
@@ -34,8 +37,9 @@ namespace sh::render
 		void CreateDescriptorSet();
 	public:
 		SH_RENDER_API VulkanDrawable(VulkanRenderer& renderer);
-		SH_RENDER_API VulkanDrawable(VulkanDrawable&& other) = delete;
-		SH_RENDER_API ~VulkanDrawable();
+		SH_RENDER_API VulkanDrawable(VulkanDrawable&& other) noexcept;
+		SH_RENDER_API VulkanDrawable(const VulkanDrawable& other) = delete;
+		SH_RENDER_API ~VulkanDrawable() noexcept;
 
 		SH_RENDER_API void Clean();
 

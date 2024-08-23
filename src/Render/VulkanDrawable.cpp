@@ -20,7 +20,21 @@ namespace sh::render
 		descriptorSet(nullptr), framebuffer(nullptr)
 	{
 	}
-	VulkanDrawable::~VulkanDrawable()
+	VulkanDrawable::VulkanDrawable(VulkanDrawable&& other) noexcept :
+		renderer(other.renderer),
+		mat(other.mat), mesh(other.mesh),
+		pipeline(std::move(other.pipeline)),
+		descriptorSet(other.descriptorSet),
+		uniformBuffers(std::move(other.uniformBuffers)), textures(std::move(other.textures)),
+		framebuffer(other.framebuffer)
+	{
+		other.mat = nullptr;
+		other.mesh = nullptr;
+		other.descriptorSet = nullptr;
+		other.framebuffer = nullptr;
+	}
+
+	VulkanDrawable::~VulkanDrawable() noexcept
 	{
 		Clean();
 	}
