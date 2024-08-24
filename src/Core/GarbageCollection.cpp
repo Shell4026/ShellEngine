@@ -121,6 +121,8 @@ namespace sh::core
 		for (auto& ptrProp : ptrProps)
 		{
 			SObject** ptr = ptrProp->Get<SObject*>(obj);
+			if (*ptr == nullptr)
+				continue;
 			//delete된 객체인 경우 참조를 nullptr로 바꾼다.
 			if (deletedObjs.find(*ptr) != deletedObjs.end())
 			{
@@ -131,11 +133,19 @@ namespace sh::core
 			Mark(*ptr, obj);
 		}
 		auto& containerPtrProps = obj->GetType().GetSObjectContainerProperties();
-		for (auto& ptrProp : containerPtrProps)
+		for (auto ptrProp : containerPtrProps)
 		{
 			for (auto it = ptrProp->Begin(obj); it != ptrProp->End(obj); ++it)
 			{
-				SObject** ptr = it.Get<SObject*>();
+				SObject** ptr;
+				if (it.IsPair())
+					ptr = &it.Get<std::pair<void*, SObject*>>()->second;
+				else
+					ptr = it.Get<SObject*>();
+
+				if (*ptr == nullptr)
+					continue;
+
 				//delete된 객체인 경우 참조를 nullptr로 바꾼다.
 				if (deletedObjs.find(*ptr) != deletedObjs.end())
 				{
