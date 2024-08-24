@@ -570,11 +570,11 @@ namespace sh::render {
 	{
 		if (!isInit || bPause)
 			return;
-		if (drawList.empty())
+		if (drawList[RENDER_THREAD].empty())
 			return;
 		if (camHandles[mainCamera] == nullptr)
 			return;
-		if (drawList[*camHandles[mainCamera]].empty())
+		if (drawList[RENDER_THREAD][*camHandles[mainCamera]].empty())
 			return;
 		//std::cout << "Render Start\n";
 		//std::cout << "main: " << mainCamera << '\n';
@@ -600,45 +600,43 @@ namespace sh::render {
 		cmdBuffer->Submit(graphicsQueue, [&]()
 		{
 			bool mainPassProcessed = false;
-			for (auto& draws : drawList)
+			for (auto& draws : drawList[RENDER_THREAD])
 			{
 				const Camera& cam = draws.first;
-				auto& drawQueue = draws.second;
+				auto& drawables = draws.second;
 
-				if (drawQueue.empty())
+				if (drawables.empty())
 					continue;
 
-				auto framebuffer = drawQueue.front()->GetFramebuffer();
+				auto framebuffer = static_cast<const impl::VulkanFramebuffer*>(drawables.front()->GetFramebuffer());
 				if(framebuffer != nullptr)
 				{
-					auto& framebuffer = static_cast<const impl::VulkanFramebuffer&>(*drawQueue.front()->GetFramebuffer());
 					std::array<VkClearValue, 2> clear;
 					clear[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
 					clear[1].depthStencil = { 1.0f, 0 };
 
 					VkRenderPassBeginInfo renderPassInfo{};
 					renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-					renderPassInfo.renderPass = framebuffer.GetRenderPass();
-					renderPassInfo.framebuffer = framebuffer.GetVkFramebuffer();
+					renderPassInfo.renderPass = framebuffer->GetRenderPass();
+					renderPassInfo.framebuffer = framebuffer->GetVkFramebuffer();
 					renderPassInfo.renderArea.offset = { 0, 0 };
-					renderPassInfo.renderArea.extent = { framebuffer.GetWidth(), framebuffer.GetHeight() };
+					renderPassInfo.renderArea.extent = { framebuffer->GetWidth(), framebuffer->GetHeight() };
 					renderPassInfo.clearValueCount = static_cast<uint32_t>(clear.size());
 					renderPassInfo.pClearValues = clear.data();
 					vkCmdBeginRenderPass(buffer, &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
 
 					VkViewport viewport{};
 					viewport.x = 0;
-					viewport.y = framebuffer.GetHeight();
-					viewport.width = framebuffer.GetWidth();
-					viewport.height = -static_cast<float>(framebuffer.GetHeight());
+					viewport.y = framebuffer->GetHeight();
+					viewport.width = framebuffer->GetWidth();
+					viewport.height = -static_cast<float>(framebuffer->GetHeight());
 					viewport.minDepth = 0.0f;
 					viewport.maxDepth = 1.0f;
 					vkCmdSetViewport(buffer, 0, 1, &viewport);
 
-					while (!drawQueue.empty())
+					for (auto iDrawable : drawables)
 					{
-						VulkanDrawable* drawable = static_cast<VulkanDrawable*>(drawQueue.front());
-						drawQueue.pop();
+						VulkanDrawable* drawable = static_cast<VulkanDrawable*>(iDrawable);
 
 						Mesh* mesh = drawable->GetMesh();
 						Material* mat = drawable->GetMaterial();
@@ -654,7 +652,7 @@ namespace sh::render {
 
 						VkRect2D scissor{};
 						scissor.offset = { 0, 0 };
-						scissor.extent = { framebuffer.GetWidth(), framebuffer.GetHeight() };
+						scissor.extent = { framebuffer->GetWidth(), framebuffer->GetHeight() };
 						vkCmdSetScissor(buffer, 0, 1, &scissor);
 
 						mesh->GetVertexBuffer()->Bind();
@@ -699,10 +697,9 @@ namespace sh::render {
 					viewport.maxDepth = 1.0f;
 					vkCmdSetViewport(buffer, 0, 1, &viewport);
 
-					while (!drawQueue.empty())
+					for (auto iDrawable : drawables)
 					{
-						VulkanDrawable* drawable = static_cast<VulkanDrawable*>(drawQueue.front());
-						drawQueue.pop();
+						VulkanDrawable* drawable = static_cast<VulkanDrawable*>(iDrawable);
 
 						Mesh* mesh = drawable->GetMesh();
 						Material* mat = drawable->GetMaterial();
@@ -767,8 +764,8 @@ namespace sh::render {
 				viewport.maxDepth = 1.0f;
 				vkCmdSetViewport(buffer, 0, 1, &viewport);
 
-				for (auto& func : drawCalls)
-					func();
+				//for (auto& func : drawCalls)
+					//func();
 
 				vkCmdEndRenderPass(buffer);
 			}

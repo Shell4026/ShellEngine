@@ -164,6 +164,8 @@ int main(int arg, char* args[])
 	auto meshRenderer = obj->AddComponent<MeshRenderer>();
 	meshRenderer->SetMesh(*mesh2);
 	meshRenderer->SetMaterial(*mat2);
+	
+	obj->AddComponent<UniformTest>();
 
 	auto meshRenderer2 = obj2->AddComponent<MeshRenderer>();
 	meshRenderer2->SetMesh(*mesh);
@@ -172,24 +174,61 @@ int main(int arg, char* args[])
 	GameObject* cam = world.AddGameObject("Camera");
 	cam->transform->SetPosition(glm::vec3(2.f, 2.f, 2.f));
 	Camera* cameraComponent = cam->AddComponent<Camera>();
-	cameraComponent->renderTexture = sh::core::reflection::Cast<sh::render::RenderTexture>(renderTex);
+	//cameraComponent->renderTexture = sh::core::reflection::Cast<sh::render::RenderTexture>(renderTex);
 	
 	GameObject* cam2 = world.AddGameObject("Camera2");
 	cam2->transform->SetPosition(glm::vec3(-2.f, 2.f, -2.f));
-	cam2->AddComponent<Camera>()->renderTexture = sh::core::reflection::Cast<sh::render::RenderTexture>(renderTex);
-	cam2->GetComponent<Camera>()->SetDepth(-2);
+	//cam2->AddComponent<Camera>()->renderTexture = sh::core::reflection::Cast<sh::render::RenderTexture>(renderTex);
+	//cam2->GetComponent<Camera>()->SetDepth(-2);
 
 	world.Start();
 	world.SetMainCamera(cameraComponent);
 
-	ImGUI gui(window, renderer);
-	gui.Init();
+	//ImGUI gui(window, renderer);
+	//gui.Init();
 
-	sh::editor::EditorUI editorUi(world, gui);
+	//sh::editor::EditorUI editorUi(world, gui);
+
+	std::atomic<bool> gameThreadReady{ false };
+	std::atomic<bool> renderThreadReady{ true };
+	std::condition_variable cv;
+	std::mutex mu;
+
+	std::thread renderThread
+	{
+		[&]
+		{
+			while (window.IsOpen())
+			{
+				//gui.Update();
+				//editorUi.Render();
+				//gui.Render();
+				renderer.Render(window.GetDeltaTime());
+				if (gameThreadReady.load(std::memory_order::memory_order_acquire))
+				{
+					renderer.SyncGameThread();
+					gameThreadReady.store(false, std::memory_order::memory_order_release);
+					renderThreadReady.store(true, std::memory_order::memory_order_release);
+					cv.notify_one();
+				}
+				//gui.Render();
+			}
+		}
+	};
 
 	while (window.IsOpen())
 	{
 		window.ProcessFrame();
+		
+		if (renderThreadReady.load(std::memory_order_acquire) == false)
+		{
+			auto start = std::chrono::high_resolution_clock::now();
+			std::unique_lock<std::mutex> lock{ mu };
+			cv.wait(lock, [&renderThreadReady] {return renderThreadReady.load(std::memory_order_acquire); });
+			std::cout << std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count() << '\n';
+		}
+		renderThreadReady.store(false, std::memory_order::memory_order_release);
+
 		std::string deltaTime = std::to_string(window.GetDeltaTime());
 		deltaTime.erase(deltaTime.begin() + 5, deltaTime.end());
 		window.SetTitle("ShellEngine [DeltaTime:" + deltaTime + "ms]");
@@ -197,14 +236,16 @@ int main(int arg, char* args[])
 		while (window.PollEvent(e))
 		{
 			Input::Update(e);
-			gui.ProcessEvent(e);
+			//gui.ProcessEvent(e);
 
 			switch (e.type)
 			{
 			case sh::window::Event::EventType::Close:
-				gui.Clean();
+				//gui.Clean();
 				world.Clean();
 				window.Close();
+				if (renderThread.joinable())
+					renderThread.join();
 				renderer.Clean();
 				break;
 			case sh::window::Event::EventType::Resize:
@@ -216,7 +257,7 @@ int main(int arg, char* args[])
 				{
 					renderer.Pause(false);
 					renderer.SetViewport({ 150.f, 0.f }, { window.width - 150.f, window.height - 180 });
-					gui.Resize();
+					//gui.Resize();
 				}
 				break;
 			case sh::window::Event::EventType::MousePressed:
@@ -252,19 +293,12 @@ int main(int arg, char* args[])
 				break;
 			}
 		}
-		editorUi.Update();
+		//editorUi.Update();
 		world.Update(window.GetDeltaTime());
 
-		gui.Update();
-		editorUi.Render();
-		gui.Render();
-		renderer.Render(window.GetDeltaTime());
-
-		auto start = std::chrono::high_resolution_clock::now();
 		gc->Update();
-		auto end = std::chrono::high_resolution_clock::now();
-		auto time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-		std::cout << time << '\n';
+
+		gameThreadReady.store(true, std::memory_order::memory_order_release);
 	}
 	return 0;
 }

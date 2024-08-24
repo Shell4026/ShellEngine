@@ -11,26 +11,26 @@
 #include "Core/Reflection.hpp"
 
 #include <cstring>
+#include <utility>
 
 namespace sh::render
 {
 	VulkanDrawable::VulkanDrawable(VulkanRenderer& renderer) :
 		renderer(renderer), 
 		mat(nullptr), mesh(nullptr),
-		descriptorSet(nullptr), framebuffer(nullptr)
+		descriptorSet(), framebuffer(nullptr)
 	{
 	}
 	VulkanDrawable::VulkanDrawable(VulkanDrawable&& other) noexcept :
 		renderer(other.renderer),
 		mat(other.mat), mesh(other.mesh),
 		pipeline(std::move(other.pipeline)),
-		descriptorSet(other.descriptorSet),
+		descriptorSet(std::move(other.descriptorSet)),
 		uniformBuffers(std::move(other.uniformBuffers)), textures(std::move(other.textures)),
 		framebuffer(other.framebuffer)
 	{
 		other.mat = nullptr;
 		other.mesh = nullptr;
-		other.descriptorSet = nullptr;
 		other.framebuffer = nullptr;
 	}
 
@@ -41,14 +41,17 @@ namespace sh::render
 
 	void VulkanDrawable::Clean()
 	{
-		uniformBuffers.clear();
+		uniformBuffers[GAME_THREAD].clear();
+		uniformBuffers[RENDER_THREAD].clear();
+
 		pipeline.reset();
 	}
 
 	void VulkanDrawable::CreateDescriptorSet()
 	{
 		VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
-		descriptorSet = renderer.GetDescriptorPool().AllocateDescriptorSet(shader->GetDescriptorSetLayout(), 1);
+		descriptorSet[GAME_THREAD] = renderer.GetDescriptorPool().AllocateDescriptorSet(shader->GetDescriptorSetLayout(), 1);
+		descriptorSet[RENDER_THREAD] = renderer.GetDescriptorPool().AllocateDescriptorSet(shader->GetDescriptorSetLayout(), 1);
 	}
 
 	void VulkanDrawable::Build(Mesh* mesh, Material* mat)
@@ -67,7 +70,6 @@ namespace sh::render
 			vkFrameBuffer = static_cast<const impl::VulkanFramebuffer*>(framebuffer);
 
 		pipeline = std::make_unique<impl::VulkanPipeline>(renderer.GetDevice(), vkFrameBuffer->GetRenderPass());
-
 
 		auto& bindings = static_cast<VulkanVertexBuffer*>(mesh->GetVertexBuffer())->bindingDescriptions;
 		auto& attrs = static_cast<VulkanVertexBuffer*>(mesh->GetVertexBuffer())->attribDescriptions;
@@ -108,15 +110,18 @@ namespace sh::render
 		{
 			size_t size = uniform.second.back().offset + uniform.second.back().size;
 
-			impl::VulkanBuffer buffer{ renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() };
-			auto result = buffer.Create(size,
-				VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-				VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
-				VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-				true);
-			assert(result == VkResult::VK_SUCCESS);
+			for (int i = 0; i < 2; ++i)
+			{
+				impl::VulkanBuffer buffer{ renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() };
+				auto result = buffer.Create(size,
+					VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+					VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
+					VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+					true);
+				assert(result == VkResult::VK_SUCCESS);
 
-			uniformBuffers.insert({ uniform.first, std::move(buffer) });
+				uniformBuffers[i].insert({ uniform.first, std::move(buffer) });
+			}
 		}
 		for (auto& uniform : shader->samplerFragmentUniforms)
 		{
@@ -129,45 +134,48 @@ namespace sh::render
 
 		CreateDescriptorSet();
 
-		for (auto& buffer : uniformBuffers)
+		for (int i = 0; i < 2; ++i)
 		{
-			VkDescriptorBufferInfo bufferInfo{};
-			bufferInfo.buffer = buffer.second.GetBuffer();
-			bufferInfo.offset = 0;
-			bufferInfo.range = buffer.second.GetSize();
+			for (auto& buffer : uniformBuffers[i])
+			{
+				VkDescriptorBufferInfo bufferInfo{};
+				bufferInfo.buffer = buffer.second.GetBuffer();
+				bufferInfo.offset = 0;
+				bufferInfo.range = buffer.second.GetSize();
 
-			VkWriteDescriptorSet descriptorWrite{};
-			descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrite.dstSet = descriptorSet;
-			descriptorWrite.dstBinding = buffer.first;
-			descriptorWrite.dstArrayElement = 0;
-			descriptorWrite.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			descriptorWrite.descriptorCount = 1;
-			descriptorWrite.pBufferInfo = &bufferInfo;
-			descriptorWrite.pImageInfo = nullptr;
-			descriptorWrite.pTexelBufferView = nullptr;
+				VkWriteDescriptorSet descriptorWrite{};
+				descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				descriptorWrite.dstSet = descriptorSet[i];
+				descriptorWrite.dstBinding = buffer.first;
+				descriptorWrite.dstArrayElement = 0;
+				descriptorWrite.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+				descriptorWrite.descriptorCount = 1;
+				descriptorWrite.pBufferInfo = &bufferInfo;
+				descriptorWrite.pImageInfo = nullptr;
+				descriptorWrite.pTexelBufferView = nullptr;
 
-			vkUpdateDescriptorSets(renderer.GetDevice(), 1, &descriptorWrite, 0, nullptr);
-		}
-		for (auto& tex : textures)
-		{
-			VkDescriptorImageInfo  imgInfo{};
-			imgInfo.imageLayout = VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			imgInfo.imageView = static_cast<VulkanTextureBuffer*>(tex.second->GetBuffer())->GetImageBuffer()->GetImageView();
-			imgInfo.sampler = static_cast<VulkanTextureBuffer*>(tex.second->GetBuffer())->GetImageBuffer()->GetSampler();
+				vkUpdateDescriptorSets(renderer.GetDevice(), 1, &descriptorWrite, 0, nullptr);
+			}
+			for (auto& tex : textures)
+			{
+				VkDescriptorImageInfo  imgInfo{};
+				imgInfo.imageLayout = VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+				imgInfo.imageView = static_cast<VulkanTextureBuffer*>(tex.second->GetBuffer())->GetImageBuffer()->GetImageView();
+				imgInfo.sampler = static_cast<VulkanTextureBuffer*>(tex.second->GetBuffer())->GetImageBuffer()->GetSampler();
 
-			VkWriteDescriptorSet descriptorWrite{};
-			descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrite.dstSet = descriptorSet;
-			descriptorWrite.dstBinding = tex.first;
-			descriptorWrite.dstArrayElement = 0;
-			descriptorWrite.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			descriptorWrite.descriptorCount = 1;
-			descriptorWrite.pBufferInfo = nullptr;
-			descriptorWrite.pImageInfo = &imgInfo;
-			descriptorWrite.pTexelBufferView = nullptr;
+				VkWriteDescriptorSet descriptorWrite{};
+				descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				descriptorWrite.dstSet = descriptorSet[i];
+				descriptorWrite.dstBinding = tex.first;
+				descriptorWrite.dstArrayElement = 0;
+				descriptorWrite.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+				descriptorWrite.descriptorCount = 1;
+				descriptorWrite.pBufferInfo = nullptr;
+				descriptorWrite.pImageInfo = &imgInfo;
+				descriptorWrite.pTexelBufferView = nullptr;
 
-			vkUpdateDescriptorSets(renderer.GetDevice(), 1, &descriptorWrite, 0, nullptr);
+				vkUpdateDescriptorSets(renderer.GetDevice(), 1, &descriptorWrite, 0, nullptr);
+			}
 		}
 
 		auto result = pipeline->
@@ -180,8 +188,8 @@ namespace sh::render
 
 	void VulkanDrawable::SetUniformData(uint32_t binding, const void* data)
 	{
-		auto it = uniformBuffers.find(binding);
-		if (it == uniformBuffers.end())
+		auto it = uniformBuffers[GAME_THREAD].find(binding);
+		if (it == uniformBuffers[GAME_THREAD].end())
 			return;
 		
 		it->second.SetData(data);
@@ -207,7 +215,7 @@ namespace sh::render
 	}
 	auto VulkanDrawable::GetDescriptorSet() const -> VkDescriptorSet
 	{
-		return descriptorSet;
+		return descriptorSet[RENDER_THREAD];
 	}
 
 	void VulkanDrawable::SetFramebuffer(Framebuffer& framebuffer)
@@ -217,5 +225,11 @@ namespace sh::render
 	auto VulkanDrawable::GetFramebuffer() const -> const Framebuffer*
 	{
 		return framebuffer;
+	}
+
+	void VulkanDrawable::SyncGameThread()
+	{
+		std::swap(descriptorSet[GAME_THREAD], descriptorSet[RENDER_THREAD]);
+		std::swap(uniformBuffers[GAME_THREAD], uniformBuffers[RENDER_THREAD]);
 	}
 }

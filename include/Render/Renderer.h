@@ -6,6 +6,7 @@
 
 #include "glm/vec2.hpp"
 
+#include <array>
 #include <map>
 #include <queue>
 #include <set>
@@ -34,14 +35,20 @@ namespace sh::render {
 		sh::window::Window* window;
 		uint32_t nextCameraId;
 	protected:
+		static constexpr int GAME_THREAD = 0;
+		static constexpr int RENDER_THREAD = 1;
+
 		std::queue<CameraHandle> emptyHandle;
+		//todo
 		std::vector<const Camera*> camHandles;
-		std::map<Camera, std::queue<IDrawable*>> drawList;
+		std::array<std::map<Camera, std::vector<IDrawable*>>, 2> drawList;
 
 		glm::vec2 viewportStart;
 		glm::vec2 viewportEnd;
 
 		CameraHandle mainCamera;
+
+		std::mutex drawListMutex;
 
 		bool bPause;
 	public:
@@ -69,6 +76,10 @@ namespace sh::render {
 		SH_RENDER_API auto GetViewportEnd() const -> const glm::vec2&;
 
 		SH_RENDER_API void ClearDrawList();
+		/// @brief [게임 스레드 전용] 드로우 객체를 큐에 집어 넣는다.
+		/// @param drawable 드로우 객체 포인터
+		/// @param camHandle 카메라 핸들
+		/// @return 
 		SH_RENDER_API void PushDrawAble(IDrawable* drawable, CameraHandle camHandle = 0);
 
 		SH_RENDER_API auto GetWindow() -> sh::window::Window&;
@@ -77,5 +88,9 @@ namespace sh::render {
 		SH_RENDER_API void DeleteCamera(CameraHandle cam);
 		SH_RENDER_API void SetMainCamera(CameraHandle cam);
 		SH_RENDER_API void SetCameraDepth(CameraHandle, int depth);
+
+		/// @brief 메인 스레드와 동기화 하는 함수.
+		/// @return 
+		SH_RENDER_API void SyncGameThread();
 	};
 }

@@ -254,6 +254,7 @@ namespace sh::editor
 			}
 		}
 	}
+
 	void EditorUI::Render()
 	{
 		if (!imgui.IsInit())
