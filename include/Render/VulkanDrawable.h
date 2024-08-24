@@ -29,7 +29,7 @@ namespace sh::render
 		VkDescriptorSet descriptorSet;
 
 		std::map<uint32_t, impl::VulkanBuffer> uniformBuffers;
-		PROPERTY(mesh)
+		PROPERTY(textures)
 		std::map<uint32_t, Texture*> textures;
 
 		Framebuffer* framebuffer;
