@@ -134,9 +134,9 @@ namespace sh::render
 
 		CreateDescriptorSet();
 
-		for (int i = 0; i < 2; ++i)
+		for (int threadIdx = 0; threadIdx < 2; ++threadIdx)
 		{
-			for (auto& buffer : uniformBuffers[i])
+			for (auto& buffer : uniformBuffers[threadIdx])
 			{
 				VkDescriptorBufferInfo bufferInfo{};
 				bufferInfo.buffer = buffer.second.GetBuffer();
@@ -145,7 +145,7 @@ namespace sh::render
 
 				VkWriteDescriptorSet descriptorWrite{};
 				descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-				descriptorWrite.dstSet = descriptorSet[i];
+				descriptorWrite.dstSet = descriptorSet[threadIdx];
 				descriptorWrite.dstBinding = buffer.first;
 				descriptorWrite.dstArrayElement = 0;
 				descriptorWrite.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -165,7 +165,7 @@ namespace sh::render
 
 				VkWriteDescriptorSet descriptorWrite{};
 				descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-				descriptorWrite.dstSet = descriptorSet[i];
+				descriptorWrite.dstSet = descriptorSet[threadIdx];
 				descriptorWrite.dstBinding = tex.first;
 				descriptorWrite.dstArrayElement = 0;
 				descriptorWrite.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -196,7 +196,32 @@ namespace sh::render
 	}
 	void VulkanDrawable::SetTextureData(uint32_t binding, Texture* tex)
 	{
-		textures[binding] = tex;
+		auto it = textures.find(binding);
+		if (it == textures.end())
+			return;
+
+		it->second = tex;
+
+		for (int threadIdx = 0; threadIdx < 2; ++threadIdx)
+		{
+			VkDescriptorImageInfo  imgInfo{};
+			imgInfo.imageLayout = VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			imgInfo.imageView = static_cast<VulkanTextureBuffer*>(it->second->GetBuffer())->GetImageBuffer()->GetImageView();
+			imgInfo.sampler = static_cast<VulkanTextureBuffer*>(it->second->GetBuffer())->GetImageBuffer()->GetSampler();
+
+			VkWriteDescriptorSet descriptorWrite{};
+			descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrite.dstSet = descriptorSet[threadIdx];
+			descriptorWrite.dstBinding = it->first;
+			descriptorWrite.dstArrayElement = 0;
+			descriptorWrite.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			descriptorWrite.descriptorCount = 1;
+			descriptorWrite.pBufferInfo = nullptr;
+			descriptorWrite.pImageInfo = &imgInfo;
+			descriptorWrite.pTexelBufferView = nullptr;
+
+			vkUpdateDescriptorSets(renderer.GetDevice(), 1, &descriptorWrite, 0, nullptr);
+		}
 	}
 
 	auto VulkanDrawable::GetMaterial() const -> Material*
