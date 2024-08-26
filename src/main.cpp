@@ -195,6 +195,9 @@ int main(int arg, char* args[])
 
 	while (window.IsOpen())
 	{
+		static float delta{ 0.f };
+		delta += window.GetDeltaTime();
+
 		std::string deltaTime = std::to_string(window.GetDeltaTime());
 		deltaTime.erase(deltaTime.begin() + 5, deltaTime.end());
 		window.SetTitle("ShellEngine [DeltaTime:" + deltaTime + "ms]");
@@ -268,11 +271,16 @@ int main(int arg, char* args[])
 			gameThread.SyncFinished();
 		}
 		
-		editorUi.Update();
-		gui.Update();
+		if (delta >= 144.f / 1000.f)
+		{
+			editorUi.Update();
+			gui.Update();
 
-		editorUi.Render();
-		gui.Render();
+			editorUi.Render();
+			gui.Render();
+			delta = 0.0f;
+		}
+		
 		renderer.Render(window.GetDeltaTime());
 
 		if (renderer.IsPause())

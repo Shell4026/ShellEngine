@@ -1,5 +1,7 @@
 ﻿#include "GameThread.h"
 #include "World.h"
+#include "Input.h"
+#include "ImGUI.h"
 
 #include "Core/GarbageCollection.h"
 
@@ -10,8 +12,7 @@
 namespace sh::game
 {
 	GameThread::GameThread() :
-		win(nullptr),
-		world(nullptr),
+		win(nullptr), world(nullptr),
 		thr(),
 		finish(false), syncFin(false),
 		stop(false)
@@ -23,6 +24,7 @@ namespace sh::game
 	{
 		this->win = &win;
 		this->world = &world;
+
 		this->thr = std::thread
 		(
 			[&]
