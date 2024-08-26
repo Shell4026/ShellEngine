@@ -6,11 +6,14 @@
 
 #include "glm/vec2.hpp"
 
+#include <array>
 #include <map>
 #include <queue>
 #include <set>
 #include <utility>
+#include <functional>
 #include <mutex>
+#include <atomic>
 namespace sh::render {
 	enum class RenderAPI
 	{
@@ -34,19 +37,25 @@ namespace sh::render {
 		sh::window::Window* window;
 		uint32_t nextCameraId;
 	protected:
+		static constexpr int GAME_THREAD = 0;
+		static constexpr int RENDER_THREAD = 1;
+
 		std::queue<CameraHandle> emptyHandle;
+		//todo
 		std::vector<const Camera*> camHandles;
-		std::map<Camera, std::queue<IDrawable*>> drawList;
+		std::array<std::map<Camera, std::vector<IDrawable*>>, 2> drawList;
+		std::vector<std::function<void()>> drawCalls;
 
 		glm::vec2 viewportStart;
 		glm::vec2 viewportEnd;
 
 		CameraHandle mainCamera;
 
-		bool bPause;
+		std::mutex drawListMutex;
+
+		std::atomic_bool bPause;
 	public:
 		const RenderAPI apiType;
-		const bool& isPause;
 	public:
 		SH_RENDER_API Renderer(RenderAPI api);
 		SH_RENDER_API virtual ~Renderer() = default;
@@ -69,7 +78,15 @@ namespace sh::render {
 		SH_RENDER_API auto GetViewportEnd() const -> const glm::vec2&;
 
 		SH_RENDER_API void ClearDrawList();
+		/// @brief [게임 스레드 전용] 드로우 객체를 큐에 집어 넣는다.
+		/// @param drawable 드로우 객체 포인터
+		/// @param camHandle 카메라 핸들
+		/// @return 
 		SH_RENDER_API void PushDrawAble(IDrawable* drawable, CameraHandle camHandle = 0);
+		/// @brief [렌더 스레드 전용] 별도의 드로우 콜을 추가한다.
+		/// @param func 드로우 콜 함수
+		/// @return 
+		SH_RENDER_API void AddDrawCall(const std::function<void()>& func);
 
 		SH_RENDER_API auto GetWindow() -> sh::window::Window&;
 
@@ -77,5 +94,13 @@ namespace sh::render {
 		SH_RENDER_API void DeleteCamera(CameraHandle cam);
 		SH_RENDER_API void SetMainCamera(CameraHandle cam);
 		SH_RENDER_API void SetCameraDepth(CameraHandle, int depth);
+
+		/// @brief 메인 스레드와 동기화 하는 함수.
+		/// @return 
+		SH_RENDER_API void SyncGameThread();
+
+		/// @brief 렌더러가 일시정지 상태인지 반환한다.
+		/// @return 일시정지 시 true 그 외 false
+		SH_RENDER_API auto IsPause() const -> bool;
 	};
 }

@@ -28,6 +28,7 @@
 #include "Game/Component/Camera.h"
 #include "Game/ComponentModule.h"
 #include "Game/ImGUI.h"
+#include "Game/GameThread.h"
 
 #include "Editor/EditorUI.h"
 #include "Editor/Project.h"
@@ -164,6 +165,8 @@ int main(int arg, char* args[])
 	auto meshRenderer = obj->AddComponent<MeshRenderer>();
 	meshRenderer->SetMesh(*mesh2);
 	meshRenderer->SetMaterial(*mat2);
+	
+	obj->AddComponent<UniformTest>();
 
 	auto meshRenderer2 = obj2->AddComponent<MeshRenderer>();
 	meshRenderer2->SetMesh(*mesh);
@@ -176,8 +179,8 @@ int main(int arg, char* args[])
 	
 	GameObject* cam2 = world.AddGameObject("Camera2");
 	cam2->transform->SetPosition(glm::vec3(-2.f, 2.f, -2.f));
-	cam2->AddComponent<Camera>()->renderTexture = sh::core::reflection::Cast<sh::render::RenderTexture>(renderTex);
-	cam2->GetComponent<Camera>()->SetDepth(-2);
+	//cam2->AddComponent<Camera>()->renderTexture = sh::core::reflection::Cast<sh::render::RenderTexture>(renderTex);
+	//cam2->GetComponent<Camera>()->SetDepth(-2);
 
 	world.Start();
 	world.SetMainCamera(cameraComponent);
@@ -187,12 +190,15 @@ int main(int arg, char* args[])
 
 	sh::editor::EditorUI editorUi(world, gui);
 
+	GameThread& gameThread = *GameThread::GetInstance();
+	gameThread.Init(window, world);
+
 	while (window.IsOpen())
 	{
-		window.ProcessFrame();
 		std::string deltaTime = std::to_string(window.GetDeltaTime());
 		deltaTime.erase(deltaTime.begin() + 5, deltaTime.end());
 		window.SetTitle("ShellEngine [DeltaTime:" + deltaTime + "ms]");
+
 		sh::window::Event e;
 		while (window.PollEvent(e))
 		{
@@ -202,6 +208,9 @@ int main(int arg, char* args[])
 			switch (e.type)
 			{
 			case sh::window::Event::EventType::Close:
+				gameThread.Stop();
+				if (gameThread.GetThread().joinable())
+					gameThread.GetThread().join();
 				gui.Clean();
 				world.Clean();
 				window.Close();
@@ -239,7 +248,7 @@ int main(int arg, char* args[])
 			case sh::window::Event::EventType::KeyDown:
 				if (e.keyType == sh::window::Event::KeyType::Enter)
 				{
-					world.meshes.DestroyResource("Mesh");
+					gameThread.AddTaskQueue([&] {world.meshes.DestroyResource("Mesh"); });
 				}
 				break;
 			case sh::window::Event::EventType::WindowFocus:
@@ -252,19 +261,18 @@ int main(int arg, char* args[])
 				break;
 			}
 		}
-		editorUi.Update();
-		world.Update(window.GetDeltaTime());
 
+		if (gameThread.IsTaskFinished())
+		{
+			renderer.SyncGameThread();
+		}
+		
+		editorUi.Update();
 		gui.Update();
+
 		editorUi.Render();
 		gui.Render();
 		renderer.Render(window.GetDeltaTime());
-
-		auto start = std::chrono::high_resolution_clock::now();
-		gc->Update();
-		auto end = std::chrono::high_resolution_clock::now();
-		auto time = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-		std::cout << time << '\n';
 	}
 	return 0;
 }

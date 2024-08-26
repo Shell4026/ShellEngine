@@ -15,7 +15,8 @@ namespace sh::render::impl {
 	class VulkanSurface : public core::INonCopyable
 	{
 	public:
-		struct SwapChainSupportDetails {
+		struct SwapChainSupportDetails 
+		{
 			VkSurfaceCapabilitiesKHR capabilities;
 			std::vector<VkPresentModeKHR> presentModes;
 			std::vector<VkSurfaceFormatKHR> formats;
@@ -36,6 +37,8 @@ namespace sh::render::impl {
 		VkExtent2D swapChainSize;
 
 		SwapChainSupportDetails details;
+
+		uint32_t swapChainImageCount;
 	private:
 		void QuerySwapChainDetails(VkPhysicalDevice gpu);
 
@@ -64,5 +67,6 @@ namespace sh::render::impl {
 		SH_RENDER_API auto GetSwapChainImageFormat() const -> const VkFormat;
 		SH_RENDER_API auto GetSwapChainImages() const -> const std::vector<VkImage>&;
 		SH_RENDER_API auto GetSwapChainImageViews() const -> const std::vector<VkImageView>&;
+		SH_RENDER_API auto GetSwapChainImageCount() const -> uint32_t;
 	};
 }

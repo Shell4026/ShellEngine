@@ -1,11 +1,11 @@
 ﻿#include "Renderer.h"
+#include "IDrawable.h"
 
 #include <cassert>
 namespace sh::render
 {
 	Renderer::Renderer(RenderAPI api) :
 		window(nullptr),
-		isPause(bPause),
 
 		apiType(api),
 		viewportStart(0.f), viewportEnd(100.f),
@@ -31,24 +31,32 @@ namespace sh::render
 	{
 		if (drawable == nullptr)
 			return;
-		if (drawList.empty()) //카메라가 없다.
+		if (drawList[GAME_THREAD].empty()) //카메라가 없다.
 			return;
 		if (cam >= camHandles.size())
 			return;
 		if (camHandles[cam] == nullptr)
 			return;
 
-		if (auto it = drawList.find(*camHandles[cam]); it != drawList.end())
+		drawListMutex.lock();
+		auto& map = drawList[GAME_THREAD];
+		if (auto it = map.find(*camHandles[cam]); it != map.end())
 		{
-			it->second.push(drawable);
+			it->second.push_back(drawable);
 		}
+		drawListMutex.unlock();
+	}
+
+	void Renderer::AddDrawCall(const std::function<void()>& func)
+	{
+		drawCalls.push_back(func);
 	}
 
 	void Renderer::ClearDrawList()
 	{
 		emptyHandle = std::queue<CameraHandle>{};
 		camHandles.clear();
-		drawList.clear();
+		drawList[GAME_THREAD].clear();
 		AddCamera(0);
 	}
 
@@ -67,7 +75,7 @@ namespace sh::render
 	}
 	void Renderer::Pause(bool b)
 	{
-		bPause = b;
+		bPause.store(b, std::memory_order::memory_order_release);
 	}
 	auto Renderer::AddCamera(int depth) -> CameraHandle
 	{
@@ -76,8 +84,13 @@ namespace sh::render
 		{
 			id = nextCameraId++;
 			Camera cam{ id, depth };
-			auto result = drawList.insert({cam , std::queue<IDrawable*>{} });
-			if (drawList.size() == 1)
+			auto result = drawList[GAME_THREAD].insert({ cam , std::vector<IDrawable*>{} });
+
+			drawListMutex.lock();
+			drawList[RENDER_THREAD].insert({ cam, std::vector<IDrawable*>{} });
+			drawListMutex.unlock();
+
+			if (drawList[GAME_THREAD].size() == 1)
 				mainCamera = id;
 
 			camHandles.push_back(&result.first->first);
@@ -87,8 +100,13 @@ namespace sh::render
 			id = emptyHandle.front();
 			emptyHandle.pop();
 			Camera cam{ id, depth };
-			auto result = drawList.insert({ cam , std::queue<IDrawable*>{} });
-			if (drawList.size() == 1)
+			auto result = drawList[GAME_THREAD].insert({ cam , std::vector<IDrawable*>{} });
+
+			drawListMutex.lock();
+			drawList[RENDER_THREAD].insert({ cam , std::vector<IDrawable*>{} });
+			drawListMutex.unlock();
+
+			if (drawList[GAME_THREAD].size() == 1)
 				mainCamera = id;
 
 			camHandles[id] = &result.first->first;
@@ -105,18 +123,22 @@ namespace sh::render
 
 		const Camera* camera = camHandles[cam];
 
-		auto it = drawList.find(*camera);
-		if (it == drawList.end())
+		auto it = drawList[GAME_THREAD].find(*camera);
+		if (it == drawList[GAME_THREAD].end())
 			return;
 
 		emptyHandle.push(it->first.id);
-		drawList.erase(it);
+		drawList[GAME_THREAD].erase(it);
+
+		drawListMutex.lock();
+		drawList[RENDER_THREAD].erase(*camera);
+		drawListMutex.unlock();
 
 		if (mainCamera == cam)
 		{
-			if (drawList.empty())
+			if (drawList[GAME_THREAD].empty())
 				return;
-			mainCamera = drawList.begin()->first.id;
+			mainCamera = drawList[GAME_THREAD].begin()->first.id;
 		}
 	}
 
@@ -132,16 +154,45 @@ namespace sh::render
 		if (camHandles[cam] == nullptr)
 			return;
 
-		auto it = drawList.find(*camHandles[cam]);
-		if (it == drawList.end())
+		auto it = drawList[GAME_THREAD].find(*camHandles[cam]);
+		if (it == drawList[GAME_THREAD].end())
 			return;
 		
-		auto queue = std::move(it->second);
+		auto& vec = it->second;
 
 		Camera tempCam{ it->first.id, depth };
 
-		drawList.erase(it);
-		auto result = drawList.insert({ tempCam, std::move(queue) });
+		drawList[GAME_THREAD].erase(it);
+		auto result = drawList[GAME_THREAD].insert({ tempCam, std::move(vec) });
+
+		drawListMutex.lock();
+		drawList[RENDER_THREAD].erase(*camHandles[cam]);
+		drawList[RENDER_THREAD].insert({ tempCam, std::vector<IDrawable*>{} });
+		drawListMutex.unlock();
+
 		camHandles[cam] = &result.first->first;
+	}
+
+	void Renderer::SyncGameThread()
+	{
+		drawListMutex.lock();
+		std::swap(drawList[GAME_THREAD], drawList[RENDER_THREAD]);
+		for (auto& pair : drawList[GAME_THREAD])
+		{
+			pair.second.clear();
+		}
+		drawListMutex.unlock();
+		for (auto& pair : drawList[RENDER_THREAD])
+		{
+			for (auto drawable : pair.second)
+			{
+				drawable->SyncGameThread();
+			}
+		}
+	}
+
+	auto Renderer::IsPause() const -> bool
+	{
+		return bPause.load(std::memory_order::memory_order_acquire);
 	}
 }

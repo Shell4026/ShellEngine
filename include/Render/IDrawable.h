@@ -28,5 +28,7 @@ namespace sh::render
 
 		SH_RENDER_API virtual void SetFramebuffer(Framebuffer& framebuffer) = 0;
 		SH_RENDER_API virtual auto GetFramebuffer() const -> const Framebuffer* = 0;
+
+		SH_RENDER_API virtual void SyncGameThread() = 0;
 	};
 }

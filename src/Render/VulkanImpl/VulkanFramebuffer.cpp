@@ -275,6 +275,9 @@ namespace sh::render::impl
 	{
 		VkFormat depthFormat = FindSupportedDepthFormat();
 		depthImg = std::make_unique<VulkanImageBuffer>(device, gpu, alloc);
+		if(width == 0 || height == 0)
+			return;
+
 		auto result = depthImg->Create(width, height, depthFormat,
 			VkImageUsageFlagBits::VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 			VkImageAspectFlagBits::VK_IMAGE_ASPECT_DEPTH_BIT);

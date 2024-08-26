@@ -68,12 +68,14 @@ namespace sh::game
 		ImGui_ImplVulkan_Init(&initInfo);
 		ImGui_ImplVulkan_CreateFontsTexture();
 
-		renderer.AddDrawCall(
-		[&]()
-		{
-			ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), renderer.GetCommandBuffer()); 
-		});
-
+		renderer.AddDrawCall
+		(
+			[&]()
+			{
+				if (ImGui::GetDrawData() != nullptr)
+					ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), renderer.GetCommandBuffer());
+			}
+		);
 		bInit = true;
 	}
 

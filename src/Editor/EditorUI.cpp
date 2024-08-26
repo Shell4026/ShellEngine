@@ -3,6 +3,7 @@
 
 #include "game/GameObject.h"
 #include "game/World.h"
+#include "Game/GameThread.h"
 
 #include "Render/VulkanTextureBuffer.h"
 #include "Render/RenderTexture.h"
@@ -208,7 +209,14 @@ namespace sh::editor
 				ImGui::SetNextItemWidth(-FLT_MIN);
 				if (ImGui::ListBox("##Components", &current, items.data(), items.size()))
 				{
-					obj->AddComponent(components.at(items[current])->Create());
+					std::string name = items[current];
+					game::GameThread::GetInstance()->AddTaskQueue
+					([obj, name]
+						{
+							auto& components = obj->world.componentModule.GetComponents();
+							obj->AddComponent(components.at(name)->Create());
+						}
+					);
 					bAddComponent = false;
 				}
 				
@@ -254,6 +262,7 @@ namespace sh::editor
 			}
 		}
 	}
+
 	void EditorUI::Render()
 	{
 		if (!imgui.IsInit())

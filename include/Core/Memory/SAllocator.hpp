@@ -19,10 +19,8 @@ namespace sh::core::memory
 	private:
 		using Super = MemoryPool<T, size>;
 
-#if defined(_WIN32)
 		SAllocator* copyAllocator = nullptr;
 		std::allocator<T>* rebindAllocator = nullptr;
-#endif
 	public:
 		using size_type = std::size_t ;
 		using difference_type = std::ptrdiff_t ;
@@ -38,7 +36,6 @@ namespace sh::core::memory
 			typedef SAllocator<U, size> other;
 		};
 	public:
-#if defined(_WIN32)
 		SAllocator() = default;
 
 		SAllocator(SAllocator& allocator) :
@@ -57,17 +54,14 @@ namespace sh::core::memory
 		{
 			delete rebindAllocator;
 		}
-#endif
 
 		auto allocate(size_type n, const void* hint = 0) -> pointer
 		{
-#if defined(_WIN32)
 			if (copyAllocator)
 				return copyAllocator->allocate(n, hint);
 
 			if (rebindAllocator)
 				return rebindAllocator->allocate(n, hint);
-#endif
 
 			if (n != 1 || hint)
 				throw std::bad_alloc();
@@ -77,19 +71,17 @@ namespace sh::core::memory
 
 		void deallocate(pointer p, size_type n)
 		{
-#if defined(_WIN32)
-			if (copyAllocator) 
+			if (copyAllocator)
 			{
 				copyAllocator->deallocate(p, n);
 				return;
 			}
 
-			if (rebindAllocator) 
+			if (rebindAllocator)
 			{
 				rebindAllocator->deallocate(p, n);
 				return;
 			}
-#endif
 
 			Super::DeAllocate(p);
 		}
