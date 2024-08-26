@@ -71,8 +71,6 @@ namespace sh::render {
 
 		VmaAllocator allocator;
 
-		std::vector<std::function<void()>> drawCalls;
-
 		bool isInit : 1;
 		bool bFindValidationLayer : 1;
 		bool bEnableValidationLayers : 1;
@@ -120,9 +118,9 @@ namespace sh::render {
 
 		SH_RENDER_API void WaitForCurrentFrame();
 
-		SH_RENDER_API void AddDrawCall(const std::function<void()>& func);
-
 		SH_RENDER_API void SetViewport(const glm::vec2& start, const glm::vec2& end) override;
+
+		SH_RENDER_API void SurfaceReady();
 
 		SH_RENDER_API auto GetInstance() const -> VkInstance;
 		SH_RENDER_API auto GetDevice() const -> VkDevice;

@@ -100,7 +100,7 @@ namespace sh::game
 			return;
 
 		sh::render::Renderer* renderer = &gameObject->world.renderer;
-		if (renderer->isPause)
+		if (renderer->IsPause())
 			return;
 
 		for (auto cam : gameObject->world.GetCameras())

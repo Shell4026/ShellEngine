@@ -28,6 +28,7 @@
 #include "Game/Component/Camera.h"
 #include "Game/ComponentModule.h"
 #include "Game/ImGUI.h"
+#include "Game/GameThread.h"
 
 #include "Editor/EditorUI.h"
 #include "Editor/Project.h"
@@ -174,7 +175,7 @@ int main(int arg, char* args[])
 	GameObject* cam = world.AddGameObject("Camera");
 	cam->transform->SetPosition(glm::vec3(2.f, 2.f, 2.f));
 	Camera* cameraComponent = cam->AddComponent<Camera>();
-	//cameraComponent->renderTexture = sh::core::reflection::Cast<sh::render::RenderTexture>(renderTex);
+	cameraComponent->renderTexture = sh::core::reflection::Cast<sh::render::RenderTexture>(renderTex);
 	
 	GameObject* cam2 = world.AddGameObject("Camera2");
 	cam2->transform->SetPosition(glm::vec3(-2.f, 2.f, -2.f));
@@ -184,68 +185,35 @@ int main(int arg, char* args[])
 	world.Start();
 	world.SetMainCamera(cameraComponent);
 
-	//ImGUI gui(window, renderer);
-	//gui.Init();
+	ImGUI gui(window, renderer);
+	gui.Init();
 
-	//sh::editor::EditorUI editorUi(world, gui);
+	sh::editor::EditorUI editorUi(world, gui);
 
-	std::atomic<bool> gameThreadReady{ false };
-	std::atomic<bool> renderThreadReady{ true };
-	std::condition_variable cv;
-	std::mutex mu;
-
-	std::thread renderThread
-	{
-		[&]
-		{
-			while (window.IsOpen())
-			{
-				//gui.Update();
-				//editorUi.Render();
-				//gui.Render();
-				renderer.Render(window.GetDeltaTime());
-				if (gameThreadReady.load(std::memory_order::memory_order_acquire))
-				{
-					renderer.SyncGameThread();
-					gameThreadReady.store(false, std::memory_order::memory_order_release);
-					renderThreadReady.store(true, std::memory_order::memory_order_release);
-					cv.notify_one();
-				}
-				//gui.Render();
-			}
-		}
-	};
+	GameThread& gameThread = *GameThread::GetInstance();
+	gameThread.Init(window, world);
 
 	while (window.IsOpen())
 	{
-		window.ProcessFrame();
-		
-		if (renderThreadReady.load(std::memory_order_acquire) == false)
-		{
-			auto start = std::chrono::high_resolution_clock::now();
-			std::unique_lock<std::mutex> lock{ mu };
-			cv.wait(lock, [&renderThreadReady] {return renderThreadReady.load(std::memory_order_acquire); });
-			std::cout << std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now() - start).count() << '\n';
-		}
-		renderThreadReady.store(false, std::memory_order::memory_order_release);
-
 		std::string deltaTime = std::to_string(window.GetDeltaTime());
 		deltaTime.erase(deltaTime.begin() + 5, deltaTime.end());
 		window.SetTitle("ShellEngine [DeltaTime:" + deltaTime + "ms]");
+
 		sh::window::Event e;
 		while (window.PollEvent(e))
 		{
 			Input::Update(e);
-			//gui.ProcessEvent(e);
+			gui.ProcessEvent(e);
 
 			switch (e.type)
 			{
 			case sh::window::Event::EventType::Close:
-				//gui.Clean();
+				gameThread.Stop();
+				if (gameThread.GetThread().joinable())
+					gameThread.GetThread().join();
+				gui.Clean();
 				world.Clean();
 				window.Close();
-				if (renderThread.joinable())
-					renderThread.join();
 				renderer.Clean();
 				break;
 			case sh::window::Event::EventType::Resize:
@@ -257,7 +225,7 @@ int main(int arg, char* args[])
 				{
 					renderer.Pause(false);
 					renderer.SetViewport({ 150.f, 0.f }, { window.width - 150.f, window.height - 180 });
-					//gui.Resize();
+					gui.Resize();
 				}
 				break;
 			case sh::window::Event::EventType::MousePressed:
@@ -280,7 +248,7 @@ int main(int arg, char* args[])
 			case sh::window::Event::EventType::KeyDown:
 				if (e.keyType == sh::window::Event::KeyType::Enter)
 				{
-					world.meshes.DestroyResource("Mesh");
+					gameThread.AddTaskQueue([&] {world.meshes.DestroyResource("Mesh"); });
 				}
 				break;
 			case sh::window::Event::EventType::WindowFocus:
@@ -293,12 +261,18 @@ int main(int arg, char* args[])
 				break;
 			}
 		}
-		//editorUi.Update();
-		world.Update(window.GetDeltaTime());
 
-		gc->Update();
+		if (gameThread.IsTaskFinished())
+		{
+			renderer.SyncGameThread();
+		}
+		
+		editorUi.Update();
+		gui.Update();
 
-		gameThreadReady.store(true, std::memory_order::memory_order_release);
+		editorUi.Render();
+		gui.Render();
+		renderer.Render(window.GetDeltaTime());
 	}
 	return 0;
 }

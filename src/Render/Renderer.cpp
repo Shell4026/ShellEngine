@@ -6,7 +6,6 @@ namespace sh::render
 {
 	Renderer::Renderer(RenderAPI api) :
 		window(nullptr),
-		isPause(bPause),
 
 		apiType(api),
 		viewportStart(0.f), viewportEnd(100.f),
@@ -39,11 +38,18 @@ namespace sh::render
 		if (camHandles[cam] == nullptr)
 			return;
 
+		drawListMutex.lock();
 		auto& map = drawList[GAME_THREAD];
 		if (auto it = map.find(*camHandles[cam]); it != map.end())
 		{
 			it->second.push_back(drawable);
 		}
+		drawListMutex.unlock();
+	}
+
+	void Renderer::AddDrawCall(const std::function<void()>& func)
+	{
+		drawCalls.push_back(func);
 	}
 
 	void Renderer::ClearDrawList()
@@ -69,7 +75,7 @@ namespace sh::render
 	}
 	void Renderer::Pause(bool b)
 	{
-		bPause = b;
+		bPause.store(b, std::memory_order::memory_order_release);
 	}
 	auto Renderer::AddCamera(int depth) -> CameraHandle
 	{
@@ -169,11 +175,13 @@ namespace sh::render
 
 	void Renderer::SyncGameThread()
 	{
+		drawListMutex.lock();
 		std::swap(drawList[GAME_THREAD], drawList[RENDER_THREAD]);
 		for (auto& pair : drawList[GAME_THREAD])
 		{
 			pair.second.clear();
 		}
+		drawListMutex.unlock();
 		for (auto& pair : drawList[RENDER_THREAD])
 		{
 			for (auto drawable : pair.second)
@@ -181,5 +189,10 @@ namespace sh::render
 				drawable->SyncGameThread();
 			}
 		}
+	}
+
+	auto Renderer::IsPause() const -> bool
+	{
+		return bPause.load(std::memory_order::memory_order_acquire);
 	}
 }

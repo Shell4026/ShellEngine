@@ -11,7 +11,9 @@
 #include <queue>
 #include <set>
 #include <utility>
+#include <functional>
 #include <mutex>
+#include <atomic>
 namespace sh::render {
 	enum class RenderAPI
 	{
@@ -42,6 +44,7 @@ namespace sh::render {
 		//todo
 		std::vector<const Camera*> camHandles;
 		std::array<std::map<Camera, std::vector<IDrawable*>>, 2> drawList;
+		std::vector<std::function<void()>> drawCalls;
 
 		glm::vec2 viewportStart;
 		glm::vec2 viewportEnd;
@@ -50,10 +53,9 @@ namespace sh::render {
 
 		std::mutex drawListMutex;
 
-		bool bPause;
+		std::atomic_bool bPause;
 	public:
 		const RenderAPI apiType;
-		const bool& isPause;
 	public:
 		SH_RENDER_API Renderer(RenderAPI api);
 		SH_RENDER_API virtual ~Renderer() = default;
@@ -81,6 +83,10 @@ namespace sh::render {
 		/// @param camHandle 카메라 핸들
 		/// @return 
 		SH_RENDER_API void PushDrawAble(IDrawable* drawable, CameraHandle camHandle = 0);
+		/// @brief [렌더 스레드 전용] 별도의 드로우 콜을 추가한다.
+		/// @param func 드로우 콜 함수
+		/// @return 
+		SH_RENDER_API void AddDrawCall(const std::function<void()>& func);
 
 		SH_RENDER_API auto GetWindow() -> sh::window::Window&;
 
@@ -92,5 +98,9 @@ namespace sh::render {
 		/// @brief 메인 스레드와 동기화 하는 함수.
 		/// @return 
 		SH_RENDER_API void SyncGameThread();
+
+		/// @brief 렌더러가 일시정지 상태인지 반환한다.
+		/// @return 일시정지 시 true 그 외 false
+		SH_RENDER_API auto IsPause() const -> bool;
 	};
 }

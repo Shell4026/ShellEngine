@@ -19,14 +19,16 @@ namespace sh::render::impl
 
 	VulkanSurface::VulkanSurface() :
 		window(nullptr), device(nullptr), instance(nullptr),
-		swapChain(nullptr), surface(nullptr), details()
+		swapChain(nullptr), surface(nullptr), details(), 
+		swapChainImageCount(1)
 	{
 	}
 
 	VulkanSurface::VulkanSurface(VulkanSurface&& other) noexcept :
 		window(other.window), device(other.device), instance(other.instance),
 		swapChain(other.swapChain), surface(other.surface),
-		swapChainImages(std::move(other.swapChainImages)), swapChainImageViews(std::move(other.swapChainImageViews))
+		swapChainImages(std::move(other.swapChainImages)), swapChainImageViews(std::move(other.swapChainImageViews)), 
+		swapChainImageCount(other.swapChainImageCount)
 	{
 		other.swapChain = nullptr;
 		other.surface = nullptr;
@@ -114,6 +116,7 @@ namespace sh::render::impl
 
 	auto VulkanSurface::SelectPresentMode() -> VkPresentModeKHR
 	{
+		
 		for (const auto& mode : details.presentModes) 
 		{
 			//삼중 버퍼링
@@ -142,14 +145,14 @@ namespace sh::render::impl
 		//스왑 체인에 쓸 이미지 갯수
 		//최소값이면 렌더링할 다른 이미지를 확보하기 전에 드라이버가 내부 작업을 완료할 때까지 기다려야 하는 경우가 있다. 따라서 +1
 		//버퍼링?
-		uint32_t imageCount = details.capabilities.minImageCount + 1;
-		if (details.capabilities.maxImageCount > 0 && imageCount > details.capabilities.maxImageCount)
-			imageCount = details.capabilities.maxImageCount;
+		swapChainImageCount = details.capabilities.minImageCount + 1;
+		if (details.capabilities.maxImageCount > 0 && swapChainImageCount > details.capabilities.maxImageCount)
+			swapChainImageCount = details.capabilities.maxImageCount;
 		
 		VkSwapchainCreateInfoKHR info{};
 		info.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
 		info.surface = surface;
-		info.minImageCount = imageCount;
+		info.minImageCount = swapChainImageCount;
 		info.imageFormat = swapChainImageFormat;
 		info.imageColorSpace = surfaceFormat.colorSpace;
 		info.imageExtent = swapChainSize;
@@ -180,18 +183,19 @@ namespace sh::render::impl
 		assert(result == VkResult::VK_SUCCESS);
 		if (result) return false;
 
-		result = vkGetSwapchainImagesKHR(device, swapChain, &imageCount, nullptr);
+		result = vkGetSwapchainImagesKHR(device, swapChain, &swapChainImageCount, nullptr);
 		assert(result == VkResult::VK_SUCCESS);
 		if (result) return false;
 
-		swapChainImages.resize(imageCount);
+		swapChainImages.resize(swapChainImageCount);
 
-		result = vkGetSwapchainImagesKHR(device, swapChain, &imageCount, swapChainImages.data());
+		result = vkGetSwapchainImagesKHR(device, swapChain, &swapChainImageCount, swapChainImages.data());
 		assert(result == VkResult::VK_SUCCESS);
 		if (result) return false;
 
-		swapChainImageViews.resize(imageCount);
-		for (size_t i = 0; i < swapChainImages.size(); i++) {
+		swapChainImageViews.resize(swapChainImageCount);
+		for (size_t i = 0; i < swapChainImages.size(); i++) 
+		{
 			VkImageViewCreateInfo createInfo{};
 			createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
 			createInfo.image = swapChainImages[i];
@@ -275,5 +279,9 @@ namespace sh::render::impl
 	auto VulkanSurface::GetSwapChainImageViews() const -> const std::vector<VkImageView>&
 	{
 		return swapChainImageViews;
+	}
+	auto VulkanSurface::GetSwapChainImageCount() const -> uint32_t
+	{
+		return swapChainImageCount;
 	}
 }

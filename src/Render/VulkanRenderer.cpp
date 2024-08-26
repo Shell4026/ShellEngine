@@ -561,14 +561,9 @@ namespace sh::render {
 		vkWaitForFences(device, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
 	}
 
-	void VulkanRenderer::AddDrawCall(const std::function<void()>& func)
-	{
-		drawCalls.push_back(func);
-	}
-
 	void VulkanRenderer::Render(float deltaTime)
 	{
-		if (!isInit || bPause)
+		if (!isInit || bPause.load(std::memory_order::memory_order_acquire))
 			return;
 		if (drawList[RENDER_THREAD].empty())
 			return;
@@ -586,7 +581,15 @@ namespace sh::render {
 		VkResult result = vkAcquireNextImageKHR(device, surface->GetSwapChain(), UINT64_MAX, imageAvailableSemaphore, nullptr, &imgIdx);
 		if (result == VkResult::VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
 		{
+			if (IsPause())
+				return;
+			std::cout << "resizing\n";
 			Resizing();
+			return;
+		}
+		if (result == VkResult::VK_ERROR_SURFACE_LOST_KHR)
+		{
+			//Resizing();
 			return;
 		}
 		vkResetFences(device, 1, &inFlightFence);
@@ -704,8 +707,6 @@ namespace sh::render {
 						Mesh* mesh = drawable->GetMesh();
 						Material* mat = drawable->GetMaterial();
 
-						assert(mesh);
-						assert(mat);
 						if (!sh::core::IsValid(mesh) || !sh::core::IsValid(mat)) continue;
 
 						VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
@@ -764,8 +765,8 @@ namespace sh::render {
 				viewport.maxDepth = 1.0f;
 				vkCmdSetViewport(buffer, 0, 1, &viewport);
 
-				//for (auto& func : drawCalls)
-					//func();
+				for (auto& func : drawCalls)
+					func();
 
 				vkCmdEndRenderPass(buffer);
 			}
@@ -784,10 +785,15 @@ namespace sh::render {
 		vkQueuePresentKHR(surfaceQueue, &presentInfo);
 	}
 
-	SH_RENDER_API void VulkanRenderer::SetViewport(const glm::vec2& start, const glm::vec2& end)
+	void VulkanRenderer::SetViewport(const glm::vec2& start, const glm::vec2& end)
 	{
 		viewportStart = start;
 		viewportEnd = end;
+	}
+
+	void VulkanRenderer::SurfaceReady()
+	{
+		
 	}
 
 	auto VulkanRenderer::GetInstance() const -> VkInstance
