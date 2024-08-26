@@ -179,8 +179,8 @@ int main(int arg, char* args[])
 	
 	GameObject* cam2 = world.AddGameObject("Camera2");
 	cam2->transform->SetPosition(glm::vec3(-2.f, 2.f, -2.f));
-	//cam2->AddComponent<Camera>()->renderTexture = sh::core::reflection::Cast<sh::render::RenderTexture>(renderTex);
-	//cam2->GetComponent<Camera>()->SetDepth(-2);
+	cam2->AddComponent<Camera>()->renderTexture = sh::core::reflection::Cast<sh::render::RenderTexture>(renderTex);
+	cam2->GetComponent<Camera>()->SetDepth(-2);
 
 	world.Start();
 	world.SetMainCamera(cameraComponent);
@@ -265,6 +265,7 @@ int main(int arg, char* args[])
 		if (gameThread.IsTaskFinished())
 		{
 			renderer.SyncGameThread();
+			gameThread.SyncFinished();
 		}
 		
 		editorUi.Update();
@@ -273,6 +274,11 @@ int main(int arg, char* args[])
 		editorUi.Render();
 		gui.Render();
 		renderer.Render(window.GetDeltaTime());
+
+		if (renderer.IsPause())
+		{
+			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+		}
 	}
 	return 0;
 }

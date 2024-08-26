@@ -177,7 +177,14 @@ namespace sh::editor
 								ImGui::InputInt(("##Input_" + prop.first).c_str(), parameter, 0, 0, ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
 							else
 								if (ImGui::InputInt(("##Input_" + prop.first).c_str(), parameter))
-									component->OnPropertyChanged(prop.second);
+								{
+									GameThread::GetInstance()->AddTaskQueue
+									([&component, prop]
+										{
+											component->OnPropertyChanged(prop.second);
+										}
+									);
+								}
 						}
 						else if (type == core::reflection::GetTypeName<uint32_t>())
 						{

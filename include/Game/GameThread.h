@@ -8,6 +8,7 @@
 #include <thread>
 #include <atomic>
 #include <functional>
+#include <condition_variable>
 
 namespace sh::window
 {
@@ -28,9 +29,12 @@ namespace sh::game
 
 		std::thread thr;
 		std::atomic_bool finish;
+		std::mutex mu;
+		std::condition_variable cv;
 		core::LockFreeQueue<std::function<void()>> task;
 
 		bool stop;
+		bool syncFin;
 	protected:
 		SH_GAME_API GameThread();
 	public:
@@ -53,5 +57,9 @@ namespace sh::game
 		/// @brief [원자적] 작업 큐에 추가하여 월드가 업데이트 되기전에 수행한다.
 		/// @param func 수행 할 함수
 		SH_GAME_API void AddTaskQueue(const std::function<void()>& func);
+
+		/// @brief 동기화 작업을 완료 했다고 알리는 함수.
+		/// @return 
+		SH_GAME_API void SyncFinished();
 	};
 }//namespace

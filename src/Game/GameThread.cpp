@@ -13,7 +13,7 @@ namespace sh::game
 		win(nullptr),
 		world(nullptr),
 		thr(),
-		finish(false),
+		finish(false), syncFin(false),
 		stop(false)
 	{
 
@@ -44,6 +44,11 @@ namespace sh::game
 					gc.Update();
 
 					finish.store(true, std::memory_order::memory_order_release);
+
+					std::unique_lock<std::mutex> lock{ mu };
+					while(!syncFin && !stop)
+						cv.wait(lock, [&] {return syncFin || stop; });
+					syncFin = false;
 				}
 				fmt::print("[Stop] GameThread\n");
 			}
@@ -53,6 +58,7 @@ namespace sh::game
 	void GameThread::Stop()
 	{
 		stop = true;
+		cv.notify_all();
 	}
 
 	auto GameThread::GetThread() -> std::thread&
@@ -68,5 +74,13 @@ namespace sh::game
 	void GameThread::AddTaskQueue(const std::function<void()>& func)
 	{
 		task.Enqueue(func);
+	}
+
+	void GameThread::SyncFinished()
+	{
+		mu.lock();
+		syncFin = true;
+		mu.unlock();
+		cv.notify_all();
 	}
 }

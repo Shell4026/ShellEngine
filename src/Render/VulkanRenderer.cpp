@@ -567,9 +567,9 @@ namespace sh::render {
 			return;
 		if (drawList[RENDER_THREAD].empty())
 			return;
-		if (camHandles[mainCamera] == nullptr)
+		if (camHandles[RENDER_THREAD][mainCamera] == nullptr)
 			return;
-		if (drawList[RENDER_THREAD][*camHandles[mainCamera]].empty())
+		if (drawList[RENDER_THREAD][*camHandles[RENDER_THREAD][mainCamera]].empty())
 			return;
 		//std::cout << "Render Start\n";
 		//std::cout << "main: " << mainCamera << '\n';

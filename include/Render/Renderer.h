@@ -42,16 +42,15 @@ namespace sh::render {
 
 		std::queue<CameraHandle> emptyHandle;
 		//todo
-		std::vector<const Camera*> camHandles;
+		std::array<std::vector<const Camera*>, 2> camHandles;
 		std::array<std::map<Camera, std::vector<IDrawable*>>, 2> drawList;
+
 		std::vector<std::function<void()>> drawCalls;
 
 		glm::vec2 viewportStart;
 		glm::vec2 viewportEnd;
 
 		CameraHandle mainCamera;
-
-		std::mutex drawListMutex;
 
 		std::atomic_bool bPause;
 	public:
