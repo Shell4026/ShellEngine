@@ -193,9 +193,10 @@ int main(int arg, char* args[])
 	GameThread& gameThread = *GameThread::GetInstance();
 	gameThread.Init(window, world);
 
+	float delta = 0.f;
+
 	while (window.IsOpen())
 	{
-		static float delta{ 0.f };
 		delta += window.GetDeltaTime();
 
 		std::string deltaTime = std::to_string(window.GetDeltaTime());
@@ -234,11 +235,11 @@ int main(int arg, char* args[])
 			case sh::window::Event::EventType::MousePressed:
 				if (e.mouseType == sh::window::Event::MouseType::Left)
 				{
-					mat->SetTexture("tex", tex);
+					gameThread.AddTaskQueue([&] {mat->SetTexture("tex", tex); });
 				}
 				else if (e.mouseType == sh::window::Event::MouseType::Right)
 				{
-					mat->SetTexture("tex", tex2);
+					gameThread.AddTaskQueue([&] {mat->SetTexture("tex", tex2); });
 				}
 				else
 				{

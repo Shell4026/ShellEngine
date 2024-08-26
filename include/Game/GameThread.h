@@ -14,6 +14,10 @@ namespace sh::window
 {
 	class Window;
 }
+namespace sh::core
+{
+	class GarbageCollection;
+}
 namespace sh::game
 {
 	class World;
@@ -26,6 +30,8 @@ namespace sh::game
 
 		window::Window* win;
 		World* world;
+
+		core::GarbageCollection& gc;
 
 		std::thread thr;
 		std::atomic_bool finish;
@@ -58,7 +64,7 @@ namespace sh::game
 		/// @param func 수행 할 함수
 		SH_GAME_API void AddTaskQueue(const std::function<void()>& func);
 
-		/// @brief 동기화 작업을 완료 했다고 알리는 함수.
+		/// @brief 동기화 작업을 완료 했다고 알리는 함수. 가비지 컬렉터도 이 시점에 작동한다.
 		/// @return 
 		SH_GAME_API void SyncFinished();
 	};

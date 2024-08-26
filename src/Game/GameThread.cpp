@@ -12,7 +12,7 @@
 namespace sh::game
 {
 	GameThread::GameThread() :
-		win(nullptr), world(nullptr),
+		win(nullptr), world(nullptr), gc(*core::GarbageCollection::GetInstance()),
 		thr(),
 		finish(false), syncFin(false),
 		stop(false)
@@ -29,7 +29,6 @@ namespace sh::game
 		(
 			[&]
 			{
-				core::GarbageCollection& gc = *core::GarbageCollection::GetInstance();
 				fmt::print("[Start] GameThread\n");
 				while (!stop)
 				{
@@ -43,12 +42,10 @@ namespace sh::game
 					}
 					this->world->Update(this->win->GetDeltaTime());
 
-					gc.Update();
-
 					finish.store(true, std::memory_order::memory_order_release);
 
 					std::unique_lock<std::mutex> lock{ mu };
-					while(!syncFin && !stop)
+					while (!syncFin && !stop)
 						cv.wait(lock, [&] {return syncFin || stop; });
 					syncFin = false;
 				}
@@ -82,7 +79,9 @@ namespace sh::game
 	{
 		mu.lock();
 		syncFin = true;
+		gc.Update();
 		mu.unlock();
+
 		cv.notify_all();
 	}
 }
