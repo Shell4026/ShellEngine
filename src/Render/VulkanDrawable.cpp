@@ -202,26 +202,23 @@ namespace sh::render
 
 		it->second = tex;
 
-		for (int threadIdx = 0; threadIdx < 2; ++threadIdx)
-		{
-			VkDescriptorImageInfo  imgInfo{};
-			imgInfo.imageLayout = VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			imgInfo.imageView = static_cast<VulkanTextureBuffer*>(it->second->GetBuffer())->GetImageBuffer()->GetImageView();
-			imgInfo.sampler = static_cast<VulkanTextureBuffer*>(it->second->GetBuffer())->GetImageBuffer()->GetSampler();
+		VkDescriptorImageInfo  imgInfo{};
+		imgInfo.imageLayout = VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		imgInfo.imageView = static_cast<VulkanTextureBuffer*>(it->second->GetBuffer())->GetImageBuffer()->GetImageView();
+		imgInfo.sampler = static_cast<VulkanTextureBuffer*>(it->second->GetBuffer())->GetImageBuffer()->GetSampler();
 
-			VkWriteDescriptorSet descriptorWrite{};
-			descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-			descriptorWrite.dstSet = descriptorSet[threadIdx];
-			descriptorWrite.dstBinding = it->first;
-			descriptorWrite.dstArrayElement = 0;
-			descriptorWrite.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			descriptorWrite.descriptorCount = 1;
-			descriptorWrite.pBufferInfo = nullptr;
-			descriptorWrite.pImageInfo = &imgInfo;
-			descriptorWrite.pTexelBufferView = nullptr;
+		VkWriteDescriptorSet descriptorWrite{};
+		descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descriptorWrite.dstSet = descriptorSet[GAME_THREAD];
+		descriptorWrite.dstBinding = it->first;
+		descriptorWrite.dstArrayElement = 0;
+		descriptorWrite.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descriptorWrite.descriptorCount = 1;
+		descriptorWrite.pBufferInfo = nullptr;
+		descriptorWrite.pImageInfo = &imgInfo;
+		descriptorWrite.pTexelBufferView = nullptr;
 
-			vkUpdateDescriptorSets(renderer.GetDevice(), 1, &descriptorWrite, 0, nullptr);
-		}
+		vkUpdateDescriptorSets(renderer.GetDevice(), 1, &descriptorWrite, 0, nullptr);
 	}
 
 	auto VulkanDrawable::GetMaterial() const -> Material*
