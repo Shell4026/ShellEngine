@@ -64,10 +64,12 @@ namespace sh::game
 		if (!core::IsValid(camera))
 			return;
 
-		if (gameObject->world.renderer.apiType == sh::render::RenderAPI::Vulkan)
+		auto it = drawables.find(camera);
+		if (it == drawables.end())
 		{
+
 			render::VulkanRenderer& renderer = static_cast<render::VulkanRenderer&>(gameObject->world.renderer);
-			auto drawable = std::make_unique<sh::render::VulkanDrawable>(renderer);
+			std::unique_ptr<render::IDrawable> drawable = std::make_unique<sh::render::VulkanDrawable>(renderer);
 			gc->SetRootSet(drawable.get());
 
 			if (camera->renderTexture != nullptr)
@@ -75,6 +77,17 @@ namespace sh::game
 
 			drawable->Build(mesh, mat);
 			drawables.insert({ camera, std::move(drawable) });
+		}
+		else
+		{
+			it->second->Build(mesh, mat);
+		}
+	}
+	void MeshRenderer::RebuildDrawables()
+	{
+		for (auto cam : gameObject->world.GetCameras())
+		{
+			CreateDrawable(cam);
 		}
 	}
 
@@ -87,7 +100,13 @@ namespace sh::game
 
 	void MeshRenderer::Start()
 	{
-
+		for (auto cam : gameObject->world.GetCameras())
+		{
+			if (drawables.find(cam) == drawables.end())
+			{
+				CreateDrawable(cam);
+			}
+		}
 	}
 
 	void MeshRenderer::Update()
@@ -110,93 +129,93 @@ namespace sh::game
 				CreateDrawable(cam);
 			}
 		}
-		for (auto& pair : drawables)
+		//++it 필수
+		for (auto it = drawables.begin(); it != drawables.end();)
 		{
-			Camera* cam = pair.first;
-			auto& drawable = pair.second;
+			Camera* cam = it->first;
+			auto& drawable = it->second;
 			if (!sh::core::IsValid(cam))
 			{
-				drawables.erase(cam);
+				it = drawables.erase(it);
 				continue;
 			}
 			if (!cam->active)
+			{
+				++it;
 				continue;
-
+			}
 			if (cam->renderTexture != nullptr)
 			{
 				drawable->SetFramebuffer(*cam->renderTexture->GetFramebuffer());
 			}
-
+			
+			std::array<const render::Shader::UniformMap*, 2> uniforms{ &mat->GetShader()->vertexUniforms ,  &mat->GetShader()->fragmentUniforms };
 			//셰이더 유니폼 값 전달
-			for (auto& uniforms : mat->GetShader()->vertexUniforms)
+			for (int i = 0; i < 2; ++i)
 			{
-				size_t size = uniforms.second.back().offset + uniforms.second.back().size;
-				uniformCopyData.resize(size);
-				for (const auto& uniform : uniforms.second)
+				auto stage = render::IDrawable::Stage::Vertex;
+				if(i == 1)
+					stage = render::IDrawable::Stage::Fragment;
+				for (auto& uniformPair : *uniforms[i])
 				{
-					if (uniform.typeName == sh::core::reflection::GetTypeName<glm::mat4>())
+					size_t size = uniformPair.second.back().offset + uniformPair.second.back().size;
+					uniformCopyData.resize(size);
+					for (const auto& uniform : uniformPair.second)
 					{
-						if (uniform.name == "proj")
-							std::memcpy(uniformCopyData.data() + uniform.offset, &cam->GetProjMatrix()[0], sizeof(glm::mat4));
-						else if (uniform.name == "view")
-							std::memcpy(uniformCopyData.data() + uniform.offset, &cam->GetViewMatrix()[0], sizeof(glm::mat4));
-						else if (uniform.name == "model")
-							std::memcpy(uniformCopyData.data() + uniform.offset, &gameObject->transform->localToWorldMatrix[0], sizeof(glm::mat4));
-						else
+						if (uniform.typeName == sh::core::reflection::GetTypeName<glm::mat4>())
 						{
-							auto matrix = mat->GetMatrix(uniform.name);
-							if (matrix == nullptr)
-							{
-								glm::mat4 defaultMat{ 0.f };
-								std::memcpy(uniformCopyData.data() + uniform.offset, &defaultMat[0], sizeof(glm::mat4));
-							}
+							if (uniform.name == "proj")
+								std::memcpy(uniformCopyData.data() + uniform.offset, &cam->GetProjMatrix()[0], sizeof(glm::mat4));
+							else if (uniform.name == "view")
+								std::memcpy(uniformCopyData.data() + uniform.offset, &cam->GetViewMatrix()[0], sizeof(glm::mat4));
+							else if (uniform.name == "model")
+								std::memcpy(uniformCopyData.data() + uniform.offset, &gameObject->transform->localToWorldMatrix[0], sizeof(glm::mat4));
 							else
-								std::memcpy(uniformCopyData.data() + uniform.offset, &matrix[0], sizeof(glm::mat4));
+							{
+								auto matrix = mat->GetMatrix(uniform.name);
+								if (matrix == nullptr)
+								{
+									glm::mat4 defaultMat{ 0.f };
+									std::memcpy(uniformCopyData.data() + uniform.offset, &defaultMat[0], sizeof(glm::mat4));
+								}
+								else
+									std::memcpy(uniformCopyData.data() + uniform.offset, &matrix[0], sizeof(glm::mat4));
+							}
 						}
-					}
-					else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec4>())
-					{
-						auto vec = mat->GetVector(uniform.name);
-						if (vec == nullptr)
+						else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec4>())
 						{
-							glm::vec4 defaultVec{ 0.f };
-							std::memcpy(uniformCopyData.data() + uniform.offset, &defaultVec, sizeof(glm::vec4));
+							auto vec = mat->GetVector(uniform.name);
+							if (vec == nullptr)
+								SetUniformData(glm::vec4{ 0.f }, uniformCopyData, uniform.offset);
+							else
+								SetUniformData(*vec, uniformCopyData, uniform.offset);
 						}
-						else
-							std::memcpy(uniformCopyData.data() + uniform.offset, vec, sizeof(glm::vec4));
-					}
-					else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec3>())
-					{
-						auto vec = mat->GetVector(uniform.name);
-						if (vec == nullptr)
+						else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec3>())
 						{
-							glm::vec3 defaultVec{ 0.f };
-							std::memcpy(uniformCopyData.data() + uniform.offset, &defaultVec, sizeof(glm::vec3));
+							auto vec = mat->GetVector(uniform.name);
+							if (vec == nullptr)
+								SetUniformData(glm::vec3{ 0.f }, uniformCopyData, uniform.offset);
+							else
+								SetUniformData(glm::vec3{ *vec }, uniformCopyData, uniform.offset);
 						}
-						else
-							std::memcpy(uniformCopyData.data() + uniform.offset, vec, sizeof(glm::vec3));
+						else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec2>())
+						{
+							auto vec = mat->GetVector(uniform.name);
+							if (vec == nullptr)
+								SetUniformData(glm::vec2{ 0.f }, uniformCopyData, uniform.offset);
+							else
+								SetUniformData(glm::vec2{ *vec }, uniformCopyData, uniform.offset);
+						}
+						else if (uniform.typeName == sh::core::reflection::GetTypeName<float>())
+						{
+							float value = mat->GetFloat(uniform.name);
+							SetUniformData(value, uniformCopyData, uniform.offset);
+						}
 					}
 
-					else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec2>())
-					{
-						auto vec = mat->GetVector(uniform.name);
-						if (vec == nullptr)
-						{
-							glm::vec2 defaultVec{ 0.f };
-							std::memcpy(uniformCopyData.data() + uniform.offset, &defaultVec, sizeof(glm::vec2));
-						}
-						else
-							std::memcpy(uniformCopyData.data() + uniform.offset, vec, sizeof(glm::vec2));
-					}
-					else if (uniform.typeName == sh::core::reflection::GetTypeName<float>())
-					{
-						float value = mat->GetFloat(uniform.name);
-						std::memcpy(uniformCopyData.data() + uniform.offset, &value, sizeof(float));
-					}
-				}
-
-				drawable->SetUniformData(uniforms.first, uniformCopyData.data());
-			}
+					drawable->SetUniformData(uniformPair.first, uniformCopyData.data(), stage);
+				}//for uniformPair
+			}//for i
 			//텍스쳐
 			for (auto& sampler : mat->GetShader()->samplerFragmentUniforms)
 			{
@@ -206,6 +225,7 @@ namespace sh::game
 			}
 			//std::cout << "push: " << this << ' ' << "cam: " << cam->GetCameraHandle() << '\n';
 			gameObject->world.renderer.PushDrawAble(drawable.get(), cam->GetCameraHandle());
+			++it;
 		}
 	}
-}
+}//namespace

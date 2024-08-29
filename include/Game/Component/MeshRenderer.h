@@ -32,7 +32,15 @@ namespace sh::game
 
 		core::SVector<unsigned char> uniformCopyData;
 	private:
+		template <typename T>
+		void SetUniformData(const T& data, std::vector<unsigned char>& uniformData, size_t offset);
+	protected:
+		/// @brief Drawable을 생성하거나 이미 존재 시 갱신하는 함수.
+		/// @param camera 카메라 포인터
 		void CreateDrawable(Camera* camera);
+
+		/// @brief 모든 Drawable들을 갱신하는 함수.
+		void RebuildDrawables();
 	public:
 		SH_GAME_API MeshRenderer();
 		SH_GAME_API ~MeshRenderer();
@@ -47,4 +55,10 @@ namespace sh::game
 		SH_GAME_API void Start() override;
 		SH_GAME_API void Update() override;
 	};
+
+	template<typename T>
+	void MeshRenderer::SetUniformData(const T& data, std::vector<unsigned char>& uniformData, size_t offset)
+	{
+		std::memcpy(uniformData.data() + offset, &data, sizeof(T));
+	}
 }

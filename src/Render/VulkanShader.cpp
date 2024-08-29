@@ -122,6 +122,12 @@ namespace sh::render
 				VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
 				VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT);
 		}
+		for (auto& uniform : fragmentUniforms)
+		{
+			AddDescriptorBinding(uniform.first,
+				VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT);
+		}
 		for (auto& uniform : samplerFragmentUniforms)
 		{
 			AddDescriptorBinding(uniform.first,

@@ -61,6 +61,8 @@ namespace sh::render
 			SH_RENDER_API UniformData(const UniformData& other);
 			SH_RENDER_API UniformData(UniformData&& other) noexcept;
 		};
+
+		using UniformMap = std::map<uint32_t, std::vector<UniformData>>;
 	private:
 		std::vector<Data> attrs;
 		std::unordered_map<std::string, uint32_t> attridx;
@@ -80,6 +82,7 @@ namespace sh::render
 	public:
 		const std::vector<Data>& attributes;
 		const std::map<uint32_t, std::vector<UniformData>>& vertexUniforms;
+		const std::map<uint32_t, std::vector<UniformData>>& fragmentUniforms;
 		const std::map<uint32_t, UniformData>& samplerFragmentUniforms;
 	public:
 		SH_RENDER_API virtual ~Shader() = default;
@@ -126,11 +129,13 @@ namespace sh::render
 
 		return true;
 	}
-
-	//
-	//유니폼을 추가하는 함수
-	//반드시 셰이더의 유니폼과 같은 순서로 호출하여 넣을 것.
-	//
+	/// @brief 유니폼을 추가하는 함수
+	/// 
+	/// 반드시 셰이더의 유니폼과 같은 순서로 호출하여 넣을 것.
+	/// @tparam T 타입
+	/// @param name 이름
+	/// @param binding 바인딩 번호
+	/// @param stage 셰이더 스테이지
 	template<typename T>
 	inline void Shader::AddUniform(const std::string& name, uint32_t binding, ShaderStage stage)
 	{

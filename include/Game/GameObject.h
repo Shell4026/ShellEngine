@@ -57,8 +57,9 @@ namespace sh::game
 		auto AddComponent() -> std::enable_if_t<IsComponent<T>::value, T*>
 		{
 			components.push_back(std::make_unique<T>());
-			components.back()->SetOwner(*this);
 			core::GarbageCollection::GetInstance()->SetRootSet(components.back().get());
+			components.back()->SetOwner(*this);
+			components.back()->SetActive(true);
 			return static_cast<T*>(components.back().get());
 		}
 		template<typename T>

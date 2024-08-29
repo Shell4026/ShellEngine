@@ -6,7 +6,8 @@
 namespace sh::render
 {
 	Mesh::Mesh() :
-		attributes(attrs)
+		attributes(attrs),
+		topology(Topology::Face)
 	{
 
 	}
@@ -89,13 +90,16 @@ namespace sh::render
 
 	void Mesh::Build(const Renderer& renderer)
 	{
-		for (int i = 0; i < indices.size(); i += 3)
+		if (topology == Topology::Face)
 		{
-			Face face;
-			face.vertexIdx[0] = indices[i + 0];
-			face.vertexIdx[1] = indices[i + 1];
-			face.vertexIdx[2] = indices[i + 2];
-			faces.push_back(face);
+			for (int i = 0; i < indices.size(); i += 3)
+			{
+				Face face;
+				face.vertexIdx[0] = indices[i + 0];
+				face.vertexIdx[1] = indices[i + 1];
+				face.vertexIdx[2] = indices[i + 2];
+				faces.push_back(face);
+			}
 		}
 		
 		if (renderer.apiType == RenderAPI::Vulkan)
@@ -108,5 +112,15 @@ namespace sh::render
 	auto Mesh::GetVertexBuffer() const -> VertexBuffer*
 	{
 		return buffer.get();
+	}
+
+	void Mesh::SetTopology(Topology topology)
+	{
+		this->topology = topology;
+	}
+
+	auto Mesh::GetTopology() const -> Topology
+	{
+		return topology;
 	}
 }

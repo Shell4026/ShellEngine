@@ -18,7 +18,7 @@ namespace sh::game
 
 		auto Create() -> std::unique_ptr<Component> override
 		{
-			return std::unique_ptr<Component>(new T);
+			return std::make_unique<T>();
 		}
 	};
 }//namespace

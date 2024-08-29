@@ -35,7 +35,8 @@ namespace sh::render
 		std::unique_ptr<impl::VulkanPipeline> pipeline;
 		//동기화 필요 목록
 		std::array<VkDescriptorSet, 2> descriptorSet;
-		std::array<std::map<uint32_t, impl::VulkanBuffer>, 2> uniformBuffers;
+		std::array<std::map<uint32_t, impl::VulkanBuffer>, 2> vertUniformBuffers;
+		std::array<std::map<uint32_t, impl::VulkanBuffer>, 2> fragUniformBuffers;
 	private:
 		void CreateDescriptorSet();
 	public:
@@ -54,8 +55,9 @@ namespace sh::render
 		/// @brief [게임 스레드용] 유니폼에 데이터를 지정한다.
 		/// @param binding 바인딩 번호
 		/// @param data 데이터 위치 포인터
+		/// @param stage 셰이더 스테이지
 		/// @return 
-		SH_RENDER_API void SetUniformData(uint32_t binding, const void* data) override;
+		SH_RENDER_API void SetUniformData(uint32_t binding, const void* data, Stage stage) override;
 
 		/// @brief [게임 스레드용] 유니폼 텍스쳐 데이터를 지정한다.
 		/// @param binding 텍스쳐 바인딩 번호

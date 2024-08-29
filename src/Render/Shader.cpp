@@ -3,7 +3,9 @@
 namespace sh::render
 {
 	Shader::Shader(int id, ShaderType type) :
-		attributes(attrs), vertexUniforms(_vertexUniforms), samplerFragmentUniforms(_samplerFragmentUniforms),
+		attributes(attrs), 
+		vertexUniforms(_vertexUniforms), fragmentUniforms(_fragmentUniforms),
+		samplerFragmentUniforms(_samplerFragmentUniforms),
 
 		id(id), type(type) 
 	{
@@ -12,7 +14,9 @@ namespace sh::render
 
 
 	Shader::Shader(Shader&& other) noexcept :
-		attributes(attrs), vertexUniforms(_vertexUniforms), samplerFragmentUniforms(_samplerFragmentUniforms),
+		attributes(attrs), 
+		vertexUniforms(_vertexUniforms), fragmentUniforms(_fragmentUniforms),
+		samplerFragmentUniforms(_samplerFragmentUniforms),
 
 		id(other.id), type(other.type),
 		attrs(std::move(other.attrs)), attridx(std::move(other.attridx)),

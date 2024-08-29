@@ -26,6 +26,7 @@
 #include "Game/Component/MeshRenderer.h"
 #include "Game/Component/UniformTest.h"
 #include "Game/Component/Camera.h"
+#include "Game/Component/LineRenderer.h"
 #include "Game/ComponentModule.h"
 #include "Game/ImGUI.h"
 #include "Game/GameThread.h"
@@ -84,6 +85,7 @@ int main(int arg, char* args[])
 	sh::core::ModuleLoader moduleLoader;
 	void* modulePtr = moduleLoader.Load("ShellEngineUser");
 	sh::game::ComponentModule* componentModule = reinterpret_cast<sh::game::ComponentModule*>(modulePtr);
+	componentModule->RegisterComponent<sh::game::LineRenderer>("LineRenderer");
 	for (auto& components : componentModule->GetComponents())
 	{
 		fmt::print("Load Component: {}\n", components.first);
@@ -110,8 +112,10 @@ int main(int arg, char* args[])
 	ModelLoader modelLoader{ renderer };
 
 	auto shader = world.shaders.AddResource("Triangle", loader.LoadShader<sh::render::VulkanShader>("shaders/vert.spv", "shaders/frag.spv"));
+	auto lineShader = world.shaders.AddResource("Line", loader.LoadShader<sh::render::VulkanShader>("shaders/lineVert.spv", "shaders/lineFrag.spv"));
 	auto mat = world.materials.AddResource("Material", sh::render::Material{ shader });
 	auto mat2 = world.materials.AddResource("Material2", sh::render::Material{ shader });
+	auto lineMat = world.materials.AddResource("LineMat", sh::render::Material{ lineShader });
 	auto mesh = world.meshes.AddResource("Mesh", sh::render::Mesh{});
 	auto mesh2 = world.meshes.AddResource("Mesh2", modelLoader.Load("model/test.obj"));
 	auto tex = world.textures.AddResource("Texture0", texLoader.Load("textures/버터고양이.jpg"));
@@ -131,11 +135,20 @@ int main(int arg, char* args[])
 	shader->AddUniform<sh::render::Texture>("tex", 2, sh::render::Shader::ShaderStage::Fragment);
 	shader->Build();
 
+	lineShader->AddUniform<glm::mat4>("model", 0, sh::render::Shader::ShaderStage::Vertex);
+	lineShader->AddUniform<glm::mat4>("view", 0, sh::render::Shader::ShaderStage::Vertex);
+	lineShader->AddUniform<glm::mat4>("proj", 0, sh::render::Shader::ShaderStage::Vertex);
+	lineShader->AddUniform<glm::vec4>("color", 1, sh::render::Shader::ShaderStage::Fragment);
+	lineShader->SetTopology(sh::render::Shader::Topology::Line);
+	lineShader->Build();
+
 	mat->SetVector("offset1", glm::vec4(0.f, 0.0f, 0.f, 0.f));
 	mat->SetFloat("offset2", 0.f);
 	mat->SetTexture("tex", tex);
 
 	mat2->SetTexture("tex", tex3);
+
+	lineMat->SetVector("color", glm::vec4{ 1.0f, 1.0f, 0.0f, 1.0f });
 
 	mesh->SetVertex({ 
 		{-0.5f, 0.0f, -0.5f}, 

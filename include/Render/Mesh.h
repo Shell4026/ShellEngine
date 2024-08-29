@@ -28,6 +28,12 @@ namespace sh::render
 		{
 			std::array<uint32_t, 3> vertexIdx;
 		};
+
+		enum class Topology
+		{
+			Line,
+			Face
+		};
 	private:
 		std::vector<glm::vec3> verts;
 		std::vector<glm::vec2> uvs;
@@ -38,6 +44,8 @@ namespace sh::render
 		std::vector<std::unique_ptr<ShaderAttributeBase>> attrs;
 
 		std::unique_ptr<VertexBuffer> buffer;
+
+		Topology topology;
 	public:
 		const std::vector< std::unique_ptr<ShaderAttributeBase>>& attributes;
 	public:
@@ -63,6 +71,9 @@ namespace sh::render
 		SH_RENDER_API void Build(const Renderer& renderer);
 
 		SH_RENDER_API auto GetVertexBuffer() const -> VertexBuffer*;
+
+		SH_RENDER_API void SetTopology(Topology topology);
+		SH_RENDER_API auto GetTopology() const -> Topology;
 
 		template<typename T>
 		void SetAttribute(const ShaderAttribute<T>& attr);

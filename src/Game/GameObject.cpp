@@ -101,5 +101,6 @@ namespace sh::game
 		component->SetOwner(*this);
 		gc->SetRootSet(component.get());
 		components.push_back(std::move(component));
+		components.back()->SetActive(true);
 	}
 }

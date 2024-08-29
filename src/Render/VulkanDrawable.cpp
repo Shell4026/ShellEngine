@@ -26,7 +26,9 @@ namespace sh::render
 		mat(other.mat), mesh(other.mesh),
 		pipeline(std::move(other.pipeline)),
 		descriptorSet(std::move(other.descriptorSet)),
-		uniformBuffers(std::move(other.uniformBuffers)), textures(std::move(other.textures)),
+		vertUniformBuffers(std::move(other.vertUniformBuffers)), 
+		fragUniformBuffers(std::move(other.fragUniformBuffers)),
+		textures(std::move(other.textures)),
 		framebuffer(other.framebuffer)
 	{
 		other.mat = nullptr;
@@ -41,8 +43,11 @@ namespace sh::render
 
 	void VulkanDrawable::Clean()
 	{
-		uniformBuffers[GAME_THREAD].clear();
-		uniformBuffers[RENDER_THREAD].clear();
+		vertUniformBuffers[GAME_THREAD].clear();
+		vertUniformBuffers[RENDER_THREAD].clear();
+		fragUniformBuffers[GAME_THREAD].clear();
+		fragUniformBuffers[RENDER_THREAD].clear();
+		textures.clear();
 
 		pipeline.reset();
 	}
@@ -120,7 +125,24 @@ namespace sh::render
 					true);
 				assert(result == VkResult::VK_SUCCESS);
 
-				uniformBuffers[i].insert({ uniform.first, std::move(buffer) });
+				vertUniformBuffers[i].insert({ uniform.first, std::move(buffer) });
+			}
+		}
+		for (auto& uniform : shader->fragmentUniforms)
+		{
+			size_t size = uniform.second.back().offset + uniform.second.back().size;
+
+			for (int i = 0; i < 2; ++i)
+			{
+				impl::VulkanBuffer buffer{ renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() };
+				auto result = buffer.Create(size,
+					VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+					VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
+					VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+					true);
+				assert(result == VkResult::VK_SUCCESS);
+
+				fragUniformBuffers[i].insert({ uniform.first, std::move(buffer) });
 			}
 		}
 		for (auto& uniform : shader->samplerFragmentUniforms)
@@ -136,7 +158,27 @@ namespace sh::render
 
 		for (int threadIdx = 0; threadIdx < 2; ++threadIdx)
 		{
-			for (auto& buffer : uniformBuffers[threadIdx])
+			for (auto& buffer : vertUniformBuffers[threadIdx])
+			{
+				VkDescriptorBufferInfo bufferInfo{};
+				bufferInfo.buffer = buffer.second.GetBuffer();
+				bufferInfo.offset = 0;
+				bufferInfo.range = buffer.second.GetSize();
+
+				VkWriteDescriptorSet descriptorWrite{};
+				descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+				descriptorWrite.dstSet = descriptorSet[threadIdx];
+				descriptorWrite.dstBinding = buffer.first;
+				descriptorWrite.dstArrayElement = 0;
+				descriptorWrite.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+				descriptorWrite.descriptorCount = 1;
+				descriptorWrite.pBufferInfo = &bufferInfo;
+				descriptorWrite.pImageInfo = nullptr;
+				descriptorWrite.pTexelBufferView = nullptr;
+
+				vkUpdateDescriptorSets(renderer.GetDevice(), 1, &descriptorWrite, 0, nullptr);
+			}
+			for (auto& buffer : fragUniformBuffers[threadIdx])
 			{
 				VkDescriptorBufferInfo bufferInfo{};
 				bufferInfo.buffer = buffer.second.GetBuffer();
@@ -186,13 +228,24 @@ namespace sh::render
 		assert(result == VkResult::VK_SUCCESS);
 	}
 
-	void VulkanDrawable::SetUniformData(uint32_t binding, const void* data)
+	void VulkanDrawable::SetUniformData(uint32_t binding, const void* data, Stage stage)
 	{
-		auto it = uniformBuffers[GAME_THREAD].find(binding);
-		if (it == uniformBuffers[GAME_THREAD].end())
-			return;
-		
-		it->second.SetData(data);
+		if (stage == Stage::Vertex)
+		{
+			auto it = vertUniformBuffers[GAME_THREAD].find(binding);
+			if (it == vertUniformBuffers[GAME_THREAD].end())
+				return;
+
+			it->second.SetData(data);
+		}
+		else if (stage == Stage::Fragment)
+		{
+			auto it = fragUniformBuffers[GAME_THREAD].find(binding);
+			if (it == fragUniformBuffers[GAME_THREAD].end())
+				return;
+
+			it->second.SetData(data);
+		}
 	}
 	void VulkanDrawable::SetTextureData(uint32_t binding, Texture* tex)
 	{
@@ -252,6 +305,7 @@ namespace sh::render
 	void VulkanDrawable::SyncGameThread()
 	{
 		std::swap(descriptorSet[GAME_THREAD], descriptorSet[RENDER_THREAD]);
-		std::swap(uniformBuffers[GAME_THREAD], uniformBuffers[RENDER_THREAD]);
+		std::swap(vertUniformBuffers[GAME_THREAD], vertUniformBuffers[RENDER_THREAD]);
+		std::swap(fragUniformBuffers[GAME_THREAD], fragUniformBuffers[RENDER_THREAD]);
 	}
 }
