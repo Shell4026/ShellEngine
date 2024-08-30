@@ -3,6 +3,7 @@
 #include "Render/VulkanImpl/VulkanFramebuffer.h"
 
 #include <iostream>
+#include <algorithm>
 
 namespace sh::game
 {
@@ -16,7 +17,9 @@ namespace sh::game
 	}
 
 	ImGUI::ImGUI(window::Window& window, render::VulkanRenderer& renderer) :
-		window(window), renderer(renderer)
+		window(window), renderer(renderer),
+		drawData(),
+		bInit(false)
 	{
 	}
 
@@ -72,10 +75,11 @@ namespace sh::game
 		(
 			[&]()
 			{
-				if (ImGui::GetDrawData() != nullptr)
-					ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), renderer.GetCommandBuffer());
+				if (drawData.Valid)
+					ImGui_ImplVulkan_RenderDrawData(&drawData, renderer.GetCommandBuffer());
 			}
 		);
+
 		bInit = true;
 	}
 
@@ -394,7 +398,7 @@ namespace sh::game
 		}
 	}
 
-	void ImGUI::Update()
+	void ImGUI::Begin()
 	{
 		if (!bInit)
 			return;
@@ -403,10 +407,11 @@ namespace sh::game
 		ImGui::NewFrame();
 		ImGui::ShowDemoWindow();
 	}
-	void ImGUI::Render()
+	void ImGUI::End()
 	{
 		if (!bInit)
 			return;
+
 		ImGui::Render();
 	}
 	bool ImGUI::IsInit() const
@@ -417,4 +422,28 @@ namespace sh::game
 	{
 		return ImGui::GetCurrentContext();
 	}
-}
+
+	void ImGUI::SyncDrawData()
+	{
+		// DrawData.Clear()는 drawData*를 해제 하지 않기에 수동 소멸시켜야함.
+		for (int i = 0; i < drawData.CmdListsCount; ++i)
+			IM_DELETE(drawData.CmdLists[i]);
+		drawData.Clear();
+		drawData.CmdLists.clear();
+
+		ImDrawData* src = ImGui::GetDrawData();
+		// CmdLists 제외 복사
+		ImVector<ImDrawList*> temp;
+		temp.swap(src->CmdLists);
+		drawData = *src;
+		temp.swap(src->CmdLists);
+
+		// CmdLists 요소 복사
+		drawData.CmdLists.resize(src->CmdLists.Size);
+		for (int i = 0; i < drawData.CmdListsCount; ++i)
+		{
+			ImDrawList* copy = src->CmdLists[i]->CloneOutput();
+			drawData.CmdLists[i] = copy;
+		}
+	}
+}//namespace

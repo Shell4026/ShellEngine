@@ -160,13 +160,13 @@ namespace sh::render
 	{
 		drawList[RENDER_THREAD] = drawList[GAME_THREAD];
 		camHandles[RENDER_THREAD] = camHandles[GAME_THREAD];
-		for (auto& pair : drawList[GAME_THREAD])
+		for (auto& [cam, vec] : drawList[GAME_THREAD])
 		{
-			pair.second.clear();
+			vec.clear();
 		}
-		for (auto& pair : drawList[RENDER_THREAD])
+		for (auto& [cam, vec] : drawList[RENDER_THREAD])
 		{
-			for (auto drawable : pair.second)
+			for (auto drawable : vec)
 			{
 				drawable->SyncGameThread();
 			}

@@ -198,18 +198,36 @@ int main(int arg, char* args[])
 	world.Start();
 	world.SetMainCamera(cameraComponent);
 
-	ImGUI gui(window, renderer);
+	ImGUI gui{ window, renderer };
 	gui.Init();
 
-	sh::editor::EditorUI editorUi(world, gui);
+	std::mutex mu;
+	std::condition_variable cv;
 
 	GameThread& gameThread = *GameThread::GetInstance();
-	gameThread.Init(window, world);
+	gameThread.Init(window, world, gui, cv);
+
+#if SH_EDITOR
+	sh::editor::EditorUI editorUi(world, gui, mu);
+	gameThread.AddUITask([&]
+		{
+			editorUi.Update();
+			editorUi.Render();
+		}
+	);
+#endif
 
 	float delta = 0.f;
+	bool stop = false;
 
 	while (window.IsOpen())
 	{
+		while (!gameThread.IsInit())
+		{
+			std::unique_lock<std::mutex> lock{ mu };
+			cv.wait(lock, [&] {return gameThread.IsInit(); });
+			std::cout << "[Render Thread] Awake\n";
+		}
 		delta += window.GetDeltaTime();
 
 		std::string deltaTime = std::to_string(window.GetDeltaTime());
@@ -221,15 +239,15 @@ int main(int arg, char* args[])
 		{
 			Input::Update(e);
 			gui.ProcessEvent(e);
-
 			switch (e.type)
 			{
 			case sh::window::Event::EventType::Close:
 				gameThread.Stop();
+				stop = true;
 				if (gameThread.GetThread().joinable())
 					gameThread.GetThread().join();
-				gui.Clean();
 				world.Clean();
+				gui.Clean();
 				window.Close();
 				renderer.Clean();
 				break;
@@ -278,28 +296,24 @@ int main(int arg, char* args[])
 				break;
 			}
 		}
-
-		if (gameThread.IsTaskFinished())
+		if (!stop)
 		{
-			renderer.SyncGameThread();
-			gameThread.SyncFinished();
-		}
-		
-		if (delta >= 144.f / 1000.f)
-		{
-			editorUi.Update();
-			gui.Update();
+			if (gameThread.IsTaskFinished())
+			{
+				renderer.SyncGameThread();
+				gui.SyncDrawData();
+				editorUi.SyncRenderThread();
+				gameThread.SyncFinished();
+			}
 
-			editorUi.Render();
-			gui.Render();
-			delta = 0.0f;
-		}
-		
-		renderer.Render(window.GetDeltaTime());
+			mu.lock(); // 락을 못 얻을 일은 되도록 없어야함.
+			renderer.Render(window.GetDeltaTime());
+			mu.unlock();
 
-		if (renderer.IsPause())
-		{
-			std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			if (renderer.IsPause())
+			{
+				std::this_thread::sleep_for(std::chrono::milliseconds(1));
+			}
 		}
 	}
 	return 0;

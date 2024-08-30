@@ -14,20 +14,22 @@ namespace sh::editor
 {
 	using namespace sh::game;
 
-	EditorUI::EditorUI(World& world, const game::ImGUI& imgui) :
+	EditorUI::EditorUI(World& world, const game::ImGUI& imgui, std::mutex& renderMutex) :
 		UI(imgui),
 		world(world),
+		renderMutex(&renderMutex),
 
 		hierarchyWidth(0), hierarchyHeight(0),
 		selected(-1),
 		explorer(imgui),
 		viewportWidthLast(100.f), viewportHeightLast(100.f),
-		viewportDescSet(nullptr),
+		viewportDescSet(),
 
 		bViewportDocking(false), bHierarchyDocking(false),
 		bAddComponent(false), bOpenExplorer(false), bChangedViewportSize(false)
 	{
-		
+		viewportDescSet[GAME_THREAD] = nullptr;
+		viewportDescSet[RENDER_THREAD] = nullptr;
 	}
 
 	void EditorUI::SetDockNode()
@@ -86,7 +88,8 @@ namespace sh::editor
 			viewportHeightLast = height;
 			bChangedViewportSize = true;
 		}
-		ImGui::Image((ImTextureID)viewportDescSet, { width, height });
+		if(viewportDescSet[RENDER_THREAD])
+			ImGui::Image((ImTextureID)viewportDescSet[RENDER_THREAD], {width, height});
 		ImGui::End();
 	}
 
@@ -136,13 +139,15 @@ namespace sh::editor
 			{
 				//std::cout << name << '\n';
 			}
+			ImGui::GetDrawData();
 
 			ImGui::Separator();
 
 			ImGui::LabelText("##ComponentsLabel", "Components");
+			int idx = 0;
 			for (auto& component : obj->GetComponents())
 			{
-				if (ImGui::CollapsingHeader(component->GetType().GetName().data()))
+				if (ImGui::CollapsingHeader((component->GetType().GetName().data() + ("##" + std::to_string(idx))).data()))
 				{
 					auto& props = component->GetType().GetProperties();
 					for (auto& prop : props)
@@ -155,7 +160,7 @@ namespace sh::editor
 							glm::vec3* parameter = prop.second.Get<glm::vec3>(component.get());
 							float v[3] = { parameter->x, parameter->y, parameter->z };
 							ImGui::LabelText(("##" + prop.first).c_str(), prop.first.c_str());
-							if (ImGui::InputFloat3(("##" + prop.first + "x").c_str(), v))
+							if (ImGui::InputFloat3(("##" + prop.first + std::to_string(idx)).c_str(), v))
 							{
 								parameter->x = v[0];
 								parameter->y = v[1];
@@ -166,7 +171,7 @@ namespace sh::editor
 						else if (type == core::reflection::GetTypeName<float>())
 						{
 							float* parameter = prop.second.Get<float>(component.get());
-							if (ImGui::InputFloat(prop.first.c_str(), parameter))
+							if (ImGui::InputFloat(("##input_" + prop.first + std::to_string(idx)).c_str(), parameter))
 								component->OnPropertyChanged(prop.second);
 						}
 						else if (type == core::reflection::GetTypeName<int>())
@@ -174,16 +179,11 @@ namespace sh::editor
 							int* parameter = prop.second.Get<int>(component.get());
 							ImGui::LabelText(("##" + prop.first).c_str(), prop.first.c_str());
 							if (prop.second.isConst)
-								ImGui::InputInt(("##Input_" + prop.first).c_str(), parameter, 0, 0, ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
+								ImGui::InputInt(("##Input_" + prop.first + std::to_string(idx)).c_str(), parameter, 0, 0, ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
 							else
-								if (ImGui::InputInt(("##Input_" + prop.first).c_str(), parameter))
+								if (ImGui::InputInt(("##Input_" + prop.first + std::to_string(idx)).c_str(), parameter))
 								{
-									GameThread::GetInstance()->AddTaskQueue
-									([&component, prop]
-										{
-											component->OnPropertyChanged(prop.second);
-										}
-									);
+									component->OnPropertyChanged(prop.second);
 								}
 						}
 						else if (type == core::reflection::GetTypeName<uint32_t>())
@@ -191,14 +191,15 @@ namespace sh::editor
 							uint32_t* parameter = prop.second.Get<uint32_t>(component.get());
 							ImGui::LabelText(("##" + prop.first).c_str(), prop.first.c_str());
 							if (prop.second.isConst)
-								ImGui::InputInt(("##Input_" + prop.first).c_str(), reinterpret_cast<int*>(parameter), 0, 0, ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
+								ImGui::InputInt(("##Input_" + prop.first + std::to_string(idx)).c_str(), reinterpret_cast<int*>(parameter), 0, 0, ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
 							else
-								if(ImGui::InputInt(("##Input_" + prop.first).c_str(), reinterpret_cast<int*>(parameter)))
+								if(ImGui::InputInt(("##Input_" + prop.first + std::to_string(idx)).c_str(), reinterpret_cast<int*>(parameter)))
 									component->OnPropertyChanged(prop.second);
 						}
 					}
 				}
-			}
+				++idx;
+			}//for auto& component
 			
 			ImGui::Separator();
 
@@ -217,13 +218,7 @@ namespace sh::editor
 				if (ImGui::ListBox("##Components", &current, items.data(), items.size()))
 				{
 					std::string name = items[current];
-					game::GameThread::GetInstance()->AddTaskQueue
-					([obj, name]
-						{
-							auto& components = obj->world.componentModule.GetComponents();
-							obj->AddComponent(components.at(name)->Create());
-						}
-					);
+					obj->AddComponent(components.at(name)->Create());
 					bAddComponent = false;
 				}
 				
@@ -250,23 +245,22 @@ namespace sh::editor
 	{
 		if (bChangedViewportSize)
 		{
+			std::cout << "changed\n";
 			bChangedViewportSize = false;
-			if (auto tex = world.textures.GetResource("RenderTexture"); tex != nullptr)
-			{
-				ImGui_ImplVulkan_RemoveTexture(viewportDescSet);
-				viewportDescSet = nullptr;
+			if (auto tex = world.textures.GetResource("RenderTexture"); core::IsValid(tex))
+			{				
+				renderMutex->lock();
 				if(viewportWidthLast != 0.f && viewportHeightLast != 0.f)
 					static_cast<render::RenderTexture*>(tex)->SetSize(viewportWidthLast, viewportHeightLast);
-			}
-		}
-		if (viewportDescSet == nullptr)
-		{
-			if (auto tex = world.textures.GetResource("RenderTexture"); tex != nullptr)
-			{
+				renderMutex->unlock();
+
+				if (viewportDescSet[GAME_THREAD] != nullptr)
+					ImGui_ImplVulkan_RemoveTexture(viewportDescSet[GAME_THREAD]);
 				auto vkTexBuffer = static_cast<render::VulkanTextureBuffer*>(tex->GetBuffer());
 				auto imgBuffer = vkTexBuffer->GetImageBuffer();
-				viewportDescSet = ImGui_ImplVulkan_AddTexture(imgBuffer->GetSampler(), imgBuffer->GetImageView(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				viewportDescSet[GAME_THREAD] = ImGui_ImplVulkan_AddTexture(imgBuffer->GetSampler(), imgBuffer->GetImageView(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			}
+			
 		}
 	}
 
@@ -296,5 +290,10 @@ namespace sh::editor
 
 		if (bOpenExplorer)
 			explorer.Update();
+	}
+
+	void EditorUI::SyncRenderThread()
+	{
+		viewportDescSet[RENDER_THREAD] = viewportDescSet[GAME_THREAD];
 	}
 }

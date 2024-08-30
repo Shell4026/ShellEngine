@@ -6,6 +6,7 @@
 #include <gtest/gtest.h>
 #include <chrono>
 #include <random>
+#include <queue>
 
 TEST(ContainerTest, VectorTest)
 {
@@ -41,4 +42,28 @@ TEST(ContainerTest, VectorTest)
 	auto time2 = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
 	EXPECT_LE(time1, time2);
+}
+
+TEST(ContainerTest, LockFreeQueue)
+{
+	sh::core::LockFreeQueue<int> lockFreeQueue;
+	std::queue<int> queue;
+
+	auto start = std::chrono::high_resolution_clock::now();
+	for (int i = 0; i < 10000; ++i)
+	{
+		queue.push(i);
+	}
+	auto end = std::chrono::high_resolution_clock::now();
+	auto timeQueue = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+
+	start = std::chrono::high_resolution_clock::now();
+	for (int i = 0; i < 10000; ++i)
+	{
+		lockFreeQueue.Enqueue(i);
+	}
+	end = std::chrono::high_resolution_clock::now();
+	auto timeQueue2 = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+
+	EXPECT_LE(timeQueue, timeQueue2);
 }

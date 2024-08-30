@@ -600,6 +600,9 @@ namespace sh::render {
 		cmdBuffer->SetWaitStage({ VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT });
 
 		VkCommandBuffer buffer = cmdBuffer->GetCommandBuffer();
+		if (drawList[RENDER_THREAD].empty())
+			return;
+
 		cmdBuffer->Submit(graphicsQueue, [&]()
 		{
 			bool mainPassProcessed = false;
@@ -612,6 +615,7 @@ namespace sh::render {
 					continue;
 
 				auto framebuffer = static_cast<const impl::VulkanFramebuffer*>(drawables.front()->GetFramebuffer());
+				//프레임버퍼에 그림
 				if(framebuffer != nullptr)
 				{
 					std::array<VkClearValue, 2> clear;
@@ -626,6 +630,8 @@ namespace sh::render {
 					renderPassInfo.renderArea.extent = { framebuffer->GetWidth(), framebuffer->GetHeight() };
 					renderPassInfo.clearValueCount = static_cast<uint32_t>(clear.size());
 					renderPassInfo.pClearValues = clear.data();
+
+					//Begin RenderPass
 					vkCmdBeginRenderPass(buffer, &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
 
 					VkViewport viewport{};
@@ -637,6 +643,12 @@ namespace sh::render {
 					viewport.maxDepth = 1.0f;
 					vkCmdSetViewport(buffer, 0, 1, &viewport);
 
+					VkRect2D scissor{};
+					scissor.offset = { 0, 0 };
+					scissor.extent = { framebuffer->GetWidth(), framebuffer->GetHeight() };
+					vkCmdSetScissor(buffer, 0, 1, &scissor);
+
+					VkPipeline lastPipeline = static_cast<VulkanDrawable*>(drawables.back())->GetPipeline()->GetPipeline();
 					for (auto iDrawable : drawables)
 					{
 						VulkanDrawable* drawable = static_cast<VulkanDrawable*>(iDrawable);
@@ -651,12 +663,8 @@ namespace sh::render {
 						VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
 						if (!sh::core::IsValid(shader)) continue;
 
-						vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, drawable->GetPipeline()->GetPipeline());
-
-						VkRect2D scissor{};
-						scissor.offset = { 0, 0 };
-						scissor.extent = { framebuffer->GetWidth(), framebuffer->GetHeight() };
-						vkCmdSetScissor(buffer, 0, 1, &scissor);
+						if(drawable->GetPipeline()->GetPipeline() != lastPipeline)
+							vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, drawable->GetPipeline()->GetPipeline());
 
 						mesh->GetVertexBuffer()->Bind();
 
@@ -666,7 +674,10 @@ namespace sh::render {
 							shader->GetPipelineLayout(), 0, 1,
 							descriptorSets, 0, nullptr);
 						vkCmdDrawIndexed(buffer, mesh->GetIndices().size(), 1, 0, 0, 0);
+
+						lastPipeline = drawable->GetPipeline()->GetPipeline();
 					}
+					//End RenderPass
 					vkCmdEndRenderPass(buffer);
 				}
 				//MainPass
@@ -700,6 +711,7 @@ namespace sh::render {
 					viewport.maxDepth = 1.0f;
 					vkCmdSetViewport(buffer, 0, 1, &viewport);
 
+					VkPipeline lastPipeline = static_cast<VulkanDrawable*>(drawables.back())->GetPipeline()->GetPipeline();
 					for (auto iDrawable : drawables)
 					{
 						VulkanDrawable* drawable = static_cast<VulkanDrawable*>(iDrawable);
@@ -712,7 +724,8 @@ namespace sh::render {
 						VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
 						if (!sh::core::IsValid(shader)) continue;
 
-						vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, drawable->GetPipeline()->GetPipeline());
+						if (drawable->GetPipeline()->GetPipeline() != lastPipeline)
+							vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, drawable->GetPipeline()->GetPipeline());
 
 						VkRect2D scissor{};
 						scissor.offset = { 0, 0 };
@@ -727,6 +740,8 @@ namespace sh::render {
 							shader->GetPipelineLayout(), 0, 1,
 							descriptorSets, 0, nullptr);
 						vkCmdDrawIndexed(buffer, mesh->GetIndices().size(), 1, 0, 0, 0);
+
+						lastPipeline = drawable->GetPipeline()->GetPipeline();
 					}
 
 					for (auto& func : drawCalls)

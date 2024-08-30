@@ -37,6 +37,7 @@ namespace sh::game
 	{
 		if (std::strcmp(prop.GetName(), "start") == 0 || std::strcmp(prop.GetName(), "end") == 0)
 		{
+			std::cout << "change\n";
 			mesh.SetVertex({ start, end });
 			mesh.Build(gameObject->world.renderer);
 
