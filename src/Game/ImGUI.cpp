@@ -425,13 +425,16 @@ namespace sh::game
 
 	void ImGUI::SyncDrawData()
 	{
+		ImDrawData* src = ImGui::GetDrawData();
+		if (src == nullptr || !src->Valid)
+			return;
+
 		// DrawData.Clear()는 drawData*를 해제 하지 않기에 수동 소멸시켜야함.
 		for (int i = 0; i < drawData.CmdListsCount; ++i)
 			IM_DELETE(drawData.CmdLists[i]);
 		drawData.Clear();
 		drawData.CmdLists.clear();
 
-		ImDrawData* src = ImGui::GetDrawData();
 		// CmdLists 제외 복사
 		ImVector<ImDrawList*> temp;
 		temp.swap(src->CmdLists);
