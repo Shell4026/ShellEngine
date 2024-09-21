@@ -2,6 +2,7 @@
 
 #include <array>
 #include <stdexcept>
+#include <cassert>
 
 namespace sh::render::impl
 {
