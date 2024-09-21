@@ -2,9 +2,6 @@
 
 #include "MemoryPool.hpp"
 
-#include "../Reflection.hpp"
-#include "../SObject.h"
-
 #include <memory>
 #include <iostream>
 
