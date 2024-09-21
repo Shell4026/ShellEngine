@@ -1,7 +1,7 @@
 ﻿#include "SObject.h"
 
 #include "GarbageCollection.h"
-#include "Observer.h"
+#include "Observer.hpp"
 
 #include <cstring>
 
@@ -9,28 +9,24 @@ namespace sh::core
 {
 	SObject::SObject() :
 		gc(GarbageCollection::GetInstance()),
-		bPendingKill(false), bMark(false), 
-		destroyObservers()
+		bPendingKill(false), bMark(false)
 	{
 	}
 	SObject::SObject(const SObject& other) :
 		gc(other.gc), 
 		bPendingKill(other.bPendingKill.load(std::memory_order::memory_order_relaxed)),
-		bMark(other.bMark),
-		destroyObservers(other.destroyObservers)
+		bMark(other.bMark)
 	{
 	}
 	SObject::SObject(SObject&& other) noexcept :
 		gc(other.gc),
 		bPendingKill(other.bPendingKill.load(std::memory_order::memory_order_relaxed)),
-		bMark(other.bMark),
-		destroyObservers(std::move(other.destroyObservers))
+		bMark(other.bMark)
 	{
 	}
 	SObject::~SObject()
 	{
-		for (auto observer : destroyObservers)
-			observer->Notify();
+		onDestroy.Notify(this);
 
 		if (!bPendingKill.load(std::memory_order::memory_order_acquire))
 			gc->RemoveObject(this);
@@ -63,17 +59,10 @@ namespace sh::core
 	{
 	}
 
-	void SObject::RegisterDestroyNotify(Observer& observer)
-	{
-		destroyObservers.insert(&observer);
-	}
-	void SObject::UnRegeisterDestroyNotify(Observer& observer)
-	{
-		destroyObservers.erase(&observer);
-	}
-
 	void SObject::Destroy()
 	{
+		onDestroy.Notify(this);
+		onDestroy.Clear();
 		bPendingKill.store(true, std::memory_order::memory_order_release);
 	}
 }
