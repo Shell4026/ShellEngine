@@ -97,5 +97,15 @@ namespace sh::core::memory
 		{
 			p->~T();
 		}
+
+		bool operator==(const SAllocator& other) const
+		{
+			return (copyAllocator == other.copyAllocator) &&
+				(rebindAllocator == other.rebindAllocator);
+		}
+		bool operator!=(const SAllocator& other) const
+		{
+			return !(*this == other);
+		}
 	};
 }
