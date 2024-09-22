@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <type_traits>
+#include <array>
 
 namespace sh::core::memory
 {
@@ -26,13 +27,18 @@ namespace sh::core::memory
 		private:
 			using Byte = uint8_t;
 			static constexpr std::size_t blockSize = (sizeof(T) > sizeof(Block)) ? sizeof(T) : sizeof(Block);
-			Byte data[blockSize * count];
+			std::array<Byte, blockSize * count> data;
 		public:
 			Buffer* const next;
 		public:
 			Buffer(Buffer* next) :
-				next(next)
+				next(next), data()
 			{}
+			Buffer(Buffer&& other) noexcept :
+				next(other.next), data(std::move(other.data))
+			{
+				other.next = nullptr;
+			}
 
 			auto GetBlock(std::size_t index) -> T*
 			{
@@ -47,6 +53,15 @@ namespace sh::core::memory
 		MemoryPool()
 		{
 			firstBuffer = new Buffer(firstBuffer);
+		}
+		MemoryPool(MemoryPool&& other) noexcept :
+			firstBuffer(other.firstBuffer),
+			firstFreeBlock(other.firstFreeBlock),
+			allocatedSize(other.allocatedSize)
+		{
+			other.firstBuffer = nullptr;
+			other.firstFreeBlock = nullptr;
+			other.allocatedSize = 0;
 		}
 		~MemoryPool()
 		{

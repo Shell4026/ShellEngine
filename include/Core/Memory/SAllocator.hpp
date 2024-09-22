@@ -40,6 +40,15 @@ namespace sh::core::memory
 		{
 		}
 
+		SAllocator(SAllocator&& other) noexcept : 
+			Super(std::move(other)),
+			copyAllocator(other.copyAllocator),
+			rebindAllocator(other.rebindAllocator)
+		{
+			other.copyAllocator = nullptr;
+			other.rebindAllocator = nullptr;
+		}
+
 		template <class U>
 		SAllocator(const SAllocator<U, size>& other)
 		{
@@ -49,7 +58,10 @@ namespace sh::core::memory
 
 		~SAllocator()
 		{
-			delete rebindAllocator;
+			if (rebindAllocator)
+			{
+				delete rebindAllocator;
+			}
 		}
 
 		auto allocate(size_type n, const void* hint = 0) -> pointer
