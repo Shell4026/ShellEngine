@@ -3,6 +3,7 @@
 #include "Window/Event.h"
 
 #include <cstdint>
+#include <imgui.h>
 
 namespace sh::game
 {
@@ -23,6 +24,8 @@ namespace sh::game
 
 	bool Input::GetKeyDown(KeyCode keycode)
 	{
+		if (ImGui::GetIO().WantCaptureKeyboard)
+			return false;
 		return  keyPressing[static_cast<uint32_t>(keycode)];
 	}
 }
