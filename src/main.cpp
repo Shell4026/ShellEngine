@@ -303,9 +303,9 @@ int main(int arg, char* args[])
 			// 게임 스레드와 동기화
 			if (gameThread.IsTaskFinished())
 			{
-				std::cout << "Sync Start\n";
+				//std::cout << "Sync Start\n";
 				renderer.SyncGameThread();
-				std::cout << "Sync End\n";
+				//std::cout << "Sync End\n";
 				gameThread.SyncFinished();
 			}
 			renderer.Render(window.GetDeltaTime());
