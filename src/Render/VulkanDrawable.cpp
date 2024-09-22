@@ -19,7 +19,7 @@ namespace sh::render
 		renderer(renderer), 
 		mat(nullptr), mesh(nullptr), camera(nullptr),
 		descriptorSet(),
-		dirty(false)
+		bDirty(false), bTextureDirty(false)
 	{
 	}
 	VulkanDrawable::VulkanDrawable(VulkanDrawable&& other) noexcept :
@@ -30,7 +30,7 @@ namespace sh::render
 		vertUniformBuffers(std::move(other.vertUniformBuffers)), 
 		fragUniformBuffers(std::move(other.fragUniformBuffers)),
 		textures(std::move(other.textures)),
-		dirty(other.dirty)
+		bDirty(other.bDirty), bTextureDirty(other.bTextureDirty)
 	{
 		other.mat = nullptr;
 		other.mesh = nullptr;
@@ -280,6 +280,7 @@ namespace sh::render
 		vkUpdateDescriptorSets(renderer.GetDevice(), 1, &descriptorWrite, 0, nullptr);
 
 		SetDirty();
+		bTextureDirty = true;
 	}
 
 	auto VulkanDrawable::GetMaterial() const -> Material*
@@ -306,19 +307,22 @@ namespace sh::render
 
 	void VulkanDrawable::SetDirty()
 	{
-		if(!dirty)
+		if(!bDirty)
 			renderer.PushSyncObject(*this);
-		dirty = true;
+		bDirty = true;
 	}
 
 	void VulkanDrawable::Sync()
 	{
-		if (!dirty)
+		if (!bDirty)
 			return;
-		std::swap(descriptorSet[GAME_THREAD], descriptorSet[RENDER_THREAD]);
+
+		if(bTextureDirty)
+			std::swap(descriptorSet[GAME_THREAD], descriptorSet[RENDER_THREAD]);
 		std::swap(vertUniformBuffers[GAME_THREAD], vertUniformBuffers[RENDER_THREAD]);
 		std::swap(fragUniformBuffers[GAME_THREAD], fragUniformBuffers[RENDER_THREAD]);
 
-		dirty = false;
+		bDirty = false;
+		bTextureDirty = false;
 	}
 }

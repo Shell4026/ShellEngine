@@ -44,6 +44,8 @@ namespace sh::render
 		{
 			buffer[GAME_THREAD] = std::make_unique<VulkanTextureBuffer>();
 			buffer[GAME_THREAD]->Create(static_cast<const VulkanRenderer&>(renderer), pixels.data(), width, height, format);
+			buffer[RENDER_THREAD] = std::make_unique<VulkanTextureBuffer>();
+			buffer[RENDER_THREAD]->Create(static_cast<const VulkanRenderer&>(renderer), pixels.data(), width, height, format);
 		}
 
 		SetDirty();
@@ -66,6 +68,7 @@ namespace sh::render
 	void Texture::Sync()
 	{
 		std::swap(buffer[RENDER_THREAD], buffer[GAME_THREAD]);
+
 		bDirty = false;
 	}
 }

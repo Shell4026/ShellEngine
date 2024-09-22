@@ -39,7 +39,8 @@ namespace sh::render
 		core::SyncArray<std::map<uint32_t, impl::VulkanBuffer>> vertUniformBuffers;
 		core::SyncArray<std::map<uint32_t, impl::VulkanBuffer>> fragUniformBuffers;
 
-		bool dirty;
+		bool bDirty;
+		bool bTextureDirty;
 	private:
 		void CreateDescriptorSet();
 	public:
