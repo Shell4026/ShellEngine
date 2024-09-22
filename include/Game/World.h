@@ -8,6 +8,7 @@
 #include "Core/SObject.h"
 #include "Core/Reflection.hpp"
 #include "Core/SContainer.hpp"
+#include "Core/Observer.hpp"
 
 #include "Render/Shader.h"
 #include "Render/Material.h"
@@ -60,6 +61,8 @@ namespace sh::game
 	public:
 		const ComponentModule& componentModule;
 		const core::SVector<std::unique_ptr<GameObject>>& gameObjects;
+		core::Observer<Camera*> onCameraAdd;
+		core::Observer<Camera*> onCameraRemove;
 	public:
 		SH_GAME_API World(sh::render::Renderer& renderer, const ComponentModule& componentModule);
 		SH_GAME_API World(World&& other) noexcept;

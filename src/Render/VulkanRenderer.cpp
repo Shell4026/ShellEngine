@@ -41,6 +41,7 @@ namespace sh::render {
 
 	void VulkanRenderer::Clean()
 	{
+		Renderer::Clean();
 		if (!device)
 			return;
 
@@ -79,8 +80,6 @@ namespace sh::render {
 
 	auto VulkanRenderer::CreateInstance(const std::vector<const char*>& requestedLayer, const std::vector<const char*>& requestedExtension) -> VkResult
 	{
-
-
 		VkDebugUtilsMessengerCreateInfoEXT debugInfo{};
 		if (bFindValidationLayer && bEnableValidationLayers)
 			debugInfo = CreateDebugInfo();
@@ -567,10 +566,6 @@ namespace sh::render {
 			return;
 		if (drawList[RENDER_THREAD].empty())
 			return;
-		if (camHandles[RENDER_THREAD][mainCamera] == nullptr)
-			return;
-		if (drawList[RENDER_THREAD][*camHandles[RENDER_THREAD][mainCamera]].empty())
-			return;
 		//std::cout << "Render Start\n";
 		//std::cout << "main: " << mainCamera << '\n';
 		//mu->lock();
@@ -606,18 +601,14 @@ namespace sh::render {
 		cmdBuffer->Submit(graphicsQueue, [&]()
 		{
 			bool mainPassProcessed = false;
-			for (auto& draws : drawList[RENDER_THREAD])
+
+			for (auto& [camera, drawables] : drawList[RENDER_THREAD])
 			{
-				const Camera& cam = draws.first;
-				auto& drawables = draws.second;
-
-				if (drawables.empty())
-					continue;
-
-				auto framebuffer = static_cast<const impl::VulkanFramebuffer*>(drawables.front()->GetFramebuffer());
+				auto renderTexture = camera->GetRenderTexture();
 				//프레임버퍼에 그림
-				if(framebuffer != nullptr)
+				if(renderTexture != nullptr)
 				{
+					auto framebuffer = static_cast<const impl::VulkanFramebuffer*>(renderTexture->GetFramebuffer());
 					std::array<VkClearValue, 2> clear;
 					clear[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
 					clear[1].depthStencil = { 1.0f, 0 };
@@ -648,24 +639,27 @@ namespace sh::render {
 					scissor.extent = { framebuffer->GetWidth(), framebuffer->GetHeight() };
 					vkCmdSetScissor(buffer, 0, 1, &scissor);
 
-					VkPipeline lastPipeline = static_cast<VulkanDrawable*>(drawables.back())->GetPipeline()->GetPipeline();
+					VkPipeline lastPipeline = nullptr;
 					for (auto iDrawable : drawables)
 					{
 						VulkanDrawable* drawable = static_cast<VulkanDrawable*>(iDrawable);
-
 						Mesh* mesh = drawable->GetMesh();
 						Material* mat = drawable->GetMaterial();
 
 						assert(mesh);
 						assert(mat);
-						if (!sh::core::IsValid(mesh) || !sh::core::IsValid(mat)) continue;
+						if (!sh::core::IsValid(mesh) || !sh::core::IsValid(mat)) 
+							continue;
 
 						VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
-						if (!sh::core::IsValid(shader)) continue;
+						if (!sh::core::IsValid(shader)) 
+							continue;
 
-						if(drawable->GetPipeline()->GetPipeline() != lastPipeline)
+						if (drawable->GetPipeline()->GetPipeline() != lastPipeline)
+						{
+							lastPipeline = drawable->GetPipeline()->GetPipeline();
 							vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, drawable->GetPipeline()->GetPipeline());
-
+						}
 						mesh->GetVertexBuffer()->Bind();
 
 						VkDescriptorSet descriptorSets[] = { drawable->GetDescriptorSet() };
@@ -674,11 +668,11 @@ namespace sh::render {
 							shader->GetPipelineLayout(), 0, 1,
 							descriptorSets, 0, nullptr);
 						vkCmdDrawIndexed(buffer, mesh->GetIndices().size(), 1, 0, 0, 0);
-
-						lastPipeline = drawable->GetPipeline()->GetPipeline();
 					}
 					//End RenderPass
 					vkCmdEndRenderPass(buffer);
+
+					//renderTexture->SetDirty();
 				}
 				//MainPass
 				else
@@ -711,7 +705,7 @@ namespace sh::render {
 					viewport.maxDepth = 1.0f;
 					vkCmdSetViewport(buffer, 0, 1, &viewport);
 
-					VkPipeline lastPipeline = static_cast<VulkanDrawable*>(drawables.back())->GetPipeline()->GetPipeline();
+					VkPipeline lastPipeline = nullptr;
 					for (auto iDrawable : drawables)
 					{
 						VulkanDrawable* drawable = static_cast<VulkanDrawable*>(iDrawable);
@@ -719,13 +713,18 @@ namespace sh::render {
 						Mesh* mesh = drawable->GetMesh();
 						Material* mat = drawable->GetMaterial();
 
-						if (!sh::core::IsValid(mesh) || !sh::core::IsValid(mat)) continue;
+						if (!sh::core::IsValid(mesh) || !sh::core::IsValid(mat)) 
+							continue;
 
 						VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
-						if (!sh::core::IsValid(shader)) continue;
+						if (!sh::core::IsValid(shader)) 
+							continue;
 
 						if (drawable->GetPipeline()->GetPipeline() != lastPipeline)
+						{
+							lastPipeline = drawable->GetPipeline()->GetPipeline();
 							vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, drawable->GetPipeline()->GetPipeline());
+						}
 
 						VkRect2D scissor{};
 						scissor.offset = { 0, 0 };
@@ -740,8 +739,6 @@ namespace sh::render {
 							shader->GetPipelineLayout(), 0, 1,
 							descriptorSets, 0, nullptr);
 						vkCmdDrawIndexed(buffer, mesh->GetIndices().size(), 1, 0, 0, 0);
-
-						lastPipeline = drawable->GetPipeline()->GetPipeline();
 					}
 
 					for (auto& func : drawCalls)
@@ -749,8 +746,8 @@ namespace sh::render {
 
 					vkCmdEndRenderPass(buffer);
 				}
-			}
-			//모든 카메라에 프레임 버퍼가 존재하는 특수한 경우
+			}//for (auto& [camera, drawables] : drawList[RENDER_THREAD])
+			// 모든 카메라에 프레임 버퍼가 존재하는 특수한 경우
 			if (mainPassProcessed == false)
 			{
 				VkRenderPassBeginInfo renderPassInfo{};

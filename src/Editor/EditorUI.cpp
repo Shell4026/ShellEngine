@@ -14,22 +14,20 @@ namespace sh::editor
 {
 	using namespace sh::game;
 
-	EditorUI::EditorUI(World& world, const game::ImGUI& imgui, std::mutex& renderMutex) :
+	EditorUI::EditorUI(World& world, game::ImGUI& imgui, std::mutex& renderMutex) :
 		UI(imgui),
 		world(world),
 		renderMutex(&renderMutex),
+		viewport(imgui, world, renderMutex),
 
 		hierarchyWidth(0), hierarchyHeight(0),
 		selected(-1),
 		explorer(imgui),
-		viewportWidthLast(100.f), viewportHeightLast(100.f),
-		viewportDescSet(),
 
 		bViewportDocking(false), bHierarchyDocking(false),
-		bAddComponent(false), bOpenExplorer(false), bChangedViewportSize(false)
+		bAddComponent(false), bOpenExplorer(false),
+		bDirty(false)
 	{
-		viewportDescSet[GAME_THREAD] = nullptr;
-		viewportDescSet[RENDER_THREAD] = nullptr;
 	}
 
 	void EditorUI::SetDockNode()
@@ -71,25 +69,9 @@ namespace sh::editor
 			ImGui::DockBuilderDockWindow("Hierarchy", dockLeft);
 			ImGui::DockBuilderDockWindow("Inspector", dockRight);
 			ImGui::DockBuilderDockWindow("Project", dockDown);
-			ImGui::DockBuilderDockWindow("Viewport", dockspaceId);
+			ImGui::DockBuilderDockWindow(this->viewport.name, dockspaceId);
 			ImGui::DockBuilderFinish(dockspaceId);
 		}
-		ImGui::End();
-	}
-
-	void EditorUI::DrawViewport()
-	{
-		ImGui::Begin("Viewport");
-		float width = ImGui::GetContentRegionAvail().x;
-		float height = ImGui::GetContentRegionAvail().y;
-		if (viewportWidthLast != width || viewportHeightLast != height)
-		{
-			viewportWidthLast = width;
-			viewportHeightLast = height;
-			bChangedViewportSize = true;
-		}
-		if(viewportDescSet[RENDER_THREAD])
-			ImGui::Image((ImTextureID)viewportDescSet[RENDER_THREAD], {width, height});
 		ImGui::End();
 	}
 
@@ -243,25 +225,7 @@ namespace sh::editor
 
 	void EditorUI::Update()
 	{
-		if (bChangedViewportSize)
-		{
-			std::cout << "changed\n";
-			bChangedViewportSize = false;
-			if (auto tex = world.textures.GetResource("RenderTexture"); core::IsValid(tex))
-			{				
-				renderMutex->lock();
-				if(viewportWidthLast != 0.f && viewportHeightLast != 0.f)
-					static_cast<render::RenderTexture*>(tex)->SetSize(viewportWidthLast, viewportHeightLast);
-				renderMutex->unlock();
-
-				if (viewportDescSet[GAME_THREAD] != nullptr)
-					ImGui_ImplVulkan_RemoveTexture(viewportDescSet[GAME_THREAD]);
-				auto vkTexBuffer = static_cast<render::VulkanTextureBuffer*>(tex->GetBuffer());
-				auto imgBuffer = vkTexBuffer->GetImageBuffer();
-				viewportDescSet[GAME_THREAD] = ImGui_ImplVulkan_AddTexture(imgBuffer->GetSampler(), imgBuffer->GetImageView(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			}
-			
-		}
+		//viewport.Update();
 	}
 
 	void EditorUI::Render()
@@ -273,7 +237,7 @@ namespace sh::editor
 		DrawHierarchy();
 		DrawInspector();
 		DrawProject();
-		DrawViewport();
+		viewport.Render();
 
 		if (ImGui::BeginMainMenuBar())
 		{
@@ -290,10 +254,17 @@ namespace sh::editor
 
 		if (bOpenExplorer)
 			explorer.Update();
+
+		imgui.SetDirty();
 	}
 
-	void EditorUI::SyncRenderThread()
+	auto EditorUI::GetViewport() -> Viewport&
 	{
-		viewportDescSet[RENDER_THREAD] = viewportDescSet[GAME_THREAD];
+		return viewport;
+	}
+
+	void EditorUI::Clean()
+	{
+		viewport.Clean();
 	}
 }

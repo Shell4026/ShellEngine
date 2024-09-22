@@ -6,6 +6,7 @@
 #include "Render/Renderer.h"
 #include "Render/RenderTexture.h"
 #include "Render/Framebuffer.h"
+#include "Render/Camera.h"
 
 #include "glm/mat4x4.hpp"
 
@@ -17,21 +18,20 @@ namespace sh::game
 	{
 		SCLASS(Camera)
 	private:
-		glm::mat4 matProj;
-		glm::mat4 matView;
+		render::Camera camera;
 
-		PROPERTY(cameraHandle, const)
-		uint32_t cameraHandle;
+		PROPERTY(renderTexture)
+		render::RenderTexture* renderTexture;
 
 		PROPERTY(depth)
 		int depth;
+	protected:
+		glm::mat4 matProj;
+		glm::mat4 matView;
 	public:
 		float fov;
 		float nearPlane;
 		float farPlane;
-
-		PROPERTY(renderTexture)
-		render::RenderTexture* renderTexture;
 
 		const glm::mat4& worldToCameraMatrix;
 	public:
@@ -45,9 +45,12 @@ namespace sh::game
 		SH_GAME_API auto GetProjMatrix() const -> const glm::mat4&;
 		SH_GAME_API auto GetViewMatrix() const -> const glm::mat4&;
 
-		SH_GAME_API auto GetCameraHandle() const -> uint32_t;
-
 		SH_GAME_API void SetDepth(int depth);
+
+		SH_GAME_API void SetRenderTexture(render::RenderTexture& renderTexture);
+		SH_GAME_API auto GetRenderTexture() const -> render::RenderTexture*;
+
+		SH_GAME_API auto GetNative() -> render::Camera&;
 
 #ifdef SH_EDITOR
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;

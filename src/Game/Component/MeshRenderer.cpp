@@ -15,7 +15,25 @@
 namespace sh::game
 {
 	MeshRenderer::MeshRenderer() :
-		mesh(nullptr), mat(nullptr)
+		mesh(nullptr), mat(nullptr),
+		onCameraAddListener
+		(
+			[&](Camera* cam)
+			{
+				CreateDrawable(cam);
+			}
+		),
+		onCameraRemoveListener
+		(
+			[&](Camera* cam)
+			{
+				auto it = drawables.find(cam);
+				if (it == drawables.end())
+					return;
+
+				drawables.erase(it);
+			}
+		)
 	{
 	}
 
@@ -72,15 +90,12 @@ namespace sh::game
 			std::unique_ptr<render::IDrawable> drawable = std::make_unique<sh::render::VulkanDrawable>(renderer);
 			gc->SetRootSet(drawable.get());
 
-			if (camera->renderTexture != nullptr)
-				drawable->SetFramebuffer(*camera->renderTexture->GetFramebuffer());
-
-			drawable->Build(mesh, mat);
+			drawable->Build(camera->GetNative(), *mesh, mat);
 			drawables.insert({ camera, std::move(drawable) });
 		}
 		else
 		{
-			it->second->Build(mesh, mat);
+			it->second->Build(camera->GetNative(), *mesh, mat);
 		}
 	}
 	void MeshRenderer::RebuildDrawables()
@@ -96,17 +111,13 @@ namespace sh::game
 		Super::Awake();
 		for(auto cam : gameObject->world.GetCameras())
 			CreateDrawable(cam);
+
+		gameObject->world.onCameraAdd.Register(onCameraAddListener);
+		gameObject->world.onCameraRemove.Register(onCameraRemoveListener);
 	}
 
 	void MeshRenderer::Start()
 	{
-		for (auto cam : gameObject->world.GetCameras())
-		{
-			if (drawables.find(cam) == drawables.end())
-			{
-				CreateDrawable(cam);
-			}
-		}
 	}
 
 	void MeshRenderer::Update()
@@ -122,45 +133,23 @@ namespace sh::game
 		if (renderer->IsPause())
 			return;
 
-		for (auto cam : gameObject->world.GetCameras())
+		for (auto&[cam, drawable] : drawables)
 		{
-			if (drawables.find(cam) == drawables.end())
-			{
-				CreateDrawable(cam);
-			}
-		}
-		//++it 필수
-		for (auto it = drawables.begin(); it != drawables.end();)
-		{
-			Camera* cam = it->first;
-			auto& drawable = it->second;
-			if (!sh::core::IsValid(cam))
-			{
-				it = drawables.erase(it);
-				continue;
-			}
 			if (!cam->active)
-			{
-				++it;
 				continue;
-			}
-			if (cam->renderTexture != nullptr)
-			{
-				drawable->SetFramebuffer(*cam->renderTexture->GetFramebuffer());
-			}
 			
 			std::array<const render::Shader::UniformMap*, 2> uniforms{ &mat->GetShader()->vertexUniforms ,  &mat->GetShader()->fragmentUniforms };
-			//셰이더 유니폼 값 전달
-			for (int i = 0; i < 2; ++i)
+			// 셰이더 유니폼 값 전달
+			for (int stageIdx = 0; stageIdx < 2; ++stageIdx) // 0 버텍스 스테이지 1 프레그먼트 스테이지
 			{
 				auto stage = render::IDrawable::Stage::Vertex;
-				if(i == 1)
+				if(stageIdx == 1)
 					stage = render::IDrawable::Stage::Fragment;
-				for (auto& uniformPair : *uniforms[i])
+				for (auto& [id, uniformVec] : *uniforms[stageIdx])
 				{
-					size_t size = uniformPair.second.back().offset + uniformPair.second.back().size;
+					size_t size = uniformVec.back().offset + uniformVec.back().size;
 					uniformCopyData.resize(size);
-					for (const auto& uniform : uniformPair.second)
+					for (const auto& uniform : uniformVec)
 					{
 						if (uniform.typeName == sh::core::reflection::GetTypeName<glm::mat4>())
 						{
@@ -213,19 +202,18 @@ namespace sh::game
 						}
 					}
 
-					drawable->SetUniformData(uniformPair.first, uniformCopyData.data(), stage);
+					drawable->SetUniformData(id, uniformCopyData.data(), stage);
 				}//for uniformPair
 			}//for i
-			//텍스쳐
+
+			// 텍스쳐
 			for (auto& sampler : mat->GetShader()->samplerFragmentUniforms)
 			{
 				auto tex = mat->GetTexture(sampler.second.name);
 				if (tex != nullptr)
 					drawable->SetTextureData(sampler.first, tex);
 			}
-			//std::cout << "push: " << this << ' ' << "cam: " << cam->GetCameraHandle() << '\n';
-			gameObject->world.renderer.PushDrawAble(drawable.get(), cam->GetCameraHandle());
-			++it;
-		}
+			gameObject->world.renderer.PushDrawAble(drawable.get());
+		}//drawables
 	}
 }//namespace

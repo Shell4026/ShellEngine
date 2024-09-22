@@ -4,19 +4,26 @@
 
 #include "Core/NonCopyable.h"
 #include "Core/SObject.h"
+#include "Core/ISyncable.h"
 
 #include <cstdint>
 #include <vector>
 #include <memory>
+#include <array>
 
 namespace sh::render
 {
 	class ITextureBuffer;
 	class Renderer;
 
-	class Texture : public core::SObject, public core::INonCopyable
+	class Texture : 
+		public core::SObject, 
+		public core::INonCopyable,
+		public core::ISyncable
 	{
 		SCLASS(Texture)
+	private:
+		bool bDirty;
 	public:
 		enum class TextureFormat
 		{
@@ -26,7 +33,10 @@ namespace sh::render
 
 		using Byte = unsigned char;
 	protected:
-		std::unique_ptr<ITextureBuffer> buffer;
+		Renderer* renderer;
+
+		core::SyncArray<std::unique_ptr<ITextureBuffer>> buffer;
+
 		std::vector<Byte> pixels;
 	public:
 		const uint32_t width;
@@ -40,8 +50,14 @@ namespace sh::render
 		SH_RENDER_API void SetPixelData(void* data);
 		SH_RENDER_API virtual auto GetPixelData() const -> const std::vector<Byte>&;
 
-		SH_RENDER_API virtual void Build(const Renderer& renderer);
+		SH_RENDER_API virtual void Build(Renderer& renderer);
 
-		SH_RENDER_API auto GetBuffer() -> ITextureBuffer*;
+		/// @brief 네이티브 텍스쳐 버퍼를 가져온다.
+		/// @param threadID 0 = 게임 스레드용, 1 = 렌더 스레드용
+		/// @return 텍스쳐 버퍼 포인터
+		SH_RENDER_API auto GetBuffer(int threadID = GAME_THREAD) -> ITextureBuffer*;
+		
+		SH_RENDER_API void SetDirty() override;
+		SH_RENDER_API void Sync() override;
 	};
 }

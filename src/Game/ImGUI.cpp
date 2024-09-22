@@ -19,7 +19,7 @@ namespace sh::game
 	ImGUI::ImGUI(window::Window& window, render::VulkanRenderer& renderer) :
 		window(window), renderer(renderer),
 		drawData(),
-		bInit(false)
+		bInit(false), bDirty(false)
 	{
 	}
 
@@ -423,13 +423,21 @@ namespace sh::game
 		return ImGui::GetCurrentContext();
 	}
 
-	void ImGUI::SyncDrawData()
+	void ImGUI::SetDirty()
+	{
+		if (bDirty)
+			return;
+		bDirty = true;
+		renderer.PushSyncObject(*this);
+	}
+
+	void ImGUI::Sync()
 	{
 		ImDrawData* src = ImGui::GetDrawData();
 		if (src == nullptr || !src->Valid)
 			return;
 
-		// DrawData.Clear()는 drawData*를 해제 하지 않기에 수동 소멸시켜야함.
+		// DrawData.Clear()는 drawData*를 해제 하지 않기에 수동 소멸시켜야 함.
 		for (int i = 0; i < drawData.CmdListsCount; ++i)
 			IM_DELETE(drawData.CmdLists[i]);
 		drawData.Clear();
@@ -448,5 +456,7 @@ namespace sh::game
 			ImDrawList* copy = src->CmdLists[i]->CloneOutput();
 			drawData.CmdLists[i] = copy;
 		}
+
+		bDirty = false;
 	}
 }//namespace

@@ -8,13 +8,17 @@
 namespace sh::render
 {
 	Texture::Texture(TextureFormat format, uint32_t width, uint32_t height) :
-		format(format), width(width), height(height)
+		renderer(nullptr),
+		format(format), width(width), height(height),
+		bDirty(false)
 	{
 		pixels.resize(width * height * 4);
 	}
 	Texture::Texture(Texture&& other) noexcept :
+		renderer(other.renderer),
 		format(other.format), width(other.width), height(other.height),
-		pixels(std::move(other.pixels)), buffer(std::move(other.buffer))
+		pixels(std::move(other.pixels)), buffer(std::move(other.buffer)),
+		bDirty(other.bDirty)
 	{
 	}
 	Texture::~Texture()
@@ -24,6 +28,8 @@ namespace sh::render
 	void Texture::SetPixelData(void* data)
 	{
 		std::memcpy(pixels.data(), data, pixels.size());
+		if (renderer)
+			Build(*renderer);
 	}
 
 	auto Texture::GetPixelData() const -> const std::vector<Byte>&
@@ -31,17 +37,35 @@ namespace sh::render
 		return pixels;
 	}
 
-	void Texture::Build(const Renderer& renderer)
+	void Texture::Build(Renderer& renderer)
 	{
+		this->renderer = &renderer;
 		if (renderer.apiType == RenderAPI::Vulkan)
 		{
-			buffer = std::make_unique<VulkanTextureBuffer>();
-			buffer->Create(static_cast<const VulkanRenderer&>(renderer), pixels.data(), width, height, format);
+			buffer[GAME_THREAD] = std::make_unique<VulkanTextureBuffer>();
+			buffer[GAME_THREAD]->Create(static_cast<const VulkanRenderer&>(renderer), pixels.data(), width, height, format);
 		}
+
+		SetDirty();
 	}
 
-	auto Texture::GetBuffer() -> ITextureBuffer*
+	auto Texture::GetBuffer(int threadID) -> ITextureBuffer*
 	{
-		return buffer.get();
+		return buffer[threadID].get();
+	}
+
+	void Texture::SetDirty()
+	{
+		if (bDirty)
+			return;
+
+		bDirty = true;
+		if (renderer != nullptr)
+			renderer->PushSyncObject(*this);
+	}
+	void Texture::Sync()
+	{
+		std::swap(buffer[RENDER_THREAD], buffer[GAME_THREAD]);
+		bDirty = false;
 	}
 }

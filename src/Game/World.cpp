@@ -175,13 +175,19 @@ namespace sh::game
 
 	void World::RegisterCamera(Camera* cam)
 	{
-		if(core::IsValid(cam))
-			cameras.insert(cam);
+		if (!core::IsValid(cam))
+			return;
+		cameras.insert(cam);
+
+		onCameraAdd.Notify(cam);
 	}
 	void World::UnRegisterCamera(Camera* cam)
 	{
-		if (core::IsValid(cam))
-			cameras.erase(cam);
+		if (!core::IsValid(cam))
+			return;
+		cameras.erase(cam);
+
+		onCameraRemove.Notify(cam);
 	}
 	auto World::GetCameras() const -> const core::SSet<Camera*>&
 	{
@@ -192,7 +198,6 @@ namespace sh::game
 		if (core::IsValid(cam))
 		{
 			mainCamera = cam;
-			renderer.SetMainCamera(cam->GetCameraHandle());
 		}
 	}
 	auto World::GetMainCamera() const -> Camera*

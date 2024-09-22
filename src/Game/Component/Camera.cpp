@@ -11,7 +11,7 @@ namespace sh::game
 		worldToCameraMatrix(matView),
 		matProj(), matView(),
 		fov(45.f), nearPlane(0.1f), farPlane(1000.f),
-		cameraHandle(0), depth(-1),
+		camera(), depth(0),
 
 		renderTexture(nullptr)
 	{
@@ -31,13 +31,11 @@ namespace sh::game
 			}
 		}
 		gameObject->world.UnRegisterCamera(this);
-		gameObject->world.renderer.DeleteCamera(cameraHandle);
 	}
 	
 	void Camera::Awake()
 	{
 		Super::Awake();
-		cameraHandle = gameObject->world.renderer.AddCamera(depth);
 		gameObject->world.RegisterCamera(this);
 	}
 	void Camera::Start()
@@ -68,15 +66,25 @@ namespace sh::game
 		return matView;
 	}
 
-	auto Camera::GetCameraHandle() const -> uint32_t
-	{
-		return cameraHandle;
-	}
-
 	void Camera::SetDepth(int depth)
 	{
 		this->depth = depth;
-		gameObject->world.renderer.SetCameraDepth(cameraHandle, depth);
+		camera.SetPriority(depth);
+	}
+
+	void Camera::SetRenderTexture(render::RenderTexture& renderTexture)
+	{
+		this->renderTexture = &renderTexture;
+		camera.SetRenderTexture(&renderTexture);
+	}
+	auto Camera::GetRenderTexture() const -> render::RenderTexture*
+	{
+		return renderTexture;
+	}
+
+	auto Camera::GetNative() -> render::Camera&
+	{
+		return camera;
 	}
 
 #ifdef SH_EDITOR
@@ -84,7 +92,7 @@ namespace sh::game
 	{
 		if (strcmp(prop.GetName(), "depth") == 0)
 		{
-			gameObject->world.renderer.SetCameraDepth(cameraHandle, depth);
+			SetDepth(depth);
 		}
 	}
 #endif

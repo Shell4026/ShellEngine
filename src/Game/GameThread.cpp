@@ -7,10 +7,6 @@
 
 #include "Window/Window.h"
 
-#if SH_EDITOR
-#include "Editor/EditorUI.h"
-#endif
-
 #include <fmt/core.h>
 
 namespace sh::game
@@ -54,7 +50,9 @@ namespace sh::game
 						func();
 					this->gui->End();
 
+					std::cout << "[Game Thread] End frame\n";
 					finish.store(true, std::memory_order::memory_order_release);
+					//최초 한번 렌더 스레드를 깨운다.
 					if (!init.load(std::memory_order_relaxed))
 					{
 						init.store(true, std::memory_order::memory_order_release);
@@ -99,6 +97,8 @@ namespace sh::game
 
 	void GameThread::SyncFinished()
 	{
+		finish.store(false, std::memory_order::memory_order_release);
+
 		mu.lock();
 		syncFin = true;
 		gc.Update();

@@ -6,7 +6,7 @@
 
 namespace sh::game
 {
-	TextureLoader::TextureLoader(const render::Renderer& renderer) :
+	TextureLoader::TextureLoader(render::Renderer& renderer) :
 		renderer(renderer)
 	{
 	}

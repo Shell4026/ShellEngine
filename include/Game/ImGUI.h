@@ -6,6 +6,8 @@
 #include "External/imgui/imgui_internal.h"
 #include "External/imgui/backends/imgui_impl_vulkan.h"
 
+#include "Core/ISyncable.h"
+
 #include "Window/Window.h"
 
 #include "Render/VulkanRenderer.h"
@@ -14,18 +16,16 @@
 
 namespace sh::game
 {
-	class ImGUI
+	class ImGUI : public core::ISyncable
 	{
 	private:
-		static constexpr int GAME_THREAD = 0;
-		static constexpr int RENDER_THREAD = 1;
-
 		window::Window& window;
 		render::VulkanRenderer& renderer;
 
 		ImDrawData drawData;
 
 		bool bInit;
+		bool bDirty;
 	private:
 		void WindowInit();
 	public:
@@ -44,8 +44,7 @@ namespace sh::game
 
 		SH_GAME_API auto GetContext() const -> ImGuiContext*;
 
-		/// @brief [렌더 스레드용] 게임 스레드와 동기화 하는 함수.
-		/// @return 
-		SH_GAME_API void SyncDrawData();
+		SH_GAME_API void SetDirty() override;
+		SH_GAME_API void Sync() override;
 	};
 }

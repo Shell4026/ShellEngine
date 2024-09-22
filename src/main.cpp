@@ -121,8 +121,6 @@ int main(int arg, char* args[])
 	auto tex = world.textures.AddResource("Texture0", texLoader.Load("textures/버터고양이.jpg"));
 	auto tex2 = world.textures.AddResource("Texture1", texLoader.Load("textures/cat.jpg"));
 	auto tex3 = world.textures.AddResource("Texture2", texLoader.Load("textures/viking_room.png"));
-	auto renderTex = world.textures.AddResource("RenderTexture", std::make_unique<sh::render::RenderTexture>());
-	renderTex->Build(renderer);
 
 	shader->AddAttribute<glm::vec2>("uvs", 1);
 
@@ -188,15 +186,11 @@ int main(int arg, char* args[])
 	GameObject* cam = world.AddGameObject("Camera");
 	cam->transform->SetPosition(glm::vec3(2.f, 2.f, 2.f));
 	Camera* cameraComponent = cam->AddComponent<Camera>();
-	cameraComponent->renderTexture = sh::core::reflection::Cast<sh::render::RenderTexture>(renderTex);
 	
 	GameObject* cam2 = world.AddGameObject("Camera2");
 	cam2->transform->SetPosition(glm::vec3(-2.f, 2.f, -2.f));
-	cam2->AddComponent<Camera>()->renderTexture = sh::core::reflection::Cast<sh::render::RenderTexture>(renderTex);
-	cam2->GetComponent<Camera>()->SetDepth(-2);
-
-	world.Start();
-	world.SetMainCamera(cameraComponent);
+	cam2->AddComponent<Camera>();
+	cam2->GetComponent<Camera>()->SetDepth(1);
 
 	ImGUI gui{ window, renderer };
 	gui.Init();
@@ -215,10 +209,15 @@ int main(int arg, char* args[])
 			editorUi.Render();
 		}
 	);
+	cameraComponent->SetRenderTexture(editorUi.GetViewport().GetRenderTexture());
+	cam2->GetComponent<Camera>()->SetRenderTexture(editorUi.GetViewport().GetRenderTexture());
 #endif
 
 	float delta = 0.f;
 	bool stop = false;
+
+	world.Start();
+	world.SetMainCamera(cameraComponent);
 
 	while (window.IsOpen())
 	{
@@ -246,6 +245,9 @@ int main(int arg, char* args[])
 				stop = true;
 				if (gameThread.GetThread().joinable())
 					gameThread.GetThread().join();
+#if SH_EDITOR
+				editorUi.Clean();
+#endif
 				world.Clean();
 				gui.Clean();
 				window.Close();
@@ -298,17 +300,15 @@ int main(int arg, char* args[])
 		}
 		if (!stop)
 		{
+			// 게임 스레드와 동기화
 			if (gameThread.IsTaskFinished())
 			{
+				std::cout << "Sync Start\n";
 				renderer.SyncGameThread();
-				gui.SyncDrawData();
-				editorUi.SyncRenderThread();
+				std::cout << "Sync End\n";
 				gameThread.SyncFinished();
 			}
-
-			mu.lock(); // 락을 못 얻을 일은 되도록 없어야함.
 			renderer.Render(window.GetDeltaTime());
-			mu.unlock();
 
 			if (renderer.IsPause())
 			{

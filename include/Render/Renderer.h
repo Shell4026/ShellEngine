@@ -1,8 +1,12 @@
 ﻿#pragma once
 
 #include "Export.h"
+#include "Camera.h"
 
-#include "../Window/Window.h"
+#include "Core/ISyncable.h"
+#include "Core/SContainer.hpp"
+
+#include "Window/Window.h"
 
 #include "glm/vec2.hpp"
 
@@ -24,44 +28,39 @@ namespace sh::render {
 	class Framebuffer;
 
 	class Renderer {
-	public:
-		using CameraHandle = uint32_t;
-		struct Camera
-		{
-			CameraHandle id;
-			int depth;
-
-			bool operator<(const Camera& other) const;
-		};
 	private:
 		sh::window::Window* window;
-		uint32_t nextCameraId;
+
+		std::queue<core::ISyncable*> syncQueue;
+
+		struct CameraCompare
+		{
+			bool operator()(const Camera* left, const Camera* right) const
+			{
+				return left->GetPriority() > right->GetPriority();
+			}
+		};
 	protected:
 		static constexpr int GAME_THREAD = 0;
 		static constexpr int RENDER_THREAD = 1;
 
-		std::queue<CameraHandle> emptyHandle;
-		//todo
-		std::array<std::vector<const Camera*>, 2> camHandles;
-		std::array<std::map<Camera, std::vector<IDrawable*>>, 2> drawList;
+		core::SyncArray<core::SMap<Camera*, core::SVector<IDrawable*>, 4, CameraCompare>> drawList;
 
 		std::vector<std::function<void()>> drawCalls;
 
 		glm::vec2 viewportStart;
 		glm::vec2 viewportEnd;
 
-		CameraHandle mainCamera;
-
 		std::atomic_bool bPause;
 	public:
 		const RenderAPI apiType;
 	public:
 		SH_RENDER_API Renderer(RenderAPI api);
-		SH_RENDER_API virtual ~Renderer() = default;
+		SH_RENDER_API virtual ~Renderer() {};
 
 		SH_RENDER_API virtual bool Init(sh::window::Window& win);
 		SH_RENDER_API virtual bool Resizing() = 0;
-		SH_RENDER_API virtual void Clean() = 0;
+		SH_RENDER_API virtual void Clean();
 
 		SH_RENDER_API virtual void Render(float deltaTime) = 0;
 		SH_RENDER_API virtual void Pause(bool b);
@@ -79,20 +78,14 @@ namespace sh::render {
 		SH_RENDER_API void ClearDrawList();
 		/// @brief [게임 스레드 전용] 드로우 객체를 큐에 집어 넣는다.
 		/// @param drawable 드로우 객체 포인터
-		/// @param camHandle 카메라 핸들
 		/// @return 
-		SH_RENDER_API void PushDrawAble(IDrawable* drawable, CameraHandle camHandle = 0);
+		SH_RENDER_API void PushDrawAble(IDrawable* drawable);
 		/// @brief [렌더 스레드 전용] 별도의 드로우 콜을 추가한다.
 		/// @param func 드로우 콜 함수
 		/// @return 
 		SH_RENDER_API void AddDrawCall(const std::function<void()>& func);
 
 		SH_RENDER_API auto GetWindow() -> sh::window::Window&;
-
-		SH_RENDER_API auto AddCamera(int depth = 0) -> CameraHandle;
-		SH_RENDER_API void DeleteCamera(CameraHandle cam);
-		SH_RENDER_API void SetMainCamera(CameraHandle cam);
-		SH_RENDER_API void SetCameraDepth(CameraHandle, int depth);
 
 		/// @brief 메인 스레드와 동기화 하는 함수.
 		/// @return 
@@ -101,5 +94,10 @@ namespace sh::render {
 		/// @brief 렌더러가 일시정지 상태인지 반환한다.
 		/// @return 일시정지 시 true 그 외 false
 		SH_RENDER_API auto IsPause() const -> bool;
+
+		/// @brief 스레드 간 동기화를 할 객체를 큐에 넣는 함수.
+		/// @param syncObj 동기화 객체 참조
+		/// @return 
+		SH_RENDER_API void PushSyncObject(core::ISyncable& syncObj);
 	};
 }

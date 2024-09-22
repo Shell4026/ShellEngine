@@ -10,6 +10,7 @@
 
 #include "Core/Util.h"
 #include "Core/SContainer.hpp"
+#include "Core/Observer.hpp"
 
 #include "glm/mat4x4.hpp"
 #include <unordered_map>
@@ -28,9 +29,12 @@ namespace sh::game
 		PROPERTY(mat);
 		sh::render::Material* mat;
 		
-		core::SHashMap<Camera*, std::unique_ptr<sh::render::IDrawable>> drawables;
+		core::SMap<Camera*, std::unique_ptr<sh::render::IDrawable>, 4> drawables;
 
 		core::SVector<unsigned char> uniformCopyData;
+
+		core::Observer<Camera*>::Listener onCameraAddListener;
+		core::Observer<Camera*>::Listener onCameraRemoveListener;
 	private:
 		template <typename T>
 		void SetUniformData(const T& data, std::vector<unsigned char>& uniformData, size_t offset);

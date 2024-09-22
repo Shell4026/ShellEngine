@@ -3,6 +3,7 @@
 #include "Export.h"
 #include "UI.h"
 #include "ExplorerUI.h"
+#include "Viewport.h"
 
 #include "Game/World.h"
 
@@ -22,33 +23,32 @@ namespace sh::editor
 
 		float hierarchyWidth;
 		float hierarchyHeight;
-		float viewportWidthLast;
-		float viewportHeightLast;
 
 		int selected;
 
 		ImGuiID dockspaceId;
 
 		ExplorerUI explorer;
-
-		std::array<VkDescriptorSet, 2> viewportDescSet; // 게임 스레드, 렌더 스레드
+		Viewport viewport;
 
 		bool bViewportDocking : 1;
 		bool bHierarchyDocking : 1;
 		bool bAddComponent : 1;
 		bool bOpenExplorer : 1;
-		bool bChangedViewportSize : 1;
+		bool bDirty : 1;
 	private:
 		inline void SetDockNode();
-		inline void DrawViewport();
 		inline void DrawHierarchy();
 		inline void DrawInspector();
 		inline void DrawProject();
-		inline void ChangedViewportSize();
 	public:
-		SH_EDITOR_API EditorUI(game::World& world, const game::ImGUI& imgui, std::mutex& renderMutex);
+		SH_EDITOR_API EditorUI(game::World& world, game::ImGUI& imgui, std::mutex& renderMutex);
 		SH_EDITOR_API void Update();
 		SH_EDITOR_API void Render();
 		SH_EDITOR_API void SyncRenderThread();
+
+		SH_EDITOR_API auto GetViewport() -> Viewport&;
+
+		SH_EDITOR_API void Clean();
 	};
 }

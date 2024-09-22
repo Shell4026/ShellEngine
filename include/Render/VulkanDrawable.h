@@ -3,6 +3,7 @@
 #include "IDrawable.h"
 #include "VulkanVertexBuffer.h"
 #include "VulkanRenderer.h"
+#include "camera.h"
 
 #include "VulkanImpl/VulkanPipeline.h"
 #include "VulkanImpl/VulkanBuffer.h"
@@ -15,6 +16,7 @@
 namespace sh::render
 {
 	class Framebuffer;
+
 	class VulkanDrawable : public IDrawable
 	{
 		SCLASS(VulkanDrawable)
@@ -29,14 +31,15 @@ namespace sh::render
 		Mesh* mesh;
 		PROPERTY(textures)
 		std::map<uint32_t, Texture*> textures;
-
-		Framebuffer* framebuffer;
+		Camera* camera;
 
 		std::unique_ptr<impl::VulkanPipeline> pipeline;
 		//동기화 필요 목록
-		std::array<VkDescriptorSet, 2> descriptorSet;
-		std::array<std::map<uint32_t, impl::VulkanBuffer>, 2> vertUniformBuffers;
-		std::array<std::map<uint32_t, impl::VulkanBuffer>, 2> fragUniformBuffers;
+		core::SyncArray<VkDescriptorSet> descriptorSet;
+		core::SyncArray<std::map<uint32_t, impl::VulkanBuffer>> vertUniformBuffers;
+		core::SyncArray<std::map<uint32_t, impl::VulkanBuffer>> fragUniformBuffers;
+
+		bool dirty;
 	private:
 		void CreateDescriptorSet();
 	public:
@@ -47,10 +50,11 @@ namespace sh::render
 
 		SH_RENDER_API void Clean();
 
-		SH_RENDER_API void Build(Mesh* mesh, Material* mat) override;
+		SH_RENDER_API void Build(Camera& camera, Mesh& mesh, Material* mat) override;
 
 		SH_RENDER_API auto GetMaterial() const -> Material* override;
 		SH_RENDER_API auto GetMesh() const-> Mesh* override;
+		SH_RENDER_API auto GetCamera() const-> Camera* override;
 
 		/// @brief [게임 스레드용] 유니폼에 데이터를 지정한다.
 		/// @param binding 바인딩 번호
@@ -68,9 +72,7 @@ namespace sh::render
 		SH_RENDER_API auto GetPipeline() const->impl::VulkanPipeline*;
 		SH_RENDER_API auto GetDescriptorSet() const -> VkDescriptorSet;
 
-		SH_RENDER_API void SetFramebuffer(Framebuffer& framebuffer) override;
-		SH_RENDER_API auto GetFramebuffer() const -> const Framebuffer* override;
-
-		SH_RENDER_API void SyncGameThread() override;
+		SH_RENDER_API void SetDirty() override;
+		SH_RENDER_API void Sync() override;
 	};
 }

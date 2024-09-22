@@ -17,23 +17,24 @@ namespace sh::render
 {
 	VulkanDrawable::VulkanDrawable(VulkanRenderer& renderer) :
 		renderer(renderer), 
-		mat(nullptr), mesh(nullptr),
-		descriptorSet(), framebuffer(nullptr)
+		mat(nullptr), mesh(nullptr), camera(nullptr),
+		descriptorSet(),
+		dirty(false)
 	{
 	}
 	VulkanDrawable::VulkanDrawable(VulkanDrawable&& other) noexcept :
 		renderer(other.renderer),
-		mat(other.mat), mesh(other.mesh),
+		mat(other.mat), mesh(other.mesh), camera(other.camera),
 		pipeline(std::move(other.pipeline)),
 		descriptorSet(std::move(other.descriptorSet)),
 		vertUniformBuffers(std::move(other.vertUniformBuffers)), 
 		fragUniformBuffers(std::move(other.fragUniformBuffers)),
 		textures(std::move(other.textures)),
-		framebuffer(other.framebuffer)
+		dirty(other.dirty)
 	{
 		other.mat = nullptr;
 		other.mesh = nullptr;
-		other.framebuffer = nullptr;
+		other.camera = nullptr;
 	}
 
 	VulkanDrawable::~VulkanDrawable() noexcept
@@ -59,25 +60,26 @@ namespace sh::render
 		descriptorSet[RENDER_THREAD] = renderer.GetDescriptorPool().AllocateDescriptorSet(shader->GetDescriptorSetLayout(), 1);
 	}
 
-	void VulkanDrawable::Build(Mesh* mesh, Material* mat)
+	void VulkanDrawable::Build(Camera& camera, Mesh& mesh, Material* mat)
 	{
 		this->mat = mat;
-		this->mesh = mesh;
+		this->mesh = &mesh;
+		this->camera = &camera;
 
 		VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
 
 		Clean();
 
 		const impl::VulkanFramebuffer* vkFrameBuffer = nullptr;
-		if (framebuffer == nullptr)
+		if (camera.GetRenderTexture() == nullptr)
 			vkFrameBuffer = static_cast<const impl::VulkanFramebuffer*>(renderer.GetMainFramebuffer());
 		else
-			vkFrameBuffer = static_cast<const impl::VulkanFramebuffer*>(framebuffer);
+			vkFrameBuffer = static_cast<const impl::VulkanFramebuffer*>(camera.GetRenderTexture()->GetFramebuffer());
 
 		pipeline = std::make_unique<impl::VulkanPipeline>(renderer.GetDevice(), vkFrameBuffer->GetRenderPass());
 
-		auto& bindings = static_cast<VulkanVertexBuffer*>(mesh->GetVertexBuffer())->bindingDescriptions;
-		auto& attrs = static_cast<VulkanVertexBuffer*>(mesh->GetVertexBuffer())->attribDescriptions;
+		auto& bindings = static_cast<VulkanVertexBuffer*>(mesh.GetVertexBuffer())->bindingDescriptions;
+		auto& attrs = static_cast<VulkanVertexBuffer*>(mesh.GetVertexBuffer())->attribDescriptions;
 		
 		//토폴리지
 		impl::VulkanPipeline::Topology topology = impl::VulkanPipeline::Topology::Triangle;
@@ -97,10 +99,10 @@ namespace sh::render
 		pipeline->AddAttributeDescription(attrs[0]);
 		for (int i = 1; i < attrs.size(); ++i)
 		{
-			auto data = shader->GetAttribute(mesh->attributes[i - 1]->name);
+			auto data = shader->GetAttribute(mesh.attributes[i - 1]->name);
 			if (!data)
 				continue;
-			if (data->typeName != mesh->attributes[i - 1]->typeName)
+			if (data->typeName != mesh.attributes[i - 1]->typeName)
 				continue;
 
 			auto attrDesc = attrs[i];
@@ -246,11 +248,15 @@ namespace sh::render
 
 			it->second.SetData(data);
 		}
+
+		SetDirty();
 	}
 	void VulkanDrawable::SetTextureData(uint32_t binding, Texture* tex)
 	{
 		auto it = textures.find(binding);
 		if (it == textures.end())
+			return;
+		if (it->second == tex)
 			return;
 
 		it->second = tex;
@@ -272,16 +278,21 @@ namespace sh::render
 		descriptorWrite.pTexelBufferView = nullptr;
 
 		vkUpdateDescriptorSets(renderer.GetDevice(), 1, &descriptorWrite, 0, nullptr);
+
+		SetDirty();
 	}
 
 	auto VulkanDrawable::GetMaterial() const -> Material*
 	{
 		return mat;
 	}
-
 	auto VulkanDrawable::GetMesh() const -> Mesh*
 	{
 		return mesh;
+	}
+	auto VulkanDrawable::GetCamera() const -> Camera*
+	{
+		return camera;
 	}
 
 	auto VulkanDrawable::GetPipeline() const -> impl::VulkanPipeline*
@@ -293,19 +304,21 @@ namespace sh::render
 		return descriptorSet[RENDER_THREAD];
 	}
 
-	void VulkanDrawable::SetFramebuffer(Framebuffer& framebuffer)
+	void VulkanDrawable::SetDirty()
 	{
-		this->framebuffer = &framebuffer;
-	}
-	auto VulkanDrawable::GetFramebuffer() const -> const Framebuffer*
-	{
-		return framebuffer;
+		if(!dirty)
+			renderer.PushSyncObject(*this);
+		dirty = true;
 	}
 
-	void VulkanDrawable::SyncGameThread()
+	void VulkanDrawable::Sync()
 	{
+		if (!dirty)
+			return;
 		std::swap(descriptorSet[GAME_THREAD], descriptorSet[RENDER_THREAD]);
 		std::swap(vertUniformBuffers[GAME_THREAD], vertUniformBuffers[RENDER_THREAD]);
 		std::swap(fragUniformBuffers[GAME_THREAD], fragUniformBuffers[RENDER_THREAD]);
+
+		dirty = false;
 	}
 }

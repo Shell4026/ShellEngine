@@ -37,9 +37,6 @@ namespace sh::game
 		window::Window* win;
 		World* world;
 		ImGUI* gui;
-#if SH_EDITOR
-		std::unique_ptr<editor::EditorUI> editorUI;
-#endif
 
 		core::GarbageCollection& gc;
 
