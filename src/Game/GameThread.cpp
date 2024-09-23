@@ -50,9 +50,9 @@ namespace sh::game
 						func();
 					this->gui->End();
 
-					std::cout << "[Game Thread] End frame\n";
+					//std::cout << "[Game Thread] End frame\n";
 					finish.store(true, std::memory_order::memory_order_release);
-					//최초 한번 렌더 스레드를 깨운다.
+					// 최초 한번 렌더 스레드를 깨운다.
 					if (!init.load(std::memory_order_relaxed))
 					{
 						init.store(true, std::memory_order::memory_order_release);

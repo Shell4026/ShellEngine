@@ -26,6 +26,7 @@
 #include "Game/Component/MeshRenderer.h"
 #include "Game/Component/UniformTest.h"
 #include "Game/Component/Camera.h"
+#include "Game/Component/EditorCamera.h"
 #include "Game/Component/LineRenderer.h"
 #include "Game/ComponentModule.h"
 #include "Game/ImGUI.h"
@@ -177,7 +178,7 @@ int main(int arg, char* args[])
 	meshRenderer->SetMesh(*mesh2);
 	meshRenderer->SetMaterial(*mat2);
 	
-	obj->AddComponent<UniformTest>();
+	//obj->AddComponent<UniformTest>();
 
 	auto meshRenderer2 = obj2->AddComponent<MeshRenderer>();
 	meshRenderer2->SetMesh(*mesh);
@@ -185,7 +186,7 @@ int main(int arg, char* args[])
 
 	GameObject* cam = world.AddGameObject("Camera");
 	cam->transform->SetPosition(glm::vec3(2.f, 2.f, 2.f));
-	Camera* cameraComponent = cam->AddComponent<Camera>();
+	Camera* cameraComponent = cam->AddComponent<EditorCamera>();
 	
 	GameObject* cam2 = world.AddGameObject("Camera2");
 	cam2->transform->SetPosition(glm::vec3(-2.f, 2.f, -2.f));
@@ -280,7 +281,7 @@ int main(int arg, char* args[])
 				}
 				break;
 			case sh::window::Event::EventType::MouseWheelScrolled:
-				std::cout << sh::window::Event::MouseWheelScrolled::delta << '\n';
+				//std::cout << sh::window::Event::MouseWheelScrolled::delta << '\n';
 				break;
 			case sh::window::Event::EventType::KeyDown:
 				if (e.keyType == sh::window::Event::KeyType::Enter)
@@ -306,6 +307,7 @@ int main(int arg, char* args[])
 				//std::cout << "Sync Start\n";
 				renderer.SyncGameThread();
 				//std::cout << "Sync End\n";
+				Input::SyncGameThread();
 				gameThread.SyncFinished();
 			}
 			renderer.Render(window.GetDeltaTime());
