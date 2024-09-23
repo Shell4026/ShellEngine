@@ -44,7 +44,7 @@ namespace sh::render {
 		static constexpr int GAME_THREAD = 0;
 		static constexpr int RENDER_THREAD = 1;
 
-		core::SyncArray<core::SMap<Camera*, core::SVector<IDrawable*>, 4, CameraCompare>> drawList;
+		core::SyncArray<std::map<Camera*, core::SVector<IDrawable*>, CameraCompare>> drawList;
 
 		std::vector<std::function<void()>> drawCalls;
 
@@ -56,7 +56,7 @@ namespace sh::render {
 		const RenderAPI apiType;
 	public:
 		SH_RENDER_API Renderer(RenderAPI api);
-		SH_RENDER_API virtual ~Renderer() {};
+		SH_RENDER_API virtual ~Renderer() = default;
 
 		SH_RENDER_API virtual bool Init(sh::window::Window& win);
 		SH_RENDER_API virtual bool Resizing() = 0;
