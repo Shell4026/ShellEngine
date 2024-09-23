@@ -11,7 +11,7 @@ namespace sh::game
 		worldToCameraMatrix(matView),
 		matProj(), matView(),
 		fov(45.f), nearPlane(0.1f), farPlane(1000.f),
-		camera(), depth(0),
+		camera(), depth(0), lookPos(), up(0, 1, 0),
 
 		renderTexture(nullptr)
 	{
@@ -53,7 +53,7 @@ namespace sh::game
 			static_cast<float>(size.x),
 			static_cast<float>(size.y),
 			nearPlane, farPlane);
-		matView = glm::lookAt(gameObject->transform->position, glm::vec3(0.f), glm::vec3(0.f, 1.0f, 0.f));
+		matView = glm::lookAt(gameObject->transform->position, lookPos, up);
 	}
 
 	auto Camera::GetProjMatrix() const -> const glm::mat4&

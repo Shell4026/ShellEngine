@@ -28,6 +28,10 @@ namespace sh::game
 	protected:
 		glm::mat4 matProj;
 		glm::mat4 matView;
+
+		PROPERTY(lookPos)
+		glm::vec3 lookPos;
+		glm::vec3 up;
 	public:
 		float fov;
 		float nearPlane;
