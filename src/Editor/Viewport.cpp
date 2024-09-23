@@ -2,6 +2,7 @@
 
 #include "Game/ImGUI.h"
 #include "Game/World.h"
+#include "Game/Input.h"
 
 #include "Render/RenderTexture.h"
 #include "Render/VulkanTextureBuffer.h"
@@ -35,9 +36,14 @@ namespace sh::editor
 
 	void Viewport::Update()
 	{
-		//뷰포트 사이즈가 변했을 시 렌더 텍스쳐의 스케일을 바꿔준다.
-		std::cout << "changed\n";
+		if (game::Input::GetMouseDown(game::Input::MouseType::Left))
+		{
+			//std::cout << "click\n";
+		}
+	}
 
+	void Viewport::ChangeViewportSize()
+	{
 		if (viewportDescSet[GAME_THREAD])
 			ImGui_ImplVulkan_RemoveTexture(viewportDescSet[GAME_THREAD]);
 		if (viewportWidthLast != 0.f && viewportHeightLast != 0.f)
@@ -61,7 +67,7 @@ namespace sh::editor
 				viewportWidthLast = 0;
 			if (viewportHeightLast < 0)
 				viewportHeightLast = 0;
-			Update();
+			ChangeViewportSize();
 		}
 		if (bDirty)
 		{

@@ -41,6 +41,9 @@ namespace sh::editor
 		std::mutex& renderMutex;
 	public:
 		static constexpr char* name = "Viewport";
+	private:
+		/// @brief 뷰포트 사이즈가 변했을 시 렌더 텍스쳐의 사이즈를 바꾸는 함수.
+		void ChangeViewportSize();
 	public:
 		SH_EDITOR_API Viewport(game::ImGUI& imgui, game::World& world, std::mutex& renderMutex);
 		SH_EDITOR_API ~Viewport() noexcept;
