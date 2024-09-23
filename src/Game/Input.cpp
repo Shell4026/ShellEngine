@@ -9,8 +9,13 @@ namespace sh::game
 {
 	std::bitset<100> Input::keyPressing{};
 	std::bitset<3> Input::mousePressing{};
-	glm::vec2 Input::mousePos{0.f, 0.f};
-	glm::vec2& Input::mousePosition(mousePos);
+	glm::vec2 Input::mousePos{};
+	core::SyncArray<glm::vec2> Input::mouseDelta{};
+	float Input::wheelDelta(0.f);
+
+	const glm::vec2& Input::mousePosition(mousePos);
+	const glm::vec2& Input::mousePositionDelta(mouseDelta[GAME_THREAD]);
+	const float& Input::mouseWheelDelta(window::Event::MouseWheelScrolled::delta);
 
 	void Input::Update(window::Event event)
 	{
@@ -26,21 +31,29 @@ namespace sh::game
 
 		if (event.type == sh::window::Event::EventType::MouseWheelScrolled)
 		{
-			std::cout << sh::window::Event::MouseWheelScrolled::delta << '\n';
+			wheelDelta = window::Event::MouseWheelScrolled::delta;
 		}
 
-		mousePosition.x = window::Event::MousePosition::mouseX;
-		mousePosition.y = window::Event::MousePosition::mouseY;
+		mouseDelta[RENDER_THREAD].x = mousePos.x;
+		mouseDelta[RENDER_THREAD].y = mousePos.y;
+		mousePos.x = window::Event::MousePosition::mouseX;
+		mousePos.y = window::Event::MousePosition::mouseY;
+		mouseDelta[RENDER_THREAD].x = mousePos.x - mouseDelta[RENDER_THREAD].x;
+		mouseDelta[RENDER_THREAD].y = mousePos.y - mouseDelta[RENDER_THREAD].y;
 	}
 
 	bool Input::GetKeyDown(KeyCode keycode)
 	{
-		if (ImGui::GetIO().WantCaptureKeyboard)
-			return false;
+		//if (ImGui::GetIO().WantCaptureKeyboard)
+		//	return false;
 		return  keyPressing[static_cast<uint32_t>(keycode)];
 	}
 	bool Input::GetMouseDown(MouseType mouseType)
 	{
 		return mousePressing[static_cast<uint32_t>(mouseType)];
+	}
+	void Input::SyncGameThread()
+	{
+		mouseDelta[GAME_THREAD] = mouseDelta[RENDER_THREAD];
 	}
 }
