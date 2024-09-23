@@ -131,54 +131,60 @@ namespace sh::editor
 			{
 				if (ImGui::CollapsingHeader((component->GetType().GetName().data() + ("##" + std::to_string(idx))).data()))
 				{
-					auto& props = component->GetType().GetProperties();
-					for (auto& prop : props)
+					auto currentType = &component->GetType();
+					do
 					{
-						if (prop.second.bVisible == false)
-							continue;
-						auto type = prop.second.GetTypeName();
-						if (type == core::reflection::GetTypeName<glm::vec3>())
+						auto& props = currentType->GetProperties();
+						for (auto& prop : props)
 						{
-							glm::vec3* parameter = prop.second.Get<glm::vec3>(component.get());
-							float v[3] = { parameter->x, parameter->y, parameter->z };
-							ImGui::LabelText(("##" + prop.first).c_str(), prop.first.c_str());
-							if (ImGui::InputFloat3(("##" + prop.first + std::to_string(idx)).c_str(), v))
+							if (prop.second.bVisible == false)
+								continue;
+							auto type = prop.second.GetTypeName();
+							if (type == core::reflection::GetTypeName<glm::vec3>())
 							{
-								parameter->x = v[0];
-								parameter->y = v[1];
-								parameter->z = v[2];
-								component->OnPropertyChanged(prop.second);
-							}
-						}
-						else if (type == core::reflection::GetTypeName<float>())
-						{
-							float* parameter = prop.second.Get<float>(component.get());
-							if (ImGui::InputFloat(("##input_" + prop.first + std::to_string(idx)).c_str(), parameter))
-								component->OnPropertyChanged(prop.second);
-						}
-						else if (type == core::reflection::GetTypeName<int>())
-						{
-							int* parameter = prop.second.Get<int>(component.get());
-							ImGui::LabelText(("##" + prop.first).c_str(), prop.first.c_str());
-							if (prop.second.isConst)
-								ImGui::InputInt(("##Input_" + prop.first + std::to_string(idx)).c_str(), parameter, 0, 0, ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
-							else
-								if (ImGui::InputInt(("##Input_" + prop.first + std::to_string(idx)).c_str(), parameter))
+								glm::vec3* parameter = prop.second.Get<glm::vec3>(component.get());
+								float v[3] = { parameter->x, parameter->y, parameter->z };
+								ImGui::LabelText(("##" + prop.first).c_str(), prop.first.c_str());
+								if (ImGui::InputFloat3(("##" + prop.first + std::to_string(idx)).c_str(), v))
 								{
+									parameter->x = v[0];
+									parameter->y = v[1];
+									parameter->z = v[2];
 									component->OnPropertyChanged(prop.second);
 								}
-						}
-						else if (type == core::reflection::GetTypeName<uint32_t>())
-						{
-							uint32_t* parameter = prop.second.Get<uint32_t>(component.get());
-							ImGui::LabelText(("##" + prop.first).c_str(), prop.first.c_str());
-							if (prop.second.isConst)
-								ImGui::InputInt(("##Input_" + prop.first + std::to_string(idx)).c_str(), reinterpret_cast<int*>(parameter), 0, 0, ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
-							else
-								if(ImGui::InputInt(("##Input_" + prop.first + std::to_string(idx)).c_str(), reinterpret_cast<int*>(parameter)))
+							}
+							else if (type == core::reflection::GetTypeName<float>())
+							{
+								float* parameter = prop.second.Get<float>(component.get());
+								if (ImGui::InputFloat(("##input_" + prop.first + std::to_string(idx)).c_str(), parameter))
 									component->OnPropertyChanged(prop.second);
+							}
+							else if (type == core::reflection::GetTypeName<int>())
+							{
+								int* parameter = prop.second.Get<int>(component.get());
+								ImGui::LabelText(("##" + prop.first).c_str(), prop.first.c_str());
+								if (prop.second.isConst)
+									ImGui::InputInt(("##Input_" + prop.first + std::to_string(idx)).c_str(), parameter, 0, 0, ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
+								else
+									if (ImGui::InputInt(("##Input_" + prop.first + std::to_string(idx)).c_str(), parameter))
+									{
+										component->OnPropertyChanged(prop.second);
+									}
+							}
+							else if (type == core::reflection::GetTypeName<uint32_t>())
+							{
+								uint32_t* parameter = prop.second.Get<uint32_t>(component.get());
+								ImGui::LabelText(("##" + prop.first).c_str(), prop.first.c_str());
+								if (prop.second.isConst)
+									ImGui::InputInt(("##Input_" + prop.first + std::to_string(idx)).c_str(), reinterpret_cast<int*>(parameter), 0, 0, ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
+								else
+									if (ImGui::InputInt(("##Input_" + prop.first + std::to_string(idx)).c_str(), reinterpret_cast<int*>(parameter)))
+										component->OnPropertyChanged(prop.second);
+							}
 						}
-					}
+						currentType = const_cast<core::reflection::TypeInfo*>(currentType->GetSuper());
+					} 
+					while (currentType);
 				}
 				++idx;
 			}//for auto& component
@@ -225,7 +231,7 @@ namespace sh::editor
 
 	void EditorUI::Update()
 	{
-		//viewport.Update();
+		viewport.Update();
 	}
 
 	void EditorUI::Render()
