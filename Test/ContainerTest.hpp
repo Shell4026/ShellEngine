@@ -7,8 +7,9 @@
 #include <chrono>
 #include <random>
 #include <queue>
+#include <map>
 
-TEST(ContainerTest, VectorTest)
+TEST(ContainerTest, SSetTest)
 {
 	class TestClass : public sh::core::SObject
 	{
@@ -41,7 +42,11 @@ TEST(ContainerTest, VectorTest)
 	end = std::chrono::high_resolution_clock::now();
 	auto time2 = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
 
-	EXPECT_LE(time1, time2);
+	EXPECT_LE(time1, time2); // SSet이 평균적으로 메모리 풀을 쓰기 때문에 기본보다 더 빠르다.
+
+	SSet<int, 128> container3{};
+	container3 = std::move(container1);
+	EXPECT_EQ(container3.size(), 5000);
 }
 
 TEST(ContainerTest, LockFreeQueue)
