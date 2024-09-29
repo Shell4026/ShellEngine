@@ -8,6 +8,35 @@
 #include <random>
 #include <queue>
 #include <map>
+#include <memory>
+
+TEST(ContainerTest, DestructorTest)
+{
+	using namespace sh;
+	class MoveClass
+	{
+	private:
+		std::unique_ptr<int> ptr;
+	public:
+		MoveClass(int num) :
+			ptr(new int(num))
+		{}
+		MoveClass(const MoveClass& other) = delete;
+		MoveClass(MoveClass&& other) noexcept :
+			ptr(std::move(other.ptr))
+		{}
+	};
+
+
+	core::SMap<int, MoveClass, 8> map0{};
+	core::SMap<int, MoveClass, 8> map1{};
+
+	for (int i = 0; i < 10; ++i)
+	{
+		map0.insert({ i, MoveClass{i} });
+	}
+	map1 = std::move(map0);
+}
 
 TEST(ContainerTest, SSetTest)
 {
@@ -45,6 +74,7 @@ TEST(ContainerTest, SSetTest)
 	EXPECT_LE(time1, time2); // SSet이 평균적으로 메모리 풀을 쓰기 때문에 기본보다 더 빠르다.
 
 	SSet<int, 128> container3{};
+	auto alloc = container3.get_allocator();
 	container3 = std::move(container1);
 	EXPECT_EQ(container3.size(), 5000);
 }

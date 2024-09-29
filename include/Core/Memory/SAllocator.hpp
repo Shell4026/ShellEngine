@@ -8,10 +8,10 @@
 
 namespace sh::core::memory
 {
-    /// @brief 엔진에서 사용하는 할당자
+    /// @brief 메모리 풀에서 메모리를 할당 받아오는 할당자.
     /// @tparam T 타입
     /// @tparam size 한번에 할당 된 메모리 갯수
-    template<typename T, std::size_t size = 8>
+    template<typename T, std::size_t size = 32>
     class SAllocator
     {
     public:
@@ -29,22 +29,23 @@ namespace sh::core::memory
             typedef SAllocator<U, size> other;
         };
     private:
-        MemoryPool<T, size> pool;
         bool useStdAllocator = false;
+
+        inline static MemoryPool<T, size> pool;
     public:
         SAllocator() = default;
         SAllocator(const SAllocator& other) :
-            pool(other.pool), useStdAllocator(other.useStdAllocator)
+            useStdAllocator(other.useStdAllocator)
         {
         }
         SAllocator(SAllocator&& other) noexcept : 
-            pool(std::move(other.pool)), useStdAllocator(other.useStdAllocator)
+            useStdAllocator(other.useStdAllocator)
         {
             other.useStdAllocator = false;
         }
         template <class U>
         SAllocator(const SAllocator<U, size>& other) : 
-            pool(), useStdAllocator(!std::is_same_v<T, U>)
+            useStdAllocator(!std::is_same_v<T, U>)
         {
         }
 
@@ -72,7 +73,9 @@ namespace sh::core::memory
         template<typename U, std::size_t otherSize>
         bool operator==(const SAllocator<U, otherSize>& other) const noexcept
         {
-            return &this->pool == &other.pool;
+            if constexpr (std::is_same_v<T, U>)
+                return true;
+            return false;
         }
 
         template<typename U, std::size_t otherSize>
@@ -81,4 +84,4 @@ namespace sh::core::memory
             return !(*this == other);
         }
     };
-}
+}//namespace
