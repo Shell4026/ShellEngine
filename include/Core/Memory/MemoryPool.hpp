@@ -7,10 +7,12 @@
 #include <array>
 #include <stack>
 #include <unordered_map>
+#include <atomic>
+#include <mutex>
 
 namespace sh::core::memory
 {
-	/// @brief 메모리 풀
+	/// @brief 할당/해제에 스레드 안전한 메모리 풀. 대부분 락프리로 구현 돼 있다.
 	/// @tparam T 타입
 	/// @tparam count 할당 갯수. 기본 128
 	/// @tparam fixed true일 시 고정된 크기이며 꽉차도 확장되지 않음.
@@ -58,25 +60,28 @@ namespace sh::core::memory
 			}
 		};
 
-		std::size_t allocatedSize = 0;
-		Block* firstFreeBlock = nullptr;
-		Buffer* firstBuffer = nullptr;
+		std::atomic<std::size_t> allocatedSize = 0;
+		std::atomic<Block*> firstFreeBlock = nullptr;
+		std::atomic<Buffer*> firstBuffer = nullptr;
+		std::mutex mu;
 	public:
-		MemoryPool()
+		MemoryPool() : mu()
 		{
 			firstBuffer = new Buffer(firstBuffer);
 		}
 		MemoryPool(const MemoryPool& other) :
 			allocatedSize(other.allocatedSize),
 			firstFreeBlock(nullptr),
-			firstBuffer(nullptr)
+			firstBuffer(nullptr),
+			mu()
 		{
 			operator=(other);
 		}
 		MemoryPool(MemoryPool&& other) noexcept :
 			firstBuffer(other.firstBuffer),
 			firstFreeBlock(other.firstFreeBlock),
-			allocatedSize(other.allocatedSize)
+			allocatedSize(other.allocatedSize),
+			mu()
 		{
 			other.firstBuffer = nullptr;
 			other.firstFreeBlock = nullptr;
@@ -131,31 +136,53 @@ namespace sh::core::memory
 	template<typename T, std::size_t count, bool fixed>
 	inline auto MemoryPool<T, count, fixed>::Allocate() -> T*
 	{
-		// 이미 해제된 메모리가 존재하는 경우
-		if (firstFreeBlock)
+		// 이미 해제된 메모리가 존재하는 경우 //
+		Block* block = firstFreeBlock.load(std::memory_order::memory_order_acquire);
+		while (block)
 		{
-			Block* block = firstFreeBlock;
-			firstFreeBlock = block->next;
-			return reinterpret_cast<T*>(block);
+			Block* next = block->next;
+			// 이 시점에서도 firstFreeBlock가 안 바뀌었다면 firstFreeBlock = next이다.
+			if (firstFreeBlock.compare_exchange_weak(block, next, std::memory_order::memory_order_release, std::memory_order::memory_order_relaxed))
+				return reinterpret_cast<T*>(block);
+
+			// firstFreeBlock이 중간에 바뀌었다. 다시 시도한다.
+			// CAS가 실패 했으므로 block의 값이 현시점의 값으로 바뀐다.
 		}
-		// 할당한 메모리가 꽉찬 경우
-		if (allocatedSize >= count)
+
+		// 할당한 메모리가 꽉찬 경우 //
+		std::size_t idx = allocatedSize.fetch_add(1, std::memory_order::memory_order_acq_rel); // allocatedSize++
+		if (idx >= count)
 		{
 			if constexpr (fixed)
 				throw std::bad_alloc{};
+			allocatedSize.fetch_sub(1, std::memory_order::memory_order_acq_rel); // allocatedSize--
+
 			// 이전에 할당됐던 버퍼가 다음 퍼버가 되며 firstBuffer는 새로 할당한 버퍼가 된다.
-			firstBuffer = new Buffer(firstBuffer);
-			allocatedSize = 0;
+			std::lock_guard<std::mutex> lock{ mu };
+			idx = allocatedSize.fetch_add(1, std::memory_order::memory_order_acq_rel); // 다른 스레드에서 이미 확장 했는지 확인 해야한다.
+			if (idx >= count) // 여전히 꽉찼으면
+			{
+				firstBuffer.store(new Buffer(firstBuffer.load(std::memory_order::memory_order_acquire)), std::memory_order::memory_order_release);
+				allocatedSize.store(1, std::memory_order::memory_order_release);
+				idx = 0;
+			}
+			// 이미 확장 된 경우
+			return firstBuffer.load(std::memory_order::memory_order_acquire)->GetBlock(idx);
 		}
-		return firstBuffer->GetBlock(allocatedSize++);
+		else
+			return firstBuffer.load(std::memory_order_acquire)->GetBlock(idx);
 	}
 
 	template<typename T, std::size_t count, bool fixed>
 	inline void MemoryPool<T, count, fixed>::DeAllocate(T* ptr)
 	{
 		Block* block = reinterpret_cast<Block*>(ptr);
-		block->next = firstFreeBlock;
-		firstFreeBlock = block;
+		Block* oldHead;
+		do
+		{
+			oldHead = firstFreeBlock.load(std::memory_order::memory_order_acquire);
+			block->next = oldHead;
+		} while (!firstFreeBlock.compare_exchange_weak(oldHead, block, std::memory_order::memory_order_release, std::memory_order::memory_order_relaxed));
 	}
 
 	template<typename T, std::size_t count, bool fixed>
