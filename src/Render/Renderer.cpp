@@ -2,6 +2,7 @@
 #include "IDrawable.h"
 
 #include "Core/Util.h"
+#include "Core/Logger.h"
 
 #include <cassert>
 namespace sh::render
@@ -85,6 +86,7 @@ namespace sh::render
 	{
 		std::swap(drawList[RENDER_THREAD], std::move(drawList[GAME_THREAD]));
 		drawList[GAME_THREAD].clear();
+		bDirty = false;
 	}
 
 	auto Renderer::IsPause() const -> bool

@@ -1,19 +1,20 @@
 ﻿#include "Component/LineRenderer.h"
-
 #include "GameObject.h"
+
+#include "Core/Logger.h"
 
 #include <assert.h>
 
 namespace sh::game
 {
 	LineRenderer::LineRenderer() :
-		start(), end(0, 1, 0), mesh()
+		start(0, 0, 0), end(0, 1, 0), mesh()
 	{
 		mesh.SetVertex({ start, end });
 		mesh.SetIndices({ 0, 1 });
 		mesh.SetTopology(render::Mesh::Topology::Line);
 
-		this->SetMesh(mesh);
+		Super::SetMesh(mesh);
 	}
 
 	void LineRenderer::Awake()
@@ -22,7 +23,7 @@ namespace sh::game
 
 		render::Material* mat = gameObject->world.materials.GetResource("LineMat");
 		assert(mat != nullptr);
-		this->SetMaterial(*mat);
+		Super::SetMaterial(*mat);
 
 		Super::Awake();
 	}
