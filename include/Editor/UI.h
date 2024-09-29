@@ -4,16 +4,16 @@
 
 #include "Core/ISyncable.h"
 
-#include "Game/ImGUI.h"
+#include "Game/ImGUImpl.h"
 
 namespace sh::editor
 {
 	class UI
 	{
 	protected:
-		game::ImGUI& imgui;
+		game::ImGUImpl& imgui;
 	public:
-		SH_EDITOR_API UI(game::ImGUI& imgui);
+		SH_EDITOR_API UI(game::ImGUImpl& imgui);
 
 		SH_EDITOR_API virtual void Update() = 0;
 	};

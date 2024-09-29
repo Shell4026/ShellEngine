@@ -1,6 +1,6 @@
 ﻿#include "Viewport.h"
 
-#include "Game/ImGUI.h"
+#include "Game/ImGUImpl.h"
 #include "Game/World.h"
 #include "Game/Input.h"
 
@@ -9,10 +9,9 @@
 
 namespace sh::editor
 {
-	Viewport::Viewport(game::ImGUI& imgui, game::World& world, std::mutex& renderMutex) :
+	Viewport::Viewport(game::ImGUImpl& imgui, game::World& world) :
 		UI(imgui),
 		world(world),
-		renderMutex(renderMutex),
 
 		viewportDescSet(), renderTex(),
 		viewportWidthLast(100.f), viewportHeightLast(100.f),
@@ -113,7 +112,7 @@ namespace sh::editor
 			return;
 
 		bDirty = true;
-		world.renderer.PushSyncObject(*this);
+		world.renderer.GetThreadSyncManager().PushSyncable(*this);
 	}
 	void Viewport::Sync()
 	{

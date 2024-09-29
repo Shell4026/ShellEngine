@@ -63,7 +63,7 @@ namespace sh::render
 
 		bDirty = true;
 		if (renderer != nullptr)
-			renderer->PushSyncObject(*this);
+			renderer->GetThreadSyncManager().PushSyncable(*this);
 	}
 	void Texture::Sync()
 	{

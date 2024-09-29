@@ -2,9 +2,10 @@
 #pragma warning(disable: 4251)
 
 #include "Renderer.h"
-
-#include <Core/NonCopyable.h>
 #include "VulkanImpl/VulkanConfig.h"
+
+#include "Core/NonCopyable.h"
+#include "Core/ThreadSyncManager.h"
 
 #include "glm/mat4x4.hpp"
 
@@ -105,7 +106,7 @@ namespace sh::render {
 
 		void PrintLayer();
 	public:
-		SH_RENDER_API VulkanRenderer();
+		SH_RENDER_API VulkanRenderer(core::ThreadSyncManager& syncManager);
 		SH_RENDER_API ~VulkanRenderer();
 
 		SH_RENDER_API bool Init(sh::window::Window& win) override;

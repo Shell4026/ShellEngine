@@ -1,6 +1,6 @@
 ﻿set(SH_EDITOR TRUE CACHE BOOL "Is Editor?")
 
-add_executable(ShellEngine main.cpp)
+add_executable(ShellEngine main.cpp EngineInit.cpp)
 
 target_include_directories(ShellEngine PUBLIC ${CMAKE_SOURCE_DIR}/include)
 #target_precompile_headers(ShellEngine PUBLIC ${CMAKE_SOURCE_DIR}/include/Engine.h)

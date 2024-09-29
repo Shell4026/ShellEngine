@@ -10,14 +10,20 @@ namespace sh::game
 	std::bitset<100> Input::keyPressing{};
 	std::bitset<3> Input::mousePressing{};
 	glm::vec2 Input::mousePos{};
-	core::SyncArray<glm::vec2> Input::mouseDelta{};
+	glm::vec2 Input::mouseDelta{};
 	float Input::wheelDelta(0.f);
 
 	const glm::vec2& Input::mousePosition(mousePos);
-	const glm::vec2& Input::mousePositionDelta(mouseDelta[GAME_THREAD]);
+	const glm::vec2& Input::mousePositionDelta(mouseDelta);
 	const float& Input::mouseWheelDelta(window::Event::MouseWheelScrolled::delta);
 
-	void Input::Update(window::Event event)
+	void Input::Update()
+	{
+		wheelDelta = 0.f;
+		mouseDelta = { 0.f, 0.f };
+	}
+
+	void Input::UpdateEvent(window::Event event)
 	{
 		if (event.type == window::Event::EventType::KeyDown)
 			keyPressing[static_cast<uint32_t>(event.keyType)] = true;
@@ -34,12 +40,12 @@ namespace sh::game
 			wheelDelta = window::Event::MouseWheelScrolled::delta;
 		}
 
-		mouseDelta[RENDER_THREAD].x = mousePos.x;
-		mouseDelta[RENDER_THREAD].y = mousePos.y;
+		mouseDelta.x = mousePos.x;
+		mouseDelta.y = mousePos.y;
 		mousePos.x = window::Event::MousePosition::mouseX;
 		mousePos.y = window::Event::MousePosition::mouseY;
-		mouseDelta[RENDER_THREAD].x = mousePos.x - mouseDelta[RENDER_THREAD].x;
-		mouseDelta[RENDER_THREAD].y = mousePos.y - mouseDelta[RENDER_THREAD].y;
+		mouseDelta.x = mousePos.x - mouseDelta.x;
+		mouseDelta.y = mousePos.y - mouseDelta.y;
 	}
 
 	bool Input::GetKeyDown(KeyCode keycode)
@@ -51,9 +57,5 @@ namespace sh::game
 	bool Input::GetMouseDown(MouseType mouseType)
 	{
 		return mousePressing[static_cast<uint32_t>(mouseType)];
-	}
-	void Input::SyncGameThread()
-	{
-		mouseDelta[GAME_THREAD] = mouseDelta[RENDER_THREAD];
 	}
 }

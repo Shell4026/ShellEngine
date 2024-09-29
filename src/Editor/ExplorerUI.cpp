@@ -3,7 +3,7 @@
 #include <filesystem>
 namespace sh::editor
 {
-	ExplorerUI::ExplorerUI(game::ImGUI& imgui) :
+	ExplorerUI::ExplorerUI(game::ImGUImpl& imgui) :
         UI(imgui),
 		currentPath(std::filesystem::current_path().string())
 	{

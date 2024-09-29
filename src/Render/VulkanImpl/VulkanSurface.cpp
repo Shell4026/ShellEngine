@@ -122,6 +122,7 @@ namespace sh::render::impl
 			//삼중 버퍼링
 			if (mode == VK_PRESENT_MODE_MAILBOX_KHR) 
 			{
+				std::cout << "Render: PRESENT_MODE_MAILBOX\n";
 				return mode;
 			}
 		}

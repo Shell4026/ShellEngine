@@ -14,7 +14,7 @@ namespace sh::editor
 	private:
 		void UpdateDirectoryEntries();
 	public:
-		ExplorerUI(game::ImGUI& imgui);
+		ExplorerUI(game::ImGUImpl& imgui);
 
 		void Update() override;
 	};

@@ -31,7 +31,7 @@ namespace sh::core
     {
         std::lock_guard<std::mutex> lock(mu);
 
-        std::string logMessage = "[" + GetTimestamp() + "] [" + LevelToString(level) + "] ";
+        std::string logMessage = "[" + GetTimestamp() + "][" + LevelToString(level) + "]";
         if (!name.empty())
             logMessage += "[" + std::string(name) + "] ";
         logMessage += message.data();

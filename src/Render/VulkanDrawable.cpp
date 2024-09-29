@@ -307,8 +307,10 @@ namespace sh::render
 
 	void VulkanDrawable::SetDirty()
 	{
-		if(!bDirty)
-			renderer.PushSyncObject(*this);
+		if (bDirty)
+			return;
+
+		renderer.GetThreadSyncManager().PushSyncable(*this);
 		bDirty = true;
 	}
 

@@ -2,7 +2,7 @@
 
 namespace sh::editor
 {
-	UI::UI(game::ImGUI& imgui) :
+	UI::UI(game::ImGUImpl& imgui) :
 		imgui(imgui)
 	{
 		ImGui::SetCurrentContext(imgui.GetContext());

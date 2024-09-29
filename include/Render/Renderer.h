@@ -4,6 +4,7 @@
 #include "Camera.h"
 
 #include "Core/ISyncable.h"
+#include "Core/ThreadSyncManager.h"
 #include "Core/SContainer.hpp"
 
 #include "Window/Window.h"
@@ -16,8 +17,6 @@
 #include <set>
 #include <utility>
 #include <functional>
-#include <mutex>
-#include <atomic>
 namespace sh::render {
 	enum class RenderAPI
 	{
@@ -27,11 +26,10 @@ namespace sh::render {
 	class IDrawable;
 	class Framebuffer;
 
-	class Renderer {
+	class Renderer : public core::ISyncable
+	{
 	private:
 		sh::window::Window* window;
-
-		std::queue<core::ISyncable*> syncQueue;
 
 		struct CameraCompare
 		{
@@ -40,11 +38,10 @@ namespace sh::render {
 				return left->GetPriority() > right->GetPriority();
 			}
 		};
-	protected:
-		static constexpr int GAME_THREAD = 0;
-		static constexpr int RENDER_THREAD = 1;
 
-		core::SyncArray<std::map<Camera*, core::SVector<IDrawable*>, CameraCompare>> drawList;
+		core::ThreadSyncManager& syncManager;
+	protected:
+		core::SyncArray<core::SMap<Camera*, core::SVector<IDrawable*>, 128, CameraCompare>> drawList;
 
 		std::vector<std::function<void()>> drawCalls;
 
@@ -52,10 +49,12 @@ namespace sh::render {
 		glm::vec2 viewportEnd;
 
 		std::atomic_bool bPause;
+	private:
+		bool bDirty; // 메모리 배열 맞추기 위해 여기에 둠
 	public:
 		const RenderAPI apiType;
 	public:
-		SH_RENDER_API Renderer(RenderAPI api);
+		SH_RENDER_API Renderer(RenderAPI api, core::ThreadSyncManager& syncManager);
 		SH_RENDER_API virtual ~Renderer() = default;
 
 		SH_RENDER_API virtual bool Init(sh::window::Window& win);
@@ -87,17 +86,13 @@ namespace sh::render {
 
 		SH_RENDER_API auto GetWindow() -> sh::window::Window&;
 
-		/// @brief 메인 스레드와 동기화 하는 함수.
-		/// @return 
-		SH_RENDER_API void SyncGameThread();
-
 		/// @brief 렌더러가 일시정지 상태인지 반환한다.
 		/// @return 일시정지 시 true 그 외 false
 		SH_RENDER_API auto IsPause() const -> bool;
 
-		/// @brief 스레드 간 동기화를 할 객체를 큐에 넣는 함수.
-		/// @param syncObj 동기화 객체 참조
-		/// @return 
-		SH_RENDER_API void PushSyncObject(core::ISyncable& syncObj);
+		SH_RENDER_API void SetDirty() override;
+		SH_RENDER_API void Sync() override;
+
+		SH_RENDER_API auto GetThreadSyncManager() -> core::ThreadSyncManager&;
 	};
 }

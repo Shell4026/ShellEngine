@@ -1,4 +1,4 @@
-﻿#include "ImGUI.h"
+﻿#include "ImGUImpl.h"
 
 #include "Render/VulkanImpl/VulkanFramebuffer.h"
 
@@ -16,18 +16,18 @@ namespace sh::game
 			abort();
 	}
 
-	ImGUI::ImGUI(window::Window& window, render::VulkanRenderer& renderer) :
+	ImGUImpl::ImGUImpl(window::Window& window, render::VulkanRenderer& renderer) :
 		window(window), renderer(renderer),
 		drawData(),
 		bInit(false), bDirty(false)
 	{
 	}
 
-	ImGUI::~ImGUI()
+	ImGUImpl::~ImGUImpl()
 	{
 		Clean();
 	}
-	void ImGUI::Clean()
+	void ImGUImpl::Clean()
 	{
 		if (!bInit)
 			return;
@@ -36,7 +36,7 @@ namespace sh::game
 		bInit = false;
 	}
 
-	void ImGUI::WindowInit()
+	void ImGUImpl::WindowInit()
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		io.BackendFlags |= 
@@ -46,7 +46,7 @@ namespace sh::game
 		io.ConfigFlags |= ImGuiConfigFlags_::ImGuiConfigFlags_DockingEnable;
 	}
 
-	void ImGUI::Init()
+	void ImGUImpl::Init()
 	{
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
@@ -83,13 +83,13 @@ namespace sh::game
 		bInit = true;
 	}
 
-	void ImGUI::Resize()
+	void ImGUImpl::Resize()
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		io.DisplaySize = ImVec2{ static_cast<float>(window.width), static_cast<float>(window.height) };
 	}
 
-	void ImGUI::ProcessEvent(window::Event event)
+	void ImGUImpl::ProcessEvent(window::Event event)
 	{
 		ImGuiIO& io = ImGui::GetIO();
 
@@ -398,7 +398,7 @@ namespace sh::game
 		}
 	}
 
-	void ImGUI::Begin()
+	void ImGUImpl::Begin()
 	{
 		if (!bInit)
 			return;
@@ -407,31 +407,31 @@ namespace sh::game
 		ImGui::NewFrame();
 		ImGui::ShowDemoWindow();
 	}
-	void ImGUI::End()
+	void ImGUImpl::End()
 	{
 		if (!bInit)
 			return;
 
 		ImGui::Render();
 	}
-	bool ImGUI::IsInit() const
+	bool ImGUImpl::IsInit() const
 	{
 		return bInit;
 	}
-	auto ImGUI::GetContext() const -> ImGuiContext*
+	auto ImGUImpl::GetContext() const -> ImGuiContext*
 	{
 		return ImGui::GetCurrentContext();
 	}
 
-	void ImGUI::SetDirty()
+	void ImGUImpl::SetDirty()
 	{
 		if (bDirty)
 			return;
 		bDirty = true;
-		renderer.PushSyncObject(*this);
+		renderer.GetThreadSyncManager().PushSyncable(*this);
 	}
 
-	void ImGUI::Sync()
+	void ImGUImpl::Sync()
 	{
 		ImDrawData* src = ImGui::GetDrawData();
 		if (src == nullptr || !src->Valid)

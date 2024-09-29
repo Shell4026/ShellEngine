@@ -89,11 +89,11 @@ namespace sh::window {
 	{
 		startTime = std::chrono::high_resolution_clock::now();
 		deltaTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(startTime - endTime).count();
-		if (static_cast<int>(maxFrameMs - deltaTimeMs) > 0)
-			std::this_thread::sleep_for(std::chrono::milliseconds{ maxFrameMs - deltaTimeMs });
+		int term = maxFrameMs - deltaTimeMs;
+		if (term > 0)
+			std::this_thread::sleep_for(std::chrono::milliseconds{ term });
 		endTime = std::chrono::high_resolution_clock::now();
 		deltaTimeMs += std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
-
 		deltaTime = deltaTimeMs / 1000.0f;
 	}
 

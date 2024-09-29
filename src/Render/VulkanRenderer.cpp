@@ -19,8 +19,8 @@
 #include <utility>
 
 namespace sh::render {
-	VulkanRenderer::VulkanRenderer() :
-		Renderer(RenderAPI::Vulkan),
+	VulkanRenderer::VulkanRenderer(core::ThreadSyncManager& syncManager) :
+		Renderer(RenderAPI::Vulkan, syncManager),
 		instance(nullptr), gpu(nullptr), device(nullptr), cmdPool(nullptr), window(nullptr),
 		graphicsQueueIndex(-1), surfaceQueueIndex(-1),
 		graphicsQueue(nullptr), surfaceQueue(nullptr),

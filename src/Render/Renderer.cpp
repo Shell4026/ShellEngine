@@ -6,12 +6,12 @@
 #include <cassert>
 namespace sh::render
 {
-	Renderer::Renderer(RenderAPI api) :
-		window(nullptr),
+	Renderer::Renderer(RenderAPI api, core::ThreadSyncManager& syncManager) :
+		window(nullptr), syncManager(syncManager),
 
 		apiType(api),
 		viewportStart(0.f), viewportEnd(100.f),
-		bPause(false)
+		bPause(false), bDirty(false)
 	{
 	}
 	void Renderer::Clean()
@@ -41,6 +41,7 @@ namespace sh::render
 		{
 			it->second.push_back(drawable);
 		}
+		SetDirty();
 	}
 
 	void Renderer::AddDrawCall(const std::function<void()>& func)
@@ -51,6 +52,7 @@ namespace sh::render
 	void Renderer::ClearDrawList()
 	{
 		drawList[GAME_THREAD].clear();
+		SetDirty();
 	}
 
 	auto Renderer::GetViewportStart() const -> const glm::vec2&
@@ -71,17 +73,18 @@ namespace sh::render
 		bPause.store(b, std::memory_order::memory_order_release);
 	}
 
-	void Renderer::SyncGameThread()
+	void Renderer::SetDirty()
 	{
-		drawList[RENDER_THREAD] = std::move(drawList[GAME_THREAD]);
-		drawList[GAME_THREAD].clear();
-		while (!syncQueue.empty())
-		{
-			core::ISyncable* syncObj = syncQueue.front();
-			syncQueue.pop();
+		if (bDirty)
+			return;
 
-			syncObj->Sync();
-		}
+		syncManager.PushSyncable(*this);
+		bDirty = true;
+	}
+	void Renderer::Sync()
+	{
+		std::swap(drawList[RENDER_THREAD], std::move(drawList[GAME_THREAD]));
+		drawList[GAME_THREAD].clear();
 	}
 
 	auto Renderer::IsPause() const -> bool
@@ -89,8 +92,8 @@ namespace sh::render
 		return bPause.load(std::memory_order::memory_order_acquire);
 	}
 
-	void Renderer::PushSyncObject(core::ISyncable& syncObj)
+	auto Renderer::GetThreadSyncManager() -> core::ThreadSyncManager&
 	{
-		syncQueue.push(&syncObj);
+		return syncManager;
 	}
 }

@@ -22,7 +22,7 @@ namespace sh::window {
 		std::queue<Event> events;
 
 		unsigned int fps;
-		unsigned int maxFrameMs;
+		float maxFrameMs;
 		std::chrono::high_resolution_clock::time_point startTime, endTime;
 		float deltaTime;
 		unsigned int deltaTimeMs;

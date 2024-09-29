@@ -3,7 +3,6 @@
 
 #include "game/GameObject.h"
 #include "game/World.h"
-#include "Game/GameThread.h"
 
 #include "Render/VulkanTextureBuffer.h"
 #include "Render/RenderTexture.h"
@@ -14,11 +13,10 @@ namespace sh::editor
 {
 	using namespace sh::game;
 
-	EditorUI::EditorUI(World& world, game::ImGUI& imgui, std::mutex& renderMutex) :
+	EditorUI::EditorUI(World& world, game::ImGUImpl& imgui) :
 		UI(imgui),
 		world(world),
-		renderMutex(&renderMutex),
-		viewport(imgui, world, renderMutex),
+		viewport(imgui, world),
 
 		hierarchyWidth(0), hierarchyHeight(0),
 		selected(-1),
@@ -232,6 +230,7 @@ namespace sh::editor
 	void EditorUI::Update()
 	{
 		viewport.Update();
+		Render();
 	}
 
 	void EditorUI::Render()
