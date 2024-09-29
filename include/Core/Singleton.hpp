@@ -16,7 +16,7 @@ namespace sh::core
 	{
 	private:
 		static std::mutex mu;
-		static SMap<uint64_t, void*, 2> instance;
+		static std::map<uint64_t, void*> instance;
 	protected:
 		struct Result
 		{
