@@ -19,6 +19,8 @@ namespace sh::game
 
 	void Input::Update()
 	{
+		window::Event::MouseWheelScrolled::delta = 0.f;
+
 		wheelDelta = 0.f;
 		mouseDelta = { 0.f, 0.f };
 	}
