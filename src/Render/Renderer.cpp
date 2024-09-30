@@ -84,8 +84,7 @@ namespace sh::render
 	}
 	void Renderer::Sync()
 	{
-		std::swap(drawList[RENDER_THREAD], std::move(drawList[GAME_THREAD]));
-		drawList[GAME_THREAD].clear();
+		drawList[RENDER_THREAD] = std::move(drawList[GAME_THREAD]);
 		bDirty = false;
 	}
 
