@@ -20,6 +20,8 @@ namespace sh::window {
 	{
 		std::cout << "WindowImplUnix::Create()\n";
 
+		XInitThreads();
+
 		//디스플레이 서버에 접속한다.
 		display = XOpenDisplay(NULL);
 

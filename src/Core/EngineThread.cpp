@@ -3,12 +3,13 @@
 namespace sh::core
 {
 	EngineThread::EngineThread(bool bSleepThread) :
-		thr([&] { Update(); }),
 		mutex(mu),
 		mu(), cv(nullptr),
 		bStop(false),
-		bSleep(bSleepThread)
+		bSleep(bSleepThread),
+		otherThreadTasks()
 	{
+		thr = std::thread{ [&] { Update(); } };
 	}
 
 	auto EngineThread::GetThread() -> std::thread&
