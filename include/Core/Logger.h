@@ -4,15 +4,19 @@
 #include "Singleton.hpp"
 #include "SContainer.hpp"
 
+#include "fmt/core.h"
+
 #include <mutex>
 #include <vector>
 #include <iostream>
 #include <string_view>
 
-#define SH_LOG(message) sh::core::Logger::GetInstance()->Debug(message, __func__)
 #define SH_INFO(message) sh::core::Logger::GetInstance()->Info(message, __func__)
+#define SH_INFO_FORMAT(message, ...) sh::core::Logger::GetInstance()->Info(fmt::format(message, __VA_ARGS__), __func__)
 #define SH_WARN(message) sh::core::Logger::GetInstance()->Warn(message, __func__)
+#define SH_WARN(message, ...) sh::core::Logger::GetInstance()->Warn(fmt::format(message, __VA_ARGS__), __func__)
 #define SH_ERROR(message) sh::core::Logger::GetInstance()->Error(message, __func__)
+#define SH_ERROR(message, ...) sh::core::Logger::GetInstance()->Error(fmt::format(message, __VA_ARGS__), __func__)
 
 namespace sh::core
 {
