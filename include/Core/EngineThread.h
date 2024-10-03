@@ -30,6 +30,9 @@ namespace sh::core
 		std::mutex& mutex;
 	private:
 		void Update();
+	protected:
+		/// @brief 매 루프마다 실행될 작업을 추가하는 함수.
+		SH_CORE_API void AddTask(const std::function<void()>& task);
 	public:
 		/// @brief 생성자
 		/// @param bSleepThread 매 루프가 끝날 시 Sleep상태가 되는지 
@@ -39,8 +42,6 @@ namespace sh::core
 		/// @brief 스레드를 반환 하는 함수.
 		/// @return std::thread 객체
 		SH_CORE_API auto GetThread() -> std::thread&;
-		/// @brief 매 루프마다 실행될 작업을 추가하는 함수.
-		SH_CORE_API void AddTask(const std::function<void()>& task);
 		/// @brief [원자적] 작업 큐에 작업을 추가하는 함수. 매 업데이트 전 실행된다.
 		/// @param func 수행 할 함수
 		SH_CORE_API void AddTaskFromOtherThread(const std::function<void()>& task);
