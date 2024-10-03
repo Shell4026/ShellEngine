@@ -100,6 +100,10 @@ namespace sh::game
 		objs[id]->Destroy();
 		objs[id].release();
 	}
+	void World::DestroyGameObject(const GameObject& obj)
+	{
+		DestroyGameObject(obj.name);
+	}
 
 	auto World::ChangeGameObjectName(const std::string& objName, const std::string& to) -> std::string
 	{
@@ -122,6 +126,11 @@ namespace sh::game
 
 		return name;
 	}
+	auto World::ChangeGameObjectName(GameObject& obj, const std::string& to) -> std::string
+	{
+		return ChangeGameObjectName(obj.name, to);
+	}
+
 	auto World::GetGameObject(std::string_view name) const -> GameObject*
 	{
 		auto it = objsMap.find(std::string{ name });

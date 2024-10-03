@@ -70,8 +70,12 @@ namespace sh::game
 
 		SH_GAME_API void Clean();
 
+		/// @brief 게임 오브젝트를 추가한다. 이름이 같은 오브젝트가 존재 시 숫자가 붙는다.
+		/// @param name 오브젝트 이름
 		SH_GAME_API auto AddGameObject(const std::string& name) -> GameObject*;
 		SH_GAME_API void DestroyGameObject(const std::string& name);
+		SH_GAME_API void DestroyGameObject(const GameObject& obj);
+		SH_GAME_API auto ChangeGameObjectName(GameObject& obj, const std::string& to) -> std::string;
 		SH_GAME_API auto ChangeGameObjectName(const std::string& objName, const std::string& to) -> std::string;
 		SH_GAME_API auto GetGameObject(std::string_view name) const -> GameObject*;
 
