@@ -3,8 +3,7 @@
 #include "NonCopyable.h"
 #include "Export.h"
 
-#include "SContainer.hpp"
-
+#include <vector>
 #include <atomic>
 #include <mutex>
 #include <utility>
@@ -16,7 +15,7 @@ namespace sh::core
 	{
 	private:
 		static std::mutex mu;
-		static std::map<uint64_t, void*> instance;
+		static std::vector<std::pair<uint64_t, void*>> instance;
 	protected:
 		struct Result
 		{
