@@ -34,16 +34,16 @@ namespace sh::core
 
 	auto SObject::operator new(std::size_t size) -> void*
 	{
-		SObject* ptr = static_cast<SObject*>(::operator new(size));
-		GarbageCollection::GetInstance()->AddObject(static_cast<SObject*>(ptr));
-		return ptr;
+		SObject* objPtr = reinterpret_cast<SObject*>(::operator new(size));
+		GarbageCollection::GetInstance()->AddObject(objPtr);
+		return objPtr;
 	}
 
-	void SObject::operator delete(void* ptr, std::size_t size)
+	void SObject::operator delete(void* ptr)
 	{
-		SObject* obj = static_cast<SObject*>(ptr);
-		GarbageCollection::GetInstance()->DeleteObject(obj);
-		::operator delete(obj);
+		SObject* objPtr = static_cast<SObject*>(ptr);
+		GarbageCollection::GetInstance()->DeleteObject(objPtr);
+		::operator delete(ptr);
 	}
 
 	auto SObject::IsPendingKill() const -> bool

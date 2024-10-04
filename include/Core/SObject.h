@@ -4,9 +4,7 @@
 #include "Reflection.hpp"
 
 #include "Observer.hpp"
-#include "Memory/SAllocator.hpp"
 
-#include <unordered_set>
 #include <string>
 #include <utility>
 #include <atomic>
@@ -15,6 +13,7 @@ namespace sh::core
 {
 	class GarbageCollection;
 
+	/// @brief 엔진에서 쓰는 기본 객체. 리플렉션과 가비지 컬렉터를 쓰려면 해당 객체를 상속해야한다.
 	class SObject
 	{
 		SCLASS(SObject)
@@ -32,8 +31,8 @@ namespace sh::core
 		SH_CORE_API SObject(const SObject& other);
 		SH_CORE_API SObject(SObject&& other) noexcept;
 		SH_CORE_API virtual ~SObject();
-		SH_CORE_API auto operator new(std::size_t size) -> void*;
-		SH_CORE_API void operator delete(void* ptr, std::size_t size);
+		SH_CORE_API auto operator new(std::size_t count) -> void*;
+		SH_CORE_API void operator delete(void* ptr);
 		SH_CORE_API auto IsPendingKill() const -> bool;
 		SH_CORE_API auto IsMark() const -> bool;
 
