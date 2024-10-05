@@ -35,7 +35,9 @@ namespace sh::render {
 		{
 			bool operator()(const Camera* left, const Camera* right) const
 			{
-				return left->GetPriority() > right->GetPriority();
+				if (left->GetPriority() == right->GetPriority())
+					return left->id < right->id;
+				return left->GetPriority() < right->GetPriority();
 			}
 		};
 
