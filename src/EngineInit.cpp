@@ -164,7 +164,7 @@ namespace sh
 #if SH_EDITOR
 		Camera* cameraComponent = cam->AddComponent<EditorCamera>();
 		cameraComponent->SetRenderTexture(editorUI->GetViewport().GetRenderTexture());
-		cameraComponent2->SetDepth(1);
+		cameraComponent->SetDepth(2);
 #endif
 
 		world->SetMainCamera(cameraComponent);
