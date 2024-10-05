@@ -80,7 +80,7 @@ namespace sh::core
 			obj->bMark = false;
 		}
 
-		//TODO 병렬 처리?
+		// TODO 병렬 처리?
 		for (SObject* root : rootSets)
 		{
 			Mark(root, nullptr);
@@ -121,42 +121,51 @@ namespace sh::core
 			if (parent == nullptr)
 				return;
 
-			auto& ptrProps = parent->GetType().GetSObjectPtrProperties();
-			for (auto& ptrProp : ptrProps)
+			const reflection::TypeInfo* type = &parent->GetType();
+			while (type)
 			{
-				SObject** ptr = ptrProp->Get<SObject*>(parent);
-				if (*ptr == obj)
-					*ptr = nullptr;
-			}
-			auto& containers = parent->GetType().GetSObjectContainerProperties();
-			for (auto prop : containers)
-			{
-				for (auto it = prop->Begin(parent); it != prop->End(parent); ++it)
+				for (auto& ptrProp : type->GetSObjectPtrProperties())
 				{
-					DFSIteratorCheckPtr(obj, 1, prop->containerNestedLevel, it);
+					SObject** ptr = ptrProp->Get<SObject*>(parent);
+					if (*ptr == obj)
+						*ptr = nullptr;
 				}
+				auto& containers = type->GetSObjectContainerProperties();
+				for (auto prop : containers)
+				{
+					for (auto it = prop->Begin(parent); it != prop->End(parent); ++it)
+					{
+						DFSIteratorCheckPtr(obj, 1, prop->containerNestedLevel, it);
+					}
+				}
+				type = type->GetSuper(); // 부모 클래스도 검사
 			}
 			return;
 		}
 
 		obj->bMark = true;
 
-		auto& ptrProps = obj->GetType().GetSObjectPtrProperties();
-		for (auto& ptrProp : ptrProps)
+		const reflection::TypeInfo* type = &obj->GetType();
+		while (type)
 		{
-			SObject** ptr = ptrProp->Get<SObject*>(obj);
-			if (*ptr == nullptr)
-				continue;
-
-			Mark(*ptr, obj);
-		}
-		auto& containerPtrProps = obj->GetType().GetSObjectContainerProperties();
-		for (auto ptrProp : containerPtrProps)
-		{
-			for (auto it = ptrProp->Begin(obj); it != ptrProp->End(obj); ++it)
+			auto& ptrProps = type->GetSObjectPtrProperties();
+			for (auto& ptrProp : ptrProps)
 			{
-				ContainerMark(obj, 1, ptrProp->containerNestedLevel, it);
+				SObject** ptr = ptrProp->Get<SObject*>(obj);
+				if (*ptr == nullptr)
+					continue;
+
+				Mark(*ptr, obj);
 			}
+			auto& containerPtrProps = type->GetSObjectContainerProperties();
+			for (auto ptrProp : containerPtrProps)
+			{
+				for (auto it = ptrProp->Begin(obj); it != ptrProp->End(obj); ++it)
+				{
+					ContainerMark(obj, 1, ptrProp->containerNestedLevel, it);
+				}
+			}
+			type = type->GetSuper(); // 부모 클래스도 검사
 		}
 	}
 
