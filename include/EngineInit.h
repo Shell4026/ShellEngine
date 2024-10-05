@@ -47,8 +47,9 @@ namespace sh
 
 		std::unique_ptr<window::Window> window;
 		std::unique_ptr<render::Renderer> renderer;
-		std::unique_ptr<game::World> world;
 		std::unique_ptr<game::ImGUImpl> gui;
+
+		game::World* world;
 #if SH_EDITOR
 		std::unique_ptr<editor::EditorUI> editorUI;
 #endif

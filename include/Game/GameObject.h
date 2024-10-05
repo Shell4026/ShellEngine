@@ -20,15 +20,16 @@ namespace sh::game
 	{
 		SCLASS(GameObject)
 	private:
-		std::vector<std::unique_ptr<Component>> components;
+		PROPERTY(components)
+		std::vector<Component*> components;
 
 		std::string objName;
 
 		bool bEnable;
-
-		bool bInit : 1;
+		bool bInit;
 	public:
 		World& world;
+		PROPERTY(transform)
 		Transform* transform;
 
 		const bool& activeSelf;
@@ -41,26 +42,27 @@ namespace sh::game
 		SH_GAME_API void Awake() override;
 		SH_GAME_API void Start() override;
 		SH_GAME_API void OnEnable() override;
+		SH_GAME_API void BeginUpdate() override;
 		SH_GAME_API void Update() override;
 		SH_GAME_API void LateUpdate() override;
-		
+		SH_GAME_API void OnDestroy() override;
+
 		SH_GAME_API void Destroy();
 
 		SH_GAME_API void SetActive(bool b);
 		SH_GAME_API void SetName(const std::string& name);
 
-		SH_GAME_API auto GetComponents() const -> const std::vector<std::unique_ptr<Component>>&;
+		SH_GAME_API auto GetComponents() const -> const std::vector<Component*>&;
 
-		SH_GAME_API void AddComponent(std::unique_ptr<Component>&& component);
+		SH_GAME_API void AddComponent(Component* component);
 	public:
 		template<typename T>
 		auto AddComponent() -> std::enable_if_t<IsComponent<T>::value, T*>
 		{
-			components.push_back(std::make_unique<T>());
-			core::GarbageCollection::GetInstance()->SetRootSet(components.back().get());
+			components.push_back(core::SObject::Create<T>());
 			components.back()->SetOwner(*this);
 			components.back()->SetActive(true);
-			return static_cast<T*>(components.back().get());
+			return static_cast<T*>(components.back());
 		}
 		template<typename T>
 		auto GetComponent() const -> T*

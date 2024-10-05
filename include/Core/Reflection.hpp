@@ -7,13 +7,15 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
-#include <map>
 #include <string>
 #include <string_view>
-#include <iostream>
 #include <cassert>
 #include <memory>
 #include <cstring>
+#include <map>
+#include <unordered_map>
+#include <set>
+#include <unordered_set>
 
 #define SCLASS(class_name)\
 public:\
@@ -107,13 +109,21 @@ namespace sh::core::reflection
 	template<typename T, typename U>
 	struct IsMap<std::map<T, U>, void> : std::bool_constant<true> {};
 
+	// 컨테이너 중첩 수 구하기
 	template<typename T>
 	struct GetContainerNestedCount : std::integral_constant<int, 0> {};
 	template<typename T>
 	struct GetContainerNestedCount<std::vector<T>> : std::integral_constant<int, GetContainerNestedCount<T>::value + 1> {};
-	template<typename T, typename U>
-	struct GetContainerNestedCount<std::map<T, U>> : std::integral_constant<int, GetContainerNestedCount<U>::value + 1> {};
+	template<typename T, typename U, typename _Pr, typename _Alloc>
+	struct GetContainerNestedCount<std::map<T, U, _Pr, _Alloc>> : std::integral_constant<int, GetContainerNestedCount<U>::value + 1> {};
+	template<typename T, typename U, typename _Hasher, typename _Keyeq, typename _Alloc>
+	struct GetContainerNestedCount<std::unordered_map<T, U, _Hasher, _Keyeq, _Alloc>> : std::integral_constant<int, GetContainerNestedCount<U>::value + 1> {};
+	template<typename T, typename _Pr, typename _Alloc>
+	struct GetContainerNestedCount<std::set<T, _Pr, _Alloc>> : std::integral_constant<int, GetContainerNestedCount<T>::value + 1> {};
+	template<typename T, typename _Hasher, typename _Keyeq, typename _Alloc>
+	struct GetContainerNestedCount<std::unordered_set<T, _Hasher, _Keyeq, _Alloc>> : std::integral_constant<int, GetContainerNestedCount<T>::value + 1> {};
 
+	// 중첩된 컨테이너의 마지막 자료형 구하기
 	template<typename T>
 	struct GetContainerLastType
 	{
@@ -124,10 +134,25 @@ namespace sh::core::reflection
 	{
 		using type = typename GetContainerLastType<T>::type;
 	};
-	template<typename T, typename U>
-	struct GetContainerLastType<std::map<T, U>>
+	template<typename T, typename U, typename _Pr, typename _Alloc>
+	struct GetContainerLastType<std::map<T, U, _Pr, _Alloc>>
 	{
 		using type = typename GetContainerLastType<U>::type;
+	};
+	template<typename T, typename U, typename _Hasher, typename _Keyeq, typename _Alloc>
+	struct GetContainerLastType<std::unordered_map<T, U, _Hasher, _Keyeq, _Alloc>>
+	{
+		using type = typename GetContainerLastType<U>::type;
+	};
+	template<typename T, typename _Pr, typename _Alloc>
+	struct GetContainerLastType<std::set<T, _Pr, _Alloc>>
+	{
+		using type = typename GetContainerLastType<T>::type;
+	};
+	template<typename T, typename _Hasher, typename _Keyeq, typename _Alloc>
+	struct GetContainerLastType<std::unordered_set<T, _Hasher, _Keyeq, _Alloc>>
+	{
+		using type = typename GetContainerLastType<T>::type;
 	};
 
 	/// \brief 빠른 다운 캐스팅.
@@ -240,6 +265,7 @@ namespace sh::core::reflection
 		SH_CORE_API auto operator==(const PropertyIterator& other) -> bool;
 		SH_CORE_API auto operator!=(const PropertyIterator& other) -> bool;
 		SH_CORE_API auto operator++()->PropertyIterator&;
+		SH_CORE_API auto operator=(PropertyIterator&& other) noexcept -> PropertyIterator&;
 
 		SH_CORE_API auto GetTypeName() const->std::string_view;
 
@@ -248,6 +274,8 @@ namespace sh::core::reflection
 		template<typename T>
 		auto GetPairSecond() -> T*;
 
+		/// @brief 자식 컨테이너의 반복자를 가져오는 함수
+		/// @return 프로퍼티 반복자
 		SH_CORE_API auto GetNestedBegin() -> PropertyIterator;
 		SH_CORE_API auto GetNestedEnd() -> PropertyIterator;
 		SH_CORE_API auto IsPair() const -> bool;

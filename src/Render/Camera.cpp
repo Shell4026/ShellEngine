@@ -2,8 +2,9 @@
 
 namespace sh::render
 {
+	uint32_t Camera::nextId{ 0 };
 	Camera::Camera() :
-		renderTexture(nullptr), priority(0)
+		renderTexture(nullptr), priority(0), id(nextId++)
 	{
 
 	}

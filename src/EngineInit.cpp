@@ -46,9 +46,12 @@ namespace sh
 
 	{
 		SH_INFO("Engine shutdown");
-		world.reset();
+		world->Clean();
+		world->Destroy();
+		gc->Update();
 #if SH_EDITOR
 		editorUI.reset();
+		gc->Update();
 #endif
 		gui.reset();
 		renderer.reset();
@@ -136,6 +139,7 @@ namespace sh
 
 		GameObject* obj = world->AddGameObject("Test");
 		GameObject* obj2 = world->AddGameObject("Test2");
+		GameObject* obj3 = world->AddGameObject("Empty");
 
 		//obj2->AddComponent(componentModule->GetComponent("ComponentTest")->New());
 
@@ -154,15 +158,15 @@ namespace sh
 
 		GameObject* cam = world->AddGameObject("Camera");
 		cam->transform->SetPosition(glm::vec3(2.f, 2.f, 2.f));
-		Camera* cameraComponent = cam->AddComponent<EditorCamera>();
+		GameObject* cam2 = world->AddGameObject("Camera2");
+		cam2->transform->SetPosition(glm::vec3(-2.f, 2.f, -2.f));
+		Camera* cameraComponent2 = cam2->AddComponent<Camera>();
+		cameraComponent2->SetRenderTexture(editorUI->GetViewport().GetRenderTexture());
 #if SH_EDITOR
+		Camera* cameraComponent = cam->AddComponent<EditorCamera>();
 		cameraComponent->SetRenderTexture(editorUI->GetViewport().GetRenderTexture());
+		cameraComponent2->SetDepth(1);
 #endif
-
-		//GameObject* cam2 = world->AddGameObject("Camera2");
-		//cam2->transform->SetPosition(glm::vec3(-2.f, 2.f, -2.f));
-		//cam2->AddComponent<Camera>();
-		//cam2->GetComponent<Camera>()->SetDepth(1);
 
 		world->SetMainCamera(cameraComponent);
 	}
@@ -227,7 +231,8 @@ namespace sh
 		renderer->Init(*window);
 		renderer->SetViewport({ 150.f, 0.f }, { window->width - 150.f, window->height - 180 });
 
-		world = std::make_unique<game::World>(*renderer.get(), *componentModule);
+		world = core::SObject::Create<game::World>(*renderer.get(), *componentModule);
+		gc->SetRootSet(world);
 
 		gui = std::make_unique<game::ImGUImpl>(*window, static_cast<render::VulkanRenderer&>(*renderer));
 		gui->Init();
@@ -275,8 +280,8 @@ namespace sh
 #endif
 			this->gui->End();
 
-			threadSyncManager.Sync();
 			gc->Update();
+			threadSyncManager.Sync();
 			threadSyncManager.AwakeThread();
 		}
 	}

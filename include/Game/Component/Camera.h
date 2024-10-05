@@ -45,6 +45,7 @@ namespace sh::game
 		SH_GAME_API void Awake() override;
 		SH_GAME_API void Start() override;
 		SH_GAME_API void Update() override;
+		SH_GAME_API void OnDestroy() override;
 
 		SH_GAME_API auto GetProjMatrix() const -> const glm::mat4&;
 		SH_GAME_API auto GetViewMatrix() const -> const glm::mat4&;

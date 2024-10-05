@@ -10,7 +10,6 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/hash.hpp>
 
-#include <memory>
 #include <string_view>
 
 namespace sh::render
@@ -27,6 +26,6 @@ namespace sh::game
 	public:
 		SH_GAME_API ModelLoader(const render::Renderer& renderer);
 		SH_GAME_API virtual ~ModelLoader() = default;
-		SH_GAME_API virtual auto Load(std::string_view filename) -> std::unique_ptr<render::Mesh>;
+		SH_GAME_API virtual auto Load(std::string_view filename) -> render::Mesh*;
 	};
 }

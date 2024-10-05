@@ -17,7 +17,7 @@ public:
 	PROPERTY(child)
 	Object* child;
 	PROPERTY(others)
-	std::vector<Object*> others;
+	std::vector<std::vector<Object*>> others;
 
 	Object(int num) : 
 		num(num), child(nullptr)
@@ -36,52 +36,77 @@ public:
 	}
 };
 
-TEST(GCTest, ValidTest) 
+TEST(GCTest, ValidTest)
+{
+	using namespace sh::core;
+	GarbageCollection& gc = *GarbageCollection::GetInstance();
+
+	Object* root = SObject::Create<Object>(1);
+	gc.SetRootSet(root);
+	Object* child = SObject::Create<Object>(2);
+	root->child = child;
+
+	EXPECT_TRUE(IsValid(root));
+	EXPECT_TRUE(IsValid(child));
+	gc.Update();
+	EXPECT_TRUE(IsValid(root));
+	EXPECT_TRUE(IsValid(child));
+	EXPECT_FALSE(root->IsPendingKill());
+	EXPECT_FALSE(child->IsPendingKill());
+
+	child->Destroy();
+	EXPECT_TRUE(child->IsPendingKill());
+	EXPECT_FALSE(IsValid(child));
+	EXPECT_EQ(child->num, 2); // 아직은 child에 접근 할 수 있음
+
+	gc.Update();
+	EXPECT_NE(child->num, 2); // 어떤 값이 될지는 알 수 없지만 지워짐
+	EXPECT_EQ(root->child, nullptr); // 소멸된 값은 자동으로 nullptr가 된다.
+
+	Object* dummy = nullptr;
+	Object* newChild = nullptr;
+	{
+		dummy = SObject::Create<Object>(3);
+		newChild = SObject::Create<Object>(4);
+		root->child = newChild;
+	}
+	EXPECT_EQ(dummy->num, 3);
+	gc.Update();
+	EXPECT_NE(dummy->num, 3); // 접근 할 수 없음 = 지워짐
+	EXPECT_EQ(newChild->num, 4);
+
+	root->Destroy();
+	gc.Update();
+
+	EXPECT_NE(root->num, 1);
+	EXPECT_NE(newChild->num, 4);
+}
+
+TEST(GCTest, ContainerTest) 
 {
 	using namespace sh::core;
 
 	GarbageCollection& gc = *GarbageCollection::GetInstance();
+
+	Object* root = SObject::Create<Object>(1);
+	gc.SetRootSet(root);
 	
+	for (int i = 0; i < 3; ++i)
 	{
-		Object obj1{ 1 };
-		Object* obj1Child = new Object{ 2 };
-		Object* obj2 = new Object{ 3 };
-		Object* obj2Child = new Object{ 4 };
-		Object* unusedObj = new Object{ 5 };
-		Object* unusedObjChild = new Object{ 6 };
-		gc.SetRootSet(&obj1);
-
-		obj1.child = obj1Child;
-		obj2->child = obj2Child;
-
-		unusedObj->child = unusedObjChild;
-
-		obj1.others.push_back(obj1Child);
-		obj1.others.push_back(obj2);
-		obj1.others.push_back(obj2Child);
-
-		delete obj1Child; //강제 제거
-		obj2->Destroy(); //GC를 이용한 제거
-
-		EXPECT_TRUE(obj2->IsPendingKill());
-		EXPECT_FALSE(IsValid(obj2));
-
-		EXPECT_NE(obj1Child->num, 2);
-		EXPECT_EQ(obj2->num, 3);
-		EXPECT_EQ(obj2Child->num, 4);
-		gc.Update();
-
-		EXPECT_EQ(obj1.child, nullptr);
-		EXPECT_NE(obj2->num, 3);
-		EXPECT_EQ(obj2Child->num, 4); //부모는 죽었지만 벡터 내부에 살아있음
-		EXPECT_NE(unusedObj->num, 5);
-		EXPECT_NE(unusedObjChild->num, 6);
-
-		EXPECT_EQ(obj1.others[0], nullptr);
-		EXPECT_EQ(obj1.others[1], nullptr);
-		EXPECT_NE(obj1.others[2], nullptr);
+		std::vector<Object*> objs(3);
+		for (int j = 0; j < 3; ++j)
+		{
+			objs[j] = SObject::Create<Object>(i * 3 + j);
+		}
+		root->others.push_back(std::move(objs));
 	}
-	//obj2Child는 이제 접근 할 수 없다. 제거됨
+	EXPECT_EQ(gc.GetObjectCount(), 10);
 	gc.Update();
-	EXPECT_EQ(gc.GetObjectCount(), 0);
+	EXPECT_EQ(gc.GetObjectCount(), 10);
+
+	Object* temp = root->others[1][1];
+
+	root->Destroy();
+	gc.Update();
+	EXPECT_NE(temp->num, 4);
 }

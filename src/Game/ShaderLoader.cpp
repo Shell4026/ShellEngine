@@ -17,7 +17,7 @@ namespace sh::game
 	{
 	}
 
-	auto ShaderLoader::LoadShader(std::string_view vertexShader, std::string_view fragShader) -> std::unique_ptr<render::Shader>
+	auto ShaderLoader::LoadShader(std::string_view vertexShader, std::string_view fragShader) -> render::Shader*
 	{
 		if (!builder)
 			return nullptr;

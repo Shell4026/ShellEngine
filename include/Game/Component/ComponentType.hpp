@@ -2,6 +2,8 @@
 
 #include "Component.h"
 
+#include "Core/SObject.h"
+
 #include <type_traits>
 #include <memory>
 
@@ -9,16 +11,16 @@ namespace sh::game
 {
 	struct IComponentType
 	{
-		virtual auto Create() -> std::unique_ptr<Component> = 0;
+		virtual auto Create() -> Component* = 0;
 	};
 	template<typename T, typename IsComponent = std::enable_if_t<std::is_base_of_v<Component, T>>>
 	struct ComponentType : IComponentType
 	{
 		using Type = T;
 
-		auto Create() -> std::unique_ptr<Component> override
+		auto Create() -> Component* override
 		{
-			return std::make_unique<T>();
+			return core::SObject::Create<T>();
 		}
 	};
 }//namespace

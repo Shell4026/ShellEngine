@@ -28,8 +28,8 @@ namespace sh::game
 		sh::render::Mesh* mesh;
 		PROPERTY(mat);
 		sh::render::Material* mat;
-		
-		core::SMap<Camera*, std::unique_ptr<sh::render::IDrawable>, 4> drawables;
+		PROPERTY(drawables);
+		core::SMap<Camera*, sh::render::IDrawable*> drawables;
 
 		core::SVector<unsigned char> uniformCopyData;
 

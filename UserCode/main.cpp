@@ -3,15 +3,15 @@
 #include "ComponentTest.h"
 #include "RotateObject.h"
 
-#include "Game/ComponentModule.h"
+#include "Core/Logger.h"
 
-#include <iostream>
+#include "Game/ComponentModule.h"
 
 extern "C"
 {
 	SH_USER_API void Init()
 	{
-		std::cout << "Init User module.\n";
+		SH_INFO("Init User module.\n");
 
 		REGISTER_COMPONENT(ComponentTest);
 		REGISTER_COMPONENT(RotateObject);

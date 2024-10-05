@@ -6,11 +6,11 @@
 #include "Core/SObject.h"
 #include "Core/GarbageCollection.h"
 #include "Core/SContainer.hpp"
+#include "Core/Observer.hpp"
 
 #include "Render/Renderer.h"
 
 #include <vector>
-#include <memory>
 #include <string>
 #include <unordered_map>
 #include <string_view>
@@ -27,19 +27,18 @@ namespace sh::game
 		core::GarbageCollection& gc;
 		render::Renderer& renderer;
 
-		core::SHashMap<std::string, std::unique_ptr<T>> resources;
+		core::SHashMap<std::string, T*> resources;
 
-		core::SHashMap<T*, core::SHashMap<void*, std::vector<std::function<void()>>>> resourceDestroyNotifies;
+		core::Observer<T*> onResourceDestroy;
 	public:
 		ResourceManager(sh::render::Renderer& renderer) :
-			renderer(renderer), gc(*core::GarbageCollection::GetInstance())
+			renderer(renderer), gc(*core::GarbageCollection::GetInstance()), onResourceDestroy()
 		{
 		}
 		ResourceManager(ResourceManager&& other) noexcept :
 			gc(other.gc),
 			renderer(other.renderer),
-			resources(std::move(other.resources)),
-			resourceDestroyNotifies(std::move(other.resourceDestroyNotifies))
+			resources(std::move(other.resources)), onResourceDestroy()
 		{
 
 		
@@ -51,19 +50,15 @@ namespace sh::game
 
 		void Clean()
 		{
-			for (auto& resourceNotify : resourceDestroyNotifies)
+			for (auto& [name, resPtr] :resources)
 			{
-				for (auto requester : resourceNotify.second)
-				{
-					for (auto& notify : requester.second)
-						notify();
-				}
+				resPtr->Destroy();
+				onResourceDestroy.Notify(resPtr);
 			}
 			resources.clear();
-			resourceDestroyNotifies.clear();
 		}
 
-		auto AddResource(std::string_view _name, std::unique_ptr<T>&& resource) -> T*
+		auto AddResource(std::string_view _name, T* resource) -> T*
 		{
 			std::string name{ _name };
 
@@ -75,8 +70,8 @@ namespace sh::game
 				it = resources.find(name);
 			}
 
-			gc.SetRootSet(resource.get());
-			return resources.insert({ name, std::move(resource) }).first->second.get();
+			gc.SetRootSet(resource);
+			return resources.insert({ name, resource }).first->second;
 		}
 		auto AddResource(std::string_view _name, T&& resource) -> T*
 		{
@@ -90,9 +85,9 @@ namespace sh::game
 				it = resources.find(name);
 			}
 
-			auto resourcePtr = std::make_unique<T>(std::move(resource));
-			gc.SetRootSet(resourcePtr.get());
-			return resources.insert({ name, std::move(resourcePtr) }).first->second.get();
+			auto resourcePtr = core::SObject::Create<T>(std::move(resource));
+			gc.SetRootSet(resourcePtr);
+			return resources.insert({ name, resourcePtr }).first->second;
 		}
 		auto AddResource(std::string_view _name, const T& resource) -> T*
 		{
@@ -106,9 +101,9 @@ namespace sh::game
 				it = resources.find(name);
 			}
 
-			auto resourcePtr = std::make_unique<T>(resource);
-			gc.SetRootSet(resourcePtr.get());
-			return resources.insert({ name, std::move(resourcePtr) }).first->second.get();
+			auto resourcePtr = core::SObject::Create<T>(resource);
+			gc.SetRootSet(resourcePtr);
+			return resources.insert({ name, resourcePtr }).first->second.get();
 		}
 
 		bool DestroyResource(std::string_view _name)
@@ -118,19 +113,9 @@ namespace sh::game
 			if (it == resources.end())
 				return false;
 
-			//notify
-			auto itNotify = resourceDestroyNotifies.find(it->second.get());
-			if (itNotify != resourceDestroyNotifies.end())
-			{
-				for (auto requester : itNotify->second)
-				{
-					for(auto& func : requester.second)
-						func();
-				}
-				resourceDestroyNotifies.erase(itNotify);
-			}
-			it->second->Destroy();
-			it->second.release();
+			T* resPtr = it->second;
+			onResourceDestroy.Notify(resPtr);
+			resPtr->Destroy();
 			resources.erase(it);
 
 			return true;
@@ -142,42 +127,7 @@ namespace sh::game
 			if (it == resources.end())
 				return nullptr;
 
-			return it->second.get();
-		}
-
-		void RegisterDestroyNotify(void* requester, T* resource, const std::function<void()>& func)
-		{
-			auto it = resourceDestroyNotifies.find(resource);
-			if (it == resourceDestroyNotifies.end())
-			{
-				std::unordered_map<void*, std::vector<std::function<void()>>> requesters;
-				requesters.insert({ requester, std::vector<std::function<void()>>{func} });
-				resourceDestroyNotifies.insert({ resource, std::move(requesters)});
-			}
-			else
-			{
-				auto requsterIt = it->second.find(requester);
-				if (requsterIt == it->second.end())
-				{
-					it->second.insert({ requester, std::vector<std::function<void()>>{func} });
-				}
-				else
-				{
-					requsterIt->second.push_back(func);
-				}
-			}
-		}
-		void DestroyNotifies(void* requester, T* resource)
-		{
-			auto it = resourceDestroyNotifies.find(resource);
-			if (it == resourceDestroyNotifies.end())
-				return;
-
-			auto requesterIt = it->second.find(requester);
-			if (requesterIt == it->second.end())
-				return;
-
-			requesterIt->second.clear();
+			return it->second;
 		}
 	};
 }

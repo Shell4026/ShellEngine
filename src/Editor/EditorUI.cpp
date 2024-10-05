@@ -109,7 +109,7 @@ namespace sh::editor
 				ImGui::End();
 				return;
 			}
-			auto obj = world.gameObjects[selected].get();
+			auto obj = world.gameObjects[selected];
 
 			char name[30] = "";
 			std::strcpy(name, obj->name.c_str());
@@ -140,7 +140,7 @@ namespace sh::editor
 							auto type = prop.second.GetTypeName();
 							if (type == core::reflection::GetTypeName<glm::vec3>())
 							{
-								glm::vec3* parameter = prop.second.Get<glm::vec3>(component.get());
+								glm::vec3* parameter = prop.second.Get<glm::vec3>(component);
 								float v[3] = { parameter->x, parameter->y, parameter->z };
 								ImGui::LabelText(("##" + prop.first).c_str(), prop.first.c_str());
 								if (ImGui::InputFloat3(("##" + prop.first + std::to_string(idx)).c_str(), v))
@@ -153,13 +153,13 @@ namespace sh::editor
 							}
 							else if (type == core::reflection::GetTypeName<float>())
 							{
-								float* parameter = prop.second.Get<float>(component.get());
+								float* parameter = prop.second.Get<float>(component);
 								if (ImGui::InputFloat(("##input_" + prop.first + std::to_string(idx)).c_str(), parameter))
 									component->OnPropertyChanged(prop.second);
 							}
 							else if (type == core::reflection::GetTypeName<int>())
 							{
-								int* parameter = prop.second.Get<int>(component.get());
+								int* parameter = prop.second.Get<int>(component);
 								ImGui::LabelText(("##" + prop.first).c_str(), prop.first.c_str());
 								if (prop.second.isConst)
 									ImGui::InputInt(("##Input_" + prop.first + std::to_string(idx)).c_str(), parameter, 0, 0, ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
@@ -171,7 +171,7 @@ namespace sh::editor
 							}
 							else if (type == core::reflection::GetTypeName<uint32_t>())
 							{
-								uint32_t* parameter = prop.second.Get<uint32_t>(component.get());
+								uint32_t* parameter = prop.second.Get<uint32_t>(component);
 								ImGui::LabelText(("##" + prop.first).c_str(), prop.first.c_str());
 								if (prop.second.isConst)
 									ImGui::InputInt(("##Input_" + prop.first + std::to_string(idx)).c_str(), reinterpret_cast<int*>(parameter), 0, 0, ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);

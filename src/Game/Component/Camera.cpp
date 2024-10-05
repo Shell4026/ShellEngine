@@ -18,19 +18,6 @@ namespace sh::game
 	}
 	Camera::~Camera()
 	{
-		if (gameObject->world.GetMainCamera() == this)
-		{
-			//다음에 추가된 카메라를 메인 카메라로 한다.
-			for (auto& cam : gameObject->world.GetCameras())
-			{
-				if (cam == this)
-					continue;
-
-				gameObject->world.SetMainCamera(cam);
-				break;
-			}
-		}
-		gameObject->world.UnRegisterCamera(this);
 	}
 	
 	void Camera::Awake()
@@ -54,6 +41,23 @@ namespace sh::game
 			static_cast<float>(size.y),
 			nearPlane, farPlane);
 		matView = glm::lookAt(gameObject->transform->position, lookPos, up);
+	}
+
+	void Camera::OnDestroy()
+	{
+		if (gameObject->world.GetMainCamera() == this)
+		{
+			//다음에 추가된 카메라를 메인 카메라로 한다.
+			for (auto& cam : gameObject->world.GetCameras())
+			{
+				if (cam == this)
+					continue;
+
+				gameObject->world.SetMainCamera(cam);
+				break;
+			}
+		}
+		gameObject->world.UnRegisterCamera(this);
 	}
 
 	auto Camera::GetProjMatrix() const -> const glm::mat4&

@@ -1,13 +1,12 @@
 ﻿#include "Component/MeshRenderer.h"
-
 #include "Component/Camera.h"
 
 #include "gameObject.h"
 
 #include "Core/Reflection.hpp"
 
-#include "Render/VulkanRenderer.h"
-#include "Render/VulkanDrawable.h"
+#include "Render/DrawableFactory.h"
+#include "Render/IDrawable.h"
 
 #include <cstring>
 #include <algorithm>
@@ -43,8 +42,6 @@ namespace sh::game
 
 	void MeshRenderer::SetMesh(sh::render::Mesh& mesh)
 	{
-		if(core::IsValid(this->mesh))
-			gameObject->world.meshes.DestroyNotifies(this, this->mesh);
 		this->mesh = &mesh;
 	}
 
@@ -55,8 +52,6 @@ namespace sh::game
 
 	void MeshRenderer::SetMaterial(sh::render::Material& mat)
 	{
-		if (core::IsValid(this->mat))
-			gameObject->world.materials.DestroyNotifies(this, this->mat);
 		this->mat = &mat;
 	}
 
@@ -85,13 +80,9 @@ namespace sh::game
 		auto it = drawables.find(camera);
 		if (it == drawables.end())
 		{
-
-			render::VulkanRenderer& renderer = static_cast<render::VulkanRenderer&>(gameObject->world.renderer);
-			std::unique_ptr<render::IDrawable> drawable = std::make_unique<sh::render::VulkanDrawable>(renderer);
-			gc->SetRootSet(drawable.get());
-
+			render::IDrawable* drawable = render::DrawableFactory::Create(gameObject->world.renderer);
 			drawable->Build(camera->GetNative(), *mesh, mat);
-			drawables.insert({ camera, std::move(drawable) });
+			drawables.insert({ camera, drawable });
 		}
 		else
 		{
@@ -213,7 +204,7 @@ namespace sh::game
 				if (tex != nullptr)
 					drawable->SetTextureData(sampler.first, tex);
 			}
-			gameObject->world.renderer.PushDrawAble(drawable.get());
+			gameObject->world.renderer.PushDrawAble(drawable);
 		}//drawables
 	}
 }//namespace

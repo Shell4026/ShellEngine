@@ -2,6 +2,8 @@
 
 #include "TextureLoader.h"
 
+#include "Core/SObject.h"
+
 #include <glm/ext.hpp>
 
 namespace sh::game
@@ -11,7 +13,7 @@ namespace sh::game
 	{
 	}
 
-	auto TextureLoader::Load(std::string_view filename, bool bGenerateMipmap) -> std::unique_ptr<render::Texture>
+	auto TextureLoader::Load(std::string_view filename, bool bGenerateMipmap) -> render::Texture*
 	{
 		int width, height, channel;
 		int info = stbi_info(filename.data(), &width, &height, &channel);
@@ -26,7 +28,7 @@ namespace sh::game
 
 		//int mip = glm::log2
 
-		std::unique_ptr<render::Texture> texture = std::make_unique<render::Texture>(format, width, height);
+		render::Texture* texture = core::SObject::Create<render::Texture>(format, width, height);
 		texture->SetPixelData(pixels);
 		stbi_image_free(pixels);
 

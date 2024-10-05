@@ -126,6 +126,12 @@ namespace sh::core::reflection
 	{
 	}
 
+	auto PropertyIterator::operator=(PropertyIterator&& other) noexcept -> PropertyIterator&
+	{
+		iteratorData = std::move(other.iteratorData);
+		return *this;
+	}
+
 	auto PropertyIterator::operator==(const PropertyIterator & other) -> bool
 	{
 		return *iteratorData.get() == *other.iteratorData.get();

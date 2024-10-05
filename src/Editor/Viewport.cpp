@@ -1,8 +1,12 @@
 ﻿#include "Viewport.h"
 
+#include "Core/Logger.h"
+
 #include "Game/ImGUImpl.h"
 #include "Game/World.h"
 #include "Game/Input.h"
+#include "Game/Component/Camera.h"
+#include "Game/GameObject.h"
 
 #include "Render/RenderTexture.h"
 #include "Render/VulkanTextureBuffer.h"
@@ -17,12 +21,13 @@ namespace sh::editor
 		viewportWidthLast(100.f), viewportHeightLast(100.f),
 		bDirty(false)
 	{
-		renderTex = std::make_unique<render::RenderTexture>();
+		renderTex = core::SObject::Create<render::RenderTexture>();
 		renderTex->Build(world.renderer);
-		core::GarbageCollection::GetInstance()->SetRootSet(renderTex.get());
+		core::GarbageCollection::GetInstance()->SetRootSet(renderTex);
+
 		for (int thr = 0; thr < 2; ++thr)
 		{
-			auto vkTexBuffer = static_cast<render::VulkanTextureBuffer*>(renderTex->GetBuffer(0));
+			auto vkTexBuffer = static_cast<render::VulkanTextureBuffer*>(renderTex->GetBuffer(thr));
 			auto imgBuffer = vkTexBuffer->GetImageBuffer();
 
 			viewportDescSet[thr] = nullptr;
@@ -47,7 +52,7 @@ namespace sh::editor
 			ImGui_ImplVulkan_RemoveTexture(viewportDescSet[GAME_THREAD]);
 		if (viewportWidthLast != 0.f && viewportHeightLast != 0.f)
 			renderTex->SetSize(viewportWidthLast, viewportHeightLast);
-		auto vkTexBuffer = static_cast<render::VulkanTextureBuffer*>(renderTex->GetBuffer(0));
+		auto vkTexBuffer = static_cast<render::VulkanTextureBuffer*>(renderTex->GetBuffer(GAME_THREAD));
 		auto imgBuffer = vkTexBuffer->GetImageBuffer();
 		viewportDescSet[GAME_THREAD] = ImGui_ImplVulkan_AddTexture(imgBuffer->GetSampler(), imgBuffer->GetImageView(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		SetDirty();
@@ -103,7 +108,7 @@ namespace sh::editor
 			viewportDescSet[RENDER_THREAD] = nullptr;
 		}
 
-		renderTex.reset();
+		renderTex->Destroy();
 	}
 
 	void Viewport::SetDirty()

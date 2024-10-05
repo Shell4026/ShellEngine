@@ -31,7 +31,7 @@ namespace sh::editor
 		float viewportWidthLast;
 		float viewportHeightLast;
 
-		std::unique_ptr<render::RenderTexture> renderTex;
+		render::RenderTexture* renderTex;
 		core::SyncArray<VkDescriptorSet> viewportDescSet;
 		
 		bool bDirty;

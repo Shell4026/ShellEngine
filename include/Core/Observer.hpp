@@ -95,12 +95,14 @@ namespace sh::core
 
 
 	template<typename ...Args>
-	inline Observer<Args...>::Observer()
+	inline Observer<Args...>::Observer() :
+		events()
 	{
 	}
 	template<typename ...Args>
 	Observer<Args...>::~Observer()
 	{
+		Clear();
 	}
 	template<typename ...Args>
 	void Observer<Args...>::Register(Listener& event)
@@ -132,6 +134,9 @@ namespace sh::core
 	template<typename ...Args>
 	inline void Observer<Args...>::Clear()
 	{
+		for (Listener* listener : events)
+			listener->observer = nullptr;
+
 		events.clear();
 	}
 }//namespace

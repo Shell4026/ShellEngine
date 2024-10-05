@@ -33,7 +33,7 @@ namespace sh::game
 		SH_GAME_API void SetData(shaderType type, const std::vector<unsigned char>& data);
 		SH_GAME_API void SetData(shaderType type, std::vector<unsigned char>&& data);
 
-		SH_GAME_API virtual auto Build() -> std::unique_ptr<render::Shader> = 0;
+		SH_GAME_API virtual auto Build() -> render::Shader* = 0;
 		SH_GAME_API void ClearData();
 	};
 }

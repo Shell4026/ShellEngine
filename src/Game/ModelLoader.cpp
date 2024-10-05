@@ -1,5 +1,7 @@
 ﻿#include "ModelLoader.h"
 
+#include "Core/SObject.h"
+
 #include "Render/Mesh.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
@@ -15,14 +17,14 @@ namespace sh::game
 	{
 	}
 
-	auto ModelLoader::Load(std::string_view filename) -> std::unique_ptr<render::Mesh>
+	auto ModelLoader::Load(std::string_view filename) -> render::Mesh*
 	{
 		tinyobj::attrib_t attrib;
 		std::vector<tinyobj::shape_t> shapes;
 		std::vector<tinyobj::material_t> materials;
 		std::string warn, err;
 
-		auto mesh = std::make_unique<render::Mesh>();
+		auto mesh = core::SObject::Create<render::Mesh>();
 		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.data()))
 		{
 			fmt::print("Can't load {}!\n", filename);

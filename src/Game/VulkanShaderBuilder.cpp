@@ -18,7 +18,7 @@ namespace sh::game
 	{
 	}
 
-	auto VulkanShaderBuilder::Build() -> std::unique_ptr<render::Shader>
+	auto VulkanShaderBuilder::Build() -> render::Shader*
 	{
 		assert(renderer.GetDevice() != nullptr);
 		VkShaderModule vertShader{ nullptr }, fragShader{ nullptr };
@@ -45,9 +45,9 @@ namespace sh::game
 		if (result != VkResult::VK_SUCCESS)
 			return nullptr;
 
-		auto retShader = std::make_unique<render::VulkanShader>(GetNextId(), renderer.GetDevice());
+		auto retShader = core::SObject::Create<render::VulkanShader>(GetNextId(), renderer.GetDevice());
 
-		render::VulkanShader* shader = static_cast<render::VulkanShader*>(retShader.get());
+		render::VulkanShader* shader = static_cast<render::VulkanShader*>(retShader);
 		shader->SetVertexShader(vertShader);
 		shader->SetFragmentShader(fragShader);
 

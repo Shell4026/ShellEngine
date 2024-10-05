@@ -26,10 +26,15 @@ namespace sh::core
 	private:
 		SHashSet<SObject*, 128> objs;
 		SHashSet<SObject*, 128> rootSets;
-		SHashSet<SObject*, 16> deletedObjs;
 	private:
 		//컨테이너를 재귀로 순회하면서 포인터를 검사하는 함수
 		void DFSIteratorCheckPtr(SObject* target, int depth, int maxDepth, sh::core::reflection::PropertyIterator& it);
+		/// @brief 컨테이너를 재귀로 순회하면서 마킹 하는 함수
+		/// @param parent 마킹이 시작된 오브젝트
+		/// @param depth 현재 깊이
+		/// @param maxDepth 최대 깊이
+		/// @param it 넘길 반복자
+		void ContainerMark(SObject* parent, int depth, int maxDepth, sh::core::reflection::PropertyIterator& it);
 
 		void Mark(SObject* obj, SObject* parent);
 	protected:
@@ -43,7 +48,6 @@ namespace sh::core
 		SH_CORE_API void AddObject(SObject* obj);
 		/// @brief 루트셋으로 지정하는 함수. 루트셋 객체는 참조하고 있는 객체가 없어도 메모리에서 유지된다.
 		/// @param obj 루트셋으로 지정할 SObject 포인터
-		/// @return 
 		SH_CORE_API void SetRootSet(SObject* obj);
 
 		/// @brief 루트셋에서 해당 객체를 제외하는 함수.
@@ -56,13 +60,7 @@ namespace sh::core
 		/// @return 성공하면 true, 아니면 false
 		SH_CORE_API auto RemoveObject(SObject* obj) -> bool;
 
-		/// @brief 강제 제거(delete) 했을 때 GC에 알리는 함수.
-		/// @param obj SObject 포인터
-		/// @return 
-		SH_CORE_API void DeleteObject(SObject* obj);
-
 		/// @brief GC를 갱신하여 쓰레기 수집 시작
-		/// @return 
 		SH_CORE_API void Update();
 
 		/// @brief GC에 등록된 오브젝트 개수를 확인하는 함수

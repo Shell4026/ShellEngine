@@ -20,6 +20,6 @@ namespace sh::game
 		SH_GAME_API VulkanShaderBuilder(render::VulkanRenderer& renderer);
 		SH_GAME_API ~VulkanShaderBuilder();
 
-		SH_GAME_API auto Build()->std::unique_ptr<render::Shader> override;
+		SH_GAME_API auto Build()->render::Shader* override;
 	};
 }

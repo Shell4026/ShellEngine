@@ -67,10 +67,9 @@ namespace sh::game
 
 		if (objsEmptyIdx.empty())
 		{
-			objs.push_back(std::make_unique<GameObject>(*this, objName));
+			objs.push_back(Create<GameObject>(*this, objName));
 			objsMap.insert(std::make_pair(objName, static_cast<uint32_t>(objs.size() - 1)));
-			auto obj = objs[objs.size() - 1].get();
-			gc->SetRootSet(obj);
+			auto obj = objs[objs.size() - 1];
 
 			return obj;
 		}
@@ -78,11 +77,10 @@ namespace sh::game
 		{
 			int idx = objsEmptyIdx.front();
 			objsMap.insert(std::make_pair(objName, idx));
-			objs[idx] = std::make_unique<GameObject>(*this, objName);
+			objs[idx] = Create<GameObject>(*this, objName);
 			objsEmptyIdx.pop();
 
-			auto obj = objs[idx].get();
-			gc->SetRootSet(obj);
+			auto obj = objs[idx];
 
 			return obj;
 		}
@@ -98,7 +96,6 @@ namespace sh::game
 		objsMap.erase(it);
 		objsEmptyIdx.push(id);
 		objs[id]->Destroy();
-		objs[id].release();
 	}
 	void World::DestroyGameObject(const GameObject& obj)
 	{
@@ -136,7 +133,7 @@ namespace sh::game
 		auto it = objsMap.find(std::string{ name });
 		if (it == objsMap.end())
 			return nullptr;
-		return objs[it->second].get();
+		return objs[it->second];
 	}
 
 	void World::Start()
@@ -166,7 +163,15 @@ namespace sh::game
 
 		for (auto& obj : objs)
 		{
-			if (!sh::core::IsValid(obj.get()))
+			if (!sh::core::IsValid(obj))
+				continue;
+			if (!obj->activeSelf)
+				continue;
+			obj->BeginUpdate();
+		}
+		for (auto& obj : objs)
+		{
+			if (!sh::core::IsValid(obj))
 				continue;
 			if (!obj->activeSelf)
 				continue;
@@ -174,7 +179,7 @@ namespace sh::game
 		}
 		for (auto& obj : objs)
 		{
-			if (!sh::core::IsValid(obj.get()))
+			if (!sh::core::IsValid(obj))
 				continue;
 			if (!obj->activeSelf)
 				continue;

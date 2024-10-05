@@ -41,7 +41,8 @@ namespace sh::game
 	{
 		SCLASS(World)
 	private:
-		core::SVector<std::unique_ptr<GameObject>> objs;
+		PROPERTY(objs)
+		core::SVector<GameObject*> objs;
 		core::SSet<Camera*> cameras;
 		core::SHashMap<std::string, uint32_t> objsMap;
 		std::queue<int> objsEmptyIdx;
@@ -60,7 +61,7 @@ namespace sh::game
 		sh::game::ResourceManager<sh::render::Texture> textures;
 	public:
 		const ComponentModule& componentModule;
-		const core::SVector<std::unique_ptr<GameObject>>& gameObjects;
+		const core::SVector<GameObject*>& gameObjects;
 		core::Observer<Camera*> onCameraAdd;
 		core::Observer<Camera*> onCameraRemove;
 	public:

@@ -49,12 +49,18 @@ namespace sh::game
 	{
 
 	}
+
+	void Component::BeginUpdate()
+	{
+	}
 	void Component::Update()
 	{
-
 	}
 	void Component::LateUpdate()
 	{
-
+	}
+	
+	void Component::OnDestroy()
+	{
 	}
 }

@@ -7,7 +7,6 @@
 #include "External/stb/stb_image.h"
 
 #include <string_view>
-#include <memory>
 
 namespace sh::render
 {
@@ -22,6 +21,6 @@ namespace sh::game
 	public:
 		SH_GAME_API TextureLoader(render::Renderer& renderer);
 		SH_GAME_API ~TextureLoader() = default;
-		SH_GAME_API auto Load(std::string_view filename, bool bGenerateMipmap = true) -> std::unique_ptr<render::Texture>;
+		SH_GAME_API auto Load(std::string_view filename, bool bGenerateMipmap = true) -> render::Texture*;
 	};
 }

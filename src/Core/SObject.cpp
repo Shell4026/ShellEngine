@@ -32,17 +32,16 @@ namespace sh::core
 			gc->RemoveObject(this);
 	}
 
+	void SObject::SetGC(SObject* ptr)
+	{
+		GarbageCollection::GetInstance()->AddObject(ptr);
+	}
 	auto SObject::operator new(std::size_t size) -> void*
 	{
-		SObject* objPtr = reinterpret_cast<SObject*>(::operator new(size));
-		GarbageCollection::GetInstance()->AddObject(objPtr);
-		return objPtr;
+		return ::operator new(size);
 	}
-
 	void SObject::operator delete(void* ptr)
 	{
-		SObject* objPtr = static_cast<SObject*>(ptr);
-		GarbageCollection::GetInstance()->DeleteObject(objPtr);
 		::operator delete(ptr);
 	}
 
@@ -64,5 +63,10 @@ namespace sh::core
 		onDestroy.Notify(this);
 		onDestroy.Clear();
 		bPendingKill.store(true, std::memory_order::memory_order_release);
+		gc->RemoveRootSet(this);
+	}
+
+	void SObject::OnDestroy()
+	{
 	}
 }

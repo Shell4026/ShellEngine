@@ -106,15 +106,15 @@ namespace sh::render::impl
 			//종속성: 외부 작업(VK_SUBPASS_EXTERNAL)이 첫 번째 서브패스의 시작 전에 완료되어야 함
 			dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
 			dependencies[0].dstSubpass = 0;
-			dependencies[0].srcStageMask = 
+			dependencies[0].srcStageMask = // 외부작업에서 픽셀 테스트 단계가 끝나야함
 				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | 
 				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-			dependencies[0].dstStageMask = 
+			dependencies[0].dstStageMask = // 첫 서브패스의 픽셀 테스트 단계전에 srcStageMask가 완료돼야 함
 				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | 
 				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-			dependencies[0].srcAccessMask = 
+			dependencies[0].srcAccessMask = // 외부작업은 깊이/스텐실에 쓰기 작업을 수행
 				VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-			dependencies[0].dstAccessMask = 
+			dependencies[0].dstAccessMask = // 첫 번째 서브패스는 깊이/스텐실에 쓰기와 읽기 작업을 수행
 				VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | 
 				VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
 			dependencies[0].dependencyFlags = 0;

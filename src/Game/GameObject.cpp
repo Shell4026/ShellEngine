@@ -52,6 +52,15 @@ namespace sh::game
 		}
 	}
 
+	void GameObject::BeginUpdate()
+	{
+		for (auto& Component : components)
+		{
+			if (Component->active)
+				Component->BeginUpdate();
+		}
+	}
+
 	void GameObject::Update()
 	{
 		for (auto& Component : components)
@@ -67,6 +76,14 @@ namespace sh::game
 		{
 			if (Component->active)
 				Component->LateUpdate();
+		}
+	}
+
+	void GameObject::OnDestroy()
+	{
+		for (auto component : components)
+		{
+			component->OnDestroy();
 		}
 	}
 
@@ -91,15 +108,14 @@ namespace sh::game
 		objName = world.ChangeGameObjectName(objName, name);
 	}
 
-	auto GameObject::GetComponents() const -> const std::vector<std::unique_ptr<Component>>&
+	auto GameObject::GetComponents() const -> const std::vector<Component*>&
 	{
 		return components;
 	}
 
-	void GameObject::AddComponent(std::unique_ptr<Component>&& component)
+	void GameObject::AddComponent(Component* component)
 	{
 		component->SetOwner(*this);
-		gc->SetRootSet(component.get());
 		components.push_back(std::move(component));
 		components.back()->SetActive(true);
 	}
