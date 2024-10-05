@@ -4,6 +4,7 @@
 
 #include "SContainer.hpp"
 #include "NonCopyable.h"
+#include "Logger.h"
 
 #include <string_view>
 #include <functional>
@@ -48,7 +49,6 @@ namespace sh::core
 			{
 				if (observer == nullptr) 
 					return;
-
 				observer->UnRegister(*this);
 			}
 
@@ -67,6 +67,8 @@ namespace sh::core
 		{
 			bool operator()(const Listener* left, const Listener* right) const 
 			{
+				if (left->priority == right->priority)
+					return left < right;
 				return left->priority > right->priority; // 높은 우선순위가 먼저 오도록 설정 (내림차)
 			}
 		};
@@ -102,7 +104,10 @@ namespace sh::core
 	template<typename ...Args>
 	Observer<Args...>::~Observer()
 	{
-		Clear();
+		for (Listener* listener : events)
+		{
+			listener->observer = nullptr;
+		}
 	}
 	template<typename ...Args>
 	void Observer<Args...>::Register(Listener& event)
@@ -135,8 +140,9 @@ namespace sh::core
 	inline void Observer<Args...>::Clear()
 	{
 		for (Listener* listener : events)
+		{
 			listener->observer = nullptr;
-
+		}
 		events.clear();
 	}
 }//namespace
