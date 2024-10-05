@@ -16,6 +16,7 @@ namespace sh::game
 		SCLASS(Component)
 	private:
 		bool bEnable;
+		bool bInit;
 	public:
 		GameObject* gameObject;
 		const bool& active;
