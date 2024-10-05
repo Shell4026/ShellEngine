@@ -48,12 +48,11 @@ namespace sh
 		SH_INFO("Engine shutdown");
 		world->Clean();
 		world->Destroy();
-		gc->Update();
 #if SH_EDITOR
 		editorUI.reset();
-		gc->Update();
 #endif
 		gui.reset();
+		gc->Update();
 		renderer.reset();
 		window.reset();
 	}
