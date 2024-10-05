@@ -4,21 +4,21 @@ namespace sh::game
 {
 	Component::Component() :
 		active(bEnable),
-		gameObject(nullptr), bInit(false), bEnable(true)
+		gameObject(nullptr), bEnable(true)
 	{
 	}
 
 	Component::Component(const Component& other) :
 		gameObject(other.gameObject), 
 		active(bEnable),
-		bInit(false), bEnable(other.bEnable)
+		bEnable(other.bEnable)
 	{
 	}
 
 	Component::Component(Component&& other) noexcept :
 		gameObject(other.gameObject),
 		active(bEnable),
-		bInit(other.bInit), bEnable(other.bEnable)
+		bEnable(other.bEnable)
 	{
 	}
 
@@ -27,8 +27,6 @@ namespace sh::game
 		bEnable = b;
 		if (bEnable)
 		{
-			if (!bInit)
-				Awake();
 			OnEnable();
 		}
 	}
@@ -39,7 +37,6 @@ namespace sh::game
 
 	void Component::Awake()
 	{
-		bInit = true;
 	}
 	void Component::Start()
 	{
