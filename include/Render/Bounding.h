@@ -12,26 +12,26 @@ namespace sh::render
 	private:
 		glm::vec3 min, max, center;
 	public:
-		Bounding();
-		Bounding(float x1, float y1, float z1, float x2, float y2, float z2);
-		Bounding(const glm::vec3& min, const glm::vec3& max);
+		SH_RENDER_API Bounding();
+		SH_RENDER_API Bounding(float x1, float y1, float z1, float x2, float y2, float z2);
+		SH_RENDER_API Bounding(const glm::vec3& min, const glm::vec3& max);
 
-		void Set(const glm::vec3& min, const glm::vec3& max);
+		SH_RENDER_API void Set(const glm::vec3& min, const glm::vec3& max);
 		/// @brief min과 max를 amount만큼 늘리는 함수.
 		/// @param amount 얼마만큼 늘릴지
-		void Expand(float amount);
+		SH_RENDER_API void Expand(float amount);
 
 		/// @brief 점이 AABB내에 존재하는지 확인하는 함수.
 		/// @param point 3차원 점
 		/// @return 존재 시 true, 아닐 시 false
-		bool Contains(const glm::vec3& point) const;
+		SH_RENDER_API bool Contains(const glm::vec3& point) const;
 		/// @brief 다른 바운딩 박스와 충돌하는지 확인하는 함수.
 		/// @param other 다른 바운딩 박스
 		/// @return 충돌 시 true, 아닐 시 false
-		bool Intersects(const Bounding& other) const;
+		SH_RENDER_API bool Intersects(const Bounding& other) const;
 
-		auto GetMin() const -> const glm::vec3&;
-		auto GetMax() const -> const glm::vec3&;
-		auto GetCenter() const -> const glm::vec3&;
+		SH_RENDER_API auto GetMin() const -> const glm::vec3&;
+		SH_RENDER_API auto GetMax() const -> const glm::vec3&;
+		SH_RENDER_API auto GetCenter() const -> const glm::vec3&;
 	};
 }//namespace

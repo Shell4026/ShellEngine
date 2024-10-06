@@ -35,7 +35,7 @@ namespace sh::render
 	{
 		this->verts = verts;
 	}
-	void Mesh::SetVertex(std::vector<glm::vec3>&& verts)
+	void Mesh::SetVertex(std::vector<glm::vec3>&& verts) noexcept
 	{
 		this->verts = std::move(verts);
 	}
