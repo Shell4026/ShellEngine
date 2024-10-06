@@ -1,8 +1,7 @@
 ﻿#include "pch.h"
 #include "Mesh.h"
 
-#include "VulkanImpl/VulkanRenderer.h"
-#include "VulkanImpl/VulkanVertexBuffer.h"
+#include "VertexBufferFactory.h"
 
 namespace sh::render
 {
@@ -104,11 +103,7 @@ namespace sh::render
 			}
 		}
 		
-		if (renderer.apiType == RenderAPI::Vulkan)
-		{
-			buffer = std::make_unique<VulkanVertexBuffer>(static_cast<const VulkanRenderer&>(renderer));
-			buffer->Create(*this);
-		}
+		buffer = VertexBufferFactory::Create(renderer, *this);
 	}
 
 	auto Mesh::GetVertexBuffer() const -> IVertexBuffer*
