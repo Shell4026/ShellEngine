@@ -5,8 +5,8 @@
 
 #include "Window/Window.h"
 
-#include "Render/VulkanRenderer.h"
-#include "Render/VulkanShader.h"
+#include "Render/VulkanImpl/VulkanRenderer.h"
+#include "Render/VulkanImpl/VulkanShader.h"
 
 #include "Game/VulkanShaderBuilder.h"
 #include "Game/ShaderLoader.h"
@@ -279,8 +279,8 @@ namespace sh
 #endif
 			this->gui->End();
 
-			gc->Update();
 			threadSyncManager.Sync();
+			gc->Update();
 			threadSyncManager.AwakeThread();
 		}
 	}
