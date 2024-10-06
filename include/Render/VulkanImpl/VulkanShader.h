@@ -1,9 +1,9 @@
 ﻿#pragma once
 
-#include "Render/Export.h"
-#include "VulkanImpl/VulkanConfig.h"
-#include "Shader.h"
-#include "VulkanImpl/VulkanPipeline.h"
+#include "../Export.h"
+#include "../Shader.h"
+#include "VulkanConfig.h"
+#include "VulkanPipeline.h"
 
 #include "Core/NonCopyable.h"
 

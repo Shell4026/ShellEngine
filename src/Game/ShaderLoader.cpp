@@ -4,7 +4,7 @@
 
 #include "Core/FileLoader.h"
 
-#include "render/VulkanShader.h"
+#include "render/VulkanImpl/VulkanShader.h"
 
 namespace sh::game
 {

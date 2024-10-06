@@ -9,12 +9,12 @@ namespace sh::render
 {
 	class Mesh;
 
-	class VertexBuffer
+	class IVertexBuffer
 	{
 	private:
 
 	public:
-		SH_RENDER_API virtual ~VertexBuffer() = default;
+		SH_RENDER_API virtual ~IVertexBuffer() = default;
 
 		SH_RENDER_API virtual void Create(const Mesh& mesh) = 0;
 		SH_RENDER_API virtual void Clean() = 0;

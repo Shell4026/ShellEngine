@@ -1,7 +1,7 @@
 ﻿#include "VulkanShaderBuilder.h"
 
-#include "Render/VulkanRenderer.h"
-#include "Render/VulkanShader.h"
+#include "Render/VulkanImpl/VulkanRenderer.h"
+#include "Render/VulkanImpl/VulkanShader.h"
 #include "Render/VulkanImpl/VulkanPipeline.h"
 #include "Render/VulkanImpl/VulkanFramebuffer.h"
 

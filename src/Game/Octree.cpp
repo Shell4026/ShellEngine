@@ -2,6 +2,9 @@
 
 #include "GameObject.h"
 
+#undef min;
+#undef max
+
 namespace sh::game
 {
 	Octree::Octree(glm::vec3 min, glm::vec3 max, int capacity) :

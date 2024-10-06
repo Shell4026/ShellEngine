@@ -1,6 +1,5 @@
-﻿#include "VulkanShader.h"
-
-#include <cassert>
+﻿#include "pch.h"
+#include "VulkanShader.h"
 
 namespace sh::render
 {

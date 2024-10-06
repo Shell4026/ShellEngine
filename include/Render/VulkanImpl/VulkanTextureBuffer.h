@@ -1,10 +1,10 @@
 ﻿#pragma once
 
-#include "Export.h"
-#include "ITextureBuffer.h"
+#include "../Export.h"
+#include "../ITextureBuffer.h"
 
-#include "VulkanImpl/VulkanImageBuffer.h"
-#include "VulkanImpl/VulkanCommandBuffer.h"
+#include "VulkanImageBuffer.h"
+#include "VulkanCommandBuffer.h"
 
 #include <memory>
 namespace sh::render

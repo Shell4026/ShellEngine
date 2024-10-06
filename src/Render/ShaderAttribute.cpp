@@ -1,4 +1,5 @@
-﻿#include "ShaderAttribute.h"
+﻿#include "pch.h"
+#include "ShaderAttribute.h"
 
 namespace sh::render
 {

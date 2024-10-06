@@ -4,7 +4,7 @@
 #include "game/GameObject.h"
 #include "game/World.h"
 
-#include "Render/VulkanTextureBuffer.h"
+#include "Render/VulkanImpl/VulkanTextureBuffer.h"
 #include "Render/RenderTexture.h"
 
 #include <cstring>

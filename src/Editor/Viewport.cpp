@@ -9,7 +9,7 @@
 #include "Game/GameObject.h"
 
 #include "Render/RenderTexture.h"
-#include "Render/VulkanTextureBuffer.h"
+#include "Render/VulkanImpl/VulkanTextureBuffer.h"
 
 namespace sh::editor
 {

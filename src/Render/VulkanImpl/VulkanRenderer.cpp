@@ -1,22 +1,26 @@
-﻿#include "VulkanRenderer.h"
+﻿#include "pch.h"
+#include "VulkanRenderer.h"
 
 #include <fmt/core.h>
 #include "../Core/Util.h"
-#include "VulkanImpl/VulkanLayer.h"
-#include "VulkanImpl/VulkanSurface.h"
-#include "VulkanImpl/VulkanCommandBuffer.h"
-#include "VulkanImpl/VulkanFramebuffer.h"
-#include "VulkanImpl/VulkanDescriptorPool.h"
 
-#include "Mesh.h"
-#include "Material.h"
+#include "VulkanLayer.h"
+#include "VulkanSurface.h"
+#include "VulkanCommandBuffer.h"
+#include "VulkanFramebuffer.h"
+#include "VulkanDescriptorPool.h"
 #include "VulkanShader.h"
 #include "VulkanDrawable.h"
 
+#include "Mesh.h"
+#include "Material.h"
+
 #include <cassert>
-#include <set>
 #include <cstdint>
 #include <utility>
+
+#undef min
+#undef max
 
 namespace sh::render {
 	VulkanRenderer::VulkanRenderer(core::ThreadSyncManager& syncManager) :

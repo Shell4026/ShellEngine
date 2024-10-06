@@ -1,4 +1,5 @@
-﻿#include "Shader.h"
+﻿#include "pch.h"
+#include "Shader.h"
 
 namespace sh::render
 {

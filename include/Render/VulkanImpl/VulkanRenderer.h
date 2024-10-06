@@ -1,8 +1,8 @@
 ﻿#pragma once
 #pragma warning(disable: 4251)
 
-#include "Renderer.h"
-#include "VulkanImpl/VulkanConfig.h"
+#include "../Renderer.h"
+#include "VulkanConfig.h"
 
 #include "Core/NonCopyable.h"
 #include "Core/ThreadSyncManager.h"

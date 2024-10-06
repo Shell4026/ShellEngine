@@ -43,7 +43,7 @@ namespace sh::render {
 
 		core::ThreadSyncManager& syncManager;
 	protected:
-		core::SyncArray<core::SMap<Camera*, core::SVector<IDrawable*>, 128, CameraCompare>> drawList;
+		core::SyncArray<core::SMap<Camera*, core::SVector<IDrawable*>, 64, CameraCompare>> drawList;
 
 		std::vector<std::function<void()>> drawCalls;
 

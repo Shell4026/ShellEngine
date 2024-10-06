@@ -1,7 +1,8 @@
-﻿#include "Mesh.h"
+﻿#include "pch.h"
+#include "Mesh.h"
 
-#include "VulkanRenderer.h"
-#include "VulkanVertexBuffer.h"
+#include "VulkanImpl/VulkanRenderer.h"
+#include "VulkanImpl/VulkanVertexBuffer.h"
 
 namespace sh::render
 {
@@ -109,7 +110,7 @@ namespace sh::render
 		}
 	}
 
-	auto Mesh::GetVertexBuffer() const -> VertexBuffer*
+	auto Mesh::GetVertexBuffer() const -> IVertexBuffer*
 	{
 		return buffer.get();
 	}

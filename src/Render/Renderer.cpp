@@ -1,4 +1,5 @@
-﻿#include "Renderer.h"
+﻿#include "pch.h"
+#include "Renderer.h"
 #include "IDrawable.h"
 
 #include "Core/Util.h"

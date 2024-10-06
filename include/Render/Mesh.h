@@ -9,7 +9,6 @@
 
 #include <glm/glm.hpp>
 #include <vector>
-#include <unordered_map>
 #include <string_view>
 #include <initializer_list>
 #include <memory>
@@ -18,7 +17,7 @@
 namespace sh::render
 {
 	class Renderer;
-	class VertexBuffer;
+	class IVertexBuffer;
 
 	class Mesh : public sh::core::SObject, public sh::core::INonCopyable
 	{
@@ -43,7 +42,7 @@ namespace sh::render
 
 		std::vector<std::unique_ptr<ShaderAttributeBase>> attrs;
 
-		std::unique_ptr<VertexBuffer> buffer;
+		std::unique_ptr<IVertexBuffer> buffer;
 
 		Topology topology;
 	public:
@@ -70,7 +69,7 @@ namespace sh::render
 
 		SH_RENDER_API void Build(const Renderer& renderer);
 
-		SH_RENDER_API auto GetVertexBuffer() const -> VertexBuffer*;
+		SH_RENDER_API auto GetVertexBuffer() const ->IVertexBuffer*;
 
 		SH_RENDER_API void SetTopology(Topology topology);
 		SH_RENDER_API auto GetTopology() const -> Topology;

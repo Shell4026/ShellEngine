@@ -1,4 +1,5 @@
-﻿#include "Camera.h"
+﻿#include "pch.h"
+#include "Camera.h"
 
 namespace sh::render
 {

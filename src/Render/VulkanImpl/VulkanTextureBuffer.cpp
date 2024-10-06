@@ -1,10 +1,9 @@
-﻿#include "VulkanTextureBuffer.h"
+﻿#include "pch.h"
+#include "VulkanTextureBuffer.h"
 
 #include "VulkanRenderer.h"
 #include "VulkanImpl/VulkanBuffer.h"
 #include "VulkanImpl/VulkanFramebuffer.h"
-
-#include <stdexcept>
 
 namespace sh::render
 {

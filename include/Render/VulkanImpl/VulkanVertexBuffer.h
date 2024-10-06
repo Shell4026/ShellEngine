@@ -1,12 +1,12 @@
 ﻿#pragma once
 
-#include "Export.h"
-#include "VertexBuffer.h"
-#include "ShaderAttribute.h"
+#include "../Export.h"
+#include "../IVertexBuffer.h"
+#include "../ShaderAttribute.h"
 
-#include "VulkanImpl/VulkanConfig.h"
-#include "VulkanImpl/VulkanBuffer.h"
-#include "VulkanImpl/VulkanCommandBuffer.h"
+#include "VulkanConfig.h"
+#include "VulkanBuffer.h"
+#include "VulkanCommandBuffer.h"
 
 #include <cstdint>
 #include <vector>
@@ -17,7 +17,7 @@ namespace sh::render
 {
 	class VulkanRenderer;
 
-	class VulkanVertexBuffer : public VertexBuffer
+	class VulkanVertexBuffer : public IVertexBuffer
 	{
 	private:
 		const VulkanRenderer& renderer;
@@ -39,9 +39,9 @@ namespace sh::render
 		VulkanVertexBuffer(const VulkanRenderer& renderer);
 		~VulkanVertexBuffer();
 
-		void Create(const Mesh& mesh) override;
-		void Clean() override;
+		SH_RENDER_API void Create(const Mesh& mesh) override;
+		SH_RENDER_API void Clean() override;
 
-		void Bind() override;
+		SH_RENDER_API void Bind() override;
 	};
 }

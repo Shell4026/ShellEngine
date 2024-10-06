@@ -1,4 +1,5 @@
-﻿#include "RenderTexture.h"
+﻿#include "pch.h"
+#include "RenderTexture.h"
 
 #include "Renderer.h"
 #include "VulkanRenderer.h"
