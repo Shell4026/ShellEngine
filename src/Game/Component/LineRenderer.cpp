@@ -8,7 +8,8 @@
 namespace sh::game
 {
 	LineRenderer::LineRenderer() :
-		start(0, 0, 0), end(0, 1, 0), mesh()
+		start(0, 0, 0), end(0, 1, 0), mesh(),
+		bUpdate(false)
 	{
 		mesh.SetVertex({ start, end });
 		mesh.SetIndices({ 0, 1 });
@@ -28,9 +29,30 @@ namespace sh::game
 		Super::Awake();
 	}
 
+	void LineRenderer::BeginUpdate()
+	{
+		if (!bUpdate)
+			return;
+
+		mesh.SetVertex({ this->start, this->end });
+		mesh.Build(gameObject->world.renderer);
+		this->RebuildDrawables();
+
+		bUpdate = false;
+	}
 	void LineRenderer::Update()
 	{
 		Super::Update();
+	}
+	void LineRenderer::SetStart(const glm::vec3& start)
+	{
+		this->start = start;
+		bUpdate = true;
+	}
+	void LineRenderer::SetEnd(const glm::vec3& start)
+	{
+		this->end = start;
+		bUpdate = true;
 	}
 
 #if SH_EDITOR
@@ -38,11 +60,7 @@ namespace sh::game
 	{
 		if (std::strcmp(prop.GetName(), "start") == 0 || std::strcmp(prop.GetName(), "end") == 0)
 		{
-			std::cout << "change\n";
-			mesh.SetVertex({ start, end });
-			mesh.Build(gameObject->world.renderer);
-
-			this->RebuildDrawables();
+			bUpdate = true;
 		}
 	}
 #endif

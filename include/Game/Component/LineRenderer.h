@@ -23,12 +23,17 @@ namespace sh::game
 		glm::vec3 end;
 
 		render::Mesh mesh;
+
+		bool bUpdate;
 	public:
 		SH_GAME_API LineRenderer();
 
 		SH_GAME_API void Awake() override;
+		SH_GAME_API void BeginUpdate() override;
 		SH_GAME_API void Update() override;
 
+		SH_GAME_API void SetStart(const glm::vec3& start);
+		SH_GAME_API void SetEnd(const glm::vec3& end);
 #if SH_EDITOR
 		SH_CORE_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 #endif
