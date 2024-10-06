@@ -14,7 +14,8 @@ namespace sh::render
 	}
 	Mesh::Mesh(Mesh&& other) noexcept :
 		attributes(attrs),
-		attrs(std::move(other.attrs))
+		attrs(std::move(other.attrs)),
+		topology(other.topology)
 	{
 		verts = std::move(other.verts);
 		indices = std::move(other.indices);
@@ -123,5 +124,14 @@ namespace sh::render
 	auto Mesh::GetTopology() const -> Topology
 	{
 		return topology;
+	}
+
+	auto Mesh::GetBoundingBox() const -> const Bounding&
+	{
+		return bounding;
+	}
+	auto Mesh::GetBoundingBox() -> Bounding&
+	{
+		return bounding;
 	}
 }

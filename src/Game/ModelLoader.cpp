@@ -35,6 +35,8 @@ namespace sh::game
 		std::vector<glm::vec3> normals;
 		std::vector<glm::vec2> uvs;
 		std::vector<uint32_t> indices;
+		
+		glm::vec3 min{}, max{};
 		for (const auto& shape : shapes)
 		{
 			uint32_t n = 0;
@@ -57,7 +59,14 @@ namespace sh::game
 					attrib.texcoords[2 * index.texcoord_index + 0],
 					1 - attrib.texcoords[2 * index.texcoord_index + 1],
 				};
-				
+
+				if (vert.x < min.x) min.x = vert.x;
+				if (vert.y < min.y) min.y = vert.y;
+				if (vert.z < min.z) min.z = vert.z;
+				if (vert.x > max.x) max.x = vert.x;
+				if (vert.y > max.y) max.y = vert.y;
+				if (vert.z > max.z) max.z = vert.z;
+
 				auto it = uniqueVerts.find(vert);
 				if (it == uniqueVerts.end())
 				{
@@ -72,6 +81,7 @@ namespace sh::game
 					indices.push_back(it->second);
 			}
 		}
+		mesh->GetBoundingBox().Set(min, max);
 
 		mesh->SetVertex(std::move(verts));
 		mesh->SetAttribute(render::ShaderAttribute<glm::vec2>{"uvs", std::move(uvs)});
