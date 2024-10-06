@@ -6,7 +6,7 @@
 
 namespace sh::render
 {
-	/// @brief 모델 공간에서만 존재하는 AABB 클래스
+	/// @brief 단순한 AABB 클래스
 	class Bounding
 	{
 	private:
