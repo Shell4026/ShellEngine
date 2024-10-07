@@ -11,17 +11,16 @@ namespace sh::game
 	std::bitset<3> Input::mousePressing{};
 	glm::vec2 Input::mousePos{};
 	glm::vec2 Input::mouseDelta{};
-	float Input::wheelDelta(0.f);
+	float Input::wheelDelta{ 0.f };
 
 	const glm::vec2& Input::mousePosition(mousePos);
 	const glm::vec2& Input::mousePositionDelta(mouseDelta);
-	const float& Input::mouseWheelDelta(window::Event::MouseWheelScrolled::delta);
+	const float& Input::mouseWheelDelta(wheelDelta);
 
 	void Input::Update()
 	{
-		window::Event::MouseWheelScrolled::delta = 0.f;
-
 		wheelDelta = 0.f;
+
 		mouseDelta = { 0.f, 0.f };
 	}
 
@@ -37,10 +36,8 @@ namespace sh::game
 		else if(event.type == sh::window::Event::EventType::MouseReleased)
 			mousePressing[static_cast<uint32_t>(event.mouseType)] = false;
 
-		if (event.type == sh::window::Event::EventType::MouseWheelScrolled)
-		{
+		if (event.type == window::Event::EventType::MouseWheelScrolled)
 			wheelDelta = window::Event::MouseWheelScrolled::delta;
-		}
 
 		mouseDelta.x = mousePos.x;
 		mouseDelta.y = mousePos.y;
