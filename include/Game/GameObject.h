@@ -67,9 +67,9 @@ namespace sh::game
 		template<typename T>
 		auto GetComponent() const -> T*
 		{
-			for (auto& component : components)
+			for (Component* component : components)
 			{
-				if (T* casting = sh::core::reflection::Cast<T>(component.get()); casting != nullptr)
+				if (T* casting = sh::core::reflection::Cast<T>(component); casting != nullptr)
 					return casting;
 			}
 			return nullptr;
