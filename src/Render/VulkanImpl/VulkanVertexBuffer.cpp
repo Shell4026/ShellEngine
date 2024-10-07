@@ -13,7 +13,7 @@ namespace sh::render
 		attribDescriptions(mAttribDescriptions),
 
 		indexBuffer(renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator()),
-		cmd(renderer.GetDevice(), renderer.GetCommandPool())
+		cmd(renderer.GetDevice(), renderer.GetCommandPool(core::ThreadType::Game))
 	{
 	}
 
@@ -183,7 +183,7 @@ namespace sh::render
 			vertexBuffers[i] = buffers[i].GetBuffer();
 			offsets[i] = 0;
 		}
-		vkCmdBindVertexBuffers(renderer.GetCommandBuffer(), 0, vertexBuffers.size(), vertexBuffers.data(), offsets.data());
-		vkCmdBindIndexBuffer(renderer.GetCommandBuffer(), indexBuffer.GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
+		vkCmdBindVertexBuffers(renderer.GetCommandBuffer(core::ThreadType::Render), 0, vertexBuffers.size(), vertexBuffers.data(), offsets.data());
+		vkCmdBindIndexBuffer(renderer.GetCommandBuffer(core::ThreadType::Render), indexBuffer.GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
 	}
 }

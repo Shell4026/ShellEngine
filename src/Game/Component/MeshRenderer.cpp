@@ -1,4 +1,5 @@
-﻿#include "Component/MeshRenderer.h"
+﻿#include "PCH.h"
+#include "Component/MeshRenderer.h"
 #include "Component/Camera.h"
 
 #include "gameObject.h"

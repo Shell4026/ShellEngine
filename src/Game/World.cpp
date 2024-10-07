@@ -1,4 +1,5 @@
-﻿#include "World.h"
+﻿#include "PCH.h"
+#include "World.h"
 
 #include "GameObject.h"
 #include "Component/Camera.h"

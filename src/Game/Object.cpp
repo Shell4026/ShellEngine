@@ -1,4 +1,5 @@
-﻿#include "Object.h"
+﻿#include "PCH.h"
+#include "Object.h"
 
 namespace sh::game
 {

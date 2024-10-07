@@ -1,4 +1,5 @@
-﻿#include "Component/Transform.h"
+﻿#include "PCH.h"
+#include "Component/Transform.h"
 
 #include "glm/mat4x4.hpp"
 

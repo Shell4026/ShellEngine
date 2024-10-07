@@ -1,4 +1,5 @@
-﻿#include "Component/LineRenderer.h"
+﻿#include "PCH.h"
+#include "Component/LineRenderer.h"
 #include "GameObject.h"
 
 #include "Core/Logger.h"

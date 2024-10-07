@@ -8,16 +8,10 @@ add_library(ShellEngine::Game ALIAS ShellEngineGame)
 target_link_libraries(ShellEngineGame PUBLIC ShellEngine::Core)
 target_link_libraries(ShellEngineGame PUBLIC ShellEngine::Window)
 target_link_libraries(ShellEngineGame PUBLIC ShellEngine::Render)
+target_link_libraries(ShellEngineGame PUBLIC ShellEngine::Physics)
 target_link_libraries(ShellEngineGame PUBLIC IMGUI)
 
-FetchContent_Declare(
-  reactphysics3d
-  GIT_REPOSITORY "https://github.com/DanielChappuis/reactphysics3d"
-  GIT_TAG "v0.10.0"
-  )
-FetchContent_MakeAvailable(reactphysics3d)
-target_link_libraries(ShellEngineGame PUBLIC reactphysics3d)
+target_precompile_headers(ShellEngineGame PUBLIC ${CMAKE_SOURCE_DIR}/include/Game/PCH.h)
 
 target_include_directories(ShellEngineGame PRIVATE ${CMAKE_SOURCE_DIR}/include/Game)
 target_include_directories(ShellEngineGame PRIVATE ${CMAKE_SOURCE_DIR}/include/external)
-target_include_directories(ShellEngineGame PRIVATE ${REACTPHYSICS3D_HEADERS})

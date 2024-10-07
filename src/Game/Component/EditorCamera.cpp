@@ -1,4 +1,5 @@
-﻿#include "Game/Component/EditorCamera.h"
+﻿#include "PCH.h"
+#include "Game/Component/EditorCamera.h"
 
 #include "Game/Input.h"
 #include "Game/GameObject.h"

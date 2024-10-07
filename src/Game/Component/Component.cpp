@@ -1,4 +1,5 @@
-﻿#include "Component/Component.h"
+﻿#include "PCH.h"
+#include "Component/Component.h"
 
 namespace sh::game
 {

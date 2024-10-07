@@ -1,4 +1,5 @@
-﻿#define STB_IMAGE_IMPLEMENTATION
+﻿#include "PCH.h"
+#define STB_IMAGE_IMPLEMENTATION
 
 #include "TextureLoader.h"
 

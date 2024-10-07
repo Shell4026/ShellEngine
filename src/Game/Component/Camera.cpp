@@ -1,4 +1,5 @@
-﻿#include "Component/Camera.h"
+﻿#include "PCH.h"
+#include "Component/Camera.h"
 #include "GameObject.h"
 
 #include "glm/gtc/matrix_transform.hpp"

@@ -1,4 +1,5 @@
-﻿#include "Octree.h"
+﻿#include "PCH.h"
+#include "Octree.h"
 
 #include "GameObject.h"
 

@@ -1,4 +1,5 @@
-﻿#include "Component/UniformTest.h"
+﻿#include "PCH.h"
+#include "Component/UniformTest.h"
 
 #include "gameObject.h"
 #include "Input.h"
