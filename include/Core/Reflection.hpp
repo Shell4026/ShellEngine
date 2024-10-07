@@ -9,6 +9,7 @@
 #include <vector>
 #include <string>
 #include <string_view>
+#include <initializer_list>
 #include <cassert>
 #include <memory>
 #include <cstring>
@@ -43,13 +44,18 @@ struct _PropertyFactory_##variable_name\
 			<This, \
 			decltype(variable_name), \
 			decltype(&This::variable_name), \
-			&This::variable_name> property_##variable_name{ #variable_name, std::string_view{#__VA_ARGS__} };\
+			&This::variable_name> property_##variable_name{ #variable_name, {__VA_ARGS__} };\
 	}\
 } _propertyFactory_##variable_name;\
 
 namespace sh::core
 {
 	class SObject;
+	struct PropertyOption
+	{
+		static constexpr const char* invisible = "invisible";
+		static constexpr const char* constant = "const";
+	};
 }
 
 namespace sh::core::reflection
@@ -536,25 +542,20 @@ namespace sh::core::reflection
 			bool bVisible = true;
 		};
 	private:
-		constexpr static auto ParseOption(std::string_view option) -> Option
+		static auto ParseOption(const std::initializer_list<std::string_view>& option) -> Option
 		{
 			Option retOption{};
-			size_t start = 0;
-			for (size_t i = 0; i <= option.size(); ++i) {
-				if (i == option.size() || option[i] == ' ' || option[i] == ',') {
-					std::string_view token = option.substr(start, i - start);
-					if (token == "const")
-						retOption.isConst = true;
-					else if (token == "invisible")
-						retOption.bVisible = false;
-					start = i + 1;
-				}
+			for (auto& option : option)
+			{
+				if (option == "const")
+					retOption.isConst = true;
+				else if (option == "invisible")
+					retOption.bVisible = false;
 			}
-			
 			return retOption;
 		}
 	public:
-		PropertyInfo(const char* name, std::string_view option) :
+		PropertyInfo(const char* name, const std::initializer_list<std::string_view>& option) :
 			name(name), owner(ThisType::GetStaticType())
 		{
 			Option options = ParseOption(option);
@@ -563,7 +564,6 @@ namespace sh::core::reflection
 			data.isConst = options.isConst;
 			data.bVisible = options.bVisible;
 			
-
 			if constexpr (std::is_convertible_v<T, SObject*>)
 			{
 				Property* prop = owner.AddProperty(name, Property{ &data, name });
