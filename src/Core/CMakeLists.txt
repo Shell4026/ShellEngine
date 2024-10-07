@@ -8,6 +8,13 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 	target_compile_definitions(ShellEngineCore PUBLIC SH_DEBUG)
 endif()
 
-target_include_directories(ShellEngineCore PRIVATE ${CMAKE_SOURCE_DIR}/include/Core)
-
+FetchContent_Declare(
+  GLM
+  GIT_REPOSITORY "https://github.com/g-truc/glm"
+  GIT_TAG "1.0.1"
+  )
+FetchContent_MakeAvailable(GLM)
+target_link_libraries(ShellEngineCore PUBLIC glm)
 target_link_libraries(ShellEngineCore PUBLIC fmt)
+
+target_include_directories(ShellEngineCore PRIVATE ${CMAKE_SOURCE_DIR}/include/Core)
