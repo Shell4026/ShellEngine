@@ -11,12 +11,12 @@
 #include <iostream>
 #include <string_view>
 
-#define SH_INFO(message) sh::core::Logger::GetInstance()->Info(message, __func__)
-#define SH_INFO_FORMAT(message, ...) sh::core::Logger::GetInstance()->Info(fmt::format(message, __VA_ARGS__), __func__)
-#define SH_WARN(message) sh::core::Logger::GetInstance()->Warn(message, __func__)
-#define SH_WARN_FORMAT(message, ...) sh::core::Logger::GetInstance()->Warn(fmt::format(message, __VA_ARGS__), __func__)
-#define SH_ERROR(message) sh::core::Logger::GetInstance()->Error(message, __func__)
-#define SH_ERROR_FORMAT(message, ...) sh::core::Logger::GetInstance()->Error(fmt::format(message, __VA_ARGS__), __func__)
+#define SH_INFO(message) sh::core::Logger::GetInstance()->Info(message, __FILE__, __LINE__)
+#define SH_INFO_FORMAT(message, ...) sh::core::Logger::GetInstance()->Info(fmt::format(message, __VA_ARGS__), __FILE__, __LINE__)
+#define SH_WARN(message) sh::core::Logger::GetInstance()->Warn(message, __FILE__, __LINE__)
+#define SH_WARN_FORMAT(message, ...) sh::core::Logger::GetInstance()->Warn(fmt::format(message, __VA_ARGS__), __FILE__, __LINE__)
+#define SH_ERROR(message) sh::core::Logger::GetInstance()->Error(message, __FILE__, __LINE__)
+#define SH_ERROR_FORMAT(message, ...) sh::core::Logger::GetInstance()->Error(fmt::format(message, __VA_ARGS__), __FILE__, __LINE__)
 
 namespace sh::core
 {
@@ -43,11 +43,11 @@ namespace sh::core
 		SH_CORE_API auto GetTimestamp() -> std::string;
 		SH_CORE_API auto LevelToString(LogLevel level) -> std::string;
 
-		SH_CORE_API void Log(LogLevel level, std::string_view message, std::string_view name);
+		SH_CORE_API void Log(LogLevel level, std::string_view message, std::string_view name, int line = 0);
 
-		SH_CORE_API void Debug(std::string_view message, std::string_view name);
-		SH_CORE_API void Info(std::string_view message, std::string_view name);
-		SH_CORE_API void Warn(std::string_view message, std::string_view name);
-		SH_CORE_API void Error(std::string_view message, std::string_view name);
+		SH_CORE_API void Debug(std::string_view message, std::string_view name, int line = 0);
+		SH_CORE_API void Info(std::string_view message, std::string_view name, int line = 0);
+		SH_CORE_API void Warn(std::string_view message, std::string_view name, int line = 0);
+		SH_CORE_API void Error(std::string_view message, std::string_view name, int line = 0);
 	};
 }//namespace
