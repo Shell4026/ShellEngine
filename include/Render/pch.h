@@ -1,9 +1,5 @@
 ﻿#pragma once
 
-#include "Core/SContainer.hpp"
-#include "Core/Logger.h"
-#include "Core/Singleton.hpp"
-
 #include <glm/glm.hpp>
 #include "VulkanImpl/VulkanConfig.h"
 
@@ -18,6 +14,7 @@
 #include <type_traits>
 #include <initializer_list>
 #include <array>
+#include <chrono>
 
 #undef min
 #undef max

@@ -27,7 +27,7 @@ namespace sh::core
 		GarbageCollection* gc;
 	public:
 		Observer<SObject*> onDestroy;
-	private:
+	protected:
 		SH_CORE_API static void SetGC(SObject* ptr);
 		SH_CORE_API auto operator new(std::size_t count) -> void*;
 		SH_CORE_API void operator delete(void* ptr);
