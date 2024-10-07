@@ -3,7 +3,7 @@
 #include "IDrawable.h"
 
 #include "Core/Util.h"
-#include "Core/Logger.h"
+#include "Core/GarbageCollection.h"
 
 #include <cassert>
 namespace sh::render
@@ -18,8 +18,8 @@ namespace sh::render
 	}
 	void Renderer::Clean()
 	{
-		drawList[GAME_THREAD].clear();
-		drawList[RENDER_THREAD].clear();
+		drawList[core::ThreadType::Game].clear();
+		drawList[core::ThreadType::Render].clear();
 		drawCalls.clear();
 	}
 
@@ -34,10 +34,12 @@ namespace sh::render
 		if (!core::IsValid(drawable))
 			return;
 
-		auto it = drawList[GAME_THREAD].find(drawable->GetCamera());
-		if (it == drawList[GAME_THREAD].end())
+		core::GarbageCollection::GetInstance()->SetRootSet(drawable);
+
+		auto it = drawList[core::ThreadType::Game].find(drawable->GetCamera());
+		if (it == drawList[core::ThreadType::Game].end())
 		{
-			drawList[GAME_THREAD].insert({ drawable->GetCamera(), core::SVector<IDrawable*>{drawable} });
+			drawList[core::ThreadType::Game].insert({ drawable->GetCamera(), core::SVector<IDrawable*>{drawable} });
 		}
 		else
 		{
@@ -53,7 +55,7 @@ namespace sh::render
 
 	void Renderer::ClearDrawList()
 	{
-		drawList[GAME_THREAD].clear();
+		drawList[core::ThreadType::Game].clear();
 		SetDirty();
 	}
 
@@ -85,7 +87,13 @@ namespace sh::render
 	}
 	void Renderer::Sync()
 	{
-		drawList[RENDER_THREAD] = std::move(drawList[GAME_THREAD]);
+		auto gc = core::GarbageCollection::GetInstance();
+		for (auto& [_, drawVec] : drawList[core::ThreadType::Render])
+		{
+			for (IDrawable* drawable : drawVec)
+				gc->RemoveRootSet(drawable);
+		}
+		drawList[core::ThreadType::Render] = std::move(drawList[core::ThreadType::Game]);
 		bDirty = false;
 	}
 

@@ -32,7 +32,7 @@ namespace sh
 {
 	EngineInit::EngineInit() :
 		moduleLoader(), 
-		componentModule(nullptr), gc(nullptr),
+		componentModule(nullptr), gc(nullptr), world(nullptr),
 		gameThread(nullptr), renderThread(nullptr),
 		limitFps(144),
 		bStop(false)
@@ -279,8 +279,9 @@ namespace sh
 #endif
 			this->gui->End();
 
-			threadSyncManager.Sync();
 			gc->Update();
+			threadSyncManager.Sync();
+			
 			threadSyncManager.AwakeThread();
 		}
 	}

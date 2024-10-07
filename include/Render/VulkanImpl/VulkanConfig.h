@@ -1,4 +1,5 @@
-﻿#pragma once
+﻿#ifndef VULKAN_CONFIG_H
+#define VULKAN_CONFIG_H
 
 #if _WIN32
 	#ifndef VK_USE_PLATFORM_WIN32_KHR
@@ -10,9 +11,12 @@
 	#endif
 #endif
 #include <vulkan/vulkan.h>
+#include <vulkan/vk_enum_string_helper.h>
 
 #ifndef VMA_VULKAN_VERSION
 #define VMA_VULKAN_VERSION 1001000
 #endif
 
 #include "../vma-src/include/vk_mem_alloc.h"
+
+#endif

@@ -16,14 +16,12 @@
 namespace sh::render
 {
 	class Framebuffer;
+	class Shader;
 
 	class VulkanDrawable : public IDrawable
 	{
 		SCLASS(VulkanDrawable)
 	private:
-		static constexpr int GAME_THREAD = 0;
-		static constexpr int RENDER_THREAD = 1;
-
 		VulkanRenderer& renderer;
 		PROPERTY(mat)
 		Material* mat;
@@ -33,16 +31,20 @@ namespace sh::render
 		std::map<uint32_t, Texture*> textures;
 		Camera* camera;
 
-		std::unique_ptr<impl::VulkanPipeline> pipeline;
+		
 		//동기화 필요 목록
+		core::SyncArray<std::unique_ptr<impl::VulkanPipeline>> pipeline;
 		core::SyncArray<VkDescriptorSet> descriptorSet;
 		core::SyncArray<std::map<uint32_t, impl::VulkanBuffer>> vertUniformBuffers;
 		core::SyncArray<std::map<uint32_t, impl::VulkanBuffer>> fragUniformBuffers;
 
+		bool bInit;
 		bool bDirty;
 		bool bTextureDirty;
+		bool bPipelineDirty;
 	private:
-		void CreateDescriptorSet();
+		void CreateUniformBuffers(core::ThreadType thr, const Shader& shader);
+		void UpdateDescriptors(core::ThreadType thr);
 	public:
 		SH_RENDER_API VulkanDrawable(VulkanRenderer& renderer);
 		SH_RENDER_API VulkanDrawable(VulkanDrawable&& other) noexcept;
@@ -70,7 +72,7 @@ namespace sh::render
 		/// @return 
 		SH_RENDER_API void SetTextureData(uint32_t binding, Texture* tex) override;
 
-		SH_RENDER_API auto GetPipeline() const->impl::VulkanPipeline*;
+		SH_RENDER_API auto GetPipeline(core::ThreadType thr) const->impl::VulkanPipeline*;
 		SH_RENDER_API auto GetDescriptorSet() const -> VkDescriptorSet;
 
 		SH_RENDER_API void SetDirty() override;

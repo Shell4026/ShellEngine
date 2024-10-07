@@ -25,7 +25,7 @@
 namespace sh::render {
 	VulkanRenderer::VulkanRenderer(core::ThreadSyncManager& syncManager) :
 		Renderer(RenderAPI::Vulkan, syncManager),
-		instance(nullptr), gpu(nullptr), device(nullptr), cmdPool(nullptr), window(nullptr),
+		instance(nullptr), gpu(nullptr), device(nullptr), window(nullptr),
 		graphicsQueueIndex(-1), surfaceQueueIndex(-1),
 		graphicsQueue(nullptr), surfaceQueue(nullptr),
 		debugMessenger(nullptr), validationLayerName("VK_LAYER_KHRONOS_validation"),
@@ -55,7 +55,8 @@ namespace sh::render {
 
 		DestroySyncObjects();
 
-		cmdBuffer->Clean();
+		cmdBuffer[core::ThreadType::Game]->Clean();
+		cmdBuffer[core::ThreadType::Render]->Clean();
 		DestroyCommandPool();
 
 		framebuffers.clear();
@@ -287,7 +288,7 @@ namespace sh::render {
 		}
 	}
 
-	auto VulkanRenderer::CreateCommandPool(uint32_t queue) -> VkResult
+	void VulkanRenderer::CreateCommandPool(uint32_t queue)
 	{
 		VkCommandPoolCreateInfo poolInfo = {};
 		poolInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -295,25 +296,36 @@ namespace sh::render {
 		poolInfo.queueFamilyIndex = queue;
 		poolInfo.flags = VkCommandPoolCreateFlagBits::VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; //명령 버퍼가 개별적으로 기록되도록 허용
 
-		VkResult result;
-		result = vkCreateCommandPool(device, &poolInfo, nullptr, &cmdPool);
-		assert(result == VkResult::VK_SUCCESS);
-
-		return result;
+		for (int thr = 0; thr < cmdPool.size(); ++thr)
+		{
+			VkResult result;
+			result = vkCreateCommandPool(device, &poolInfo, nullptr, &cmdPool[thr]);
+			if (result != VkResult::VK_SUCCESS)
+				throw std::runtime_error{ std::string{"Can't create VkCommandPool!: "} + string_VkResult(result) };
+		}
 	}
 
 	void VulkanRenderer::DestroyCommandPool()
 	{
-		if (cmdPool)
+		for (int thr = 0; thr < cmdPool.size(); ++thr)
 		{
-			vkDestroyCommandPool(device, cmdPool, nullptr);
-			cmdPool = nullptr;
+			if (cmdPool[thr])
+			{
+				vkDestroyCommandPool(device, cmdPool[thr], nullptr);
+				cmdPool[thr] = nullptr;
+			}
 		}
 	}
 
 	auto VulkanRenderer::ResetCommandPool(uint32_t queue) -> VkResult
 	{
-		return vkResetCommandPool(device, cmdPool, VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
+		for (int thr = 0; thr < cmdPool.size(); ++thr)
+		{
+			auto result = vkResetCommandPool(device, cmdPool[thr], VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
+			if(result != VkResult::VK_SUCCESS)
+				throw std::runtime_error{ std::string{"Can't reset VkCommandPool!: "} + string_VkResult(result) };
+		}
+		return VkResult::VK_SUCCESS;
 	}
 
 	auto VulkanRenderer::CreateSyncObjects() -> VkResult
@@ -479,11 +491,12 @@ namespace sh::render {
 		}
 
 		//커맨드 풀과 커맨드 버퍼 생성
-		if (CreateCommandPool(graphicsQueueIndex)) 
-			return false;
+		CreateCommandPool(graphicsQueueIndex);
 
-		cmdBuffer = std::make_unique<impl::VulkanCommandBuffer>(device, cmdPool);
-		cmdBuffer->Create();
+		cmdBuffer[core::ThreadType::Game] = std::make_unique<impl::VulkanCommandBuffer>(device, cmdPool[core::ThreadType::Game]);
+		cmdBuffer[core::ThreadType::Game]->Create();
+		cmdBuffer[core::ThreadType::Render] = std::make_unique<impl::VulkanCommandBuffer>(device, cmdPool[core::ThreadType::Render]);
+		cmdBuffer[core::ThreadType::Render]->Create();
 		//세마포어와 펜스 생성 (동기화 변수)
 		if (CreateSyncObjects() != VkResult::VK_SUCCESS)
 			return false;
@@ -568,7 +581,7 @@ namespace sh::render {
 	{
 		if (!isInit || bPause.load(std::memory_order::memory_order_acquire))
 			return;
-		if (drawList[RENDER_THREAD].empty())
+		if (drawList[core::ThreadType::Render].empty())
 			return;
 		//std::cout << "Render Start\n";
 		//std::cout << "main: " << mainCamera << '\n';
@@ -593,20 +606,20 @@ namespace sh::render {
 		}
 		vkResetFences(device, 1, &inFlightFence);
 
-		cmdBuffer->Reset();
-		cmdBuffer->SetWaitSemaphore({ imageAvailableSemaphore });
-		cmdBuffer->SetSignalSemaphore({ renderFinishedSemaphore });
-		cmdBuffer->SetWaitStage({ VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT });
+		cmdBuffer[core::ThreadType::Render]->Reset();
+		cmdBuffer[core::ThreadType::Render]->SetWaitSemaphore({ imageAvailableSemaphore });
+		cmdBuffer[core::ThreadType::Render]->SetSignalSemaphore({ renderFinishedSemaphore });
+		cmdBuffer[core::ThreadType::Render]->SetWaitStage({ VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT });
 
-		VkCommandBuffer buffer = cmdBuffer->GetCommandBuffer();
-		if (drawList[RENDER_THREAD].empty())
+		VkCommandBuffer buffer = cmdBuffer[core::ThreadType::Render]->GetCommandBuffer();
+		if (drawList[core::ThreadType::Render].empty())
 			return;
 
-		cmdBuffer->Submit(graphicsQueue, [&]()
+		cmdBuffer[core::ThreadType::Render]->Submit(graphicsQueue, [&]()
 		{
 			bool mainPassProcessed = false;
 
-			for (auto& [camera, drawables] : drawList[RENDER_THREAD])
+			for (auto& [camera, drawables] : drawList[core::ThreadType::Render])
 			{
 				auto renderTexture = camera->GetRenderTexture();
 				//프레임버퍼에 그림
@@ -644,6 +657,7 @@ namespace sh::render {
 					vkCmdSetScissor(buffer, 0, 1, &scissor);
 
 					VkPipeline lastPipeline = nullptr;
+
 					for (auto iDrawable : drawables)
 					{
 						VulkanDrawable* drawable = static_cast<VulkanDrawable*>(iDrawable);
@@ -659,10 +673,16 @@ namespace sh::render {
 						if (!sh::core::IsValid(shader)) 
 							continue;
 
-						if (drawable->GetPipeline()->GetPipeline() != lastPipeline)
+						impl::VulkanPipeline* currentPipeline = drawable->GetPipeline(core::ThreadType::Render);
+						if (currentPipeline == nullptr)
+							continue;
+						if (currentPipeline->GetPipeline() == nullptr)
+							continue;
+
+						if (currentPipeline->GetPipeline() != lastPipeline)
 						{
-							lastPipeline = drawable->GetPipeline()->GetPipeline();
-							vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, drawable->GetPipeline()->GetPipeline());
+							lastPipeline = currentPipeline->GetPipeline();
+							vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, lastPipeline);
 						}
 						mesh->GetVertexBuffer()->Bind();
 
@@ -724,10 +744,16 @@ namespace sh::render {
 						if (!sh::core::IsValid(shader)) 
 							continue;
 
-						if (drawable->GetPipeline()->GetPipeline() != lastPipeline)
+						impl::VulkanPipeline* currentPipeline = drawable->GetPipeline(core::ThreadType::Render);
+						if (currentPipeline == nullptr)
+							continue;
+						if (currentPipeline->GetPipeline() == nullptr)
+							continue;
+
+						if (currentPipeline->GetPipeline() != lastPipeline)
 						{
-							lastPipeline = drawable->GetPipeline()->GetPipeline();
-							vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, drawable->GetPipeline()->GetPipeline());
+							lastPipeline = currentPipeline->GetPipeline();
+							vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, lastPipeline);
 						}
 
 						VkRect2D scissor{};
@@ -831,13 +857,13 @@ namespace sh::render {
 		return gpu;
 	}
 
-	auto VulkanRenderer::GetCommandPool() const -> VkCommandPool
+	auto VulkanRenderer::GetCommandPool(core::ThreadType thr) const -> VkCommandPool
 	{
-		return cmdPool;
+		return cmdPool[thr];
 	}
-	auto VulkanRenderer::GetCommandBuffer() const -> VkCommandBuffer
+	auto VulkanRenderer::GetCommandBuffer(core::ThreadType thr) const -> VkCommandBuffer
 	{
-		return cmdBuffer->GetCommandBuffer();
+		return cmdBuffer[static_cast<int>(thr)]->GetCommandBuffer();
 	}
 
 	auto VulkanRenderer::GetGraphicsQueue() const -> VkQueue

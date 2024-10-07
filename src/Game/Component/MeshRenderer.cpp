@@ -77,7 +77,6 @@ namespace sh::game
 			return;
 		if (!core::IsValid(camera))
 			return;
-
 		auto it = drawables.find(camera);
 		if (it == drawables.end())
 		{
@@ -92,9 +91,9 @@ namespace sh::game
 	}
 	void MeshRenderer::RebuildDrawables()
 	{
-		for (auto cam : gameObject->world.GetCameras())
+		for (auto& [cam, drawable] : drawables)
 		{
-			CreateDrawable(cam);
+			drawable->Build(cam->GetNative(), *mesh, mat);
 		}
 	}
 

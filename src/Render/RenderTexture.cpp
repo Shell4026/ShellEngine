@@ -34,22 +34,22 @@ namespace sh::render
 		if (renderer.apiType == RenderAPI::Vulkan)
 		{
 			auto& vkRenderer = static_cast<const VulkanRenderer&>(renderer);
-			framebuffer[GAME_THREAD] = std::make_unique<impl::VulkanFramebuffer>(vkRenderer.GetDevice(), vkRenderer.GetGPU(), vkRenderer.GetAllocator());
-			framebuffer[RENDER_THREAD] = std::make_unique<impl::VulkanFramebuffer>(vkRenderer.GetDevice(), vkRenderer.GetGPU(), vkRenderer.GetAllocator());
-			static_cast<impl::VulkanFramebuffer*>(framebuffer[GAME_THREAD].get())->CreateOffScreen(width, height);
-			static_cast<impl::VulkanFramebuffer*>(framebuffer[RENDER_THREAD].get())->CreateOffScreen(width, height);
+			framebuffer[core::ThreadType::Game] = std::make_unique<impl::VulkanFramebuffer>(vkRenderer.GetDevice(), vkRenderer.GetGPU(), vkRenderer.GetAllocator());
+			framebuffer[core::ThreadType::Render] = std::make_unique<impl::VulkanFramebuffer>(vkRenderer.GetDevice(), vkRenderer.GetGPU(), vkRenderer.GetAllocator());
+			static_cast<impl::VulkanFramebuffer*>(framebuffer[core::ThreadType::Game].get())->CreateOffScreen(width, height);
+			static_cast<impl::VulkanFramebuffer*>(framebuffer[core::ThreadType::Render].get())->CreateOffScreen(width, height);
 		}
-		buffer[GAME_THREAD] = std::make_unique<VulkanTextureBuffer>();
-		buffer[GAME_THREAD]->Create(*framebuffer[GAME_THREAD].get());
-		buffer[RENDER_THREAD] = std::make_unique<VulkanTextureBuffer>();
-		buffer[RENDER_THREAD]->Create(*framebuffer[RENDER_THREAD].get());
+		buffer[core::ThreadType::Game] = std::make_unique<VulkanTextureBuffer>();
+		buffer[core::ThreadType::Game]->Create(*framebuffer[core::ThreadType::Game].get());
+		buffer[core::ThreadType::Render] = std::make_unique<VulkanTextureBuffer>();
+		buffer[core::ThreadType::Render]->Create(*framebuffer[core::ThreadType::Render].get());
 
 		SetDirty();
 	}
 
 	auto RenderTexture::GetFramebuffer() const -> Framebuffer*
 	{
-		return framebuffer[RENDER_THREAD].get();
+		return framebuffer[core::ThreadType::Render].get();
 	}
 
 	void RenderTexture::SetSize(uint32_t width, uint32_t height)
@@ -62,11 +62,11 @@ namespace sh::render
 
 		if (this->renderer->apiType == RenderAPI::Vulkan)
 		{
-			static_cast<impl::VulkanFramebuffer*>(framebuffer[GAME_THREAD].get())->Clean();
-			static_cast<impl::VulkanFramebuffer*>(framebuffer[GAME_THREAD].get())->CreateOffScreen(width, height);
+			static_cast<impl::VulkanFramebuffer*>(framebuffer[core::ThreadType::Game].get())->Clean();
+			static_cast<impl::VulkanFramebuffer*>(framebuffer[core::ThreadType::Game].get())->CreateOffScreen(width, height);
 		}
-		buffer[GAME_THREAD]->Clean();
-		buffer[GAME_THREAD]->Create(*framebuffer[GAME_THREAD].get());
+		buffer[core::ThreadType::Game]->Clean();
+		buffer[core::ThreadType::Game]->Create(*framebuffer[core::ThreadType::Game].get());
 
 		SetDirty();
 	}
@@ -78,7 +78,7 @@ namespace sh::render
 	void RenderTexture::Sync()
 	{
 		Super::Sync();
-		std::swap(framebuffer[RENDER_THREAD], framebuffer[GAME_THREAD]);
+		std::swap(framebuffer[core::ThreadType::Render], framebuffer[core::ThreadType::Game]);
 	}
 #if SH_EDITOR
 	void RenderTexture::OnPropertyChanged(const core::reflection::Property& property)

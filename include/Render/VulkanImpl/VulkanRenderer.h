@@ -41,7 +41,7 @@ namespace sh::render {
 
 		std::unique_ptr<impl::VulkanSurface> surface;
 		std::unique_ptr<impl::VulkanLayer> layers;
-		std::unique_ptr<impl::VulkanCommandBuffer> cmdBuffer;
+		core::SyncArray<std::unique_ptr<impl::VulkanCommandBuffer>> cmdBuffer;
 		std::unique_ptr<impl::VulkanDescriptorPool> descPool;
 
 		VkInstance instance;
@@ -50,7 +50,7 @@ namespace sh::render {
 		VkDevice device; //논리적 장치
 		std::vector<impl::VulkanFramebuffer> framebuffers;
 
-		VkCommandPool cmdPool;
+		core::SyncArray<VkCommandPool> cmdPool;
 
 		std::vector<VkPhysicalDevice> gpus;
 		std::vector<VkQueueFamilyProperties> queueFamilies;
@@ -94,7 +94,7 @@ namespace sh::render {
 		auto CreateDevice(VkPhysicalDevice gpu)->VkResult;
 		void DestroyDevice();
 
-		auto CreateCommandPool(uint32_t queue) -> VkResult;
+		void CreateCommandPool(uint32_t queue);
 		void DestroyCommandPool();
 		auto ResetCommandPool(uint32_t queue) -> VkResult;
 
@@ -126,8 +126,8 @@ namespace sh::render {
 		SH_RENDER_API auto GetInstance() const -> VkInstance;
 		SH_RENDER_API auto GetDevice() const -> VkDevice;
 		SH_RENDER_API auto GetGPU() const -> VkPhysicalDevice;
-		SH_RENDER_API auto GetCommandPool() const -> VkCommandPool;
-		SH_RENDER_API auto GetCommandBuffer() const -> VkCommandBuffer;
+		SH_RENDER_API auto GetCommandPool(core::ThreadType thr) const -> VkCommandPool;
+		SH_RENDER_API auto GetCommandBuffer(core::ThreadType thr) const -> VkCommandBuffer;
 		SH_RENDER_API auto GetGraphicsQueue() const -> VkQueue;
 		SH_RENDER_API auto GetGraphicsQueueIdx() const -> uint32_t;
 		SH_RENDER_API auto GetMainFramebuffer() const -> const Framebuffer* override;

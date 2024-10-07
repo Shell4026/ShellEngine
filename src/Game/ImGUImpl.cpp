@@ -77,7 +77,7 @@ namespace sh::game
 			[&]()
 			{
 				if (drawData.Valid)
-					ImGui_ImplVulkan_RenderDrawData(&drawData, renderer.GetCommandBuffer());
+					ImGui_ImplVulkan_RenderDrawData(&drawData, renderer.GetCommandBuffer(core::ThreadType::Render));
 			}
 		);
 

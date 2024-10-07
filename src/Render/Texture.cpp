@@ -43,18 +43,18 @@ namespace sh::render
 		this->renderer = &renderer;
 		if (renderer.apiType == RenderAPI::Vulkan)
 		{
-			buffer[GAME_THREAD] = std::make_unique<VulkanTextureBuffer>();
-			buffer[GAME_THREAD]->Create(static_cast<const VulkanRenderer&>(renderer), pixels.data(), width, height, format);
-			buffer[RENDER_THREAD] = std::make_unique<VulkanTextureBuffer>();
-			buffer[RENDER_THREAD]->Create(static_cast<const VulkanRenderer&>(renderer), pixels.data(), width, height, format);
+			buffer[core::ThreadType::Game] = std::make_unique<VulkanTextureBuffer>();
+			buffer[core::ThreadType::Game]->Create(static_cast<const VulkanRenderer&>(renderer), pixels.data(), width, height, format);
+			buffer[core::ThreadType::Render] = std::make_unique<VulkanTextureBuffer>();
+			buffer[core::ThreadType::Render]->Create(static_cast<const VulkanRenderer&>(renderer), pixels.data(), width, height, format);
 		}
 
 		SetDirty();
 	}
 
-	auto Texture::GetBuffer(int threadID) -> ITextureBuffer*
+	auto Texture::GetBuffer(core::ThreadType thr) -> ITextureBuffer*
 	{
-		return buffer[threadID].get();
+		return buffer[thr].get();
 	}
 
 	void Texture::SetDirty()
@@ -68,7 +68,7 @@ namespace sh::render
 	}
 	void Texture::Sync()
 	{
-		std::swap(buffer[RENDER_THREAD], buffer[GAME_THREAD]);
+		std::swap(buffer[core::ThreadType::Render], buffer[core::ThreadType::Game]);
 
 		bDirty = false;
 	}

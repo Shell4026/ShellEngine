@@ -22,7 +22,7 @@ namespace sh::render
 		renderer(renderer), 
 		mat(nullptr), mesh(nullptr), camera(nullptr),
 		descriptorSet(),
-		bDirty(false), bTextureDirty(false)
+		bInit(false), bDirty(false), bTextureDirty(false), bPipelineDirty(false)
 	{
 	}
 	VulkanDrawable::VulkanDrawable(VulkanDrawable&& other) noexcept :
@@ -33,11 +33,16 @@ namespace sh::render
 		vertUniformBuffers(std::move(other.vertUniformBuffers)), 
 		fragUniformBuffers(std::move(other.fragUniformBuffers)),
 		textures(std::move(other.textures)),
-		bDirty(other.bDirty), bTextureDirty(other.bTextureDirty)
+		bInit(other.bInit), bDirty(other.bDirty), bTextureDirty(other.bTextureDirty), bPipelineDirty(other.bPipelineDirty)
 	{
 		other.mat = nullptr;
 		other.mesh = nullptr;
 		other.camera = nullptr;
+
+		other.bInit = false;
+		other.bDirty = false;
+		other.bTextureDirty = false;
+		other.bPipelineDirty = false;
 	}
 
 	VulkanDrawable::~VulkanDrawable() noexcept
@@ -47,20 +52,118 @@ namespace sh::render
 
 	void VulkanDrawable::Clean()
 	{
-		vertUniformBuffers[GAME_THREAD].clear();
-		vertUniformBuffers[RENDER_THREAD].clear();
-		fragUniformBuffers[GAME_THREAD].clear();
-		fragUniformBuffers[RENDER_THREAD].clear();
+		vertUniformBuffers[core::ThreadType::Game].clear();
+		fragUniformBuffers[core::ThreadType::Game].clear();
 		textures.clear();
-
-		pipeline.reset();
+		vertUniformBuffers[core::ThreadType::Render].clear();
+		fragUniformBuffers[core::ThreadType::Render].clear();
+		pipeline[core::ThreadType::Game].reset();
+		pipeline[core::ThreadType::Render].reset();
 	}
 
-	void VulkanDrawable::CreateDescriptorSet()
+	void VulkanDrawable::CreateUniformBuffers(core::ThreadType thr, const Shader& shader)
 	{
-		VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
-		descriptorSet[GAME_THREAD] = renderer.GetDescriptorPool().AllocateDescriptorSet(shader->GetDescriptorSetLayout(), 1);
-		descriptorSet[RENDER_THREAD] = renderer.GetDescriptorPool().AllocateDescriptorSet(shader->GetDescriptorSetLayout(), 1);
+		for (auto& [binding, data] : shader.vertexUniforms)
+		{
+			size_t size = data.back().offset + data.back().size;
+
+			impl::VulkanBuffer buffer{ renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() };
+			auto result = buffer.Create(size,
+				VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+				VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
+				VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+				true);
+			assert(result == VkResult::VK_SUCCESS);
+
+			vertUniformBuffers[thr].insert({ binding, std::move(buffer) });
+		}
+		for (auto& [binding, data] : shader.fragmentUniforms)
+		{
+			size_t size = data.back().offset + data.back().size;
+
+			impl::VulkanBuffer buffer{ renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() };
+			auto result = buffer.Create(size,
+				VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+				VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
+				VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
+				true);
+			assert(result == VkResult::VK_SUCCESS);
+
+			fragUniformBuffers[thr].insert({ binding, std::move(buffer) });
+		}
+		for (auto& [binding, data] : shader.samplerFragmentUniforms)
+		{
+			Texture* tex = mat->GetTexture(data.name);
+			if (tex != nullptr)
+			{
+				textures.insert({ binding, tex });
+			}
+		}
+	}
+
+	void VulkanDrawable::UpdateDescriptors(core::ThreadType thr)
+	{
+		// 디스크립터셋 데이터 업데이트
+		for (auto& [binding, buffer] : vertUniformBuffers[thr])
+		{
+			VkDescriptorBufferInfo bufferInfo{};
+			bufferInfo.buffer = buffer.GetBuffer();
+			bufferInfo.offset = 0;
+			bufferInfo.range = buffer.GetSize();
+
+			VkWriteDescriptorSet descriptorWrite{};
+			descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrite.dstSet = descriptorSet[thr];
+			descriptorWrite.dstBinding = binding;
+			descriptorWrite.dstArrayElement = 0;
+			descriptorWrite.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrite.descriptorCount = 1;
+			descriptorWrite.pBufferInfo = &bufferInfo;
+			descriptorWrite.pImageInfo = nullptr;
+			descriptorWrite.pTexelBufferView = nullptr;
+
+			vkUpdateDescriptorSets(renderer.GetDevice(), 1, &descriptorWrite, 0, nullptr);
+		}
+		for (auto& [binding, buffer] : fragUniformBuffers[thr])
+		{
+			VkDescriptorBufferInfo bufferInfo{};
+			bufferInfo.buffer = buffer.GetBuffer();
+			bufferInfo.offset = 0;
+			bufferInfo.range = buffer.GetSize();
+
+			VkWriteDescriptorSet descriptorWrite{};
+			descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrite.dstSet = descriptorSet[thr];
+			descriptorWrite.dstBinding = binding;
+			descriptorWrite.dstArrayElement = 0;
+			descriptorWrite.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+			descriptorWrite.descriptorCount = 1;
+			descriptorWrite.pBufferInfo = &bufferInfo;
+			descriptorWrite.pImageInfo = nullptr;
+			descriptorWrite.pTexelBufferView = nullptr;
+
+			vkUpdateDescriptorSets(renderer.GetDevice(), 1, &descriptorWrite, 0, nullptr);
+		}
+		for (auto& [binding, buffer] : textures)
+		{
+			VkDescriptorImageInfo  imgInfo{};
+			imgInfo.imageLayout = VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			imgInfo.imageView = static_cast<VulkanTextureBuffer*>(buffer->GetBuffer())->GetImageBuffer()->GetImageView();
+			imgInfo.sampler = static_cast<VulkanTextureBuffer*>(buffer->GetBuffer())->GetImageBuffer()->GetSampler();
+
+			VkWriteDescriptorSet descriptorWrite{};
+			descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+			descriptorWrite.dstSet = descriptorSet[thr];
+			descriptorWrite.dstBinding = binding;
+			descriptorWrite.dstArrayElement = 0;
+			descriptorWrite.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			descriptorWrite.descriptorCount = 1;
+			descriptorWrite.pBufferInfo = nullptr;
+			descriptorWrite.pImageInfo = &imgInfo;
+			descriptorWrite.pTexelBufferView = nullptr;
+
+			vkUpdateDescriptorSets(renderer.GetDevice(), 1, &descriptorWrite, 0, nullptr);
+		}
 	}
 
 	void VulkanDrawable::Build(Camera& camera, Mesh& mesh, Material* mat)
@@ -70,8 +173,7 @@ namespace sh::render
 		this->camera = &camera;
 
 		VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
-
-		Clean();
+		assert(shader);
 
 		const impl::VulkanFramebuffer* vkFrameBuffer = nullptr;
 		if (camera.GetRenderTexture() == nullptr)
@@ -79,8 +181,36 @@ namespace sh::render
 		else
 			vkFrameBuffer = static_cast<const impl::VulkanFramebuffer*>(camera.GetRenderTexture()->GetFramebuffer());
 
-		pipeline = std::make_unique<impl::VulkanPipeline>(renderer.GetDevice(), vkFrameBuffer->GetRenderPass());
+		if (!bInit)
+		{
+			for (int thr = 0; thr < pipeline.size(); ++thr)
+			{
+				core::ThreadType type = static_cast<core::ThreadType>(thr);
 
+				pipeline[type] = std::make_unique<impl::VulkanPipeline>(renderer.GetDevice(), vkFrameBuffer->GetRenderPass());
+
+				CreateUniformBuffers(type, *shader);
+
+				descriptorSet[type] = renderer.GetDescriptorPool().AllocateDescriptorSet(shader->GetDescriptorSetLayout(), 1);
+
+				UpdateDescriptors(type);
+			}
+			bInit = true;
+		}
+		else
+		{
+			core::ThreadType type = core::ThreadType::Game;
+
+			pipeline[type] = std::make_unique<impl::VulkanPipeline>(renderer.GetDevice(), vkFrameBuffer->GetRenderPass());
+			
+			CreateUniformBuffers(type, *shader);
+
+			renderer.GetDescriptorPool().FreeDescriptorSet(descriptorSet[type]);
+			descriptorSet[type] = renderer.GetDescriptorPool().AllocateDescriptorSet(shader->GetDescriptorSetLayout(), 1);
+
+			UpdateDescriptors(type);
+		}
+		
 		auto& bindings = static_cast<VulkanVertexBuffer*>(mesh.GetVertexBuffer())->bindingDescriptions;
 		auto& attrs = static_cast<VulkanVertexBuffer*>(mesh.GetVertexBuffer())->attribDescriptions;
 		
@@ -95,11 +225,11 @@ namespace sh::render
 			topology = impl::VulkanPipeline::Topology::Line;
 			break;
 		}
-		pipeline->SetTopology(topology);
+		pipeline[core::ThreadType::Game]->SetTopology(topology);
 
 		//Attribute
-		pipeline->AddBindingDescription(bindings[0]);
-		pipeline->AddAttributeDescription(attrs[0]);
+		pipeline[core::ThreadType::Game]->AddBindingDescription(bindings[0]);
+		pipeline[core::ThreadType::Game]->AddAttributeDescription(attrs[0]);
 		for (int i = 1; i < attrs.size(); ++i)
 		{
 			auto data = shader->GetAttribute(mesh.attributes[i - 1]->name);
@@ -111,125 +241,19 @@ namespace sh::render
 			auto attrDesc = attrs[i];
 			attrDesc.location = data->idx;
 
-			pipeline->AddBindingDescription(bindings[i]);
-			pipeline->AddAttributeDescription(attrDesc);
+			pipeline[core::ThreadType::Game]->AddBindingDescription(bindings[i]);
+			pipeline[core::ThreadType::Game]->AddAttributeDescription(attrDesc);
 		}
 
-		//유니폼 버퍼, 바인딩 생성
-		for (auto& uniform : shader->vertexUniforms)
-		{
-			size_t size = uniform.second.back().offset + uniform.second.back().size;
-
-			for (int i = 0; i < 2; ++i)
-			{
-				impl::VulkanBuffer buffer{ renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() };
-				auto result = buffer.Create(size,
-					VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-					VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
-					VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-					true);
-				assert(result == VkResult::VK_SUCCESS);
-
-				vertUniformBuffers[i].insert({ uniform.first, std::move(buffer) });
-			}
-		}
-		for (auto& uniform : shader->fragmentUniforms)
-		{
-			size_t size = uniform.second.back().offset + uniform.second.back().size;
-
-			for (int i = 0; i < 2; ++i)
-			{
-				impl::VulkanBuffer buffer{ renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() };
-				auto result = buffer.Create(size,
-					VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-					VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
-					VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-					true);
-				assert(result == VkResult::VK_SUCCESS);
-
-				fragUniformBuffers[i].insert({ uniform.first, std::move(buffer) });
-			}
-		}
-		for (auto& uniform : shader->samplerFragmentUniforms)
-		{
-			Texture* tex = mat->GetTexture(uniform.second.name);
-			if (tex != nullptr)
-			{
-				textures.insert({ uniform.first, tex });
-			}
-		}
-
-		CreateDescriptorSet();
-
-		for (int threadIdx = 0; threadIdx < 2; ++threadIdx)
-		{
-			for (auto& buffer : vertUniformBuffers[threadIdx])
-			{
-				VkDescriptorBufferInfo bufferInfo{};
-				bufferInfo.buffer = buffer.second.GetBuffer();
-				bufferInfo.offset = 0;
-				bufferInfo.range = buffer.second.GetSize();
-
-				VkWriteDescriptorSet descriptorWrite{};
-				descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-				descriptorWrite.dstSet = descriptorSet[threadIdx];
-				descriptorWrite.dstBinding = buffer.first;
-				descriptorWrite.dstArrayElement = 0;
-				descriptorWrite.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-				descriptorWrite.descriptorCount = 1;
-				descriptorWrite.pBufferInfo = &bufferInfo;
-				descriptorWrite.pImageInfo = nullptr;
-				descriptorWrite.pTexelBufferView = nullptr;
-
-				vkUpdateDescriptorSets(renderer.GetDevice(), 1, &descriptorWrite, 0, nullptr);
-			}
-			for (auto& buffer : fragUniformBuffers[threadIdx])
-			{
-				VkDescriptorBufferInfo bufferInfo{};
-				bufferInfo.buffer = buffer.second.GetBuffer();
-				bufferInfo.offset = 0;
-				bufferInfo.range = buffer.second.GetSize();
-
-				VkWriteDescriptorSet descriptorWrite{};
-				descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-				descriptorWrite.dstSet = descriptorSet[threadIdx];
-				descriptorWrite.dstBinding = buffer.first;
-				descriptorWrite.dstArrayElement = 0;
-				descriptorWrite.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-				descriptorWrite.descriptorCount = 1;
-				descriptorWrite.pBufferInfo = &bufferInfo;
-				descriptorWrite.pImageInfo = nullptr;
-				descriptorWrite.pTexelBufferView = nullptr;
-
-				vkUpdateDescriptorSets(renderer.GetDevice(), 1, &descriptorWrite, 0, nullptr);
-			}
-			for (auto& tex : textures)
-			{
-				VkDescriptorImageInfo  imgInfo{};
-				imgInfo.imageLayout = VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-				imgInfo.imageView = static_cast<VulkanTextureBuffer*>(tex.second->GetBuffer())->GetImageBuffer()->GetImageView();
-				imgInfo.sampler = static_cast<VulkanTextureBuffer*>(tex.second->GetBuffer())->GetImageBuffer()->GetSampler();
-
-				VkWriteDescriptorSet descriptorWrite{};
-				descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-				descriptorWrite.dstSet = descriptorSet[threadIdx];
-				descriptorWrite.dstBinding = tex.first;
-				descriptorWrite.dstArrayElement = 0;
-				descriptorWrite.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-				descriptorWrite.descriptorCount = 1;
-				descriptorWrite.pBufferInfo = nullptr;
-				descriptorWrite.pImageInfo = &imgInfo;
-				descriptorWrite.pTexelBufferView = nullptr;
-
-				vkUpdateDescriptorSets(renderer.GetDevice(), 1, &descriptorWrite, 0, nullptr);
-			}
-		}
-
-		auto result = pipeline->
+		auto result = pipeline[core::ThreadType::Game]->
 			SetShader(static_cast<VulkanShader*>(shader)).
 			AddShaderStage(impl::VulkanPipeline::ShaderStage::Vertex).
 			AddShaderStage(impl::VulkanPipeline::ShaderStage::Fragment).
 			Build(shader->GetPipelineLayout());
+
+		bPipelineDirty = true;
+		SetDirty();
+
 		assert(result == VkResult::VK_SUCCESS);
 	}
 
@@ -237,16 +261,16 @@ namespace sh::render
 	{
 		if (stage == Stage::Vertex)
 		{
-			auto it = vertUniformBuffers[GAME_THREAD].find(binding);
-			if (it == vertUniformBuffers[GAME_THREAD].end())
+			auto it = vertUniformBuffers[core::ThreadType::Game].find(binding);
+			if (it == vertUniformBuffers[core::ThreadType::Game].end())
 				return;
 
 			it->second.SetData(data);
 		}
 		else if (stage == Stage::Fragment)
 		{
-			auto it = fragUniformBuffers[GAME_THREAD].find(binding);
-			if (it == fragUniformBuffers[GAME_THREAD].end())
+			auto it = fragUniformBuffers[core::ThreadType::Game].find(binding);
+			if (it == fragUniformBuffers[core::ThreadType::Game].end())
 				return;
 
 			it->second.SetData(data);
@@ -271,7 +295,7 @@ namespace sh::render
 
 		VkWriteDescriptorSet descriptorWrite{};
 		descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descriptorWrite.dstSet = descriptorSet[GAME_THREAD];
+		descriptorWrite.dstSet = descriptorSet[core::ThreadType::Game];
 		descriptorWrite.dstBinding = it->first;
 		descriptorWrite.dstArrayElement = 0;
 		descriptorWrite.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -299,13 +323,13 @@ namespace sh::render
 		return camera;
 	}
 
-	auto VulkanDrawable::GetPipeline() const -> impl::VulkanPipeline*
+	auto VulkanDrawable::GetPipeline(core::ThreadType thr) const -> impl::VulkanPipeline*
 	{
-		return pipeline.get();
+		return pipeline[static_cast<int>(thr)].get();
 	}
 	auto VulkanDrawable::GetDescriptorSet() const -> VkDescriptorSet
 	{
-		return descriptorSet[RENDER_THREAD];
+		return descriptorSet[core::ThreadType::Render];
 	}
 
 	void VulkanDrawable::SetDirty()
@@ -322,12 +346,15 @@ namespace sh::render
 		if (!bDirty)
 			return;
 
-		if(bTextureDirty)
-			std::swap(descriptorSet[GAME_THREAD], descriptorSet[RENDER_THREAD]);
-		std::swap(vertUniformBuffers[GAME_THREAD], vertUniformBuffers[RENDER_THREAD]);
-		std::swap(fragUniformBuffers[GAME_THREAD], fragUniformBuffers[RENDER_THREAD]);
+		if (bPipelineDirty)
+			std::swap(pipeline[core::ThreadType::Game], pipeline[core::ThreadType::Render]);
+		if (bTextureDirty)
+			std::swap(descriptorSet[core::ThreadType::Game], descriptorSet[core::ThreadType::Render]);
+		std::swap(vertUniformBuffers[core::ThreadType::Game], vertUniformBuffers[core::ThreadType::Render]);
+		std::swap(fragUniformBuffers[core::ThreadType::Game], fragUniformBuffers[core::ThreadType::Render]);
 
 		bDirty = false;
 		bTextureDirty = false;
+		bPipelineDirty = false;
 	}
 }

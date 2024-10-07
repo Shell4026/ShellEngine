@@ -134,7 +134,7 @@ namespace sh::render
 			VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		stagingBuffer.SetData(data);
 
-		cmd = std::make_unique<impl::VulkanCommandBuffer>(renderer.GetDevice(), renderer.GetCommandPool());
+		cmd = std::make_unique<impl::VulkanCommandBuffer>(renderer.GetDevice(), renderer.GetCommandPool(core::ThreadType::Game));
 		cmd->Create();
 
 		TransitionImageLayout(renderer.GetGraphicsQueue(), buffer->GetImage(),

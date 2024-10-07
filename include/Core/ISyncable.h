@@ -10,12 +10,15 @@ namespace sh::core
 	template<typename T, std::size_t size = 2>
 	using SyncArray = std::array<T, size>;
 
+	enum ThreadType
+	{
+		Game = 0,
+		Render = 1
+	};
+
 	/// @brief 여러 스레드에서 접근 할 가능성이 있는 객체 인터페이스.
 	class ISyncable
 	{
-	public:
-		static constexpr int GAME_THREAD = 0;
-		static constexpr int RENDER_THREAD = 1;
 	public:
 		virtual ~ISyncable() = default;
 
