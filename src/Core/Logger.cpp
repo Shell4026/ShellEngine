@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <sstream>
 #include <thread>
+#include <filesystem>
 
 namespace sh::core
 {
@@ -27,13 +28,15 @@ namespace sh::core
         streams.erase(std::remove(streams.begin(), streams.end(), &stream), streams.end());
     }
 
-    void Logger::Log(LogLevel level, std::string_view message, std::string_view name)
+    void Logger::Log(LogLevel level, std::string_view message, std::string_view name, int line)
     {
         std::lock_guard<std::mutex> lock(mu);
 
+        std::string source{ std::filesystem::path{ std::string{name} }.filename().string() };
+
         std::string logMessage = "[" + GetTimestamp() + "][" + LevelToString(level) + "]";
         if (!name.empty())
-            logMessage += "[" + std::string(name) + "] ";
+            logMessage += fmt::format("[{}: {}]", source, line);
         logMessage += message.data();
         logMessage += '\n';
 
@@ -76,19 +79,19 @@ namespace sh::core
         }
     }
 
-    void Logger::Debug(std::string_view message, std::string_view name) {
-        Log(LogLevel::Debug, message, name);
+    void Logger::Debug(std::string_view message, std::string_view name, int line) {
+        Log(LogLevel::Debug, message, name, line);
     }
 
-    void Logger::Info(std::string_view message, std::string_view name) {
-        Log(LogLevel::Info, message, name);
+    void Logger::Info(std::string_view message, std::string_view name, int line) {
+        Log(LogLevel::Info, message, name, line);
     }
 
-    void Logger::Warn(std::string_view message, std::string_view name) {
-        Log(LogLevel::Warn, message, name);
+    void Logger::Warn(std::string_view message, std::string_view name, int line) {
+        Log(LogLevel::Warn, message, name, line);
     }
 
-    void Logger::Error(std::string_view message, std::string_view name) {
-        Log(LogLevel::Error, message, name);
+    void Logger::Error(std::string_view message, std::string_view name, int line) {
+        Log(LogLevel::Error, message, name, line);
     }
 }//namespace
