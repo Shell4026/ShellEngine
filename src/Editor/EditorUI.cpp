@@ -143,12 +143,19 @@ namespace sh::editor
 								glm::vec3* parameter = prop.second.Get<glm::vec3>(component);
 								float v[3] = { parameter->x, parameter->y, parameter->z };
 								ImGui::LabelText(("##" + prop.first).c_str(), prop.first.c_str());
-								if (ImGui::InputFloat3(("##" + prop.first + std::to_string(idx)).c_str(), v))
+								if (prop.second.isConst)
 								{
-									parameter->x = v[0];
-									parameter->y = v[1];
-									parameter->z = v[2];
-									component->OnPropertyChanged(prop.second);
+									ImGui::InputFloat3(("##" + prop.first + std::to_string(idx)).c_str(), v, "%.3f", ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
+								}
+								else
+								{
+									if (ImGui::InputFloat3(("##" + prop.first + std::to_string(idx)).c_str(), v))
+									{
+										parameter->x = v[0];
+										parameter->y = v[1];
+										parameter->z = v[2];
+										component->OnPropertyChanged(prop.second);
+									}
 								}
 							}
 							else if (type == core::reflection::GetTypeName<float>())
