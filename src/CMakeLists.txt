@@ -29,6 +29,9 @@ target_link_libraries(ShellEngine PUBLIC ShellEngine::Window)
 add_subdirectory(Render)
 target_link_libraries(ShellEngine PUBLIC ShellEngine::Render)
 
+add_subdirectory(Physics)
+target_link_libraries(ShellEngine PUBLIC ShellEngine::Physics)
+
 add_subdirectory(Game)
 target_link_libraries(ShellEngine PUBLIC ShellEngine::Game)
 
