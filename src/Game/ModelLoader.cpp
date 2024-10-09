@@ -2,6 +2,7 @@
 #include "ModelLoader.h"
 
 #include "Core/SObject.h"
+#include "Core/Logger.h"
 
 #include "Render/Mesh.h"
 
@@ -28,10 +29,11 @@ namespace sh::game
 		auto mesh = core::SObject::Create<render::Mesh>();
 		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, filename.data()))
 		{
-			fmt::print("Can't load {}!\n", filename);
+			SH_ERROR_FORMAT("Can't load {}!", filename);
+			return nullptr;
 		}
 
-		std::unordered_map<glm::vec3, uint32_t> uniqueVerts;
+		std::unordered_map<Indices, uint32_t> uniqueVerts;
 		std::vector<glm::vec3> verts;
 		std::vector<glm::vec3> normals;
 		std::vector<glm::vec2> uvs;
@@ -68,10 +70,13 @@ namespace sh::game
 				if (vert.y > max.y) max.y = vert.y;
 				if (vert.z > max.z) max.z = vert.z;
 
-				auto it = uniqueVerts.find(vert);
+				Indices indexList{ index.vertex_index, index.normal_index, index.texcoord_index };
+
+				// 버텍스 위치가 겹치더라도 노말이나 UV도 겹치는지 비교해야 인덱스로 재사용 할 수 있다.
+				auto it = uniqueVerts.find(indexList);
 				if (it == uniqueVerts.end())
 				{
-					uniqueVerts.insert({ vert, n });
+					uniqueVerts.insert({ indexList, n });
 
 					verts.push_back(vert);
 					uvs.push_back(uv);
