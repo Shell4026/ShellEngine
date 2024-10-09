@@ -50,11 +50,14 @@ namespace sh::render
 
 		ShaderAttribute(ShaderAttribute&& other) noexcept;
 
+		auto operator=(ShaderAttribute&& other) noexcept -> ShaderAttribute&;
+
 		void SetData(std::initializer_list<T>&& datas);
 		void SetData(const std::vector<T>& data);
 		void SetData(std::vector<T>&& data);
 
 		auto GetData() const -> const void* override;
+		auto GetDataT() const -> const std::vector<T>&;
 		auto GetSize() const -> size_t override;
 		auto GetStride() const -> size_t override;
 		
@@ -98,6 +101,15 @@ namespace sh::render
 		mTypeName = std::move(other.typeName);
 	}
 	template<typename T>
+	inline auto ShaderAttribute<T>::operator=(ShaderAttribute&& other) noexcept -> ShaderAttribute&
+	{
+		data = std::move(other.data);
+		mTypeName = std::move(other.mTypeName);
+
+		return *this;
+	}
+
+	template<typename T>
 	inline void ShaderAttribute<T>::SetData(std::initializer_list<T>&& datas)
 	{
 		for (auto& data : datas)
@@ -119,6 +131,11 @@ namespace sh::render
 	inline auto ShaderAttribute<T>::GetData() const -> const void*
 	{
 		return data.data();
+	}
+	template<typename T>
+	inline auto ShaderAttribute<T>::GetDataT() const -> const std::vector<T>&
+	{
+		return data;
 	}
 	template<typename T>
 	inline auto ShaderAttribute<T>::GetSize() const -> size_t

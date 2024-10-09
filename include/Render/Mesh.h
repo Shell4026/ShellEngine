@@ -36,9 +36,10 @@ namespace sh::render
 			Face
 		};
 	private:
-		std::vector<glm::vec3> verts;
-		std::vector<glm::vec2> uvs;
-		std::vector<glm::vec3> normals;
+		static constexpr uint8_t VERTEX_ID = 0;
+		static constexpr uint8_t UV_ID = 1;
+		static constexpr uint8_t NORMAL_ID = 2;
+
 		std::vector<uint32_t> indices;
 		std::vector<Face> faces;
 
@@ -55,7 +56,7 @@ namespace sh::render
 		SH_RENDER_API Mesh();
 		SH_RENDER_API Mesh(const Mesh& other);
 		SH_RENDER_API Mesh(Mesh&& other) noexcept;
-		SH_RENDER_API ~Mesh();
+		SH_RENDER_API virtual ~Mesh();
 
 		SH_RENDER_API auto operator=(const Mesh& other) -> Mesh&;
 		SH_RENDER_API auto operator=(Mesh&& other) noexcept -> Mesh&;
@@ -70,6 +71,16 @@ namespace sh::render
 		SH_RENDER_API void SetIndices(std::vector<uint32_t>&& indices);
 		SH_RENDER_API void SetIndices(const std::initializer_list<uint32_t>& indices);
 		SH_RENDER_API auto GetIndices() const -> const std::vector<uint32_t>&;
+
+		SH_RENDER_API void SetNormal(const std::vector<glm::vec3>& normals);
+		SH_RENDER_API void SetNormal(std::vector<glm::vec3>&& normals) noexcept;
+		SH_RENDER_API void SetNormal(const std::initializer_list<glm::vec3>& normals);
+		SH_RENDER_API auto GetNormal() const -> const std::vector<glm::vec3>&;
+
+		SH_RENDER_API void SetUV(const std::vector<glm::vec2>& uvs);
+		SH_RENDER_API void SetUV(std::vector<glm::vec2>&& uvs) noexcept;
+		SH_RENDER_API void SetUV(const std::initializer_list<glm::vec2>& uvs);
+		SH_RENDER_API auto GetUV() const -> const std::vector<glm::vec2>&;
 
 		SH_RENDER_API auto GetFaces() const -> const std::vector<Face>&;
 
@@ -87,16 +98,33 @@ namespace sh::render
 		void SetAttribute(const ShaderAttribute<T>& attr);
 		template<typename T>
 		void SetAttribute(ShaderAttribute<T>&& attr);
+		auto GetAttribute(std::string_view name) const -> const ShaderAttributeBase*;
 	};
 
 	template<typename T>
 	inline void Mesh::SetAttribute(const ShaderAttribute<T>& attr)
 	{
-		attrs.push_back(std::make_unique<ShaderAttribute<T>>(attr));
+		for (auto& attrPtr : attrs)
+		{
+			if (attrPtr->name == attr.name)
+			{
+				attrPtr.get()->SetData(attr.GetData());
+				return;
+			}
+		}
+		attrs.push_back(attr.Clone());
 	}
 	template<typename T>
 	inline void Mesh::SetAttribute(ShaderAttribute<T>&& attr)
 	{
+		for (auto& attrPtr : attrs)
+		{
+			if (attrPtr->name == attr.name)
+			{
+				static_cast<ShaderAttribute<T>&>(*attrPtr.get()) = std::move(attr);
+				return;
+			}
+		}
 		attrs.push_back(std::make_unique<ShaderAttribute<T>>(std::move(attr)));
 	}
 }

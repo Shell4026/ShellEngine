@@ -75,12 +75,12 @@ namespace sh::render
 
 	void VulkanVertexBuffer::CreateVertexBuffer(const Mesh& mesh)
 	{
+		// 버텍스
 		VkVertexInputBindingDescription bindingDesc{};
 		bindingDesc.binding = 0;
 		bindingDesc.stride = sizeof(glm::vec3);
 		bindingDesc.inputRate = VkVertexInputRate::VK_VERTEX_INPUT_RATE_VERTEX;
 		mBindingDescriptions.push_back(bindingDesc);
-
 		VkVertexInputAttributeDescription attrDesc{};
 		attrDesc.binding = 0;
 		attrDesc.location = 0;
@@ -134,11 +134,21 @@ namespace sh::render
 
 	void VulkanVertexBuffer::CreateAttributeBuffers(const Mesh& mesh)
 	{
-		int idx = 1;
+		int idx = 0;
 		for (auto& attr : mesh.attributes)
 		{
+			// 0은 버텍스 버퍼
+			// CreateVertexBuffer()에서 수행
+			if (idx == 0)
+			{
+				++idx;
+				continue;
+			}
+
 			VkFormat format = VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT;
 			size_t size = attr->GetSize();
+			if (size == 0)
+				continue;
 			const void* data = attr->GetData();
 
 			switch (attr->GetStride())

@@ -211,9 +211,6 @@ namespace sh::render
 			UpdateDescriptors(type);
 		}
 		
-		auto& bindings = static_cast<VulkanVertexBuffer*>(mesh.GetVertexBuffer())->bindingDescriptions;
-		auto& attrs = static_cast<VulkanVertexBuffer*>(mesh.GetVertexBuffer())->attribDescriptions;
-		
 		//토폴리지
 		impl::VulkanPipeline::Topology topology = impl::VulkanPipeline::Topology::Triangle;
 		switch (shader->GetTopology())
@@ -228,17 +225,19 @@ namespace sh::render
 		pipeline[core::ThreadType::Game]->SetTopology(topology);
 
 		//Attribute
-		pipeline[core::ThreadType::Game]->AddBindingDescription(bindings[0]);
-		pipeline[core::ThreadType::Game]->AddAttributeDescription(attrs[0]);
-		for (int i = 1; i < attrs.size(); ++i)
+		auto& bindings = static_cast<VulkanVertexBuffer*>(mesh.GetVertexBuffer())->bindingDescriptions;
+		auto& attrs = static_cast<VulkanVertexBuffer*>(mesh.GetVertexBuffer())->attribDescriptions;
+
+		// binding 0과 attribute 0은 버텍스
+		for (int i = 0; i < attrs.size(); ++i)
 		{
-			auto data = shader->GetAttribute(mesh.attributes[i - 1]->name);
+			auto data = shader->GetAttribute(mesh.attributes[i]->name);
 			if (!data)
 				continue;
-			if (data->typeName != mesh.attributes[i - 1]->typeName)
+			if (data->typeName != mesh.attributes[i]->typeName)
 				continue;
 
-			auto attrDesc = attrs[i];
+			VkVertexInputAttributeDescription attrDesc = attrs[i];
 			attrDesc.location = data->idx;
 
 			pipeline[core::ThreadType::Game]->AddBindingDescription(bindings[i]);

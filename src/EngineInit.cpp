@@ -7,6 +7,7 @@
 
 #include "Render/VulkanImpl/VulkanRenderer.h"
 #include "Render/VulkanImpl/VulkanShader.h"
+#include "Render/Mesh/Plane.h"
 
 #include "Game/VulkanShaderBuilder.h"
 #include "Game/ShaderLoader.h"
@@ -88,7 +89,7 @@ namespace sh
 		auto mat = world->materials.AddResource("Material", sh::render::Material{ shader });
 		auto mat2 = world->materials.AddResource("Material2", sh::render::Material{ shader });
 		auto lineMat = world->materials.AddResource("LineMat", sh::render::Material{ lineShader });
-		auto mesh = world->meshes.AddResource("Mesh", sh::render::Mesh{});
+		auto plane = world->meshes.AddResource("Plane", sh::render::Plane{});
 		auto mesh2 = world->meshes.AddResource("Mesh2", modelLoader.Load("model/test.obj"));
 		auto tex = world->textures.AddResource("Texture0", texLoader.Load("textures/버터고양이.jpg"));
 		auto tex2 = world->textures.AddResource("Texture1", texLoader.Load("textures/cat.jpg"));
@@ -119,22 +120,7 @@ namespace sh
 
 		lineMat->SetVector("color", glm::vec4{ 1.0f, 1.0f, 0.0f, 1.0f });
 
-		mesh->SetVertex({
-			{-0.5f, 0.0f, -0.5f},
-			{-0.5f, 0.0f, 0.5f},
-			{0.5f, 0.0f, 0.5f},
-			{0.5f, 0.0f, -0.5f}
-			});
-		mesh->SetIndices({
-			0, 1, 2, 2, 3, 0
-			});
-		mesh->SetAttribute(sh::render::ShaderAttribute<glm::vec2>{"uvs", {
-			{0.0f, 0.0f},
-			{0.0f, 1.0f},
-			{1.0f, 1.0f},
-			{1.0f, 0.0f}
-			}});
-		mesh->Build(*renderer);
+		plane->Build(*renderer);
 
 		GameObject* obj = world->AddGameObject("Test");
 		GameObject* obj2 = world->AddGameObject("Test2");
@@ -152,7 +138,7 @@ namespace sh
 		obj->AddComponent<UniformTest>();
 
 		auto meshRenderer2 = obj2->AddComponent<MeshRenderer>();
-		meshRenderer2->SetMesh(*mesh);
+		meshRenderer2->SetMesh(*plane);
 		meshRenderer2->SetMaterial(*mat);
 
 		GameObject* cam = world->AddGameObject("Camera");
@@ -195,7 +181,7 @@ namespace sh
 					renderThread->AddTaskFromOtherThread(
 						[&, width = window->width, height = window->height]
 						{
-							renderer->SetViewport({ 150.f, 0.f }, { width - 150.f, height - 180 }); 
+							renderer->SetViewport({ 0, 0.f }, { width, height }); 
 						}
 					);
 					gui->Resize();

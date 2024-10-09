@@ -21,6 +21,7 @@ namespace sh::render::impl
 		shaderStages(std::move(other.shaderStages)),
 		bindingDescriptions(std::move(other.bindingDescriptions)),
 		attributeDescriptions(std::move(other.attributeDescriptions)),
+		viewportX(other.viewportX), viewportY(other.viewportY),
 		cullMode(other.cullMode),
 		topology(other.topology)
 	{
@@ -113,7 +114,7 @@ namespace sh::render::impl
 	{
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 		vertexInputInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		vertexInputInfo.vertexBindingDescriptionCount = bindingDescriptions.size();;
+		vertexInputInfo.vertexBindingDescriptionCount = bindingDescriptions.size();
 		vertexInputInfo.pVertexBindingDescriptions = bindingDescriptions.data(); //버텍스 바인딩
 		vertexInputInfo.vertexAttributeDescriptionCount = attributeDescriptions.size();
 		vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data(); // 버텍스 어트리뷰트

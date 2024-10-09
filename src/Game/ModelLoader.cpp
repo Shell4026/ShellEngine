@@ -85,8 +85,8 @@ namespace sh::game
 		mesh->GetBoundingBox().Set(min, max);
 
 		mesh->SetVertex(std::move(verts));
-		mesh->SetAttribute(render::ShaderAttribute<glm::vec2>{"uvs", std::move(uvs)});
-		mesh->SetAttribute(render::ShaderAttribute<glm::vec3>{"normals", std::move(normals)});
+		mesh->SetUV(uvs);
+		mesh->SetNormal(normals);
 		mesh->SetIndices(std::move(indices));
 
 		mesh->Build(renderer);
