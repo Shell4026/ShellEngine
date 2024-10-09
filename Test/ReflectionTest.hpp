@@ -2,6 +2,7 @@
 
 #include "../include/Core/SObject.h"
 #include "../include/Core/Reflection.hpp"
+#include "../include/Core/SContainer.hpp"
 
 #include <gtest/gtest.h>
 
@@ -17,9 +18,11 @@ class Derived : public Base
     SCLASS(Derived)
 public:
     PROPERTY(number, "const")
-        int number;
+    int number;
     PROPERTY(numbers)
-        std::vector<int> numbers;
+    std::vector<int> numbers;
+    PROPERTY(set)
+    sh::core::SSet<int> set;
 };
 
 TEST(ReflectionTest, TypeInfoTest) 
@@ -55,6 +58,19 @@ TEST(ReflectionTest, PropertyTest)
     std::vector<int> expected = { 1, 2, 3 };
     for (size_t i = 0; begin != end; ++begin, ++i) 
     {
+        EXPECT_FALSE(begin.IsConst());
         EXPECT_EQ(*begin.Get<int>(), expected[i]);
     }
+
+    // set테스트
+    for(int i = 0; i < 3; ++i)
+        derived.set.insert(i);
+    
+    auto setProp = derived.GetType().GetProperty("set");
+    EXPECT_TRUE(setProp->isContainer);
+    auto setIterator = setProp->Begin(&derived);
+    EXPECT_TRUE(setIterator.IsConst());
+
+    const int* ptr = setIterator.Get<const int>();
+    EXPECT_EQ(*ptr, 0);
 }

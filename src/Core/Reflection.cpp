@@ -167,4 +167,13 @@ namespace sh::core::reflection
 	{
 		return iteratorData->IsPair();
 	}
+	auto PropertyIterator::IsConst() const -> bool
+	{
+		return iteratorData->IsConst();
+	}
+
+	void PropertyIterator::Erase()
+	{
+		iteratorData->Erase();
+	}
 ;}

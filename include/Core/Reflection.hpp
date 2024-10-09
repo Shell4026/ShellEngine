@@ -95,6 +95,7 @@ namespace sh::core::reflection
 		using type = typename T::This;
 	};
 
+	// 컨테이너 검증
 	template<typename T, typename Check = void>
 	struct IsContainer : std::bool_constant<false> {};
 	template<typename T>
@@ -114,6 +115,21 @@ namespace sh::core::reflection
 	struct IsMap : std::bool_constant<false> {};
 	template<typename T, typename U>
 	struct IsMap<std::map<T, U>, void> : std::bool_constant<true> {};
+
+	template<typename T, typename U = void>
+	struct IsHashMap : std::bool_constant<false> {};
+	template<typename... Args>
+	struct IsHashMap<std::unordered_map<Args...>> : std::bool_constant<true> {};
+
+	template<typename T>
+	struct IsSet : std::bool_constant<false> {};
+	template<typename... Args>
+	struct IsSet<std::set<Args...>> : std::bool_constant<true> {};
+
+	template<typename T>
+	struct IsHashSet : std::bool_constant<false> {};
+	template<typename... Args>
+	struct IsHashSet<std::unordered_set<Args...>> : std::bool_constant<true> {};
 
 	// 컨테이너 중첩 수 구하기
 	template<typename T>
@@ -161,12 +177,10 @@ namespace sh::core::reflection
 		using type = typename GetContainerLastType<T>::type;
 	};
 
-	/// \brief 빠른 다운 캐스팅.
-	///
-	/// 둘 다 SCLASS매크로가 선언 돼 있어야한다.
+	/// \brief 빠른 다운 캐스팅. 둘 다 SCLASS매크로가 선언 돼 있어야한다.
 	template<typename To, typename From>
 	static auto Cast(From* src) -> std::enable_if_t<
-		IsSClass<To>::value&&
+		IsSClass<To>::value &&
 		IsSClass<From>::value, To*>
 	{
 		if (!src) return nullptr;
@@ -284,7 +298,14 @@ namespace sh::core::reflection
 		/// @return 프로퍼티 반복자
 		SH_CORE_API auto GetNestedBegin() -> PropertyIterator;
 		SH_CORE_API auto GetNestedEnd() -> PropertyIterator;
-		SH_CORE_API auto IsPair() const -> bool;
+
+		SH_CORE_API auto IsPair() const -> bool;\
+		/// @brief 원소가 const 변수인지 반환하는 함수.
+		/// @return 맞으면 true, 아니면 false
+		SH_CORE_API auto IsConst() const -> bool;
+
+		/// @brief 컨테이너에서 해당 반복자 위치의 원소를 지우는 함수.
+		SH_CORE_API void Erase();
 	};
 
 	//자료형과 컨테이너를 숨긴 프로퍼티 반복자 인터페이스//
@@ -302,7 +323,11 @@ namespace sh::core::reflection
 		virtual auto GetNestedEnd() -> PropertyIterator = 0;
 
 		virtual auto IsPair() const -> bool = 0;
+		virtual auto IsConst() const -> bool = 0;
+
 		virtual auto GetPairSecond() const -> void* = 0;
+
+		virtual void Erase() = 0;
 	};
 
 	//컨테이너를 숨긴 프로퍼티 반복자 인터페이스//
@@ -322,6 +347,7 @@ namespace sh::core::reflection
 	private:
 		TContainer* container;
 		typename TContainer::iterator it;
+		using iteratorType = typename TContainer::iterator::reference;
 	public:
 		PropertyIteratorData(TContainer* container) :
 			container(container)
@@ -343,7 +369,7 @@ namespace sh::core::reflection
 
 		auto Get() -> T& override
 		{
-			return *it;
+			return const_cast<T&>(*it);
 		}
 
 		auto GetPairSecond() const -> void*
@@ -398,6 +424,10 @@ namespace sh::core::reflection
 		{
 			return sh::core::reflection::IsPair<T>::value;
 		}
+		auto IsConst() const -> bool override
+		{
+			return std::is_const<std::remove_reference_t<iteratorType>>::value;
+		}
 
 		auto operator==(const IPropertyIteratorBase& other) -> bool override
 		{
@@ -411,7 +441,13 @@ namespace sh::core::reflection
 
 		void operator++() override
 		{
-			++it;
+			if(it != container->end())
+				++it;
+		}
+
+		void Erase() override
+		{
+			it = container->erase(it);
 		}
 	};
 
@@ -572,13 +608,11 @@ namespace sh::core::reflection
 			else if (IsContainer<T>())
 			{
 				using type = typename GetContainerLastType<T>::type;
+				Property* prop = owner.AddProperty(name, Property{ &data, name, true, GetContainerNestedCount<T>::value });
 				if constexpr (std::is_convertible_v<type, SObject*>)
 				{
-					Property* prop = owner.AddProperty(name, Property{ &data, name, true, GetContainerNestedCount<T>::value });
 					owner.AddSObjectContainerProperty(prop);
 				}
-				else
-					Property* prop = owner.AddProperty(name, Property{ &data, name });
 			}
 			else
 			{
