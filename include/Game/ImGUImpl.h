@@ -5,6 +5,7 @@
 #include "External/imgui/imgui.h"
 #include "External/imgui/imgui_internal.h"
 #include "External/imgui/backends/imgui_impl_vulkan.h"
+#include "External/imgui/misc/cpp/imgui_stdlib.h"
 
 #include "Core/ISyncable.h"
 

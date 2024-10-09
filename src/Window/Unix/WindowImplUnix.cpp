@@ -157,10 +157,16 @@ namespace sh::window {
 				//Keyboard
 			case KeyPress:
 			{
-				XKeyEvent* keyEvent = reinterpret_cast<XKeyEvent*>(&e);
-				evt.type = Event::EventType::KeyDown;
-				evt.keyType = CovertKeyCode(keyEvent->keycode);
-				PushEvent(evt);
+				{
+					XKeyEvent* keyEvent = reinterpret_cast<XKeyEvent*>(&e);
+					evt.type = Event::EventType::KeyDown;
+					evt.keyType = CovertKeyCode(keyEvent->keycode);
+
+					unsigned int state;
+					if(XkbGetIndicatorState(display, XkbUseCoreKbd, &state) == Success)
+						evt.capsLock = (state & 0x01); // 0x01 = capslock
+					PushEvent(evt);
+				}
 				break;
 			}
 			case KeyRelease:
@@ -301,6 +307,7 @@ namespace sh::window {
 		case XK_Scroll_Lock: return Event::KeyType::Scroll;
 		case XK_Pause: return Event::KeyType::Pause;
 		case XK_Num_Lock : return Event::KeyType::NumLock;
+		case XK_Caps_Lock: return Event::KeyType::CapsLock;
 		}
 		return Event::KeyType::Unknown;
 	}

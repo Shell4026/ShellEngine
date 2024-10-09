@@ -1,5 +1,5 @@
 set(SRC "imgui.cpp" "imgui_demo.cpp" "imgui_draw.cpp" "imgui_tables.cpp" "imgui_widgets.cpp"
-"backends/imgui_impl_vulkan.cpp"
+"backends/imgui_impl_vulkan.cpp" "misc/cpp/imgui_stdlib.cpp"
 )
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)

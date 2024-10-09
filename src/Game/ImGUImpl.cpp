@@ -160,7 +160,9 @@ namespace sh::game
 				int keyDif = static_cast<int>(event.keyType) - static_cast<int>(window::Event::KeyType::A);
 				io.AddKeyEvent(
 					static_cast<ImGuiKey>(ImGuiKey::ImGuiKey_A + keyDif), keyDown);
-				if (keyDown) io.AddInputCharacter('a' + keyDif);
+				char alphabet = 'a' + keyDif;
+				if (event.capsLock) alphabet = std::toupper(alphabet);
+				if (keyDown) io.AddInputCharacter(alphabet);
 				break;
 			}
 			case window::Event::KeyType::Num0: [[fallthrough]];
@@ -376,6 +378,9 @@ namespace sh::game
 				break;
 			case window::Event::KeyType::RAlt:
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_RightAlt, keyDown);
+				break;
+			case window::Event::KeyType::CapsLock:
+				io.AddKeyEvent(ImGuiKey::ImGuiKey_CapsLock, keyDown);
 				break;
 			case window::Event::KeyType::F1: [[fallthrough]];
 			case window::Event::KeyType::F2: [[fallthrough]];

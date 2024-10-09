@@ -2,9 +2,10 @@
 
 #include "Export.h"
 
-namespace sh::window {
-	class Event {
-	public:
+namespace sh::window 
+{
+	struct Event 
+	{
 		enum class EventType
 		{
 			Close,
@@ -20,14 +21,12 @@ namespace sh::window {
 			WindowFocusOut,
 			Unknown
 		};
-
 		enum class MouseType
 		{
 			Left,
 			Right,
 			Middle
 		};
-
 		enum class KeyType
 		{
 			Num0, Num1, Num2, Num3,Num4,
@@ -48,24 +47,21 @@ namespace sh::window {
 			Comma, Period, Slash, BackSlash, Minus, Equal,
 			Grave, LBracket, RBracket, Colon, Semicolon,
 			Print, Scroll, Pause,
-			NumLock,
+			NumLock, CapsLock,
 			Unknown
 		};
-
 		struct MouseWheelScrolled
 		{
 			SH_WINDOW_API static float delta;
 		};
-
 		struct MousePosition
 		{
 			SH_WINDOW_API static int mouseX;
 			SH_WINDOW_API static int mouseY;
 		};
-
 		EventType type;
 		MouseType mouseType;
 		KeyType keyType;
-
+		bool capsLock;
 	};
 }//namespace

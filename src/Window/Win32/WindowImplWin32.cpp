@@ -142,6 +142,7 @@ namespace sh::window {
 		case WM_KEYDOWN:
 			e.type = Event::EventType::KeyDown;
 			e.keyType = ConvertKeycode(wParam);
+			e.capsLock = 0x1 & GetKeyState(VK_CAPITAL); // 최하위 비트가 1 = 토글 on
 			PushEvent(e);
 			break;
 		case WM_SYSKEYUP:
@@ -234,66 +235,37 @@ namespace sh::window {
 
 		switch (wParam)
 		{
-		case VK_SHIFT:
-			return Event::KeyType::Shift;
-		case VK_CONTROL:
-			return Event::KeyType::LCtrl;
-		case VK_MENU:
-			return Event::KeyType::LAlt;
-		case VK_SPACE:
-			return Event::KeyType::Space;
-		case VK_BACK:
-			return Event::KeyType::BackSpace;
-		case VK_RETURN:
-			return Event::KeyType::Enter;
-		case VK_TAB:
-			return Event::KeyType::Tab;
-		case VK_ESCAPE:
-			return Event::KeyType::Esc;
-		case VK_INSERT:
-			return Event::KeyType::Insert;
-		case VK_DELETE:
-			return Event::KeyType::Delete;
-		case VK_ADD:
-			return Event::KeyType::NumpadAdd;
-		case VK_SUBTRACT:
-			return Event::KeyType::NumpadSubtract;
-		case VK_DIVIDE:
-			return Event::KeyType::NumpadDivide;
-		case VK_MULTIPLY:
-			return Event::KeyType::NumpadMultiply;
-		case VK_DECIMAL:
-			return Event::KeyType::NumpadDecimal;
-		case VK_OEM_COMMA: //,
-			return Event::KeyType::Comma;
-		case VK_OEM_PERIOD: //.
-			return Event::KeyType::Period;
-		case VK_OEM_2:
-			return Event::KeyType::Slash;
-		case VK_OEM_5:
-			return Event::KeyType::BackSlash;
-		case VK_OEM_MINUS:
-			return Event::KeyType::Minus;
-		case VK_OEM_PLUS:
-			return Event::KeyType::Equal;
-		case VK_OEM_4:
-			return Event::KeyType::LBracket;
-		case VK_OEM_6:
-			return Event::KeyType::RBracket;
-		case VK_OEM_1:
-			return Event::KeyType::Semicolon;
-		case VK_OEM_7:
-			return Event::KeyType::Colon;
-		case VK_SNAPSHOT:
-			return Event::KeyType::Print;
-		case VK_SCROLL:
-			return Event::KeyType::Scroll;
-		case VK_PAUSE:
-			return Event::KeyType::Pause;
-		case VK_NUMLOCK:
-			return Event::KeyType::NumLock;
-		case VK_OEM_3:
-			return Event::KeyType::Grave;
+		case VK_SHIFT: return Event::KeyType::Shift;
+		case VK_CONTROL: return Event::KeyType::LCtrl;
+		case VK_MENU: return Event::KeyType::LAlt;
+		case VK_SPACE: return Event::KeyType::Space;
+		case VK_BACK: return Event::KeyType::BackSpace;
+		case VK_RETURN: return Event::KeyType::Enter;
+		case VK_TAB: return Event::KeyType::Tab;
+		case VK_ESCAPE: return Event::KeyType::Esc;
+		case VK_INSERT: return Event::KeyType::Insert;
+		case VK_DELETE: return Event::KeyType::Delete;
+		case VK_ADD: return Event::KeyType::NumpadAdd;
+		case VK_SUBTRACT: return Event::KeyType::NumpadSubtract;
+		case VK_DIVIDE: return Event::KeyType::NumpadDivide;
+		case VK_MULTIPLY: return Event::KeyType::NumpadMultiply;
+		case VK_DECIMAL: return Event::KeyType::NumpadDecimal;
+		case VK_OEM_COMMA: return Event::KeyType::Comma;
+		case VK_OEM_PERIOD: return Event::KeyType::Period;
+		case VK_OEM_2: return Event::KeyType::Slash;
+		case VK_OEM_5: return Event::KeyType::BackSlash;
+		case VK_OEM_MINUS: return Event::KeyType::Minus;
+		case VK_OEM_PLUS: return Event::KeyType::Equal;
+		case VK_OEM_4: return Event::KeyType::LBracket;
+		case VK_OEM_6: return Event::KeyType::RBracket;
+		case VK_OEM_1: return Event::KeyType::Semicolon;
+		case VK_OEM_7: return Event::KeyType::Colon;
+		case VK_SNAPSHOT: return Event::KeyType::Print;
+		case VK_SCROLL: return Event::KeyType::Scroll;
+		case VK_PAUSE: return Event::KeyType::Pause;
+		case VK_NUMLOCK: return Event::KeyType::NumLock;
+		case VK_OEM_3: return Event::KeyType::Grave;
+		case VK_CAPITAL: return Event::KeyType::CapsLock;
 		}
 		return Event::KeyType::Unknown;
 	}
