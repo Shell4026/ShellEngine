@@ -3,16 +3,19 @@
 #include "Export.h"
 
 #include "Core/Reflection.hpp"
+#include "Core/NonCopyable.h"
+#include <Core/ICloneable.h>
 
 #include <initializer_list>
 #include <vector>
 #include <string>
 #include <string_view>
 #include <type_traits>
+#include <memory>
 
 namespace sh::render
 {
-	class ShaderAttributeBase
+	class ShaderAttributeBase : public core::INonCopyable, public core::ICloneable<ShaderAttributeBase>
 	{
 	private:
 		std::string attributeName;
@@ -25,7 +28,6 @@ namespace sh::render
 	public:
 		SH_RENDER_API ShaderAttributeBase(std::string_view name, bool isInteger = false);
 		SH_RENDER_API virtual ~ShaderAttributeBase() = default;
-		SH_RENDER_API ShaderAttributeBase(const ShaderAttributeBase& other);
 		SH_RENDER_API ShaderAttributeBase(ShaderAttributeBase&& other) noexcept;
 
 		SH_RENDER_API virtual auto GetData() const -> const void* = 0;
@@ -46,7 +48,6 @@ namespace sh::render
 		ShaderAttribute(std::string_view name, std::vector<T>&& data);
 		~ShaderAttribute() = default;
 
-		ShaderAttribute(const ShaderAttribute& other);
 		ShaderAttribute(ShaderAttribute&& other) noexcept;
 
 		void SetData(std::initializer_list<T>&& datas);
@@ -56,6 +57,8 @@ namespace sh::render
 		auto GetData() const -> const void* override;
 		auto GetSize() const -> size_t override;
 		auto GetStride() const -> size_t override;
+		
+		auto Clone() const -> std::unique_ptr<ShaderAttributeBase> override;
 	};
 
 	template<typename T>
@@ -86,13 +89,6 @@ namespace sh::render
 		data(std::move(data)), stride(sizeof(T))
 	{
 		mTypeName = core::reflection::GetTypeName<T>();
-	}
-	template<typename T>
-	inline ShaderAttribute<T>::ShaderAttribute(const ShaderAttribute& other) :
-		ShaderAttributeBase(other),
-		data(other.data), stride(sizeof(T))
-	{
-		mTypeName = other.typeName;
 	}
 	template<typename T>
 	inline ShaderAttribute<T>::ShaderAttribute(ShaderAttribute&& other) noexcept :
@@ -133,5 +129,13 @@ namespace sh::render
 	inline auto ShaderAttribute<T>::GetStride() const -> size_t
 	{
 		return stride;
+	}
+
+	template<typename T>
+	inline auto ShaderAttribute<T>::Clone() const -> std::unique_ptr<ShaderAttributeBase>
+	{
+		auto ptr = std::make_unique<ShaderAttribute<T>>(name, data);
+
+		return ptr;
 	}
 }

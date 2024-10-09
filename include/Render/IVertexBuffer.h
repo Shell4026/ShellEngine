@@ -2,6 +2,8 @@
 
 #include "Export.h"
 
+#include "Core/ICloneable.h"
+
 #include <cstdint>
 #include <string_view>
 
@@ -9,10 +11,8 @@ namespace sh::render
 {
 	class Mesh;
 
-	class IVertexBuffer
+	class IVertexBuffer : public core::ICloneable<IVertexBuffer>
 	{
-	private:
-
 	public:
 		SH_RENDER_API virtual ~IVertexBuffer() = default;
 

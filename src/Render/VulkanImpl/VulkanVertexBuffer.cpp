@@ -226,4 +226,9 @@ namespace sh::render
 		vkCmdBindVertexBuffers(renderer.GetCommandBuffer(core::ThreadType::Render), 0, vertexBuffers.size(), vertexBuffers.data(), offsets.data());
 		vkCmdBindIndexBuffer(renderer.GetCommandBuffer(core::ThreadType::Render), indexBuffer.GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
 	}
+
+	auto VulkanVertexBuffer::Clone() const -> std::unique_ptr<IVertexBuffer>
+	{
+		return std::make_unique<VulkanVertexBuffer>(*this);
+	}
 }

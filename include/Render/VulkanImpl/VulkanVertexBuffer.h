@@ -48,5 +48,7 @@ namespace sh::render
 		SH_RENDER_API void Clean() override;
 
 		SH_RENDER_API void Bind() override;
+
+		SH_RENDER_API auto Clone() const -> std::unique_ptr<IVertexBuffer> override;
 	};
 }

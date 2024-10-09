@@ -11,23 +11,66 @@ namespace sh::render
 	{
 
 	}
+	Mesh::Mesh(const Mesh& other) :
+		attributes(attrs),
+
+		verts(other.verts), uvs(other.uvs), normals(other.normals), indices(other.indices), faces(other.faces),
+		attrs(other.attrs.size()), buffer(),
+		topology(other.topology), 
+		bounding(other.bounding)
+	{
+		for (std::size_t i = 0; i < other.attrs.size(); ++i)
+		{
+			attrs[i] = other.attrs[i]->Clone();
+		}
+		buffer = other.buffer->Clone();
+	}
 	Mesh::Mesh(Mesh&& other) noexcept :
 		attributes(attrs),
-		attrs(std::move(other.attrs)),
-		topology(other.topology)
+
+		verts(std::move(other.verts)), uvs(std::move(other.uvs)), normals(std::move(other.normals)), indices(std::move(other.indices)), faces(std::move(other.faces)),
+		attrs(std::move(other.attrs)), buffer(std::move(other.buffer)),
+		topology(other.topology),
+		bounding(std::move(other.bounding))
 	{
-		verts = std::move(other.verts);
-		indices = std::move(other.indices);
 	}
 	Mesh::~Mesh()
 	{
 
 	}
 
+	auto Mesh::operator=(const Mesh& other) -> Mesh&
+	{
+		verts = other.verts;
+		uvs = other.uvs;
+		normals = other.normals;
+		indices = other.indices;
+		faces = other.faces;
+
+		for (std::size_t i = 0; i < other.attrs.size(); ++i)
+		{
+			attrs[i] = other.attrs[i]->Clone();
+		}
+		buffer = other.buffer->Clone();
+
+		topology = other.topology;
+		bounding = other.bounding;
+
+		return *this;
+	}
 	auto Mesh::operator=(Mesh&& other) noexcept -> Mesh&
 	{
 		verts = std::move(other.verts);
+		uvs = std::move(other.uvs);
+		normals = std::move(other.normals);
 		indices = std::move(other.indices);
+		faces = std::move(other.faces);
+
+		attrs = std::move(other.attrs);
+		buffer = std::move(other.buffer);
+		topology = other.topology;
+		bounding = std::move(other.bounding);
+		
 		return *this;
 	}
 
