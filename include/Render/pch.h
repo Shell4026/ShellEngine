@@ -3,6 +3,8 @@
 #include <glm/glm.hpp>
 #include "VulkanImpl/VulkanConfig.h"
 
+#include "Export.h"
+
 #include <iostream>
 #include <memory>
 #include <string>
