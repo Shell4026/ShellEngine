@@ -12,6 +12,7 @@
 
 namespace sh::core::reflection
 {
+	class Property;
 	class PropertyIterator;
 }
 
@@ -26,17 +27,21 @@ namespace sh::core
 	private:
 		SHashSet<SObject*, 128> objs;
 		SHashSet<SObject*, 128> rootSets;
+
+		bool bContainerIteratorErased;
 	private:
-		//컨테이너를 재귀로 순회하면서 포인터를 검사하는 함수
-		void DFSIteratorCheckPtr(SObject* target, int depth, int maxDepth, sh::core::reflection::PropertyIterator& it);
-		/// @brief 컨테이너를 재귀로 순회하면서 마킹 하는 함수
+		/// @brief 중첩 컨테이너를 재귀로 순회하면서 SObject에 마킹 하는 함수
 		/// @param parent 마킹이 시작된 오브젝트
 		/// @param depth 현재 깊이
 		/// @param maxDepth 최대 깊이
 		/// @param it 넘길 반복자
 		void ContainerMark(SObject* parent, int depth, int maxDepth, sh::core::reflection::PropertyIterator& it);
-
-		void Mark(SObject* obj, SObject* parent);
+		/// @brief 마킹 함수
+		/// @param obj 마킹 할 객체
+		/// @param parent 마킹 할 객체의 부모
+		/// @param parentProperty 부모의 해당 객체를 가르키는 프로퍼티
+		/// @param parentIterator 부모 컨테이너의 해당 객체를 가르키는 반복자 프로퍼티
+		void Mark(SObject* obj, SObject* parent, core::reflection::Property* parentProperty, core::reflection::PropertyIterator* parentIterator);
 	protected:
 		SH_CORE_API GarbageCollection();
 	public:

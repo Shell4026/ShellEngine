@@ -6,7 +6,8 @@
 
 namespace sh::core
 {
-	GarbageCollection::GarbageCollection()
+	GarbageCollection::GarbageCollection() :
+		bContainerIteratorErased(false)
 	{
 	}
 	GarbageCollection::~GarbageCollection()
@@ -32,39 +33,20 @@ namespace sh::core
 	auto GarbageCollection::RemoveObject(SObject* obj) -> bool
 	{
 		RemoveRootSet(obj);
-		return objs.erase(obj) == 1; //지워진 원소 수
+		return objs.erase(obj) == 1; // 지워진 원소 수
 	}
 
-	void GarbageCollection::DFSIteratorCheckPtr(SObject* target, int depth, int maxDepth, sh::core::reflection::PropertyIterator& it)
-	{
-		if (depth == maxDepth)
-		{
-			SObject** ptr;
-			if(!it.IsPair())
-				ptr = it.Get<SObject*>();
-			else
-				ptr = it.GetPairSecond<SObject*>();
-
-			if (*ptr == target)
-				*ptr = nullptr;
-			return;
-		}
-		for (auto itSide = it.GetNestedBegin(); itSide != it.GetNestedEnd(); ++itSide)
-		{
-			DFSIteratorCheckPtr(target, depth + 1, maxDepth, itSide);
-		}
-	}
 	void GarbageCollection::ContainerMark(SObject* parent, int depth, int maxDepth, sh::core::reflection::PropertyIterator& it)
 	{
 		if (depth == maxDepth)
 		{
-			SObject** ptr;
+			SObject* const* ptr;
 			if (!it.IsPair())
 				ptr = it.Get<SObject*>();
 			else
 				ptr = it.GetPairSecond<SObject*>();
 
-			Mark(*ptr, parent);
+			Mark(*ptr, parent, nullptr, &it);
 			return;
 		}
 		for (auto itSide = it.GetNestedBegin(); itSide != it.GetNestedEnd(); ++itSide)
@@ -83,7 +65,7 @@ namespace sh::core
 		// TODO 병렬 처리?
 		for (SObject* root : rootSets)
 		{
-			Mark(root, nullptr);
+			Mark(root, nullptr, nullptr, nullptr);
 		}
 
 		// 모든 SObject를 순회하며 마킹이 안 됐으면 제거
@@ -111,34 +93,26 @@ namespace sh::core
 		}
 	}
 
-	void GarbageCollection::Mark(SObject* obj, SObject* parent)
+	void GarbageCollection::Mark(SObject* obj, SObject* parent, core::reflection::Property* parentProperty, core::reflection::PropertyIterator* parentIterator)
 	{
 		if (obj == nullptr || obj->bMark)
 			return;
-		//제거 한 객체(Remove())인 경우 obj를 참조하고 있는 포인터를 nullptr로 바꾼다.
+		// 제거 한 객체(Remove())인 경우 obj를 참조하고 있는 포인터를 nullptr로 바꾼다.
 		if (obj->bPendingKill.load(std::memory_order::memory_order_acquire))
 		{
 			if (parent == nullptr)
 				return;
 
-			const reflection::TypeInfo* type = &parent->GetType();
-			while (type)
+			if (parentProperty)
 			{
-				for (auto& ptrProp : type->GetSObjectPtrProperties())
-				{
-					SObject** ptr = ptrProp->Get<SObject*>(parent);
-					if (*ptr == obj)
-						*ptr = nullptr;
-				}
-				auto& containers = type->GetSObjectContainerProperties();
-				for (auto prop : containers)
-				{
-					for (auto it = prop->Begin(parent); it != prop->End(parent); ++it)
-					{
-						DFSIteratorCheckPtr(obj, 1, prop->containerNestedLevel, it);
-					}
-				}
-				type = type->GetSuper(); // 부모 클래스도 검사
+				SObject** ptr = parentProperty->Get<SObject*>(parent);
+				if (*ptr == obj)
+					*ptr = nullptr;
+			}
+			if (parentIterator)
+			{
+				parentIterator->Erase();
+				bContainerIteratorErased = true;
 			}
 			return;
 		}
@@ -155,14 +129,21 @@ namespace sh::core
 				if (*ptr == nullptr)
 					continue;
 
-				Mark(*ptr, obj);
+				Mark(*ptr, obj, ptrProp, nullptr);
 			}
 			auto& containerPtrProps = type->GetSObjectContainerProperties();
 			for (auto ptrProp : containerPtrProps)
 			{
-				for (auto it = ptrProp->Begin(obj); it != ptrProp->End(obj); ++it)
+				for (auto it = ptrProp->Begin(obj); it != ptrProp->End(obj);)
 				{
 					ContainerMark(obj, 1, ptrProp->containerNestedLevel, it);
+					if (!bContainerIteratorErased)
+					{
+						++it;
+						continue;
+					}
+					else
+						bContainerIteratorErased = false;
 				}
 			}
 			type = type->GetSuper(); // 부모 클래스도 검사

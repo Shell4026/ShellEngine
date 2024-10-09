@@ -18,6 +18,8 @@ public:
 	Object* child;
 	PROPERTY(others)
 	std::vector<std::vector<Object*>> others;
+	PROPERTY(childs)
+	sh::core::SSet<Object*> childs;
 
 	Object(int num) : 
 		num(num), child(nullptr)
@@ -82,6 +84,28 @@ TEST(GCTest, ValidTest)
 	EXPECT_NE(newChild->num, 4);
 }
 
+TEST(GCTest, CircularReferencingTest)
+{
+	using namespace sh::core;
+	GarbageCollection& gc = *GarbageCollection::GetInstance();
+
+	Object* root = SObject::Create<Object>(999);
+	Object* obj1 = SObject::Create<Object>(1);
+	Object* obj2 = SObject::Create<Object>(2);
+
+	gc.SetRootSet(root);
+
+	root->child = obj1;
+	obj1->child = obj2;
+	obj2->child = obj1;
+
+	root->Destroy();
+	gc.Update();
+
+	EXPECT_NE(obj1->num, 1);
+	EXPECT_NE(obj2->num, 2);
+}
+
 TEST(GCTest, ContainerTest) 
 {
 	using namespace sh::core;
@@ -100,6 +124,7 @@ TEST(GCTest, ContainerTest)
 		}
 		root->others.push_back(std::move(objs));
 	}
+
 	EXPECT_EQ(gc.GetObjectCount(), 10);
 	gc.Update();
 	EXPECT_EQ(gc.GetObjectCount(), 10);
@@ -109,4 +134,34 @@ TEST(GCTest, ContainerTest)
 	root->Destroy();
 	gc.Update();
 	EXPECT_NE(temp->num, 4);
+
+	// SSet테스트
+	Object* setRoot = SObject::Create<Object>(123);
+	gc.SetRootSet(setRoot);
+	{
+		Object* root = SObject::Create<Object>(999);
+		gc.SetRootSet(root);
+		for (int i = 0; i < 3; ++i)
+			root->childs.insert(SObject::Create<Object>(i));
+
+		gc.Update();
+
+		int i = 0;
+		for (auto child : root->childs)
+		{
+			EXPECT_EQ(child->num, i++);
+			child->Destroy();
+		}
+		EXPECT_EQ(root->childs.size(), 3);
+		gc.Update();
+		EXPECT_EQ(root->childs.size(), 0);
+
+		root->Destroy();
+		root->childs.insert(SObject::Create<Object>(4));
+		setRoot->child = *root->childs.begin();
+	}
+	EXPECT_EQ(setRoot->child->num, 4);
+	setRoot->Destroy();
+	gc.Update();
+	EXPECT_EQ(gc.GetObjectCount(), 0);
 }
