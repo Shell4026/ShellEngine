@@ -9,31 +9,69 @@ namespace sh::render::impl
 	VulkanBuffer::VulkanBuffer(VkDevice device, VkPhysicalDevice gpu, VmaAllocator allocator) :
 		device(device), gpu(gpu), allocator(allocator),
 		buffer(nullptr), bufferMem(nullptr), data(nullptr),
-		bufferInfo(),
+		bufferInfo(), memProperty(0),
 		persistentMapping(false),
 		size(0)
 	{
-
 	}
-
+	VulkanBuffer::VulkanBuffer(const VulkanBuffer& other) :
+		device(other.device), gpu(other.gpu), allocator(other.allocator),
+		buffer(nullptr), bufferMem(nullptr), data(nullptr),
+		bufferInfo(other.bufferInfo), memProperty(other.memProperty),
+		persistentMapping(other.persistentMapping),
+		size(other.size)
+	{
+		operator=(other);
+	}
 	VulkanBuffer::VulkanBuffer(VulkanBuffer&& other) noexcept :
 		device(other.device), gpu(other.gpu), allocator(other.allocator),
 		buffer(other.buffer), bufferMem(other.bufferMem), data(other.data),
-		bufferInfo(other.bufferInfo),
+		bufferInfo(other.bufferInfo), memProperty(other.memProperty),
 		persistentMapping(other.persistentMapping),
 		size(other.size)
 	{
 		other.device = nullptr;
 		other.gpu = nullptr;
 		other.allocator = nullptr;
+
 		other.buffer = nullptr;
 		other.bufferMem = nullptr;
 		other.data = nullptr;
 	}
-
 	VulkanBuffer::~VulkanBuffer()
 	{
 		Clean();
+	}
+	auto VulkanBuffer::operator=(const VulkanBuffer& other)->VulkanBuffer&
+	{
+		Create(size, bufferInfo.usage, bufferInfo.sharingMode, memProperty, persistentMapping);
+		SetData(other.data);
+		
+		return *this;
+	}
+	auto VulkanBuffer::operator=(VulkanBuffer&& other) noexcept -> VulkanBuffer&
+	{
+		device = other.device;
+		gpu = other.gpu;
+		allocator = other.allocator;
+
+		buffer = other.buffer;
+		bufferMem = other.bufferMem;
+		data = other.data;
+		bufferInfo = other.bufferInfo;
+		memProperty = other.memProperty;
+		persistentMapping = other.persistentMapping;
+		size = other.size;
+
+		other.device = nullptr;
+		other.gpu = nullptr;
+		other.allocator = nullptr;
+
+		other.buffer = nullptr;
+		other.bufferMem = nullptr;
+		other.data = nullptr;
+
+		return *this;
 	}
 
 	void VulkanBuffer::Clean()
@@ -105,8 +143,9 @@ namespace sh::render::impl
 
 		VmaAllocationInfo allocInfo{};
 		auto result = vmaCreateBuffer(allocator, &bufferInfo, &allocCreateInfo, &buffer, &bufferMem, &allocInfo);
-		assert(result == VkResult::VK_SUCCESS);
 
+		assert(result == VkResult::VK_SUCCESS);
+		
 		if (persistentMapping)
 			data = allocInfo.pMappedData;
 		//result = vkBindBufferMemory(device, buffer, bufferMem, 0);
@@ -138,7 +177,10 @@ namespace sh::render::impl
 	{
 		return buffer;
 	}
-
+	auto VulkanBuffer::GetBufferInfo() const -> const VkBufferCreateInfo&
+	{
+		return bufferInfo;
+	}
 	auto VulkanBuffer::GetBufferMemory() const -> VmaAllocation
 	{
 		return bufferMem;

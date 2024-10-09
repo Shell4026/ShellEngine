@@ -16,10 +16,50 @@ namespace sh::render
 		cmd(renderer.GetDevice(), renderer.GetCommandPool(core::ThreadType::Game))
 	{
 	}
+	VulkanVertexBuffer::VulkanVertexBuffer(const VulkanVertexBuffer& other) :
+		renderer(other.renderer),
+		bindingDescriptions(mBindingDescriptions),
+		attribDescriptions(mAttribDescriptions),
 
+		mBindingDescriptions(other.mBindingDescriptions),
+		mAttribDescriptions(other.mAttribDescriptions),
+		buffers(other.buffers),
+		indexBuffer(other.indexBuffer),
+		cmd(renderer.GetDevice(), renderer.GetCommandPool(core::ThreadType::Game))
+	{
+	}
+	VulkanVertexBuffer::VulkanVertexBuffer(VulkanVertexBuffer&& other) noexcept :
+		renderer(other.renderer),
+		bindingDescriptions(mBindingDescriptions),
+		attribDescriptions(mAttribDescriptions),
+
+		mBindingDescriptions(std::move(other.mBindingDescriptions)),
+		mAttribDescriptions(std::move(other.mAttribDescriptions)),
+		buffers(std::move(other.buffers)),
+		indexBuffer(std::move(other.indexBuffer)),
+		cmd(std::move(other.cmd))
+	{
+	}
 	VulkanVertexBuffer::~VulkanVertexBuffer()
 	{
 		Clean();
+	}
+	auto VulkanVertexBuffer::operator=(const VulkanVertexBuffer& other) -> VulkanVertexBuffer&
+	{
+		mBindingDescriptions = other.bindingDescriptions;
+		mAttribDescriptions = other.mAttribDescriptions;
+		buffers = other.buffers;
+		indexBuffer = other.indexBuffer;
+
+		return *this;
+	}
+	auto VulkanVertexBuffer::operator=(VulkanVertexBuffer&& other) noexcept ->VulkanVertexBuffer&
+	{
+		mBindingDescriptions = std::move(other.mBindingDescriptions);
+		mAttribDescriptions = std::move(other.mAttribDescriptions);
+		buffers = std::move(other.buffers);
+		indexBuffer = std::move(other.indexBuffer);
+		return *this;
 	}
 
 	void VulkanVertexBuffer::Clean()

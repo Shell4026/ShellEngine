@@ -36,8 +36,13 @@ namespace sh::render
 		const std::vector<VkVertexInputBindingDescription>& bindingDescriptions;
 		const std::vector<VkVertexInputAttributeDescription>& attribDescriptions;
 	public:
-		VulkanVertexBuffer(const VulkanRenderer& renderer);
-		~VulkanVertexBuffer();
+		SH_RENDER_API VulkanVertexBuffer(const VulkanRenderer& renderer);
+		SH_RENDER_API VulkanVertexBuffer(const VulkanVertexBuffer& other);
+		SH_RENDER_API VulkanVertexBuffer(VulkanVertexBuffer&& other) noexcept;
+		SH_RENDER_API ~VulkanVertexBuffer();
+
+		SH_RENDER_API auto operator=(const VulkanVertexBuffer& other) -> VulkanVertexBuffer&;
+		SH_RENDER_API auto operator=(VulkanVertexBuffer&& other) noexcept -> VulkanVertexBuffer&;
 
 		SH_RENDER_API void Create(const Mesh& mesh) override;
 		SH_RENDER_API void Clean() override;
