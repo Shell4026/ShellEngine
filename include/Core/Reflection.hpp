@@ -190,7 +190,7 @@ namespace sh::core::reflection
 	}
 
 	template<typename T>
-	constexpr auto GetTypeName() -> std::string_view
+	constexpr auto GetTypeName()
 	{
 
 #ifdef __clang__
