@@ -8,6 +8,7 @@
 
 #include "Render/DrawableFactory.h"
 #include "Render/IDrawable.h"
+#include "Render/IUniformBuffer.h"
 
 #include <cstring>
 #include <algorithm>
@@ -111,6 +112,59 @@ namespace sh::game
 	{
 	}
 
+	void MeshRenderer::FillData(const render::Shader::UniformData& uniform, std::vector<unsigned char>& uniformData, Camera* cam)
+	{
+		if (uniform.typeName == sh::core::reflection::GetTypeName<glm::mat4>())
+		{
+			if (uniform.name == "proj")
+				std::memcpy(uniformCopyData.data() + uniform.offset, &cam->GetProjMatrix()[0], sizeof(glm::mat4));
+			else if (uniform.name == "view")
+				std::memcpy(uniformCopyData.data() + uniform.offset, &cam->GetViewMatrix()[0], sizeof(glm::mat4));
+			else if (uniform.name == "model")
+				std::memcpy(uniformCopyData.data() + uniform.offset, &gameObject->transform->localToWorldMatrix[0], sizeof(glm::mat4));
+			else
+			{
+				auto matrix = mat->GetMatrix(uniform.name);
+				if (matrix == nullptr)
+				{
+					glm::mat4 defaultMat{ 0.f };
+					std::memcpy(uniformCopyData.data() + uniform.offset, &defaultMat[0], sizeof(glm::mat4));
+				}
+				else
+					std::memcpy(uniformCopyData.data() + uniform.offset, &matrix[0], sizeof(glm::mat4));
+			}
+		}
+		else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec4>())
+		{
+			auto vec = mat->GetVector(uniform.name);
+			if (vec == nullptr)
+				SetUniformData(glm::vec4{ 0.f }, uniformCopyData, uniform.offset);
+			else
+				SetUniformData(*vec, uniformCopyData, uniform.offset);
+		}
+		else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec3>())
+		{
+			auto vec = mat->GetVector(uniform.name);
+			if (vec == nullptr)
+				SetUniformData(glm::vec3{ 0.f }, uniformCopyData, uniform.offset);
+			else
+				SetUniformData(glm::vec3{ *vec }, uniformCopyData, uniform.offset);
+		}
+		else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec2>())
+		{
+			auto vec = mat->GetVector(uniform.name);
+			if (vec == nullptr)
+				SetUniformData(glm::vec2{ 0.f }, uniformCopyData, uniform.offset);
+			else
+				SetUniformData(glm::vec2{ *vec }, uniformCopyData, uniform.offset);
+		}
+		else if (uniform.typeName == sh::core::reflection::GetTypeName<float>())
+		{
+			float value = mat->GetFloat(uniform.name);
+			SetUniformData(value, uniformCopyData, uniform.offset);
+		}
+	}
+
 	void MeshRenderer::Update()
 	{
 		if (!sh::core::IsValid(mesh))
@@ -124,86 +178,29 @@ namespace sh::game
 		if (renderer->IsPause())
 			return;
 
+		render::Shader* shader = mat->GetShader();
+		if (!core::IsValid(shader))
+			return;
+
+		mat->UpdateUniformBuffers();
+
 		for (auto&[cam, drawable] : drawables)
 		{
 			if (!cam->active)
 				continue;
-			
-			std::array<const render::Shader::UniformMap*, 2> uniforms{ &mat->GetShader()->vertexUniforms ,  &mat->GetShader()->fragmentUniforms };
-			// 셰이더 유니폼 값 전달
-			for (int stageIdx = 0; stageIdx < 2; ++stageIdx) // 0 버텍스 스테이지 1 프레그먼트 스테이지
-			{
-				auto stage = render::IDrawable::Stage::Vertex;
-				if(stageIdx == 1)
-					stage = render::IDrawable::Stage::Fragment;
-				for (auto& [id, uniformVec] : *uniforms[stageIdx])
-				{
-					size_t size = uniformVec.back().offset + uniformVec.back().size;
-					uniformCopyData.resize(size);
-					for (const auto& uniform : uniformVec)
-					{
-						if (uniform.typeName == sh::core::reflection::GetTypeName<glm::mat4>())
-						{
-							if (uniform.name == "proj")
-								std::memcpy(uniformCopyData.data() + uniform.offset, &cam->GetProjMatrix()[0], sizeof(glm::mat4));
-							else if (uniform.name == "view")
-								std::memcpy(uniformCopyData.data() + uniform.offset, &cam->GetViewMatrix()[0], sizeof(glm::mat4));
-							else if (uniform.name == "model")
-								std::memcpy(uniformCopyData.data() + uniform.offset, &gameObject->transform->localToWorldMatrix[0], sizeof(glm::mat4));
-							else
-							{
-								auto matrix = mat->GetMatrix(uniform.name);
-								if (matrix == nullptr)
-								{
-									glm::mat4 defaultMat{ 0.f };
-									std::memcpy(uniformCopyData.data() + uniform.offset, &defaultMat[0], sizeof(glm::mat4));
-								}
-								else
-									std::memcpy(uniformCopyData.data() + uniform.offset, &matrix[0], sizeof(glm::mat4));
-							}
-						}
-						else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec4>())
-						{
-							auto vec = mat->GetVector(uniform.name);
-							if (vec == nullptr)
-								SetUniformData(glm::vec4{ 0.f }, uniformCopyData, uniform.offset);
-							else
-								SetUniformData(*vec, uniformCopyData, uniform.offset);
-						}
-						else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec3>())
-						{
-							auto vec = mat->GetVector(uniform.name);
-							if (vec == nullptr)
-								SetUniformData(glm::vec3{ 0.f }, uniformCopyData, uniform.offset);
-							else
-								SetUniformData(glm::vec3{ *vec }, uniformCopyData, uniform.offset);
-						}
-						else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec2>())
-						{
-							auto vec = mat->GetVector(uniform.name);
-							if (vec == nullptr)
-								SetUniformData(glm::vec2{ 0.f }, uniformCopyData, uniform.offset);
-							else
-								SetUniformData(glm::vec2{ *vec }, uniformCopyData, uniform.offset);
-						}
-						else if (uniform.typeName == sh::core::reflection::GetTypeName<float>())
-						{
-							float value = mat->GetFloat(uniform.name);
-							SetUniformData(value, uniformCopyData, uniform.offset);
-						}
-					}
 
-					drawable->SetUniformData(id, uniformCopyData.data(), stage);
-				}//for uniformPair
-			}//for i
-
-			// 텍스쳐
-			for (auto& sampler : mat->GetShader()->samplerFragmentUniforms)
+			struct alignas(16) Uniform
 			{
-				auto tex = mat->GetTexture(sampler.second.name);
-				if (tex != nullptr)
-					drawable->SetTextureData(sampler.first, tex);
-			}
+				glm::mat4 model;
+				glm::mat4 view;
+				glm::mat4 proj;
+			} uniform{};
+			uniform.model = gameObject->transform->localToWorldMatrix;
+			uniform.view = cam->GetViewMatrix();
+			uniform.proj = cam->GetProjMatrix();
+
+			drawable->SetUniformData(0, &uniform, render::IDrawable::Stage::Vertex);
+
 			gameObject->world.renderer.PushDrawAble(drawable);
 		}//drawables
 	}

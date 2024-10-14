@@ -8,6 +8,7 @@
 #include "Render/VulkanImpl/VulkanRenderer.h"
 #include "Render/VulkanImpl/VulkanShader.h"
 #include "Render/Mesh/Plane.h"
+#include "Render/IUniformBuffer.h"
 
 #include "Game/VulkanShaderBuilder.h"
 #include "Game/ShaderLoader.h"
@@ -82,45 +83,53 @@ namespace sh
 		TextureLoader texLoader{ *renderer };
 		ModelLoader modelLoader{ *renderer };
 
-		auto shader = world->shaders.AddResource("Triangle", loader.LoadShader<render::VulkanShader>
-			("shaders/vert.spv", "shaders/frag.spv"));
-		auto lineShader = world->shaders.AddResource("Line", loader.LoadShader<render::VulkanShader>
-			("shaders/lineVert.spv", "shaders/lineFrag.spv"));
-		auto mat = world->materials.AddResource("Material", sh::render::Material{ shader });
-		auto mat2 = world->materials.AddResource("Material2", sh::render::Material{ shader });
+		auto defaultShader = world->shaders.AddResource("Default", loader.LoadShader<render::VulkanShader>
+			("shaders/default.vert.spv", "shaders/default.frag.spv"));
+		auto lineShader = world->shaders.AddResource("Line", loader.LoadShader<render::VulkanShader>("shaders/line.vert.spv", "shaders/line.frag.spv"));
+		//auto mat = world->materials.AddResource("Material", sh::render::Material{ defaultShader });
+		auto mat2 = world->materials.AddResource("Material2", sh::render::Material{ defaultShader });
 		auto lineMat = world->materials.AddResource("LineMat", sh::render::Material{ lineShader });
 		auto plane = world->meshes.AddResource("Plane", sh::render::Plane{});
+		auto cube = world->meshes.AddResource("Cube", modelLoader.Load("model/cube.obj"));
 		auto mesh2 = world->meshes.AddResource("Mesh2", modelLoader.Load("model/test.obj"));
 		auto tex = world->textures.AddResource("Texture0", texLoader.Load("textures/버터고양이.jpg"));
 		auto tex2 = world->textures.AddResource("Texture1", texLoader.Load("textures/cat.jpg"));
 		auto tex3 = world->textures.AddResource("Texture2", texLoader.Load("textures/viking_room.png"));
 
-		shader->AddAttribute<glm::vec2>("uvs", 1);
+		defaultShader->AddAttribute<glm::vec2>("uvs", 1);
 
-		shader->AddUniform<glm::mat4>("model", 0, sh::render::Shader::ShaderStage::Vertex);
-		shader->AddUniform<glm::mat4>("view", 0, sh::render::Shader::ShaderStage::Vertex);
-		shader->AddUniform<glm::mat4>("proj", 0, sh::render::Shader::ShaderStage::Vertex);
-		shader->AddUniform<glm::vec3>("offset1", 1, sh::render::Shader::ShaderStage::Vertex);
-		shader->AddUniform<float>("offset2", 1, sh::render::Shader::ShaderStage::Vertex);
-		shader->AddUniform<sh::render::Texture>("tex", 2, sh::render::Shader::ShaderStage::Fragment);
-		shader->Build();
+		auto ObjectUniformType = render::Shader::UniformType::Object;
+		auto MaterialUniformType = render::Shader::UniformType::Material;
 
-		lineShader->AddUniform<glm::mat4>("model", 0, sh::render::Shader::ShaderStage::Vertex);
-		lineShader->AddUniform<glm::mat4>("view", 0, sh::render::Shader::ShaderStage::Vertex);
-		lineShader->AddUniform<glm::mat4>("proj", 0, sh::render::Shader::ShaderStage::Vertex);
-		lineShader->AddUniform<glm::vec4>("color", 1, sh::render::Shader::ShaderStage::Fragment);
-		lineShader->SetTopology(sh::render::Shader::Topology::Line);
+		defaultShader->AddUniform<glm::mat4>("model", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
+		defaultShader->AddUniform<glm::mat4>("view", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
+		defaultShader->AddUniform<glm::mat4>("proj", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
+
+		defaultShader->AddUniform<sh::render::Texture>("tex", MaterialUniformType, 0, sh::render::Shader::ShaderStage::Fragment);
+		defaultShader->Build();
+
+		lineShader->AddUniform<glm::mat4>("model", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
+		lineShader->AddUniform<glm::mat4>("view", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
+		lineShader->AddUniform<glm::mat4>("proj", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
+
+		lineShader->AddUniform<glm::vec3>("start", MaterialUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
+		lineShader->AddUniform<glm::vec3>("end", MaterialUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
+		lineShader->AddUniform<glm::vec4>("color", MaterialUniformType, 1, sh::render::Shader::ShaderStage::Fragment);
 		lineShader->Build();
 
-		mat->SetVector("offset1", glm::vec4(0.f, 0.0f, 0.f, 0.f));
-		mat->SetFloat("offset2", 0.f);
-		mat->SetTexture("tex", tex);
-
+		//mat2->SetFloat("offset2", 1.f);
+		//mat->SetTexture("tex", tex);
+		//mat->Build(*renderer);
 		mat2->SetTexture("tex", tex3);
+		mat2->Build(*renderer);
 
+		lineMat->SetVector("start", glm::vec4(0.f));
+		lineMat->SetVector("end", glm::vec4(0.f));
 		lineMat->SetVector("color", glm::vec4{ 1.0f, 1.0f, 0.0f, 1.0f });
+		lineMat->Build(*renderer);
 
 		plane->Build(*renderer);
+		cube->Build(*renderer);
 
 		GameObject* obj = world->AddGameObject("Test");
 		GameObject* obj2 = world->AddGameObject("Test2");
@@ -130,27 +139,31 @@ namespace sh
 
 		auto transform = obj->transform;
 		transform->SetRotation({ -90.f, 0.f, 0.f });
+		transform = obj3->transform;
+		transform->SetPosition(0, 1, 0);
 
 		auto meshRenderer = obj->AddComponent<MeshRenderer>();
 		meshRenderer->SetMesh(*mesh2);
 		meshRenderer->SetMaterial(*mat2);
 
+		obj2->transform->SetParent(obj->transform);
+
 		obj->AddComponent<UniformTest>();
 
-		auto meshRenderer2 = obj2->AddComponent<MeshRenderer>();
-		meshRenderer2->SetMesh(*plane);
-		meshRenderer2->SetMaterial(*mat);
+		//auto meshRenderer = obj2->AddComponent<MeshRenderer>();
+		//meshRenderer->SetMesh(*cube);
+		//meshRenderer->SetMaterial(*mat);
 
 		GameObject* cam = world->AddGameObject("Camera");
 		cam->transform->SetPosition(glm::vec3(2.f, 2.f, 2.f));
-		GameObject* cam2 = world->AddGameObject("Camera2");
-		cam2->transform->SetPosition(glm::vec3(-2.f, 2.f, -2.f));
-		Camera* cameraComponent2 = cam2->AddComponent<Camera>();
-		cameraComponent2->SetRenderTexture(editorUI->GetViewport().GetRenderTexture());
+		//GameObject* cam2 = world->AddGameObject("Camera2");
+		//cam2->transform->SetPosition(glm::vec3(-2.f, 2.f, -2.f));
+		//Camera* cameraComponent2 = cam2->AddComponent<Camera>();
+		//cameraComponent2->SetRenderTexture(editorUI->GetViewport().GetRenderTexture());
 #if SH_EDITOR
 		Camera* cameraComponent = cam->AddComponent<EditorCamera>();
 		cameraComponent->SetRenderTexture(editorUI->GetViewport().GetRenderTexture());
-		cameraComponent->SetDepth(2);
+		//cameraComponent->SetDepth(2);
 #endif
 
 		world->SetMainCamera(cameraComponent);

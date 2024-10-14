@@ -172,6 +172,10 @@ namespace sh::render::impl
 		else
 			std::memcpy(this->data, data, static_cast<size_t>(bufferInfo.size));
 	}
+	auto VulkanBuffer::GetData() const -> void*
+	{
+		return data;
+	}
 
 	auto VulkanBuffer::GetBuffer() const -> VkBuffer
 	{

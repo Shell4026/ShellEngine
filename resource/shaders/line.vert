@@ -1,14 +1,21 @@
 #version 430 core
-layout(location = 0) in vec3 verts;
 
-layout(binding = 0) uniform MVP
+layout(set = 0, binding = 0) uniform MVP
 {
 	mat4 model;
 	mat4 view;
 	mat4 proj;
 } mvp;
+layout(set = 1, binding = 0) uniform Points
+{
+	vec3 start;
+	vec3 end;
+} points;
 
 void main()
 {
-	gl_Position = mvp.proj * mvp.view * mvp.model * vec4(verts, 1.0);
+	vec3 point = points.start;
+	if(gl_VertexIndex == 1)
+		point = points.end;
+	gl_Position = mvp.proj * mvp.view * mvp.model * vec4(point, 1.0);
 }

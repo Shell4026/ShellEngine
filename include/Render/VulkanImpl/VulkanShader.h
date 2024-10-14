@@ -5,6 +5,7 @@
 #include "VulkanConfig.h"
 #include "VulkanPipeline.h"
 
+#include "Core/SContainer.hpp"
 #include "Core/NonCopyable.h"
 
 #include <vector>
@@ -21,12 +22,13 @@ namespace sh::render
 		VkShaderModule vertShader;
 		VkShaderModule fragShader;
 
-		std::vector<VkDescriptorSetLayoutBinding> descriptorBindings;
-		VkDescriptorSetLayout descriptorSetLayout;
+		core::SVector<VkDescriptorSetLayoutBinding> localDescriptorBindings;
+		core::SVector<VkDescriptorSetLayoutBinding> descriptorBindings;
+		core::SVector<VkDescriptorSetLayout> descriptorSetLayout;
 
 		VkPipelineLayout pipelineLayout;
 	private:
-		void AddDescriptorBinding(uint32_t binding, VkDescriptorType type, VkShaderStageFlagBits stage);
+		void AddDescriptorBinding(uint32_t set, uint32_t binding, VkDescriptorType type, VkShaderStageFlagBits stage);
 		auto CreateDescriptorLayout() -> VkResult;
 		auto CreatePipelineLayout() -> VkResult;
 
@@ -46,7 +48,10 @@ namespace sh::render
 
 		SH_RENDER_API void Build();
 
-		SH_RENDER_API auto GetDescriptorSetLayout() const -> VkDescriptorSetLayout;
+		/// @brief 디스크립터셋 레이아웃을 반환 하는 함수
+		/// @param set 세트 번호
+		/// @return 디스크립터셋 레이아웃 포인터
+		SH_RENDER_API auto GetDescriptorSetLayout(uint32_t set) const -> VkDescriptorSetLayout;
 		SH_RENDER_API auto GetPipelineLayout() const -> VkPipelineLayout;
 	};
 }

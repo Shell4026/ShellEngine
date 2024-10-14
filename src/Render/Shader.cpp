@@ -3,11 +3,19 @@
 
 namespace sh::render
 {
-	Shader::Shader(int id, ShaderType type) :
-		attributes(attrs), 
-		vertexUniforms(_vertexUniforms), fragmentUniforms(_fragmentUniforms),
-		samplerFragmentUniforms(_samplerFragmentUniforms),
+	Shader::UniformData::UniformData(const UniformData& other) :
+		binding(other.binding), offset(other.offset), size(other.size),
+		name(other.name), typeName(other.typeName)
+	{
+	}
 
+	Shader::UniformData::UniformData(UniformData&& other) noexcept :
+		binding(other.binding), offset(other.offset), size(other.size),
+		name(std::move(other.name)), typeName(other.typeName)
+	{
+	}
+
+	Shader::Shader(int id, ShaderType type) :
 		id(id), type(type) 
 	{
 		AddAttribute<glm::vec3>("vertex", 0);
@@ -15,17 +23,12 @@ namespace sh::render
 
 
 	Shader::Shader(Shader&& other) noexcept :
-		attributes(attrs), 
-		vertexUniforms(_vertexUniforms), fragmentUniforms(_fragmentUniforms),
-		samplerFragmentUniforms(_samplerFragmentUniforms),
-
 		id(other.id), type(other.type),
 		attrs(std::move(other.attrs)), attridx(std::move(other.attridx)),
-		_vertexUniforms(std::move(other._vertexUniforms)),
-		_fragmentUniforms(std::move(other._fragmentUniforms)),
-		_samplerVertexUniforms(std::move(other._samplerVertexUniforms)),
-		_samplerFragmentUniforms(std::move(other._samplerFragmentUniforms)),
-		topology(other.topology)
+		uniformBindings(std::move(other.uniformBindings)),
+		vertexUniforms(std::move(other.vertexUniforms)),
+		fragmentUniforms(std::move(other.fragmentUniforms)),
+		samplerUniforms(std::move(other.samplerUniforms))
 	{
 	}
 
@@ -40,6 +43,10 @@ namespace sh::render
 
 		attrs = std::move(other.attrs);
 		attridx = std::move(other.attridx);
+		uniformBindings = std::move(other.uniformBindings);
+		vertexUniforms = std::move(other.vertexUniforms);
+		fragmentUniforms = std::move(other.fragmentUniforms);
+		samplerUniforms = std::move(other.samplerUniforms);
 	}
 
 	auto Shader::operator==(const Shader& other) -> bool
@@ -68,25 +75,27 @@ namespace sh::render
 		
 		return attrs[it->second];
 	}
-
-	Shader::UniformData::UniformData(const UniformData& other) :
-		binding(other.binding), offset(other.offset), size(other.size),
-		name(other.name), typeName(other.typeName)
+	auto Shader::GetAttributes() const -> const std::vector<Data>&
 	{
+		return attrs;
 	}
-
-	Shader::UniformData::UniformData(UniformData&& other) noexcept :
-		binding(other.binding), offset(other.offset), size(other.size),
-		name(std::move(other.name)), typeName(other.typeName)
+	auto Shader::GetVertexUniforms() const -> const std::vector<UniformBlock>&
 	{
+		return vertexUniforms;
 	}
-
-	void Shader::SetTopology(Topology topology)
+	auto Shader::GetFragmentUniforms() const -> const std::vector<UniformBlock>&
 	{
-		this->topology = topology;
+		return fragmentUniforms;
 	}
-	auto Shader::GetTopology() const -> Topology
+	auto Shader::GetSamplerUniforms() const -> const std::vector<UniformData>&
 	{
-		return topology;
+		return samplerUniforms;
+	}
+	auto Shader::GetUniformBinding(std::string_view name) const -> std::optional<uint32_t>
+	{
+		auto it = uniformBindings.find(std::string{ name });
+		if (it == uniformBindings.end())
+			return {};
+		return it->second;
 	}
 }

@@ -52,7 +52,7 @@ namespace sh::render::impl {
 		SH_RENDER_API bool CreateSurface(sh::window::Window& window, VkInstance instance);
 		SH_RENDER_API void DestroySurface();
 
-		SH_RENDER_API bool CreateSwapChain(VkPhysicalDevice gpu, uint32_t graphicsQueueIdx, uint32_t surfaceQueueIdx);
+		SH_RENDER_API bool CreateSwapChain(VkPhysicalDevice gpu, uint32_t graphicsQueueFamily, uint32_t surfaceQueueFamily);
 		SH_RENDER_API void DestroySwapChain();
 		
 		SH_RENDER_API bool IsSwapChainSupport(VkPhysicalDevice gpu);

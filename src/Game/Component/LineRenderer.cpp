@@ -9,7 +9,7 @@
 namespace sh::game
 {
 	LineRenderer::LineRenderer() :
-		start(0, 0, 0), end(0, 1, 0), mesh(),
+		start(0, 0, 0), end(0, 1, 0), mesh(), mat(nullptr),
 		bUpdate(false)
 	{
 		mesh.SetVertex({ start, end });
@@ -23,7 +23,9 @@ namespace sh::game
 	{
 		mesh.Build(gameObject->world.renderer);
 
-		render::Material* mat = gameObject->world.materials.GetResource("LineMat");
+		mat = gameObject->world.materials.GetResource("LineMat");
+		mat->SetVector("start", glm::vec4(start, 1.f));
+		mat->SetVector("end", glm::vec4(end, 1.f));
 		assert(mat != nullptr);
 		Super::SetMaterial(*mat);
 
@@ -35,9 +37,8 @@ namespace sh::game
 		if (!bUpdate)
 			return;
 
-		mesh.SetVertex({ this->start, this->end });
-		mesh.Build(gameObject->world.renderer);
-		this->RebuildDrawables();
+		mat->SetVector("start", glm::vec4(start, 1.f));
+		mat->SetVector("end", glm::vec4(end, 1.f));
 
 		bUpdate = false;
 	}

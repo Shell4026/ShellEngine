@@ -52,7 +52,7 @@ namespace sh::render
 		SetDirty();
 	}
 
-	auto Texture::GetBuffer(core::ThreadType thr) -> ITextureBuffer*
+	auto Texture::GetBuffer(core::ThreadType thr) const -> ITextureBuffer*
 	{
 		return buffer[thr].get();
 	}

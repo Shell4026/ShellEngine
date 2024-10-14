@@ -91,26 +91,26 @@ namespace sh::render
 		size_t size = sizeof(glm::vec3) * mesh.GetVertexCount();
 		impl::VulkanBuffer stagingBuffer1{ renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() };
 		stagingBuffer1.Create(size, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			VK_SHARING_MODE_EXCLUSIVE,
+			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		stagingBuffer1.SetData(mesh.GetVertex().data());
 
 		buffers.push_back(impl::VulkanBuffer{ renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() });
 		buffers[0].Create(size,
 			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-			VK_SHARING_MODE_EXCLUSIVE,
+			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 		size_t sizeIndices = sizeof(uint32_t) * mesh.GetIndices().size();
 		impl::VulkanBuffer stagingBuffer2{ renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() };
 		stagingBuffer2.Create(sizeIndices, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			VK_SHARING_MODE_EXCLUSIVE,
+			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		stagingBuffer2.SetData(mesh.GetIndices().data());
 
 		indexBuffer.Create(sizeIndices,
 			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-			VK_SHARING_MODE_EXCLUSIVE,
+			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 		VkCommandBufferBeginInfo info{};

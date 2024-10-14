@@ -32,6 +32,7 @@ namespace sh::render
 
 		enum class Topology
 		{
+			Point,
 			Line,
 			Face
 		};
@@ -108,7 +109,7 @@ namespace sh::render
 		{
 			if (attrPtr->name == attr.name)
 			{
-				attrPtr.get()->SetData(attr.GetData());
+				static_cast<ShaderAttribute<T>&>(*attrPtr.get()).SetData(attr.GetData());
 				return;
 			}
 		}

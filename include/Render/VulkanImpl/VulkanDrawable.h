@@ -8,6 +8,7 @@
 #include "VulkanPipeline.h"
 #include "VulkanBuffer.h"
 #include "VulkanCommandBuffer.h"
+#include "VulkanUniformBuffer.h"
 
 #include <vector>
 #include <memory>
@@ -27,53 +28,40 @@ namespace sh::render
 		Material* mat;
 		PROPERTY(mesh)
 		Mesh* mesh;
-		PROPERTY(textures)
-		std::map<uint32_t, Texture*> textures;
 		Camera* camera;
 
-		
 		//동기화 필요 목록
 		core::SyncArray<std::unique_ptr<impl::VulkanPipeline>> pipeline;
-		core::SyncArray<VkDescriptorSet> descriptorSet;
-		core::SyncArray<std::map<uint32_t, impl::VulkanBuffer>> vertUniformBuffers;
-		core::SyncArray<std::map<uint32_t, impl::VulkanBuffer>> fragUniformBuffers;
+		core::SyncArray<core::SMap<uint32_t, std::unique_ptr<impl::VulkanBuffer>>> localVertBuffer;
+		core::SyncArray<core::SMap<uint32_t, std::unique_ptr<impl::VulkanBuffer>>> localFragBuffer;
+		core::SyncArray<std::unique_ptr<impl::VulkanUniformBuffer>> localDescSet;
 
-		bool bInit;
-		bool bDirty;
-		bool bTextureDirty;
-		bool bPipelineDirty;
-	private:
-		void CreateUniformBuffers(core::ThreadType thr, const Shader& shader);
-		void UpdateDescriptors(core::ThreadType thr);
+		bool bInit, bDirty, bBufferDirty, bPipelineDirty;
+	protected:
+		void Clean(core::ThreadType thr);
+		void CreateBuffer(core::ThreadType thr);
 	public:
 		SH_RENDER_API VulkanDrawable(VulkanRenderer& renderer);
 		SH_RENDER_API VulkanDrawable(VulkanDrawable&& other) noexcept;
 		SH_RENDER_API VulkanDrawable(const VulkanDrawable& other) = delete;
 		SH_RENDER_API ~VulkanDrawable() noexcept;
 
-		SH_RENDER_API void Clean();
-
 		SH_RENDER_API void Build(Camera& camera, Mesh& mesh, Material* mat) override;
+
+		/// @brief [게임 스레드용] 로컬 유니폼에 데이터를 지정한다.
+		/// @param binding 바인딩 번호
+		/// @param data 데이터 위치 포인터
+		/// @param stage 셰이더 스테이지
+		SH_RENDER_API void SetUniformData(uint32_t binding, const void* data, Stage stage) override;
 
 		SH_RENDER_API auto GetMaterial() const -> Material* override;
 		SH_RENDER_API auto GetMesh() const-> Mesh* override;
 		SH_RENDER_API auto GetCamera() const-> Camera* override;
 
-		/// @brief 유니폼에 데이터를 지정한다.
-		/// @param binding 바인딩 번호
-		/// @param data 데이터 위치 포인터
-		/// @param stage 셰이더 스테이지
-		/// @return 
-		SH_RENDER_API void SetUniformData(uint32_t binding, const void* data, Stage stage) override;
-
-		/// @brief 유니폼 텍스쳐 데이터를 지정한다.
-		/// @param binding 텍스쳐 바인딩 번호
-		/// @param tex 텍스쳐 포인터
-		/// @return 
-		SH_RENDER_API void SetTextureData(uint32_t binding, Texture* tex) override;
-
 		SH_RENDER_API auto GetPipeline(core::ThreadType thr) const->impl::VulkanPipeline*;
-		SH_RENDER_API auto GetDescriptorSet() const -> VkDescriptorSet;
+
+		SH_RENDER_API auto GetLocalUniformBuffer(core::ThreadType thr) const -> impl::VulkanUniformBuffer*;
+		SH_RENDER_API auto GetDescriptorSet(core::ThreadType thr) const -> VkDescriptorSet;
 
 		SH_RENDER_API void SetDirty() override;
 		SH_RENDER_API void Sync() override;

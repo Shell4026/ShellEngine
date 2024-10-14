@@ -60,4 +60,16 @@ namespace sh::core {
 		auto end = std::chrono::high_resolution_clock::now();
 		return std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 	}
+
+	auto Util::AlignTo(uint32_t value, uint32_t alignment) -> uint32_t
+	{
+		// ex) value = 20, alignment = 16
+		// value = 0001'0100
+		// alignment = 0001'0000
+		// alignment - 1 = 0000'1111
+		// ~(alignment - 1) = 1111'0000 - 끝 4비트가 0이면 16의 배수라는 뜻.
+		// 35 = 0010'0011
+		// 0010'0011 & 1111'0000 = 0010'0000 = 32 
+		return (value + alignment - 1) & ~(alignment - 1);
+	}
 }

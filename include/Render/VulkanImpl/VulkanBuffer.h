@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "VulkanConfig.h"
+#include "IBuffer.h"
 
 #include "Render/Export.h"
 
@@ -8,7 +9,7 @@ namespace sh::render
 {
 	namespace impl
 	{
-		class VulkanBuffer
+		class VulkanBuffer : public IBuffer
 		{
 		private:
 			VkDevice device;
@@ -38,6 +39,7 @@ namespace sh::render
 			SH_RENDER_API auto Create(size_t size, VkBufferUsageFlags usageBits, VkSharingMode sharing, VkMemoryPropertyFlags memPropFlagBits, bool persistentMapping = false) -> VkResult;
 			SH_RENDER_API void Clean();
 			SH_RENDER_API void SetData(const void* data);
+			SH_RENDER_API auto GetData() const -> void* override;
 			SH_RENDER_API auto GetBuffer() const -> VkBuffer;
 			SH_RENDER_API auto GetBufferInfo() const -> const VkBufferCreateInfo&;
 			SH_RENDER_API auto GetBufferMemory() const -> VmaAllocation;

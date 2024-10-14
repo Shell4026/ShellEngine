@@ -95,6 +95,6 @@ namespace sh::render {
 		SH_RENDER_API void SetDirty() override;
 		SH_RENDER_API void Sync() override;
 
-		SH_RENDER_API auto GetThreadSyncManager() -> core::ThreadSyncManager&;
+		SH_RENDER_API auto GetThreadSyncManager() const -> core::ThreadSyncManager&;
 	};
 }

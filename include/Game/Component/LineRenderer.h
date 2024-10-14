@@ -23,6 +23,8 @@ namespace sh::game
 		glm::vec3 end;
 
 		render::Mesh mesh;
+		PROPERTY(mat)
+		render::Material* mat;
 
 		bool bUpdate;
 	public:

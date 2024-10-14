@@ -58,7 +58,7 @@ namespace sh::game
 		initInfo.Instance = renderer.GetInstance();
 		initInfo.PhysicalDevice = renderer.GetGPU();
 		initInfo.Device = renderer.GetDevice();
-		initInfo.QueueFamily = renderer.GetGraphicsQueueIdx();
+		initInfo.QueueFamily = renderer.GetGraphicsQueueIdx().first;
 		initInfo.Queue = renderer.GetGraphicsQueue();
 		initInfo.DescriptorPool = &renderer.GetDescriptorPool();
 		initInfo.RenderPass = static_cast<const render::impl::VulkanFramebuffer*>(renderer.GetMainFramebuffer())->GetRenderPass();

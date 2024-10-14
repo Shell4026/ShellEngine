@@ -47,7 +47,7 @@ namespace sh::render {
 		VkInstance instance;
 		VkPhysicalDeviceProperties gpuProp;
 		VkPhysicalDevice gpu;
-		VkDevice device; //논리적 장치
+		VkDevice device; // 논리적 장치
 		std::vector<impl::VulkanFramebuffer> framebuffers;
 
 		core::SyncArray<VkCommandPool> cmdPool;
@@ -58,13 +58,16 @@ namespace sh::render {
 		VkDebugUtilsMessengerEXT debugMessenger;
 		std::string validationLayerName;
 
-		uint32_t graphicsQueueIndex;
-		uint32_t surfaceQueueIndex;
+		std::pair<uint8_t, uint8_t> graphicsQueueIndex; // 큐패밀리, 큐
+		std::pair<uint8_t, uint8_t> surfaceQueueIndex;
+		std::pair<uint8_t, uint8_t> transferQueueIndex;
 		VkQueue graphicsQueue;
 		VkQueue surfaceQueue;
+		VkQueue transferQueue; // 큐 하나만 지원하면 nullptr
 
 		VkSemaphore imageAvailableSemaphore;
 		VkSemaphore renderFinishedSemaphore;
+		VkSemaphore gameThreadSemaphore;
 		VkFence inFlightFence;
 
 		int currentFrame;
@@ -94,7 +97,7 @@ namespace sh::render {
 		auto CreateDevice(VkPhysicalDevice gpu)->VkResult;
 		void DestroyDevice();
 
-		void CreateCommandPool(uint32_t queue);
+		void CreateCommandPool(uint32_t queueFamily);
 		void DestroyCommandPool();
 		auto ResetCommandPool(uint32_t queue) -> VkResult;
 
@@ -129,7 +132,9 @@ namespace sh::render {
 		SH_RENDER_API auto GetCommandPool(core::ThreadType thr) const -> VkCommandPool;
 		SH_RENDER_API auto GetCommandBuffer(core::ThreadType thr) const -> VkCommandBuffer;
 		SH_RENDER_API auto GetGraphicsQueue() const -> VkQueue;
-		SH_RENDER_API auto GetGraphicsQueueIdx() const -> uint32_t;
+		SH_RENDER_API auto GetGraphicsQueueIdx() const -> std::pair<uint8_t, uint8_t>;
+		SH_RENDER_API auto GetTransferQueue() const-> VkQueue;
+		SH_RENDER_API auto GetTransferQueueIdx() const->std::pair<uint8_t, uint8_t>;
 		SH_RENDER_API auto GetMainFramebuffer() const -> const Framebuffer* override;
 		SH_RENDER_API auto GetDescriptorPool() const -> impl::VulkanDescriptorPool&;
 		SH_RENDER_API auto GetCurrentFrame() const -> int;
@@ -137,5 +142,7 @@ namespace sh::render {
 		SH_RENDER_API auto GetHeight() const -> uint32_t override;
 		SH_RENDER_API auto GetAllocator() const -> VmaAllocator;
 		SH_RENDER_API auto GetGPUProperty() const -> const VkPhysicalDeviceProperties&;
+		SH_RENDER_API auto GetRenderFinshedSemaphore() const -> VkSemaphore;
+		SH_RENDER_API auto GetGameThreadSemaphore() const -> VkSemaphore;
 	};
 }//namespace

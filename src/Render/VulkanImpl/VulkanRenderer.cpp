@@ -11,6 +11,7 @@
 #include "VulkanDescriptorPool.h"
 #include "VulkanShader.h"
 #include "VulkanDrawable.h"
+#include "VulkanUniformBuffer.h"
 
 #include "Mesh.h"
 #include "Material.h"
@@ -26,14 +27,15 @@ namespace sh::render {
 	VulkanRenderer::VulkanRenderer(core::ThreadSyncManager& syncManager) :
 		Renderer(RenderAPI::Vulkan, syncManager),
 		instance(nullptr), gpu(nullptr), device(nullptr), window(nullptr),
-		graphicsQueueIndex(-1), surfaceQueueIndex(-1),
+		graphicsQueueIndex({ -1, 0 }), surfaceQueueIndex({ -1, 0 }),
 		graphicsQueue(nullptr), surfaceQueue(nullptr),
 		debugMessenger(nullptr), validationLayerName("VK_LAYER_KHRONOS_validation"),
 		currentFrame(0),
 		isInit(false), bFindValidationLayer(false), bEnableValidationLayers(sh::core::Util::IsDebug()),
 		allocator(nullptr), 
 		descPool(nullptr),
-		descriptorPoolSize(10)
+		descriptorPoolSize(10),
+		gameThreadSemaphore(nullptr)
 	{
 	}
 
@@ -245,24 +247,48 @@ namespace sh::render {
 
 		VkPhysicalDeviceFeatures deviceFeatures{};
 
-		assert(graphicsQueueIndex != -1);
-		assert(surfaceQueueIndex != -1);
+		assert(graphicsQueueIndex.first != -1);
+		assert(surfaceQueueIndex.first != -1);
+		assert(transferQueueIndex.first != -1);
 		std::vector<VkDeviceQueueCreateInfo> queueInfos;
-		std::set<uint32_t> queueIdxs = { graphicsQueueIndex, surfaceQueueIndex };
+		std::map<uint8_t, uint32_t> queueCount{};
+
+		queueCount.insert({ graphicsQueueIndex.first, 1 });
+		auto it = queueCount.find(surfaceQueueIndex.first);
+		if (it == queueCount.end())
+		{
+			queueCount.insert({ surfaceQueueIndex.first, 1 });
+		}
+		else
+		{
+			int maxCount = queueFamilies[it->first].queueCount;
+			it->second = (maxCount > it->second) ? it->second + 1 : it->second;
+			surfaceQueueIndex.second = it->second - 1;
+		}
+		it = queueCount.find(transferQueueIndex.first);
+		if (it == queueCount.end())
+		{
+			queueCount.insert({ transferQueueIndex.first, 1 });
+		}
+		else
+		{
+			int maxCount = queueFamilies[it->first].queueCount;
+			it->second = (maxCount > it->second) ? it->second + 1 : it->second;
+			transferQueueIndex.second = it->second - 1;
+		}
 
 		float queuePriority = 1.0f;
-		for (auto idx : queueIdxs)
+		for (auto& [idx, count] : queueCount)
 		{
 			VkDeviceQueueCreateInfo queueInfo = {};
 			queueInfo.queueFamilyIndex = idx;
 			queueInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 			queueInfo.pNext = nullptr;
-			queueInfo.queueCount = 1;
+			queueInfo.queueCount = count;
 			queueInfo.pQueuePriorities = &queuePriority;
 
 			queueInfos.push_back(queueInfo);
 		}
-
 
 		VkDeviceCreateInfo deviceInfo = {};
 		deviceInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -288,12 +314,12 @@ namespace sh::render {
 		}
 	}
 
-	void VulkanRenderer::CreateCommandPool(uint32_t queue)
+	void VulkanRenderer::CreateCommandPool(uint32_t queueFamily)
 	{
 		VkCommandPoolCreateInfo poolInfo = {};
 		poolInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 		poolInfo.pNext = nullptr;
-		poolInfo.queueFamilyIndex = queue;
+		poolInfo.queueFamilyIndex = queueFamily;
 		poolInfo.flags = VkCommandPoolCreateFlagBits::VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; //명령 버퍼가 개별적으로 기록되도록 허용
 
 		for (int thr = 0; thr < cmdPool.size(); ++thr)
@@ -348,6 +374,11 @@ namespace sh::render {
 		if (result != VkResult::VK_SUCCESS)
 			return result;
 
+		result = vkCreateSemaphore(device, &semaphoreInfo, nullptr, &gameThreadSemaphore);
+		assert(result == VkResult::VK_SUCCESS);
+		if (result != VkResult::VK_SUCCESS)
+			return result;
+
 		result = vkCreateFence(device, &fenceInfo, nullptr, &inFlightFence);
 		assert(result == VkResult::VK_SUCCESS);
 		if (result != VkResult::VK_SUCCESS)
@@ -360,6 +391,7 @@ namespace sh::render {
 	{
 		vkDestroySemaphore(device, imageAvailableSemaphore, nullptr);
 		vkDestroySemaphore(device, renderFinishedSemaphore, nullptr);
+		vkDestroySemaphore(device, gameThreadSemaphore, nullptr);
 		vkDestroyFence(device, inFlightFence, nullptr);
 	}
 
@@ -453,12 +485,21 @@ namespace sh::render {
 		vkGetPhysicalDeviceProperties(gpu, &gpuProp);
 		fmt::print("GPU: {}\n", gpuProp.deviceName);
 
-		//그래픽 큐와 화면 큐 선택
+		// 큐 선택
 		GetQueueFamilyProperties(gpu);
-		if (auto idx = SelectQueueFamily(VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT); !idx.has_value()) return false;
-		else graphicsQueueIndex = *idx;
-		if (auto idx = GetSurfaceQueueFamily(gpu); !idx.has_value()) return false;
-		else surfaceQueueIndex = *idx;
+		if (auto idx = SelectQueueFamily(VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT); !idx.has_value()) 
+			return false;
+		else 
+			graphicsQueueIndex.first = *idx;
+		if (auto idx = GetSurfaceQueueFamily(gpu); !idx.has_value()) 
+			return false;
+		else 
+			surfaceQueueIndex.first = *idx;
+		if (auto idx = SelectQueueFamily(VkQueueFlagBits::VK_QUEUE_TRANSFER_BIT); !idx.has_value())
+			return false;
+		else
+			transferQueueIndex.first = *idx;
+
 
 		requestedDeviceExtension = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 		//가상 장치 생성
@@ -467,16 +508,18 @@ namespace sh::render {
 		surface->SetDevice(device);
 
 		//가상 장치에서 큐를 가져온다.
-		vkGetDeviceQueue(device, graphicsQueueIndex, 0, &graphicsQueue);
+		vkGetDeviceQueue(device, graphicsQueueIndex.first, graphicsQueueIndex.second, &graphicsQueue); // graphicsQueue를 가진 큐 패밀리에서 n번째 큐를 가져옴
 		assert(graphicsQueue);
-		vkGetDeviceQueue(device, surfaceQueueIndex, 0, &surfaceQueue);
+		vkGetDeviceQueue(device, surfaceQueueIndex.first, surfaceQueueIndex.second, &surfaceQueue);
 		assert(surfaceQueue);
+		vkGetDeviceQueue(device, transferQueueIndex.first, transferQueueIndex.second, &transferQueue);
+		assert(transferQueue);
 
 		//메모리 할당자 생성(VMA라이브러리)
 		CreateAllocator();
 
 		//스왑체인 생성
-		surface->CreateSwapChain(gpu, graphicsQueueIndex, surfaceQueueIndex);
+		surface->CreateSwapChain(gpu, graphicsQueueIndex.first, surfaceQueueIndex.first);
 
 		//프레임버퍼 생성 (렌더패스 생성 -> 프레임버퍼 생성)
 		auto& imgs = surface->GetSwapChainImageViews();
@@ -491,7 +534,7 @@ namespace sh::render {
 		}
 
 		//커맨드 풀과 커맨드 버퍼 생성
-		CreateCommandPool(graphicsQueueIndex);
+		CreateCommandPool(graphicsQueueIndex.first);
 
 		cmdBuffer[core::ThreadType::Game] = std::make_unique<impl::VulkanCommandBuffer>(device, cmdPool[core::ThreadType::Game]);
 		cmdBuffer[core::ThreadType::Game]->Create();
@@ -520,7 +563,7 @@ namespace sh::render {
 		framebuffers.clear();
 		surface->DestroySwapChain();
 
-		surface->CreateSwapChain(gpu, graphicsQueueIndex, surfaceQueueIndex);
+		surface->CreateSwapChain(gpu, graphicsQueueIndex.first, surfaceQueueIndex.first);
 
 		auto& imgs = surface->GetSwapChainImageViews();
 		framebuffers.reserve(imgs.size());
@@ -609,7 +652,9 @@ namespace sh::render {
 		cmdBuffer[core::ThreadType::Render]->Reset();
 		cmdBuffer[core::ThreadType::Render]->SetWaitSemaphore({ imageAvailableSemaphore });
 		cmdBuffer[core::ThreadType::Render]->SetSignalSemaphore({ renderFinishedSemaphore });
-		cmdBuffer[core::ThreadType::Render]->SetWaitStage({ VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT });
+		cmdBuffer[core::ThreadType::Render]->SetWaitStage({ 
+			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+		});
 
 		VkCommandBuffer buffer = cmdBuffer[core::ThreadType::Render]->GetCommandBuffer();
 		if (drawList[core::ThreadType::Render].empty())
@@ -622,7 +667,7 @@ namespace sh::render {
 			for (auto& [camera, drawables] : drawList[core::ThreadType::Render])
 			{
 				auto renderTexture = camera->GetRenderTexture();
-				//프레임버퍼에 그림
+				// 프레임버퍼에 그림
 				if(renderTexture != nullptr)
 				{
 					auto framebuffer = static_cast<const impl::VulkanFramebuffer*>(renderTexture->GetFramebuffer());
@@ -657,7 +702,6 @@ namespace sh::render {
 					vkCmdSetScissor(buffer, 0, 1, &scissor);
 
 					VkPipeline lastPipeline = nullptr;
-
 					for (auto iDrawable : drawables)
 					{
 						VulkanDrawable* drawable = static_cast<VulkanDrawable*>(iDrawable);
@@ -686,11 +730,15 @@ namespace sh::render {
 						}
 						mesh->GetVertexBuffer()->Bind();
 
-						VkDescriptorSet descriptorSets[] = { drawable->GetDescriptorSet() };
+						VkDescriptorSet localDescSet = drawable->GetDescriptorSet(core::ThreadType::Render);
+						VkDescriptorSet descSet = static_cast<impl::VulkanUniformBuffer*>(mat->GetUniformBuffer(core::ThreadType::Render))->GetVkDescriptorSet();
+						std::array<VkDescriptorSet, 2> descriptorSets = { localDescSet, descSet };
+
 						vkCmdBindDescriptorSets(buffer,
 							VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS,
-							shader->GetPipelineLayout(), 0, 1,
-							descriptorSets, 0, nullptr);
+							shader->GetPipelineLayout(), 0, descriptorSets.size(),
+							descriptorSets.data(), 0, nullptr);
+
 						vkCmdDrawIndexed(buffer, mesh->GetIndices().size(), 1, 0, 0, 0);
 					}
 					//End RenderPass
@@ -729,6 +777,11 @@ namespace sh::render {
 					viewport.maxDepth = 1.0f;
 					vkCmdSetViewport(buffer, 0, 1, &viewport);
 
+					VkRect2D scissor{};
+					scissor.offset = { 0, 0 };
+					scissor.extent = surface->GetSwapChainSize();
+					vkCmdSetScissor(buffer, 0, 1, &scissor);
+
 					VkPipeline lastPipeline = nullptr;
 					for (auto iDrawable : drawables)
 					{
@@ -755,19 +808,16 @@ namespace sh::render {
 							lastPipeline = currentPipeline->GetPipeline();
 							vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, lastPipeline);
 						}
-
-						VkRect2D scissor{};
-						scissor.offset = { 0, 0 };
-						scissor.extent = surface->GetSwapChainSize();
-						vkCmdSetScissor(buffer, 0, 1, &scissor);
-
 						mesh->GetVertexBuffer()->Bind();
 
-						VkDescriptorSet descriptorSets[] = { drawable->GetDescriptorSet() };
+						VkDescriptorSet localDescSet = drawable->GetDescriptorSet(core::ThreadType::Render);
+						VkDescriptorSet descSet = static_cast<impl::VulkanUniformBuffer*>(mat->GetUniformBuffer(core::ThreadType::Render))->GetVkDescriptorSet();
+						std::array<VkDescriptorSet, 2> descriptorSets = { localDescSet, descSet };
+						
 						vkCmdBindDescriptorSets(buffer,
 							VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS,
-							shader->GetPipelineLayout(), 0, 1,
-							descriptorSets, 0, nullptr);
+							shader->GetPipelineLayout(), 0, descriptorSets.size(),
+							descriptorSets.data(), 0, nullptr);
 						vkCmdDrawIndexed(buffer, mesh->GetIndices().size(), 1, 0, 0, 0);
 					}
 
@@ -870,9 +920,17 @@ namespace sh::render {
 	{
 		return graphicsQueue;
 	}
-	auto VulkanRenderer::GetGraphicsQueueIdx() const -> uint32_t
+	auto VulkanRenderer::GetGraphicsQueueIdx() const -> std::pair<uint8_t, uint8_t>
 	{
 		return graphicsQueueIndex;
+	}
+	auto VulkanRenderer::GetTransferQueue() const -> VkQueue
+	{
+		return transferQueue;
+	}
+	auto VulkanRenderer::GetTransferQueueIdx() const -> std::pair<uint8_t, uint8_t>
+	{
+		return transferQueueIndex;
 	}
 
 	auto VulkanRenderer::GetDescriptorPool() const -> impl::VulkanDescriptorPool&
@@ -898,6 +956,14 @@ namespace sh::render {
 	auto VulkanRenderer::GetGPUProperty() const -> const VkPhysicalDeviceProperties&
 	{
 		return gpuProp;
+	}
+	auto VulkanRenderer::GetRenderFinshedSemaphore() const -> VkSemaphore
+	{
+		return renderFinishedSemaphore;
+	}
+	auto VulkanRenderer::GetGameThreadSemaphore() const -> VkSemaphore
+	{
+		return gameThreadSemaphore;
 	}
 }//namespace
 

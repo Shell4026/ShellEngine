@@ -45,6 +45,10 @@ namespace sh::core {
 #endif
 		}
 
+		/// @brief 두 해시를 합쳐 새로운 해시로 만드는 함수
+		/// @param v1 해시1
+		/// @param v2 해시2
+		/// @return 합쳐진 새로운 해시
 		static inline auto CombineHash(size_t v1, size_t v2) -> size_t
 		{
 			return v1 ^= v2 + 0x9e3779b9 + (v1 << 6) + (v1 >> 2);
@@ -59,7 +63,16 @@ namespace sh::core {
 				return CombineHash(h1, h2);
 			}
 		};
+		/// @brief 주어진 값을 정렬 값에 가까운 배수로 올림 하는 함수. 메모리 정렬에 사용된다.
+		/// 예시: (20, 16) => 32
+		/// @param value 입력 값
+		/// @param alignment 정렬 값
+		/// @return 입력값에서 올림된 정렬 값의 배수
+		SH_CORE_API static auto AlignTo(uint32_t value, uint32_t alignment) -> uint32_t;
 	};
 
+	/// @brief 해당 SObject가 nullptr이거나 앞으로 지워질 객체인지 검증 하는 함수.
+	/// @param obj SObject 포인터
+	/// @return 유효하면 true, 아니면 false
 	SH_CORE_API bool IsValid(SObject* obj);
 }

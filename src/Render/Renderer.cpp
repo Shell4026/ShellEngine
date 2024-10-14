@@ -102,7 +102,7 @@ namespace sh::render
 		return bPause.load(std::memory_order::memory_order_acquire);
 	}
 
-	auto Renderer::GetThreadSyncManager() -> core::ThreadSyncManager&
+	auto Renderer::GetThreadSyncManager() const -> core::ThreadSyncManager&
 	{
 		return syncManager;
 	}

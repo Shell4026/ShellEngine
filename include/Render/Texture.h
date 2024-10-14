@@ -55,7 +55,7 @@ namespace sh::render
 		/// @brief 네이티브 텍스쳐 버퍼를 가져온다.
 		/// @param thr 현재 스레드 종류
 		/// @return 텍스쳐 버퍼 포인터
-		SH_RENDER_API auto GetBuffer(core::ThreadType thr = core::ThreadType::Game) -> ITextureBuffer*;
+		SH_RENDER_API auto GetBuffer(core::ThreadType thr = core::ThreadType::Game) const -> ITextureBuffer*;
 		
 		SH_RENDER_API void SetDirty() override;
 		SH_RENDER_API void Sync() override;

@@ -3,7 +3,7 @@
 
 #include "GameObject.h"
 
-#undef min;
+#undef min
 #undef max
 
 namespace sh::game
