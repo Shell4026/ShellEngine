@@ -10,5 +10,7 @@ target_link_libraries(ShellEngineEditor PUBLIC ShellEngine::Window)
 target_link_libraries(ShellEngineEditor PUBLIC ShellEngine::Render)
 target_link_libraries(ShellEngineEditor PUBLIC ShellEngine::Game)
 
+target_precompile_headers(ShellEngineEditor PRIVATE ${CMAKE_SOURCE_DIR}/include/Game/PCH.h)
+
 target_include_directories(ShellEngineEditor PUBLIC ${CMAKE_SOURCE_DIR}/include/)
 target_include_directories(ShellEngineEditor PUBLIC ${CMAKE_SOURCE_DIR}/include/Editor/)
