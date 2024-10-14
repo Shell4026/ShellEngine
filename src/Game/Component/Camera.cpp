@@ -2,6 +2,8 @@
 #include "Component/Camera.h"
 #include "GameObject.h"
 
+#include "Physics/Ray.h"
+
 #include "glm/gtc/matrix_transform.hpp"
 
 #include <cstdint>
@@ -11,7 +13,7 @@ namespace sh::game
 	Camera::Camera() :
 		worldToCameraMatrix(matView),
 		matProj(), matView(),
-		fov(45.f), nearPlane(0.1f), farPlane(1000.f),
+		fov(60.f), fovRadians(glm::radians(60.f)), nearPlane(0.1f), farPlane(1000.f),
 		camera(), depth(0), lookPos(), up(0, 1, 0),
 
 		renderTexture(nullptr)
@@ -31,16 +33,22 @@ namespace sh::game
 	}
 	void Camera::Update()
 	{
-		glm::vec2 size{};
 		if (renderTexture == nullptr)
-			size = gameObject->world.renderer.GetViewportEnd() - gameObject->world.renderer.GetViewportStart();
+			screenSize = gameObject->world.renderer.GetViewportEnd() - gameObject->world.renderer.GetViewportStart();
 		else
-			size = renderTexture->GetSize();
+			screenSize = renderTexture->GetSize();
 		
-		matProj = glm::perspectiveFov(fov,
-			static_cast<float>(size.x),
-			static_cast<float>(size.y),
+		CalcMatrix();
+	}
+	void Camera::CalcMatrix()
+	{
+		fovRadians = glm::radians(fov);
+
+		matProj = glm::perspectiveFov(fovRadians,
+			static_cast<float>(screenSize.x),
+			static_cast<float>(screenSize.y),
 			nearPlane, farPlane);
+
 		matView = glm::lookAt(gameObject->transform->position, lookPos, up);
 	}
 
@@ -90,6 +98,25 @@ namespace sh::game
 	auto Camera::GetNative() -> render::Camera&
 	{
 		return camera;
+	}
+
+	auto Camera::ScreenPointToRay(const glm::vec2& mousePos) const -> phys::Ray
+	{
+		float aspect = screenSize.x / screenSize.y;
+
+		float ndcX = 2.f * mousePos.x / screenSize.x - 1.0f;
+		float ndcY = 1.0f -2.f * mousePos.y / screenSize.y;
+
+		glm::vec4 camCoord{ 0.f, 0.f, 0.f, 1.f };
+
+		camCoord.x = aspect * ndcX;
+		camCoord.y = ndcY;
+		camCoord.z = -1.f / glm::tan(fovRadians / 2.f);
+
+		glm::vec3 worldCoord{ glm::inverse(matView) * camCoord };
+		glm::vec3 dir = glm::normalize(worldCoord - gameObject->transform->position);
+
+		return phys::Ray(gameObject->transform->position, dir);
 	}
 
 #ifdef SH_EDITOR

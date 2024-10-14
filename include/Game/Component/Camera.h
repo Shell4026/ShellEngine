@@ -12,6 +12,10 @@
 
 #include <memory>
 
+namespace sh::phys
+{
+	class Ray;
+}
 namespace sh::game
 {
 	class Camera : public Component
@@ -25,6 +29,10 @@ namespace sh::game
 
 		PROPERTY(depth)
 		int depth;
+		
+		float fovRadians;
+
+		glm::vec2 screenSize;
 	protected:
 		glm::mat4 matProj;
 		glm::mat4 matView;
@@ -38,6 +46,8 @@ namespace sh::game
 		float farPlane;
 
 		const glm::mat4& worldToCameraMatrix;
+	private:
+		inline void CalcMatrix();
 	public:
 		SH_GAME_API Camera();
 		SH_GAME_API ~Camera();
@@ -57,6 +67,7 @@ namespace sh::game
 
 		SH_GAME_API auto GetNative() -> render::Camera&;
 
+		SH_GAME_API auto ScreenPointToRay(const glm::vec2& mousePos) const -> phys::Ray;
 #ifdef SH_EDITOR
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 #endif

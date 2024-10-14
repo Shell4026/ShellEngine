@@ -6,6 +6,10 @@
 #include "Game/World.h"
 #include "Game/Input.h"
 #include "Game/GameObject.h"
+#include "Game/Component/Camera.h"
+#include "Game/Component/LineRenderer.h"
+
+#include "Physics/Ray.h"
 
 #include "Render/RenderTexture.h"
 #include "Render/VulkanImpl/VulkanTextureBuffer.h"
@@ -17,8 +21,9 @@ namespace sh::editor
 		world(world),
 
 		viewportDescSet(), renderTex(),
+		x(0.f), y(0.f),
 		viewportWidthLast(100.f), viewportHeightLast(100.f),
-		bDirty(false)
+		bDirty(false), bMouseDown(false), bFocus(false)
 	{
 		renderTex = core::SObject::Create<render::RenderTexture>();
 		renderTex->Build(world.renderer);
@@ -39,10 +44,44 @@ namespace sh::editor
 
 	void Viewport::Update()
 	{
-		if (game::Input::GetMouseDown(game::Input::MouseType::Left))
+		if (!bFocus)
+			return;
+		if (game::Input::GetKeyDown(game::Input::KeyCode::LAlt))
+			return;
+		if (!bMouseDown)
 		{
-			//std::cout << "click\n";
+			bMouseDown = game::Input::GetMouseDown(game::Input::MouseType::Left);
+			if (bMouseDown)
+			{
+				SH_INFO("Click");
+				auto start = std::chrono::high_resolution_clock::now();
+				mousePos.x = ImGui::GetIO().MousePos.x - x;
+				mousePos.y = ImGui::GetIO().MousePos.y - y;
+				if (mousePos.x < 0 || mousePos.y < 0)
+					return;
+				if (mousePos.x > viewportWidthLast || mousePos.y > viewportHeightLast)
+					return;
+
+				game::GameObject* picking = world.GetGameObject("picking");
+				if (picking == nullptr)
+				{
+					picking = world.AddGameObject("picking");
+					picking->AddComponent<game::LineRenderer>();
+				}
+				game::LineRenderer* line = picking->GetComponent<game::LineRenderer>();
+				game::Camera* cam = *world.GetCameras().begin();
+				
+				phys::Ray ray = cam->ScreenPointToRay(mousePos);
+				line->SetStart(ray.origin);
+				line->SetEnd(ray.origin + ray.direction * 5.f);
+
+				SH_INFO_FORMAT("x: {}, y: {}", mousePos.x, mousePos.y);
+				auto end = std::chrono::high_resolution_clock::now();
+				SH_INFO_FORMAT("Click time: {}", std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
+			}
 		}
+		else
+			bMouseDown = game::Input::GetMouseDown(game::Input::MouseType::Left);
 	}
 
 	void Viewport::ChangeViewportSize()

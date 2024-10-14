@@ -64,6 +64,8 @@ namespace sh
 		SH_INFO("Module loading");
 		void* modulePtr = moduleLoader.Load("ShellEngineUser");
 		componentModule = reinterpret_cast<sh::game::ComponentModule*>(modulePtr);
+		if (componentModule == nullptr)
+			throw std::runtime_error{ "Can't load user module!" };
 
 		componentModule->RegisterComponent<game::LineRenderer>("LineRenderer");
 		for (auto& components : componentModule->GetComponents())
@@ -86,15 +88,16 @@ namespace sh
 		auto defaultShader = world->shaders.AddResource("Default", loader.LoadShader<render::VulkanShader>
 			("shaders/default.vert.spv", "shaders/default.frag.spv"));
 		auto lineShader = world->shaders.AddResource("Line", loader.LoadShader<render::VulkanShader>("shaders/line.vert.spv", "shaders/line.frag.spv"));
-		//auto mat = world->materials.AddResource("Material", sh::render::Material{ defaultShader });
-		auto mat2 = world->materials.AddResource("Material2", sh::render::Material{ defaultShader });
+		auto mat = world->materials.AddResource("Material", sh::render::Material{ defaultShader });
+		auto catMat0 = world->materials.AddResource("Material2", sh::render::Material{ defaultShader });
+		auto catMat1 = world->materials.AddResource("Material3", sh::render::Material{ defaultShader });
 		auto lineMat = world->materials.AddResource("LineMat", sh::render::Material{ lineShader });
 		auto plane = world->meshes.AddResource("Plane", sh::render::Plane{});
 		auto cube = world->meshes.AddResource("Cube", modelLoader.Load("model/cube.obj"));
 		auto mesh2 = world->meshes.AddResource("Mesh2", modelLoader.Load("model/test.obj"));
-		auto tex = world->textures.AddResource("Texture0", texLoader.Load("textures/버터고양이.jpg"));
-		auto tex2 = world->textures.AddResource("Texture1", texLoader.Load("textures/cat.jpg"));
-		auto tex3 = world->textures.AddResource("Texture2", texLoader.Load("textures/viking_room.png"));
+		auto catTex0 = world->textures.AddResource("Texture0", texLoader.Load("textures/버터고양이.jpg"));
+		auto catTex1 = world->textures.AddResource("Texture1", texLoader.Load("textures/cat.jpg"));
+		auto tex = world->textures.AddResource("Texture2", texLoader.Load("textures/viking_room.png"));
 
 		defaultShader->AddAttribute<glm::vec2>("uvs", 1);
 
@@ -117,11 +120,10 @@ namespace sh
 		lineShader->AddUniform<glm::vec4>("color", MaterialUniformType, 1, sh::render::Shader::ShaderStage::Fragment);
 		lineShader->Build();
 
-		//mat2->SetFloat("offset2", 1.f);
-		//mat->SetTexture("tex", tex);
-		//mat->Build(*renderer);
-		mat2->SetTexture("tex", tex3);
-		mat2->Build(*renderer);
+		catMat0->SetTexture("tex", catTex0);
+		catMat0->Build(*renderer);
+		catMat1->SetTexture("tex", catTex1);
+		catMat1->Build(*renderer);
 
 		lineMat->SetVector("start", glm::vec4(0.f));
 		lineMat->SetVector("end", glm::vec4(0.f));
@@ -138,21 +140,21 @@ namespace sh
 		//obj2->AddComponent(componentModule->GetComponent("ComponentTest")->New());
 
 		auto transform = obj->transform;
-		transform->SetRotation({ -90.f, 0.f, 0.f });
-		transform = obj3->transform;
-		transform->SetPosition(0, 1, 0);
+		transform->SetRotation({ 0.f, 0.f, 0.f });
+		transform->SetPosition(0, 0, -1);
+		transform->SetScale(1.f);
 
-		auto meshRenderer = obj->AddComponent<MeshRenderer>();
-		meshRenderer->SetMesh(*mesh2);
-		meshRenderer->SetMaterial(*mat2);
-
+		obj2->transform->SetPosition(1, 1, 0);
 		obj2->transform->SetParent(obj->transform);
 
 		obj->AddComponent<UniformTest>();
+		auto meshRenderer = obj->AddComponent<MeshRenderer>();
+		meshRenderer->SetMesh(*cube);
+		meshRenderer->SetMaterial(*catMat0);
 
-		//auto meshRenderer = obj2->AddComponent<MeshRenderer>();
-		//meshRenderer->SetMesh(*cube);
-		//meshRenderer->SetMaterial(*mat);
+		meshRenderer = obj2->AddComponent<MeshRenderer>();
+		meshRenderer->SetMesh(*cube);
+		meshRenderer->SetMaterial(*catMat1);
 
 		GameObject* cam = world->AddGameObject("Camera");
 		cam->transform->SetPosition(glm::vec3(2.f, 2.f, 2.f));

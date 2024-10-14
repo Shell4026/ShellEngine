@@ -16,5 +16,6 @@ namespace sh::editor
 		SH_EDITOR_API UI(game::ImGUImpl& imgui);
 
 		SH_EDITOR_API virtual void Update() = 0;
+		SH_EDITOR_API virtual void Render() = 0;
 	};
 }
