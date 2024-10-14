@@ -4,6 +4,7 @@
 #include "UI.h"
 #include "ExplorerUI.h"
 #include "Viewport.h"
+#include "Hierarchy.h"
 
 #include "Game/World.h"
 
@@ -20,21 +21,17 @@ namespace sh::editor
 		float hierarchyWidth;
 		float hierarchyHeight;
 
-		int selected;
-
 		ImGuiID dockspaceId;
 
 		ExplorerUI explorer;
 		Viewport viewport;
+		Hierarchy hierarchy;
 
-		bool bViewportDocking : 1;
-		bool bHierarchyDocking : 1;
-		bool bAddComponent : 1;
-		bool bOpenExplorer : 1;
-		bool bDirty : 1;
+		bool bAddComponent;
+		bool bOpenExplorer;
+		bool bDirty;
 	private:
 		inline void SetDockNode();
-		inline void DrawHierarchy();
 		inline void DrawInspector();
 		inline void DrawProject();
 		inline void Render();

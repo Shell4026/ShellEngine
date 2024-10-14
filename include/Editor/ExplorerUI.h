@@ -17,5 +17,6 @@ namespace sh::editor
 		ExplorerUI(game::ImGUImpl& imgui);
 
 		void Update() override;
+		void Render() override;
 	};
 }

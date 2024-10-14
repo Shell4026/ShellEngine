@@ -12,14 +12,14 @@ class ComponentTest : public Component
 {
 	SCLASS(ComponentTest)
 private:
-	PROPERTY(height)
-	float height;
-	PROPERTY(height2)
-	float height2;
+	PROPERTY(target)
+	std::string target;
 public:
 	SH_USER_API ComponentTest();
 	SH_USER_API ~ComponentTest();
 
 	SH_USER_API void OnEnable() override;
 	SH_USER_API void Update() override;
+
+	SH_USER_API void OnPropertyChanged(const sh::core::reflection::Property& prop) override;
 };

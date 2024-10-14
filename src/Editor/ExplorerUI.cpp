@@ -52,4 +52,7 @@ namespace sh::editor
 
         ImGui::End();
 	}
+    void ExplorerUI::Render()
+    {
+    }
 }

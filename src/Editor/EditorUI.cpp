@@ -17,12 +17,11 @@ namespace sh::editor
 		UI(imgui),
 		world(world),
 		viewport(imgui, world),
+		hierarchy(imgui, world),
 
 		hierarchyWidth(0), hierarchyHeight(0),
-		selected(-1),
 		explorer(imgui),
 
-		bViewportDocking(false), bHierarchyDocking(false),
 		bAddComponent(false), bOpenExplorer(false),
 		bDirty(false)
 	{
@@ -64,33 +63,12 @@ namespace sh::editor
 			auto dockDown = ImGui::DockBuilderSplitNode(dockspaceId, ImGuiDir_Down, 0.25f, nullptr, &dockspaceId);
 			auto dockLeft = ImGui::DockBuilderSplitNode(dockspaceId, ImGuiDir_Left, 0.2f, nullptr, &dockspaceId);
 			auto dockRight = ImGui::DockBuilderSplitNode(dockspaceId, ImGuiDir_Right, 0.25f, nullptr, &dockspaceId);
-			ImGui::DockBuilderDockWindow("Hierarchy", dockLeft);
+			ImGui::DockBuilderDockWindow(Hierarchy::name, dockLeft);
 			ImGui::DockBuilderDockWindow("Inspector", dockRight);
 			ImGui::DockBuilderDockWindow("Project", dockDown);
 			ImGui::DockBuilderDockWindow(this->viewport.name, dockspaceId);
 			ImGui::DockBuilderFinish(dockspaceId);
 		}
-		ImGui::End();
-	}
-
-	void EditorUI::DrawHierarchy()
-	{
-
-		ImGuiWindowFlags style =
-			//ImGuiWindowFlags_::ImGuiWindowFlags_NoBringToFrontOnFocus |
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoCollapse;
-
-		ImGui::Begin("Hierarchy", nullptr, style);
-		bHierarchyDocking = ImGui::IsWindowDocked();
-		for (int i = 0; i < world.gameObjects.size(); ++i)
-		{
-			auto& obj = world.gameObjects[i];
-			if (ImGui::Selectable(obj->name.c_str(), selected == i))
-			{
-				selected = i;
-			}
-		}
-		
 		ImGui::End();
 	}
 
@@ -101,16 +79,8 @@ namespace sh::editor
 
 		ImGui::Begin("Inspector", nullptr, style);
 
-		if (selected != -1)
+		if (auto obj = hierarchy.GetSelected(); core::IsValid(obj))
 		{
-			if (selected > world.gameObjects.size() - 1)
-			{
-				selected = -1;
-				ImGui::End();
-				return;
-			}
-			auto obj = world.gameObjects[selected];
-
 			char name[30] = "";
 			std::strcpy(name, obj->name.c_str());
 
@@ -138,6 +108,8 @@ namespace sh::editor
 							if (prop.second.bVisible == false)
 								continue;
 							auto type = prop.second.GetTypeName();
+							bool constant = prop.second.isConst;
+							auto inputFlag = constant ? ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly : ImGuiInputTextFlags_::ImGuiInputTextFlags_None;
 							if (type == core::reflection::GetTypeName<glm::vec3>())
 							{
 								glm::vec3* parameter = prop.second.Get<glm::vec3>(component);
@@ -185,6 +157,13 @@ namespace sh::editor
 								else
 									if (ImGui::InputInt(("##Input_" + prop.first + std::to_string(idx)).c_str(), reinterpret_cast<int*>(parameter)))
 										component->OnPropertyChanged(prop.second);
+							}
+							else if (type == core::reflection::GetTypeName<std::string>())
+							{
+								std::string* parameter = prop.second.Get<std::string>(component);
+								ImGui::LabelText(("##" + prop.first).c_str(), prop.first.c_str());
+								if(ImGui::InputText(("##Input_" + prop.first + std::to_string(idx)).c_str(), parameter, inputFlag))
+									component->OnPropertyChanged(prop.second);
 							}
 						}
 						currentType = const_cast<core::reflection::TypeInfo*>(currentType->GetSuper());
@@ -246,7 +225,7 @@ namespace sh::editor
 			return;
 
 		SetDockNode();
-		DrawHierarchy();
+		hierarchy.Render();
 		DrawInspector();
 		DrawProject();
 		viewport.Render();
