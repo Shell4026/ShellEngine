@@ -18,6 +18,7 @@ namespace sh::editor
 		world(world),
 		viewport(imgui, world),
 		hierarchy(imgui, world),
+		project(imgui, world),
 
 		hierarchyWidth(0), hierarchyHeight(0),
 		explorer(imgui),
@@ -65,7 +66,7 @@ namespace sh::editor
 			auto dockRight = ImGui::DockBuilderSplitNode(dockspaceId, ImGuiDir_Right, 0.25f, nullptr, &dockspaceId);
 			ImGui::DockBuilderDockWindow(Hierarchy::name, dockLeft);
 			ImGui::DockBuilderDockWindow("Inspector", dockRight);
-			ImGui::DockBuilderDockWindow("Project", dockDown);
+			ImGui::DockBuilderDockWindow(Project::name, dockDown);
 			ImGui::DockBuilderDockWindow(this->viewport.name, dockspaceId);
 			ImGui::DockBuilderFinish(dockspaceId);
 		}
@@ -203,16 +204,6 @@ namespace sh::editor
 		ImGui::End();
 	}
 
-	void EditorUI::DrawProject()
-	{
-		static ImGuiWindowFlags style =
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoBringToFrontOnFocus;
-
-		ImGui::Begin("Project", nullptr, style);
-
-		ImGui::End();
-	}
-
 	void EditorUI::Update()
 	{
 		viewport.Update();
@@ -227,7 +218,7 @@ namespace sh::editor
 		SetDockNode();
 		hierarchy.Render();
 		DrawInspector();
-		DrawProject();
+		project.Render();
 		viewport.Render();
 
 		if (ImGui::BeginMainMenuBar())

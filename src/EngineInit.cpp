@@ -98,6 +98,7 @@ namespace sh
 		auto catTex0 = world->textures.AddResource("Texture0", texLoader.Load("textures/버터고양이.jpg"));
 		auto catTex1 = world->textures.AddResource("Texture1", texLoader.Load("textures/cat.jpg"));
 		auto tex = world->textures.AddResource("Texture2", texLoader.Load("textures/viking_room.png"));
+		world->textures.AddResource("FolderIcon", texLoader.Load("textures/folder.png"));
 
 		defaultShader->AddAttribute<glm::vec2>("uvs", 1);
 
@@ -171,7 +172,6 @@ namespace sh
 		//cameraComponent2->SetRenderTexture(editorUI->GetViewport().GetRenderTexture());
 #if SH_EDITOR
 		Camera* cameraComponent = cam->AddComponent<EditorCamera>();
-		cameraComponent->SetRenderTexture(editorUI->GetViewport().GetRenderTexture());
 		//cameraComponent->SetDepth(2);
 #endif
 
@@ -241,14 +241,15 @@ namespace sh
 		world = core::SObject::Create<game::World>(*renderer.get(), *componentModule);
 		gc->SetRootSet(world);
 
+		InitResource();
+
 		gui = std::make_unique<game::ImGUImpl>(*window, static_cast<render::VulkanRenderer&>(*renderer));
 		gui->Init();
 
 #if SH_EDITOR
 		editorUI = std::make_unique<editor::EditorUI>(*world, *gui);
+		world->GetMainCamera()->SetRenderTexture(editorUI->GetViewport().GetRenderTexture());
 #endif
-
-		InitResource();
 
 		SH_INFO("Start world");
 		world->Start();

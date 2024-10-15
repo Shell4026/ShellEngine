@@ -5,6 +5,7 @@
 #include "ExplorerUI.h"
 #include "Viewport.h"
 #include "Hierarchy.h"
+#include "Project.h"
 
 #include "Game/World.h"
 
@@ -26,6 +27,7 @@ namespace sh::editor
 		ExplorerUI explorer;
 		Viewport viewport;
 		Hierarchy hierarchy;
+		Project project;
 
 		bool bAddComponent;
 		bool bOpenExplorer;
@@ -33,7 +35,6 @@ namespace sh::editor
 	private:
 		inline void SetDockNode();
 		inline void DrawInspector();
-		inline void DrawProject();
 		inline void Render();
 	public:
 		SH_EDITOR_API EditorUI(game::World& world, game::ImGUImpl& imgui);
