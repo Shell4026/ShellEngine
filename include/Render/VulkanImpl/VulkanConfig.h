@@ -1,5 +1,4 @@
-﻿#ifndef VULKAN_CONFIG_H
-#define VULKAN_CONFIG_H
+﻿#pragma once
 
 #if _WIN32
 	#ifndef VK_USE_PLATFORM_WIN32_KHR
@@ -18,5 +17,3 @@
 #endif
 
 #include "../vma-src/include/vk_mem_alloc.h"
-
-#endif
