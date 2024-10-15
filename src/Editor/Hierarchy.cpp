@@ -157,7 +157,7 @@ namespace sh::editor
 		}
 
 		// 빈 공간 드래그 시 부모 제거
-		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+		ImGui::PushStyleVar(ImGuiStyleVar_::ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
 		ImGui::InvisibleButton("HierarchyEmptySpace", ImGui::GetContentRegionAvail());
 		if (ImGui::BeginDragDropTarget()) // 드래그 받는 대상의 시점
 		{
@@ -172,6 +172,20 @@ namespace sh::editor
 			ImGui::EndDragDropTarget();
 		}
 		ImGui::PopStyleVar();
+
+		if (ImGui::BeginPopupContextItem("RightClickPopup"))
+		{
+			if (ImGui::BeginMenu("Create"))
+			{
+				if (ImGui::MenuItem("GameObject"))
+				{
+					world.AddGameObject("EmptyObject");
+				}
+				ImGui::EndMenu();
+			}
+			ImGui::EndPopup();
+		}
+
 		ImGui::End();
 	}
 
