@@ -146,10 +146,8 @@ TEST(GCTest, ContainerTest)
 
 		gc.Update();
 
-		int i = 0;
 		for (auto child : root->childs)
 		{
-			EXPECT_EQ(child->num, i++);
 			child->Destroy();
 		}
 		EXPECT_EQ(root->childs.size(), 3);

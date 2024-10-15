@@ -23,17 +23,17 @@ public:\
 	using Super = sh::core::reflection::MakeSuper<class_name>::type;\
 	using This = class_name;\
 public:\
-	static auto GetStaticType() -> sh::core::reflection::TypeInfo&\
+	static auto GetStaticType() -> sh::core::reflection::STypeInfo&\
 	{\
-		static sh::core::reflection::TypeInfo info{ sh::core::reflection::TypeInfoData<class_name>(#class_name) };\
+		static sh::core::reflection::STypeInfo info{ sh::core::reflection::TypeInfoData<class_name>(#class_name) };\
 		return info;\
 	}\
-	virtual auto GetType() const -> sh::core::reflection::TypeInfo&\
+	virtual auto GetType() const -> sh::core::reflection::STypeInfo&\
 	{\
-		return typeInfo;\
+		return stypeInfo;\
 	}\
 private:\
-		inline static sh::core::reflection::TypeInfo& typeInfo = GetStaticType();
+		inline static sh::core::reflection::STypeInfo& stypeInfo = GetStaticType();
 
 #define PROPERTY(variable_name, ...)\
 struct _PropertyFactory_##variable_name\
@@ -60,7 +60,7 @@ namespace sh::core
 
 namespace sh::core::reflection
 {
-	class TypeInfo;
+	class STypeInfo;
 	class Property;
 	
 	//기본 HasSuper 구조체
@@ -216,7 +216,7 @@ namespace sh::core::reflection
 	struct TypeInfoData
 	{
 		std::string_view name;
-		const TypeInfo* super;
+		const STypeInfo* super;
 		using Type = T;
 
 		TypeInfoData(std::string_view name) :
@@ -229,10 +229,12 @@ namespace sh::core::reflection
 		}
 	};
 
-	class TypeInfo {
+	/// @brief SClass의 타입 정보 객체
+	class STypeInfo 
+	{
 	private:
 		std::string_view name;
-		const TypeInfo* super;
+		const STypeInfo* super;
 		const size_t hash;
 
 		std::map<std::string, Property> properties;
@@ -243,19 +245,21 @@ namespace sh::core::reflection
 		const size_t size;
 	public:
 		template<typename T>
-		explicit TypeInfo(TypeInfoData<T> data) :
+		explicit STypeInfo(TypeInfoData<T> data) :
 			name(data.name), super(data.super), hash(typeid(T).hash_code()), 
 			isPointer(std::is_pointer_v<T>), size(sizeof(T))
 		{
 		}
 
 		SH_CORE_API auto GetName() const -> std::string_view;
-		SH_CORE_API auto GetSuper() const -> const TypeInfo*;
-		//other와 자신이 같은 타입인지
-		SH_CORE_API bool IsA(const TypeInfo& other) const;
-		SH_CORE_API bool operator==(const TypeInfo& other) const;
-		//현재 타입이 other의 자식인지
-		SH_CORE_API bool IsChildOf(const TypeInfo& other) const;
+		SH_CORE_API auto GetSuper() const -> const STypeInfo*;
+		/// @brief other와 자신이 같은 타입인지
+		/// @return 같으면 true, 아니면 false
+		SH_CORE_API bool IsA(const STypeInfo& other) const;
+		SH_CORE_API bool operator==(const STypeInfo& other) const;
+		/// @brief 현재 타입이 other의 자식인지
+		/// @return 자식이면 true 아니면 false
+		SH_CORE_API bool IsChildOf(const STypeInfo& other) const;
 
 		SH_CORE_API auto AddProperty(const std::string& name, const Property& prop) -> Property*;
 		SH_CORE_API auto GetProperty(const std::string& name) -> Property*;
@@ -266,7 +270,7 @@ namespace sh::core::reflection
 
 		SH_CORE_API void AddSObjectContainerProperty(Property* prop);
 		SH_CORE_API auto GetSObjectContainerProperties() const -> const std::vector<Property*>&;
-	};//TypeInfo
+	};//STypeInfo
 
 	class IPropertyIteratorBase;
 	template<typename T>
@@ -307,6 +311,21 @@ namespace sh::core::reflection
 		/// @brief 컨테이너에서 해당 반복자 위치의 원소를 지우는 함수.
 		SH_CORE_API void Erase();
 	};
+	template<typename T>
+	auto PropertyIterator::Get() -> T*
+	{
+		//컨테이너 클래스가 아닌경우를 뜻한다.
+		if (iteratorData.get() == nullptr)
+			return nullptr;
+
+		IPropertyIterator<T>* it = static_cast<IPropertyIterator<T>*>(iteratorData.get());
+		return &it->Get();
+	}
+	template<typename T>
+	auto PropertyIterator::GetPairSecond() -> T*
+	{
+		return reinterpret_cast<T*>(iteratorData->GetPairSecond());
+	}
 
 	//자료형과 컨테이너를 숨긴 프로퍼티 반복자 인터페이스//
 	class IPropertyIteratorBase
@@ -456,12 +475,12 @@ namespace sh::core::reflection
 	protected:
 		std::string_view typeName;
 	public:
-		TypeInfo& ownerType;
+		STypeInfo& ownerType;
 
 		bool isConst = false;
 		bool bVisible = true;
 	public:
-		PropertyDataBase(TypeInfo& ownerType) :
+		PropertyDataBase(STypeInfo& ownerType) :
 			ownerType(ownerType), typeName("")
 		{
 		}
@@ -472,27 +491,10 @@ namespace sh::core::reflection
 	};
 
 	template<typename T>
-	auto PropertyIterator::Get() -> T*
-	{
-		//컨테이너 클래스가 아닌경우를 뜻한다.
-		if (iteratorData.get() == nullptr)
-			return nullptr;
-
-		IPropertyIterator<T>* it = static_cast<IPropertyIterator<T>*>(iteratorData.get());
-		return &it->Get();
-	}
-
-	template<typename T>
-	auto PropertyIterator::GetPairSecond() -> T*
-	{
-		return reinterpret_cast<T*>(iteratorData->GetPairSecond());
-	}
-
-	template<typename T>
 	class IPropertyData : public PropertyDataBase
 	{
 	public:
-		IPropertyData<T>(TypeInfo& ownerType) :
+		IPropertyData<T>(STypeInfo& ownerType) :
 			PropertyDataBase(ownerType)
 		{
 		}
@@ -504,7 +506,7 @@ namespace sh::core::reflection
 	class PropertyData : public IPropertyData<T>
 	{
 	public:
-		PropertyData(TypeInfo& ownerType) :
+		PropertyData(STypeInfo& ownerType) :
 			IPropertyData<T>(ownerType)
 		{
 			PropertyDataBase::typeName = sh::core::reflection::GetTypeName<T>();
@@ -568,7 +570,7 @@ namespace sh::core::reflection
 	class PropertyInfo
 	{
 	private:
-		TypeInfo& owner;
+		STypeInfo& owner;
 
 		const char* name;
 
@@ -648,9 +650,17 @@ namespace sh::core::reflection
 		{
 			return &static_cast<IPropertyData<T>*>(data)->Get(sobject);
 		}
+		template<typename T, typename ThisType>
+		auto GetSafe(ThisType* sobject) const -> T*
+		{
+			if (data->GetTypeName() != reflection::GetTypeName<T>())
+				return nullptr;
+			return Get<T, ThisType>(sobject);
+		}
 		SH_CORE_API auto Begin(SObject* SObject) -> PropertyIterator;
 		SH_CORE_API auto End(SObject* SObject) -> PropertyIterator;
 		SH_CORE_API auto GetName() const -> const char*;
 		SH_CORE_API auto GetTypeName() const -> std::string_view;
 	};
-}
+
+}//namespace

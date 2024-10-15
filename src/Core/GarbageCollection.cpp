@@ -119,7 +119,7 @@ namespace sh::core
 
 		obj->bMark = true;
 
-		const reflection::TypeInfo* type = &obj->GetType();
+		const reflection::STypeInfo* type = &obj->GetType();
 		while (type)
 		{
 			auto& ptrProps = type->GetSObjectPtrProperties();

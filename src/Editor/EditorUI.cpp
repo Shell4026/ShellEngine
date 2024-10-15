@@ -166,7 +166,7 @@ namespace sh::editor
 									component->OnPropertyChanged(prop.second);
 							}
 						}
-						currentType = const_cast<core::reflection::TypeInfo*>(currentType->GetSuper());
+						currentType = const_cast<core::reflection::STypeInfo*>(currentType->GetSuper());
 					} 
 					while (currentType);
 				}

@@ -17,7 +17,7 @@ class Derived : public Base
 {
     SCLASS(Derived)
 public:
-    PROPERTY(number, "const")
+    PROPERTY(number, sh::core::PropertyOption::constant)
     int number;
     PROPERTY(numbers)
     std::vector<int> numbers;
@@ -73,4 +73,17 @@ TEST(ReflectionTest, PropertyTest)
 
     const int* ptr = setIterator.Get<const int>();
     EXPECT_EQ(*ptr, 0);
+}
+
+TEST(ReflectionTest, SafePropertyTest)
+{
+    Derived derived;
+    derived.number = 123;
+
+    auto prop = Derived::GetStaticType().GetProperty("number");
+    int number = *prop->GetSafe<int>(&derived);
+    EXPECT_EQ(number, 123);
+
+    float* floatPtr = prop->GetSafe<float>(&derived);
+    EXPECT_EQ(floatPtr, nullptr);
 }

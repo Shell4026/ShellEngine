@@ -2,17 +2,17 @@
 
 namespace sh::core::reflection
 {
-	auto TypeInfo::GetName() const -> std::string_view
+	auto STypeInfo::GetName() const -> std::string_view
 	{
 		return name;
 	}
 
-	auto TypeInfo::GetSuper() const -> const TypeInfo*
+	auto STypeInfo::GetSuper() const -> const STypeInfo*
 	{
 		return super;
 	}
 
-	bool TypeInfo::IsA(const TypeInfo& other) const
+	bool STypeInfo::IsA(const STypeInfo& other) const
 	{
 		if (this == &other)
 			return true;
@@ -21,17 +21,17 @@ namespace sh::core::reflection
 		return this->hash == other.hash;
 	}
 
-	bool TypeInfo::operator==(const TypeInfo& other) const
+	bool STypeInfo::operator==(const STypeInfo& other) const
 	{
 		return IsA(other);
 	}
 
-	bool TypeInfo::IsChildOf(const TypeInfo& other) const
+	bool STypeInfo::IsChildOf(const STypeInfo& other) const
 	{
 		if (IsA(other))
 			return true;
 
-		const TypeInfo* super = GetSuper();
+		const STypeInfo* super = GetSuper();
 		while (super != nullptr)
 		{
 			if (super->IsA(other))
@@ -41,7 +41,7 @@ namespace sh::core::reflection
 		return false;
 	}
 
-	auto TypeInfo::AddProperty(const std::string& name, const Property& prop) -> Property*
+	auto STypeInfo::AddProperty(const std::string& name, const Property& prop) -> Property*
 	{
 		auto it = properties.insert({ name, prop });
 		if (!it.second)
@@ -49,7 +49,7 @@ namespace sh::core::reflection
 		return &it.first->second;
 	}
 
-	auto TypeInfo::GetProperty(const std::string& name) -> Property*
+	auto STypeInfo::GetProperty(const std::string& name) -> Property*
 	{
 		auto it = properties.find(name);
 		if (it == properties.end())
@@ -57,25 +57,25 @@ namespace sh::core::reflection
 		return &it->second;
 	}
 
-	auto TypeInfo::GetProperties() const -> const std::map<std::string, Property>&
+	auto STypeInfo::GetProperties() const -> const std::map<std::string, Property>&
 	{
 		return properties;
 	}
 
-	void TypeInfo::AddSObjectPtrProperty(Property* prop)
+	void STypeInfo::AddSObjectPtrProperty(Property* prop)
 	{
 		pointers.push_back(prop);
 	}
-	auto TypeInfo::GetSObjectPtrProperties() const -> const std::vector<Property*>&
+	auto STypeInfo::GetSObjectPtrProperties() const -> const std::vector<Property*>&
 	{
 		return pointers;
 	}
 
-	void TypeInfo::AddSObjectContainerProperty(Property* prop)
+	void STypeInfo::AddSObjectContainerProperty(Property* prop)
 	{
 		containers.push_back(prop);
 	}
-	auto TypeInfo::GetSObjectContainerProperties() const -> const std::vector<Property*>&
+	auto STypeInfo::GetSObjectContainerProperties() const -> const std::vector<Property*>&
 	{
 		return containers;
 	}
