@@ -64,6 +64,8 @@ namespace sh::game
 		const core::SVector<GameObject*>& gameObjects;
 		core::Observer<Camera*> onCameraAdd;
 		core::Observer<Camera*> onCameraRemove;
+		core::Observer<GameObject*> onGameObjectAdded;
+		core::Observer<GameObject*> onGameObjectRemoved;
 	public:
 		SH_GAME_API World(sh::render::Renderer& renderer, const ComponentModule& componentModule);
 		SH_GAME_API World(World&& other) noexcept;
@@ -79,6 +81,10 @@ namespace sh::game
 		SH_GAME_API auto ChangeGameObjectName(GameObject& obj, const std::string& to) -> std::string;
 		SH_GAME_API auto ChangeGameObjectName(const std::string& objName, const std::string& to) -> std::string;
 		SH_GAME_API auto GetGameObject(std::string_view name) const -> GameObject*;
+		/// @brief obj를 pivotObj보다 배열에서 우선 배치하는 함수
+		/// @param obj 바꿀 오브젝트 이름
+		/// @param pivotObj 기준 오브젝트 이름
+		SH_GAME_API void ReorderObjectAbovePivot(std::string_view obj, std::string_view pivotObj);
 
 		SH_GAME_API void RegisterCamera(Camera* cam);
 		SH_GAME_API void UnRegisterCamera(Camera* cam);

@@ -27,14 +27,16 @@ namespace sh::game
 		glm::mat4 matModel;
 
 		glm::quat quat;
+		glm::quat worldQuat;
 
 		Transform* parent;
 		PROPERTY(childs)
-		core::SSet<Transform*> childs;
+		core::SVector<Transform*> childs;
 
 		bool bUpdateMatrix;
 	private:
 		void UpdateMatrix();
+		void RemoveChild(const Transform& child);
 	public:
 		const glm::vec3& position;
 		const glm::vec3& scale;
@@ -51,7 +53,9 @@ namespace sh::game
 		SH_GAME_API void Update() override;
 
 		SH_GAME_API auto GetParent() const -> Transform*;
-		SH_GAME_API auto GetChildren() const -> const core::SSet<Transform*>&;
+		SH_GAME_API auto GetChildren() const -> const core::SVector<Transform*>&;
+		/// @brief 자식 객체를 배열상에서 한칸 왼쪽으로 미는 함수. 제일 왼쪽이면 아무 일도 일어나지 않는다.
+		SH_GAME_API void ReorderChildAbove(Transform* child);
 		SH_GAME_API void SetPosition(const glm::vec3& pos);
 		SH_GAME_API void SetPosition(float x, float y, float z);
 		SH_GAME_API void SetScale(const glm::vec3& scale);
@@ -60,15 +64,15 @@ namespace sh::game
 		SH_GAME_API void SetRotation(const glm::vec3& rot);
 		SH_GAME_API void SetRotation(const glm::quat& rot);
 
-		SH_GAME_API auto GetRotationQuat() const -> const glm::quat&;
+		SH_GAME_API auto GetQuat() const -> const glm::quat&;
+		SH_GAME_API auto GetWorldQuat() const -> const glm::quat&;
 		SH_GAME_API auto GetWorldPosition() const -> const glm::vec3&;
 		SH_GAME_API auto GetWorldRotation() const -> const glm::vec3&;
 		SH_GAME_API auto GetWorldScale() const -> const glm::vec3&;
 		SH_GAME_API auto GetWorldToLocalMatrix() const -> glm::mat4;
 
 		SH_GAME_API void SetParent(Transform* parent);
-		SH_GAME_API void AddChild(Transform& child);
-		SH_GAME_API void RemoveChild(Transform& child);
+		SH_GAME_API bool HasChild(const Transform& child) const;
 
 		SH_GAME_API void OnDestroy() override;
 #if SH_EDITOR

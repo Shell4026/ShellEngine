@@ -130,6 +130,9 @@ namespace sh
 		lineMat->SetVector("color", glm::vec4{ 1.0f, 1.0f, 0.0f, 1.0f });
 		lineMat->Build(*renderer);
 
+		mat->SetTexture("tex", tex);
+		mat->Build(*renderer);
+
 		plane->Build(*renderer);
 		cube->Build(*renderer);
 
@@ -155,6 +158,10 @@ namespace sh
 		meshRenderer = obj2->AddComponent<MeshRenderer>();
 		meshRenderer->SetMesh(*cube);
 		meshRenderer->SetMaterial(*catMat1);
+
+		meshRenderer = obj3->AddComponent<MeshRenderer>();
+		meshRenderer->SetMesh(*cube);
+		meshRenderer->SetMaterial(*mat);
 
 		GameObject* cam = world->AddGameObject("Camera");
 		cam->transform->SetPosition(glm::vec3(2.f, 2.f, 2.f));

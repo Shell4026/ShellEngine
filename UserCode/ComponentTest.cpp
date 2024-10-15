@@ -31,7 +31,9 @@ void ComponentTest::Update()
 	if (Input::GetKeyDown(Input::KeyCode::Space))
 	{
 		glm::vec3 pos = gameObject->transform->GetWorldPosition();
+		glm::vec3 rot = gameObject->transform->GetWorldRotation();
 		SH_INFO_FORMAT("worldPosition: x: {}, y: {}, z: {}", pos.x, pos.y, pos.z);
+		SH_INFO_FORMAT("worldRotation: x: {}, y: {}, z: {}", rot.x, rot.y, rot.z);
 	}
 }
 

@@ -12,7 +12,7 @@
 
 namespace sh::game
 {
-	World::World(sh::render::Renderer& renderer, const ComponentModule& componentModule) :
+	SH_GAME_API World::World(sh::render::Renderer& renderer, const ComponentModule& componentModule) :
 		renderer(renderer), componentModule(componentModule),
 		deltaTime(_deltaTime), gameObjects(objs),
 		
@@ -24,7 +24,7 @@ namespace sh::game
 
 		gc->SetRootSet(this);
 	}
-	World::World(World&& other) noexcept :
+	SH_GAME_API World::World(World&& other) noexcept :
 		renderer(other.renderer), gc(other.gc), componentModule(other.componentModule),
 		deltaTime(_deltaTime), gameObjects(objs),
 		
@@ -36,12 +36,12 @@ namespace sh::game
 		gc->RemoveRootSet(&other);
 		gc->SetRootSet(this);
 	}
-	World::~World()
+	SH_GAME_API World::~World()
 	{
 		Clean();
 	}
 
-	void World::Clean()
+	SH_GAME_API void World::Clean()
 	{
 		meshes.Clean();
 		materials.Clean();
@@ -53,7 +53,7 @@ namespace sh::game
 		objs.clear();
 	}
 
-	auto World::AddGameObject(const std::string& name) -> GameObject*
+	SH_GAME_API auto World::AddGameObject(const std::string& name) -> GameObject*
 	{
 		std::string objName = name;
 
@@ -70,7 +70,9 @@ namespace sh::game
 		{
 			objs.push_back(Create<GameObject>(*this, objName));
 			objsMap.insert(std::make_pair(objName, static_cast<uint32_t>(objs.size() - 1)));
+
 			auto obj = objs[objs.size() - 1];
+			onGameObjectAdded.Notify(obj);
 
 			return obj;
 		}
@@ -82,12 +84,13 @@ namespace sh::game
 			objsEmptyIdx.pop();
 
 			auto obj = objs[idx];
+			onGameObjectAdded.Notify(obj);
 
 			return obj;
 		}
 	}
 
-	void World::DestroyGameObject(const std::string& name)
+	SH_GAME_API void World::DestroyGameObject(const std::string& name)
 	{
 		auto it = objsMap.find(name);
 		if (it == objsMap.end())
@@ -97,13 +100,15 @@ namespace sh::game
 		objsMap.erase(it);
 		objsEmptyIdx.push(id);
 		objs[id]->Destroy();
+
+		onGameObjectRemoved.Notify(objs[id]);
 	}
-	void World::DestroyGameObject(const GameObject& obj)
+	SH_GAME_API void World::DestroyGameObject(const GameObject& obj)
 	{
 		DestroyGameObject(obj.name);
 	}
 
-	auto World::ChangeGameObjectName(const std::string& objName, const std::string& to) -> std::string
+	SH_GAME_API auto World::ChangeGameObjectName(const std::string& objName, const std::string& to) -> std::string
 	{
 		auto it = objsMap.find(objName);
 		if (it == objsMap.end())
@@ -124,12 +129,12 @@ namespace sh::game
 
 		return name;
 	}
-	auto World::ChangeGameObjectName(GameObject& obj, const std::string& to) -> std::string
+	SH_GAME_API auto World::ChangeGameObjectName(GameObject& obj, const std::string& to) -> std::string
 	{
 		return ChangeGameObjectName(obj.name, to);
 	}
 
-	auto World::GetGameObject(std::string_view name) const -> GameObject*
+	SH_GAME_API auto World::GetGameObject(std::string_view name) const -> GameObject*
 	{
 		auto it = objsMap.find(std::string{ name });
 		if (it == objsMap.end())
@@ -137,7 +142,46 @@ namespace sh::game
 		return objs[it->second];
 	}
 
-	void World::Start()
+	SH_GAME_API void World::ReorderObjectAbovePivot(std::string_view obj, std::string_view pivotObj)
+	{
+		if (obj == pivotObj)
+			return;
+		auto objIt = objsMap.find(std::string{ obj });
+		if (objIt == objsMap.end())
+			return;
+		auto pivotIt = objsMap.find(std::string{ pivotObj });
+		if (pivotIt == objsMap.end())
+			return;
+
+		uint32_t objIdx = objIt->second;
+		uint32_t pivotIdx = pivotIt->second;
+		
+		if (objIdx > pivotIdx)
+		{
+			pivotIt->second++;
+			objIt->second = pivotIdx;
+			auto objPtr = objs[objIdx];
+			for (std::size_t i = objIdx; i > pivotIdx; --i)
+			{
+				objsMap[objs[i - 1]->name] = i;
+				objs[i] = objs[i - 1];
+			}
+			objs[pivotIdx] = objPtr;
+		}
+		else
+		{
+			auto objPtr = objs[objIdx];
+			objIt->second = pivotIdx - 1;
+			for (std::size_t i = objIdx; i < pivotIdx - 1; ++i)
+			{
+				objsMap[objs[i + 1]->name] = i;
+				objs[i] = objs[i + 1];
+			}
+			objs[pivotIdx - 1] = objPtr;
+		}
+	}
+
+	SH_GAME_API void World::Start()
 	{
 		for (auto& obj : objs)
 		{
@@ -158,7 +202,7 @@ namespace sh::game
 			obj->Start();
 		}
 	}
-	void World::Update(float deltaTime)
+	SH_GAME_API void World::Update(float deltaTime)
 	{
 		_deltaTime = deltaTime;
 
@@ -188,7 +232,7 @@ namespace sh::game
 		}
 	}
 
-	void World::RegisterCamera(Camera* cam)
+	SH_GAME_API void World::RegisterCamera(Camera* cam)
 	{
 		if (!core::IsValid(cam))
 			return;
@@ -196,7 +240,7 @@ namespace sh::game
 
 		onCameraAdd.Notify(cam);
 	}
-	void World::UnRegisterCamera(Camera* cam)
+	SH_GAME_API void World::UnRegisterCamera(Camera* cam)
 	{
 		if (!core::IsValid(cam))
 			return;
@@ -204,18 +248,18 @@ namespace sh::game
 
 		onCameraRemove.Notify(cam);
 	}
-	auto World::GetCameras() const -> const core::SSet<Camera*>&
+	SH_GAME_API auto World::GetCameras() const -> const core::SSet<Camera*>&
 	{
 		return cameras;
 	}
-	void World::SetMainCamera(Camera* cam)
+	SH_GAME_API void World::SetMainCamera(Camera* cam)
 	{
 		if (core::IsValid(cam))
 		{
 			mainCamera = cam;
 		}
 	}
-	auto World::GetMainCamera() const -> Camera*
+	SH_GAME_API auto World::GetMainCamera() const -> Camera*
 	{
 		return mainCamera;
 	}

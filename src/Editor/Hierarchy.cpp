@@ -14,6 +14,57 @@ namespace sh::editor
 	{
 	}
 
+	void Hierarchy::DrawInvisibleSpace(game::GameObject* obj)
+	{
+		ImGui::SetCursorPosY(ImGui::GetCursorPosY() - ImGui::GetStyle().ItemSpacing.y);
+		ImGui::InvisibleButton(("ReorderDrop" + obj->name).c_str(), ImVec2(-1, 1));
+
+		if (ImGui::BeginDragDropTarget())
+		{
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("GameObject"))
+			{
+				IM_ASSERT(payload->DataSize == sizeof(game::GameObject*));
+				game::GameObject* draggedObj = *(game::GameObject**)payload->Data;
+
+				if (obj->transform->GetParent() == nullptr)
+				{
+					world.ReorderObjectAbovePivot(draggedObj->name, obj->name);
+					if (draggedObj->transform->GetParent() != nullptr)
+					{
+						draggedObj->transform->SetParent(nullptr);
+					}
+				}
+				else
+				{
+					if (obj->transform->GetParent() == draggedObj->transform->GetParent())
+					{
+						auto objParent = obj->transform->GetParent();
+						auto objIt = std::find(objParent->GetChildren().begin(), objParent->GetChildren().end(), obj->transform);
+						auto draggedIt = std::find(objParent->GetChildren().begin(), objParent->GetChildren().end(), draggedObj->transform);
+						uint32_t dif = draggedIt - objIt;
+						for (std::size_t i = 0; i < dif; ++i)
+						{
+							objParent->ReorderChildAbove(draggedObj->transform);
+						}
+					}
+					else
+					{
+						auto objParent = obj->transform->GetParent();
+						draggedObj->transform->SetParent(objParent);
+						auto objIt = std::find(objParent->GetChildren().begin(), objParent->GetChildren().end(), obj->transform);
+						auto draggedIt = std::find(objParent->GetChildren().begin(), objParent->GetChildren().end(), draggedObj->transform);
+						uint32_t dif = draggedIt - objIt;
+						for (std::size_t i = 0; i < dif; ++i)
+						{
+							objParent->ReorderChildAbove(draggedObj->transform);
+						}
+					}
+				}
+			}
+			ImGui::EndDragDropTarget();
+		}
+	}
+
 	void Hierarchy::DrawGameObjectHierarchy(game::GameObject* obj, core::SHashSet<game::GameObject*>& drawSet)
 	{
 		if (drawSet.find(obj) != drawSet.end())
@@ -25,6 +76,7 @@ namespace sh::editor
 		bool nodeOpen = false;
 		bool hasChildren = !obj->transform->GetChildren().empty();
 
+		DrawInvisibleSpace(obj);
 		if (hasChildren) 
 		{
 			nodeOpen = ImGui::TreeNodeEx((void*)obj,
@@ -57,6 +109,7 @@ namespace sh::editor
 				IM_ASSERT(payload->DataSize == sizeof(game::GameObject*));
 				game::GameObject* draggedObj = *reinterpret_cast<game::GameObject**>(payload->Data);
 
+				// 순환 참조 체크, 부모 설정
 				bool circulation = false;
 				game::Transform* parent = obj->transform->GetParent();
 				while (parent)
@@ -74,8 +127,8 @@ namespace sh::editor
 			ImGui::EndDragDropTarget();
 		}
 
-
-		if (nodeOpen && hasChildren) {
+		if (nodeOpen && hasChildren) 
+		{
 			for (auto child : obj->transform->GetChildren())
 				DrawGameObjectHierarchy(child->gameObject, drawSet);
 			ImGui::TreePop();

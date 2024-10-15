@@ -83,18 +83,22 @@ namespace sh::game
 			vRotation.y -= 360;
 		if (vRotation.z >= 360)
 			vRotation.z -= 360;
+
 		quat = glm::quat{ glm::radians(vRotation) };
 
 		matModel = glm::translate(glm::mat4{ 1.0f }, vPosition) * glm::mat4_cast(quat) * glm::scale(glm::mat4{ 1.0f }, vScale);
 		if (parent)
 		{
+			worldQuat = parent->worldQuat * quat;
 			matModel = parent->matModel * matModel;
 			worldPosition = glm::vec3(matModel[3]);
-			worldRotation = glm::degrees(glm::eulerAngles(parent->quat * quat));
-			worldScale = parent->scale * vScale;
+			worldRotation = glm::degrees(glm::eulerAngles(worldQuat));
+			worldScale = parent->worldScale * vScale;
 		}
 		else
 		{
+			worldQuat = quat;
+
 			worldPosition = vPosition;
 			worldRotation = vRotation;
 			worldScale = vScale;
@@ -112,13 +116,30 @@ namespace sh::game
 		bUpdateMatrix = false;
 	}
 
+	void Transform::RemoveChild(const Transform& child)
+	{
+		auto it = std::find(childs.begin(), childs.end(), &child);
+		if (it == childs.end())
+			return;
+		childs.erase(it);
+	}
+
 	SH_GAME_API auto Transform::GetParent() const -> Transform*
 	{
 		return parent;
 	}
-	SH_GAME_API auto Transform::GetChildren() const -> const core::SSet<Transform*>&
+	SH_GAME_API auto Transform::GetChildren() const -> const core::SVector<Transform*>&
 	{
 		return childs;
+	}
+	SH_GAME_API void Transform::ReorderChildAbove(Transform* child)
+	{
+		auto it = std::find(childs.begin(), childs.end(), child);
+		if (it == childs.end() || it == childs.begin())
+			return;
+
+		uint32_t idx = it - childs.begin();
+		std::swap(childs[idx], childs[idx - 1]);
 	}
 
 	SH_GAME_API void Transform::SetPosition(const glm::vec3& pos)
@@ -176,20 +197,25 @@ namespace sh::game
 	{
 		if (parent == this)
 			return;
+
+		if (parent && parent->HasChild(*this))
+			return;
+
 		if (core::IsValid(parent))
 			parent->UpdateMatrix();
 		UpdateMatrix();
+
 		if (this->parent)
 		{
 			this->parent->RemoveChild(*this);
 			if (core::IsValid(parent))
 			{
 				this->parent = parent;
-				this->parent->AddChild(*this);
+				this->parent->childs.push_back(this);
 
 				vPosition = parent->GetWorldToLocalMatrix() * glm::vec4(worldPosition, 1);
-				vRotation = glm::degrees(glm::eulerAngles(glm::inverse(parent->quat) * quat));
-				vScale = (1.f / parent->vScale) * scale;
+				vRotation = glm::degrees(glm::eulerAngles(glm::inverse(parent->worldQuat) * worldQuat));
+				vScale = (1.f / parent->worldScale) * worldScale;
 			}
 			else
 			{
@@ -204,33 +230,29 @@ namespace sh::game
 			if (core::IsValid(parent))
 			{
 				this->parent = parent;
-				this->parent->AddChild(*this);
+				this->parent->childs.push_back(this);
 				vPosition = parent->GetWorldToLocalMatrix() * glm::vec4(worldPosition, 1);
-				vRotation = glm::degrees(glm::eulerAngles(glm::inverse(parent->quat) * quat));
-				vScale = (1.f / parent->vScale) * scale;
+				vRotation = glm::degrees(glm::eulerAngles(glm::inverse(parent->worldQuat) * quat));
+				vScale = (1.f / parent->worldScale) * worldScale;
 			}
 			else
 				return;
 		}
 		UpdateMatrix();
 	}
-	SH_GAME_API void Transform::AddChild(Transform& child)
+	SH_GAME_API bool Transform::HasChild(const Transform& child) const
 	{
-		if (!core::IsValid(&child))
-			return;
-		childs.insert(&child);
-	}
-	SH_GAME_API void Transform::RemoveChild(Transform& child)
-	{
-		if (!core::IsValid(&child))
-			return;
-		auto it = childs.find(&child);
-		childs.erase(it);
+		auto it = std::find(childs.begin(), childs.end(), &child);
+		return it != childs.end();
 	}
 
-	SH_GAME_API auto Transform::GetRotationQuat() const -> const glm::quat&
+	SH_GAME_API auto Transform::GetQuat() const -> const glm::quat&
 	{
 		return quat;
+	}
+	SH_GAME_API auto Transform::GetWorldQuat() const -> const glm::quat&
+	{
+		return worldQuat;
 	}
 	SH_GAME_API auto Transform::GetWorldPosition() const -> const glm::vec3&
 	{
