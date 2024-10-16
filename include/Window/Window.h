@@ -25,7 +25,6 @@ namespace sh::window {
 		float maxFrameMs;
 		std::chrono::high_resolution_clock::time_point startTime, endTime;
 		float deltaTime;
-		unsigned int deltaTimeMs;
 
 		uint32_t wsize;
 		uint32_t hsize;

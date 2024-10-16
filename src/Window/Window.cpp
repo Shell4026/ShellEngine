@@ -9,7 +9,7 @@ namespace sh::window {
 		width(wsize), height(hsize),
 
 		isOpen(false),
-		fps(60), maxFrameMs(1000.0f / static_cast<float>(fps)), deltaTimeMs(0), deltaTime(0.0f),
+		fps(60), maxFrameMs(1000.0f / static_cast<float>(fps)), deltaTime(0.0f),
 		wsize(0), hsize(0)
 	{
 		startTime = std::chrono::high_resolution_clock::now();
@@ -88,13 +88,19 @@ namespace sh::window {
 	void Window::ProcessFrame()
 	{
 		startTime = std::chrono::high_resolution_clock::now();
-		deltaTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(startTime - endTime).count();
-		int term = maxFrameMs - deltaTimeMs;
-		if (term > 0)
-			std::this_thread::sleep_for(std::chrono::milliseconds{ term });
+
+		std::chrono::duration<float, std::milli> frameDuration = startTime - endTime;
+		float deltaTimeMs = frameDuration.count();
+
+		float term = maxFrameMs - deltaTimeMs;
+		if (term > 0.f)
+		{
+			std::this_thread::sleep_for(std::chrono::microseconds{ static_cast<int>(term * 1000.f) });
+		}
 		endTime = std::chrono::high_resolution_clock::now();
-		deltaTimeMs += std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
-		deltaTime = deltaTimeMs / 1000.0f;
+
+		frameDuration = endTime - startTime;
+		deltaTime = frameDuration.count() / 1000.f;
 	}
 
 	auto Window::GetNativeHandle() const -> WinHandle
