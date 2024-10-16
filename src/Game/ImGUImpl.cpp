@@ -95,6 +95,7 @@ namespace sh::game
 		ImGuiIO& io = ImGui::GetIO();
 
 		io.MousePos = ImVec2{ static_cast<float>(window::Event::MousePosition::mouseX), static_cast<float>(window::Event::MousePosition::mouseY) };
+		io.DeltaTime = window.GetDeltaTime();
 
 		bool keyDown = false;
 		switch (event.type)
