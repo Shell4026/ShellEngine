@@ -1,6 +1,7 @@
 ﻿#pragma once
 
 #include "Export.h"
+#include "SContainer.hpp"
 
 #include <cstddef>
 #include <typeinfo>
@@ -25,15 +26,34 @@ public:\
 public:\
 	static auto GetStaticType() -> sh::core::reflection::STypeInfo&\
 	{\
-		static sh::core::reflection::STypeInfo info{ sh::core::reflection::TypeInfoData<class_name>(#class_name) };\
-		return info;\
+		if(stypeInfo == nullptr)\
+		{\
+			uint32_t hash = typeid(class_name).hash_code();\
+			auto it = sh::core::reflection::STypes::types.find(hash);\
+			if (it == sh::core::reflection::STypes::types.end())\
+			{\
+				static sh::core::reflection::STypeInfo info{ sh::core::reflection::TypeInfoData<class_name>(#class_name) }; \
+				sh::core::reflection::STypes::types.insert({ hash, &info });\
+				stypeInfo = &info;\
+				return info;\
+			}\
+			else\
+			{\
+				stypeInfo = it->second;\
+				return *stypeInfo;\
+			}\
+		}\
+		else\
+			return *stypeInfo;\
 	}\
 	virtual auto GetType() const -> sh::core::reflection::STypeInfo&\
 	{\
-		return stypeInfo;\
+		if (stypeInfo == nullptr)\
+			stypeInfo = &GetStaticType();\
+		return *stypeInfo;\
 	}\
 private:\
-		inline static sh::core::reflection::STypeInfo& stypeInfo = GetStaticType();
+		inline static sh::core::reflection::STypeInfo* stypeInfo = nullptr;
 
 #define PROPERTY(variable_name, ...)\
 struct _PropertyFactory_##variable_name\
@@ -211,6 +231,12 @@ namespace sh::core::reflection
 
 		return str;
 	}
+
+	class STypes
+	{
+	public:
+		SH_CORE_API static SHashMap<uint32_t, STypeInfo*> types;
+	};
 
 	template<typename T>
 	struct TypeInfoData
