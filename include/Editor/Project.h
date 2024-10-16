@@ -12,17 +12,14 @@
 #include <optional>
 #include <filesystem>
 
-namespace sh::game
-{
-	class World;
-}
 namespace sh::editor
 {
+	class EditorWorld;
 	class Project : public UI
 	{
 	private:
-		game::World& world;
-		static constexpr const ImVec4 iconBackgroundColor{ 0, 0, 0, 1 };
+		EditorWorld& world;
+		static constexpr const ImVec4 iconBackgroundColor{ 0, 0, 0, 0 };
 		
 		std::string dir;
 		std::filesystem::path rootPath;
@@ -39,10 +36,14 @@ namespace sh::editor
 	private:
 		void InitResources();
 		void GetAllFiles(const std::filesystem::path& path);
-		auto GetElideFileName(std::string_view name, float maxSize) const -> std::string;
+		/// @brief 경로의 파일의 이름의 폰트 크기가 maxSize가 넘어가면 잘라내는 함수
+		/// @param path 파일 경로
+		/// @param maxSize 최대 길이
+		/// @return 새로 만들어진 이름
+		auto GetElideFileName(const std::filesystem::path& path, float maxSize) const -> std::string;
 		inline void RenderParentFolder();
 	public:
-		SH_EDITOR_API Project(game::ImGUImpl& imgui, game::World& world);
+		SH_EDITOR_API Project(game::ImGUImpl& imgui, EditorWorld& world);
 
 		SH_EDITOR_API void Update() override;
 		SH_EDITOR_API void Render() override;

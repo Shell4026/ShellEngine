@@ -1,14 +1,14 @@
 ﻿#include "Game/PCH.h"
 #include "Project.h"
+#include "EditorWorld.h"
 
-#include "Game/World.h"
 #include "Game/TextureLoader.h"
 
 namespace sh::editor
 {
 	bool Project::bInitResource = false;
 
-	Project::Project(game::ImGUImpl& imgui, game::World& world) :
+	Project::Project(game::ImGUImpl& imgui, EditorWorld& world) :
 		UI(imgui), world(world),
 		rootPath(std::filesystem::current_path()),
 		currentPath(rootPath),
@@ -50,9 +50,9 @@ namespace sh::editor
 			}
 		}
 	}
-	auto Project::GetElideFileName(std::string_view name, float maxSize) const -> std::string
+	auto Project::GetElideFileName(const std::filesystem::path& path, float maxSize) const -> std::string
 	{
-		std::string result{ name };
+		std::string result = path.filename().string();
 		float currentSize = ImGui::CalcTextSize(result.c_str()).x;
 		while (currentSize > maxSize)
 		{
@@ -110,19 +110,22 @@ namespace sh::editor
 			if (!std::filesystem::is_directory(path))
 				icon = &fileIcon;
 
-			if (ImGui::ImageButton(path.string().c_str(), *icon, ImVec2{iconSize, iconSize}, ImVec2{0, 0}, ImVec2{1, 1}, iconBackgroundColor))
+			ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Button, iconBackgroundColor);
+			if (ImGui::ImageButton(path.string().c_str(), *icon, ImVec2{iconSize, iconSize}))
 			{
 				
 			}
+			ImGui::PopStyleColor();
 			if (std::filesystem::is_directory(path) && 
 				ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_::ImGuiMouseButton_Left))
 			{
+				SH_INFO("double");
 				ImGui::EndGroup();
 				currentPath = path;
 				GetAllFiles(currentPath);
 				break;
 			}
-			std::string name = GetElideFileName(path.filename().string(), iconSize);
+			std::string name = GetElideFileName(path, iconSize);
 			float textWidth = ImGui::CalcTextSize(name.c_str()).x;
 			float textOffset = (iconSize - textWidth) / 2.f;
 			if (textOffset >= 0.0f)

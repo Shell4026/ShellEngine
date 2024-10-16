@@ -12,18 +12,16 @@
 
 namespace sh::game
 {
-	class World;
 	class GameObject;
 }
 namespace sh::editor
 {
+	class EditorWorld;
+
 	class Hierarchy : public UI
 	{
 	private:
-		game::World& world;
-
-		int selected;
-		game::GameObject* selectedObj;
+		EditorWorld& world;
 
 		std::list<game::GameObject*> objList;
 		//core::Observer<game::GameObject*>::Listener onGameObjectAddedListener;
@@ -37,12 +35,11 @@ namespace sh::editor
 		void DrawInvisibleSpace(game::GameObject* obj);
 		void DrawGameObjectHierarchy(game::GameObject* obj, core::SHashSet<game::GameObject*>& drawSet);
 	public:
-		SH_EDITOR_API Hierarchy(game::ImGUImpl& imgui, game::World& world);
+		SH_EDITOR_API Hierarchy(game::ImGUImpl& imgui, EditorWorld& world);
 
 		SH_EDITOR_API void Update() override;
 		SH_EDITOR_API void Render() override;
 
 		SH_EDITOR_API bool IsDocking() const;
-		SH_EDITOR_API auto GetSelected() const -> game::GameObject*;
 	};
 }//namespace

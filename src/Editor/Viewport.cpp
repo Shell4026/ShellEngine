@@ -1,9 +1,9 @@
 ﻿#include "Viewport.h"
+#include "EditorWorld.h"
 
 #include "Core/Logger.h"
 
 #include "Game/ImGUImpl.h"
-#include "Game/World.h"
 #include "Game/Input.h"
 #include "Game/GameObject.h"
 #include "Game/Component/Camera.h"
@@ -16,7 +16,7 @@
 
 namespace sh::editor
 {
-	Viewport::Viewport(game::ImGUImpl& imgui, game::World& world) :
+	Viewport::Viewport(game::ImGUImpl& imgui, EditorWorld& world) :
 		UI(imgui),
 		world(world),
 

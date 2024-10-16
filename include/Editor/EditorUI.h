@@ -6,6 +6,7 @@
 #include "Viewport.h"
 #include "Hierarchy.h"
 #include "Project.h"
+#include "Inspector.h"
 
 #include "Game/World.h"
 
@@ -14,10 +15,12 @@
 
 namespace sh::editor
 {
+	class EditorWorld;
+
 	class EditorUI : public UI
 	{
 	private:
-		game::World& world;
+		EditorWorld& world;
 
 		float hierarchyWidth;
 		float hierarchyHeight;
@@ -28,15 +31,15 @@ namespace sh::editor
 		Viewport viewport;
 		Hierarchy hierarchy;
 		Project project;
+		Inspector inspector;
 
-		bool bAddComponent;
 		bool bOpenExplorer;
 		bool bDirty;
 	private:
 		inline void SetDockNode();
 		inline void DrawInspector();
 	public:
-		SH_EDITOR_API EditorUI(game::World& world, game::ImGUImpl& imgui);
+		SH_EDITOR_API EditorUI(EditorWorld& world, game::ImGUImpl& imgui);
 		SH_EDITOR_API void Update();
 		SH_EDITOR_API void Render();
 		

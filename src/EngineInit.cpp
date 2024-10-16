@@ -26,6 +26,7 @@
 
 #if SH_EDITOR
 #include "Editor/EditorUI.h"
+#include "Editor/EditorWorld.h"
 #endif
 
 #include "fmt/core.h"
@@ -237,7 +238,11 @@ namespace sh
 		renderer->Init(*window);
 		renderer->SetViewport({ 150.f, 0.f }, { window->width - 150.f, window->height - 180 });
 
+#if SH_EDITOR
+		world = core::SObject::Create<editor::EditorWorld>(*renderer.get(), *componentModule);
+#else
 		world = core::SObject::Create<game::World>(*renderer.get(), *componentModule);
+#endif
 		gc->SetRootSet(world);
 
 		InitResource();
@@ -246,10 +251,9 @@ namespace sh
 		gui->Init();
 
 #if SH_EDITOR
-		editorUI = std::make_unique<editor::EditorUI>(*world, *gui);
+		editorUI = std::make_unique<editor::EditorUI>(*static_cast<editor::EditorWorld*>(world), *gui);
 		world->GetMainCamera()->SetRenderTexture(editorUI->GetViewport().GetRenderTexture());
 #endif
-
 		SH_INFO("Start world");
 		world->Start();
 

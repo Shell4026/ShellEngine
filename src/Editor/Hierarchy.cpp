@@ -1,15 +1,14 @@
 ﻿#include "Game/PCH.h"
 #include "Hierarchy.h"
+#include "EditorWorld.h"
 
-#include "Game/World.h"
 #include "Game/GameObject.h"
 
 namespace sh::editor
 {
-	SH_EDITOR_API Hierarchy::Hierarchy(game::ImGUImpl& imgui, game::World& world) :
+	SH_EDITOR_API Hierarchy::Hierarchy(game::ImGUImpl& imgui, EditorWorld& world) :
 		UI(imgui),
 		world(world),
-		selected(0), selectedObj(nullptr),
 		isDocking(false)
 	{
 	}
@@ -72,7 +71,7 @@ namespace sh::editor
 
 		drawSet.insert(obj);
 
-		bool isSelected = selectedObj == obj;
+		bool isSelected = world.GetSelectedObject() == obj;
 		bool nodeOpen = false;
 		bool hasChildren = !obj->transform->GetChildren().empty();
 
@@ -92,7 +91,7 @@ namespace sh::editor
 		}
 
 		if (ImGui::IsItemClicked())
-			selectedObj = obj;
+			world.SetSelectedObject(obj);
 
 		// 드래그 되는 대상의 시점
 		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_::ImGuiDragDropFlags_None))
@@ -192,9 +191,5 @@ namespace sh::editor
 	SH_EDITOR_API bool Hierarchy::IsDocking() const
 	{
 		return isDocking;
-	}
-	SH_EDITOR_API auto Hierarchy::GetSelected() const -> game::GameObject*
-	{
-		return selectedObj;
 	}
 }

@@ -15,11 +15,12 @@
 namespace sh::game
 {
 	class ImGUImpl;
-	class World;
 }
 
 namespace sh::editor
 {
+	class EditorWorld;
+
 	class Viewport : 
 		public UI, 
 		public core::ISyncable
@@ -40,14 +41,14 @@ namespace sh::editor
 		bool bMouseDown;
 		bool bFocus;
 	protected:
-		game::World& world;
+		EditorWorld& world;
 	public:
 		static constexpr const char* name = "Viewport";
 	private:
 		/// @brief 뷰포트 사이즈가 변했을 시 렌더 텍스쳐의 사이즈를 바꾸는 함수.
 		void ChangeViewportSize();
 	public:
-		SH_EDITOR_API Viewport(game::ImGUImpl& imgui, game::World& world);
+		SH_EDITOR_API Viewport(game::ImGUImpl& imgui, EditorWorld& world);
 		SH_EDITOR_API ~Viewport() noexcept;
 
 		SH_EDITOR_API void Update() override;
