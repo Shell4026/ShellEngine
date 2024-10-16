@@ -204,13 +204,14 @@ namespace sh::editor
 		ImGui::End();
 	}
 
-	void EditorUI::Update()
+	SH_EDITOR_API void EditorUI::Update()
 	{
 		viewport.Update();
-		Render();
+		hierarchy.Update();
+		project.Update();
 	}
 
-	void EditorUI::Render()
+	SH_EDITOR_API void EditorUI::Render()
 	{
 		if (!imgui.IsInit())
 			return;
@@ -240,12 +241,12 @@ namespace sh::editor
 		imgui.SetDirty();
 	}
 
-	auto EditorUI::GetViewport() -> Viewport&
+	SH_EDITOR_API auto EditorUI::GetViewport() -> Viewport&
 	{
 		return viewport;
 	}
 
-	void EditorUI::Clean()
+	SH_EDITOR_API void EditorUI::Clean()
 	{
 		viewport.Clean();
 	}

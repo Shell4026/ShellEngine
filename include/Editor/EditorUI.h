@@ -35,10 +35,10 @@ namespace sh::editor
 	private:
 		inline void SetDockNode();
 		inline void DrawInspector();
-		inline void Render();
 	public:
 		SH_EDITOR_API EditorUI(game::World& world, game::ImGUImpl& imgui);
 		SH_EDITOR_API void Update();
+		SH_EDITOR_API void Render();
 		
 		SH_EDITOR_API auto GetViewport() -> Viewport&;
 

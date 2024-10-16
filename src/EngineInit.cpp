@@ -98,7 +98,6 @@ namespace sh
 		auto catTex0 = world->textures.AddResource("Texture0", texLoader.Load("textures/버터고양이.jpg"));
 		auto catTex1 = world->textures.AddResource("Texture1", texLoader.Load("textures/cat.jpg"));
 		auto tex = world->textures.AddResource("Texture2", texLoader.Load("textures/viking_room.png"));
-		world->textures.AddResource("FolderIcon", texLoader.Load("textures/folder.png"));
 
 		defaultShader->AddAttribute<glm::vec2>("uvs", 1);
 
@@ -285,6 +284,7 @@ namespace sh
 			this->gui->Begin();
 #if SH_EDITOR
 			this->editorUI->Update();
+			this->editorUI->Render();
 #endif
 			this->gui->End();
 

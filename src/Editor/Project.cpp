@@ -1,33 +1,85 @@
-﻿#include "Project.h"
+﻿#include "Game/PCH.h"
+#include "Project.h"
 
 #include "Game/World.h"
+#include "Game/TextureLoader.h"
 
 namespace sh::editor
 {
+	bool Project::bInitResource = false;
+
 	Project::Project(game::ImGUImpl& imgui, game::World& world) :
 		UI(imgui), world(world),
-		currentPath(std::filesystem::current_path().string()),
-		folderIcon(world.renderer)
+		rootPath(std::filesystem::current_path()),
+		currentPath(rootPath),
+		folderIcon(world.renderer), fileIcon(world.renderer)
 	{
-		for (const auto& entry : std::filesystem::directory_iterator(currentPath)) 
-		{
-			if (std::filesystem::is_directory(entry.path()))
-				dirs.push_back(entry.path().filename());
-		}
+		InitResources();
 
-		auto folderTex = world.textures.GetResource("FolderIcon");
-		assert(folderTex);
-		render::ITextureBuffer* texBuffer = folderTex->GetBuffer();
+		GetAllFiles(currentPath);
+	}
 
-		if (world.renderer.apiType == render::RenderAPI::Vulkan)
+	void Project::InitResources()
+	{
+		if (bInitResource)
+			return;
+		bInitResource = true;
+
+		game::TextureLoader texLoader{ world.renderer };
+
+		auto folderTex = world.textures.AddResource("FolderIcon", texLoader.Load("textures/folder.png"));
+		folderIcon.Create(*folderTex);
+
+		auto fileTex = world.textures.AddResource("FileIcon", texLoader.Load("textures/file.png"));
+		fileIcon.Create(*fileTex);
+	}
+
+	void Project::GetAllFiles(const std::filesystem::path& path)
+	{
+		filesPath.clear();
+		for (const auto& entry : std::filesystem::directory_iterator(path))
 		{
-			folderIcon.Create(*folderTex);
+			if (rootPath == path)
+			{
+				if (std::filesystem::is_directory(entry.path()))
+					filesPath.push_back(entry.path());
+			}
+			else
+			{
+				filesPath.push_back(entry.path());
+			}
 		}
+	}
+	auto Project::GetElideFileName(std::string_view name, float maxSize) const -> std::string
+	{
+		std::string result{ name };
+		float currentSize = ImGui::CalcTextSize(result.c_str()).x;
+		while (currentSize > maxSize)
+		{
+			result.pop_back();
+			currentSize = ImGui::CalcTextSize(result.c_str()).x;
+		}
+		return result;
+	}
+	void Project::RenderParentFolder()
+	{
+		ImGui::BeginGroup();
+		ImGui::ImageButton("../", folderIcon, ImVec2{ iconSize, iconSize }, ImVec2{ 0, 0 }, ImVec2{ 1, 1 }, iconBackgroundColor);
+		if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_::ImGuiMouseButton_Left))
+		{
+			currentPath = currentPath.parent_path();
+			GetAllFiles(currentPath);
+		}
+		float textWidth = ImGui::CalcTextSize("../").x;
+		float textOffset = (iconSize - textWidth) / 2.f;
+		if (textOffset >= 0.0f)
+			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + textOffset);
+		ImGui::Text("../");
+		ImGui::EndGroup();
 	}
 
 	SH_EDITOR_API void Project::Update()
 	{
-
 	}
 	SH_EDITOR_API void Project::Render()
 	{
@@ -36,29 +88,46 @@ namespace sh::editor
 
 		ImGui::Begin("Project", nullptr, style);
 
-		float iconSize = 50.0f;
 		float availableWidth = ImGui::GetContentRegionAvail().x;
 		float cursorX = ImGui::GetCursorPosX();
 		float spacing = ImGui::GetStyle().ItemSpacing.x;
 
-		for (auto& dir : dirs)
+		if (currentPath != rootPath)
 		{
-			ImGui::BeginGroup();
+			RenderParentFolder();
+			ImGui::SameLine();
+		}
+		for (auto& path : filesPath)
+		{
+			cursorX = ImGui::GetCursorPosX();
 			if (cursorX + iconSize > availableWidth)
 			{
 				ImGui::NewLine();
 				cursorX = ImGui::GetCursorPosX();
 			}
-			if (ImGui::ImageButton(folderIcon, ImVec2{ iconSize, iconSize }))
-			{
+			ImGui::BeginGroup();
+			game::GUITexture* icon = &folderIcon;
+			if (!std::filesystem::is_directory(path))
+				icon = &fileIcon;
 
+			if (ImGui::ImageButton(path.string().c_str(), *icon, ImVec2{iconSize, iconSize}, ImVec2{0, 0}, ImVec2{1, 1}, iconBackgroundColor))
+			{
+				
 			}
-			std::string folderName = dir.filename().string();
-			float textWidth = ImGui::CalcTextSize(folderName.c_str()).x;
-			float textOffset = (iconSize - textWidth);
-			if (textOffset > 0.0f)
+			if (std::filesystem::is_directory(path) && 
+				ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_::ImGuiMouseButton_Left))
+			{
+				ImGui::EndGroup();
+				currentPath = path;
+				GetAllFiles(currentPath);
+				break;
+			}
+			std::string name = GetElideFileName(path.filename().string(), iconSize);
+			float textWidth = ImGui::CalcTextSize(name.c_str()).x;
+			float textOffset = (iconSize - textWidth) / 2.f;
+			if (textOffset >= 0.0f)
 				ImGui::SetCursorPosX(ImGui::GetCursorPosX() + textOffset);
-			ImGui::TextWrapped("%s", folderName.c_str());
+			ImGui::Text("%s", name.c_str());
 			ImGui::EndGroup();
 
 			ImGui::SameLine(0.0f, spacing);
