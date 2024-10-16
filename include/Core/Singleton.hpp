@@ -39,7 +39,15 @@ namespace sh::core
 	protected:
 		Singleton() {}
 	public:
-		static auto GetInstance()->T*;
+		/// @brief 싱글톤 인스턴스를 생성하거나 가져온다.
+		/// 
+		/// @details 같은 dll내 멀티 스레드 환경에서는 lock을 쓰지 않고 memory_order를 이용하여 lock-free로 구현.
+		/// @details 다른 dll내 멀티 스레드 환경에서는 ISingleton의 CreateInstance내부에서 락을 써서 구현.
+		/// @tparam ...Args 가변 인자 타입
+		/// @param ...args 생성자에 전달 할 인자. 첫 초기화 시에만 사용된다.
+		/// @return 객체 포인터
+		template<typename ...Args>
+		static auto GetInstance(Args&&... args)->T*;
 		static void Destroy();
 	};
 
@@ -51,7 +59,8 @@ namespace sh::core
 	protected:
 		Singleton() {}
 	public:
-		static auto GetInstance() -> T*;
+		template<typename ...Args>
+		static auto GetInstance(Args&&... args) -> T*;
 		static void Destroy();
 	};
 
@@ -62,16 +71,10 @@ namespace sh::core
 
 	template<typename T>
 	std::atomic<T*> Singleton<T, false>::instance{};
-	/// @brief 싱글톤 인스턴스를 생성하거나 가져온다.
-	/// 
-	/// @details 같은 dll내 멀티 스레드 환경에서는 lock을 쓰지 않고 memory_order를 이용하여 lock-free로 구현.
-	/// @details 다른 dll내 멀티 스레드 환경에서는 ISingleton의 CreateInstance내부에서 락을 써서 구현.
-	/// 
-	/// @tparam T 타입
-	/// @tparam shareDLL DLL간 메모리 영역을 공유할지
-	/// @return 객체 포인터
+
 	template<typename T, bool shareDLL>
-	auto Singleton<T, shareDLL>::GetInstance() -> T*
+	template<typename ...Args>
+	auto Singleton<T, shareDLL>::GetInstance(Args&&... args) -> T*
 	{
 		T* instancePtr = instance.load(std::memory_order::memory_order_acquire);
 		if (instancePtr == nullptr)
@@ -86,11 +89,11 @@ namespace sh::core
 					Result result = CreateInstance(hash, sizeof(T));
 					void* resultPtr = result.ptr;
 					if (result.needInit)
-						new (resultPtr) T();
+						new (resultPtr) T(std::forward<Args>(args)...);
 					instancePtr = reinterpret_cast<T*>(resultPtr);
 				}
 				else
-					instancePtr = new T{};
+					instancePtr = new T{ std::forward<Args>(args)... };
 				instance.store(instancePtr, std::memory_order::memory_order_release);
 			}	
 		}

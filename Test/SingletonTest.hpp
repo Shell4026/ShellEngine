@@ -21,6 +21,16 @@ public:
 	}
 };
 
+class SingleClassWithArgs : public sh::core::Singleton<SingleClassWithArgs>
+{
+public:
+	int num0, num1;
+public:
+	SingleClassWithArgs(int num0, int num1) : 
+		num0(num0), num1(num1)
+	{}
+};
+
 TEST(SingletonTest, GetInstancingTesting)
 {
 	SingleClass* instance = SingleClass::GetInstance();
@@ -55,4 +65,14 @@ TEST(SingletonTest, MultiThreadTesting)
 		thr2.join();
 		EXPECT_EQ(ptr1, ptr2);
 	}
+}
+
+TEST(SingletonTest, ArgsTesting)
+{
+	SingleClassWithArgs* ptr = SingleClassWithArgs::GetInstance(1, 2);
+	EXPECT_EQ(ptr->num0, 1);
+	EXPECT_EQ(ptr->num1, 2);
+	SingleClassWithArgs* ptr2 = SingleClassWithArgs::GetInstance(0, 0);
+	EXPECT_EQ(ptr2->num0, 1);
+	EXPECT_EQ(ptr2->num1, 2);
 }
