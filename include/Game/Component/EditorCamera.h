@@ -4,10 +4,13 @@
 
 namespace sh::game
 {
+	class ImGUImpl;
+
 	class EditorCamera : public Camera
 	{
 		COMPONENT(EditorCamera)
 	private:
+		ImGUImpl* gui = nullptr;
 		float distance;
 
 		float xdir;
@@ -35,6 +38,7 @@ namespace sh::game
 	public:
 		SH_GAME_API EditorCamera();
 
-		SH_GAME_API void Update() override;
+		SH_GAME_API void BeginUpdate() override;
+		SH_GAME_API void SetGUI(ImGUImpl& gui);
 	};
 }//namespace

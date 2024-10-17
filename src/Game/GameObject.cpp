@@ -80,14 +80,6 @@ namespace sh::game
 		}
 	}
 
-	void GameObject::OnDestroy()
-	{
-		for (auto component : components)
-		{
-			component->OnDestroy();
-		}
-	}
-
 	void GameObject::Destroy()
 	{
 		world.DestroyGameObject(name);

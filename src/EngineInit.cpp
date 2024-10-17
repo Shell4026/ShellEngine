@@ -45,14 +45,14 @@ namespace sh
 		Clean();
 	}
 	void EngineInit::Clean()
-
 	{
 		SH_INFO("Engine shutdown");
 		world->Clean();
+		gc->Update();
 		world->Destroy();
+		gc->Update();
 
 		gui.reset();
-		gc->Update();
 		renderer.reset();
 		window.reset();
 	}
