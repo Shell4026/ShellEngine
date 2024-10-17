@@ -68,7 +68,7 @@ namespace sh::editor
 							bool constant = prop.isConstProperty;
 							auto inputFlag = constant ? ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly : ImGuiInputTextFlags_::ImGuiInputTextFlags_None;
 
-							// 포인터 형식, 드래그 앤 드랍 기능
+							// SObject 포인터 형식, 드래그 앤 드랍 기능
 							if (prop.isSObjectPointer)
 							{
 								ImGui::LabelText(("##" + name).c_str(), name.c_str());

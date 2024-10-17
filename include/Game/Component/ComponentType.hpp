@@ -1,14 +1,11 @@
 ﻿#pragma once
-
-#include "Component.h"
-
-#include "Core/SObject.h"
-
 #include <type_traits>
 #include <memory>
 
 namespace sh::game
 {
+	class Component;
+
 	struct IComponentType
 	{
 		virtual auto Create() -> Component* = 0;

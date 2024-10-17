@@ -6,7 +6,7 @@ namespace sh::game
 {
 	class EditorCamera : public Camera
 	{
-		SCLASS(EditorCamera)
+		COMPONENT(EditorCamera)
 	private:
 		float distance;
 

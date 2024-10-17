@@ -15,7 +15,7 @@ namespace sh::game
 {
 	class LineRenderer : public MeshRenderer
 	{
-		SCLASS(LineRenderer)
+		COMPONENT(LineRenderer)
 	private:
 		PROPERTY(start)
 		glm::vec3 start;

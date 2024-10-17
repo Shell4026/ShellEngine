@@ -12,9 +12,6 @@ extern "C"
 	SH_USER_API void Init()
 	{
 		SH_INFO("Init User module.\n");
-
-		REGISTER_COMPONENT(ComponentTest);
-		REGISTER_COMPONENT(RotateObject);
 	}
 	SH_USER_API auto GetModule() -> sh::game::ComponentModule*
 	{

@@ -22,7 +22,7 @@ namespace sh::game
 
 	class MeshRenderer : public Component
 	{
-		SCLASS(MeshRenderer);
+		COMPONENT(MeshRenderer);
 	private:
 		PROPERTY(mesh);
 		sh::render::Mesh* mesh;

@@ -10,7 +10,7 @@ using namespace sh::game;
 
 class ComponentTest : public Component
 {
-	SCLASS(ComponentTest)
+	COMPONENT(ComponentTest, "user")
 private:
 	PROPERTY(target)
 	std::string target;

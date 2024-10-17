@@ -20,7 +20,7 @@ namespace sh::game
 {
 	class Camera : public Component
 	{
-		SCLASS(Camera)
+		COMPONENT(Camera)
 	private:
 		render::Camera camera;
 

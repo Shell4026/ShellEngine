@@ -2,10 +2,22 @@
 
 #include "Game/Export.h"
 #include "Game/Object.h"
+#include "Game/ComponentModule.h"
 
 #include "Core/Util.h"
 
 #include <type_traits>
+
+#define COMPONENT(className, folderName)\
+	SCLASS(className)\
+	struct _ComponentBuilder_##className\
+	{\
+		_ComponentBuilder_##className()\
+		{\
+			sh::game::ComponentModule::GetInstance()->RegisterComponent<className>(#className, std::string{folderName});\
+		}\
+	};\
+	inline static _ComponentBuilder_##className* _componentBuilder = &static _ComponentBuilder_##className{};
 
 namespace sh::game
 {
@@ -20,6 +32,8 @@ namespace sh::game
 	public:
 		GameObject* gameObject;
 		const bool& active;
+	protected:
+		auto GetComponentModule() const -> ComponentModule*;
 	public:
 		SH_GAME_API Component();
 		SH_GAME_API virtual ~Component() = default;
