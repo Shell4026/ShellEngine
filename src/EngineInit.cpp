@@ -69,7 +69,6 @@ namespace sh
 		if (componentModule == nullptr)
 			throw std::runtime_error{ "Can't load user module!" };
 
-		componentModule->RegisterComponent<game::LineRenderer>("LineRenderer");
 		for (auto& components : componentModule->GetComponents())
 		{
 			SH_INFO(fmt::format("Load Component: {}\n", components.first));
@@ -87,16 +86,20 @@ namespace sh
 		TextureLoader texLoader{ *renderer };
 		ModelLoader modelLoader{ *renderer };
 
-		auto defaultShader = world->shaders.AddResource("Default", loader.LoadShader<render::VulkanShader>
-			("shaders/default.vert.spv", "shaders/default.frag.spv"));
+		auto defaultShader = world->shaders.AddResource("Default", loader.LoadShader<render::VulkanShader>("shaders/default.vert.spv", "shaders/default.frag.spv"));
 		auto lineShader = world->shaders.AddResource("Line", loader.LoadShader<render::VulkanShader>("shaders/line.vert.spv", "shaders/line.frag.spv"));
+		auto errorShader = world->shaders.AddResource("ErrorShader", loader.LoadShader<render::VulkanShader>("shaders/error.vert.spv", "shaders/error.frag.spv"));
+
+		auto errorMat = world->materials.AddResource("ErrorMaterial", sh::render::Material{ errorShader });
 		auto mat = world->materials.AddResource("Material", sh::render::Material{ defaultShader });
 		auto catMat0 = world->materials.AddResource("Material2", sh::render::Material{ defaultShader });
 		auto catMat1 = world->materials.AddResource("Material3", sh::render::Material{ defaultShader });
 		auto lineMat = world->materials.AddResource("LineMat", sh::render::Material{ lineShader });
+
 		auto plane = world->meshes.AddResource("Plane", sh::render::Plane{});
 		auto cube = world->meshes.AddResource("Cube", modelLoader.Load("model/cube.obj"));
 		auto mesh2 = world->meshes.AddResource("Mesh2", modelLoader.Load("model/test.obj"));
+
 		auto catTex0 = world->textures.AddResource("Texture0", texLoader.Load("textures/버터고양이.jpg"));
 		auto catTex1 = world->textures.AddResource("Texture1", texLoader.Load("textures/cat.jpg"));
 		auto tex = world->textures.AddResource("Texture2", texLoader.Load("textures/viking_room.png"));
@@ -105,6 +108,11 @@ namespace sh
 
 		auto ObjectUniformType = render::Shader::UniformType::Object;
 		auto MaterialUniformType = render::Shader::UniformType::Material;
+
+		errorShader->AddUniform<glm::mat4>("model", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
+		errorShader->AddUniform<glm::mat4>("view", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
+		errorShader->AddUniform<glm::mat4>("proj", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
+		errorShader->Build();
 
 		defaultShader->AddUniform<glm::mat4>("model", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
 		defaultShader->AddUniform<glm::mat4>("view", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
@@ -121,6 +129,8 @@ namespace sh
 		lineShader->AddUniform<glm::vec3>("end", MaterialUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
 		lineShader->AddUniform<glm::vec4>("color", MaterialUniformType, 1, sh::render::Shader::ShaderStage::Fragment);
 		lineShader->Build();
+
+		errorMat->Build(*renderer);
 
 		catMat0->SetTexture("tex", catTex0);
 		catMat0->Build(*renderer);

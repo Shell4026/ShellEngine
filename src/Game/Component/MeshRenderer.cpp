@@ -101,6 +101,12 @@ namespace sh::game
 	void MeshRenderer::Awake()
 	{
 		Super::Awake();
+
+		if (!core::IsValid(mat))
+		{
+			mat = gameObject->world.materials.GetResource("ErrorMaterial");
+		}
+
 		for(auto cam : gameObject->world.GetCameras())
 			CreateDrawable(cam);
 

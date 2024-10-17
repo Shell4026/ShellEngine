@@ -60,6 +60,7 @@ namespace sh::game
 
 		auto AddResource(std::string_view _name, T* resource) -> T*
 		{
+			assert(resource);
 			std::string name{ _name };
 
 			int idx = 0;
