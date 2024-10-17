@@ -2,6 +2,8 @@
 #include <type_traits>
 #include <memory>
 
+#include "Core/SObject.h"
+
 namespace sh::game
 {
 	class Component;

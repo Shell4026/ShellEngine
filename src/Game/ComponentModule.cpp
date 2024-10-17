@@ -3,11 +3,11 @@
 
 namespace sh::game
 {
-	auto ComponentModule::GetComponents() -> core::SHashMap<std::string, std::unique_ptr<IComponentType>>&
+	auto ComponentModule::GetComponents() -> std::unordered_map<std::string, std::unique_ptr<IComponentType>>&
 	{
 		return components;
 	}
-	auto ComponentModule::GetComponents() const -> const core::SHashMap<std::string, std::unique_ptr<IComponentType>>&
+	auto ComponentModule::GetComponents() const -> const std::unordered_map<std::string, std::unique_ptr<IComponentType>>&
 	{
 		return components;
 	}

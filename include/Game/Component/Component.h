@@ -8,16 +8,21 @@
 
 #include <type_traits>
 
-#define COMPONENT(className, folderName)\
+#define COMPONENT(className, ...)\
 	SCLASS(className)\
 	struct _ComponentBuilder_##className\
 	{\
 		_ComponentBuilder_##className()\
 		{\
-			sh::game::ComponentModule::GetInstance()->RegisterComponent<className>(#className, std::string{folderName});\
+			sh::game::ComponentModule::GetInstance()->RegisterComponent<className>(#className, std::string{__VA_ARGS__});\
 		}\
-	};\
-	inline static _ComponentBuilder_##className* _componentBuilder = &static _ComponentBuilder_##className{};
+		static auto GetStatic() -> _ComponentBuilder_##className*\
+		{\
+			static _ComponentBuilder_##className builder{};\
+			return &builder;\
+		}\
+	}; \
+	inline static _ComponentBuilder_##className* _componentBuilder = _ComponentBuilder_##className::GetStatic();
 
 namespace sh::game
 {

@@ -89,18 +89,18 @@ namespace sh::window {
 	{
 		startTime = std::chrono::high_resolution_clock::now();
 
-		std::chrono::duration<float, std::milli> frameDuration = startTime - endTime;
-		float deltaTimeMs = frameDuration.count();
+		auto frameDuration = std::chrono::duration_cast<std::chrono::microseconds>(startTime - endTime);
+		uint64_t deltaTimeMicro = frameDuration.count();
 
-		float term = maxFrameMs - deltaTimeMs;
-		if (term > 0.f)
+		uint64_t freeTimeMicro = maxFrameMs * 1000.f - deltaTimeMicro;
+		if (freeTimeMicro > 0.f)
 		{
-			std::this_thread::sleep_for(std::chrono::microseconds{ static_cast<int>(term * 1000.f) });
+			std::this_thread::sleep_for(std::chrono::microseconds{ freeTimeMicro });
 		}
 		endTime = std::chrono::high_resolution_clock::now();
 
-		frameDuration = endTime - startTime;
-		deltaTime = frameDuration.count() / 1000.f;
+		frameDuration += std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
+		deltaTime = frameDuration.count() / 1000'000.f;
 	}
 
 	auto Window::GetNativeHandle() const -> WinHandle

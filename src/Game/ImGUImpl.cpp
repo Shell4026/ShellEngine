@@ -409,6 +409,9 @@ namespace sh::game
 	{
 		if (!bInit)
 			return;
+		ImGuiIO& io = ImGui::GetIO();
+		io.DeltaTime = window.GetDeltaTime();
+
 		ImGui_ImplVulkan_NewFrame();
 		//ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();

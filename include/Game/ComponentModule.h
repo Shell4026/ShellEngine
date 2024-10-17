@@ -20,13 +20,14 @@ namespace sh::game
 	class ComponentModule : public core::Singleton<ComponentModule>
 	{
 	private:
-		core::SHashMap<std::string, std::unique_ptr<IComponentType>> components;
+		std::unordered_map<std::string, std::unique_ptr<IComponentType>> components;
 	public:
+		ComponentModule() = default;
 		template<typename T>
 		void RegisterComponent(std::string_view name, std::string&& group);
 
-		SH_GAME_API auto GetComponents() -> core::SHashMap<std::string, std::unique_ptr<IComponentType>>&;
-		SH_GAME_API auto GetComponents() const -> const core::SHashMap<std::string, std::unique_ptr<IComponentType>>&;
+		SH_GAME_API auto GetComponents() -> std::unordered_map<std::string, std::unique_ptr<IComponentType>>&;
+		SH_GAME_API auto GetComponents() const -> const std::unordered_map<std::string, std::unique_ptr<IComponentType>>&;
 		SH_GAME_API auto GetComponent(std::string_view name) const -> IComponentType*;
 	};
 
@@ -40,6 +41,7 @@ namespace sh::game
 			group.push_back('/');
 			group += name;
 		}
-		components.insert({ std::move(group), std::make_unique<ComponentType<T>>()});
+		std::string newName{ group };
+		components.insert({ std::move(newName), std::make_unique<ComponentType<T>>()});
 	}
 }
