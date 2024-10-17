@@ -3,6 +3,10 @@
 #include "Export.h"
 #include "Camera.h"
 
+#include "Mesh.h"
+#include "Material.h"
+#include "Texture.h"
+
 #include "Core/SObject.h"
 #include "Core/NonCopyable.h"
 #include "Core/ISyncable.h"
@@ -11,9 +15,6 @@
 
 namespace sh::render
 {
-	class Mesh;
-	class Material;
-	class Texture;
 	class Framebuffer;
 
 	class IDrawable : 

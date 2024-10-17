@@ -27,7 +27,7 @@ namespace sh::editor
 
 		core::SVector<std::filesystem::path> filesPath;
 
-		game::GUITexture folderIcon, fileIcon;
+		const game::GUITexture *folderIcon, *fileIcon, *meshIcon;
 		float iconSize = 50.0f;
 
 		static bool bInitResource;
@@ -42,6 +42,8 @@ namespace sh::editor
 		/// @return 새로 만들어진 이름
 		auto GetElideFileName(const std::filesystem::path& path, float maxSize) const -> std::string;
 		inline void RenderParentFolder();
+		inline void SetDragItem(const std::filesystem::path& path);
+		inline auto GetIcon(const std::filesystem::path& path) const -> const game::GUITexture*;
 	public:
 		SH_EDITOR_API Project(game::ImGUImpl& imgui, EditorWorld& world);
 

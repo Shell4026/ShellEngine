@@ -1,8 +1,9 @@
 ﻿#include "Game/PCH.h"
 #include "Project.h"
 #include "EditorWorld.h"
+#include "EditorResource.h"
 
-#include "Game/TextureLoader.h"
+#include "Game/ModelLoader.h"
 
 namespace sh::editor
 {
@@ -11,8 +12,7 @@ namespace sh::editor
 	Project::Project(game::ImGUImpl& imgui, EditorWorld& world) :
 		UI(imgui), world(world),
 		rootPath(std::filesystem::current_path()),
-		currentPath(rootPath),
-		folderIcon(world.renderer), fileIcon(world.renderer)
+		currentPath(rootPath)
 	{
 		InitResources();
 
@@ -25,13 +25,10 @@ namespace sh::editor
 			return;
 		bInitResource = true;
 
-		game::TextureLoader texLoader{ world.renderer };
-
-		auto folderTex = world.textures.AddResource("FolderIcon", texLoader.Load("textures/folder.png"));
-		folderIcon.Create(*folderTex);
-
-		auto fileTex = world.textures.AddResource("FileIcon", texLoader.Load("textures/file.png"));
-		fileIcon.Create(*fileTex);
+		auto resource = EditorResource::GetInstance();
+		folderIcon = resource->GetIcon(EditorResource::Icon::Folder);
+		fileIcon = resource->GetIcon(EditorResource::Icon::File);
+		meshIcon = resource->GetIcon(EditorResource::Icon::Mesh);
 	}
 
 	void Project::GetAllFiles(const std::filesystem::path& path)
@@ -61,10 +58,10 @@ namespace sh::editor
 		}
 		return result;
 	}
-	void Project::RenderParentFolder()
+	inline void Project::RenderParentFolder()
 	{
 		ImGui::BeginGroup();
-		ImGui::ImageButton("../", folderIcon, ImVec2{ iconSize, iconSize }, ImVec2{ 0, 0 }, ImVec2{ 1, 1 }, iconBackgroundColor);
+		ImGui::ImageButton("../", *folderIcon, ImVec2{ iconSize, iconSize }, ImVec2{ 0, 0 }, ImVec2{ 1, 1 }, iconBackgroundColor);
 		if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_::ImGuiMouseButton_Left))
 		{
 			currentPath = currentPath.parent_path();
@@ -76,6 +73,45 @@ namespace sh::editor
 			ImGui::SetCursorPosX(ImGui::GetCursorPosX() + textOffset);
 		ImGui::Text("../");
 		ImGui::EndGroup();
+	}
+
+	inline void Project::SetDragItem(const std::filesystem::path& path)
+	{
+		void* item = nullptr;
+		std::string pathStr = path.string();
+		std::string extension = path.extension().string();
+		std::string payloadName = "asset";
+
+		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_::ImGuiDragDropFlags_None))
+		{
+			if (extension == ".obj")
+			{
+				payloadName = core::reflection::GetTypeName<render::Mesh*>();
+				item = world.meshes.GetResource(pathStr);
+				if (item == nullptr)
+				{
+					game::ModelLoader loader{ world.renderer };
+					item = world.meshes.AddResource(pathStr, loader.Load(pathStr));
+				}
+			}
+			ImGui::SetDragDropPayload(payloadName.c_str(), &item, sizeof(render::Mesh*));
+			ImGui::Text("%s", path.filename().c_str());
+			ImGui::EndDragDropSource();
+		}
+
+	}
+
+	inline auto Project::GetIcon(const std::filesystem::path& path) const -> const game::GUITexture*
+	{
+		std::string extension = path.extension().string();
+		const game::GUITexture* icon = folderIcon;
+		if (!std::filesystem::is_directory(path))
+		{
+			icon = fileIcon;
+			if (extension == ".obj")
+				icon = meshIcon;
+		}
+		return icon;
 	}
 
 	SH_EDITOR_API void Project::Update()
@@ -106,20 +142,19 @@ namespace sh::editor
 				cursorX = ImGui::GetCursorPosX();
 			}
 			ImGui::BeginGroup();
-			game::GUITexture* icon = &folderIcon;
-			if (!std::filesystem::is_directory(path))
-				icon = &fileIcon;
-
+			const game::GUITexture* icon = GetIcon(path);
 			ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Button, iconBackgroundColor);
 			if (ImGui::ImageButton(path.string().c_str(), *icon, ImVec2{iconSize, iconSize}))
 			{
 				
 			}
+			SetDragItem(path);
+
 			ImGui::PopStyleColor();
+			// 폴더면 더블 클릭 시 경로 변경
 			if (std::filesystem::is_directory(path) && 
 				ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_::ImGuiMouseButton_Left))
 			{
-				SH_INFO("double");
 				ImGui::EndGroup();
 				currentPath = path;
 				GetAllFiles(currentPath);

@@ -59,6 +59,10 @@ namespace sh::game
 		SH_GAME_API void Awake() override;
 		SH_GAME_API void Start() override;
 		SH_GAME_API void Update() override;
+
+#if SH_EDITOR
+		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
+#endif
 	};
 
 	template<typename T>

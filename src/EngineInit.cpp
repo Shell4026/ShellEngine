@@ -27,6 +27,7 @@
 #if SH_EDITOR
 #include "Editor/EditorUI.h"
 #include "Editor/EditorWorld.h"
+#include "Editor/EditorResource.h"
 #endif
 
 #include "fmt/core.h"
@@ -161,7 +162,7 @@ namespace sh
 		meshRenderer->SetMaterial(*catMat1);
 
 		meshRenderer = obj3->AddComponent<MeshRenderer>();
-		meshRenderer->SetMesh(*cube);
+		meshRenderer->SetMesh(*mesh2);
 		meshRenderer->SetMaterial(*mat);
 
 		GameObject* cam = world->AddGameObject("Camera");
@@ -251,6 +252,8 @@ namespace sh
 		gui->Init();
 
 #if SH_EDITOR
+		editor::EditorResource::GetInstance()->LoadAllAssets(*static_cast<editor::EditorWorld*>(world));
+
 		editorUI = std::make_unique<editor::EditorUI>(*static_cast<editor::EditorWorld*>(world), *gui);
 		world->GetMainCamera()->SetRenderTexture(editorUI->GetViewport().GetRenderTexture());
 #endif

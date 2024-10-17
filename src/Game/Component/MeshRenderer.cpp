@@ -204,4 +204,15 @@ namespace sh::game
 			gameObject->world.renderer.PushDrawAble(drawable);
 		}//drawables
 	}
+
+#if SH_EDITOR
+	SH_GAME_API void MeshRenderer::OnPropertyChanged(const core::reflection::Property& prop)
+	{
+		if (std::strcmp(prop.GetName(), "mesh") == 0)
+		{
+			for (auto cam : gameObject->world.GetCameras())
+				CreateDrawable(cam);
+		}
+	}
+#endif
 }//namespace

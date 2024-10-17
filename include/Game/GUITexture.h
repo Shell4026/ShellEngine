@@ -21,13 +21,13 @@ namespace sh::game
 
 		ImTextureID tex;
 	public:
-		SH_GAME_API GUITexture(const render::Renderer& renderer);
+		SH_GAME_API GUITexture();
 		SH_GAME_API ~GUITexture();
 
-		SH_GAME_API void Create(const render::Texture& texture);
+		SH_GAME_API void Create(const render::Renderer& renderer, const render::Texture& texture);
 		SH_GAME_API void Clean();
 		SH_GAME_API bool IsValid() const;
 
-		SH_GAME_API operator ImTextureID();
+		SH_GAME_API operator ImTextureID() const;
 	};
 }//namespace

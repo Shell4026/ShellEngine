@@ -1,6 +1,10 @@
 ﻿#include "Game/PCH.h"
 #include "Inspector.h"
 #include "EditorWorld.h"
+#include "EditorResource.h"
+
+#include "Core/Logger.h"
+#include "Core/SObject.h"
 
 #include "Game/GameObject.h"
 
@@ -10,6 +14,15 @@ namespace sh::editor
 		UI(imgui),
 		world(world)
 	{
+	}
+
+	inline auto Inspector::GetIcon(std::string_view typeName) const -> const game::GUITexture*
+	{
+		if (typeName == core::reflection::GetTypeName<render::Mesh*>())
+		{
+			return EditorResource::GetInstance()->GetIcon(EditorResource::Icon::Mesh);
+		}
+		return nullptr;
 	}
 
 	SH_EDITOR_API void Inspector::Update()
@@ -47,67 +60,103 @@ namespace sh::editor
 					do
 					{
 						auto& props = currentType->GetProperties();
-						for (auto& prop : props)
+						for (auto& [name, prop] : props)
 						{
-							if (prop.second.bVisible == false)
+							if (prop.bVisibleProperty == false)
 								continue;
-							auto type = prop.second.GetTypeName();
-							bool constant = prop.second.isConst;
+							auto type = prop.GetTypeName();
+							bool constant = prop.isConstProperty;
 							auto inputFlag = constant ? ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly : ImGuiInputTextFlags_::ImGuiInputTextFlags_None;
-							if (type == core::reflection::GetTypeName<glm::vec3>())
+
+							// 포인터 형식, 드래그 앤 드랍 기능
+							if (prop.isSObjectPointer)
 							{
-								glm::vec3* parameter = prop.second.Get<glm::vec3>(component);
-								float v[3] = { parameter->x, parameter->y, parameter->z };
-								ImGui::LabelText(("##" + prop.first).c_str(), prop.first.c_str());
-								if (prop.second.isConst)
+								ImGui::LabelText(("##" + name).c_str(), name.c_str());
+								core::SObject** parameter = prop.Get<core::SObject*>(component);
+
+								auto icon = GetIcon(prop.GetTypeName());
+
+								float iconSize = 20;
+								float buttonWidth = ImGui::GetContentRegionAvail().x - iconSize;
+
+								if (buttonWidth < 0)
+									buttonWidth = 0;
+
+								const char* objName = *parameter ? (*parameter)->editorName.c_str() : "None";
+								ImGui::Button(objName, ImVec2{buttonWidth, iconSize});
+								if (ImGui::BeginDragDropTarget())
 								{
-									ImGui::InputFloat3(("##" + prop.first + std::to_string(idx)).c_str(), v, "%.3f", ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
-								}
-								else
-								{
-									if (ImGui::InputFloat3(("##" + prop.first + std::to_string(idx)).c_str(), v))
+									const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(std::string{ prop.GetTypeName() }.c_str());
+									if (payload)
 									{
-										parameter->x = v[0];
-										parameter->y = v[1];
-										parameter->z = v[2];
-										component->OnPropertyChanged(prop.second);
+										*parameter = *reinterpret_cast<render::Mesh**>(payload->Data);
+										component->OnPropertyChanged(prop);
+									}
+									ImGui::EndDragDropTarget();
+								}
+								if (icon)
+								{
+									ImGui::SameLine();
+									ImGui::Image(*icon, ImVec2{ iconSize, iconSize });
+								}
+							}
+							else
+							{
+								if (type == core::reflection::GetTypeName<glm::vec3>())
+								{
+									glm::vec3* parameter = prop.Get<glm::vec3>(component);
+									float v[3] = { parameter->x, parameter->y, parameter->z };
+									ImGui::LabelText(("##" + name).c_str(), name.c_str());
+									if (prop.isConstProperty)
+									{
+										ImGui::InputFloat3(("##" + name + std::to_string(idx)).c_str(), v, "%.3f", ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
+									}
+									else
+									{
+										if (ImGui::InputFloat3(("##" + name + std::to_string(idx)).c_str(), v))
+										{
+											parameter->x = v[0];
+											parameter->y = v[1];
+											parameter->z = v[2];
+											component->OnPropertyChanged(prop);
+										}
 									}
 								}
-							}
-							else if (type == core::reflection::GetTypeName<float>())
-							{
-								float* parameter = prop.second.Get<float>(component);
-								if (ImGui::InputFloat(("##input_" + prop.first + std::to_string(idx)).c_str(), parameter))
-									component->OnPropertyChanged(prop.second);
-							}
-							else if (type == core::reflection::GetTypeName<int>())
-							{
-								int* parameter = prop.second.Get<int>(component);
-								ImGui::LabelText(("##" + prop.first).c_str(), prop.first.c_str());
-								if (prop.second.isConst)
-									ImGui::InputInt(("##Input_" + prop.first + std::to_string(idx)).c_str(), parameter, 0, 0, ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
-								else
-									if (ImGui::InputInt(("##Input_" + prop.first + std::to_string(idx)).c_str(), parameter))
-									{
-										component->OnPropertyChanged(prop.second);
-									}
-							}
-							else if (type == core::reflection::GetTypeName<uint32_t>())
-							{
-								uint32_t* parameter = prop.second.Get<uint32_t>(component);
-								ImGui::LabelText(("##" + prop.first).c_str(), prop.first.c_str());
-								if (prop.second.isConst)
-									ImGui::InputInt(("##Input_" + prop.first + std::to_string(idx)).c_str(), reinterpret_cast<int*>(parameter), 0, 0, ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
-								else
-									if (ImGui::InputInt(("##Input_" + prop.first + std::to_string(idx)).c_str(), reinterpret_cast<int*>(parameter)))
-										component->OnPropertyChanged(prop.second);
-							}
-							else if (type == core::reflection::GetTypeName<std::string>())
-							{
-								std::string* parameter = prop.second.Get<std::string>(component);
-								ImGui::LabelText(("##" + prop.first).c_str(), prop.first.c_str());
-								if (ImGui::InputText(("##Input_" + prop.first + std::to_string(idx)).c_str(), parameter, inputFlag))
-									component->OnPropertyChanged(prop.second);
+								else if (type == core::reflection::GetTypeName<float>())
+								{
+									float* parameter = prop.Get<float>(component);
+									if (ImGui::InputFloat(("##input_" + name + std::to_string(idx)).c_str(), parameter))
+										component->OnPropertyChanged(prop);
+								}
+								else if (type == core::reflection::GetTypeName<int>())
+								{
+									int* parameter = prop.Get<int>(component);
+									ImGui::LabelText(("##" + name).c_str(), name.c_str());
+									if (prop.isConstProperty)
+										ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), parameter, 0, 0, ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
+									else
+										if (ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), parameter))
+										{
+											component->OnPropertyChanged(prop);
+										}
+								}
+								else if (type == core::reflection::GetTypeName<uint32_t>())
+								{
+									uint32_t* parameter = prop.Get<uint32_t>(component);
+									ImGui::LabelText(("##" + name).c_str(), name.c_str());
+									if (prop.isConstProperty)
+										ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), reinterpret_cast<int*>(parameter), 0, 0, ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
+									else
+										if (ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), reinterpret_cast<int*>(parameter)))
+											component->OnPropertyChanged(prop);
+								}
+								else if (type == core::reflection::GetTypeName<std::string>())
+								{
+									std::string* parameter = prop.Get<std::string>(component);
+									ImGui::LabelText(("##" + name).c_str(), name.c_str());
+									if (ImGui::InputText(("##Input_" + name + std::to_string(idx)).c_str(), parameter, inputFlag))
+										component->OnPropertyChanged(prop);
+								}
 							}
 						}
 						currentType = const_cast<core::reflection::STypeInfo*>(currentType->GetSuper());

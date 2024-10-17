@@ -6,6 +6,7 @@
 namespace sh::game
 {
 	class World;
+	class GUITexture;
 }
 namespace sh::editor
 {
@@ -18,6 +19,8 @@ namespace sh::editor
 		EditorWorld& world;
 
 		bool bAddComponent = false;
+	private:
+		inline auto GetIcon(std::string_view typeName) const -> const game::GUITexture*;
 ;	public:
 		SH_EDITOR_API Inspector(game::ImGUImpl& imgui, EditorWorld& world);
 
