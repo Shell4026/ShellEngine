@@ -7,8 +7,9 @@
 
 #include "Render/VulkanImpl/VulkanRenderer.h"
 #include "Render/VulkanImpl/VulkanShader.h"
-#include "Render/Mesh/Plane.h"
 #include "Render/IUniformBuffer.h"
+#include "Render/Mesh/Plane.h"
+#include "Render/Mesh/Grid.h"
 
 #include "Game/VulkanShaderBuilder.h"
 #include "Game/ShaderLoader.h"
@@ -89,16 +90,19 @@ namespace sh
 		auto defaultShader = world->shaders.AddResource("Default", loader.LoadShader<render::VulkanShader>("shaders/default.vert.spv", "shaders/default.frag.spv"));
 		auto lineShader = world->shaders.AddResource("Line", loader.LoadShader<render::VulkanShader>("shaders/line.vert.spv", "shaders/line.frag.spv"));
 		auto errorShader = world->shaders.AddResource("ErrorShader", loader.LoadShader<render::VulkanShader>("shaders/error.vert.spv", "shaders/error.frag.spv"));
+		auto gridShader = world->shaders.AddResource("GridShader", loader.LoadShader<render::VulkanShader>("shaders/grid.vert.spv", "shaders/grid.frag.spv"));
 
 		auto errorMat = world->materials.AddResource("ErrorMaterial", sh::render::Material{ errorShader });
 		auto mat = world->materials.AddResource("Material", sh::render::Material{ defaultShader });
 		auto catMat0 = world->materials.AddResource("Material2", sh::render::Material{ defaultShader });
 		auto catMat1 = world->materials.AddResource("Material3", sh::render::Material{ defaultShader });
 		auto lineMat = world->materials.AddResource("LineMat", sh::render::Material{ lineShader });
+		auto gridMat = world->materials.AddResource("GridMaterial", sh::render::Material{ gridShader });
 
-		auto plane = world->meshes.AddResource("Plane", sh::render::Plane{});
+		auto plane = world->meshes.AddResource("PlaneMesh", sh::render::Plane{});
 		auto cube = world->meshes.AddResource("Cube", modelLoader.Load("model/cube.obj"));
 		auto mesh2 = world->meshes.AddResource("Mesh2", modelLoader.Load("model/test.obj"));
+		auto grid = world->meshes.AddResource("GridMesh", sh::render::Grid{});
 
 		auto catTex0 = world->textures.AddResource("Texture0", texLoader.Load("textures/버터고양이.jpg"));
 		auto catTex1 = world->textures.AddResource("Texture1", texLoader.Load("textures/cat.jpg"));
@@ -117,20 +121,27 @@ namespace sh
 		defaultShader->AddUniform<glm::mat4>("model", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
 		defaultShader->AddUniform<glm::mat4>("view", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
 		defaultShader->AddUniform<glm::mat4>("proj", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
-
 		defaultShader->AddUniform<sh::render::Texture>("tex", MaterialUniformType, 0, sh::render::Shader::ShaderStage::Fragment);
 		defaultShader->Build();
 
 		lineShader->AddUniform<glm::mat4>("model", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
 		lineShader->AddUniform<glm::mat4>("view", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
 		lineShader->AddUniform<glm::mat4>("proj", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
-
 		lineShader->AddUniform<glm::vec3>("start", MaterialUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
 		lineShader->AddUniform<glm::vec3>("end", MaterialUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
 		lineShader->AddUniform<glm::vec4>("color", MaterialUniformType, 1, sh::render::Shader::ShaderStage::Fragment);
 		lineShader->Build();
 
+		gridShader->AddUniform<glm::mat4>("model", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
+		gridShader->AddUniform<glm::mat4>("view", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
+		gridShader->AddUniform<glm::mat4>("proj", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
+		gridShader->AddUniform<glm::vec4>("color", MaterialUniformType, 0, sh::render::Shader::ShaderStage::Fragment);
+		gridShader->Build();
+
 		errorMat->Build(*renderer);
+
+		gridMat->SetVector("color", glm::vec4{ 0.6f, 0.6f, 0.8f, 0.2f });
+		gridMat->Build(*renderer);
 
 		catMat0->SetTexture("tex", catTex0);
 		catMat0->Build(*renderer);
@@ -147,6 +158,7 @@ namespace sh
 
 		plane->Build(*renderer);
 		cube->Build(*renderer);
+		grid->Build(*renderer);
 
 		GameObject* obj = world->AddGameObject("Test");
 		GameObject* obj2 = world->AddGameObject("Test2");

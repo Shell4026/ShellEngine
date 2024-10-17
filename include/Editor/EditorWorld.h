@@ -19,5 +19,7 @@ namespace sh::editor
 
 		SH_EDITOR_API void SetSelectedObject(game::GameObject* gameObject);
 		SH_EDITOR_API auto GetSelectedObject() const -> game::GameObject*;
+
+		SH_EDITOR_API void Start() override;
 	};
 }

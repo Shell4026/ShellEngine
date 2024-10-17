@@ -92,7 +92,7 @@ namespace sh::game
 		SH_GAME_API void SetMainCamera(Camera* cam);
 		SH_GAME_API	auto GetMainCamera() const -> Camera*;
 
-		SH_GAME_API void Start();
-		SH_GAME_API void Update(float deltaTime);
+		SH_GAME_API virtual void Start();
+		SH_GAME_API virtual void Update(float deltaTime);
 	};
 }

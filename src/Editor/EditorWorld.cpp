@@ -2,6 +2,7 @@
 #include "EditorWorld.h"
 
 #include "Game/GameObject.h"
+#include "Game/Component/MeshRenderer.h"
 
 namespace sh::editor
 {
@@ -21,5 +22,15 @@ namespace sh::editor
 	SH_EDITOR_API auto EditorWorld::GetSelectedObject() const -> game::GameObject*
 	{
 		return selected;
+	}
+
+	void EditorWorld::Start()
+	{
+		auto grid = this->AddGameObject("Grid");
+		auto meshRenderer = grid->AddComponent<game::MeshRenderer>();
+		meshRenderer->SetMesh(*this->meshes.GetResource("GridMesh"));
+		meshRenderer->SetMaterial(*this->materials.GetResource("GridMaterial"));
+
+		Super::Start();
 	}
 }
