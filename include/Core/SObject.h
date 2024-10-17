@@ -27,6 +27,9 @@ namespace sh::core
 		GarbageCollection* gc;
 	public:
 		Observer<SObject*> onDestroy;
+#if SH_EDITOR
+		std::string editorName;
+#endif
 	protected:
 		SH_CORE_API static void SetGC(SObject* ptr);
 		SH_CORE_API auto operator new(std::size_t count) -> void*;

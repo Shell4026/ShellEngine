@@ -66,12 +66,16 @@ namespace sh::game
 			it = objsMap.find(objName);
 		}
 
+		// 전에 제거된 게임 오브젝트가 있어서 빈 idx가 있는 상태
 		if (objsEmptyIdx.empty())
 		{
 			objs.push_back(Create<GameObject>(*this, objName));
 			objsMap.insert(std::make_pair(objName, static_cast<uint32_t>(objs.size() - 1)));
 
 			auto obj = objs[objs.size() - 1];
+#if SH_EDITOR
+			obj->editorName = objName;
+#endif
 			onGameObjectAdded.Notify(obj);
 
 			return obj;
@@ -84,6 +88,9 @@ namespace sh::game
 			objsEmptyIdx.pop();
 
 			auto obj = objs[idx];
+#if SH_EDITOR
+			obj->editorName = objName;
+#endif
 			onGameObjectAdded.Notify(obj);
 
 			return obj;
@@ -123,8 +130,11 @@ namespace sh::game
 			it = objsMap.find(objName);
 		}
 
-		int id = it->second;
-		objsMap.insert(std::make_pair(name, id));
+		int idx = it->second;
+#if SH_EDITOR
+		objs[idx]->editorName = to;
+#endif
+		objsMap.insert(std::make_pair(name, idx));
 		objsMap.erase(it);
 
 		return name;

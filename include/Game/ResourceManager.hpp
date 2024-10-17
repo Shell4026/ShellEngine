@@ -69,9 +69,11 @@ namespace sh::game
 				name += std::to_string(idx);
 				it = resources.find(name);
 			}
-
+#if SH_EDITOR
+			resource->editorName = name;
+#endif
 			gc.SetRootSet(resource);
-			return resources.insert({ name, resource }).first->second;
+			return resources.insert({ std::move(name), resource }).first->second;
 		}
 		auto AddResource(std::string_view _name, T&& resource) -> T*
 		{
@@ -86,8 +88,11 @@ namespace sh::game
 			}
 
 			auto resourcePtr = core::SObject::Create<T>(std::move(resource));
+#if SH_EDITOR
+			resourcePtr->editorName = name;
+#endif
 			gc.SetRootSet(resourcePtr);
-			return resources.insert({ name, resourcePtr }).first->second;
+			return resources.insert({ std::move(name), resourcePtr }).first->second;
 		}
 		auto AddResource(std::string_view _name, const T& resource) -> T*
 		{
@@ -102,8 +107,11 @@ namespace sh::game
 			}
 
 			auto resourcePtr = core::SObject::Create<T>(resource);
+#if SH_EDITOR
+			resourcePtr->editorName = name;
+#endif
 			gc.SetRootSet(resourcePtr);
-			return resources.insert({ name, resourcePtr }).first->second.get();
+			return resources.insert({ std::move(name), resourcePtr }).first->second.get();
 		}
 
 		bool DestroyResource(std::string_view _name)
