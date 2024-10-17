@@ -28,10 +28,7 @@
 #if SH_EDITOR
 #include "Editor/EditorUI.h"
 #include "Editor/EditorWorld.h"
-#include "Editor/EditorResource.h"
 #endif
-
-#include "fmt/core.h"
 
 namespace sh
 {
@@ -53,9 +50,7 @@ namespace sh
 		SH_INFO("Engine shutdown");
 		world->Clean();
 		world->Destroy();
-#if SH_EDITOR
-		editorUI.reset();
-#endif
+
 		gui.reset();
 		gc->Update();
 		renderer.reset();
@@ -189,16 +184,6 @@ namespace sh
 
 		GameObject* cam = world->AddGameObject("Camera");
 		cam->transform->SetPosition(glm::vec3(2.f, 2.f, 2.f));
-		//GameObject* cam2 = world->AddGameObject("Camera2");
-		//cam2->transform->SetPosition(glm::vec3(-2.f, 2.f, -2.f));
-		//Camera* cameraComponent2 = cam2->AddComponent<Camera>();
-		//cameraComponent2->SetRenderTexture(editorUI->GetViewport().GetRenderTexture());
-#if SH_EDITOR
-		Camera* cameraComponent = cam->AddComponent<EditorCamera>();
-		//cameraComponent->SetDepth(2);
-#endif
-
-		world->SetMainCamera(cameraComponent);
 	}
 
 	void EngineInit::ProcessInput()
@@ -261,8 +246,10 @@ namespace sh
 		renderer->Init(*window);
 		renderer->SetViewport({ 150.f, 0.f }, { window->width - 150.f, window->height - 180 });
 
+		gui = std::make_unique<game::ImGUImpl>(*window, static_cast<render::VulkanRenderer&>(*renderer));
+		gui->Init();
 #if SH_EDITOR
-		world = core::SObject::Create<editor::EditorWorld>(*renderer.get(), *componentModule);
+		world = core::SObject::Create<editor::EditorWorld>(*renderer.get(), *componentModule, *gui);
 #else
 		world = core::SObject::Create<game::World>(*renderer.get(), *componentModule);
 #endif
@@ -270,15 +257,6 @@ namespace sh
 
 		InitResource();
 
-		gui = std::make_unique<game::ImGUImpl>(*window, static_cast<render::VulkanRenderer&>(*renderer));
-		gui->Init();
-
-#if SH_EDITOR
-		editor::EditorResource::GetInstance()->LoadAllAssets(*static_cast<editor::EditorWorld*>(world));
-
-		editorUI = std::make_unique<editor::EditorUI>(*static_cast<editor::EditorWorld*>(world), *gui);
-		world->GetMainCamera()->SetRenderTexture(editorUI->GetViewport().GetRenderTexture());
-#endif
 		SH_INFO("Start world");
 		world->Start();
 
@@ -310,12 +288,6 @@ namespace sh
 				return;
 
 			this->world->Update(window->GetDeltaTime());
-			this->gui->Begin();
-#if SH_EDITOR
-			this->editorUI->Update();
-			this->editorUI->Render();
-#endif
-			this->gui->End();
 
 			gc->Update();
 			threadSyncManager.Sync();

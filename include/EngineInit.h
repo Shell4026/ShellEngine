@@ -27,12 +27,6 @@ namespace sh
 		class GameThread;
 		class RenderThread;
 	}
-#if SH_EDITOR
-	namespace editor
-	{
-		class EditorUI;
-	}
-#endif
 
 	class EngineInit
 	{
@@ -50,9 +44,6 @@ namespace sh
 		std::unique_ptr<game::ImGUImpl> gui;
 
 		game::World* world;
-#if SH_EDITOR
-		std::unique_ptr<editor::EditorUI> editorUI;
-#endif
 
 		int limitFps;
 

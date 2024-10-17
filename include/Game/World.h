@@ -71,7 +71,7 @@ namespace sh::game
 		SH_GAME_API World(World&& other) noexcept;
 		SH_GAME_API virtual ~World();
 
-		SH_GAME_API void Clean();
+		SH_GAME_API virtual void Clean();
 
 		/// @brief 게임 오브젝트를 추가한다. 이름이 같은 오브젝트가 존재 시 숫자가 붙는다.
 		/// @param name 오브젝트 이름
