@@ -104,7 +104,7 @@ namespace sh::core::reflection
 	struct IsSClass : std::bool_constant<HasThis<T>::value> {};
 
 	template<typename T>
-	struct IsSObject : std::bool_constant<std::is_base_of_v<SObject, T>> {};
+	struct IsSObject : std::bool_constant<std::is_base_of_v<SObject, std::remove_reference_t<T>>> {};
 
 	template<typename T, typename U = void>
 	struct MakeSuper {
@@ -505,6 +505,9 @@ namespace sh::core::reflection
 
 		bool isConst = false;
 		bool bVisible = true;
+		bool isSObject = false;
+		bool isPointer = false;
+		bool isSObjectPointer = false;
 	public:
 		PropertyDataBase(STypeInfo& ownerType) :
 			ownerType(ownerType), typeName("")
@@ -627,6 +630,12 @@ namespace sh::core::reflection
 			static PropertyData<ThisType, T, VariablePointer, ptr> data{ owner };
 			data.isConst = options.isConst;
 			data.bVisible = options.bVisible;
+			data.isSObject = IsSObject<T>::value;
+			data.isPointer = std::is_pointer_v<T>;
+			if constexpr (std::is_pointer_v<T>)
+			{
+				data.isSObjectPointer = std::is_convertible_v<T, SObject*>;
+			}
 			
 			if constexpr (std::is_convertible_v<T, SObject*>)
 			{
@@ -657,10 +666,13 @@ namespace sh::core::reflection
 
 		const char* name;
 	public:
-		const bool isContainer;
 		const int containerNestedLevel;
-		const bool isConst;
-		const bool bVisible;
+		const bool isConstProperty;
+		const bool bVisibleProperty;
+		const bool isContainer;
+		const bool isPointer;
+		const bool isSObject;
+		const bool isSObjectPointer;
 	public:
 		SH_CORE_API Property(PropertyDataBase* data, const char* name, bool isContainer = false, uint32_t containerNestedLevel = 0);
 			
