@@ -23,6 +23,10 @@ public:
     std::vector<int> numbers;
     PROPERTY(set)
     sh::core::SSet<int> set;
+    PROPERTY(ptr)
+    int* ptr;
+    PROPERTY(sobjectPtr)
+    Derived* sobjectPtr;
 };
 
 TEST(ReflectionTest, TypeInfoTest) 
@@ -73,6 +77,14 @@ TEST(ReflectionTest, PropertyTest)
 
     const int* ptr = setIterator.Get<const int>();
     EXPECT_EQ(*ptr, 0);
+
+    // 포인터 테스트
+    auto ptrProp = derived.GetType().GetProperty("ptr");
+    EXPECT_TRUE(ptrProp->isPointer);
+    EXPECT_FALSE(ptrProp->isSObjectPointer);
+    ptrProp = derived.GetType().GetProperty("sobjectPtr");
+    EXPECT_TRUE(ptrProp->isPointer);
+    EXPECT_TRUE(ptrProp->isSObjectPointer);
 }
 
 TEST(ReflectionTest, SafePropertyTest)
