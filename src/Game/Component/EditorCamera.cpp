@@ -3,9 +3,11 @@
 
 #include "Game/Input.h"
 #include "Game/GameObject.h"
+#include "Game/ImGUImpl.h"
+
 namespace sh::game
 {
-	EditorCamera::EditorCamera() :
+	SH_GAME_API EditorCamera::EditorCamera() :
 		distance(3.f),
 		xdir(45.f), ydir(90.f),
 		lastXdir(xdir), lastYdir(ydir),
@@ -34,16 +36,15 @@ namespace sh::game
 				lastXdir = xdir;
 				lastYdir = ydir;
 			}
-
-			if (Input::GetMouseDown(Input::MouseType::Middle))
-			{
-				HandleMiddleMouseDrag();
-			}
-			else
-			{
-				middleMousePressed = false;
-				lastLookPos = lookPos;
-			}
+		}
+		if (Input::GetMouseDown(Input::MouseType::Middle))
+		{
+			HandleMiddleMouseDrag();
+		}
+		else
+		{
+			middleMousePressed = false;
+			lastLookPos = lookPos;
 		}
 	}
 
@@ -75,12 +76,23 @@ namespace sh::game
 		glm::vec2 delta = (Input::mousePosition - middlePressedPos);
 		float dis = glm::length(delta);
 		
-		lookPos = lastLookPos + right * (-delta.x * moveSpeed) + up * (delta.y * moveSpeed);
+		lookPos = lastLookPos + right * (-delta.x * moveSpeed * distance * 0.1f) + up * (delta.y * moveSpeed * distance * 0.1f);
 	}
 
 	void EditorCamera::Zoom()
 	{
-		distance -= Input::mouseWheelDelta;
+		if (gui)
+		{
+			SH_INFO(gui->GetContext()->WheelingWindow->Name);
+		}
+		float delta = 1.f;
+		if (Input::mouseWheelDelta > 0)
+			delta = 0.9f;
+		else if (Input::mouseWheelDelta < 0)
+			delta = 1.1f;
+
+		distance = delta * distance;
+		if (distance < 0.01f) distance = 0.01f;
 	}
 
 	void EditorCamera::ClampAngles()
@@ -99,11 +111,16 @@ namespace sh::game
 		gameObject->transform->SetPosition(x, y, z);
 	}
 
-	void EditorCamera::Update()
+	SH_GAME_API void EditorCamera::BeginUpdate()
 	{
 		HandleMouseInput();
 		ClampAngles();
 		UpdateCameraPosition();
-		Super::Update();
+		Super::BeginUpdate();
+	}
+
+	SH_GAME_API void EditorCamera::SetGUI(ImGUImpl& gui)
+	{
+		this->gui = &gui;
 	}
 }//namespace

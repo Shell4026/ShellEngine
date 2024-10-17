@@ -31,7 +31,7 @@ namespace sh::game
 	void Camera::Start()
 	{
 	}
-	void Camera::Update()
+	void Camera::BeginUpdate()
 	{
 		if (renderTexture == nullptr)
 			screenSize = gameObject->world.renderer.GetViewportEnd() - gameObject->world.renderer.GetViewportStart();
