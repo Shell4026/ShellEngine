@@ -59,7 +59,6 @@ namespace sh::editor
 
 		if (bAddComponent)
 		{
-			//ImGui::SetNextItemWidth(100);
 			ImGui::SetNextItemWidth(-FLT_MIN);
 			ImGui::BeginChild("ComponentsList", ImVec2(0, 200), ImGuiChildFlags_::ImGuiChildFlags_Border);
 			for (auto& [group, vector] : componentItems)
@@ -80,25 +79,6 @@ namespace sh::editor
 				}
 			}
 			ImGui::EndChild();
-			//for (int i = 0; i < componentItems.size(); ++i)
-			//{
-			//	if (false)
-			//	{
-			//		ImGui::TextDisabled("%s", componentItems[i]);
-			//		ImGui::Separator();
-			//	}
-			//	else
-			//	{
-			//		if (ImGui::Selectable(componentItems[i], current == i))
-			//		{
-			//			current = i;
-			//			// 컴포넌트 추가 로직
-			//			std::string name = componentItems[i];
-			//			gameObject.AddComponent(componentItems.at(name)->Create());
-			//			bAddComponent = false;
-			//		}
-			//	}
-			//}
 			if (ImGui::Button("Close"))
 				bAddComponent = false;
 		}
