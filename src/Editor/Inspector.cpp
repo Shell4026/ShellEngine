@@ -24,6 +24,85 @@ namespace sh::editor
 		}
 		return nullptr;
 	}
+	inline auto Inspector::GetComponentGroupAndName(std::string_view fullname) -> std::pair<std::string, std::string>
+	{
+		auto pos = fullname.find('/');
+		std::string group{}, name{};
+		if (pos == fullname.npos)
+			name = fullname;
+		else
+		{
+			group = fullname.substr(0, pos);
+			name = fullname.substr(pos + 1);
+		}
+
+		return { std::move(group), std::move(name)};
+	}
+	inline void Inspector::RenderAddComponent(game::GameObject& gameObject)
+	{
+		if (ImGui::Button("Add Component", { -FLT_MIN, 0.0f }))
+		{
+			componentItems.clear();
+			auto& components = world.componentModule.GetComponents();
+			for (auto& [fullname, _] : components)
+			{
+				auto [group, name] = GetComponentGroupAndName(fullname);
+				auto it = componentItems.find(group);
+				if (it == componentItems.end())
+					componentItems.insert({ group, std::vector<std::string>{std::move(name)} });
+				else
+					it->second.push_back(std::move(name));
+			}
+
+			bAddComponent = !bAddComponent;
+		}
+
+		if (bAddComponent)
+		{
+			//ImGui::SetNextItemWidth(100);
+			ImGui::SetNextItemWidth(-FLT_MIN);
+			ImGui::BeginChild("ComponentsList", ImVec2(0, 200), ImGuiChildFlags_::ImGuiChildFlags_Border);
+			for (auto& [group, vector] : componentItems)
+			{
+				const char* groupName = group.c_str();
+				if (group.empty())
+					groupName = "Default";
+				if (ImGui::CollapsingHeader(groupName))
+				{
+					for (auto& name : vector)
+					{
+						if (ImGui::Selectable(name.c_str()))
+						{
+							gameObject.AddComponent(world.componentModule.GetComponents().at(name)->Create());
+							bAddComponent = false;
+						}
+					}
+				}
+			}
+			ImGui::EndChild();
+			//for (int i = 0; i < componentItems.size(); ++i)
+			//{
+			//	if (false)
+			//	{
+			//		ImGui::TextDisabled("%s", componentItems[i]);
+			//		ImGui::Separator();
+			//	}
+			//	else
+			//	{
+			//		if (ImGui::Selectable(componentItems[i], current == i))
+			//		{
+			//			current = i;
+			//			// 컴포넌트 추가 로직
+			//			std::string name = componentItems[i];
+			//			gameObject.AddComponent(componentItems.at(name)->Create());
+			//			bAddComponent = false;
+			//		}
+			//	}
+			//}
+			if (ImGui::Button("Close"))
+				bAddComponent = false;
+		}
+	}
 
 	SH_EDITOR_API void Inspector::Update()
 	{
@@ -82,7 +161,14 @@ namespace sh::editor
 								if (buttonWidth < 0)
 									buttonWidth = 0;
 
-								const char* objName = *parameter ? (*parameter)->editorName.c_str() : "None";
+								const char* objName = "None";
+								if (*parameter)
+								{
+									if ((*parameter)->editorName.empty())
+										objName = "Unknown";
+									else
+										objName = (*parameter)->editorName.c_str();
+								}
 								ImGui::Button(objName, ImVec2{buttonWidth, iconSize});
 								if (ImGui::BeginDragDropTarget())
 								{
@@ -167,29 +253,7 @@ namespace sh::editor
 
 			ImGui::Separator();
 
-			if (ImGui::Button("Add Component", { -FLT_MIN, 0.0f }))
-				bAddComponent = !bAddComponent;
-			if (bAddComponent)
-			{
-				static int current = -1;
-				std::vector<const char*> items;
-				auto& components = world.componentModule.GetComponents();
-				for (auto& comp : components)
-					items.push_back(comp.first.c_str());
-
-				//ImGui::SetNextItemWidth(100);
-				ImGui::SetNextItemWidth(-FLT_MIN);
-				if (ImGui::ListBox("##Components", &current, items.data(), items.size()))
-				{
-					std::string name = items[current];
-					obj->AddComponent(components.at(name)->Create());
-					bAddComponent = false;
-				}
-
-				if (ImGui::Button("Close"))
-					bAddComponent = false;
-			}
-			//obj->SetName(name);
+			RenderAddComponent(*obj);
 		}
 
 		ImGui::End();
