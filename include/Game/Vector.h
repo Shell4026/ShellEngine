@@ -32,12 +32,13 @@ namespace sh::game
     struct HasW : std::false_type {};
     template <typename T>
     struct HasW<T, std::void_t<decltype(std::declval<T>().w)>> : std::true_type {};
-    
-    struct Empty {};
 
     template<std::size_t N>
     struct Vec
     {
+    private:
+        struct Empty {};
+    public:
         union 
         {
             float data[N];
