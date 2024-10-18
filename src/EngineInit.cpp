@@ -183,7 +183,7 @@ namespace sh
 		meshRenderer->SetMaterial(*mat);
 
 		GameObject* cam = world->AddGameObject("Camera");
-		cam->transform->SetPosition(glm::vec3(2.f, 2.f, 2.f));
+		cam->transform->SetPosition({ 2.f, 2.f, 2.f });
 	}
 
 	void EngineInit::ProcessInput()

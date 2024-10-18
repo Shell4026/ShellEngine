@@ -51,7 +51,7 @@ namespace sh::game
 			static_cast<float>(screenSize.y),
 			nearPlane, farPlane);
 
-		matView = glm::lookAt(gameObject.transform->position, lookPos, up);
+		matView = glm::lookAt(glm::vec3{ gameObject.transform->position }, lookPos, up);
 	}
 
 	void Camera::OnDestroy()
@@ -116,7 +116,7 @@ namespace sh::game
 		camCoord.z = -1.f / glm::tan(fovRadians / 2.f);
 
 		glm::vec3 worldCoord{ glm::inverse(matView) * camCoord };
-		glm::vec3 dir = glm::normalize(worldCoord - gameObject.transform->position);
+		glm::vec3 dir = glm::normalize(worldCoord - glm::vec3{ gameObject.transform->position });
 
 		return phys::Ray(gameObject.transform->position, dir);
 	}

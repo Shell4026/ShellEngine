@@ -7,6 +7,7 @@
 #include "Core/SObject.h"
 
 #include "Game/GameObject.h"
+#include "Game/Vector.h"
 
 namespace sh::editor
 {
@@ -168,9 +169,9 @@ namespace sh::editor
 							}
 							else
 							{
-								if (type == core::reflection::GetTypeName<glm::vec3>())
+								if (type == core::reflection::GetTypeName<game::Vec3>())
 								{
-									glm::vec3* parameter = prop.Get<glm::vec3>(component);
+									game::Vec3* parameter = prop.Get<game::Vec3>(component);
 									float v[3] = { parameter->x, parameter->y, parameter->z };
 									ImGui::LabelText(("##" + name).c_str(), name.c_str());
 									if (prop.isConstProperty)
@@ -184,6 +185,23 @@ namespace sh::editor
 											parameter->x = v[0];
 											parameter->y = v[1];
 											parameter->z = v[2];
+											component->OnPropertyChanged(prop);
+										}
+									}
+								}
+								else if (type == core::reflection::GetTypeName<game::Vec2>())
+								{
+									game::Vec2* parameter = prop.Get<game::Vec2>(component);
+									float v[2] = { parameter->x, parameter->y };
+									ImGui::LabelText(("##" + name).c_str(), name.c_str());
+									if (prop.isConstProperty)
+										ImGui::InputFloat2(("##" + name + std::to_string(idx)).c_str(), v, "%.3f", ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
+									else
+									{
+										if (ImGui::InputFloat2(("##" + name + std::to_string(idx)).c_str(), v))
+										{
+											parameter->x = v[0];
+											parameter->y = v[1];
 											component->OnPropertyChanged(prop);
 										}
 									}
