@@ -270,6 +270,12 @@ namespace sh::editor
 									if (ImGui::InputText(("##Input_" + name + std::to_string(idx)).c_str(), parameter, inputFlag))
 										component->OnPropertyChanged(prop);
 								}
+								else if (type == core::reflection::GetTypeName<bool>())
+								{
+									bool* parameter = prop.Get<bool>(component);
+									ImGui::Checkbox(prop.GetName(), parameter);
+									component->OnPropertyChanged(prop);
+								}
 							}
 						}
 						currentType = const_cast<core::reflection::STypeInfo*>(currentType->GetSuper());
