@@ -91,7 +91,7 @@ namespace sh::game
             if constexpr (N >= 2)
                 return reactphysics3d::Vector2{ x, y };
             else if constexpr (N >= 1)
-                return greactphysics3d::Vector2{ x, 0.f };
+                return reactphysics3d::Vector2{ x, 0.f };
         }
         operator reactphysics3d::Vector3() const
         {
@@ -102,7 +102,7 @@ namespace sh::game
             else if constexpr (N >= 2)
                 return reactphysics3d::Vector3{ x, y, 0.f };
             else if constexpr (N >= 1)
-                return greactphysics3d::Vector3{ x, 0.f, 0.f };
+                return reactphysics3d::Vector3{ x, 0.f, 0.f };
         }
         auto operator=(const glm::vec2& other) -> Vec<N>
         {
