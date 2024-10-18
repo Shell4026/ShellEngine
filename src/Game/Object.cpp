@@ -1,5 +1,5 @@
 ﻿#include "PCH.h"
-#include "Object.h"
+#include "IObject.h"
 
 namespace sh::game
 {

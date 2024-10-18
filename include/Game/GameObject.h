@@ -2,7 +2,7 @@
 
 #include "Export.h"
 
-#include "Object.h"
+#include "IObject.h"
 #include "Component/Component.h"
 #include "Component/Transform.h"
 #include "World.h"

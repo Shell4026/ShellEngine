@@ -1,10 +1,11 @@
 ﻿#pragma once
 
 #include "Game/Export.h"
-#include "Game/Object.h"
+#include "Game/IObject.h"
 #include "Game/ComponentModule.h"
 
 #include "Core/Util.h"
+#include "Core/SObject.h"
 
 #include <type_traits>
 
