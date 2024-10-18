@@ -114,6 +114,9 @@ namespace sh::game
 		if (!core::IsValid(component) || &component->gameObject != this)
 			return;
 
+#if SH_EDITOR
+		component->editorName = component->GetType().typeName;
+#endif
 		components.push_back(std::move(component));
 		components.back()->SetActive(true);
 	}

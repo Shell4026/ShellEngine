@@ -32,7 +32,7 @@ public:\
 			auto it = sh::core::reflection::STypes::types.find(hash);\
 			if (it == sh::core::reflection::STypes::types.end())\
 			{\
-				static sh::core::reflection::STypeInfo info{ sh::core::reflection::TypeInfoData<class_name>(#class_name) }; \
+				static sh::core::reflection::STypeInfo info{ sh::core::reflection::TypeInfoData<class_name>{ #class_name } }; \
 				sh::core::reflection::STypes::types.insert({ hash, &info });\
 				stypeInfo = &info;\
 				return info;\
@@ -258,8 +258,6 @@ namespace sh::core::reflection
 	/// @brief SClass의 타입 정보 객체
 	class STypeInfo 
 	{
-	private:
-		std::string_view name;
 		const STypeInfo* super;
 		const size_t hash;
 
@@ -269,15 +267,16 @@ namespace sh::core::reflection
 	public:
 		const bool isPointer;
 		const size_t size;
+		const std::string_view name;
+		const std::string_view typeName;
 	public:
 		template<typename T>
 		explicit STypeInfo(TypeInfoData<T> data) :
-			name(data.name), super(data.super), hash(typeid(T).hash_code()), 
+			name(data.name), typeName(sh::core::reflection::GetTypeName<T>()), super(data.super), hash(typeid(T).hash_code()),
 			isPointer(std::is_pointer_v<T>), size(sizeof(T))
 		{
 		}
 
-		SH_CORE_API auto GetName() const -> std::string_view;
 		SH_CORE_API auto GetSuper() const -> const STypeInfo*;
 		/// @brief other와 자신이 같은 타입인지
 		/// @return 같으면 true, 아니면 false

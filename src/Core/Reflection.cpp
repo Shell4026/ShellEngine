@@ -4,11 +4,6 @@ namespace sh::core::reflection
 {
 	SHashMap<uint32_t, STypeInfo*> STypes::types{};
 
-	auto STypeInfo::GetName() const -> std::string_view
-	{
-		return name;
-	}
-
 	auto STypeInfo::GetSuper() const -> const STypeInfo*
 	{
 		return super;

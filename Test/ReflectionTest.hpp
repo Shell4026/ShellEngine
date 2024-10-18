@@ -34,8 +34,8 @@ TEST(ReflectionTest, TypeInfoTest)
     Base base;
     Derived derived;
 
-    EXPECT_EQ(Base::GetStaticType().GetName(), "Base");
-    EXPECT_EQ(Derived::GetStaticType().GetName(), "Derived");
+    EXPECT_EQ(Base::GetStaticType().name, "Base");
+    EXPECT_EQ(Derived::GetStaticType().name, "Derived");
 
     EXPECT_TRUE(derived.GetType().IsA(Derived::GetStaticType()));
     EXPECT_TRUE(derived.GetType().IsChildOf(Base::GetStaticType()));

@@ -65,6 +65,9 @@ namespace sh::game
 		{
 			components.push_back(core::SObject::Create<T>(*this));
 			components.back()->SetActive(true);
+#if SH_EDITOR
+			components.back()->editorName = components.back()->GetType().typeName;
+#endif
 			return static_cast<T*>(components.back());
 		}
 		template<typename T>

@@ -90,8 +90,10 @@ namespace sh::editor
 				"%s", obj->name.c_str());
 		}
 
-		if (ImGui::IsItemClicked())
+		if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && ImGui::IsItemHovered())
+		{
 			world.SetSelectedObject(obj);
+		}
 
 		// 드래그 되는 대상의 시점
 		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_::ImGuiDragDropFlags_None))

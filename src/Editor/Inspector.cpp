@@ -117,7 +117,7 @@ namespace sh::editor
 			int idx = 0;
 			for (auto& component : obj->GetComponents())
 			{
-				if (ImGui::CollapsingHeader((component->GetType().GetName().data() + ("##" + std::to_string(idx))).data()))
+				if (ImGui::CollapsingHeader((component->GetType().name.data() + ("##" + std::to_string(idx))).data()))
 				{
 					auto currentType = &component->GetType();
 					do
@@ -127,17 +127,20 @@ namespace sh::editor
 						{
 							if (prop.bVisibleProperty == false)
 								continue;
-							auto type = prop.GetTypeName();
+							std::string type{ prop.GetTypeName() };
 							bool constant = prop.isConstProperty;
 							auto inputFlag = constant ? ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly : ImGuiInputTextFlags_::ImGuiInputTextFlags_None;
 
 							// SObject 포인터 형식, 드래그 앤 드랍 기능
 							if (prop.isSObjectPointer)
 							{
+								std::string typeNameSubPtr = type;
+								typeNameSubPtr.pop_back();
+
 								ImGui::LabelText(("##" + name).c_str(), name.c_str());
 								core::SObject** parameter = prop.Get<core::SObject*>(component);
 
-								auto icon = GetIcon(prop.GetTypeName());
+								auto icon = GetIcon(type);
 
 								float iconSize = 20;
 								float buttonWidth = ImGui::GetContentRegionAvail().x - iconSize;
@@ -156,11 +159,34 @@ namespace sh::editor
 								ImGui::Button(objName, ImVec2{buttonWidth, iconSize});
 								if (ImGui::BeginDragDropTarget())
 								{
-									const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(std::string{ prop.GetTypeName() }.c_str());
+									// 드래그로 받는 객체의 타입 이름 == 드래그 중인 객체의 타입 이름이면 받음
+									const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(type.c_str());
 									if (payload)
 									{
-										*parameter = *reinterpret_cast<render::Mesh**>(payload->Data);
+										*parameter = *reinterpret_cast<core::SObject**>(payload->Data);
 										component->OnPropertyChanged(prop);
+									}
+									else
+									{
+										// 게임 오브젝트라면 컴포넌트 검사
+										if (std::strcmp(ImGui::GetDragDropPayload()->DataType, "GameObject") == 0)
+										{
+											game::GameObject* obj = *reinterpret_cast<game::GameObject**>(ImGui::GetDragDropPayload()->Data);
+											for (auto payloadComponent : obj->GetComponents())
+											{
+												const core::reflection::STypeInfo* componentType = &payloadComponent->GetType();
+												while (componentType)
+												{
+													if (payloadComponent->GetType().typeName == typeNameSubPtr)
+													{
+														// 요구하는 컴포넌트가 맞다면 페이로드 재설정
+														ImGui::SetDragDropPayload((std::string{ payloadComponent->GetType().typeName } + '*').c_str(), &payloadComponent, sizeof(game::Component*));
+														break;
+													}
+													componentType = componentType->GetSuper();
+												}
+											}
+										}
 									}
 									ImGui::EndDragDropTarget();
 								}
