@@ -88,19 +88,20 @@ namespace sh::game
 		matModel = glm::translate(glm::mat4{ 1.0f }, glm::vec3{ vPosition }) * glm::mat4_cast(quat) * glm::scale(glm::mat4{ 1.0f }, glm::vec3{ vScale });
 		if (parent)
 		{
-			worldQuat = parent->worldQuat * quat;
 			matModel = parent->matModel * matModel;
 			worldPosition = matModel[3];
-			worldRotation = glm::degrees(glm::eulerAngles(worldQuat));
+			worldQuat = parent->worldQuat * quat;
 			worldScale = parent->worldScale * vScale;
+#if SH_EDITOR
+			worldRotation = glm::degrees(glm::eulerAngles(worldQuat));
+#endif
 		}
 		else
 		{
-			worldQuat = quat;
-
 			worldPosition = vPosition;
-			worldRotation = vRotation;
+			worldQuat = quat;
 			worldScale = vScale;
+			worldRotation = vRotation;
 		}
 
 		for (auto it = childs.begin(); it != childs.end();)
@@ -176,18 +177,22 @@ namespace sh::game
 	SH_GAME_API void Transform::SetRotation(const Vec3& rot)
 	{
 		vRotation = rot;
+
 		if (vRotation.x >= 360)
 			vRotation.x -= 360;
 		if (vRotation.y >= 360)
 			vRotation.y -= 360;
 		if (vRotation.z >= 360)
 			vRotation.z -= 360;
-		quat = glm::quat{ glm::radians(glm::vec3{ vRotation }) };
+
+		quat = glm::quat{ glm::radians(glm::vec3{ rot }) };
 		bUpdateMatrix = true;
 	}
 	SH_GAME_API void Transform::SetRotation(const glm::quat& rot)
 	{
+#if SH_EDITOR
 		vRotation = glm::degrees(glm::eulerAngles(quat));
+#endif
 		quat = rot;
 		bUpdateMatrix = true;
 	}
@@ -204,7 +209,7 @@ namespace sh::game
 			parent->UpdateMatrix();
 		UpdateMatrix();
 
-		if (this->parent)
+		if (this->parent) // 이미 다른 부모가 있던 경우
 		{
 			this->parent->RemoveChild(*this);
 			if (core::IsValid(parent))
@@ -213,15 +218,20 @@ namespace sh::game
 				this->parent->childs.push_back(this);
 
 				vPosition = parent->GetWorldToLocalMatrix() * glm::vec4{ glm::vec3{ worldPosition }, 1.f };
-				vRotation = glm::degrees(glm::eulerAngles(glm::inverse(parent->worldQuat) * worldQuat));
+				quat = glm::inverse(parent->worldQuat) * worldQuat;
 				vScale = (1.f / parent->worldScale) * worldScale;
+#if SH_EDITOR
+				vRotation = glm::degrees(glm::eulerAngles(glm::inverse(parent->worldQuat) * worldQuat));
+#endif
 			}
 			else
 			{
 				this->parent = nullptr;
 				vPosition = worldPosition;
+				quat = glm::quat{ glm::radians(glm::vec3{ worldRotation }) };
 				vRotation = worldRotation;
 				vScale = worldScale;
+				
 			}
 		}
 		else
@@ -231,8 +241,11 @@ namespace sh::game
 				this->parent = parent;
 				this->parent->childs.push_back(this);
 				vPosition = parent->GetWorldToLocalMatrix() * glm::vec4{ glm::vec3{ worldPosition }, 1.f };
-				vRotation = glm::degrees(glm::eulerAngles(glm::inverse(parent->worldQuat) * quat));
+				quat = glm::inverse(parent->worldQuat) * quat;
 				vScale = (1.f / glm::vec3{ parent->worldScale }) * glm::vec3{ worldScale };
+#if SH_EDITOR
+				vRotation = glm::degrees(glm::eulerAngles(glm::inverse(parent->worldQuat) * quat));
+#endif
 			}
 			else
 				return;
