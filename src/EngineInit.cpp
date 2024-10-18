@@ -23,7 +23,6 @@
 #include "Game/ComponentModule.h"
 #include "Game/Component/LineRenderer.h"
 #include "Game/Component/EditorCamera.h"
-#include "Game/Component/UniformTest.h"
 
 #if SH_EDITOR
 #include "Editor/EditorUI.h"
@@ -169,7 +168,6 @@ namespace sh
 		obj2->transform->SetPosition(1, 1, 0);
 		obj2->transform->SetParent(obj->transform);
 
-		obj->AddComponent<UniformTest>();
 		auto meshRenderer = obj->AddComponent<MeshRenderer>();
 		meshRenderer->SetMesh(*cube);
 		meshRenderer->SetMaterial(*catMat0);

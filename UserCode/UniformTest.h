@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "Component.h"
+#include "Game/Component/Component.h"
 
 #include "Game/Export.h"
 
@@ -10,7 +10,7 @@ namespace sh::game
 {
 	class UniformTest : public Component
 	{
-		COMPONENT(UniformTest)
+		COMPONENT(UniformTest, "user")
 	private:
 		PROPERTY(mat)
 		sh::render::Material* mat;

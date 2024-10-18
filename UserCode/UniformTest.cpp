@@ -1,10 +1,7 @@
-﻿#include "PCH.h"
-#include "Component/UniformTest.h"
+﻿#include "UniformTest.h"
 
-#include "gameObject.h"
-#include "Input.h"
-
-#include <glm/glm.hpp>
+#include "Game/GameObject.h"
+#include "Game/Input.h"
 
 namespace sh::game
 {
