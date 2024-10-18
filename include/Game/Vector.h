@@ -120,7 +120,7 @@ namespace sh::game
             x = other.x;
             if constexpr (N >= 2)
                 y = other.y;
-            else if constexpr (N >= 3)
+            if constexpr (N >= 3)
                 z = other.z;
             return *this;
         }
@@ -131,9 +131,9 @@ namespace sh::game
             x = other.x;
             if constexpr (N >= 2)
                 y = other.y;
-            else if constexpr (N >= 3)
+            if constexpr (N >= 3)
                 z = other.z;
-            else if constexpr (N >= 4)
+            if constexpr (N >= 4)
                 w = other.w;
             return *this;
         }
