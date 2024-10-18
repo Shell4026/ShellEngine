@@ -15,7 +15,9 @@
 
 namespace sh::game
 {
-	MeshRenderer::MeshRenderer() :
+	MeshRenderer::MeshRenderer(GameObject& owner) :
+		Component(owner),
+
 		mesh(nullptr), mat(nullptr),
 		onCameraAddListener
 		(
@@ -81,7 +83,7 @@ namespace sh::game
 		auto it = drawables.find(camera);
 		if (it == drawables.end())
 		{
-			render::IDrawable* drawable = render::DrawableFactory::Create(gameObject->world.renderer);
+			render::IDrawable* drawable = render::DrawableFactory::Create(gameObject.world.renderer);
 			drawable->Build(camera->GetNative(), *mesh, mat);
 			drawables.insert({ camera, drawable });
 		}
@@ -104,14 +106,14 @@ namespace sh::game
 
 		if (!core::IsValid(mat))
 		{
-			mat = gameObject->world.materials.GetResource("ErrorMaterial");
+			mat = gameObject.world.materials.GetResource("ErrorMaterial");
 		}
 
-		for(auto cam : gameObject->world.GetCameras())
+		for(auto cam : gameObject.world.GetCameras())
 			CreateDrawable(cam);
 
-		gameObject->world.onCameraAdd.Register(onCameraAddListener);
-		gameObject->world.onCameraRemove.Register(onCameraRemoveListener);
+		gameObject.world.onCameraAdd.Register(onCameraAddListener);
+		gameObject.world.onCameraRemove.Register(onCameraRemoveListener);
 	}
 
 	void MeshRenderer::Start()
@@ -127,7 +129,7 @@ namespace sh::game
 			else if (uniform.name == "view")
 				std::memcpy(uniformCopyData.data() + uniform.offset, &cam->GetViewMatrix()[0], sizeof(glm::mat4));
 			else if (uniform.name == "model")
-				std::memcpy(uniformCopyData.data() + uniform.offset, &gameObject->transform->localToWorldMatrix[0], sizeof(glm::mat4));
+				std::memcpy(uniformCopyData.data() + uniform.offset, &gameObject.transform->localToWorldMatrix[0], sizeof(glm::mat4));
 			else
 			{
 				auto matrix = mat->GetMatrix(uniform.name);
@@ -180,7 +182,7 @@ namespace sh::game
 		if (!sh::core::IsValid(mat->GetShader()))
 			return;
 
-		sh::render::Renderer* renderer = &gameObject->world.renderer;
+		sh::render::Renderer* renderer = &gameObject.world.renderer;
 		if (renderer->IsPause())
 			return;
 
@@ -201,13 +203,13 @@ namespace sh::game
 				glm::mat4 view;
 				glm::mat4 proj;
 			} uniform{};
-			uniform.model = gameObject->transform->localToWorldMatrix;
+			uniform.model = gameObject.transform->localToWorldMatrix;
 			uniform.view = cam->GetViewMatrix();
 			uniform.proj = cam->GetProjMatrix();
 
 			drawable->SetUniformData(0, &uniform, render::IDrawable::Stage::Vertex);
 
-			gameObject->world.renderer.PushDrawAble(drawable);
+			gameObject.world.renderer.PushDrawAble(drawable);
 		}//drawables
 	}
 
@@ -216,7 +218,7 @@ namespace sh::game
 	{
 		if (std::strcmp(prop.GetName(), "mesh") == 0)
 		{
-			for (auto cam : gameObject->world.GetCameras())
+			for (auto cam : gameObject.world.GetCameras())
 				CreateDrawable(cam);
 		}
 	}

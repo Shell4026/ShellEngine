@@ -8,7 +8,9 @@
 
 namespace sh::game
 {
-	LineRenderer::LineRenderer() :
+	LineRenderer::LineRenderer(GameObject& owner) :
+		MeshRenderer(owner),
+
 		start(0, 0, 0), end(0, 1, 0), mesh(), mat(nullptr),
 		bUpdate(false)
 	{
@@ -21,9 +23,9 @@ namespace sh::game
 
 	void LineRenderer::Awake()
 	{
-		mesh.Build(gameObject->world.renderer);
+		mesh.Build(gameObject.world.renderer);
 
-		mat = gameObject->world.materials.GetResource("LineMat");
+		mat = gameObject.world.materials.GetResource("LineMat");
 		mat->SetVector("start", glm::vec4(start, 1.f));
 		mat->SetVector("end", glm::vec4(end, 1.f));
 		assert(mat != nullptr);

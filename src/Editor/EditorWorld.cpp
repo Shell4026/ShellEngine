@@ -22,6 +22,7 @@ namespace sh::editor
 	{
 		Super::Clean();
 		editorUI.reset();
+		selected = nullptr;
 	}
 
 	SH_EDITOR_API void EditorWorld::SetSelectedObject(game::GameObject* gameObject)

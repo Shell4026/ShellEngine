@@ -36,7 +36,7 @@ namespace sh::game
 		inline void ClampAngles();
 		inline void UpdateCameraPosition();
 	public:
-		SH_GAME_API EditorCamera();
+		SH_GAME_API EditorCamera(GameObject& owner);
 
 		SH_GAME_API void BeginUpdate() override;
 		SH_GAME_API void SetGUI(ImGUImpl& gui);

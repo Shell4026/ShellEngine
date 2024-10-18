@@ -15,7 +15,7 @@ private:
 	PROPERTY(target)
 	std::string target;
 public:
-	SH_USER_API ComponentTest();
+	SH_USER_API ComponentTest(GameObject& owner);
 	SH_USER_API ~ComponentTest();
 
 	SH_USER_API void OnEnable() override;

@@ -49,7 +49,7 @@ namespace sh::game
 	private:
 		inline void CalcMatrix();
 	public:
-		SH_GAME_API Camera();
+		SH_GAME_API Camera(GameObject& owner);
 		SH_GAME_API ~Camera();
 		
 		SH_GAME_API void Awake() override;

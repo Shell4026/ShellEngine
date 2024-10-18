@@ -8,6 +8,9 @@
 
 #include <type_traits>
 
+/// 컴포넌트 임을 명시하고 자동으로 컴포넌트 모듈에 해당 컴포넌트를 등록하는 매크로.
+/// className 클래스 이름
+/// ... 그룹 이름
 #define COMPONENT(className, ...)\
 	SCLASS(className)\
 	struct _ComponentBuilder_##className\
@@ -26,26 +29,25 @@
 
 namespace sh::game
 {
+	class World;
 	class GameObject;
 
-	class Component : public IObject
+	class Component : public sh::core::SObject, public IObject
 	{
 		SCLASS(Component)
 	private:
 		bool bEnable;
 		bool bInit;
 	public:
-		GameObject* gameObject;
+		GameObject& gameObject;
+		World& world;
 		const bool& active;
-	protected:
-		auto GetComponentModule() const -> ComponentModule*;
 	public:
-		SH_GAME_API Component();
+		SH_GAME_API Component(GameObject& object);
 		SH_GAME_API virtual ~Component() = default;
 		SH_GAME_API Component(const Component& other);
 		SH_GAME_API Component(Component&& other) noexcept;
 
-		SH_GAME_API void SetOwner(GameObject& object);
 		SH_GAME_API void SetActive(bool b);
 
 		SH_GAME_API void Awake() override;

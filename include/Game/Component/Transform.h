@@ -43,7 +43,7 @@ namespace sh::game
 		const glm::vec3& rotation;
 		const glm::mat4& localToWorldMatrix;
 	public:
-		SH_GAME_API Transform();
+		SH_GAME_API Transform(GameObject& owner);
 		SH_GAME_API ~Transform();
 		SH_GAME_API Transform(const Transform& other);
 		SH_GAME_API Transform(Transform&& other) noexcept;

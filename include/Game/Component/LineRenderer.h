@@ -28,7 +28,7 @@ namespace sh::game
 
 		bool bUpdate;
 	public:
-		SH_GAME_API LineRenderer();
+		SH_GAME_API LineRenderer(GameObject& owner);
 
 		SH_GAME_API void Awake() override;
 		SH_GAME_API void BeginUpdate() override;

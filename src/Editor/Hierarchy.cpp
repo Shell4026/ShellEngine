@@ -129,7 +129,7 @@ namespace sh::editor
 		if (nodeOpen && hasChildren) 
 		{
 			for (auto child : obj->transform->GetChildren())
-				DrawGameObjectHierarchy(child->gameObject, drawSet);
+				DrawGameObjectHierarchy(&child->gameObject, drawSet);
 			ImGui::TreePop();
 		}
 	}

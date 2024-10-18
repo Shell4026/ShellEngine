@@ -7,7 +7,9 @@
 
 namespace sh::game
 {
-	SH_GAME_API EditorCamera::EditorCamera() :
+	SH_GAME_API EditorCamera::EditorCamera(GameObject& owner) :
+		Camera(owner),
+
 		distance(3.f),
 		xdir(45.f), ydir(90.f),
 		lastXdir(xdir), lastYdir(ydir),
@@ -69,7 +71,7 @@ namespace sh::game
 			middlePressedPos = Input::mousePosition;
 		}
 
-		glm::vec3 to = lookPos - gameObject->transform->position;
+		glm::vec3 to = lookPos - gameObject.transform->position;
 		glm::vec3 right = glm::normalize(glm::cross(to, this->up));
 		glm::vec3 up = glm::normalize(glm::cross(right, to));
 
@@ -108,7 +110,7 @@ namespace sh::game
 		float x = lookPos.x + distance * glm::cos(glm::radians(ydir)) * glm::cos(glm::radians(xdir));
 		float y = lookPos.y + distance * glm::sin(glm::radians(xdir));
 		float z = lookPos.z + distance * glm::sin(glm::radians(ydir)) * glm::cos(glm::radians(xdir));
-		gameObject->transform->SetPosition(x, y, z);
+		gameObject.transform->SetPosition(x, y, z);
 	}
 
 	SH_GAME_API void EditorCamera::BeginUpdate()

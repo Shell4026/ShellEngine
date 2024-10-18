@@ -23,6 +23,8 @@ namespace sh::core
 		bPendingKill(other.bPendingKill.load(std::memory_order::memory_order_relaxed)),
 		bMark(other.bMark)
 	{
+		other.bPendingKill.store(true, std::memory_order_release);
+		other.bMark = false;
 	}
 	SObject::~SObject()
 	{

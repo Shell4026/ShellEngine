@@ -14,9 +14,12 @@ namespace sh::game
 	}
 
 	GameObject::GameObject(GameObject&& other) noexcept :
-		world(other.world), objName(std::move(other.objName)), name(objName),
+		SObject(std::move(other)),
+		world(other.world), transform(other.transform),
+		
+		objName(std::move(other.objName)), name(objName),
 		bInit(other.bInit), bEnable(other.bEnable), activeSelf(bEnable),
-		components(std::move(other.components)), transform(other.transform)
+		components(std::move(other.components))
 	{
 		other.transform = nullptr;
 	}
@@ -108,7 +111,9 @@ namespace sh::game
 
 	void GameObject::AddComponent(Component* component)
 	{
-		component->SetOwner(*this);
+		if (!core::IsValid(component) || &component->gameObject != this)
+			return;
+
 		components.push_back(std::move(component));
 		components.back()->SetActive(true);
 	}

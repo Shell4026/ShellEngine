@@ -16,7 +16,7 @@
 
 namespace sh::game
 {
-	class GameObject : public IObject
+	class GameObject : public core::SObject, public IObject
 	{
 		SCLASS(GameObject)
 	private:
@@ -53,13 +53,17 @@ namespace sh::game
 
 		SH_GAME_API auto GetComponents() const -> const std::vector<Component*>&;
 
+		/// @brief 이미 만들어진 컴포넌트를 추가하는 함수. 
+		/// 해당 컴포넌트의 gameObject가 이 gameObject와 다르면 추가 되지 않는다.
+		/// @param component 컴포넌트 포인터
 		SH_GAME_API void AddComponent(Component* component);
 	public:
+		/// @brief 새 컴포넌트를 추가하는 함수
+		/// @tparam T 컴포넌트 타입
 		template<typename T>
 		auto AddComponent() -> std::enable_if_t<IsComponent<T>::value, T*>
 		{
-			components.push_back(core::SObject::Create<T>());
-			components.back()->SetOwner(*this);
+			components.push_back(core::SObject::Create<T>(*this));
 			components.back()->SetActive(true);
 			return static_cast<T*>(components.back());
 		}

@@ -7,7 +7,8 @@
 
 #include <iostream>
 
-ComponentTest::ComponentTest()
+ComponentTest::ComponentTest(GameObject& owner) :
+	Component(owner)
 {
 }
 
@@ -26,12 +27,12 @@ void ComponentTest::Update()
 	using namespace sh::game;
 	if (Input::GetKeyDown(Input::KeyCode::Enter))
 	{
-		gameObject->transform->SetParent(nullptr);
+		gameObject.transform->SetParent(nullptr);
 	}
 	if (Input::GetKeyDown(Input::KeyCode::Space))
 	{
-		glm::vec3 pos = gameObject->transform->GetWorldPosition();
-		glm::vec3 rot = gameObject->transform->GetWorldRotation();
+		glm::vec3 pos = gameObject.transform->GetWorldPosition();
+		glm::vec3 rot = gameObject.transform->GetWorldRotation();
 		SH_INFO_FORMAT("worldPosition: x: {}, y: {}, z: {}", pos.x, pos.y, pos.z);
 		SH_INFO_FORMAT("worldRotation: x: {}, y: {}, z: {}", rot.x, rot.y, rot.z);
 	}
@@ -40,9 +41,9 @@ void ComponentTest::Update()
 void ComponentTest::OnPropertyChanged(const sh::core::reflection::Property& prop)
 {
 	std::string* name = prop.Get<std::string>(this);
-	auto obj = gameObject->world.GetGameObject(*name);
+	auto obj = gameObject.world.GetGameObject(*name);
 	if (obj)
 	{
-		gameObject->transform->SetParent(obj->transform);
+		gameObject.transform->SetParent(obj->transform);
 	}
 }

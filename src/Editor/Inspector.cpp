@@ -72,7 +72,7 @@ namespace sh::editor
 					{
 						if (ImGui::Selectable(name.c_str()))
 						{
-							gameObject.AddComponent(world.componentModule.GetComponents().at(name)->Create());
+							gameObject.AddComponent(world.componentModule.GetComponents().at(name)->Create(gameObject));
 							bAddComponent = false;
 						}
 					}

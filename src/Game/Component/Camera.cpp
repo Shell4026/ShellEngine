@@ -10,7 +10,9 @@
 
 namespace sh::game
 {
-	Camera::Camera() :
+	Camera::Camera(GameObject& owner) :
+		Component(owner),
+		
 		worldToCameraMatrix(matView),
 		matProj(), matView(),
 		fov(60.f), fovRadians(glm::radians(60.f)), nearPlane(0.1f), farPlane(1000.f),
@@ -26,7 +28,7 @@ namespace sh::game
 	void Camera::Awake()
 	{
 		Super::Awake();
-		gameObject->world.RegisterCamera(this);
+		gameObject.world.RegisterCamera(this);
 	}
 	void Camera::Start()
 	{
@@ -34,7 +36,7 @@ namespace sh::game
 	void Camera::BeginUpdate()
 	{
 		if (renderTexture == nullptr)
-			screenSize = gameObject->world.renderer.GetViewportEnd() - gameObject->world.renderer.GetViewportStart();
+			screenSize = gameObject.world.renderer.GetViewportEnd() - gameObject.world.renderer.GetViewportStart();
 		else
 			screenSize = renderTexture->GetSize();
 		
@@ -49,24 +51,24 @@ namespace sh::game
 			static_cast<float>(screenSize.y),
 			nearPlane, farPlane);
 
-		matView = glm::lookAt(gameObject->transform->position, lookPos, up);
+		matView = glm::lookAt(gameObject.transform->position, lookPos, up);
 	}
 
 	void Camera::OnDestroy()
 	{
-		if (gameObject->world.GetMainCamera() == this)
+		if (gameObject.world.GetMainCamera() == this)
 		{
 			//다음에 추가된 카메라를 메인 카메라로 한다.
-			for (auto& cam : gameObject->world.GetCameras())
+			for (auto& cam : gameObject.world.GetCameras())
 			{
 				if (cam == this)
 					continue;
 
-				gameObject->world.SetMainCamera(cam);
+				gameObject.world.SetMainCamera(cam);
 				break;
 			}
 		}
-		gameObject->world.UnRegisterCamera(this);
+		gameObject.world.UnRegisterCamera(this);
 	}
 
 	auto Camera::GetProjMatrix() const -> const glm::mat4&
@@ -114,9 +116,9 @@ namespace sh::game
 		camCoord.z = -1.f / glm::tan(fovRadians / 2.f);
 
 		glm::vec3 worldCoord{ glm::inverse(matView) * camCoord };
-		glm::vec3 dir = glm::normalize(worldCoord - gameObject->transform->position);
+		glm::vec3 dir = glm::normalize(worldCoord - gameObject.transform->position);
 
-		return phys::Ray(gameObject->transform->position, dir);
+		return phys::Ray(gameObject.transform->position, dir);
 	}
 
 #ifdef SH_EDITOR

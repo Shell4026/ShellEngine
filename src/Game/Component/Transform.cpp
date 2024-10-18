@@ -7,7 +7,8 @@
 
 namespace sh::game
 {
-	SH_GAME_API Transform::Transform() :
+	SH_GAME_API Transform::Transform(GameObject& owner) :
+		Component(owner),
 		position(vPosition), scale(vScale), rotation(vRotation), localToWorldMatrix(matModel),
 
 		worldPosition(), worldRotation(), worldScale(),
@@ -54,7 +55,7 @@ namespace sh::game
 			parent->RemoveChild(*this);
 		for (Transform* child : childs)
 		{
-			child->gameObject->Destroy();
+			child->gameObject.Destroy();
 		}
 	}
 
@@ -83,8 +84,6 @@ namespace sh::game
 			vRotation.y -= 360;
 		if (vRotation.z >= 360)
 			vRotation.z -= 360;
-
-		quat = glm::quat{ glm::radians(vRotation) };
 
 		matModel = glm::translate(glm::mat4{ 1.0f }, vPosition) * glm::mat4_cast(quat) * glm::scale(glm::mat4{ 1.0f }, vScale);
 		if (parent)
@@ -274,6 +273,10 @@ namespace sh::game
 #if SH_EDITOR
 	void Transform::OnPropertyChanged(const core::reflection::Property& property)
 	{
+		if (std::strcmp(property.GetName(), "vRotation") == 0)
+		{
+			quat = glm::quat{ glm::radians(vRotation) };
+		}
 		bUpdateMatrix = true;
 	}
 #endif

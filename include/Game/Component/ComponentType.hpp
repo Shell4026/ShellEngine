@@ -7,19 +7,20 @@
 namespace sh::game
 {
 	class Component;
+	class GameObject;
 
 	struct IComponentType
 	{
-		virtual auto Create() -> Component* = 0;
+		virtual auto Create(GameObject& owner) -> Component* = 0;
 	};
 	template<typename T, typename IsComponent = std::enable_if_t<std::is_base_of_v<Component, T>>>
 	struct ComponentType : IComponentType
 	{
 		using Type = T;
 
-		auto Create() -> Component* override
+		auto Create(GameObject& owner) -> Component* override
 		{
-			return core::SObject::Create<T>();
+			return core::SObject::Create<T>(owner);
 		}
 	};
 }//namespace
