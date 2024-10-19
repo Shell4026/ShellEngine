@@ -36,6 +36,7 @@ namespace sh::game
 	SH_GAME_API World::~World()
 	{
 		SH_INFO("~World");
+		Clean();
 		physWorld.Clean();
 	}
 
@@ -48,6 +49,11 @@ namespace sh::game
 
 		objsEmptyIdx = std::queue<int>{};
 		objsMap.clear();
+		for (auto obj : objs)
+		{
+			if (core::IsValid(obj))
+				obj->Destroy();
+		}
 		objs.clear();
 	}
 
@@ -64,21 +70,28 @@ namespace sh::game
 			it = objsMap.find(objName);
 		}
 
-		// 전에 제거된 게임 오브젝트가 있어서 빈 idx가 있는 상태
 		if (objsEmptyIdx.empty())
 		{
-			objs.push_back(Create<GameObject>(*this, objName));
-			objsMap.insert(std::make_pair(objName, static_cast<uint32_t>(objs.size() - 1)));
-
-			auto obj = objs[objs.size() - 1];
+			auto obj = Create<GameObject>(*this, objName);
+			if (!startLoop)
+			{
+				objsMap.insert({ objName, objs.size() });
+				objs.push_back(obj);
+			}
+			else
+			{
+				objsMap.insert({ objName, objs.size() + addedObjMap.size() });
+				addedObjQueue.push(obj);
+				addedObjMap.insert({ objName, obj });
+			}
+			gc->SetRootSet(obj);
+			onGameObjectAdded.Notify(obj);
 #if SH_EDITOR
 			obj->editorName = objName;
 #endif
-			onGameObjectAdded.Notify(obj);
-
 			return obj;
 		}
-		else
+		else // 전에 제거된 게임 오브젝트가 있어서 빈 idx가 있는 상태
 		{
 			int idx = objsEmptyIdx.front();
 			objsMap.insert(std::make_pair(objName, idx));
@@ -86,11 +99,11 @@ namespace sh::game
 			objsEmptyIdx.pop();
 
 			auto obj = objs[idx];
+			gc->SetRootSet(obj);
+			onGameObjectAdded.Notify(obj);
 #if SH_EDITOR
 			obj->editorName = objName;
 #endif
-			onGameObjectAdded.Notify(obj);
-
 			return obj;
 		}
 	}
@@ -102,11 +115,15 @@ namespace sh::game
 			return;
 
 		int id = it->second;
-		objsMap.erase(it);
-		objsEmptyIdx.push(id);
-		objs[id]->Destroy();
+		if (objs[id] != nullptr)
+		{
+			objsMap.erase(it);
+			objsEmptyIdx.push(id);
+			objs[id]->Destroy();
+			onGameObjectRemoved.Notify(objs[id]);
 
-		onGameObjectRemoved.Notify(objs[id]);
+			objs[id] = nullptr;
+		}
 	}
 	SH_GAME_API void World::DestroyGameObject(const GameObject& obj)
 	{
@@ -144,10 +161,18 @@ namespace sh::game
 
 	SH_GAME_API auto World::GetGameObject(std::string_view name) const -> GameObject*
 	{
-		auto it = objsMap.find(std::string{ name });
-		if (it == objsMap.end())
-			return nullptr;
-		return objs[it->second];
+		std::string nameStr{ name };
+		if (addedObjMap.size() > 0)
+		{
+			auto addedIt = addedObjMap.find(nameStr);
+			if (addedIt != addedObjMap.end())
+				return addedIt->second;
+		}
+		auto it = objsMap.find(nameStr);
+		if (it != objsMap.end())
+			return objs[it->second];
+
+		return nullptr;
 	}
 
 	SH_GAME_API void World::ReorderObjectAbovePivot(std::string_view obj, std::string_view pivotObj)
@@ -213,6 +238,18 @@ namespace sh::game
 	SH_GAME_API void World::Update(float deltaTime)
 	{
 		_deltaTime = deltaTime;
+		if (!startLoop)
+			startLoop = true;
+
+		while (!addedObjQueue.empty())
+		{
+			auto obj = addedObjQueue.front();
+			addedObjQueue.pop();
+
+			objsMap.insert({ obj->name, objs.size() });
+			objs.push_back(obj);
+		}
+		addedObjMap.clear();
 
 		for (auto& obj : objs)
 		{

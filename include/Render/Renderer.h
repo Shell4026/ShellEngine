@@ -3,6 +3,7 @@
 #include "Export.h"
 #include "Camera.h"
 
+#include "Core/SObject.h"
 #include "Core/ISyncable.h"
 #include "Core/ThreadSyncManager.h"
 #include "Core/SContainer.hpp"
@@ -26,8 +27,9 @@ namespace sh::render {
 	class IDrawable;
 	class Framebuffer;
 
-	class Renderer : public core::ISyncable
+	class Renderer : public core::SObject, public core::ISyncable
 	{
+		SCLASS(Renderer)
 	private:
 		sh::window::Window* window;
 
@@ -43,6 +45,7 @@ namespace sh::render {
 
 		core::ThreadSyncManager& syncManager;
 	protected:
+		PROPERTY(drawList)
 		core::SyncArray<core::SMap<Camera*, core::SVector<IDrawable*>, 64, CameraCompare>> drawList;
 
 		std::vector<std::function<void()>> drawCalls;
@@ -52,7 +55,7 @@ namespace sh::render {
 
 		std::atomic_bool bPause;
 	private:
-		bool bDirty; // 메모리 배열 맞추기 위해 여기에 둠
+		bool bDirty;
 	public:
 		const RenderAPI apiType;
 	public:

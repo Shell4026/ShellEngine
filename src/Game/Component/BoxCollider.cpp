@@ -1,5 +1,6 @@
 ﻿#include "PCH.h"
 #include "Component/BoxCollider.h"
+#include "Component/RigidBody.h"
 
 #include "Game/World.h"
 
@@ -12,7 +13,17 @@ namespace sh::game
 	}
 	SH_GAME_API BoxCollider::~BoxCollider()
 	{
+		SH_INFO("~BodCollider");
 		world.GetPhysWorld()->GetContext().destroyBoxShape(shape);
+	}
+
+	SH_GAME_API void BoxCollider::OnDestroy()
+	{
+		SH_INFO("Destroy!");
+		for (auto rb : rigidbodies)
+		{
+			rb->SetCollider(nullptr);
+		}
 	}
 
 	auto BoxCollider::operator*() const -> reactphysics3d::BoxShape*

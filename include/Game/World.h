@@ -45,11 +45,13 @@ namespace sh::game
 	private:
 		static constexpr float FIXED_TIME = 0.02f;
 
-		PROPERTY(objs)
 		core::SVector<GameObject*> objs;
 		core::SSet<Camera*> cameras;
 		core::SHashMap<std::string, uint32_t> objsMap;
 		std::queue<int> objsEmptyIdx;
+
+		std::queue<GameObject*> addedObjQueue; // 루프 도중 추가 된 객체
+		core::SHashMap<std::string, GameObject*> addedObjMap;
 
 		float _deltaTime = 0.f;
 		float _fixedDeltaTime = 0.f;
@@ -58,6 +60,8 @@ namespace sh::game
 		core::GarbageCollection* gc;
 
 		phys::PhysWorld physWorld;
+
+		bool startLoop = false;
 	public:
 		sh::render::Renderer& renderer;
 		const float& deltaTime = _deltaTime;

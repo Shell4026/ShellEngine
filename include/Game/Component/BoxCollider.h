@@ -4,19 +4,26 @@
 #include "Component.h"
 
 #include "Game/Vector.h"
+
+#include "Core/SContainer.hpp"
 namespace sh::game
 {
 	class BoxCollider : public Component
 	{
 		COMPONENT(BoxCollider)
+		friend class RigidBody;;
 	private:
 		reactphysics3d::BoxShape* shape = nullptr;
-		
+		PROPERTY(rigidbodies)
+		core::SSet<RigidBody*> rigidbodies;
+
 		PROPERTY(size)
 		Vec3 size;
 	public:
 		SH_GAME_API BoxCollider(GameObject& owner);
 		SH_GAME_API ~BoxCollider();
+
+		SH_GAME_API void OnDestroy() override;
 
 		SH_GAME_API auto operator*() const -> reactphysics3d::BoxShape*;
 

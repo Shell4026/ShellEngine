@@ -15,7 +15,6 @@ namespace sh::game
 		BoxCollider* collision = nullptr;
 		BoxCollider* collisionLast = nullptr;
 		reactphysics3d::Collider* collider = nullptr;
-
 		reactphysics3d::RigidBody* rigidbody = nullptr;
 
 		PROPERTY(bKinematic)
@@ -36,6 +35,7 @@ namespace sh::game
 		/// @param set true 또는 false
 		SH_GAME_API void SetKinematic(bool set);
 		SH_GAME_API void SetGravity(bool use);
+		SH_GAME_API void SetCollider(BoxCollider* colliderComponent);
 
 		SH_GAME_API bool IsKinematic() const;
 		SH_GAME_API bool IsGravityUse() const;

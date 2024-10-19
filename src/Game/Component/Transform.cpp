@@ -51,11 +51,12 @@ namespace sh::game
 
 	SH_GAME_API void Transform::OnDestroy()
 	{
-		if (parent)
+		if (core::IsValid(parent))
 			parent->RemoveChild(*this);
 		for (Transform* child : childs)
 		{
-			child->gameObject.Destroy();
+			if(core::IsValid(child))
+				child->gameObject.Destroy();
 		}
 	}
 

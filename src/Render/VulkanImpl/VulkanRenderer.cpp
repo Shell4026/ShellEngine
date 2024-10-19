@@ -609,6 +609,47 @@ namespace sh::render {
 			fmt::print("Vulkan Renderer Init!\n");
 		}
 	}
+	inline void VulkanRenderer::RenderDrawable(IDrawable* iDrawable, VkPipeline& lastPipeline, VkCommandBuffer cmd)
+	{
+		if (!core::IsValid(iDrawable))
+			return;
+		VulkanDrawable* drawable = static_cast<VulkanDrawable*>(iDrawable);
+		Mesh* mesh = drawable->GetMesh();
+		Material* mat = drawable->GetMaterial();
+
+		assert(mesh);
+		assert(mat);
+		if (!sh::core::IsValid(mesh) || !sh::core::IsValid(mat))
+			return;
+
+		VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
+		if (!sh::core::IsValid(shader))
+			return;
+
+		impl::VulkanPipeline* currentPipeline = drawable->GetPipeline(core::ThreadType::Render);
+		if (currentPipeline == nullptr)
+			return;
+		if (currentPipeline->GetPipeline() == nullptr)
+			return;
+
+		if (currentPipeline->GetPipeline() != lastPipeline)
+		{
+			lastPipeline = currentPipeline->GetPipeline();
+			vkCmdBindPipeline(cmd, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, lastPipeline);
+		}
+		mesh->GetVertexBuffer()->Bind();
+
+		VkDescriptorSet localDescSet = drawable->GetDescriptorSet(core::ThreadType::Render);
+		VkDescriptorSet descSet = static_cast<impl::VulkanUniformBuffer*>(mat->GetUniformBuffer(core::ThreadType::Render))->GetVkDescriptorSet();
+		std::array<VkDescriptorSet, 2> descriptorSets = { localDescSet, descSet };
+
+		vkCmdBindDescriptorSets(cmd,
+			VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS,
+			shader->GetPipelineLayout(), 0, descriptorSets.size(),
+			descriptorSets.data(), 0, nullptr);
+
+		vkCmdDrawIndexed(cmd, mesh->GetIndices().size(), 1, 0, 0, 0);
+	}
 
 	bool VulkanRenderer::IsInit() const
 	{
@@ -626,9 +667,6 @@ namespace sh::render {
 			return;
 		if (drawList[core::ThreadType::Render].empty())
 			return;
-		//std::cout << "Render Start\n";
-		//std::cout << "main: " << mainCamera << '\n';
-		//mu->lock();
 
 		WaitForCurrentFrame();
 
@@ -638,13 +676,12 @@ namespace sh::render {
 		{
 			if (IsPause())
 				return;
-			std::cout << "resizing\n";
+			SH_INFO("Resizing");
 			Resizing();
 			return;
 		}
 		if (result == VkResult::VK_ERROR_SURFACE_LOST_KHR)
 		{
-			//Resizing();
 			return;
 		}
 		vkResetFences(device, 1, &inFlightFence);
@@ -704,47 +741,10 @@ namespace sh::render {
 					VkPipeline lastPipeline = nullptr;
 					for (auto iDrawable : drawables)
 					{
-						VulkanDrawable* drawable = static_cast<VulkanDrawable*>(iDrawable);
-						Mesh* mesh = drawable->GetMesh();
-						Material* mat = drawable->GetMaterial();
-
-						assert(mesh);
-						assert(mat);
-						if (!sh::core::IsValid(mesh) || !sh::core::IsValid(mat)) 
-							continue;
-
-						VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
-						if (!sh::core::IsValid(shader)) 
-							continue;
-
-						impl::VulkanPipeline* currentPipeline = drawable->GetPipeline(core::ThreadType::Render);
-						if (currentPipeline == nullptr)
-							continue;
-						if (currentPipeline->GetPipeline() == nullptr)
-							continue;
-
-						if (currentPipeline->GetPipeline() != lastPipeline)
-						{
-							lastPipeline = currentPipeline->GetPipeline();
-							vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, lastPipeline);
-						}
-						mesh->GetVertexBuffer()->Bind();
-
-						VkDescriptorSet localDescSet = drawable->GetDescriptorSet(core::ThreadType::Render);
-						VkDescriptorSet descSet = static_cast<impl::VulkanUniformBuffer*>(mat->GetUniformBuffer(core::ThreadType::Render))->GetVkDescriptorSet();
-						std::array<VkDescriptorSet, 2> descriptorSets = { localDescSet, descSet };
-
-						vkCmdBindDescriptorSets(buffer,
-							VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS,
-							shader->GetPipelineLayout(), 0, descriptorSets.size(),
-							descriptorSets.data(), 0, nullptr);
-
-						vkCmdDrawIndexed(buffer, mesh->GetIndices().size(), 1, 0, 0, 0);
+						RenderDrawable(iDrawable, lastPipeline, buffer);
 					}
 					//End RenderPass
 					vkCmdEndRenderPass(buffer);
-
-					//renderTexture->SetDirty();
 				}
 				//MainPass
 				else
@@ -785,42 +785,8 @@ namespace sh::render {
 					VkPipeline lastPipeline = nullptr;
 					for (auto iDrawable : drawables)
 					{
-						VulkanDrawable* drawable = static_cast<VulkanDrawable*>(iDrawable);
-
-						Mesh* mesh = drawable->GetMesh();
-						Material* mat = drawable->GetMaterial();
-
-						if (!sh::core::IsValid(mesh) || !sh::core::IsValid(mat)) 
-							continue;
-
-						VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
-						if (!sh::core::IsValid(shader)) 
-							continue;
-
-						impl::VulkanPipeline* currentPipeline = drawable->GetPipeline(core::ThreadType::Render);
-						if (currentPipeline == nullptr)
-							continue;
-						if (currentPipeline->GetPipeline() == nullptr)
-							continue;
-
-						if (currentPipeline->GetPipeline() != lastPipeline)
-						{
-							lastPipeline = currentPipeline->GetPipeline();
-							vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, lastPipeline);
-						}
-						mesh->GetVertexBuffer()->Bind();
-
-						VkDescriptorSet localDescSet = drawable->GetDescriptorSet(core::ThreadType::Render);
-						VkDescriptorSet descSet = static_cast<impl::VulkanUniformBuffer*>(mat->GetUniformBuffer(core::ThreadType::Render))->GetVkDescriptorSet();
-						std::array<VkDescriptorSet, 2> descriptorSets = { localDescSet, descSet };
-						
-						vkCmdBindDescriptorSets(buffer,
-							VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS,
-							shader->GetPipelineLayout(), 0, descriptorSets.size(),
-							descriptorSets.data(), 0, nullptr);
-						vkCmdDrawIndexed(buffer, mesh->GetIndices().size(), 1, 0, 0, 0);
+						RenderDrawable(iDrawable, lastPipeline, buffer);
 					}
-
 					for (auto& func : drawCalls)
 						func();
 

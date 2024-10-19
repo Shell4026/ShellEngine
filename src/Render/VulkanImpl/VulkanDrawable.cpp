@@ -48,6 +48,7 @@ namespace sh::render
 
 	VulkanDrawable::~VulkanDrawable() noexcept
 	{
+		SH_INFO("~VulkanDrawable()");
 		Clean(core::ThreadType::Game);
 		Clean(core::ThreadType::Render);
 	}

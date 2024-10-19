@@ -48,11 +48,13 @@ namespace sh
 		SH_INFO("Engine shutdown");
 		world->Clean();
 		gc->Update();
-		world->Destroy();
-		gc->Update();
+		gc->ForceDelete(world);
 
 		gui.reset();
-		renderer.reset();
+
+		renderer->Clean();
+		gc->ForceDelete(renderer);
+
 		window.reset();
 	}
 
@@ -240,14 +242,15 @@ namespace sh
 		window->SetFps(limitFps);
 
 		SH_INFO("Renderer initialization");
-		renderer = std::make_unique<sh::render::VulkanRenderer>(threadSyncManager);
+		renderer = core::SObject::Create<sh::render::VulkanRenderer>(threadSyncManager);
 		renderer->Init(*window);
 		renderer->SetViewport({ 150.f, 0.f }, { window->width - 150.f, window->height - 180 });
+		gc->SetRootSet(renderer);
 
 		gui = std::make_unique<game::ImGUImpl>(*window, static_cast<render::VulkanRenderer&>(*renderer));
 		gui->Init();
 #if SH_EDITOR
-		world = core::SObject::Create<editor::EditorWorld>(*renderer.get(), *componentModule, *gui);
+		world = core::SObject::Create<editor::EditorWorld>(*renderer, *componentModule, *gui);
 #else
 		world = core::SObject::Create<game::World>(*renderer.get(), *componentModule);
 #endif

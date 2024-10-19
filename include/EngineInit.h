@@ -40,9 +40,9 @@ namespace sh
 		game::ComponentModule* componentModule;
 
 		std::unique_ptr<window::Window> window;
-		std::unique_ptr<render::Renderer> renderer;
 		std::unique_ptr<game::ImGUImpl> gui;
 
+		render::Renderer* renderer;
 		game::World* world;
 
 		int limitFps;

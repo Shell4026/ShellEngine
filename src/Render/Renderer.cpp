@@ -18,8 +18,18 @@ namespace sh::render
 	}
 	void Renderer::Clean()
 	{
-		drawList[core::ThreadType::Game].clear();
-		drawList[core::ThreadType::Render].clear();
+		for (int thr = 0; thr < drawList.size(); ++thr)
+		{
+			for (auto& [cam, vec] : drawList[thr])
+			{
+				for (auto idrawable : vec)
+				{
+					if (core::IsValid(idrawable))
+						gc->ForceDelete(idrawable);
+				}
+			}
+			drawList[thr].clear();
+		}
 		drawCalls.clear();
 	}
 
@@ -33,8 +43,6 @@ namespace sh::render
 	{
 		if (!core::IsValid(drawable))
 			return;
-
-		core::GarbageCollection::GetInstance()->SetRootSet(drawable);
 
 		auto it = drawList[core::ThreadType::Game].find(drawable->GetCamera());
 		if (it == drawList[core::ThreadType::Game].end())
@@ -87,12 +95,6 @@ namespace sh::render
 	}
 	void Renderer::Sync()
 	{
-		auto gc = core::GarbageCollection::GetInstance();
-		for (auto& [_, drawVec] : drawList[core::ThreadType::Render])
-		{
-			for (IDrawable* drawable : drawVec)
-				gc->RemoveRootSet(drawable);
-		}
 		drawList[core::ThreadType::Render] = std::move(drawList[core::ThreadType::Game]);
 		bDirty = false;
 	}

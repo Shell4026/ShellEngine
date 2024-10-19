@@ -26,6 +26,7 @@ namespace sh::game
 
 	SH_GAME_API GameObject::~GameObject()
 	{
+		SH_INFO_FORMAT("~GameObject: {}", name);
 	}
 
 	SH_GAME_API void GameObject::Awake()
@@ -91,6 +92,11 @@ namespace sh::game
 	SH_GAME_API void GameObject::Destroy()
 	{
 		world.DestroyGameObject(name);
+		for (auto component : components)
+		{
+			component->Destroy();
+		}
+		SObject::Destroy();
 	}
 	SH_GAME_API void GameObject::SetActive(bool b)
 	{

@@ -108,6 +108,8 @@ namespace sh::render {
 		void DestroyAllocator();
 
 		void PrintLayer();
+
+		void RenderDrawable(IDrawable* drawable, VkPipeline& lastPipeline, VkCommandBuffer cmd);
 	public:
 		SH_RENDER_API VulkanRenderer(core::ThreadSyncManager& syncManager);
 		SH_RENDER_API ~VulkanRenderer();

@@ -47,6 +47,8 @@ namespace sh::game
 	void MeshRenderer::SetMesh(sh::render::Mesh& mesh)
 	{
 		this->mesh = &mesh;
+		for (auto cam : gameObject.world.GetCameras())
+			CreateDrawable(cam);
 	}
 
 	auto MeshRenderer::GetMesh() const -> const sh::render::Mesh&
