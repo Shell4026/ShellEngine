@@ -14,9 +14,7 @@ namespace sh::game
 {
 	SH_GAME_API World::World(sh::render::Renderer& renderer, const ComponentModule& componentModule) :
 		renderer(renderer), componentModule(componentModule),
-		deltaTime(_deltaTime), gameObjects(objs),
 		
-		_deltaTime(0.0f), 
 		shaders(renderer), materials(renderer), meshes(renderer), textures(renderer),
 		mainCamera(nullptr)
 	{
@@ -26,9 +24,8 @@ namespace sh::game
 	}
 	SH_GAME_API World::World(World&& other) noexcept :
 		renderer(other.renderer), gc(other.gc), componentModule(other.componentModule),
-		deltaTime(_deltaTime), gameObjects(objs),
 		
-		_deltaTime(other._deltaTime), 
+		_deltaTime(other._deltaTime), _fixedDeltaTime(other._fixedDeltaTime),
 		objs(std::move(other.objs)), objsMap(std::move(objsMap)), objsEmptyIdx(std::move(other.objsEmptyIdx)),
 		shaders(std::move(other.shaders)), materials(std::move(other.materials)), meshes(std::move(other.meshes)), textures(std::move(other.textures)),
 		mainCamera(nullptr)
@@ -38,7 +35,8 @@ namespace sh::game
 	}
 	SH_GAME_API World::~World()
 	{
-		Clean();
+		SH_INFO("~World");
+		physWorld.Clean();
 	}
 
 	SH_GAME_API void World::Clean()
@@ -224,6 +222,20 @@ namespace sh::game
 				continue;
 			obj->BeginUpdate();
 		}
+		_fixedDeltaTime += _deltaTime;
+		while (_fixedDeltaTime >= FIXED_TIME)
+		{
+			physWorld.Update(FIXED_TIME);
+			for (auto& obj : objs)
+			{
+				if (!sh::core::IsValid(obj))
+					continue;
+				if (!obj->activeSelf)
+					continue;
+				obj->FixedUpdate();
+			}
+			_fixedDeltaTime -= FIXED_TIME;
+		}
 		for (auto& obj : objs)
 		{
 			if (!sh::core::IsValid(obj))
@@ -272,5 +284,10 @@ namespace sh::game
 	SH_GAME_API auto World::GetMainCamera() const -> Camera*
 	{
 		return mainCamera;
+	}
+
+	SH_GAME_API auto World::GetPhysWorld() -> phys::PhysWorld*
+	{
+		return &physWorld;
 	}
 }

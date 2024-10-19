@@ -15,5 +15,6 @@ namespace sh::game
 		SH_GAME_API virtual void BeginUpdate() = 0;
 		SH_GAME_API virtual void Update() = 0;
 		SH_GAME_API virtual void LateUpdate() = 0;
+		SH_GAME_API virtual void FixedUpdate() = 0;
 	};
 }

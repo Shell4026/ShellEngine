@@ -10,7 +10,7 @@ namespace sh::game
 	SH_GAME_API EditorCamera::EditorCamera(GameObject& owner) :
 		Camera(owner),
 
-		distance(3.f),
+		distance(5.f),
 		xdir(45.f), ydir(90.f),
 		lastXdir(xdir), lastYdir(ydir),
 		leftPressedPos(), middlePressedPos(),

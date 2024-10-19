@@ -5,7 +5,7 @@
 
 namespace sh::game
 {
-	GameObject::GameObject(World& world, const std::string& name) :
+	SH_GAME_API GameObject::GameObject(World& world, const std::string& name) :
 		world(world),
 		objName(name), name(objName),
 		bInit(false), bEnable(true), activeSelf(bEnable)
@@ -13,7 +13,7 @@ namespace sh::game
 		transform = AddComponent<Transform>();
 	}
 
-	GameObject::GameObject(GameObject&& other) noexcept :
+	SH_GAME_API GameObject::GameObject(GameObject&& other) noexcept :
 		SObject(std::move(other)),
 		world(other.world), transform(other.transform),
 		
@@ -24,11 +24,11 @@ namespace sh::game
 		other.transform = nullptr;
 	}
 
-	GameObject::~GameObject()
+	SH_GAME_API GameObject::~GameObject()
 	{
 	}
 
-	void GameObject::Awake()
+	SH_GAME_API void GameObject::Awake()
 	{
 		for (auto& Component : components)
 		{
@@ -38,7 +38,7 @@ namespace sh::game
 		bInit = true;
 	}
 
-	void GameObject::Start()
+	SH_GAME_API void GameObject::Start()
 	{
 		for (auto& Component : components)
 		{
@@ -47,7 +47,7 @@ namespace sh::game
 		}
 	}
 
-	void GameObject::OnEnable()
+	SH_GAME_API void GameObject::OnEnable()
 	{
 		for (auto& Component : components)
 		{
@@ -56,7 +56,7 @@ namespace sh::game
 		}
 	}
 
-	void GameObject::BeginUpdate()
+	SH_GAME_API void GameObject::BeginUpdate()
 	{
 		for (auto& Component : components)
 		{
@@ -64,8 +64,15 @@ namespace sh::game
 				Component->BeginUpdate();
 		}
 	}
-
-	void GameObject::Update()
+	SH_GAME_API void GameObject::FixedUpdate()
+	{
+		for (auto& Component : components)
+		{
+			if (Component->active)
+				Component->FixedUpdate();
+		}
+	}
+	SH_GAME_API void GameObject::Update()
 	{
 		for (auto& Component : components)
 		{
@@ -73,8 +80,7 @@ namespace sh::game
 				Component->Update();
 		}
 	}
-
-	void GameObject::LateUpdate()
+	SH_GAME_API void GameObject::LateUpdate()
 	{
 		for (auto& Component : components)
 		{
@@ -82,13 +88,11 @@ namespace sh::game
 				Component->LateUpdate();
 		}
 	}
-
-	void GameObject::Destroy()
+	SH_GAME_API void GameObject::Destroy()
 	{
 		world.DestroyGameObject(name);
 	}
-
-	void GameObject::SetActive(bool b)
+	SH_GAME_API void GameObject::SetActive(bool b)
 	{
 		bEnable = true;
 		if (bEnable)
@@ -99,17 +103,17 @@ namespace sh::game
 		}
 	}
 
-	void GameObject::SetName(const std::string& name)
+	SH_GAME_API void GameObject::SetName(const std::string& name)
 	{
 		objName = world.ChangeGameObjectName(objName, name);
 	}
 
-	auto GameObject::GetComponents() const -> const std::vector<Component*>&
+	SH_GAME_API auto GameObject::GetComponents() const -> const std::vector<Component*>&
 	{
 		return components;
 	}
 
-	void GameObject::AddComponent(Component* component)
+	SH_GAME_API void GameObject::AddComponent(Component* component)
 	{
 		if (!core::IsValid(component) || &component->gameObject != this)
 			return;

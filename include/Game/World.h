@@ -15,6 +15,8 @@
 #include "Render/Mesh.h"
 #include "Render/Texture.h"
 
+#include "Physics/PhysWorld.h"
+
 #include <string>
 #include <vector>
 #include <set>
@@ -41,19 +43,25 @@ namespace sh::game
 	{
 		SCLASS(World)
 	private:
+		static constexpr float FIXED_TIME = 0.02f;
+
 		PROPERTY(objs)
 		core::SVector<GameObject*> objs;
 		core::SSet<Camera*> cameras;
 		core::SHashMap<std::string, uint32_t> objsMap;
 		std::queue<int> objsEmptyIdx;
 
-		float _deltaTime;
+		float _deltaTime = 0.f;
+		float _fixedDeltaTime = 0.f;
 
 		Camera* mainCamera;
 		core::GarbageCollection* gc;
+
+		phys::PhysWorld physWorld;
 	public:
 		sh::render::Renderer& renderer;
-		const float& deltaTime;
+		const float& deltaTime = _deltaTime;
+		const float& fixedDeltaTime = _fixedDeltaTime;
 
 		sh::game::ResourceManager<sh::render::Shader> shaders;
 		sh::game::ResourceManager<sh::render::Material> materials;
@@ -61,7 +69,7 @@ namespace sh::game
 		sh::game::ResourceManager<sh::render::Texture> textures;
 	public:
 		const ComponentModule& componentModule;
-		const core::SVector<GameObject*>& gameObjects;
+		const core::SVector<GameObject*>& gameObjects = objs;
 		core::Observer<Camera*> onCameraAdd;
 		core::Observer<Camera*> onCameraRemove;
 		core::Observer<GameObject*> onGameObjectAdded;
@@ -91,6 +99,8 @@ namespace sh::game
 		SH_GAME_API auto GetCameras() const -> const core::SSet<Camera*>&;
 		SH_GAME_API void SetMainCamera(Camera* cam);
 		SH_GAME_API	auto GetMainCamera() const -> Camera*;
+
+		SH_GAME_API auto GetPhysWorld() -> phys::PhysWorld*;
 
 		SH_GAME_API virtual void Start();
 		SH_GAME_API virtual void Update(float deltaTime);

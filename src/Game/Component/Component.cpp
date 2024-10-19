@@ -58,7 +58,9 @@ namespace sh::game
 	{
 
 	}
-
+	SH_GAME_API void Component::FixedUpdate()
+	{
+	}
 	SH_GAME_API void Component::BeginUpdate()
 	{
 	}
