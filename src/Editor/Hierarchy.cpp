@@ -89,10 +89,23 @@ namespace sh::editor
 				(isSelected ? ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_Selected : 0),
 				"%s", obj->name.c_str());
 		}
-
-		if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && ImGui::IsItemHovered())
+		if (ImGui::BeginPopupContextItem((std::string{ "RightClickPopupGameObject" } + obj->name).c_str()))
 		{
-			world.SetSelectedObject(obj);
+			if (ImGui::Selectable("Delete"))
+			{
+				if (obj == world.GetSelectedObject())
+					world.SetSelectedObject(nullptr);
+				world.DestroyGameObject(*obj);
+			}
+			ImGui::EndPopup();
+		}
+
+		if (ImGui::IsItemHovered())
+		{
+			if (ImGui::IsMouseReleased(ImGuiMouseButton_::ImGuiMouseButton_Left))
+			{
+				world.SetSelectedObject(obj);
+			}
 		}
 
 		// 드래그 되는 대상의 시점
@@ -153,6 +166,8 @@ namespace sh::editor
 
 		for (auto& obj : world.gameObjects)
 		{
+			if (!core::IsValid(obj))
+				continue;
 			if (obj->transform->GetParent() == nullptr)
 				DrawGameObjectHierarchy(obj, drawSet);
 		}
