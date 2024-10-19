@@ -27,6 +27,8 @@ public:
     int* ptr;
     PROPERTY(sobjectPtr)
     Derived* sobjectPtr;
+    PROPERTY(sobjectArr)
+    std::array<Derived*, 2> sobjectArr;
 };
 
 TEST(ReflectionTest, TypeInfoTest) 
@@ -85,6 +87,13 @@ TEST(ReflectionTest, PropertyTest)
     ptrProp = derived.GetType().GetProperty("sobjectPtr");
     EXPECT_TRUE(ptrProp->isPointer);
     EXPECT_TRUE(ptrProp->isSObjectPointer);
+    // Array 테스트
+    {
+        auto prop = derived.GetType().GetProperty("sobjectArr");
+        EXPECT_EQ(prop->isContainer, true);
+        auto arrIterator = prop->Begin(&derived);
+        EXPECT_FALSE(arrIterator.IsConst());
+    }
 }
 
 TEST(ReflectionTest, SafePropertyTest)

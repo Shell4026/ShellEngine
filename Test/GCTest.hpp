@@ -20,6 +20,8 @@ public:
 	std::vector<std::vector<Object*>> others;
 	PROPERTY(childs)
 	sh::core::SSet<Object*> childs;
+	PROPERTY(arr)
+	std::array<Object*, 2> arr{ nullptr, nullptr };
 
 	Object(int num) : 
 		num(num), child(nullptr)
@@ -150,6 +152,7 @@ TEST(GCTest, ContainerTest)
 		{
 			child->Destroy();
 		}
+
 		EXPECT_EQ(root->childs.size(), 3);
 		gc.Update();
 		EXPECT_EQ(root->childs.size(), 0);
@@ -161,5 +164,26 @@ TEST(GCTest, ContainerTest)
 	EXPECT_EQ(setRoot->child->num, 4);
 	setRoot->Destroy();
 	gc.Update();
+	EXPECT_EQ(gc.GetObjectCount(), 0);
+	// Array 테스트
+	{
+		Object* arrRoot = SObject::Create<Object>(123);
+		gc.SetRootSet(arrRoot);
+
+		arrRoot->arr[0] = SObject::Create<Object>(1);
+		arrRoot->arr[1] = SObject::Create<Object>(2);
+
+		gc.Update();
+
+		EXPECT_EQ(arrRoot->arr[0]->num, 1);
+		EXPECT_EQ(arrRoot->arr[1]->num, 2);
+
+		arrRoot->arr[1]->Destroy();
+		gc.Update();
+
+		EXPECT_EQ(arrRoot->arr[1], nullptr);
+		arrRoot->Destroy();
+		gc.Update();
+	}
 	EXPECT_EQ(gc.GetObjectCount(), 0);
 }

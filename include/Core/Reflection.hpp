@@ -156,6 +156,8 @@ namespace sh::core::reflection
 	struct GetContainerNestedCount : std::integral_constant<int, 0> {};
 	template<typename T>
 	struct GetContainerNestedCount<std::vector<T>> : std::integral_constant<int, GetContainerNestedCount<T>::value + 1> {};
+	template<typename T, std::size_t N>
+	struct GetContainerNestedCount<std::array<T, N>> : std::integral_constant<int, GetContainerNestedCount<T>::value + 1> {};
 	template<typename T, typename U, typename _Pr, typename _Alloc>
 	struct GetContainerNestedCount<std::map<T, U, _Pr, _Alloc>> : std::integral_constant<int, GetContainerNestedCount<U>::value + 1> {};
 	template<typename T, typename U, typename _Hasher, typename _Keyeq, typename _Alloc>
@@ -173,6 +175,11 @@ namespace sh::core::reflection
 	};
 	template<typename T>
 	struct GetContainerLastType<std::vector<T>>
+	{
+		using type = typename GetContainerLastType<T>::type;
+	};
+	template<typename T, std::size_t n>
+	struct GetContainerLastType<std::array<T, n>>
 	{
 		using type = typename GetContainerLastType<T>::type;
 	};
@@ -196,6 +203,11 @@ namespace sh::core::reflection
 	{
 		using type = typename GetContainerLastType<T>::type;
 	};
+
+	template<typename T, typename = void>
+	struct HasErase : std::bool_constant<false> {};
+	template<typename T>
+	struct HasErase<T, std::void_t<decltype(std::declval<T>().erase(std::declval<typename T::iterator>()))>> : std::bool_constant<true> {};
 
 	/// \brief 빠른 다운 캐스팅. 둘 다 SCLASS매크로가 선언 돼 있어야한다.
 	template<typename To, typename From>
@@ -491,7 +503,13 @@ namespace sh::core::reflection
 
 		void Erase() override
 		{
-			it = container->erase(it);
+			if constexpr (HasErase<TContainer>::value)
+				it = container->erase(it);
+			else
+			{
+				if constexpr (std::is_pointer_v<T> && !std::is_const_v<std::remove_reference_t<iteratorType>>)
+					*it = nullptr;
+			}
 		}
 	};
 
