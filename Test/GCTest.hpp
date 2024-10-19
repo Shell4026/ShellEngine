@@ -22,6 +22,8 @@ public:
 	sh::core::SSet<Object*> childs;
 	PROPERTY(arr)
 	std::array<Object*, 2> arr{ nullptr, nullptr };
+	PROPERTY(nested)
+	std::array<std::vector<Object*>, 2> nested;
 
 	Object(int num) : 
 		num(num), child(nullptr)
@@ -183,6 +185,29 @@ TEST(GCTest, ContainerTest)
 
 		EXPECT_EQ(arrRoot->arr[1], nullptr);
 		arrRoot->Destroy();
+		gc.Update();
+	}
+	EXPECT_EQ(gc.GetObjectCount(), 0);
+	// 중첩 컨테이너 테스트
+	{
+		Object* root = SObject::Create<Object>(24);
+		gc.SetRootSet(root);
+
+		root->nested[0].push_back(SObject::Create<Object>(1));
+		root->nested[0].push_back(SObject::Create<Object>(2));
+		root->nested[1].push_back(SObject::Create<Object>(3));
+		root->nested[1].push_back(SObject::Create<Object>(4));
+
+		gc.Update();
+
+		EXPECT_EQ(root->nested[1][0]->num, 3);
+
+		root->nested[1][1]->Destroy();
+		gc.Update();
+
+		EXPECT_EQ(root->nested[1].size(), 1); // 벡터라서 원소가 지워짐
+
+		root->Destroy();
 		gc.Update();
 	}
 	EXPECT_EQ(gc.GetObjectCount(), 0);
