@@ -82,10 +82,11 @@ namespace sh::core::reflection
 		return typeName;
 	}
 
-	Property::Property(PropertyDataBase * data, const char* name, bool isContainer, uint32_t containerNestedLevel) :
+	Property::Property(PropertyDataBase* data, const char* name, bool isContainer, uint32_t containerNestedLevel) :
 		data(data), name(name),
-		isConstProperty(data->isConst), bVisibleProperty(data->bVisible),
-		isContainer(isContainer), containerNestedLevel(containerNestedLevel), isPointer(data->isPointer), isSObject(data->isSObject), isSObjectPointer(data->isSObjectPointer)
+		bConstProperty(data->bConst), bVisibleProperty(data->bVisible),
+		isContainer(isContainer), containerNestedLevel(containerNestedLevel), isPointer(data->isPointer),
+		isSObject(data->isSObject), isSObjectPointer(data->isSObjectPointer), isConst(data->isConst)
 	{
 
 	}

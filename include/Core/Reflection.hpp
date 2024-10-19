@@ -520,11 +520,12 @@ namespace sh::core::reflection
 	public:
 		STypeInfo& ownerType;
 
-		bool isConst = false;
+		bool bConst = false;
 		bool bVisible = true;
 		bool isSObject = false;
 		bool isPointer = false;
 		bool isSObjectPointer = false;
+		bool isConst = false;
 	public:
 		PropertyDataBase(STypeInfo& ownerType) :
 			ownerType(ownerType), typeName("")
@@ -622,7 +623,7 @@ namespace sh::core::reflection
 
 		struct Option
 		{
-			bool isConst = false;
+			bool bConst = false;
 			bool bVisible = true;
 		};
 	private:
@@ -632,7 +633,7 @@ namespace sh::core::reflection
 			for (auto& option : option)
 			{
 				if (option == "const")
-					retOption.isConst = true;
+					retOption.bConst = true;
 				else if (option == "invisible")
 					retOption.bVisible = false;
 			}
@@ -645,10 +646,11 @@ namespace sh::core::reflection
 			Option options = ParseOption(option);
 
 			static PropertyData<ThisType, T, VariablePointer, ptr> data{ owner };
-			data.isConst = options.isConst;
+			data.bConst = options.bConst;
 			data.bVisible = options.bVisible;
 			data.isSObject = IsSObject<T>::value;
 			data.isPointer = std::is_pointer_v<T>;
+			data.isConst = std::is_const_v<T>;
 			if constexpr (std::is_pointer_v<T>)
 			{
 				data.isSObjectPointer = std::is_convertible_v<T, const SObject*>;
@@ -684,12 +686,13 @@ namespace sh::core::reflection
 		const char* name;
 	public:
 		const int containerNestedLevel;
-		const bool isConstProperty;
+		const bool bConstProperty;
 		const bool bVisibleProperty;
 		const bool isContainer;
 		const bool isPointer;
 		const bool isSObject;
 		const bool isSObjectPointer;
+		const bool isConst;
 	public:
 		SH_CORE_API Property(PropertyDataBase* data, const char* name, bool isContainer = false, uint32_t containerNestedLevel = 0);
 			

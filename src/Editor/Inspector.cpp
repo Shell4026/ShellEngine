@@ -193,7 +193,7 @@ namespace sh::editor
 							if (prop.bVisibleProperty == false)
 								continue;
 							std::string type{ prop.GetTypeName() };
-							bool constant = prop.isConstProperty;
+							bool constant = prop.bConstProperty || prop.isConst;
 							auto inputFlag = constant ? ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly : ImGuiInputTextFlags_::ImGuiInputTextFlags_None;
 
 							// SObject 포인터 형식, 드래그 앤 드랍 기능
@@ -208,9 +208,9 @@ namespace sh::editor
 									game::Vec3* parameter = prop.Get<game::Vec3>(component);
 									float v[3] = { parameter->x, parameter->y, parameter->z };
 									ImGui::LabelText(("##" + name).c_str(), name.c_str());
-									if (prop.isConstProperty)
+									if (constant)
 									{
-										ImGui::InputFloat3(("##" + name + std::to_string(idx)).c_str(), v, "%.3f", ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
+										ImGui::InputFloat3(("##" + name + std::to_string(idx)).c_str(), v, "%.3f", inputFlag);
 									}
 									else
 									{
@@ -228,8 +228,8 @@ namespace sh::editor
 									game::Vec2* parameter = prop.Get<game::Vec2>(component);
 									float v[2] = { parameter->x, parameter->y };
 									ImGui::LabelText(("##" + name).c_str(), name.c_str());
-									if (prop.isConstProperty)
-										ImGui::InputFloat2(("##" + name + std::to_string(idx)).c_str(), v, "%.3f", ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
+									if (constant)
+										ImGui::InputFloat2(("##" + name + std::to_string(idx)).c_str(), v, "%.3f", inputFlag);
 									else
 									{
 										if (ImGui::InputFloat2(("##" + name + std::to_string(idx)).c_str(), v))
@@ -243,15 +243,18 @@ namespace sh::editor
 								else if (type == core::reflection::GetTypeName<float>())
 								{
 									float* parameter = prop.Get<float>(component);
-									if (ImGui::InputFloat(("##input_" + name + std::to_string(idx)).c_str(), parameter))
-										component->OnPropertyChanged(prop);
+									if (constant)
+										ImGui::InputFloat(("##input_" + name + std::to_string(idx)).c_str(), parameter, 0.f, 0.f, "%.3f", inputFlag);
+									else
+										if (ImGui::InputFloat(("##input_" + name + std::to_string(idx)).c_str(), parameter))
+											component->OnPropertyChanged(prop);
 								}
 								else if (type == core::reflection::GetTypeName<int>())
 								{
 									int* parameter = prop.Get<int>(component);
 									ImGui::LabelText(("##" + name).c_str(), name.c_str());
-									if (prop.isConstProperty)
-										ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), parameter, 0, 0, ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
+									if (constant)
+										ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), parameter, 0, 0, inputFlag);
 									else
 										if (ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), parameter))
 										{
@@ -262,8 +265,8 @@ namespace sh::editor
 								{
 									uint32_t* parameter = prop.Get<uint32_t>(component);
 									ImGui::LabelText(("##" + name).c_str(), name.c_str());
-									if (prop.isConstProperty)
-										ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), reinterpret_cast<int*>(parameter), 0, 0, ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly);
+									if (constant)
+										ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), reinterpret_cast<int*>(parameter), 0, 0, inputFlag);
 									else
 										if (ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), reinterpret_cast<int*>(parameter)))
 											component->OnPropertyChanged(prop);
@@ -272,13 +275,17 @@ namespace sh::editor
 								{
 									std::string* parameter = prop.Get<std::string>(component);
 									ImGui::LabelText(("##" + name).c_str(), name.c_str());
-									if (ImGui::InputText(("##Input_" + name + std::to_string(idx)).c_str(), parameter, inputFlag))
-										component->OnPropertyChanged(prop);
+									if (constant)
+										ImGui::InputText(("##Input_" + name + std::to_string(idx)).c_str(), parameter, inputFlag);
+									else
+										if (ImGui::InputText(("##Input_" + name + std::to_string(idx)).c_str(), parameter, inputFlag))
+											component->OnPropertyChanged(prop);
 								}
 								else if (type == core::reflection::GetTypeName<bool>())
 								{
 									bool* parameter = prop.Get<bool>(component);
-									ImGui::Checkbox(prop.GetName(), parameter);
+									if (!constant)
+										ImGui::Checkbox(prop.GetName(), parameter);
 									component->OnPropertyChanged(prop);
 								}
 							}
