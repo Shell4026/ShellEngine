@@ -5,11 +5,6 @@
 #include "SContainer.hpp"
 #include "Singleton.hpp"
 
-#include <unordered_set>
-#include <unordered_map>
-#include <vector>
-#include <queue>
-
 namespace sh::core::reflection
 {
 	class Property;
@@ -28,7 +23,8 @@ namespace sh::core
 		SHashSet<SObject*, 128> objs;
 		SHashSet<SObject*, 128> rootSets;
 
-		bool bContainerIteratorErased;
+		uint32_t elapseTime = 0;
+		bool bContainerIteratorErased = false;
 	private:
 		/// @brief 중첩 컨테이너를 재귀로 순회하면서 SObject에 마킹 하는 함수
 		/// @param parent 마킹이 시작된 오브젝트
@@ -71,5 +67,12 @@ namespace sh::core
 		/// @brief GC에 등록된 오브젝트 개수를 확인하는 함수
 		/// @return GC에 등록된 SObject개수
 		SH_CORE_API auto GetObjectCount() const -> std::size_t;
+
+		/// @brief 강제로 메모리를 해제 하는 함수. 주의해서 써야한다. 해당 포인터를 참조하고 있던 값은 변하지 않는다.
+		/// @param obj SObject 포인터
+		SH_CORE_API void ForceDelete(SObject* obj);
+
+		/// @brief 이전에 GC를 수행하는데 걸린 시간(ms)을 반환 하는 함수
+		SH_CORE_API auto GetElapsedTime() -> uint32_t;
 	};
 }

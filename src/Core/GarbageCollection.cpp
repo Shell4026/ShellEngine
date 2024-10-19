@@ -6,8 +6,7 @@
 
 namespace sh::core
 {
-	GarbageCollection::GarbageCollection() :
-		bContainerIteratorErased(false)
+	GarbageCollection::GarbageCollection()
 	{
 	}
 	GarbageCollection::~GarbageCollection()
@@ -15,22 +14,22 @@ namespace sh::core
 		Update();
 	}
 
-	void GarbageCollection::AddObject(SObject* obj)
+	SH_CORE_API void GarbageCollection::AddObject(SObject* obj)
 	{
 		objs.insert(obj);
 	}
 
-	void GarbageCollection::SetRootSet(SObject* obj)
+	SH_CORE_API void GarbageCollection::SetRootSet(SObject* obj)
 	{
 		rootSets.insert(obj);
 	}
 
-	void GarbageCollection::RemoveRootSet(SObject* obj)
+	SH_CORE_API void GarbageCollection::RemoveRootSet(SObject* obj)
 	{
 		rootSets.erase(obj);
 	}
 
-	auto GarbageCollection::RemoveObject(SObject* obj) -> bool
+	SH_CORE_API auto GarbageCollection::RemoveObject(SObject* obj) -> bool
 	{
 		RemoveRootSet(obj);
 		return objs.erase(obj) == 1; // 지워진 원소 수
@@ -55,8 +54,9 @@ namespace sh::core
 		}
 	}
 
-	void GarbageCollection::Update()
+	SH_CORE_API void GarbageCollection::Update()
 	{
+		auto start = std::chrono::high_resolution_clock::now();
 		for (SObject* obj : objs)
 		{
 			obj->bMark = false;
@@ -91,6 +91,8 @@ namespace sh::core
 
 			delete ptr;
 		}
+		auto end = std::chrono::high_resolution_clock::now();
+		elapseTime = static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
 	}
 
 	void GarbageCollection::Mark(SObject* obj, SObject* parent, core::reflection::Property* parentProperty, core::reflection::PropertyIterator* parentIterator)
@@ -150,8 +152,24 @@ namespace sh::core
 		}
 	}
 
-	auto GarbageCollection::GetObjectCount() const -> std::size_t
+	SH_CORE_API auto GarbageCollection::GetObjectCount() const -> std::size_t
 	{
 		return objs.size();
+	}
+
+	SH_CORE_API void GarbageCollection::ForceDelete(SObject* obj)
+	{
+		auto it = objs.find(obj);
+		if (it != objs.end())
+		{
+			RemoveRootSet(obj);
+			objs.erase(it);
+			delete obj;
+		}
+	}
+
+	SH_CORE_API auto sh::core::GarbageCollection::GetElapsedTime() -> uint32_t
+	{
+		return elapseTime;
 	}
 }//namespace
