@@ -33,7 +33,7 @@ SH_USER_API void CreateManyObj::Update()
 
 				obj->transform->SetPosition(rand(seed), rand(seed), rand(seed));
 				auto renderer = obj->AddComponent<MeshRenderer>();
-				renderer->SetMesh(*world.meshes.GetResource("Cube"));
+				renderer->SetMesh(world.meshes.GetResource("Cube"));
 			}
 		}
 	}

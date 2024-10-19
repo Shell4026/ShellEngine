@@ -7,9 +7,10 @@
 
 namespace sh::game
 {
-	class World;
 	class GUITexture;
+	class World;
 	class GameObject;
+	class Component;
 }
 namespace sh::editor
 {
@@ -29,6 +30,7 @@ namespace sh::editor
 		inline auto GetIcon(std::string_view typeName) const -> const game::GUITexture*;
 		inline auto GetComponentGroupAndName(std::string_view fullname) -> std::pair<std::string, std::string>;
 		inline void RenderAddComponent(game::GameObject& gameObject);
+		inline void RenderSObjectPtrProperty(const core::reflection::Property& prop, game::Component* component, const std::string& name, const std::string& typeName);
 ;	public:
 		SH_EDITOR_API Inspector(game::ImGUImpl& imgui, EditorWorld& world);
 

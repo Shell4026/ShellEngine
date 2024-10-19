@@ -614,8 +614,8 @@ namespace sh::render {
 		if (!core::IsValid(iDrawable))
 			return;
 		VulkanDrawable* drawable = static_cast<VulkanDrawable*>(iDrawable);
-		Mesh* mesh = drawable->GetMesh();
-		Material* mat = drawable->GetMaterial();
+		const Mesh* mesh = drawable->GetMesh();
+		const Material* mat = drawable->GetMaterial();
 
 		assert(mesh);
 		assert(mat);

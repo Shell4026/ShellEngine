@@ -30,10 +30,10 @@ namespace sh::render
 		};
 	public:
 		SH_RENDER_API virtual ~IDrawable() = default;
-		SH_RENDER_API virtual void Build(Camera& camera, Mesh& mesh, Material* mat) = 0;
+		SH_RENDER_API virtual void Build(Camera& camera, const Mesh* mesh, const Material* mat) = 0;
 
-		SH_RENDER_API virtual auto GetMaterial() const -> Material* = 0;
-		SH_RENDER_API virtual auto GetMesh() const -> Mesh* = 0;
+		SH_RENDER_API virtual auto GetMaterial() const ->const Material* = 0;
+		SH_RENDER_API virtual auto GetMesh() const -> const Mesh* = 0;
 		SH_RENDER_API virtual auto GetCamera() const -> Camera* = 0;
 
 		/// @brief [게임 스레드용] 로컬 유니폼에 데이터를 지정한다.

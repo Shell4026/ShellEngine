@@ -651,7 +651,7 @@ namespace sh::core::reflection
 			data.isPointer = std::is_pointer_v<T>;
 			if constexpr (std::is_pointer_v<T>)
 			{
-				data.isSObjectPointer = std::is_convertible_v<T, SObject*>;
+				data.isSObjectPointer = std::is_convertible_v<T, const SObject*>;
 			}
 			
 			if constexpr (std::is_convertible_v<T, SObject*>)

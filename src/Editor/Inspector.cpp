@@ -88,6 +88,71 @@ namespace sh::editor
 		}
 	}
 
+	inline void Inspector::RenderSObjectPtrProperty(const core::reflection::Property& prop, game::Component* component, const std::string& name, const std::string& typeName)
+	{
+		std::string typeNameSubPtr = typeName;
+		typeNameSubPtr.pop_back();
+
+		ImGui::LabelText(("##" + name).c_str(), name.c_str());
+		core::SObject** parameter = prop.Get<core::SObject*>(component);
+
+		auto icon = GetIcon(typeName);
+
+		float iconSize = 20;
+		float buttonWidth = ImGui::GetContentRegionAvail().x - iconSize;
+
+		if (buttonWidth < 0)
+			buttonWidth = 0;
+
+		const char* objName = "None";
+		if (*parameter)
+		{
+			if ((*parameter)->editorName.empty())
+				objName = "Unknown";
+			else
+				objName = (*parameter)->editorName.c_str();
+		}
+		ImGui::Button(objName, ImVec2{ buttonWidth, iconSize });
+		if (ImGui::BeginDragDropTarget())
+		{
+			// 드래그로 받는 객체의 타입 이름 == 드래그 중인 객체의 타입 이름이면 받음
+			const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(typeName.c_str());
+			if (payload)
+			{
+				*parameter = *reinterpret_cast<core::SObject**>(payload->Data);
+				component->OnPropertyChanged(prop);
+			}
+			else
+			{
+				// 게임 오브젝트라면 컴포넌트 검사
+				if (std::strcmp(ImGui::GetDragDropPayload()->DataType, "GameObject") == 0)
+				{
+					game::GameObject* obj = *reinterpret_cast<game::GameObject**>(ImGui::GetDragDropPayload()->Data);
+					for (auto payloadComponent : obj->GetComponents())
+					{
+						const core::reflection::STypeInfo* componentType = &payloadComponent->GetType();
+						while (componentType)
+						{
+							if (payloadComponent->GetType().typeName == typeNameSubPtr)
+							{
+								// 요구하는 컴포넌트가 맞다면 페이로드 재설정
+								ImGui::SetDragDropPayload((std::string{ payloadComponent->GetType().typeName } + '*').c_str(), &payloadComponent, sizeof(game::Component*));
+								break;
+							}
+							componentType = componentType->GetSuper();
+						}
+					}
+				}
+			}
+			ImGui::EndDragDropTarget();
+		}
+		if (icon)
+		{
+			ImGui::SameLine();
+			ImGui::Image(*icon, ImVec2{ iconSize, iconSize });
+		}
+	}
+
 	SH_EDITOR_API void Inspector::Update()
 	{
 		
@@ -134,67 +199,7 @@ namespace sh::editor
 							// SObject 포인터 형식, 드래그 앤 드랍 기능
 							if (prop.isSObjectPointer)
 							{
-								std::string typeNameSubPtr = type;
-								typeNameSubPtr.pop_back();
-
-								ImGui::LabelText(("##" + name).c_str(), name.c_str());
-								core::SObject** parameter = prop.Get<core::SObject*>(component);
-
-								auto icon = GetIcon(type);
-
-								float iconSize = 20;
-								float buttonWidth = ImGui::GetContentRegionAvail().x - iconSize;
-
-								if (buttonWidth < 0)
-									buttonWidth = 0;
-
-								const char* objName = "None";
-								if (*parameter)
-								{
-									if ((*parameter)->editorName.empty())
-										objName = "Unknown";
-									else
-										objName = (*parameter)->editorName.c_str();
-								}
-								ImGui::Button(objName, ImVec2{buttonWidth, iconSize});
-								if (ImGui::BeginDragDropTarget())
-								{
-									// 드래그로 받는 객체의 타입 이름 == 드래그 중인 객체의 타입 이름이면 받음
-									const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(type.c_str());
-									if (payload)
-									{
-										*parameter = *reinterpret_cast<core::SObject**>(payload->Data);
-										component->OnPropertyChanged(prop);
-									}
-									else
-									{
-										// 게임 오브젝트라면 컴포넌트 검사
-										if (std::strcmp(ImGui::GetDragDropPayload()->DataType, "GameObject") == 0)
-										{
-											game::GameObject* obj = *reinterpret_cast<game::GameObject**>(ImGui::GetDragDropPayload()->Data);
-											for (auto payloadComponent : obj->GetComponents())
-											{
-												const core::reflection::STypeInfo* componentType = &payloadComponent->GetType();
-												while (componentType)
-												{
-													if (payloadComponent->GetType().typeName == typeNameSubPtr)
-													{
-														// 요구하는 컴포넌트가 맞다면 페이로드 재설정
-														ImGui::SetDragDropPayload((std::string{ payloadComponent->GetType().typeName } + '*').c_str(), &payloadComponent, sizeof(game::Component*));
-														break;
-													}
-													componentType = componentType->GetSuper();
-												}
-											}
-										}
-									}
-									ImGui::EndDragDropTarget();
-								}
-								if (icon)
-								{
-									ImGui::SameLine();
-									ImGui::Image(*icon, ImVec2{ iconSize, iconSize });
-								}
+								RenderSObjectPtrProperty(prop, component, name, type);
 							}
 							else
 							{

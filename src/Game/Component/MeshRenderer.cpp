@@ -44,26 +44,26 @@ namespace sh::game
 	{
 	}
 
-	void MeshRenderer::SetMesh(sh::render::Mesh& mesh)
+	void MeshRenderer::SetMesh(const sh::render::Mesh* mesh)
 	{
-		this->mesh = &mesh;
+		this->mesh = mesh;
 		for (auto cam : gameObject.world.GetCameras())
 			CreateDrawable(cam);
 	}
 
-	auto MeshRenderer::GetMesh() const -> const sh::render::Mesh&
+	auto MeshRenderer::GetMesh() const -> const sh::render::Mesh*
 	{
-		return *mesh;
+		return mesh;
 	}
 
-	void MeshRenderer::SetMaterial(sh::render::Material& mat)
+	void MeshRenderer::SetMaterial(sh::render::Material* mat)
 	{
-		this->mat = &mat;
+		this->mat = mat;
 	}
 
-	auto MeshRenderer::GetMaterial() const -> const sh::render::Material&
+	auto MeshRenderer::GetMaterial() const -> sh::render::Material*
 	{
-		return *mat;
+		return mat;
 	}
 
 	void MeshRenderer::CreateDrawable(Camera* camera)
@@ -86,19 +86,19 @@ namespace sh::game
 		if (it == drawables.end())
 		{
 			render::IDrawable* drawable = render::DrawableFactory::Create(gameObject.world.renderer);
-			drawable->Build(camera->GetNative(), *mesh, mat);
+			drawable->Build(camera->GetNative(), mesh, mat);
 			drawables.insert({ camera, drawable });
 		}
 		else
 		{
-			it->second->Build(camera->GetNative(), *mesh, mat);
+			it->second->Build(camera->GetNative(), mesh, mat);
 		}
 	}
 	void MeshRenderer::RebuildDrawables()
 	{
 		for (auto& [cam, drawable] : drawables)
 		{
-			drawable->Build(cam->GetNative(), *mesh, mat);
+			drawable->Build(cam->GetNative(), mesh, mat);
 		}
 	}
 

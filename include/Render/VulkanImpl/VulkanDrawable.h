@@ -25,9 +25,9 @@ namespace sh::render
 	private:
 		VulkanRenderer& renderer;
 		PROPERTY(mat)
-		Material* mat;
+		const Material* mat;
 		PROPERTY(mesh)
-		Mesh* mesh;
+		const Mesh* mesh;
 		Camera* camera;
 
 		//동기화 필요 목록
@@ -46,7 +46,7 @@ namespace sh::render
 		SH_RENDER_API VulkanDrawable(const VulkanDrawable& other) = delete;
 		SH_RENDER_API ~VulkanDrawable() noexcept;
 
-		SH_RENDER_API void Build(Camera& camera, Mesh& mesh, Material* mat) override;
+		SH_RENDER_API void Build(Camera& camera, const Mesh* mesh, const Material* mat) override;
 
 		/// @brief [게임 스레드용] 로컬 유니폼에 데이터를 지정한다.
 		/// @param binding 바인딩 번호
@@ -54,8 +54,8 @@ namespace sh::render
 		/// @param stage 셰이더 스테이지
 		SH_RENDER_API void SetUniformData(uint32_t binding, const void* data, Stage stage) override;
 
-		SH_RENDER_API auto GetMaterial() const -> Material* override;
-		SH_RENDER_API auto GetMesh() const-> Mesh* override;
+		SH_RENDER_API auto GetMaterial() const -> const Material* override;
+		SH_RENDER_API auto GetMesh() const-> const Mesh* override;
 		SH_RENDER_API auto GetCamera() const-> Camera* override;
 
 		SH_RENDER_API auto GetPipeline(core::ThreadType thr) const->impl::VulkanPipeline*;

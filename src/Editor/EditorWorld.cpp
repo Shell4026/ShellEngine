@@ -47,8 +47,8 @@ namespace sh::editor
 
 		auto grid = this->AddGameObject("Grid");
 		auto meshRenderer = grid->AddComponent<game::MeshRenderer>();
-		meshRenderer->SetMesh(*this->meshes.GetResource("GridMesh"));
-		meshRenderer->SetMaterial(*this->materials.GetResource("GridMaterial"));
+		meshRenderer->SetMesh(this->meshes.GetResource("GridMesh"));
+		meshRenderer->SetMaterial(this->materials.GetResource("GridMaterial"));
 
 		Super::Start();
 	}

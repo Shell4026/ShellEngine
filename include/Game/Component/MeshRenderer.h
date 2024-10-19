@@ -25,7 +25,7 @@ namespace sh::game
 		COMPONENT(MeshRenderer);
 	private:
 		PROPERTY(mesh);
-		sh::render::Mesh* mesh;
+		const sh::render::Mesh* mesh;
 		PROPERTY(mat);
 		sh::render::Material* mat;
 		PROPERTY(drawables);
@@ -50,11 +50,11 @@ namespace sh::game
 		SH_GAME_API MeshRenderer(GameObject& owner);
 		SH_GAME_API ~MeshRenderer();
 
-		SH_GAME_API void SetMesh(sh::render::Mesh& mesh);
-		SH_GAME_API auto GetMesh() const -> const sh::render::Mesh&;
+		SH_GAME_API void SetMesh(const sh::render::Mesh* mesh);
+		SH_GAME_API auto GetMesh() const -> const sh::render::Mesh*;
 
-		SH_GAME_API void SetMaterial(sh::render::Material& mat);
-		SH_GAME_API auto GetMaterial() const -> const sh::render::Material&;
+		SH_GAME_API void SetMaterial(sh::render::Material* mat);
+		SH_GAME_API auto GetMaterial() const -> sh::render::Material*;
 
 		SH_GAME_API void Awake() override;
 		SH_GAME_API void Start() override;

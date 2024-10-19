@@ -100,11 +100,14 @@ namespace sh::render
 		localDescSet[thr] = std::unique_ptr<impl::VulkanUniformBuffer>(ptr);
 	}
 
-	void VulkanDrawable::Build(Camera& camera, Mesh& mesh, Material* mat)
+	void VulkanDrawable::Build(Camera& camera, const Mesh* mesh, const Material* mat)
 	{
 		this->mat = mat;
-		this->mesh = &mesh;
+		this->mesh = mesh;
 		this->camera = &camera;
+
+		assert(mesh);
+		assert(mat);
 
 		VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
 		assert(shader);
@@ -117,7 +120,7 @@ namespace sh::render
 
 		//토폴리지
 		impl::VulkanPipeline::Topology topology = impl::VulkanPipeline::Topology::Triangle;
-		switch (mesh.GetTopology())
+		switch (mesh->GetTopology())
 		{
 		case Mesh::Topology::Point:
 			topology = impl::VulkanPipeline::Topology::Point;
@@ -138,16 +141,16 @@ namespace sh::render
 			CreateBuffer(thr);
 
 			//Attribute
-			auto& bindings = static_cast<VulkanVertexBuffer*>(mesh.GetVertexBuffer())->bindingDescriptions;
-			auto& attrs = static_cast<VulkanVertexBuffer*>(mesh.GetVertexBuffer())->attribDescriptions;
+			auto& bindings = static_cast<VulkanVertexBuffer*>(mesh->GetVertexBuffer())->bindingDescriptions;
+			auto& attrs = static_cast<VulkanVertexBuffer*>(mesh->GetVertexBuffer())->attribDescriptions;
 
 			// binding 0과 attribute 0은 버텍스
 			for (int i = 0; i < attrs.size(); ++i)
 			{
-				auto data = shader->GetAttribute(mesh.attributes[i]->name);
+				auto data = shader->GetAttribute(mesh->attributes[i]->name);
 				if (!data)
 					continue;
-				if (data->typeName != mesh.attributes[i]->typeName)
+				if (data->typeName != mesh->attributes[i]->typeName)
 					continue;
 
 				VkVertexInputAttributeDescription attrDesc = attrs[i];
@@ -202,11 +205,11 @@ namespace sh::render
 		SetDirty();
 	}
 
-	auto VulkanDrawable::GetMaterial() const -> Material*
+	auto VulkanDrawable::GetMaterial() const -> const Material*
 	{
 		return mat;
 	}
-	auto VulkanDrawable::GetMesh() const -> Mesh*
+	auto VulkanDrawable::GetMesh() const -> const Mesh*
 	{
 		return mesh;
 	}

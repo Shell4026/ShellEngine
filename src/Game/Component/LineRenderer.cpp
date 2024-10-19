@@ -18,7 +18,7 @@ namespace sh::game
 		mesh.SetIndices({ 0, 1 });
 		mesh.SetTopology(render::Mesh::Topology::Line);
 
-		Super::SetMesh(mesh);
+		Super::SetMesh(&mesh);
 	}
 
 	void LineRenderer::Awake()
@@ -29,7 +29,7 @@ namespace sh::game
 		mat->SetVector("start", glm::vec4(start, 1.f));
 		mat->SetVector("end", glm::vec4(end, 1.f));
 		assert(mat != nullptr);
-		Super::SetMaterial(*mat);
+		Super::SetMaterial(mat);
 
 		Super::Awake();
 	}
