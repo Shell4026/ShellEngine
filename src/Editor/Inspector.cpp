@@ -124,7 +124,7 @@ namespace sh::editor
 			}
 			else
 				payload = ImGui::AcceptDragDropPayload(typeName.c_str());
-			SH_INFO_FORMAT("payload: {}", ImGui::GetDragDropPayload()->DataType);
+			//SH_INFO_FORMAT("payload: {}", ImGui::GetDragDropPayload()->DataType);
 			if (payload)
 			{
 				*parameter = *reinterpret_cast<core::SObject**>(payload->Data);
