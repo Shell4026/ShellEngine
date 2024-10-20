@@ -65,7 +65,8 @@ namespace sh::game
 	{
 		if (std::strcmp(prop.GetName(), "mesh") == 0)
 		{
-			this->mesh = mesh;
+			CleanDrawables();
+			CreateDrawable(this->camera);
 		}
 		if (std::strcmp(prop.GetName(), "camera") == 0)
 		{

@@ -144,7 +144,11 @@ namespace sh::editor
 		if (nodeOpen && hasChildren) 
 		{
 			for (auto child : obj->transform->GetChildren())
+			{
+				if (child->gameObject.hideInspector)
+					continue;
 				DrawGameObjectHierarchy(&child->gameObject, drawSet);
+			}
 			ImGui::TreePop();
 		}
 	}
@@ -167,6 +171,8 @@ namespace sh::editor
 		for (auto& obj : world.gameObjects)
 		{
 			if (!core::IsValid(obj))
+				continue;
+			if (obj->hideInspector)
 				continue;
 			if (obj->transform->GetParent() == nullptr)
 				DrawGameObjectHierarchy(obj, drawSet);

@@ -190,6 +190,8 @@ namespace sh::editor
 			int idx = 0;
 			for (auto& component : obj->GetComponents())
 			{
+				if (component->hideInspector)
+					continue;
 				if (ImGui::CollapsingHeader((component->GetType().name.data() + ("##" + std::to_string(idx))).data()))
 				{
 					auto currentType = &component->GetType();

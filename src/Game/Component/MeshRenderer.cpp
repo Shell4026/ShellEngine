@@ -59,6 +59,7 @@ namespace sh::game
 				if (auto picking = gameObject.GetComponent<PickingRenderer>(); picking == nullptr)
 				{
 					picking = gameObject.AddComponent<PickingRenderer>();
+					picking->hideInspector = true;
 					picking->SetMesh(mesh);
 					picking->SetCamera(*world.GetGameObject("PickingCamera")->GetComponent<PickingCamera>());
 				}

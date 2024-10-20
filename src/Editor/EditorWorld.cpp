@@ -16,6 +16,7 @@ namespace sh::editor
 	{
 		game::GameObject* camObj = AddGameObject("EditorCamera");
 		camObj->transform->SetPosition({ 2.f, 2.f, 2.f });
+		camObj->hideInspector = true;
 		auto cam = camObj->AddComponent<game::EditorCamera>();
 		this->SetMainCamera(cam);
 
@@ -53,6 +54,7 @@ namespace sh::editor
 		this->GetMainCamera()->SetRenderTexture(editorUI->GetViewport().GetRenderTexture());
 
 		auto grid = this->AddGameObject("Grid");
+		grid->hideInspector = true;
 		auto meshRenderer = grid->AddComponent<game::MeshRenderer>();
 		meshRenderer->SetMesh(this->meshes.GetResource("GridMesh"));
 		meshRenderer->SetMaterial(this->materials.GetResource("GridMaterial"));

@@ -43,6 +43,9 @@ namespace sh::game
 		GameObject& gameObject;
 		World& world;
 		const bool& active;
+#if SH_EDITOR
+		bool hideInspector = false;
+#endif
 	public:
 		SH_GAME_API Component(GameObject& object);
 		SH_GAME_API virtual ~Component() = default;

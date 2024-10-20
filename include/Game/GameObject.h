@@ -34,6 +34,9 @@ namespace sh::game
 
 		const bool& activeSelf;
 		const std::string& name;
+#if SH_EDITOR
+		bool hideInspector = false;
+#endif
 	public:
 		SH_GAME_API GameObject(World& world, const std::string& name);
 		SH_GAME_API GameObject(GameObject&& other) noexcept;
