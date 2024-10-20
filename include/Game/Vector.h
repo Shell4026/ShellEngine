@@ -10,6 +10,7 @@
 
 #include <cassert>
 #include <type_traits>
+#include <initializer_list>
 
 namespace sh::game
 {
@@ -50,6 +51,51 @@ namespace sh::game
                 std::conditional_t<N >= 4, float, Empty> w;
             };
         };
+        
+        Vec()
+        {
+            for (std::size_t i = 0; i < N; ++i)
+                data[i] = 0.f;
+        }
+        Vec(const std::initializer_list<float>& list)
+        {
+            for (std::size_t i = 0; i < N; ++i)
+            {
+                if (i < list.size())
+                    data[i] = *(list.begin() + i);
+            }
+        }
+        Vec(const glm::vec2& vec)
+        {
+            assert(N >= 2);
+            if constexpr (N >= 2)
+            {
+                x = vec.x;
+                y = vec.y;
+            }
+        }
+        Vec(const glm::vec3& vec)
+        {
+            if constexpr (N >= 2)
+            {
+                x = vec.x;
+                y = vec.y;
+            }
+            if constexpr (N >= 3)
+                z = vec.z;
+        }
+        Vec(const glm::vec4& vec)
+        {
+            if constexpr (N >= 2)
+            {
+                x = vec.x;
+                y = vec.y;
+            }
+            if constexpr (N >= 3)
+                z = vec.z;
+            if constexpr (N >= 4)
+                w = vec.w;
+        }
 
         operator glm::vec2() const
         {
