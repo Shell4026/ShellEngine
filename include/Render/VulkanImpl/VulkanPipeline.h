@@ -49,6 +49,8 @@ namespace sh::render::impl
 
 		CullMode cullMode;
 		Topology topology;
+
+		float lineWidth = 1.f;
 	public:
 		SH_RENDER_API VulkanPipeline(VkDevice device, VkRenderPass renderPass);
 		SH_RENDER_API VulkanPipeline(VulkanPipeline&& other) noexcept;
@@ -74,5 +76,8 @@ namespace sh::render::impl
 
 		SH_RENDER_API auto SetTopology(Topology topology) -> VulkanPipeline&;
 		SH_RENDER_API auto GetTopology() const -> Topology;
+
+		SH_RENDER_API void SetLineWidth(float width);
+		SH_RENDER_API auto GetLineWidth() const -> float;
 	};
 }

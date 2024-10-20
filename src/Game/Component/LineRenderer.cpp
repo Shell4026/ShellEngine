@@ -19,6 +19,7 @@ namespace sh::game
 		mesh.SetVertex({ start, end });
 		mesh.SetIndices({ 0, 1 });
 		mesh.SetTopology(render::Mesh::Topology::Line);
+		mesh.lineWidth = 1.f;
 		mesh.Build(world.renderer);
 		Super::SetMesh(&mesh);
 

@@ -53,6 +53,8 @@ namespace sh::render
 		Bounding bounding;
 	public:
 		const std::vector<std::unique_ptr<ShaderAttributeBase>>& attributes;
+
+		float lineWidth = 1.f;
 	public:
 		SH_RENDER_API Mesh();
 		SH_RENDER_API Mesh(const Mesh& other);

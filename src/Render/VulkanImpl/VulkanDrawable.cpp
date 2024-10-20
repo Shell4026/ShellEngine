@@ -160,6 +160,8 @@ namespace sh::render
 				pipeline[thr]->AddAttributeDescription(attrDesc);
 			}
 
+			pipeline[thr]->SetLineWidth(mesh->lineWidth);
+			
 			auto result = pipeline[thr]->
 				SetShader(static_cast<VulkanShader*>(shader)).
 				AddShaderStage(impl::VulkanPipeline::ShaderStage::Vertex).

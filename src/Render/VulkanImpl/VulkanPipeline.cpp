@@ -6,7 +6,7 @@
 #include <cassert>
 namespace sh::render::impl
 {
-	VulkanPipeline::VulkanPipeline(VkDevice device, VkRenderPass renderPass) :
+	SH_RENDER_API VulkanPipeline::VulkanPipeline(VkDevice device, VkRenderPass renderPass) :
 		device(device), renderPass(renderPass),
 		pipeline(nullptr), shader(nullptr),
 		viewportX(0), viewportY(0),
@@ -15,7 +15,7 @@ namespace sh::render::impl
 	{
 	}
 
-	VulkanPipeline::VulkanPipeline(VulkanPipeline&& other) noexcept :
+	SH_RENDER_API VulkanPipeline::VulkanPipeline(VulkanPipeline&& other) noexcept :
 		pipeline(other.pipeline),
 		device(other.device), renderPass(other.renderPass), shader(other.shader),
 		shaderStages(std::move(other.shaderStages)),
@@ -28,12 +28,12 @@ namespace sh::render::impl
 		other.pipeline = nullptr;
 	}
 
-	VulkanPipeline::~VulkanPipeline()
+	SH_RENDER_API VulkanPipeline::~VulkanPipeline()
 	{
 		Clean();
 	}
 
-	void VulkanPipeline::Clean()
+	SH_RENDER_API void VulkanPipeline::Clean()
 	{
 		shaderStages.clear();
 		bindingDescriptions.clear();
@@ -46,13 +46,13 @@ namespace sh::render::impl
 		}
 	}
 
-	auto VulkanPipeline::SetShader(VulkanShader* shader) -> VulkanPipeline&
+	SH_RENDER_API auto VulkanPipeline::SetShader(VulkanShader* shader) -> VulkanPipeline&
 	{
 		this->shader = shader;
 		return *this;
 	}
 
-	auto VulkanPipeline::AddShaderStage(ShaderStage stage) -> VulkanPipeline&
+	SH_RENDER_API auto VulkanPipeline::AddShaderStage(ShaderStage stage) -> VulkanPipeline&
 	{
 		assert(shader);
 
@@ -75,28 +75,28 @@ namespace sh::render::impl
 		return *this;
 	}
 
-	auto VulkanPipeline::ResetShaderStage() -> VulkanPipeline&
+	SH_RENDER_API auto VulkanPipeline::ResetShaderStage() -> VulkanPipeline&
 	{
 		shaderStages.clear();
 
 		return *this;
 	}
 
-	auto VulkanPipeline::AddBindingDescription(const VkVertexInputBindingDescription& bindingDescription) -> VulkanPipeline&
+	SH_RENDER_API auto VulkanPipeline::AddBindingDescription(const VkVertexInputBindingDescription& bindingDescription) -> VulkanPipeline&
 	{
 		bindingDescriptions.push_back(bindingDescription);
 
 		return *this;
 	}
 
-	auto VulkanPipeline::ResetBindingDescription() -> VulkanPipeline&
+	SH_RENDER_API auto VulkanPipeline::ResetBindingDescription() -> VulkanPipeline&
 	{
 		bindingDescriptions.clear();
 
 		return *this;
 	}
 
-	auto VulkanPipeline::AddAttributeDescription(const VkVertexInputAttributeDescription& attributeDescription) -> VulkanPipeline&
+	SH_RENDER_API auto VulkanPipeline::AddAttributeDescription(const VkVertexInputAttributeDescription& attributeDescription) -> VulkanPipeline&
 	{
 		attributeDescriptions.push_back(attributeDescription);
 
@@ -110,7 +110,7 @@ namespace sh::render::impl
 		return *this;
 	}
 
-	auto VulkanPipeline::Build(VkPipelineLayout layout) -> VkResult
+	SH_RENDER_API auto VulkanPipeline::Build(VkPipelineLayout layout) -> VkResult
 	{
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 		vertexInputInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -172,7 +172,7 @@ namespace sh::render::impl
 		rasterizer.depthClampEnable = VK_FALSE;
 		rasterizer.rasterizerDiscardEnable = VK_FALSE;
 		rasterizer.polygonMode = VkPolygonMode::VK_POLYGON_MODE_FILL; //채우기
-		rasterizer.lineWidth = 1.0f;
+		rasterizer.lineWidth = lineWidth;
 		rasterizer.frontFace = VkFrontFace::VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rasterizer.depthBiasEnable = VK_FALSE;
 		rasterizer.depthBiasConstantFactor = 0.0f; // Optional
@@ -267,23 +267,32 @@ namespace sh::render::impl
 		return result;
 	}
 
-	auto VulkanPipeline::GetPipeline() const -> VkPipeline
+	SH_RENDER_API auto VulkanPipeline::GetPipeline() const -> VkPipeline
 	{
 		return pipeline;
 	}
 
-	auto VulkanPipeline::SetCullMode(CullMode mode) -> VulkanPipeline&
+	SH_RENDER_API auto VulkanPipeline::SetCullMode(CullMode mode) -> VulkanPipeline&
 	{
 		cullMode = mode;
 		return *this;
 	}
-	auto VulkanPipeline::SetTopology(Topology topology) -> VulkanPipeline&
+	SH_RENDER_API auto VulkanPipeline::SetTopology(Topology topology) -> VulkanPipeline&
 	{
 		this->topology = topology;
 		return *this;
 	}
-	auto VulkanPipeline::GetTopology() const -> Topology
+	SH_RENDER_API auto VulkanPipeline::GetTopology() const -> Topology
 	{
 		return topology;
+	}
+
+	SH_RENDER_API void VulkanPipeline::SetLineWidth(float width)
+	{
+		lineWidth = width;
+	}
+	SH_RENDER_API auto VulkanPipeline::GetLineWidth() const -> float
+	{
+		return lineWidth;
 	}
 }
