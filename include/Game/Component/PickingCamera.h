@@ -23,6 +23,7 @@ namespace sh::game
 		Camera* followCamera = nullptr;
 		
 		int x = 0, y = 0;
+		int frameCount = 0;
 
 		std::unique_ptr<render::IBuffer> buffer;
 

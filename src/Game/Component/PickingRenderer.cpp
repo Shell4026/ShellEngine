@@ -33,25 +33,31 @@ namespace sh::game
 	{
 		
 	}
+	SH_GAME_API void PickingRenderer::BeginUpdate()
+	{
+		if (!camera->pickingCallback.Empty())
+		{
+			for (auto& [cam, drawable] : drawables)
+			{
+				if (!cam->active)
+					continue;
+
+				float r = ((id & 0x000000FF) >> 0) / 255.0f;
+				float g = ((id & 0x0000FF00) >> 8) / 255.0f;
+				float b = ((id & 0x00FF0000) >> 16) / 255.0f;
+				float a = 1.f;
+				struct alignas(16) Uniform
+				{
+					glm::vec4 color;
+				} uniform{ {r, g, b, a} };
+
+				drawable->SetUniformData(1, &uniform, render::IDrawable::Stage::Fragment);
+			}
+			Super::Update();
+		}
+	}
 	SH_GAME_API void PickingRenderer::Update()
 	{
-		for (auto& [cam, drawable] : drawables)
-		{
-			if (!cam->active)
-				continue;
-
-			float r = ((id & 0x000000FF) >> 0) / 255.0f;
-			float g = ((id & 0x0000FF00) >> 8) / 255.0f;
-			float b = ((id & 0x00FF0000) >> 16) / 255.0f;
-			float a = 1.f;
-			struct alignas(16) Uniform
-			{
-				glm::vec4 color;
-			} uniform{ {r, g, b, a} };
-
-			drawable->SetUniformData(1, &uniform, render::IDrawable::Stage::Fragment);
-		}
-		Super::Update();
 	}
 
 	SH_GAME_API void PickingRenderer::SetCamera(PickingCamera& camera)
