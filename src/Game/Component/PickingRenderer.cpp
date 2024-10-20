@@ -1,4 +1,5 @@
-﻿#include "Component/PickingRenderer.h"
+﻿#include "PCH.h"
+#include "Component/PickingRenderer.h"
 
 #include "Game/GameObject.h"
 #include "Game/World.h"
