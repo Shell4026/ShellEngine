@@ -8,6 +8,8 @@
 #include "Game/GameObject.h"
 #include "Game/Component/Camera.h"
 #include "Game/Component/LineRenderer.h"
+#include "Game/Component/PickingCamera.h"
+#include "Game/Component/PickingRenderer.h"
 
 #include "Physics/Ray.h"
 
@@ -36,6 +38,15 @@ namespace sh::editor
 
 			viewportDescSet[thr] = nullptr;
 		}
+
+		pickingListener.SetCallback([&world ](uint8_t r, uint8_t g, uint8_t b, uint8_t a)
+			{
+				SH_INFO_FORMAT("R:{}, G:{}, B:{}, A:{}", r, g, b, a);
+				uint32_t id = r | g << 8 | b << 24;
+				if (auto pickingRenderer = game::PickingIdManager::Get(id); pickingRenderer != nullptr)
+					world.SetSelectedObject(&pickingRenderer->gameObject);
+			}
+		);
 	}
 	Viewport::~Viewport()
 	{
@@ -53,8 +64,6 @@ namespace sh::editor
 			bMouseDown = game::Input::GetMouseDown(game::Input::MouseType::Left);
 			if (bMouseDown)
 			{
-				SH_INFO("Click");
-				auto start = std::chrono::high_resolution_clock::now();
 				mousePos.x = ImGui::GetIO().MousePos.x - x;
 				mousePos.y = ImGui::GetIO().MousePos.y - y;
 				if (mousePos.x < 0 || mousePos.y < 0)
@@ -62,22 +71,24 @@ namespace sh::editor
 				if (mousePos.x > viewportWidthLast || mousePos.y > viewportHeightLast)
 					return;
 
-				game::GameObject* picking = world.GetGameObject("picking");
-				if (picking == nullptr)
-				{
-					picking = world.AddGameObject("picking");
-					picking->AddComponent<game::LineRenderer>();
-				}
-				game::LineRenderer* line = picking->GetComponent<game::LineRenderer>();
-				game::Camera* cam = *world.GetCameras().begin();
-				
-				phys::Ray ray = cam->ScreenPointToRay(mousePos);
-				line->SetStart(ray.origin);
-				line->SetEnd(ray.origin + ray.direction * 5.f);
+				//game::GameObject* picking = world.GetGameObject("picking");
+				//if (picking == nullptr)
+				//{
+				//	picking = world.AddGameObject("picking");
+				//	picking->AddComponent<game::LineRenderer>();
+				//}
+				//game::LineRenderer* line = picking->GetComponent<game::LineRenderer>();
+				//game::Camera* cam = *world.GetCameras().begin();
+				//
+				//phys::Ray ray = cam->ScreenPointToRay(mousePos);
+				//line->SetStart(ray.origin);
+				//line->SetEnd(ray.origin + ray.direction * 5.f);
 
-				SH_INFO_FORMAT("x: {}, y: {}", mousePos.x, mousePos.y);
-				auto end = std::chrono::high_resolution_clock::now();
-				SH_INFO_FORMAT("Click time: {}", std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
+				if (pickingCamera == nullptr)
+					pickingCamera = world.GetGameObject("PickingCamera")->GetComponent<game::PickingCamera>();
+
+				pickingCamera->SetPickingPos({ mousePos.x, mousePos.y });
+				pickingCamera->pickingCallback.Register(pickingListener);
 			}
 		}
 		else
@@ -93,6 +104,10 @@ namespace sh::editor
 		auto vkTexBuffer = static_cast<render::VulkanTextureBuffer*>(renderTex->GetBuffer(core::ThreadType::Game));
 		auto imgBuffer = vkTexBuffer->GetImageBuffer();
 		viewportDescSet[core::ThreadType::Game] = ImGui_ImplVulkan_AddTexture(imgBuffer->GetSampler(), imgBuffer->GetImageView(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+		if (pickingCamera)
+			pickingCamera->SetTextureSize({ viewportWidthLast, viewportHeightLast });
+
 		SetDirty();
 	}
 

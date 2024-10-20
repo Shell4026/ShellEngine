@@ -87,6 +87,7 @@ namespace sh
 		auto lineShader = world->shaders.AddResource("Line", loader.LoadShader<render::VulkanShader>("shaders/line.vert.spv", "shaders/line.frag.spv"));
 		auto errorShader = world->shaders.AddResource("ErrorShader", loader.LoadShader<render::VulkanShader>("shaders/error.vert.spv", "shaders/error.frag.spv"));
 		auto gridShader = world->shaders.AddResource("GridShader", loader.LoadShader<render::VulkanShader>("shaders/grid.vert.spv", "shaders/grid.frag.spv"));
+		auto pickingShader = world->shaders.AddResource("PickingShader", loader.LoadShader<render::VulkanShader>("shaders/picking.vert.spv", "shaders/picking.frag.spv"));
 
 		auto errorMat = world->materials.AddResource("ErrorMaterial", sh::render::Material{ errorShader });
 		auto mat = world->materials.AddResource("Material", sh::render::Material{ defaultShader });
@@ -94,6 +95,9 @@ namespace sh
 		auto catMat1 = world->materials.AddResource("Material3", sh::render::Material{ defaultShader });
 		auto lineMat = world->materials.AddResource("LineMat", sh::render::Material{ lineShader });
 		auto gridMat = world->materials.AddResource("GridMaterial", sh::render::Material{ gridShader });
+		auto pickingMat = world->materials.AddResource("PickingMaterial", sh::render::Material{ pickingShader });
+
+		std::vector<int>::iterator;
 
 		auto plane = world->meshes.AddResource("PlaneMesh", sh::render::Plane{});
 		auto cube = world->meshes.AddResource("Cube", modelLoader.Load("model/cube.obj"));
@@ -134,7 +138,14 @@ namespace sh
 		gridShader->AddUniform<glm::vec4>("color", MaterialUniformType, 0, sh::render::Shader::ShaderStage::Fragment);
 		gridShader->Build();
 
+		pickingShader->AddUniform<glm::mat4>("model", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
+		pickingShader->AddUniform<glm::mat4>("view", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
+		pickingShader->AddUniform<glm::mat4>("proj", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
+		pickingShader->AddUniform<glm::vec4>("id", ObjectUniformType, 1, sh::render::Shader::ShaderStage::Fragment);
+		pickingShader->Build();
+
 		errorMat->Build(*renderer);
+		pickingMat->Build(*renderer);
 
 		gridMat->SetVector("color", glm::vec4{ 0.6f, 0.6f, 0.8f, 0.2f });
 		gridMat->Build(*renderer);
@@ -171,19 +182,16 @@ namespace sh
 		obj2->transform->SetParent(obj->transform);
 
 		auto meshRenderer = obj->AddComponent<MeshRenderer>();
-		meshRenderer->SetMesh(*cube);
-		meshRenderer->SetMaterial(*catMat0);
+		meshRenderer->SetMesh(cube);
+		meshRenderer->SetMaterial(catMat0);
 
 		meshRenderer = obj2->AddComponent<MeshRenderer>();
-		meshRenderer->SetMesh(*cube);
-		meshRenderer->SetMaterial(*catMat1);
+		meshRenderer->SetMesh(cube);
+		meshRenderer->SetMaterial(catMat1);
 
 		meshRenderer = obj3->AddComponent<MeshRenderer>();
-		meshRenderer->SetMesh(*mesh2);
-		meshRenderer->SetMaterial(*mat);
-
-		GameObject* cam = world->AddGameObject("Camera");
-		cam->transform->SetPosition({ 2.f, 2.f, 2.f });
+		meshRenderer->SetMesh(mesh2);
+		meshRenderer->SetMaterial(mat);
 	}
 
 	void EngineInit::ProcessInput()

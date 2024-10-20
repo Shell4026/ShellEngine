@@ -233,8 +233,8 @@ namespace sh::render
 			vertexBuffers[i] = buffers[i].GetBuffer();
 			offsets[i] = 0;
 		}
-		vkCmdBindVertexBuffers(renderer.GetCommandBuffer(core::ThreadType::Render), 0, vertexBuffers.size(), vertexBuffers.data(), offsets.data());
-		vkCmdBindIndexBuffer(renderer.GetCommandBuffer(core::ThreadType::Render), indexBuffer.GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
+		vkCmdBindVertexBuffers(renderer.GetCommandBuffer(core::ThreadType::Render)->GetCommandBuffer(), 0, vertexBuffers.size(), vertexBuffers.data(), offsets.data());
+		vkCmdBindIndexBuffer(renderer.GetCommandBuffer(core::ThreadType::Render)->GetCommandBuffer(), indexBuffer.GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
 	}
 
 	auto VulkanVertexBuffer::Clone() const -> std::unique_ptr<IVertexBuffer>

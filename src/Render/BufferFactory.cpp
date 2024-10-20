@@ -12,11 +12,15 @@
 
 namespace sh::render
 {
-	auto BufferFactory::CreateVkUniformBuffer(const VulkanRenderer& renderer, std::size_t size) -> std::unique_ptr<IBuffer>
+	auto BufferFactory::CreateVkUniformBuffer(const VulkanRenderer& renderer, std::size_t size, bool bTransferDst) -> std::unique_ptr<IBuffer>
 	{
 		std::unique_ptr<impl::VulkanBuffer> buffer = std::make_unique<impl::VulkanBuffer>(renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator());
-		auto result = buffer->Create(size,
-			VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+
+		VkBufferUsageFlags usage = VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+		if (bTransferDst)
+			usage = VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+		auto result = buffer->Create(size, usage,
 			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 			VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 			true);
@@ -29,11 +33,12 @@ namespace sh::render
 		return buffer;
 	}
 
-	auto BufferFactory::Create(const Renderer& renderer, std::size_t size) -> std::unique_ptr<IBuffer>
+	auto BufferFactory::Create(const Renderer& renderer, std::size_t size, bool bTransferDst) -> std::unique_ptr<IBuffer>
 	{
+		assert(renderer.apiType == RenderAPI::Vulkan);
 		if (renderer.apiType == RenderAPI::Vulkan)
 		{
-			return CreateVkUniformBuffer(static_cast<const VulkanRenderer&>(renderer), size);
+			return CreateVkUniformBuffer(static_cast<const VulkanRenderer&>(renderer), size, bTransferDst);
 		}
 		return nullptr;
 	}

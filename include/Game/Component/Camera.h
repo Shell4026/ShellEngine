@@ -2,6 +2,7 @@
 
 #include "Component.h"
 #include "Game/Export.h"
+#include "Game/Vector.h"
 
 #include "Render/Renderer.h"
 #include "Render/RenderTexture.h"
@@ -31,22 +32,23 @@ namespace sh::game
 		int depth;
 		
 		float fovRadians;
-
-		glm::vec2 screenSize;
 	protected:
 		glm::mat4 matProj;
 		glm::mat4 matView;
 
 		PROPERTY(lookPos)
-		glm::vec3 lookPos;
-		glm::vec3 up;
+		Vec3 lookPos;
+		Vec3 up;
+
+		Vec2 screenSize;
 	public:
+		PROPERTY(fov)
 		float fov;
 		float nearPlane;
 		float farPlane;
 
 		const glm::mat4& worldToCameraMatrix;
-	private:
+	protected:
 		inline void CalcMatrix();
 	public:
 		SH_GAME_API Camera(GameObject& owner);
@@ -67,7 +69,12 @@ namespace sh::game
 
 		SH_GAME_API auto GetNative() -> render::Camera&;
 
-		SH_GAME_API auto ScreenPointToRay(const glm::vec2& mousePos) const -> phys::Ray;
+		SH_GAME_API auto ScreenPointToRay(const Vec2& mousePos) const -> phys::Ray;
+
+		SH_GAME_API void SetLookPos(const Vec3& pos);
+		SH_GAME_API auto GetLookPos() const -> const Vec3&;
+		SH_GAME_API void SetUpVector(const Vec3& up);
+		SH_GAME_API auto GetUpVector() const -> const Vec3&;
 #ifdef SH_EDITOR
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 #endif

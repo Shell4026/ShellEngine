@@ -6,14 +6,14 @@
 
 namespace sh::render::impl
 {
-	VulkanImageBuffer::VulkanImageBuffer(VkDevice device, VkPhysicalDevice gpu, VmaAllocator allocator) :
+	SH_RENDER_API VulkanImageBuffer::VulkanImageBuffer(VkDevice device, VkPhysicalDevice gpu, VmaAllocator allocator) :
 		device(device), gpu(gpu), allocator(allocator),
 		img(nullptr), imgMem(nullptr), imgView(nullptr), sampler(nullptr),
 		bUseAnisotropy(false)
 	{
 
 	}
-	VulkanImageBuffer::VulkanImageBuffer(VulkanImageBuffer&& other) noexcept :
+	SH_RENDER_API VulkanImageBuffer::VulkanImageBuffer(VulkanImageBuffer&& other) noexcept :
 		device(other.device), gpu(other.gpu), allocator(other.allocator),
 		img(other.img), imgMem(other.imgMem), imgView(other.imgView), sampler(other.sampler),
 		bUseAnisotropy(other.bUseAnisotropy)
@@ -23,7 +23,7 @@ namespace sh::render::impl
 		other.imgView = nullptr;
 		other.sampler = nullptr;
 	}
-	auto VulkanImageBuffer::operator=(VulkanImageBuffer&& other) noexcept -> VulkanImageBuffer&
+	SH_RENDER_API auto VulkanImageBuffer::operator=(VulkanImageBuffer&& other) noexcept -> VulkanImageBuffer&
 	{
 		device = other.device;
 		gpu = other.gpu;
@@ -44,11 +44,11 @@ namespace sh::render::impl
 		return *this;
 	}
 
-	VulkanImageBuffer::~VulkanImageBuffer()
+	SH_RENDER_API VulkanImageBuffer::~VulkanImageBuffer()
 	{
 		Clean();
 	}
-	void VulkanImageBuffer::Clean()
+	SH_RENDER_API void VulkanImageBuffer::Clean()
 	{
 		if (sampler)
 		{
@@ -68,12 +68,12 @@ namespace sh::render::impl
 		}
 	}
 
-	void VulkanImageBuffer::UseAnisotropy(bool bUse)
+	SH_RENDER_API void VulkanImageBuffer::UseAnisotropy(bool bUse)
 	{
 		bUseAnisotropy = bUse;
 	}
 
-	auto VulkanImageBuffer::Create(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspectFlag, VkPhysicalDeviceProperties* gpuProp) -> VkResult
+	SH_RENDER_API auto VulkanImageBuffer::Create(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspectFlag, VkPhysicalDeviceProperties* gpuProp) -> VkResult
 	{
 		VkImageCreateInfo info{};
 		info.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -149,15 +149,74 @@ namespace sh::render::impl
 		return result;
 	}
 
-	auto VulkanImageBuffer::GetImage() const -> VkImage
+	SH_RENDER_API void VulkanImageBuffer::TransitionImageLayout(VkQueue queue, VulkanCommandBuffer* cmd, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
+	{
+		VkImageMemoryBarrier barrier{};
+		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barrier.oldLayout = oldLayout;
+		barrier.newLayout = newLayout;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.image = img;
+		barrier.subresourceRange.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
+		barrier.subresourceRange.baseMipLevel = 0;
+		barrier.subresourceRange.levelCount = 1;
+		barrier.subresourceRange.baseArrayLayer = 0;
+		barrier.subresourceRange.layerCount = 1;
+		barrier.srcAccessMask = 0; // TODO
+		barrier.dstAccessMask = 0; // TODO
+
+		VkPipelineStageFlags sourceStage;
+		VkPipelineStageFlags destinationStage;
+
+		if (oldLayout == VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) 
+		{
+			barrier.srcAccessMask = 0;
+			barrier.dstAccessMask = VkAccessFlagBits::VK_ACCESS_TRANSFER_WRITE_BIT;
+
+			sourceStage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+			destinationStage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT;
+		}
+		else if (oldLayout == VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) 
+		{
+			barrier.srcAccessMask = VkAccessFlagBits::VK_ACCESS_TRANSFER_WRITE_BIT;
+			barrier.dstAccessMask = VkAccessFlagBits::VK_ACCESS_SHADER_READ_BIT;
+
+			sourceStage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT;
+			destinationStage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		}
+		else 
+		{
+			throw std::invalid_argument("unsupported layout transition!");
+		}
+
+		VkCommandBufferBeginInfo beginInfo{};
+		beginInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags = VkCommandBufferUsageFlagBits::VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		cmd->Submit(queue, [&]()
+			{
+				vkCmdPipelineBarrier(
+					cmd->GetCommandBuffer(),
+					sourceStage, destinationStage,
+					0,
+					0, nullptr,
+					0, nullptr,
+					1, &barrier
+				);
+			},
+			&beginInfo);
+	}
+
+	SH_RENDER_API auto VulkanImageBuffer::GetImage() const -> VkImage
 	{
 		return img;
 	}
-	auto VulkanImageBuffer::GetImageView() const -> VkImageView
+	SH_RENDER_API auto VulkanImageBuffer::GetImageView() const -> VkImageView
 	{
 		return imgView;
 	}
-	auto VulkanImageBuffer::GetSampler() const -> VkSampler
+	SH_RENDER_API auto VulkanImageBuffer::GetSampler() const -> VkSampler
 	{
 		return sampler;
 	}

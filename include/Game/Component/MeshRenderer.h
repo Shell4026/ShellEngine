@@ -46,6 +46,7 @@ namespace sh::game
 
 		/// @brief 모든 Drawable들을 갱신하는 함수.
 		void RebuildDrawables();
+		void CleanDrawables();
 	public:
 		SH_GAME_API MeshRenderer(GameObject& owner);
 		SH_GAME_API ~MeshRenderer();

@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "VulkanConfig.h"
+#include "VulkanCommandBuffer.h"
 #include "Render/Export.h"
 
 #include "Core/NonCopyable.h"
@@ -36,6 +36,8 @@ namespace sh::render::impl
 			VkImageAspectFlags aspectFlag = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT,
 			VkPhysicalDeviceProperties* gpuProp = nullptr) -> VkResult;
 		SH_RENDER_API void Clean();
+
+		SH_RENDER_API void TransitionImageLayout(VkQueue queue, VulkanCommandBuffer* cmd, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 
 		SH_RENDER_API auto GetImage() const ->VkImage;
 		SH_RENDER_API auto GetImageView() const -> VkImageView;

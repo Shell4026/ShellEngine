@@ -1,6 +1,7 @@
 ﻿#include "PCH.h"
 #include "Component/MeshRenderer.h"
 #include "Component/Camera.h"
+#include "Component/PickingRenderer.h"
 
 #include "gameObject.h"
 
@@ -47,8 +48,25 @@ namespace sh::game
 	void MeshRenderer::SetMesh(const sh::render::Mesh* mesh)
 	{
 		this->mesh = mesh;
-		for (auto cam : gameObject.world.GetCameras())
-			CreateDrawable(cam);
+		if (core::IsValid(mesh))
+		{
+			for (auto cam : gameObject.world.GetCameras())
+				CreateDrawable(cam);
+
+#if SH_EDITOR
+			if (GetType().typeName != core::reflection::GetTypeName<PickingRenderer>())
+			{
+				if (auto picking = gameObject.GetComponent<PickingRenderer>(); picking == nullptr)
+				{
+					picking = gameObject.AddComponent<PickingRenderer>();
+					picking->SetMesh(mesh);
+					picking->SetCamera(*world.GetGameObject("PickingCamera")->GetComponent<PickingCamera>());
+				}
+				else
+					picking->SetMesh(mesh);
+			}
+#endif
+		}
 	}
 
 	auto MeshRenderer::GetMesh() const -> const sh::render::Mesh*
@@ -100,6 +118,10 @@ namespace sh::game
 		{
 			drawable->Build(cam->GetNative(), mesh, mat);
 		}
+	}
+	void MeshRenderer::CleanDrawables()
+	{
+		drawables.clear();
 	}
 
 	void MeshRenderer::Awake()
@@ -220,8 +242,7 @@ namespace sh::game
 	{
 		if (std::strcmp(prop.GetName(), "mesh") == 0)
 		{
-			for (auto cam : gameObject.world.GetCameras())
-				CreateDrawable(cam);
+			SetMesh(mesh);
 		}
 	}
 #endif

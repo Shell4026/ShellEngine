@@ -2,14 +2,13 @@
 
 #include "Export.h"
 
+#include "Core/ISyncable.h"
 #include "Core/NonCopyable.h"
 #include "Core/SObject.h"
-#include "Core/ISyncable.h"
 
 #include <cstdint>
-#include <vector>
 #include <memory>
-#include <array>
+#include <vector>
 
 namespace sh::render
 {
@@ -27,6 +26,8 @@ namespace sh::render
 	public:
 		enum class TextureFormat
 		{
+			SRGB24,
+			SRGBA32,
 			RGB24,
 			RGBA32
 		};

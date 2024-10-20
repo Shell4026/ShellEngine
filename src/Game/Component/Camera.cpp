@@ -12,11 +12,11 @@ namespace sh::game
 {
 	Camera::Camera(GameObject& owner) :
 		Component(owner),
-		
+
 		worldToCameraMatrix(matView),
 		matProj(), matView(),
 		fov(60.f), fovRadians(glm::radians(60.f)), nearPlane(0.1f), farPlane(1000.f),
-		camera(), depth(0), lookPos(), up(0, 1, 0),
+		camera(), depth(0), lookPos({ 0.f, 0.f, 0.f }), up({ 0.f, 1.f, 0.f }),
 
 		renderTexture(nullptr)
 	{
@@ -51,7 +51,7 @@ namespace sh::game
 			static_cast<float>(screenSize.y),
 			nearPlane, farPlane);
 
-		matView = glm::lookAt(glm::vec3{ gameObject.transform->position }, lookPos, up);
+		matView = glm::lookAt(glm::vec3{ gameObject.transform->position }, glm::vec3{ lookPos }, glm::vec3{ up });
 	}
 
 	void Camera::OnDestroy()
@@ -102,7 +102,7 @@ namespace sh::game
 		return camera;
 	}
 
-	auto Camera::ScreenPointToRay(const glm::vec2& mousePos) const -> phys::Ray
+	auto Camera::ScreenPointToRay(const Vec2& mousePos) const -> phys::Ray
 	{
 		float aspect = screenSize.x / screenSize.y;
 
@@ -119,6 +119,23 @@ namespace sh::game
 		glm::vec3 dir = glm::normalize(worldCoord - glm::vec3{ gameObject.transform->position });
 
 		return phys::Ray(gameObject.transform->position, dir);
+	}
+
+	SH_GAME_API void Camera::SetLookPos(const Vec3& pos)
+	{
+		lookPos = pos;
+	}
+	SH_GAME_API auto Camera::GetLookPos() const -> const Vec3&
+	{
+		return lookPos;
+	}
+	SH_GAME_API void Camera::SetUpVector(const Vec3& up)
+	{
+		this->up = up;
+	}
+	SH_GAME_API auto Camera::GetUpVector() const -> const Vec3&
+	{
+		return up;
 	}
 
 #ifdef SH_EDITOR

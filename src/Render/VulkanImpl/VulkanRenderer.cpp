@@ -877,9 +877,9 @@ namespace sh::render {
 	{
 		return cmdPool[thr];
 	}
-	auto VulkanRenderer::GetCommandBuffer(core::ThreadType thr) const -> VkCommandBuffer
+	auto VulkanRenderer::GetCommandBuffer(core::ThreadType thr) const -> impl::VulkanCommandBuffer*
 	{
-		return cmdBuffer[static_cast<int>(thr)]->GetCommandBuffer();
+		return cmdBuffer[static_cast<int>(thr)].get();
 	}
 
 	auto VulkanRenderer::GetGraphicsQueue() const -> VkQueue

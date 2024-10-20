@@ -6,12 +6,23 @@
 #include "Game/GameObject.h"
 #include "Game/Component/MeshRenderer.h"
 #include "Game/Component/EditorCamera.h"
+#include "Game/Component/PickingCamera.h"
+#include "Game/Component/PickingRenderer.h"
 
 namespace sh::editor
 {
 	SH_EDITOR_API EditorWorld::EditorWorld(render::Renderer& renderer, const game::ComponentModule& module, game::ImGUImpl& guiContext) :
 		World(renderer, module), guiContext(guiContext)
 	{
+		game::GameObject* camObj = AddGameObject("EditorCamera");
+		camObj->transform->SetPosition({ 2.f, 2.f, 2.f });
+		auto cam = camObj->AddComponent<game::EditorCamera>();
+		this->SetMainCamera(cam);
+
+		auto PickingCamObj = this->AddGameObject("PickingCamera");
+		PickingCamObj->transform->SetParent(camObj->transform);
+		auto pickingCam = PickingCamObj->AddComponent<game::PickingCamera>();
+		pickingCam->SetFollowCamera(cam);
 	}
 
 	SH_EDITOR_API EditorWorld::~EditorWorld()
@@ -36,10 +47,6 @@ namespace sh::editor
 
 	SH_EDITOR_API void EditorWorld::Start()
 	{
-		auto camObj = this->GetGameObject("Camera");
-		auto cam = camObj->AddComponent<game::EditorCamera>();
-		this->SetMainCamera(cam);
-
 		EditorResource::GetInstance()->LoadAllAssets(*this);
 
 		editorUI = std::make_unique<editor::EditorUI>(*this, guiContext);

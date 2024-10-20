@@ -25,7 +25,7 @@ namespace sh::game
 
 		render::Texture::TextureFormat format;
 		if (channel == 3)
-			format = render::Texture::TextureFormat::RGB24;
+			format = render::Texture::TextureFormat::SRGB24;
 
 		//int mip = glm::log2
 

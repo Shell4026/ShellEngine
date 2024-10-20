@@ -1,4 +1,5 @@
 ﻿#include "VulkanImpl/VulkanFramebuffer.h"
+#include "VulkanImpl/VulkanCommandBuffer.h"
 
 #include <array>
 #include <cassert>
@@ -6,7 +7,7 @@
 
 namespace sh::render::impl
 {
-	VulkanFramebuffer::VulkanFramebuffer(VkDevice device, VkPhysicalDevice gpu, VmaAllocator alloc) :
+	SH_RENDER_API VulkanFramebuffer::VulkanFramebuffer(VkDevice device, VkPhysicalDevice gpu, VmaAllocator alloc) :
 		device(device), gpu(gpu), alloc(alloc),
 		renderPass(nullptr),
 		framebuffer(nullptr), img(nullptr),
@@ -15,23 +16,25 @@ namespace sh::render::impl
 	{
 	}
 
-	VulkanFramebuffer::VulkanFramebuffer(VulkanFramebuffer&& other) noexcept :
+	SH_RENDER_API VulkanFramebuffer::VulkanFramebuffer(VulkanFramebuffer&& other) noexcept :
 		device(other.device), gpu(other.gpu), alloc(other.alloc),
 		framebuffer(other.framebuffer), img(other.img), renderPass(other.renderPass),
 		colorImg(std::move(other.colorImg)), depthImg(std::move(other.depthImg)),
-		width(other.width), height(other.height), format(other.format)
+		width(other.width), height(other.height), format(other.format),
+		bTransferSrc(other.bTransferSrc)
 	{
 		other.renderPass = nullptr;
 		other.framebuffer = nullptr;
 		other.img = nullptr;
+		other.bTransferSrc = false;
 	}
 
-	VulkanFramebuffer::~VulkanFramebuffer()
+	SH_RENDER_API VulkanFramebuffer::~VulkanFramebuffer()
 	{
 		Clean();
 	}
 
-	auto VulkanFramebuffer::operator=(VulkanFramebuffer&& other) noexcept -> VulkanFramebuffer&
+	SH_RENDER_API auto VulkanFramebuffer::operator=(VulkanFramebuffer&& other) noexcept -> VulkanFramebuffer&
 	{
 		Clean();
 
@@ -51,6 +54,7 @@ namespace sh::render::impl
 		height = other.height;
 		img = other.img;
 		format = other.format;
+		bTransferSrc = other.bTransferSrc;
 
 		return *this;
 	}
@@ -68,9 +72,14 @@ namespace sh::render::impl
 		colorAttachment.initialLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
 		//최종 레이아웃
 		if (colorImg == nullptr)
-			colorAttachment.finalLayout = VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; //화면 출력용
+			colorAttachment.finalLayout = VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR; // 화면 출력용
 		else //offscreen
-			colorAttachment.finalLayout = VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; //셰이더 읽기용
+		{
+			if (!bTransferSrc)
+				colorAttachment.finalLayout = VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL; // 셰이더 읽기용
+			else
+				colorAttachment.finalLayout = VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL; // 전송 소스용
+		}
 
 		//깊이 버퍼
 		VkAttachmentDescription depthAttachment{};
@@ -135,8 +144,8 @@ namespace sh::render::impl
 		{
 			dependencies.resize(2);
 			
-			//첫 번째 종속성
-			//외부의 픽셀 셰이더 단계 이후에 첫 번째 서브패스에서 컬러와 깊이/스텐실을 읽고 쓸 수 있도록 설정한다.
+			// 첫 번째 종속성
+			// 외부의 픽셀 셰이더 단계 이후에 첫 번째 서브패스에서 컬러와 깊이/스텐실을 읽고 쓸 수 있도록 설정한다.
 			dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL;
 			dependencies[0].dstSubpass = 0;
 			dependencies[0].srcStageMask = 
@@ -154,8 +163,8 @@ namespace sh::render::impl
 				VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 			dependencies[0].dependencyFlags = VkDependencyFlagBits::VK_DEPENDENCY_BY_REGION_BIT; //프레임버퍼 로컬
 
-			//두 번째 종속성
-			//첫 번째 서브패스의 컬러 및 깊이/스텐실 접근이 끝난 후에 외부 픽셀 셰이더 단계에서 메모리를 읽을 수 있도록 설정한다.
+			// 두 번째 종속성
+			// 첫 번째 서브패스의 컬러 및 깊이/스텐실 접근이 끝난 후에 외부 픽셀 셰이더 단계에서 메모리를 읽을 수 있도록 설정한다.
 			dependencies[1].srcSubpass = 0;
 			dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
 			dependencies[1].srcStageMask = 
@@ -167,10 +176,22 @@ namespace sh::render::impl
 				VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | 
 				VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | 
 				VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-			dependencies[1].dstStageMask = 
-				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-			dependencies[1].dstAccessMask = 
-				VkAccessFlagBits::VK_ACCESS_MEMORY_READ_BIT;
+			if (!bTransferSrc)
+			{
+				dependencies[1].dstStageMask =
+					VkPipelineStageFlagBits::VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+				dependencies[1].dstAccessMask =
+					VkAccessFlagBits::VK_ACCESS_MEMORY_READ_BIT;
+			}
+			else
+			{
+				dependencies[1].dstStageMask =
+					VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT;
+				dependencies[1].dstAccessMask =
+					VkAccessFlagBits::VK_ACCESS_TRANSFER_READ_BIT | 
+					VkAccessFlagBits::VK_ACCESS_TRANSFER_WRITE_BIT;
+			}
+
 			dependencies[1].dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT;
 		}
 
@@ -207,7 +228,7 @@ namespace sh::render::impl
 		throw std::runtime_error("Failed to find supported Depth format!");
 	}
 
-	auto VulkanFramebuffer::Create(uint32_t width, uint32_t height, VkImageView img, VkFormat format) -> VkResult
+	SH_RENDER_API auto VulkanFramebuffer::Create(uint32_t width, uint32_t height, VkImageView img, VkFormat format) -> VkResult
 	{
 		this->format = format;
 		this->img = img;
@@ -238,14 +259,20 @@ namespace sh::render::impl
 		return result;
 	}
 
-	auto VulkanFramebuffer::CreateOffScreen(uint32_t width, uint32_t height) -> VkResult
+	SH_RENDER_API auto VulkanFramebuffer::CreateOffScreen(uint32_t width, uint32_t height, VkFormat format, bool bTransferSrc) -> VkResult
 	{
 		this->width = width;
 		this->height = height;
+		this->bTransferSrc = bTransferSrc;
+
+		VkImageUsageFlags usage = VkImageUsageFlagBits::VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+		if (!bTransferSrc) 
+			usage |= VkImageUsageFlagBits::VK_IMAGE_USAGE_SAMPLED_BIT;
+		else
+			usage |= VkImageUsageFlagBits::VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
 		colorImg = std::make_unique<VulkanImageBuffer>(device, gpu, alloc);
-		auto result = colorImg->Create(width, height, VkFormat::VK_FORMAT_R8G8B8A8_SRGB,
-			VkImageUsageFlagBits::VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | VkImageUsageFlagBits::VK_IMAGE_USAGE_SAMPLED_BIT,
+		auto result = colorImg->Create(width, height, format, usage,
 			VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT);
 		assert(result == VkResult::VK_SUCCESS);
 
@@ -285,7 +312,7 @@ namespace sh::render::impl
 
 	}
 
-	void VulkanFramebuffer::Clean()
+	SH_RENDER_API void VulkanFramebuffer::Clean()
 	{
 		depthImg.reset();
 		colorImg.reset();
@@ -302,30 +329,74 @@ namespace sh::render::impl
 			renderPass = nullptr;
 		}
 	}
+	SH_RENDER_API void VulkanFramebuffer::TransferImageToBuffer(VulkanCommandBuffer* cmd, VkQueue queue, VkBuffer buffer, int x, int y)
+	{
+		VkImageMemoryBarrier barrier = {};
+		barrier.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barrier.srcAccessMask = VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+		barrier.dstAccessMask = VkAccessFlagBits::VK_ACCESS_TRANSFER_READ_BIT;
+		barrier.oldLayout = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		barrier.newLayout = VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.image = colorImg->GetImage();
+		barrier.subresourceRange.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
+		barrier.subresourceRange.baseMipLevel = 0;
+		barrier.subresourceRange.levelCount = 1;
+		barrier.subresourceRange.baseArrayLayer = 0;
+		barrier.subresourceRange.layerCount = 1;
 
-	auto VulkanFramebuffer::GetRenderPass() const -> VkRenderPass
+		cmd->Submit(queue, [&]
+		{
+			vkCmdPipelineBarrier(
+				cmd->GetCommandBuffer(),
+				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT,
+				0, 0, nullptr, 0, nullptr, 1, &barrier
+			);
+
+			VkBufferImageCopy region{};
+			region.bufferOffset = 0;
+			region.bufferRowLength = 0;
+			region.bufferImageHeight = 0;
+			region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			region.imageSubresource.mipLevel = 0;
+			region.imageSubresource.baseArrayLayer = 0;
+			region.imageSubresource.layerCount = 1;
+			region.imageOffset = { x, y, 0 };
+			region.imageExtent = { 1, 1, 1 };
+
+			vkCmdCopyImageToBuffer(cmd->GetCommandBuffer(),
+				colorImg->GetImage(),
+				VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+				buffer, 1, &region
+			);
+		});
+	}
+
+	SH_RENDER_API auto VulkanFramebuffer::GetRenderPass() const -> VkRenderPass
 	{
 		return renderPass;
 	}
 
-	auto VulkanFramebuffer::GetVkFramebuffer() const -> VkFramebuffer
+	SH_RENDER_API auto VulkanFramebuffer::GetVkFramebuffer() const -> VkFramebuffer
 	{
 		return framebuffer;
 	}
 
-	auto VulkanFramebuffer::GetColorImg() const -> VulkanImageBuffer*
+	SH_RENDER_API auto VulkanFramebuffer::GetColorImg() const -> VulkanImageBuffer*
 	{
 		return colorImg.get();
 	}
-	auto VulkanFramebuffer::GetDepthImg() const -> VulkanImageBuffer*
+	SH_RENDER_API auto VulkanFramebuffer::GetDepthImg() const -> VulkanImageBuffer*
 	{
 		return depthImg.get();
 	}
-	auto VulkanFramebuffer::GetWidth() const -> uint32_t
+	SH_RENDER_API auto VulkanFramebuffer::GetWidth() const -> uint32_t
 	{
 		return width;
 	}
-	auto VulkanFramebuffer::GetHeight() const -> uint32_t
+	SH_RENDER_API auto VulkanFramebuffer::GetHeight() const -> uint32_t
 	{
 		return height;
 	}

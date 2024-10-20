@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "VulkanConfig.h"
-#include "IBuffer.h"
+#include "Render/IBuffer.h"
 
 #include "Render/Export.h"
 

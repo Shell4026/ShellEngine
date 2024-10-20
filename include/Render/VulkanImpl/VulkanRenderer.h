@@ -132,7 +132,7 @@ namespace sh::render {
 		SH_RENDER_API auto GetDevice() const -> VkDevice;
 		SH_RENDER_API auto GetGPU() const -> VkPhysicalDevice;
 		SH_RENDER_API auto GetCommandPool(core::ThreadType thr) const -> VkCommandPool;
-		SH_RENDER_API auto GetCommandBuffer(core::ThreadType thr) const -> VkCommandBuffer;
+		SH_RENDER_API auto GetCommandBuffer(core::ThreadType thr) const -> impl::VulkanCommandBuffer*;
 		SH_RENDER_API auto GetGraphicsQueue() const -> VkQueue;
 		SH_RENDER_API auto GetGraphicsQueueIdx() const -> std::pair<uint8_t, uint8_t>;
 		SH_RENDER_API auto GetTransferQueue() const-> VkQueue;
