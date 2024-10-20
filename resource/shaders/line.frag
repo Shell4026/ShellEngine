@@ -2,11 +2,11 @@
 
 layout(location = 0) out vec4 outColor;
 
-layout(set = 1, binding = 1) uniform Uniforms
+layout(set = 0, binding = 2) uniform Color
 {
 	vec4 color;
-} uniforms;
+} color;
 
 void main() {
-    outColor = uniforms.color;
+    outColor = color.color;
 }

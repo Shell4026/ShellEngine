@@ -4,12 +4,13 @@
 #include "Component.h"
 #include "MeshRenderer.h"
 
+#include "Game/Vector.h"
+
 #include "Core/Reflection.hpp"
 #include "Core/SContainer.hpp"
 
 #include "Render/Mesh.h"
 
-#include <glm/vec3.hpp>
 
 namespace sh::game
 {
@@ -18,26 +19,25 @@ namespace sh::game
 		COMPONENT(LineRenderer)
 	private:
 		PROPERTY(start)
-		glm::vec3 start;
+		Vec3 start;
 		PROPERTY(end)
-		glm::vec3 end;
+		Vec3 end;
+		PROPERTY(color)
+		Vec4 color;
 
 		render::Mesh mesh;
-		PROPERTY(mat)
-		render::Material* mat;
-
-		bool bUpdate;
 	public:
 		SH_GAME_API LineRenderer(GameObject& owner);
 
 		SH_GAME_API void Awake() override;
-		SH_GAME_API void BeginUpdate() override;
 		SH_GAME_API void Update() override;
 
-		SH_GAME_API void SetStart(const glm::vec3& start);
-		SH_GAME_API void SetEnd(const glm::vec3& end);
-#if SH_EDITOR
-		SH_CORE_API void OnPropertyChanged(const core::reflection::Property& prop) override;
-#endif
+		SH_GAME_API void SetStart(const Vec3& start);
+		SH_GAME_API void SetEnd(const Vec3& end);
+		SH_GAME_API void SetColor(const Vec4& color);
+
+		SH_GAME_API auto GetStart() const -> const Vec3&;
+		SH_GAME_API auto GetEnd() const -> const Vec3&;
+		SH_GAME_API auto GetColor() const -> const Vec4&;
 	};
 }//namespace

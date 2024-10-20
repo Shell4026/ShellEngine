@@ -93,7 +93,7 @@ namespace sh
 		auto mat = world->materials.AddResource("Material", sh::render::Material{ defaultShader });
 		auto catMat0 = world->materials.AddResource("Material2", sh::render::Material{ defaultShader });
 		auto catMat1 = world->materials.AddResource("Material3", sh::render::Material{ defaultShader });
-		auto lineMat = world->materials.AddResource("LineMat", sh::render::Material{ lineShader });
+		auto lineMat = world->materials.AddResource("LineMaterial", sh::render::Material{ lineShader });
 		auto gridMat = world->materials.AddResource("GridMaterial", sh::render::Material{ gridShader });
 		auto pickingMat = world->materials.AddResource("PickingMaterial", sh::render::Material{ pickingShader });
 
@@ -127,9 +127,9 @@ namespace sh
 		lineShader->AddUniform<glm::mat4>("model", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
 		lineShader->AddUniform<glm::mat4>("view", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
 		lineShader->AddUniform<glm::mat4>("proj", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
-		lineShader->AddUniform<glm::vec3>("start", MaterialUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
-		lineShader->AddUniform<glm::vec3>("end", MaterialUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
-		lineShader->AddUniform<glm::vec4>("color", MaterialUniformType, 1, sh::render::Shader::ShaderStage::Fragment);
+		lineShader->AddUniform<glm::vec3>("start", ObjectUniformType, 1, sh::render::Shader::ShaderStage::Vertex);
+		lineShader->AddUniform<glm::vec3>("end", ObjectUniformType, 1, sh::render::Shader::ShaderStage::Vertex);
+		lineShader->AddUniform<glm::vec4>("color", ObjectUniformType, 2, sh::render::Shader::ShaderStage::Fragment);
 		lineShader->Build();
 
 		gridShader->AddUniform<glm::mat4>("model", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
@@ -146,6 +146,7 @@ namespace sh
 
 		errorMat->Build(*renderer);
 		pickingMat->Build(*renderer);
+		lineMat->Build(*renderer);
 
 		gridMat->SetVector("color", glm::vec4{ 0.6f, 0.6f, 0.8f, 0.2f });
 		gridMat->Build(*renderer);
@@ -154,11 +155,6 @@ namespace sh
 		catMat0->Build(*renderer);
 		catMat1->SetTexture("tex", catTex1);
 		catMat1->Build(*renderer);
-
-		lineMat->SetVector("start", glm::vec4(0.f));
-		lineMat->SetVector("end", glm::vec4(0.f));
-		lineMat->SetVector("color", glm::vec4{ 1.0f, 1.0f, 0.0f, 1.0f });
-		lineMat->Build(*renderer);
 
 		mat->SetTexture("tex", tex);
 		mat->Build(*renderer);

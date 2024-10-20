@@ -6,7 +6,7 @@ layout(set = 0, binding = 0) uniform MVP
 	mat4 view;
 	mat4 proj;
 } mvp;
-layout(set = 1, binding = 0) uniform Points
+layout(set = 0, binding = 1) uniform Points
 {
 	vec3 start;
 	vec3 end;
