@@ -62,13 +62,11 @@ namespace sh::render
 		buffer[core::ThreadType::Game]->Create(*framebuffer[core::ThreadType::Game].get());
 		buffer[core::ThreadType::Render] = std::make_unique<VulkanTextureBuffer>();
 		buffer[core::ThreadType::Render]->Create(*framebuffer[core::ThreadType::Render].get());
-
-		SetDirty();
 	}
 
-	SH_RENDER_API auto RenderTexture::GetFramebuffer() const -> Framebuffer*
+	SH_RENDER_API auto RenderTexture::GetFramebuffer(core::ThreadType thr) const -> Framebuffer*
 	{
-		return framebuffer[core::ThreadType::Render].get();
+		return framebuffer[thr].get();
 	}
 	SH_RENDER_API auto RenderTexture::GetPixelData() const -> const std::vector<Byte>&
 	{
@@ -79,11 +77,8 @@ namespace sh::render
 		}
 		return pixels;
 	}
-	SH_RENDER_API void RenderTexture::SetSize(uint32_t width, uint32_t height)
+	inline void RenderTexture::Resize(uint32_t width, uint32_t height)
 	{
-		this->width = width;
-		this->height = height;
-
 		if (this->renderer == nullptr)
 			return;
 
@@ -108,7 +103,15 @@ namespace sh::render
 		}
 		buffer[core::ThreadType::Game]->Clean();
 		buffer[core::ThreadType::Game]->Create(*framebuffer[core::ThreadType::Game].get());
+	}
+	SH_RENDER_API void RenderTexture::SetSize(uint32_t width, uint32_t height)
+	{
+		this->width = width;
+		this->height = height;
 
+		Resize(width, height);
+
+		bChangeSize = true;
 		SetDirty();
 	}
 	SH_RENDER_API auto RenderTexture::GetSize() const -> glm::vec2
@@ -120,6 +123,11 @@ namespace sh::render
 	{
 		Super::Sync();
 		std::swap(framebuffer[core::ThreadType::Render], framebuffer[core::ThreadType::Game]);
+		if (bChangeSize)
+		{
+			Resize(width, height);
+			bChangeSize = false;
+		}
 	}
 #if SH_EDITOR
 	SH_RENDER_API void RenderTexture::OnPropertyChanged(const core::reflection::Property& property)

@@ -29,7 +29,7 @@ SH_USER_API void CreateManyObj::Update()
 				std::random_device device{};
 				std::mt19937 seed{ device()};
 				
-				std::uniform_real<float> rand{ -10.f, 10.f };
+				std::uniform_real_distribution<float> rand{ -10.f, 10.f };
 
 				obj->transform->SetPosition(rand(seed), rand(seed), rand(seed));
 				auto renderer = obj->AddComponent<MeshRenderer>();

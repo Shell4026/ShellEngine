@@ -264,6 +264,7 @@ namespace sh::render::impl
 		this->width = width;
 		this->height = height;
 		this->bTransferSrc = bTransferSrc;
+		this->format = format;
 
 		VkImageUsageFlags usage = VkImageUsageFlagBits::VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
 		if (!bTransferSrc) 
@@ -346,14 +347,32 @@ namespace sh::render::impl
 		barrier.subresourceRange.baseArrayLayer = 0;
 		barrier.subresourceRange.layerCount = 1;
 
+		VkImageMemoryBarrier toColorAttachmentBarrier = {};
+		toColorAttachmentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		toColorAttachmentBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+		toColorAttachmentBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+		toColorAttachmentBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		toColorAttachmentBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		toColorAttachmentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		toColorAttachmentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		toColorAttachmentBarrier.image = colorImg->GetImage();
+		toColorAttachmentBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		toColorAttachmentBarrier.subresourceRange.baseMipLevel = 0;
+		toColorAttachmentBarrier.subresourceRange.levelCount = 1;
+		toColorAttachmentBarrier.subresourceRange.baseArrayLayer = 0;
+		toColorAttachmentBarrier.subresourceRange.layerCount = 1;
+
 		cmd->Submit(queue, [&]
 		{
-			vkCmdPipelineBarrier(
-				cmd->GetCommandBuffer(),
-				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT,
-				0, 0, nullptr, 0, nullptr, 1, &barrier
-			);
+			if (!bTransferSrc)
+			{
+				vkCmdPipelineBarrier(
+					cmd->GetCommandBuffer(),
+					VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+					VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT,
+					0, 0, nullptr, 0, nullptr, 1, &barrier
+				);
+			}
 
 			VkBufferImageCopy region{};
 			region.bufferOffset = 0;
@@ -370,6 +389,13 @@ namespace sh::render::impl
 				colorImg->GetImage(),
 				VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
 				buffer, 1, &region
+			);
+
+			vkCmdPipelineBarrier(
+				cmd->GetCommandBuffer(),
+				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT,
+				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+				0, 0, nullptr, 0, nullptr, 1, &toColorAttachmentBarrier
 			);
 		});
 	}

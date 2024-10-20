@@ -18,6 +18,7 @@
 #include <unordered_map>
 #include <set>
 #include <unordered_set>
+#include <iterator>
 
 #define SCLASS(class_name)\
 public:\
@@ -403,7 +404,7 @@ namespace sh::core::reflection
 	private:
 		TContainer* container;
 		typename TContainer::iterator it;
-		using iteratorType = typename TContainer::iterator::reference;
+		using IteratorType = typename std::iterator_traits<typename TContainer::iterator>::reference;
 	public:
 		PropertyIteratorData(TContainer* container) :
 			container(container)
@@ -482,7 +483,7 @@ namespace sh::core::reflection
 		}
 		auto IsConst() const -> bool override
 		{
-			return std::is_const<std::remove_reference_t<iteratorType>>::value;
+			return std::is_const<std::remove_reference_t<IteratorType>>::value;
 		}
 
 		auto operator==(const IPropertyIteratorBase& other) -> bool override
@@ -507,7 +508,7 @@ namespace sh::core::reflection
 				it = container->erase(it);
 			else
 			{
-				if constexpr (std::is_pointer_v<T> && !std::is_const_v<std::remove_reference_t<iteratorType>>)
+				if constexpr (std::is_pointer_v<T> && !std::is_const_v<std::remove_reference_t<IteratorType>>)
 					*it = nullptr;
 			}
 		}

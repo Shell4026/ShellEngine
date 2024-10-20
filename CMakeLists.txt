@@ -14,6 +14,7 @@ project (
  set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
  set(CMAKE_CXX_STANDARD 17)
+ set(CMAKE_CXX_STANDARD_REQUIRED True)
 # 하위 프로젝트를 포함합니다.
 add_subdirectory (src)
 add_subdirectory (include/External/imgui)

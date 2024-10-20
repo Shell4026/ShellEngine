@@ -36,6 +36,8 @@ namespace sh::game
 	}
 	SH_GAME_API void PickingRenderer::BeginUpdate()
 	{
+		if (!core::IsValid(camera))
+			return;
 		if (!camera->pickingCallback.Empty())
 		{
 			for (auto& [cam, drawable] : drawables)

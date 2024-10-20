@@ -8,10 +8,11 @@
 #include "Core/SContainer.hpp"
 namespace sh::game
 {
+	class RigidBody;
 	class BoxCollider : public Component
 	{
 		COMPONENT(BoxCollider)
-		friend class RigidBody;;
+		friend RigidBody;
 	private:
 		reactphysics3d::BoxShape* shape = nullptr;
 		PROPERTY(rigidbodies)

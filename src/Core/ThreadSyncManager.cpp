@@ -1,5 +1,7 @@
 ﻿#include "ThreadSyncManager.h"
 
+#include "Logger.h"
+
 #include <algorithm>
 #include <string>
 
@@ -27,10 +29,11 @@ namespace sh::core
 
 		while (!syncables.empty())
 		{
-			auto& syncable = syncables.front();
+			core::ISyncable* syncable = syncables.front();
 			syncables.pop();
 
-			syncable->Sync();
+			if (syncable)
+				syncable->Sync();
 		}
 
 		for (int i = threads.size() - 1; i >= 0; --i)

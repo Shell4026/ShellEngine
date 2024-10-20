@@ -707,7 +707,7 @@ namespace sh::render {
 				// 프레임버퍼에 그림
 				if(renderTexture != nullptr)
 				{
-					auto framebuffer = static_cast<const impl::VulkanFramebuffer*>(renderTexture->GetFramebuffer());
+					auto framebuffer = static_cast<const impl::VulkanFramebuffer*>(renderTexture->GetFramebuffer(core::ThreadType::Render));
 					std::array<VkClearValue, 2> clear;
 					clear[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
 					clear[1].depthStencil = { 1.0f, 0 };
@@ -745,6 +745,8 @@ namespace sh::render {
 					}
 					//End RenderPass
 					vkCmdEndRenderPass(buffer);
+
+					renderTexture->SetDirty();
 				}
 				//MainPass
 				else

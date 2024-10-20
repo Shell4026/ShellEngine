@@ -65,6 +65,8 @@ namespace sh::render
 		bDirty = true;
 		if (renderer != nullptr)
 			renderer->GetThreadSyncManager().PushSyncable(*this);
+		else
+			bDirty = false;
 	}
 	void Texture::Sync()
 	{

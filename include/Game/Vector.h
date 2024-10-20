@@ -183,6 +183,15 @@ namespace sh::game
                 w = other.w;
             return *this;
         }
+        auto operator=(const std::initializer_list<float>& list) -> Vec<N>
+        {
+            for (std::size_t i = 0; i < N; ++i)
+            {
+                if (i < list.size())
+                    data[i] = *(list.begin() + i);
+            }
+            return *this;
+        }
 
         // 벡터 간 연산
         auto operator+(const Vec<N> other) const-> Vec<N>

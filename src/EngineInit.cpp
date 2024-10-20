@@ -97,8 +97,6 @@ namespace sh
 		auto gridMat = world->materials.AddResource("GridMaterial", sh::render::Material{ gridShader });
 		auto pickingMat = world->materials.AddResource("PickingMaterial", sh::render::Material{ pickingShader });
 
-		std::vector<int>::iterator;
-
 		auto plane = world->meshes.AddResource("PlaneMesh", sh::render::Plane{});
 		auto cube = world->meshes.AddResource("Cube", modelLoader.Load("model/cube.obj"));
 		auto mesh2 = world->meshes.AddResource("Mesh2", modelLoader.Load("model/test.obj"));
@@ -294,9 +292,8 @@ namespace sh
 
 			this->world->Update(window->GetDeltaTime());
 
-			gc->Update();
 			threadSyncManager.Sync();
-			
+			gc->Update();
 			threadSyncManager.AwakeThread();
 		}
 	}

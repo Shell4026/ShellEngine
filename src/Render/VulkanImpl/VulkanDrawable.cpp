@@ -48,7 +48,6 @@ namespace sh::render
 
 	VulkanDrawable::~VulkanDrawable() noexcept
 	{
-		SH_INFO("~VulkanDrawable()");
 		Clean(core::ThreadType::Game);
 		Clean(core::ThreadType::Render);
 	}
@@ -116,7 +115,7 @@ namespace sh::render
 		if (camera.GetRenderTexture() == nullptr)
 			vkFrameBuffer = static_cast<const impl::VulkanFramebuffer*>(renderer.GetMainFramebuffer());
 		else
-			vkFrameBuffer = static_cast<const impl::VulkanFramebuffer*>(camera.GetRenderTexture()->GetFramebuffer());
+			vkFrameBuffer = static_cast<const impl::VulkanFramebuffer*>(camera.GetRenderTexture()->GetFramebuffer(core::ThreadType::Game));
 
 		//토폴리지
 		impl::VulkanPipeline::Topology topology = impl::VulkanPipeline::Topology::Triangle;
