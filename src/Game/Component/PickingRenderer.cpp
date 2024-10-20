@@ -11,7 +11,7 @@ namespace sh::game
 		MeshRenderer(owner)
 	{
 		id = PickingIdManager::AssignId(this);
-		SH_INFO_FORMAT("ID: {}", id);
+		//SH_INFO_FORMAT("ID: {}", id);
 
 		this->mat = world.materials.GetResource("PickingMaterial");
 		auto renderer = owner.GetComponent<MeshRenderer>();

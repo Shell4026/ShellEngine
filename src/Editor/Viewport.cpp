@@ -41,12 +41,15 @@ namespace sh::editor
 
 		pickingListener.SetCallback([&world ](uint8_t r, uint8_t g, uint8_t b, uint8_t a)
 			{
-				SH_INFO_FORMAT("R:{}, G:{}, B:{}, A:{}", r, g, b, a);
+				SH_INFO_FORMAT("Pick R:{}, G:{}, B:{}, A:{}", r, g, b, a);
 				uint32_t id = r | g << 8 | b << 24;
 				if (auto pickingRenderer = game::PickingIdManager::Get(id); pickingRenderer != nullptr)
 					world.SetSelectedObject(&pickingRenderer->gameObject);
 			}
 		);
+
+		if (pickingCamera == nullptr)
+			pickingCamera = world.GetGameObject("PickingCamera")->GetComponent<game::PickingCamera>();
 	}
 	Viewport::~Viewport()
 	{
@@ -83,9 +86,6 @@ namespace sh::editor
 				//phys::Ray ray = cam->ScreenPointToRay(mousePos);
 				//line->SetStart(ray.origin);
 				//line->SetEnd(ray.origin + ray.direction * 5.f);
-
-				if (pickingCamera == nullptr)
-					pickingCamera = world.GetGameObject("PickingCamera")->GetComponent<game::PickingCamera>();
 
 				pickingCamera->SetPickingPos({ mousePos.x, mousePos.y });
 				pickingCamera->pickingCallback.Register(pickingListener);
