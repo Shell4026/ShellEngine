@@ -79,6 +79,8 @@ namespace sh::game
 		{
 			for (Component* component : components)
 			{
+				if (!core::IsValid(component))
+					continue;
 				if (T* casting = sh::core::reflection::Cast<T>(component); casting != nullptr)
 					return casting;
 			}
