@@ -26,7 +26,7 @@ namespace sh::core
 	protected:
 		GarbageCollection* gc;
 	public:
-		Observer<SObject*> onDestroy;
+		Observer<false, SObject*> onDestroy;
 #if SH_EDITOR
 		std::string editorName;
 #endif

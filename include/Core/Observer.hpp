@@ -16,8 +16,9 @@
 namespace sh::core
 {
 	/// @brief 리스너를 등록하면 특정 시점에 그 리스너의 함수를 호출하는 클래스.
+	/// @tparam OneTimeListener Notify 후 리스너가 제거 되는지
 	/// @tparam ...Args 리스너 매개변수
-	template<typename... Args>
+	template<bool OneTimeListener, typename... Args>
 	class Observer : public INonCopyable
 	{
 	public:
@@ -30,10 +31,11 @@ namespace sh::core
 		private:
 			std::function<void(Args...)> func;
 
-			Observer* observer;
+			Observer* observer = nullptr;
 		public:
 			const int priority;
 		public:
+			Listener(int priority = 0) : priority(priority) {};
 			/// @brief 생성자
 			/// @param func 호출 될 함수
 			/// @param priority 우선 순위. 높을 수록 옵저버에서 우선 실행된다.
@@ -50,6 +52,11 @@ namespace sh::core
 				if (observer == nullptr) 
 					return;
 				observer->UnRegister(*this);
+			}
+
+			void SetCallback(const std::function<void(Args...)>& func)
+			{
+				this->func = func;
 			}
 
 			bool operator<(const Listener& other) const
@@ -92,31 +99,36 @@ namespace sh::core
 
 		/// @brief 등록된 리스너를 모두 제거하는 함수.
 		void Clear();
+
+		/// @brief 리스너가 없는지 반환 하는 함수
+		/// @return 없으면 true, 있으면 false
+		bool Empty();
 	};//class
 
 
 
-	template<typename ...Args>
-	inline Observer<Args...>::Observer() :
+	template<bool OneTimeListener, typename ...Args>
+	inline Observer<OneTimeListener, Args...>::Observer() :
 		events()
 	{
 	}
-	template<typename ...Args>
-	Observer<Args...>::~Observer()
+	template<bool OneTimeListener, typename ...Args>
+	Observer<OneTimeListener, Args...>::~Observer()
 	{
 		for (Listener* listener : events)
 		{
-			listener->observer = nullptr;
+			if (listener)
+				listener->observer = nullptr;
 		}
 	}
-	template<typename ...Args>
-	void Observer<Args...>::Register(Listener& event)
+	template<bool OneTimeListener, typename ...Args>
+	void Observer<OneTimeListener, Args...>::Register(Listener& event)
 	{
 		event.observer = this;
 		events.insert(&event);
 	}
-	template<typename ...Args>
-	bool Observer<Args...>::UnRegister(Listener& event)
+	template<bool OneTimeListener, typename ...Args>
+	bool Observer<OneTimeListener, Args...>::UnRegister(Listener& event)
 	{
 		auto it = events.find(&event);
 		if (it == events.end())
@@ -127,22 +139,30 @@ namespace sh::core
 
 		return true;
 	}
-	template<typename ...Args>
-	void Observer<Args...>::Notify(const Args&... args)
+	template<bool OneTimeListener, typename ...Args>
+	void Observer<OneTimeListener, Args...>::Notify(const Args&... args)
 	{
 		for (auto& event : events)
 		{
 			event->Execute(args...);
 		}
+		if constexpr (OneTimeListener)
+			Clear();
 	}
 
-	template<typename ...Args>
-	inline void Observer<Args...>::Clear()
+	template<bool OneTimeListener, typename ...Args>
+	inline void Observer<OneTimeListener, Args...>::Clear()
 	{
 		for (Listener* listener : events)
 		{
 			listener->observer = nullptr;
 		}
 		events.clear();
+	}
+
+	template<bool OneTimeListener, typename ...Args>
+	inline bool Observer<OneTimeListener, Args...>::Empty()
+	{
+		return events.empty();
 	}
 }//namespace

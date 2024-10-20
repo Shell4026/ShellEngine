@@ -72,7 +72,7 @@ namespace sh::game
 		}
 
 		glm::vec3 to = lookPos - glm::vec3{ gameObject.transform->position };
-		glm::vec3 right = glm::normalize(glm::cross(to, this->up));
+		glm::vec3 right = glm::normalize(glm::cross(to, glm::vec3{ this->up }));
 		glm::vec3 up = glm::normalize(glm::cross(right, to));
 
 		glm::vec2 delta = (Input::mousePosition - middlePressedPos);

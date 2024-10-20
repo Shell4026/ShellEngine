@@ -74,10 +74,10 @@ namespace sh::game
 	public:
 		const ComponentModule& componentModule;
 		const core::SVector<GameObject*>& gameObjects = objs;
-		core::Observer<Camera*> onCameraAdd;
-		core::Observer<Camera*> onCameraRemove;
-		core::Observer<GameObject*> onGameObjectAdded;
-		core::Observer<GameObject*> onGameObjectRemoved;
+		core::Observer<false, Camera*> onCameraAdd;
+		core::Observer<false, Camera*> onCameraRemove;
+		core::Observer<false, GameObject*> onGameObjectAdded;
+		core::Observer<false, GameObject*> onGameObjectRemoved;
 	public:
 		SH_GAME_API World(sh::render::Renderer& renderer, const ComponentModule& componentModule);
 		SH_GAME_API World(World&& other) noexcept;

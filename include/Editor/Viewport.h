@@ -4,6 +4,7 @@
 #include "UI.h"
 
 #include "Core/ISyncable.h"
+#include "Core/Observer.hpp"
 
 #include "Render/VulkanImpl/VulkanConfig.h"
 #include "Render/RenderTexture.h"
@@ -15,6 +16,7 @@
 namespace sh::game
 {
 	class ImGUImpl;
+	class PickingCamera;
 }
 
 namespace sh::editor
@@ -37,6 +39,10 @@ namespace sh::editor
 		render::RenderTexture* renderTex;
 		core::SyncArray<VkDescriptorSet> viewportDescSet;
 		
+		game::PickingCamera* pickingCamera = nullptr;
+
+		core::Observer<true, uint8_t, uint8_t, uint8_t, uint8_t>::Listener pickingListener{};
+
 		bool bDirty;
 		bool bMouseDown;
 		bool bFocus;

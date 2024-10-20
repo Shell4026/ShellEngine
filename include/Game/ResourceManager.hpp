@@ -29,7 +29,7 @@ namespace sh::game
 
 		core::SHashMap<std::string, T*> resources;
 
-		core::Observer<T*> onResourceDestroy;
+		core::Observer<false, T*> onResourceDestroy;
 	public:
 		ResourceManager(sh::render::Renderer& renderer) :
 			renderer(renderer), gc(*core::GarbageCollection::GetInstance()), onResourceDestroy()

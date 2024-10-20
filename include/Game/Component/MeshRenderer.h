@@ -24,17 +24,17 @@ namespace sh::game
 	{
 		COMPONENT(MeshRenderer);
 	private:
+		core::SVector<unsigned char> uniformCopyData;
+
+		core::Observer<false, Camera*>::Listener onCameraAddListener;
+		core::Observer<false, Camera*>::Listener onCameraRemoveListener;
+	protected:
 		PROPERTY(mesh);
 		const sh::render::Mesh* mesh;
 		PROPERTY(mat);
 		sh::render::Material* mat;
 		PROPERTY(drawables);
 		core::SMap<Camera*, sh::render::IDrawable*> drawables;
-
-		core::SVector<unsigned char> uniformCopyData;
-
-		core::Observer<Camera*>::Listener onCameraAddListener;
-		core::Observer<Camera*>::Listener onCameraRemoveListener;
 	private:
 		template <typename T>
 		void SetUniformData(const T& data, std::vector<unsigned char>& uniformData, size_t offset);

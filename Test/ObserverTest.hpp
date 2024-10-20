@@ -9,7 +9,7 @@ class Target
 private:
 	int number;
 public:
-	sh::core::Observer<int> observer{};
+	sh::core::Observer<false, int> observer{};
 public:
 	Target() :
 		 number(0)
@@ -35,7 +35,7 @@ TEST(ObserverTest, NotifyTesting)
 
 	Target target{};
 
-	sh::core::Observer<int>::Listener listener
+	sh::core::Observer<false, int>::Listener listener
 	{
 		[&](int num)
 		{
@@ -55,7 +55,7 @@ TEST(ObserverTest, PriorityTesting)
 
 	Target target{};
 
-	sh::core::Observer<int>::Listener listener1
+	sh::core::Observer<false, int>::Listener listener1
 	{ 
 		[&](int num)
 		{
@@ -63,7 +63,7 @@ TEST(ObserverTest, PriorityTesting)
 		},
 		0
 	};
-	sh::core::Observer<int>::Listener listener2
+	sh::core::Observer<false, int>::Listener listener2
 	{
 		[&](int num)
 		{
@@ -71,7 +71,7 @@ TEST(ObserverTest, PriorityTesting)
 		},
 		1
 	};
-	sh::core::Observer<int>::Listener listener3
+	sh::core::Observer<false, int>::Listener listener3
 	{
 		[&](int num)
 		{
@@ -106,7 +106,7 @@ TEST(ObserverTest, AutoUnRegisterTesting)
 	Target target{};
 
 	{
-		sh::core::Observer<int>::Listener listener
+		sh::core::Observer<false, int>::Listener listener
 		{
 			[&](int num)
 			{
