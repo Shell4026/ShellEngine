@@ -102,3 +102,52 @@ TEST(ContainerTest, LockFreeQueue)
 
 	EXPECT_LE(timeQueue, timeQueue2);
 }
+
+TEST(ContainerTest, SHashMapVectorTest)
+{
+	using namespace sh;
+	core::SHashMapVector<std::string, int> hvec;
+	hvec.Insert("test1", 1);
+	hvec.Insert("test2", 2);
+	hvec.Insert("test3", 3);
+
+	int i = 1;
+	for (auto& v : hvec)
+	{
+		if (v)
+		{
+			EXPECT_EQ(*v, i++);
+		}
+	}
+	hvec.Erase("test2");
+	EXPECT_FALSE(hvec[1].has_value());
+	EXPECT_EQ(hvec.Size(), 2);
+	EXPECT_EQ(hvec.AllocatedSize(), 3);
+	auto it = hvec.Find("Test2");
+	EXPECT_TRUE(it == hvec.end());
+	it = hvec.Find("test3");
+	EXPECT_FALSE(it == hvec.end());
+	EXPECT_EQ(it->value(), 3);
+
+	for (int i = 0; i < 7; ++i)
+	{
+		hvec.Insert("test" + std::to_string(4 + i), 4 + i);
+	}
+	EXPECT_EQ(hvec.Size(), 9);
+	EXPECT_EQ(hvec.AllocatedSize(), 9);
+
+	hvec.Clear();
+	EXPECT_EQ(hvec.Size(), 0);
+	EXPECT_EQ(hvec.AllocatedSize(), 0);
+
+	for (int i = 0; i < 10; ++i)
+	{
+		hvec.Insert("test" + std::to_string(i), i);
+	}
+	for (int i = 0; i < 8; ++i)
+	{
+		hvec.Erase("test" + std::to_string(i));
+	}
+	EXPECT_EQ(hvec.Size(), 2);
+	EXPECT_EQ(hvec.AllocatedSize(), 2);
+}
