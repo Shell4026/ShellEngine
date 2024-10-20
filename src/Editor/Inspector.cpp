@@ -213,7 +213,28 @@ namespace sh::editor
 							}
 							else
 							{
-								if (type == core::reflection::GetTypeName<game::Vec3>())
+								if (type == core::reflection::GetTypeName<game::Vec4>())
+								{
+									game::Vec4* parameter = prop.Get<game::Vec4>(component);
+									float v[4] = { parameter->x, parameter->y, parameter->z };
+									ImGui::LabelText(("##" + name).c_str(), name.c_str());
+									if (constant)
+									{
+										ImGui::InputFloat4(("##" + name + std::to_string(idx)).c_str(), v, "%.3f", inputFlag);
+									}
+									else
+									{
+										if (ImGui::InputFloat4(("##" + name + std::to_string(idx)).c_str(), v))
+										{
+											parameter->x = v[0];
+											parameter->y = v[1];
+											parameter->z = v[2];
+											parameter->w = v[3];
+											component->OnPropertyChanged(prop);
+										}
+									}
+								}
+								else if (type == core::reflection::GetTypeName<game::Vec3>())
 								{
 									game::Vec3* parameter = prop.Get<game::Vec3>(component);
 									float v[3] = { parameter->x, parameter->y, parameter->z };
