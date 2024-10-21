@@ -8,7 +8,7 @@ Vulkan C++17 크로스 플랫폼 게임 엔진
 > 각 스레드는 작업이 끝난 후 Sync타이밍에 버퍼를 교환하며 가비지 컬렉터가 작동합니다.
 
 ## 구성 요소
-![구조](https://github.com/user-attachments/assets/7f85f7ac-3e7e-43e1-accb-9dc8effbc9e0)
+![구조](https://github.com/user-attachments/assets/2cbb3291-e7cd-4441-86dc-6fe32df651c6)
 
 ### Core 모듈
 > 하위 모듈에서 쓸 공통적인 코드와 핵심 기능을 정의해둔 모듈입니다. </br>
@@ -50,3 +50,9 @@ sudo apt install build-essential ninja-build
 sudo apt install libx11-dev libxext-dev libgl1-mesa-dev
 ```
 VulkanSDK : https://vulkan.lunarg.com/sdk/home#linux
+
+# TODO
+- 조명
+- 스켈레탈 메쉬
+- 애니메이션, 애니메이터
+- 세이브, 로드 (직렬화)
