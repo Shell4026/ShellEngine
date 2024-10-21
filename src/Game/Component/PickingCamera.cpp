@@ -3,13 +3,13 @@
 
 #include "Game/World.h"
 #include "Game/GameObject.h"
+#include "Game/RenderThread.h"
 
 #include "Render/VulkanImpl/VulkanFramebuffer.h"
 #include "Render/VulkanImpl/VulkanImageBuffer.h"
 #include "Render/VulkanImpl/VulkanRenderer.h"
 #include "Render/VulkanImpl/VulkanBuffer.h"
 #include "Render/BufferFactory.h"
-
 
 namespace sh::game
 {
@@ -46,26 +46,40 @@ namespace sh::game
 				this->SetUpVector(followCamera->GetUpVector());
 			}
 			CalcMatrix();
-			assert(world.renderer.apiType == render::RenderAPI::Vulkan);
-			if (world.renderer.apiType == render::RenderAPI::Vulkan)
-			{
-				auto vkFramebuffer = static_cast<render::impl::VulkanFramebuffer*>(renderTex->GetFramebuffer(core::ThreadType::Game));
-				auto& vkRenderer = static_cast<render::VulkanRenderer&>(world.renderer);
-				auto vkBuffer = static_cast<render::impl::VulkanBuffer*>(buffer.get());
 
-				vkFramebuffer->TransferImageToBuffer(vkRenderer.GetCommandBuffer(core::ThreadType::Game), vkRenderer.GetTransferQueue(), vkBuffer->GetBuffer(), x, y);
-				pixels = reinterpret_cast<uint8_t*>(buffer->GetData());
-			}
-		}
-		if (!pickingCallback.Empty())
-		{
-			if(frameCount == 1)
+			if (!addTask)
 			{
-				pickingCallback.Notify(pixels[0], pixels[1], pixels[2], pixels[3]);
-				frameCount = 0;
+				renderAlreadyPromise = std::promise<void>{};
+				renderAlready = renderAlreadyPromise.get_future();
+				game::RenderThread::GetInstance()->AddEndTaskFromOtherThread([&]
+					{
+						renderAlreadyPromise.set_value();
+					}
+				);
+				addTask = true;
 			}
-			else
-				++frameCount;
+			if (renderAlready.valid())
+			{
+				// 요청을 받은 후 적어도 1프레임 뒤에 알 수 있다.
+				// (에디터 요청 -> 렌더링 요청) -> 스레드 동기화 -> 렌더링 -> promise에 신호 전달 - 0프레임
+				// 신호를 받았으면 처리, 아니면 다음 프레임 - 1프레임
+				if (renderAlready.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+				{
+					assert(world.renderer.apiType == render::RenderAPI::Vulkan);
+					if (world.renderer.apiType == render::RenderAPI::Vulkan)
+					{
+						auto vkFramebuffer = static_cast<render::impl::VulkanFramebuffer*>(renderTex->GetFramebuffer(core::ThreadType::Render));
+						auto& vkRenderer = static_cast<render::VulkanRenderer&>(world.renderer);
+						auto vkBuffer = static_cast<render::impl::VulkanBuffer*>(buffer.get());
+
+						vkFramebuffer->TransferImageToBuffer(vkRenderer.GetCommandBuffer(core::ThreadType::Game), vkRenderer.GetTransferQueue(), vkBuffer->GetBuffer(), x, y);
+						pixels = reinterpret_cast<uint8_t*>(buffer->GetData());
+					}
+
+					pickingCallback.Notify(pixels[0], pixels[1], pixels[2], pixels[3]);
+					addTask = false;
+				}
+			}
 		}
 	}
 

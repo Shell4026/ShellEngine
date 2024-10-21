@@ -10,6 +10,7 @@
 
 #include <functional>
 #include <queue>
+#include <future>
 
 namespace sh::game
 {
@@ -23,11 +24,14 @@ namespace sh::game
 		Camera* followCamera = nullptr;
 		
 		int x = 0, y = 0;
-		int frameCount = 0;
 
 		std::unique_ptr<render::IBuffer> buffer;
 
 		uint8_t* pixels = nullptr;
+
+		std::promise<void> renderAlreadyPromise;
+		std::future<void> renderAlready;
+		bool addTask = false;
 	public:
 		struct PixelData
 		{
