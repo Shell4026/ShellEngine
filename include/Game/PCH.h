@@ -17,4 +17,5 @@
 #include <initializer_list>
 #include <array>
 #include <thread>
+#include <future>
 #include <algorithm>

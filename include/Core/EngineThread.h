@@ -20,7 +20,8 @@ namespace sh::core
 		std::mutex mu;
 
 		SVector<std::function<void()>> tasks;
-		core::LockFreeQueue<std::function<void()>> otherThreadTasks;
+		core::LockFreeQueue<std::function<void()>> beginTasks;
+		core::LockFreeQueue<std::function<void()>> endTasks;
 
 		std::unique_ptr<std::condition_variable> cv;
 
@@ -44,7 +45,10 @@ namespace sh::core
 		SH_CORE_API auto GetThread() -> std::thread&;
 		/// @brief [원자적] 작업 큐에 작업을 추가하는 함수. 매 업데이트 전 실행된다.
 		/// @param func 수행 할 함수
-		SH_CORE_API void AddTaskFromOtherThread(const std::function<void()>& task);
+		SH_CORE_API void AddBeginTaskFromOtherThread(const std::function<void()>& task);
+		/// @brief [원자적] 작업 큐에 작업을 추가하는 함수. 매 업데이트 후 실행된다.
+		/// @param func 수행 할 함수
+		SH_CORE_API void AddEndTaskFromOtherThread(const std::function<void()>& task);
 		/// @brief [원자적] 루프를 중단 시키고 스레드를 끝내는 함수.
 		SH_CORE_API void Stop();
 		/// @brief 스레드가 자고 있으면 깨운다. (조건 변수 사용)

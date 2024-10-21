@@ -7,6 +7,7 @@
 namespace sh::game
 {
 	class ImGUImpl;
+	class EditorCamera;
 }
 namespace sh::editor
 {
@@ -18,6 +19,8 @@ namespace sh::editor
 	private:
 		PROPERTY(selected)
 		game::GameObject* selected = nullptr;
+		PROPERTY(editorCamera)
+		game::EditorCamera* editorCamera = nullptr;
 
 		game::ImGUImpl& guiContext;
 

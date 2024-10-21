@@ -2,17 +2,17 @@
 
 namespace sh::core
 {
-	EngineThread::EngineThread(bool bSleepThread) :
+	SH_CORE_API EngineThread::EngineThread(bool bSleepThread) :
 		mutex(mu),
 		mu(), cv(nullptr),
 		bStop(false),
 		bSleep(bSleepThread),
-		otherThreadTasks()
+		beginTasks(), endTasks()
 	{
 		thr = std::thread{ [&] { Update(); } };
 	}
 
-	auto EngineThread::GetThread() -> std::thread&
+	SH_CORE_API auto EngineThread::GetThread() -> std::thread&
 	{
 		return thr;
 	}
@@ -24,10 +24,12 @@ namespace sh::core
 			std::unique_lock<std::mutex> lock{ mu };
 
 			std::function<void()> otherTask;
-			while (otherThreadTasks.Dequeue(otherTask))
+			while (beginTasks.Dequeue(otherTask))
 				otherTask();
 			for (auto& task : tasks)
 				task();
+			while (endTasks.Dequeue(otherTask))
+				otherTask();
 
 			if (cv)
 			{
@@ -37,17 +39,21 @@ namespace sh::core
 		}
 	}
 
-	void EngineThread::AddTask(const std::function<void()>& task)
+	SH_CORE_API void EngineThread::AddTask(const std::function<void()>& task)
 	{
 		tasks.push_back(task);
 	}
 
-	void EngineThread::AddTaskFromOtherThread(const std::function<void()>& task)
+	SH_CORE_API void EngineThread::AddBeginTaskFromOtherThread(const std::function<void()>& task)
 	{
-		otherThreadTasks.Enqueue(task);
+		beginTasks.Enqueue(task);
+	}
+	SH_CORE_API void EngineThread::AddEndTaskFromOtherThread(const std::function<void()>& task)
+	{
+		endTasks.Enqueue(task);
 	}
 
-	void EngineThread::Stop()
+	SH_CORE_API void EngineThread::Stop()
 	{
 		bStop.store(true, std::memory_order::memory_order_relaxed); // 원자적이기만 하면 되므로 relaxed
 		if (cv)
@@ -60,7 +66,7 @@ namespace sh::core
 		}
 	}
 
-	bool EngineThread::Awake()
+	SH_CORE_API bool EngineThread::Awake()
 	{
 		if (!this->cv)
 			return false;
@@ -74,7 +80,7 @@ namespace sh::core
 		return false;
 	}
 
-	void EngineThread::SetWaitableThread(bool wait)
+	SH_CORE_API void EngineThread::SetWaitableThread(bool wait)
 	{
 		if (wait)
 		{

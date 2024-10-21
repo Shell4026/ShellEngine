@@ -38,7 +38,7 @@ namespace sh::render
 	}
 	Mesh::~Mesh()
 	{
-
+		SH_INFO("~?");
 	}
 
 	auto Mesh::operator=(const Mesh& other) -> Mesh&

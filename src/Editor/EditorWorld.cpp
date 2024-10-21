@@ -8,6 +8,8 @@
 #include "Game/Component/EditorCamera.h"
 #include "Game/Component/PickingCamera.h"
 #include "Game/Component/PickingRenderer.h"
+#include "Game/Component/EditorControl.h"
+#include "Game/Component/LineRenderer.h"
 
 namespace sh::editor
 {
@@ -17,13 +19,13 @@ namespace sh::editor
 		game::GameObject* camObj = AddGameObject("EditorCamera");
 		camObj->transform->SetPosition({ 2.f, 2.f, 2.f });
 		camObj->hideInspector = true;
-		auto cam = camObj->AddComponent<game::EditorCamera>();
-		this->SetMainCamera(cam);
+		editorCamera = camObj->AddComponent<game::EditorCamera>();
+		this->SetMainCamera(editorCamera);
 
-		auto PickingCamObj = this->AddGameObject("PickingCamera");
+		auto PickingCamObj = AddGameObject("PickingCamera");
 		PickingCamObj->transform->SetParent(camObj->transform);
 		auto pickingCam = PickingCamObj->AddComponent<game::PickingCamera>();
-		pickingCam->SetFollowCamera(cam);
+		pickingCam->SetFollowCamera(editorCamera);
 	}
 
 	SH_EDITOR_API EditorWorld::~EditorWorld()
@@ -39,7 +41,24 @@ namespace sh::editor
 
 	SH_EDITOR_API void EditorWorld::SetSelectedObject(game::GameObject* gameObject)
 	{
+		if (selected)
+		{
+			auto control = selected->GetComponent<game::EditorControl>();
+			if (core::IsValid(control))
+			{
+				control->Destroy();
+			}
+		}
 		selected = gameObject;
+		if (selected)
+		{
+			if (selected->GetComponent<game::EditorControl>() == nullptr)
+			{
+				auto control = selected->AddComponent<game::EditorControl>();
+				control->SetCamera(editorCamera);
+				control->hideInspector = true;
+			}
+		}
 	}
 	SH_EDITOR_API auto EditorWorld::GetSelectedObject() const -> game::GameObject*
 	{
@@ -59,17 +78,30 @@ namespace sh::editor
 		meshRenderer->SetMesh(this->meshes.GetResource("GridMesh"));
 		meshRenderer->SetMaterial(this->materials.GetResource("GridMaterial"));
 
+		auto axis = AddGameObject("_Axis");
+		axis->transform->SetPosition(0.f, 0.01f, 0.f);
+		axis->transform->SetParent(grid->transform);
+		auto line = axis->AddComponent<game::LineRenderer>();
+		line->SetEnd({ 10.f, 0.f, 0.f });
+		line->SetColor({ 1.f, 0.f, 0.f, 1.f });
+		line = axis->AddComponent<game::LineRenderer>();
+		line->SetEnd({ 0.f, 10.f, 0.f });
+		line->SetColor({ 0.f, 1.f, 0.f, 1.f });
+		line = axis->AddComponent<game::LineRenderer>();
+		line->SetEnd({ 0.f, 0.f, 10.f });
+		line->SetColor({ 0.f, 0.f, 1.f, 1.f });
+
 		Super::Start();
 	}
 
 	SH_EDITOR_API void EditorWorld::Update(float deltaTime)
 	{
-		Super::Update(deltaTime);
 		guiContext.Begin();
 
 		editorUI->Update();
 		editorUI->Render();
 
 		guiContext.End();
+		Super::Update(deltaTime);
 	}
 }

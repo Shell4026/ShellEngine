@@ -54,7 +54,7 @@ namespace sh::game
 				CreateDrawable(cam);
 
 #if SH_EDITOR
-			if (GetType().typeName != core::reflection::GetTypeName<PickingRenderer>())
+			if (GetType().typeName == core::reflection::GetTypeName<MeshRenderer>())
 			{
 				if (auto picking = gameObject.GetComponent<PickingRenderer>(); picking == nullptr)
 				{

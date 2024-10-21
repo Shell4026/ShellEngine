@@ -6,12 +6,9 @@
 #include "Game/ImGUImpl.h"
 #include "Game/Input.h"
 #include "Game/GameObject.h"
-#include "Game/Component/Camera.h"
-#include "Game/Component/LineRenderer.h"
 #include "Game/Component/PickingCamera.h"
 #include "Game/Component/PickingRenderer.h"
 
-#include "Physics/Ray.h"
 
 #include "Render/RenderTexture.h"
 #include "Render/VulkanImpl/VulkanTextureBuffer.h"
@@ -43,8 +40,14 @@ namespace sh::editor
 			{
 				SH_INFO_FORMAT("Pick R:{}, G:{}, B:{}, A:{}", r, g, b, a);
 				uint32_t id = r | g << 8 | b << 24;
-				if (auto pickingRenderer = game::PickingIdManager::Get(id); pickingRenderer != nullptr)
+				if (id == 0)
+				{
+					world.SetSelectedObject(nullptr);
+				}
+				else if (auto pickingRenderer = game::PickingIdManager::Get(id); pickingRenderer != nullptr)
+				{
 					world.SetSelectedObject(&pickingRenderer->gameObject);
+				}
 			}
 		);
 

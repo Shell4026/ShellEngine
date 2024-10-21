@@ -210,7 +210,7 @@ namespace sh
 				else
 				{
 					renderer->Pause(false);
-					renderThread->AddTaskFromOtherThread(
+					renderThread->AddBeginTaskFromOtherThread(
 						[&, width = window->width, height = window->height]
 						{
 							renderer->SetViewport({ 0, 0.f }, { width, height }); 
