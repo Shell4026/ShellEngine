@@ -24,7 +24,7 @@
 #undef max
 
 namespace sh::render {
-	VulkanRenderer::VulkanRenderer(core::ThreadSyncManager& syncManager) :
+	SH_RENDER_API VulkanRenderer::VulkanRenderer(core::ThreadSyncManager& syncManager) :
 		Renderer(RenderAPI::Vulkan, syncManager),
 		instance(nullptr), gpu(nullptr), device(nullptr), window(nullptr),
 		graphicsQueueIndex({ -1, 0 }), surfaceQueueIndex({ -1, 0 }),
@@ -39,13 +39,13 @@ namespace sh::render {
 	{
 	}
 
-	VulkanRenderer::~VulkanRenderer()
+	SH_RENDER_API VulkanRenderer::~VulkanRenderer()
 	{
 		if(isInit)
 			Clean();
 	}
 
-	void VulkanRenderer::Clean()
+	SH_RENDER_API void VulkanRenderer::Clean()
 	{
 		Renderer::Clean();
 		if (!device)
@@ -75,7 +75,7 @@ namespace sh::render {
 		fmt::print("Clean VulkanRenderer\n");
 	}
 
-	VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
+	VKAPI_ATTR VkBool32 VKAPI_CALL DebugCallback(
 		VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
 		VkDebugUtilsMessageTypeFlagsEXT messageType,
 		const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
@@ -137,7 +137,7 @@ namespace sh::render {
 			VkDebugUtilsMessageTypeFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT |
 			VkDebugUtilsMessageTypeFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT |
 			VkDebugUtilsMessageTypeFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-		debugInfo.pfnUserCallback = debugCallback;
+		debugInfo.pfnUserCallback = DebugCallback;
 		debugInfo.pUserData = nullptr;
 
 		return debugInfo;
@@ -251,41 +251,58 @@ namespace sh::render {
 		assert(surfaceQueueIndex.first != -1);
 		assert(transferQueueIndex.first != -1);
 		std::vector<VkDeviceQueueCreateInfo> queueInfos;
-		std::map<uint8_t, uint32_t> queueCount{};
 
-		queueCount.insert({ graphicsQueueIndex.first, 1 });
+		struct QueueData
+		{
+			uint32_t count;
+			std::vector<float> priorities;
+		};
+		std::map<uint8_t, QueueData> queueCount{};
+
+		queueCount.insert({ graphicsQueueIndex.first, QueueData{ 1, std::vector<float>{ 1.f } } });
+
+		// surface 큐
 		auto it = queueCount.find(surfaceQueueIndex.first);
 		if (it == queueCount.end())
 		{
-			queueCount.insert({ surfaceQueueIndex.first, 1 });
+			queueCount.insert({ surfaceQueueIndex.first, QueueData{ 1, std::vector<float>{ 1.f } } });
 		}
 		else
 		{
 			int maxCount = queueFamilies[it->first].queueCount;
-			it->second = (maxCount > it->second) ? it->second + 1 : it->second;
-			surfaceQueueIndex.second = it->second - 1;
+			if (it->second.count < maxCount)
+			{
+				it->second.count += 1;
+				it->second.priorities.push_back(1.f);
+			}
+			surfaceQueueIndex.second = it->second.count - 1;
 		}
+
+		// transfer 큐
 		it = queueCount.find(transferQueueIndex.first);
 		if (it == queueCount.end())
 		{
-			queueCount.insert({ transferQueueIndex.first, 1 });
+			queueCount.insert({ transferQueueIndex.first, QueueData{ 1, std::vector<float>{ 1.f } } });
 		}
 		else
 		{
 			int maxCount = queueFamilies[it->first].queueCount;
-			it->second = (maxCount > it->second) ? it->second + 1 : it->second;
-			transferQueueIndex.second = it->second - 1;
+			if (it->second.count < maxCount)
+			{
+				it->second.count += 1;
+				it->second.priorities.push_back(1.f);
+			}
+			transferQueueIndex.second = it->second.count - 1;
 		}
 
-		float queuePriority = 1.0f;
-		for (auto& [idx, count] : queueCount)
+		for (auto& [idx, info] : queueCount)
 		{
 			VkDeviceQueueCreateInfo queueInfo = {};
 			queueInfo.queueFamilyIndex = idx;
 			queueInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 			queueInfo.pNext = nullptr;
-			queueInfo.queueCount = count;
-			queueInfo.pQueuePriorities = &queuePriority;
+			queueInfo.queueCount = info.count;
+			queueInfo.pQueuePriorities = info.priorities.data();
 
 			queueInfos.push_back(queueInfo);
 		}
@@ -417,7 +434,7 @@ namespace sh::render {
 		}
 	}
 
-	bool VulkanRenderer::Init(sh::window::Window& win)
+	SH_RENDER_API bool VulkanRenderer::Init(sh::window::Window& win)
 	{
 		Renderer::Init(win);
 
@@ -553,7 +570,7 @@ namespace sh::render {
 		return true;
 	}
 
-	bool VulkanRenderer::Resizing()
+	SH_RENDER_API bool VulkanRenderer::Resizing()
 	{
 		vkDeviceWaitIdle(device);
 
@@ -651,17 +668,17 @@ namespace sh::render {
 		vkCmdDrawIndexed(cmd, mesh->GetIndices().size(), 1, 0, 0, 0);
 	}
 
-	bool VulkanRenderer::IsInit() const
+	SH_RENDER_API bool VulkanRenderer::IsInit() const
 	{
 		return isInit;
 	}
 
-	void VulkanRenderer::WaitForCurrentFrame()
+	SH_RENDER_API void VulkanRenderer::WaitForCurrentFrame()
 	{
 		vkWaitForFences(device, 1, &inFlightFence, VK_TRUE, UINT64_MAX);
 	}
 
-	void VulkanRenderer::Render(float deltaTime)
+	SH_RENDER_API void VulkanRenderer::Render(float deltaTime)
 	{
 		if (!isInit || bPause.load(std::memory_order::memory_order_acquire))
 			return;
@@ -856,80 +873,80 @@ namespace sh::render {
 		
 	}
 
-	auto VulkanRenderer::GetInstance() const -> VkInstance
+	SH_RENDER_API auto VulkanRenderer::GetInstance() const -> VkInstance
 	{
 		return instance;
 	}
-	auto VulkanRenderer::GetDevice() const -> VkDevice
+	SH_RENDER_API auto VulkanRenderer::GetDevice() const -> VkDevice
 	{
 		return device;
 	}
 
-	auto VulkanRenderer::GetMainFramebuffer() const -> const Framebuffer*
+	SH_RENDER_API auto VulkanRenderer::GetMainFramebuffer() const -> const Framebuffer*
 	{
 		return &framebuffers[0];
 	}
 
-	auto VulkanRenderer::GetGPU() const -> VkPhysicalDevice
+	SH_RENDER_API auto VulkanRenderer::GetGPU() const -> VkPhysicalDevice
 	{
 		return gpu;
 	}
 
-	auto VulkanRenderer::GetCommandPool(core::ThreadType thr) const -> VkCommandPool
+	SH_RENDER_API auto VulkanRenderer::GetCommandPool(core::ThreadType thr) const -> VkCommandPool
 	{
 		return cmdPool[thr];
 	}
-	auto VulkanRenderer::GetCommandBuffer(core::ThreadType thr) const -> impl::VulkanCommandBuffer*
+	SH_RENDER_API auto VulkanRenderer::GetCommandBuffer(core::ThreadType thr) const -> impl::VulkanCommandBuffer*
 	{
 		return cmdBuffer[static_cast<int>(thr)].get();
 	}
 
-	auto VulkanRenderer::GetGraphicsQueue() const -> VkQueue
+	SH_RENDER_API auto VulkanRenderer::GetGraphicsQueue() const -> VkQueue
 	{
 		return graphicsQueue;
 	}
-	auto VulkanRenderer::GetGraphicsQueueIdx() const -> std::pair<uint8_t, uint8_t>
+	SH_RENDER_API auto VulkanRenderer::GetGraphicsQueueIdx() const -> std::pair<uint8_t, uint8_t>
 	{
 		return graphicsQueueIndex;
 	}
-	auto VulkanRenderer::GetTransferQueue() const -> VkQueue
+	SH_RENDER_API auto VulkanRenderer::GetTransferQueue() const -> VkQueue
 	{
 		return transferQueue;
 	}
-	auto VulkanRenderer::GetTransferQueueIdx() const -> std::pair<uint8_t, uint8_t>
+	SH_RENDER_API auto VulkanRenderer::GetTransferQueueIdx() const -> std::pair<uint8_t, uint8_t>
 	{
 		return transferQueueIndex;
 	}
 
-	auto VulkanRenderer::GetDescriptorPool() const -> impl::VulkanDescriptorPool&
+	SH_RENDER_API auto VulkanRenderer::GetDescriptorPool() const -> impl::VulkanDescriptorPool&
 	{
 		return *descPool.get();
 	}
-	auto VulkanRenderer::GetCurrentFrame() const -> int
+	SH_RENDER_API auto VulkanRenderer::GetCurrentFrame() const -> int
 	{
 		return currentFrame;
 	}
-	auto VulkanRenderer::GetWidth() const -> uint32_t
+	SH_RENDER_API auto VulkanRenderer::GetWidth() const -> uint32_t
 	{
 		return surface->GetSwapChainSize().width;
 	}
-	auto VulkanRenderer::GetHeight() const -> uint32_t
+	SH_RENDER_API auto VulkanRenderer::GetHeight() const -> uint32_t
 	{
 		return surface->GetSwapChainSize().height;
 	}
-	auto VulkanRenderer::GetAllocator() const -> VmaAllocator
+	SH_RENDER_API auto VulkanRenderer::GetAllocator() const -> VmaAllocator
 	{
 		return allocator;
 	}
-	auto VulkanRenderer::GetGPUProperty() const -> const VkPhysicalDeviceProperties&
+	SH_RENDER_API auto VulkanRenderer::GetGPUProperty() const -> const VkPhysicalDeviceProperties&
 	{
 		return gpuProp;
 	}
-	auto VulkanRenderer::GetRenderFinshedSemaphore() const -> VkSemaphore
+	SH_RENDER_API auto VulkanRenderer::GetRenderFinshedSemaphore() const -> VkSemaphore
 	{
 		return renderFinishedSemaphore;
 	}
-	auto VulkanRenderer::GetGameThreadSemaphore() const -> VkSemaphore
+	SH_RENDER_API auto VulkanRenderer::GetGameThreadSemaphore() const -> VkSemaphore
 	{
 		return gameThreadSemaphore;
 	}

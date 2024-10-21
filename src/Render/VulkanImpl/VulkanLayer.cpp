@@ -131,7 +131,7 @@ namespace sh::render::impl
 	bool VulkanLayer::FindLayer(std::string_view layerName, VkPhysicalDevice gpu)
 	{
 		auto& layersVector = gpu ? gpuLayers : layers;
-		for (auto& i : layers)
+		for (auto& i : layersVector)
 		{
 			if (layerName == i.properties.layerName)
 				return true;
