@@ -12,18 +12,26 @@ Vulkan C++17 크로스 플랫폼 게임 엔진
 
 ### Core 모듈
 > 하위 모듈에서 쓸 공통적인 코드와 핵심 기능을 정의해둔 모듈입니다. </br>
-> 리플렉션과 GC 기능이 핵심입니다. [리플렉션](https://github.com/Shell4026/ShellEngine/blob/main/include/Core/Reflection.hpp) [GC](https://github.com/Shell4026/ShellEngine/blob/main/src/Core/GarbageCollection.cpp)</br>
+> 리플렉션과 GC 기능이 핵심입니다. </br>
+> [Reflection.hpp](https://github.com/Shell4026/ShellEngine/blob/main/include/Core/Reflection.hpp) [GarbageCollection.cpp](https://github.com/Shell4026/ShellEngine/blob/main/src/Core/GarbageCollection.cpp)</br>
 ### Window 모듈
 > Windows와 Linux의 창을 생성하고 OS의 이벤트를 받는 모듈입니다.
 ### Render 모듈
 > 렌더링에 필요한 기능들을 담고 있는 모듈입니다. </br>
-> 현재는 Vulkan API만 지원하며 추후 확장을 고려해 설계했습니다.
+> 현재는 Vulkan API만 지원하며 추후 확장을 고려해 설계했습니다. </br>
+> 큐에 IDrawable 객체를 받아 렌더링 하는 구조입니다. [VulkanRenderer.cpp](https://github.com/Shell4026/ShellEngine/blob/main/src/Render/VulkanImpl/VulkanRenderer.cpp)
 ### Physics 모듈
 > [ReactPhysics3D](https://www.reactphysics3d.com/)라이브러리를 사용한 물리 모듈입니다.
+### Game 모듈
+> 실제 게임에서 사용되는 객체와 컴포넌트들이 정의된 모듈입니다.</br>
+> COMPONENT 매크로를 사용하고 Component객체를 상속해 컴포넌트를 정의합니다.</br>
+> [GameObject.h](https://github.com/Shell4026/ShellEngine/blob/main/include/Game/GameObject.h) [Component.h](https://github.com/Shell4026/ShellEngine/blob/main/include/Game/Component/Component.h)
 ### User 모듈
 > 사용자가 짜는 코드는 동적 라이브러리 형태로 이 모듈에 포함되며, 엔진이 시작 될 때 불러옵니다. </br>
 ### Editor 모듈
-> 에디터에서 사용하는 코드와 기능을 담고 있는 모듈입니다.
+> 에디터에서 사용하는 코드와 기능을 담고 있는 모듈입니다. </br>
+> 리플렉션을 사용해 객체의 정보를 표시합니다. </br>
+> [Hierarchy.cpp](https://github.com/Shell4026/ShellEngine/blob/main/src/Editor/Hierarchy.cpp) [Inspector.cpp](https://github.com/Shell4026/ShellEngine/blob/main/src/Editor/Inspector.cpp)
 
 # 설치
 ## Windows
