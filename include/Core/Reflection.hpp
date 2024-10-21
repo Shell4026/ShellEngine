@@ -20,6 +20,8 @@
 #include <unordered_set>
 #include <iterator>
 
+/// SCLASS 매크로
+/// 해당 매크로를 선언하면 해당 클래스는 리플렉션 데이터를 가지게 된다.
 #define SCLASS(class_name)\
 public:\
 	using Super = sh::core::reflection::MakeSuper<class_name>::type;\
@@ -222,6 +224,8 @@ namespace sh::core::reflection
 		return nullptr;
 	}
 
+	/// @brief 타입 이름(문자열)을 가져오는 함수
+	/// @tparam T 타입
 	template<typename T>
 	constexpr auto GetTypeName()
 	{
@@ -245,12 +249,15 @@ namespace sh::core::reflection
 		return str;
 	}
 
+	/// @brief 리플렉션 데이터의 DLL간 공유를 위한 클래스
 	class STypes
 	{
 	public:
-		SH_CORE_API static SHashMap<uint32_t, STypeInfo*> types;
+		SH_CORE_API static SHashMap<uint32_t, STypeInfo*> types; // 해쉬, 타입 포인터
 	};
 
+	/// @brief TypeInfo를 만드는데 필요한 구조체
+	/// @tparam T 타입
 	template<typename T>
 	struct TypeInfoData
 	{
@@ -365,7 +372,7 @@ namespace sh::core::reflection
 		return reinterpret_cast<T*>(iteratorData->GetPairSecond());
 	}
 
-	//자료형과 컨테이너를 숨긴 프로퍼티 반복자 인터페이스//
+	/// @brief 자료형과 컨테이너를 숨긴 프로퍼티 반복자 인터페이스
 	class IPropertyIteratorBase
 	{
 	public:
@@ -387,7 +394,8 @@ namespace sh::core::reflection
 		virtual void Erase() = 0;
 	};
 
-	//컨테이너를 숨긴 프로퍼티 반복자 인터페이스//
+	/// @brief 컨테이너 타입을 숨긴 프로퍼티 반복자 인터페이스
+	/// @tparam T 컨테이너가 담고 있는 값의 타입
 	template<typename T>
 	class IPropertyIterator : public IPropertyIteratorBase
 	{
@@ -397,7 +405,9 @@ namespace sh::core::reflection
 		virtual auto Get() -> T& = 0;
 	};
 
-	//실질적인 프로퍼티 반복자 데이터//
+	/// @brief 실질적인 프로퍼티 반복자 데이터
+	/// @tparam TContainer 컨테이너 타입
+	/// @tparam T 컨테이너가 담고 있는 값의 타입
 	template<typename TContainer, typename T = typename TContainer::value_type>
 	class PropertyIteratorData : public IPropertyIterator<T>
 	{
@@ -429,6 +439,9 @@ namespace sh::core::reflection
 			return const_cast<T&>(*it);
 		}
 
+		/// @brief 값이 std::pair일 경우 페어의 두번째 값을 반환 하는 함수
+		/// @brief pair가 아닐 시 nullptr를 반환한다.
+		/// @return pair->second
 		auto GetPairSecond() const -> void*
 		{
 			if constexpr(!sh::core::reflection::IsPair<T>::value)
@@ -437,6 +450,8 @@ namespace sh::core::reflection
 				return &it->second;
 		}
 
+		/// @brief 내부 중첩된 컨테이너의 시작 반복자를 반환하는 함수
+		/// @return 반복자
 		auto GetNestedBegin() -> PropertyIterator override
 		{
 			if constexpr (GetContainerNestedCount<TContainer>::value > 1)
@@ -456,7 +471,8 @@ namespace sh::core::reflection
 			}
 			return PropertyIterator{};
 		}
-
+		/// @brief 내부 중첩된 컨테이너의 끝 반복자를 반환하는 함수
+		/// @return 반복자
 		auto GetNestedEnd() -> PropertyIterator override
 		{
 			if constexpr (GetContainerNestedCount<TContainer>::value > 1)
@@ -477,10 +493,14 @@ namespace sh::core::reflection
 			return PropertyIterator{};
 		}
 
+		/// @brief 해당 타입이 std::pair인지
+		/// @return 맞다면 true 아니면 false
 		auto IsPair() const -> bool override
 		{
 			return sh::core::reflection::IsPair<T>::value;
 		}
+		/// @brief 해당 타입이 const인지
+		/// @return 맞다면 true 아니면 false
 		auto IsConst() const -> bool override
 		{
 			return std::is_const<std::remove_reference_t<IteratorType>>::value;
@@ -502,6 +522,8 @@ namespace sh::core::reflection
 				++it;
 		}
 
+		/// @brief erase가 되는 컨테이너라면 해당 값을 컨테이너에서 erase한다.
+		/// @brief 아니라면 nullptr로 만든다.
 		void Erase() override
 		{
 			if constexpr (HasErase<TContainer>::value)
@@ -514,6 +536,7 @@ namespace sh::core::reflection
 		}
 	};
 
+	/// @brief 타입을 숨긴 프로퍼티 추상 클래스
 	class PropertyDataBase
 	{
 	protected:
@@ -537,7 +560,7 @@ namespace sh::core::reflection
 		virtual auto Begin(void* sobject) const->PropertyIterator = 0;
 		virtual auto End(void* sobject) const->PropertyIterator = 0;
 	};
-
+	/// @brief 타입을 가진 프로퍼티 추상 클래스
 	template<typename T>
 	class IPropertyData : public PropertyDataBase
 	{
@@ -549,7 +572,7 @@ namespace sh::core::reflection
 		virtual auto Get(void* sobject) const -> T& = 0;
 	};
 	
-	//클래스의 맴버 변수마다 static영역에 하나씩 존재하는 클래스
+	/// @brief 클래스의 맴버 변수마다 static영역에 하나씩 존재하는 클래스
 	template<typename ThisType, typename T, typename VariablePointer, VariablePointer ptr>
 	class PropertyData : public IPropertyData<T>
 	{
@@ -568,6 +591,9 @@ namespace sh::core::reflection
 				return *ptr;
 		}
 
+		/// @brief 해당 프로퍼티가 컨테이너라면 시작 반복자를 반환한다.
+		/// @param sobject 해당 프로퍼티를 가지고 있는 클래스 포인터
+		/// @return 컨테이너라면 유효한 반복자를, 아니라면 빈 반복자를 반환한다.
 		auto Begin(void* sobject) const -> PropertyIterator override
 		{
 			if constexpr (IsContainer<T>())
@@ -589,7 +615,9 @@ namespace sh::core::reflection
 			}
 			return PropertyIterator{};
 		}
-
+		/// @brief 해당 프로퍼티가 컨테이너라면 시작 반복자를 반환한다.
+		/// @param sobject 해당 프로퍼티를 가지고 있는 클래스 포인터
+		/// @return 컨테이너라면 유효한 반복자를, 아니라면 빈 반복자를 반환한다.
 		auto End(void* sobject) const -> PropertyIterator override
 		{
 			if constexpr (IsContainer<T>())
@@ -613,7 +641,11 @@ namespace sh::core::reflection
 		}
 	};
 
-	//프로퍼티를 만드는데 필요한 정보를 담고 있는 클래스
+	/// @brief 프로퍼티를 만드는데 필요한 정보를 담고 있는 클래스
+	/// @tparam ThisType 프로퍼티를 가지고 있는 객체의 타입
+	/// @tparam T 프로퍼티의 타입
+	/// @tparam VariablePointer 맴버 변수 포인터의 타입
+	/// @tparam ptr 맴버 변수 포인터
 	template<typename ThisType, typename T, typename VariablePointer, VariablePointer ptr>
 	class PropertyInfo
 	{
@@ -678,7 +710,7 @@ namespace sh::core::reflection
 		}
 	};
 
-	//실제 프로퍼티 클래스
+	/// @brief 프로퍼티 클래스
 	class Property
 	{
 	private:
@@ -698,8 +730,7 @@ namespace sh::core::reflection
 		SH_CORE_API Property(PropertyDataBase* data, const char* name, bool isContainer = false, uint32_t containerNestedLevel = 0);
 			
 		/// @brief 프로퍼티가 가지고 있는 값을 반환하는 함수.
-		/// 
-		/// 주의: 타입 검사를 하지 않음.
+		/// @brief 주의: 타입 검사를 하지 않음.
 		/// @tparam T 반환 타입
 		/// @tparam ThisType SObject의 타입
 		/// @param sobject 해당 프로퍼티를 가지고 있는 SObject객체
@@ -716,9 +747,19 @@ namespace sh::core::reflection
 				return nullptr;
 			return Get<T, ThisType>(sobject);
 		}
+		/// @brief 해당 프로퍼티가 컨테이너라면 시작 반복자를 반환한다.
+		/// @param SObject 프로퍼티 소유 객체
+		/// @return 컨테이너가 아니라면 빈 반복자를 반환한다.
 		SH_CORE_API auto Begin(SObject* SObject) -> PropertyIterator;
+		/// @brief 해당 프로퍼티가 컨테이너라면 시작 반복자를 반환한다.
+		/// @param SObject 프로퍼티 소유 객체
+		/// @return 컨테이너가 아니라면 빈 반복자를 반환한다.
 		SH_CORE_API auto End(SObject* SObject) -> PropertyIterator;
-		SH_CORE_API auto GetName() const -> const char*;
+		/// @brief 변수의 이름을 반환한다.
+		/// @return 변수 이름
+		SH_CORE_API auto GetName() const -> std::string_view;
+		/// @brief 타입 이름을 반환한다.
+		/// @return 타입 이름
 		SH_CORE_API auto GetTypeName() const -> std::string_view;
 	};
 

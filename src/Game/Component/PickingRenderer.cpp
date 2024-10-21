@@ -72,12 +72,12 @@ namespace sh::game
 
 	SH_GAME_API void PickingRenderer::OnPropertyChanged(const core::reflection::Property& prop)
 	{
-		if (std::strcmp(prop.GetName(), "mesh") == 0)
+		if (prop.GetName() == "mesh")
 		{
 			CleanDrawables();
 			CreateDrawable(this->camera);
 		}
-		if (std::strcmp(prop.GetName(), "camera") == 0)
+		if (prop.GetName() == "camera")
 		{
 			SetCamera(*camera);
 		}

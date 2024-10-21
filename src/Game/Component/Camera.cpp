@@ -141,7 +141,7 @@ namespace sh::game
 #ifdef SH_EDITOR
 	void Camera::OnPropertyChanged(const core::reflection::Property& prop)
 	{
-		if (strcmp(prop.GetName(), "depth") == 0)
+		if (prop.GetName() == "depth")
 		{
 			SetDepth(depth);
 		}

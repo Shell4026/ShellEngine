@@ -241,7 +241,7 @@ namespace sh::game
 #if SH_EDITOR
 	SH_GAME_API void MeshRenderer::OnPropertyChanged(const core::reflection::Property& prop)
 	{
-		if (std::strcmp(prop.GetName(), "mesh") == 0)
+		if (prop.GetName() == "mesh")
 		{
 			SetMesh(mesh);
 		}

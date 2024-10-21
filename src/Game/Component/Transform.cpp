@@ -287,7 +287,7 @@ namespace sh::game
 #if SH_EDITOR
 	void Transform::OnPropertyChanged(const core::reflection::Property& property)
 	{
-		if (std::strcmp(property.GetName(), "vRotation") == 0)
+		if (property.GetName() == "vRotation")
 		{
 			quat = glm::quat{ glm::radians(glm::vec3{ vRotation }) };
 		}

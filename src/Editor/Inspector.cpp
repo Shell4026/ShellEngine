@@ -316,7 +316,7 @@ namespace sh::editor
 								{
 									bool* parameter = prop.Get<bool>(component);
 									if (!constant)
-										ImGui::Checkbox(prop.GetName(), parameter);
+										ImGui::Checkbox(prop.GetName().data(), parameter);
 									component->OnPropertyChanged(prop);
 								}
 							}

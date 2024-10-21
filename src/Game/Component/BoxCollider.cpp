@@ -43,7 +43,7 @@ namespace sh::game
 #if SH_EDITOR
 	SH_GAME_API void BoxCollider::OnPropertyChanged(const core::reflection::Property& prop)
 	{
-		if(std::strcmp(prop.GetName(), "size") == 0)
+		if(prop.GetName() == "size")
 			shape->setHalfExtents(size * 0.5f);
 	}
 #endif

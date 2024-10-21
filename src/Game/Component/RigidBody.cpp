@@ -110,15 +110,15 @@ namespace sh::game
 #if SH_EDITOR
 	SH_GAME_API void RigidBody::OnPropertyChanged(const core::reflection::Property& prop)
 	{
-		if (std::strcmp(prop.GetName(), "collision") == 0)
+		if (prop.GetName() == "collision")
 		{
 			SetCollider(collision);
 		}
-		else if (std::strcmp(prop.GetName(), "bGravity") == 0)
+		else if (prop.GetName() == "bGravity")
 		{
 			SetGravity(bGravity);
 		}
-		else if (std::strcmp(prop.GetName(), "bKinematic") == 0)
+		else if (prop.GetName() == "bKinematic")
 		{
 			SetKinematic(bKinematic);
 		}

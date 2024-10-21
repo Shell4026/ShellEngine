@@ -91,7 +91,7 @@ namespace sh::core::reflection
 
 	}
 
-	auto Property::GetName() const -> const char*
+	auto Property::GetName() const -> std::string_view
 	{
 		return name;
 	}
