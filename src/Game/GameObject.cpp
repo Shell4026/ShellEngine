@@ -100,13 +100,13 @@ namespace sh::game
 	}
 	SH_GAME_API void GameObject::SetActive(bool b)
 	{
-		bEnable = true;
-		if (bEnable)
+		if (!bEnable && b == true)
 		{
 			if (!bInit)
 				Awake();
 			OnEnable();
 		}
+		bEnable = b;
 	}
 
 	SH_GAME_API void GameObject::SetName(const std::string& name)
