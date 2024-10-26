@@ -1,5 +1,6 @@
 # ShellEngine
-Vulkan C++17 크로스 플랫폼 게임 엔진
+![스크린샷 2024-10-26 212736](https://github.com/user-attachments/assets/8f0001a3-71a0-4e79-9854-9e41714507eb)</br>
+Vulkan C++17 크로스 플랫폼 게임 엔진 프로젝트
 
 # 프로젝트 구조
 
