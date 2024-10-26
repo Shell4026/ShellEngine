@@ -9,6 +9,8 @@
 #include "Render/VulkanImpl/VulkanConfig.h"
 #include "Render/RenderTexture.h"
 
+#include "Game/Component/PickingCamera.h"
+
 #include <mutex>
 #include <array>
 #include <memory>
@@ -16,7 +18,6 @@
 namespace sh::game
 {
 	class ImGUImpl;
-	class PickingCamera;
 }
 
 namespace sh::editor
@@ -41,7 +42,7 @@ namespace sh::editor
 		
 		game::PickingCamera* pickingCamera = nullptr;
 
-		core::Observer<true, uint8_t, uint8_t, uint8_t, uint8_t>::Listener pickingListener{};
+		core::Observer<true,game::PickingCamera::PixelData>::Listener pickingListener{};
 
 		bool bDirty;
 		bool bMouseDown;

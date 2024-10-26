@@ -6,9 +6,7 @@
 #include "Game/ImGUImpl.h"
 #include "Game/Input.h"
 #include "Game/GameObject.h"
-#include "Game/Component/PickingCamera.h"
 #include "Game/Component/PickingRenderer.h"
-
 
 #include "Render/RenderTexture.h"
 #include "Render/VulkanImpl/VulkanTextureBuffer.h"
@@ -36,10 +34,10 @@ namespace sh::editor
 			viewportDescSet[thr] = nullptr;
 		}
 
-		pickingListener.SetCallback([&world ](uint8_t r, uint8_t g, uint8_t b, uint8_t a)
+		pickingListener.SetCallback([&world](game::PickingCamera::PixelData pixel)
 			{
-				SH_INFO_FORMAT("Pick R:{}, G:{}, B:{}, A:{}", r, g, b, a);
-				uint32_t id = r | g << 8 | b << 24;
+				SH_INFO_FORMAT("Pick R:{}, G:{}, B:{}, A:{}", pixel.r, pixel.g, pixel.b, pixel.a);
+				uint32_t id = pixel;
 				if (id == 0)
 				{
 					world.SetSelectedObject(nullptr);

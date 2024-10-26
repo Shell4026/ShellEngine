@@ -13,6 +13,12 @@
 
 namespace sh::game
 {
+	PickingCamera::PixelData::operator uint32_t() const
+	{
+		uint32_t id = r | g << 8 | b << 24;
+		return id;
+	}
+
 	PickingCamera::PickingCamera(GameObject& owner) :
 		Camera(owner)
 	{
@@ -49,22 +55,20 @@ namespace sh::game
 
 			if (!addTask)
 			{
-				renderAlreadyPromise = std::promise<void>{};
-				renderAlready = renderAlreadyPromise.get_future();
 				game::RenderThread::GetInstance()->AddEndTaskFromOtherThread([&]
 					{
-						renderAlreadyPromise.set_value();
+						renderFinished.store(true, std::memory_order::memory_order_release);
 					}
 				);
 				addTask = true;
 			}
-			if (renderAlready.valid())
+			else
 			{
-				// 요청을 받은 후 적어도 1프레임 뒤에 알 수 있다.
-				// (에디터 요청 -> 렌더링 요청) -> 스레드 동기화 -> 렌더링 -> promise에 신호 전달 - 0프레임
-				// 신호를 받았으면 처리, 아니면 다음 프레임 - 1프레임
-				if (renderAlready.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+				if (renderFinished.load(std::memory_order::memory_order_acquire))
 				{
+					// 요청을 받은 후 적어도 1프레임 뒤에 알 수 있다.
+					// (에디터 요청 -> 렌더링 요청) -> 스레드 동기화 -> 렌더링 -> renderFinsihed에 신호 전달 - 0프레임
+					// 신호를 받았으면 처리, 아니면 다음 프레임 - 1프레임
 					assert(world.renderer.apiType == render::RenderAPI::Vulkan);
 					if (world.renderer.apiType == render::RenderAPI::Vulkan)
 					{
@@ -76,7 +80,7 @@ namespace sh::game
 						pixels = reinterpret_cast<uint8_t*>(buffer->GetData());
 					}
 
-					pickingCallback.Notify(pixels[0], pixels[1], pixels[2], pixels[3]);
+					pickingCallback.Notify({ pixels[0], pixels[1], pixels[2], pixels[3] });
 					addTask = false;
 				}
 			}

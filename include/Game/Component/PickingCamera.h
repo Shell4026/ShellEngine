@@ -11,6 +11,7 @@
 #include <functional>
 #include <queue>
 #include <future>
+#include <atomic>
 
 namespace sh::game
 {
@@ -29,15 +30,15 @@ namespace sh::game
 
 		uint8_t* pixels = nullptr;
 
-		std::promise<void> renderAlreadyPromise;
-		std::future<void> renderAlready;
+		std::atomic_bool renderFinished{ false };
 		bool addTask = false;
 	public:
 		struct PixelData
 		{
 			uint8_t r, g, b, a;
+			SH_GAME_API operator uint32_t() const;
 		};
-		core::Observer<true, uint8_t, uint8_t, uint8_t, uint8_t> pickingCallback;
+		core::Observer<true, PixelData> pickingCallback;
 	public:
 		SH_GAME_API PickingCamera(GameObject& owner);
 
