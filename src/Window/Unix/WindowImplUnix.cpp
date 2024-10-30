@@ -1,6 +1,9 @@
 ﻿#include "Unix/WindowImplUnix.h"
 #include "Window.h"
 
+#include "Core/Util.h"
+#include "Core/Logger.h"
+
 #include <X11/Xutil.h>
 #include <X11/Xos.h>
 #include <X11/Xatom.h>
@@ -9,6 +12,7 @@
 
 #include <iostream>
 #include <string_view>
+#include <thread>
 
 namespace sh::window {
 	WindowImplUnix::~WindowImplUnix()
@@ -18,7 +22,7 @@ namespace sh::window {
 
 	auto WindowImplUnix::Create(const std::string& title, int wsize, int hsize, uint32_t style) -> WinHandle
 	{
-		std::cout << "WindowImplUnix::Create()\n";
+		SH_INFO("Create Window");
 
 		XInitThreads();
 
@@ -253,7 +257,6 @@ namespace sh::window {
 	auto WindowImplUnix::CovertKeyCode(unsigned int keycode) -> Event::KeyType
 	{
 		KeySym keySym = XkbKeycodeToKeysym(display, keycode, 0, 0);
-		std::cout << keySym << '\n';
 		switch (keySym)
 		{
 		//A...B : C++ 표준 문법은 아님!
@@ -331,6 +334,15 @@ namespace sh::window {
 		XWindowAttributes attributes;
 		XGetWindowAttributes(display, win, &attributes);
 		return attributes.height;
+	}
+
+	void WindowImplUnix::StopTimer(uint32_t ms)
+	{
+		struct timespec ts;
+		ts.tv_sec = ms / 1000;
+		ts.tv_nsec = (ms % 1000) * 1000000; // 나머지 밀리초를 나노초로 변환
+
+		while (::nanosleep(&ts, &ts) == -1 && errno == EINTR); // 이 방법은 신호에 의해 중단될 수 있음. EINTR 오류를 반환할 경우 루프를 통해 다시 시도
 	}
 
 }//namespace

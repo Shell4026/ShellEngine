@@ -17,10 +17,13 @@ endif()
 add_library(ShellEngineWindow SHARED ${SRC} ${OS_SRC})
 add_library(ShellEngine::Window ALIAS ShellEngineWindow)
 
-if(UNIX)
+if(WIN32)
+	target_link_libraries(ShellEngineWindow PRIVATE Winmm)
+elseif(UNIX)
 	target_link_libraries(ShellEngineWindow PRIVATE ${X11_LIBRARIES})
 endif()
 
+target_include_directories(ShellEngineWindow PRIVATE ${CMAKE_SOURCE_DIR}/include)
 target_include_directories(ShellEngineWindow PRIVATE ${CMAKE_SOURCE_DIR}/include/Window)
 
 target_link_libraries(ShellEngineWindow PUBLIC ShellEngine::Core)

@@ -1,7 +1,11 @@
 ﻿#include "Win32/WindowImplWin32.h"
 #include "Window.h"
 
-#include <../Core/Util.h>
+#include "Core/Util.h"
+#include "Core/Logger.h"
+
+#include <synchapi.h>
+#include <timeapi.h>
 
 #include <iostream>
 
@@ -38,7 +42,7 @@ namespace sh::window {
 
 	WinHandle WindowImplWin32::Create(const std::string& title, int wsize, int hsize, uint32_t style)
 	{
-		std::cout << "WindowImplWin32::Create()\n";
+		SH_INFO("Create Window");
 		RegisterWindow();
 
 		unsigned long winStyle = WS_VISIBLE | WS_MINIMIZEBOX | WS_CAPTION | WS_SYSMENU;
@@ -62,7 +66,6 @@ namespace sh::window {
 		{
 			TranslateMessage(&msg);
 			DispatchMessageW(&msg);
-			
 		}
 	}
 
@@ -287,5 +290,21 @@ namespace sh::window {
 		RECT rect;
 		GetClientRect(window, &rect);
 		return rect.bottom - rect.top;
+	}
+
+	void WindowImplWin32::StopTimer(uint32_t ms)
+	{
+		// 최소 시스템 정밀도
+		static const UINT periodMin = []
+		{
+			TIMECAPS tc;
+			timeGetDevCaps(&tc, sizeof(TIMECAPS));
+			return tc.wPeriodMin;
+		}();
+
+		// Sleep하는 동안 타이머의 정밀도를 최소 값으로 맞춘다. (오차 방지)
+		timeBeginPeriod(periodMin);
+		::Sleep(static_cast<DWORD>(ms));
+		timeEndPeriod(periodMin);
 	}
 }

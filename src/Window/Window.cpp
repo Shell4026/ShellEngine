@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <thread>
+
 namespace sh::window {
 	Window::Window() :
 		width(wsize), height(hsize),
@@ -89,18 +90,20 @@ namespace sh::window {
 	{
 		startTime = std::chrono::high_resolution_clock::now();
 
-		auto frameDuration = std::chrono::duration_cast<std::chrono::microseconds>(startTime - endTime);
-		uint64_t deltaTimeMicro = frameDuration.count();
+		auto frameDuration = std::chrono::duration_cast<std::chrono::milliseconds>(startTime - endTime);
+		uint64_t deltaTimeMs = frameDuration.count();
 
-		uint64_t freeTimeMicro = maxFrameMs * 1000.f - deltaTimeMicro;
-		if (freeTimeMicro > 0.f)
+		int64_t freeTimeMs = maxFrameMs - deltaTimeMs;
+		if (freeTimeMs > 0)
 		{
-			std::this_thread::sleep_for(std::chrono::microseconds{ freeTimeMicro });
+			winImpl->StopTimer(freeTimeMs);
 		}
 		endTime = std::chrono::high_resolution_clock::now();
+		
 
-		frameDuration += std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
-		deltaTime = frameDuration.count() / 1000'000.f;
+		auto sleepTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
+		frameDuration += sleepTimeMs;
+		deltaTime = frameDuration.count() / 1000.f;
 	}
 
 	auto Window::GetNativeHandle() const -> WinHandle

@@ -40,5 +40,8 @@ namespace sh::window {
 		SH_WINDOW_API virtual void SetTitle(std::string_view title) = 0;
 		SH_WINDOW_API virtual auto GetWidth() const->uint32_t = 0;
 		SH_WINDOW_API virtual auto GetHeight() const->uint32_t = 0;
+		/// @brief 일정 시간동안 스레드를 멈추는 함수
+		/// @param ms 밀리초
+		SH_WINDOW_API virtual void StopTimer(uint32_t ms) = 0;
 	};
 }

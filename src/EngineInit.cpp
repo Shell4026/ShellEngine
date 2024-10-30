@@ -236,6 +236,8 @@ namespace sh
 		SH_INFO("Engine start");
 		LoadModule();
 
+		SH_INFO_FORMAT("System thread count: {}", std::thread::hardware_concurrency());
+
 		gc = core::GarbageCollection::GetInstance(); //GC 초기화
 
 		SH_INFO("Window initialization");
@@ -286,6 +288,7 @@ namespace sh
 			std::string deltaTime = std::to_string(window->GetDeltaTime());
 			deltaTime.erase(deltaTime.begin() + 5, deltaTime.end());
 			window->SetTitle("ShellEngine [DeltaTime:" + deltaTime + "ms]");
+
 			ProcessInput();
 			if (bStop)
 				return;

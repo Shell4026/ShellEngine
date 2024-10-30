@@ -33,5 +33,7 @@ namespace sh::window {
 
 		auto GetWidth() const->uint32_t override;
 		auto GetHeight() const->uint32_t override;
+
+		void StopTimer(uint32_t ms) override;
 	};
 }
