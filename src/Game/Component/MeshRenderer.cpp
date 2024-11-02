@@ -147,7 +147,7 @@ namespace sh::game
 
 	void MeshRenderer::FillData(const render::Shader::UniformData& uniform, std::vector<unsigned char>& uniformData, Camera* cam)
 	{
-		if (uniform.typeName == sh::core::reflection::GetTypeName<glm::mat4>())
+		if (uniform.type == sh::core::reflection::GetType<glm::mat4>())
 		{
 			if (uniform.name == "proj")
 				std::memcpy(uniformCopyData.data() + uniform.offset, &cam->GetProjMatrix()[0], sizeof(glm::mat4));
@@ -167,7 +167,7 @@ namespace sh::game
 					std::memcpy(uniformCopyData.data() + uniform.offset, &matrix[0], sizeof(glm::mat4));
 			}
 		}
-		else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec4>())
+		else if (uniform.type == sh::core::reflection::GetType<glm::vec4>())
 		{
 			auto vec = mat->GetVector(uniform.name);
 			if (vec == nullptr)
@@ -175,7 +175,7 @@ namespace sh::game
 			else
 				SetUniformData(*vec, uniformCopyData, uniform.offset);
 		}
-		else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec3>())
+		else if (uniform.type == sh::core::reflection::GetType<glm::vec3>())
 		{
 			auto vec = mat->GetVector(uniform.name);
 			if (vec == nullptr)
@@ -183,7 +183,7 @@ namespace sh::game
 			else
 				SetUniformData(glm::vec3{ *vec }, uniformCopyData, uniform.offset);
 		}
-		else if (uniform.typeName == sh::core::reflection::GetTypeName<glm::vec2>())
+		else if (uniform.type == sh::core::reflection::GetType<glm::vec2>())
 		{
 			auto vec = mat->GetVector(uniform.name);
 			if (vec == nullptr)
@@ -191,7 +191,7 @@ namespace sh::game
 			else
 				SetUniformData(glm::vec2{ *vec }, uniformCopyData, uniform.offset);
 		}
-		else if (uniform.typeName == sh::core::reflection::GetTypeName<float>())
+		else if (uniform.type == sh::core::reflection::GetType<float>())
 		{
 			float value = mat->GetFloat(uniform.name);
 			SetUniformData(value, uniformCopyData, uniform.offset);

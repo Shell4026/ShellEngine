@@ -43,6 +43,7 @@ namespace sh::render
 		core::SMap<std::string, int, 4> ints;
 		core::SMap<std::string, glm::mat4, 4> mats;
 		core::SMap<std::string, glm::vec4, 4> vectors;
+		core::SMap<std::string, std::vector<glm::vec4>, 4> vectorArrs;
 		PROPERTY(textures)
 		core::SMap<uint32_t, Texture*, 4> textures;
 
@@ -101,8 +102,8 @@ namespace sh::render
 		SH_RENDER_API auto GetVector(std::string_view name) const -> const glm::vec4*;
 		SH_RENDER_API void SetMatrix(std::string_view name, const glm::mat4& value);
 		SH_RENDER_API auto GetMatrix(std::string_view name) const -> const glm::mat4*;
-		//SH_RENDER_API void SetVectorArray(std::string_view name, const std::vector<glm::vec4>& value);
-		//SH_RENDER_API auto GetVectorArray(std::string_view name) -> const std::vector<glm::vec4>*;
+		SH_RENDER_API void SetVectorArray(std::string_view name, const std::vector<glm::vec4>& value);
+		SH_RENDER_API auto GetVectorArray(std::string_view name) -> const std::vector<glm::vec4>*;
 		SH_RENDER_API void SetTexture(std::string_view name, Texture* tex);
 		SH_RENDER_API auto GetTexture(std::string_view name) const -> Texture*;
 	};

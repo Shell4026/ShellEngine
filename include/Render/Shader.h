@@ -49,13 +49,9 @@ namespace sh::render
 		{
 			uint32_t binding;
 			std::string name;
-			std::string_view typeName;
+			core::reflection::TypeInfo type;
 			size_t offset;
 			size_t size;
-
-			UniformData() = default;
-			SH_RENDER_API UniformData(const UniformData& other);
-			SH_RENDER_API UniformData(UniformData&& other) noexcept;
 		};
 		struct UniformBlock
 		{
@@ -149,12 +145,7 @@ namespace sh::render
 	template<typename T>
 	inline void Shader::AddUniform(const std::string& name, UniformType type, uint32_t binding, ShaderStage stage)
 	{
-		UniformData uniform;
-		uniform.binding = binding;
-		uniform.name = name;
-		uniform.typeName = sh::core::reflection::GetTypeName<T>();
-		uniform.size = sizeof(T);
-		uniform.offset = 0;
+		UniformData uniform{ binding, name, core::reflection::GetType<T>(), 0, sizeof(T) };
 
 		auto uniformVec = &vertexUniforms;
 		if (stage == ShaderStage::Fragment)
@@ -181,6 +172,7 @@ namespace sh::render
 		block.type = type;
 		block.binding = binding;
 		block.data.push_back(uniform);
+		block.align = (uniform.size > 4) ? 16 : 4;
 
 		uniformBindings.insert({ name, binding });
 		uniformVec->push_back(block);
@@ -189,12 +181,7 @@ namespace sh::render
 	template<>
 	inline void Shader::AddUniform<Texture>(const std::string& name, UniformType type, uint32_t binding, ShaderStage stage)
 	{
-		UniformData uniform;
-		uniform.binding = binding;
-		uniform.name = name;
-		uniform.typeName = sh::core::reflection::GetTypeName<Texture>();
-		uniform.size = 0;
-		uniform.offset = 0;
+		UniformData uniform{ binding, name, core::reflection::GetType<Texture>(), 0, 0 };
 
 		for (auto& uniform : samplerUniforms)
 		{

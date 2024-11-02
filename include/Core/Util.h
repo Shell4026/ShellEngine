@@ -69,6 +69,23 @@ namespace sh::core {
 		/// @param alignment 정렬 값
 		/// @return 입력값에서 올림된 정렬 값의 배수
 		SH_CORE_API static auto AlignTo(uint32_t value, uint32_t alignment) -> uint32_t;
+
+		/// @brief 컴파일 시간에 FNV-1a 해시 알고리즘을 사용해 해시 값을 반환 한다.
+		/// @param str 문자열
+		/// @return 해시 
+		constexpr static auto ConstexprHash(std::string_view str) -> std::size_t
+		{
+			constexpr std::size_t FNVOffsetBasis = 14695981039346656037ULL;
+			constexpr std::size_t FNVPrime = 1099511628211ULL;
+
+			std::size_t hash = FNVOffsetBasis;
+			for (char c : str)
+			{
+				hash ^= static_cast<std::size_t>(c);
+				hash *= FNVPrime;
+			}
+			return hash;
+		}
 	};
 
 	/// @brief 해당 SObject가 nullptr이거나 앞으로 지워질 객체인지 검증 하는 함수.

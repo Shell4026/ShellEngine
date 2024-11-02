@@ -10,25 +10,25 @@
 
 namespace sh::render
 {
-	Material::Material() :
+	SH_RENDER_API Material::Material() :
 		renderer(nullptr),
 		shader(nullptr),
 		bDirty(false), bBufferDirty(false), bBufferSync(false)
 	{
 	}
-	Material::Material(Shader* shader) :
+	SH_RENDER_API Material::Material(Shader* shader) :
 		renderer(nullptr),
 		shader(shader),
 		bDirty(false), bBufferDirty(false), bBufferSync(false)
 	{
 	}
 
-	Material::~Material()
+	SH_RENDER_API Material::~Material()
 	{
 		Clean();
 	}
 
-	Material::Material(Material&& other) noexcept :
+	SH_RENDER_API Material::Material(Material&& other) noexcept :
 		renderer(other.renderer),
 		shader(other.shader),
 		bDirty(other.bDirty), bBufferDirty(other.bBufferDirty), bBufferSync(other.bBufferSync)
@@ -55,7 +55,7 @@ namespace sh::render
 		mats.clear();
 	}
 
-	void Material::SetShader(Shader* shader)
+	SH_RENDER_API void Material::SetShader(Shader* shader)
 	{
 		this->shader = shader;
 		if (!core::IsValid(this->shader))
@@ -67,12 +67,12 @@ namespace sh::render
 		Build(*renderer);
 	}
 	
-	auto Material::GetShader() const -> Shader*
+	SH_RENDER_API auto Material::GetShader() const -> Shader*
 	{
 		return shader;
 	}
 
-	void Material::Build(const Renderer& renderer)
+	SH_RENDER_API void Material::Build(const Renderer& renderer)
 	{
 		if (!core::IsValid(shader))
 			return;
@@ -161,7 +161,7 @@ namespace sh::render
 	{
 		for (auto& data : uniformBlock.data)
 		{
-			if (data.typeName == core::reflection::GetTypeName<int>())
+			if (data.type == core::reflection::GetType<int>())
 			{
 				auto it = ints.find(data.name);
 				if (it == ints.end())
@@ -172,7 +172,7 @@ namespace sh::render
 				else
 					SetData(it->second, dst, data.offset);
 			}
-			else if (data.typeName == core::reflection::GetTypeName<float>())
+			else if (data.type == core::reflection::GetType<float>())
 			{
 				auto it = floats.find(data.name);
 				if (it == floats.end())
@@ -183,7 +183,7 @@ namespace sh::render
 				else
 					SetData(it->second, dst, data.offset);
 			}
-			else if (data.typeName == core::reflection::GetTypeName<glm::vec2>())
+			else if (data.type == core::reflection::GetType<glm::vec2>())
 			{
 				auto it = vectors.find(data.name);
 				if (it == vectors.end())
@@ -196,7 +196,7 @@ namespace sh::render
 					SetData(glm::vec2{ it->second }, dst, data.offset);
 				}
 			}
-			else if (data.typeName == core::reflection::GetTypeName<glm::vec3>())
+			else if (data.type == core::reflection::GetType<glm::vec3>())
 			{
 				auto it = vectors.find(data.name);
 				if (it == vectors.end())
@@ -208,7 +208,7 @@ namespace sh::render
 					SetData(glm::vec3{ it->second }, dst, data.offset);
 				}
 			}
-			else if (data.typeName == core::reflection::GetTypeName<glm::vec4>())
+			else if (data.type == core::reflection::GetType<glm::vec4>())
 			{
 				auto it = vectors.find(data.name);
 				if (it == vectors.end())
@@ -220,7 +220,7 @@ namespace sh::render
 					SetData(glm::vec4{ it->second }, dst, data.offset);
 				}
 			}
-			else if (data.typeName == core::reflection::GetTypeName<glm::mat4>())
+			else if (data.type == core::reflection::GetType<glm::mat4>())
 			{
 				auto it = mats.find(data.name);
 				if (it == mats.end())
@@ -236,7 +236,7 @@ namespace sh::render
 		}
 	}
 
-	void Material::UpdateUniformBuffers()
+	SH_RENDER_API void Material::UpdateUniformBuffers()
 	{
 		if (!core::IsValid(shader))
 			return;
@@ -288,14 +288,14 @@ namespace sh::render
 		bBufferDirty = false;
 	}
 
-	void Material::SetDirty()
+	SH_RENDER_API void Material::SetDirty()
 	{
 		if (bDirty)
 			return;
 		renderer->GetThreadSyncManager().PushSyncable(*this);
 		bDirty = true;
 	}
-	void Material::Sync()
+	SH_RENDER_API void Material::Sync()
 	{
 		if (bBufferSync)
 		{
@@ -307,7 +307,7 @@ namespace sh::render
 		bDirty = false;
 	}
 
-	auto Material::GetShaderBuffer(Stage stage, uint32_t binding, core::ThreadType thr) const -> IBuffer*
+	SH_RENDER_API auto Material::GetShaderBuffer(Stage stage, uint32_t binding, core::ThreadType thr) const -> IBuffer*
 	{
 		if (stage == Stage::Vertex)
 		{
@@ -327,12 +327,12 @@ namespace sh::render
 		}
 		return nullptr;
 	}
-	auto Material::GetUniformBuffer(core::ThreadType thr) const -> IUniformBuffer*
+	SH_RENDER_API auto Material::GetUniformBuffer(core::ThreadType thr) const -> IUniformBuffer*
 	{
 		return uniformBuffer[thr].get();
 	}
 
-	void Material::SetInt(std::string_view name, int value)
+	SH_RENDER_API void Material::SetInt(std::string_view name, int value)
 	{
 		if (!core::IsValid(shader))
 			return;
@@ -343,14 +343,14 @@ namespace sh::render
 			bBufferDirty = true;
 		}
 	}
-	auto Material::GetInt(std::string_view name) const -> int
+	SH_RENDER_API auto Material::GetInt(std::string_view name) const -> int
 	{
 		auto it = ints.find(std::string{ name });
 		if (it == ints.end())
 			return 0;
 		return it->second;
 	}
-	void Material::SetFloat(std::string_view name, float value)
+	SH_RENDER_API void Material::SetFloat(std::string_view name, float value)
 	{
 		if (!core::IsValid(shader))
 			return;
@@ -361,14 +361,14 @@ namespace sh::render
 			bBufferDirty = true;
 		}
 	}
-	auto Material::GetFloat(std::string_view name) const -> float
+	SH_RENDER_API auto Material::GetFloat(std::string_view name) const -> float
 	{
 		auto it = floats.find(std::string{ name });
 		if (it == floats.end())
 			return 0.f;
 		return it->second;
 	}
-	void Material::SetVector(std::string_view name, const glm::vec4& value)
+	SH_RENDER_API void Material::SetVector(std::string_view name, const glm::vec4& value)
 	{
 		if (!core::IsValid(shader))
 			return;
@@ -379,14 +379,14 @@ namespace sh::render
 			bBufferDirty = true;
 		}
 	}
-	auto Material::GetVector(std::string_view name) const -> const glm::vec4*
+	SH_RENDER_API auto Material::GetVector(std::string_view name) const -> const glm::vec4*
 	{
 		auto it = vectors.find(std::string{ name });
 		if (it == vectors.end())
 			return nullptr;
 		return &it->second;
 	}
-	void Material::SetMatrix(std::string_view name, const glm::mat4& value)
+	SH_RENDER_API void Material::SetMatrix(std::string_view name, const glm::mat4& value)
 	{
 		if (!core::IsValid(shader))
 			return;
@@ -397,14 +397,33 @@ namespace sh::render
 			bBufferDirty = true;
 		}
 	}
-	auto Material::GetMatrix(std::string_view name) const -> const glm::mat4*
+	SH_RENDER_API auto Material::GetMatrix(std::string_view name) const -> const glm::mat4*
 	{
 		auto it = mats.find(std::string{ name });
 		if (it == mats.end())
 			return nullptr;
 		return &it->second;
 	}
-	void Material::SetTexture(std::string_view name, Texture* tex)
+	SH_RENDER_API void Material::SetVectorArray(std::string_view name, const std::vector<glm::vec4>& value)
+	{
+		if (!core::IsValid(shader))
+			return;
+		auto binding = shader->GetUniformBinding(name);
+		if (binding)
+		{
+			vectorArrs.insert_or_assign(std::string{ name }, value);
+			bBufferDirty = true;
+		}
+	}
+	SH_RENDER_API auto Material::GetVectorArray(std::string_view name) -> const std::vector<glm::vec4>*
+	{
+		auto it = vectorArrs.find(std::string{ name });
+		if (it == vectorArrs.end())
+			return nullptr;
+		return &it->second;
+	}
+
+	SH_RENDER_API void Material::SetTexture(std::string_view name, Texture* tex)
 	{
 		if (!core::IsValid(shader))
 			return;
@@ -416,7 +435,7 @@ namespace sh::render
 			bBufferDirty = true;
 		}
 	}
-	auto Material::GetTexture(std::string_view name) const -> Texture*
+	SH_RENDER_API auto Material::GetTexture(std::string_view name) const -> Texture*
 	{
 		auto binding = shader->GetUniformBinding(name);
 		if (binding)

@@ -35,7 +35,7 @@ public:\
 			auto it = sh::core::reflection::STypes::types.find(hash);\
 			if (it == sh::core::reflection::STypes::types.end())\
 			{\
-				static sh::core::reflection::STypeInfo info{ sh::core::reflection::TypeInfoData<class_name>{ #class_name } }; \
+				static sh::core::reflection::STypeInfo info{ sh::core::reflection::STypeInfoData<class_name>{ #class_name } }; \
 				sh::core::reflection::STypes::types.insert({ hash, &info });\
 				stypeInfo = &info;\
 				return info;\
@@ -249,6 +249,48 @@ namespace sh::core::reflection
 		return str;
 	}
 
+	template<typename T>
+	struct TypeInfoData
+	{
+		const std::string_view name;
+		const std::size_t size;
+		const std::size_t hash;
+		constexpr TypeInfoData() :
+			name(GetTypeName<T>()), size(sizeof(T)), hash(Util::ConstexprHash(GetTypeName<T>()))
+		{}
+	};
+
+	/// @brief 타입에 대한 정보를 담고 있는 구조체.
+	/// @brief SCLASS 객체는 STypeInfo 클래스를 쓰는 것이 더 좋다.
+	struct TypeInfo
+	{
+		const std::string_view name;
+		const std::size_t size;
+		const std::size_t hash;
+
+		template<typename T>
+		constexpr TypeInfo(TypeInfoData<T> data) :
+			name(data.name), size(data.size), hash(data.hash)
+		{}
+		constexpr TypeInfo(const TypeInfo& other) :
+			name(other.name), size(other.size), hash(other.hash)
+		{}
+
+		constexpr bool operator==(const TypeInfo& other) const
+		{
+			return hash == other.hash;
+		}
+	};
+
+	/// @brief 해당 타입에 대한 TypeInfo 구조체를 컴파일 시간에 반환 하는 함수
+	/// @tparam T 타입
+	/// @return TypeInfo 구조체
+	template<typename T>
+	constexpr auto GetType() -> TypeInfo
+	{
+		return TypeInfo(TypeInfoData<T>());
+	}
+
 	/// @brief 리플렉션 데이터의 DLL간 공유를 위한 클래스
 	class STypes
 	{
@@ -259,13 +301,13 @@ namespace sh::core::reflection
 	/// @brief TypeInfo를 만드는데 필요한 구조체
 	/// @tparam T 타입
 	template<typename T>
-	struct TypeInfoData
+	struct STypeInfoData
 	{
 		std::string_view name;
 		const STypeInfo* super;
 		using Type = T;
 
-		TypeInfoData(std::string_view name) :
+		STypeInfoData(std::string_view name) :
 			name(name), super(nullptr)
 		{
 			if constexpr (HasSuper<T>())
@@ -291,7 +333,7 @@ namespace sh::core::reflection
 		const std::string_view typeName;
 	public:
 		template<typename T>
-		explicit STypeInfo(TypeInfoData<T> data) :
+		explicit STypeInfo(STypeInfoData<T> data) :
 			name(data.name), typeName(sh::core::reflection::GetTypeName<T>()), super(data.super), hash(typeid(T).hash_code()),
 			isPointer(std::is_pointer_v<T>), size(sizeof(T))
 		{

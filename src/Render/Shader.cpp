@@ -3,18 +3,6 @@
 
 namespace sh::render
 {
-	Shader::UniformData::UniformData(const UniformData& other) :
-		binding(other.binding), offset(other.offset), size(other.size),
-		name(other.name), typeName(other.typeName)
-	{
-	}
-
-	Shader::UniformData::UniformData(UniformData&& other) noexcept :
-		binding(other.binding), offset(other.offset), size(other.size),
-		name(std::move(other.name)), typeName(other.typeName)
-	{
-	}
-
 	Shader::Shader(int id, ShaderType type) :
 		id(id), type(type) 
 	{
