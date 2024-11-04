@@ -154,6 +154,13 @@ namespace sh::core::reflection
 	template<typename... Args>
 	struct IsHashSet<std::unordered_set<Args...>> : std::bool_constant<true> {};
 
+	template<typename T>
+	struct IsArray : std::false_type {};
+	template<typename T, std::size_t size>
+	struct IsArray<std::array<T, size>> : std::true_type {};
+	template<typename T, std::size_t size>
+	struct IsArray<T[size]> : std::true_type {};
+
 	// 컨테이너 중첩 수 구하기
 	template<typename T>
 	struct GetContainerNestedCount : std::integral_constant<int, 0> {};
@@ -161,6 +168,8 @@ namespace sh::core::reflection
 	struct GetContainerNestedCount<std::vector<T>> : std::integral_constant<int, GetContainerNestedCount<T>::value + 1> {};
 	template<typename T, std::size_t N>
 	struct GetContainerNestedCount<std::array<T, N>> : std::integral_constant<int, GetContainerNestedCount<T>::value + 1> {};
+	template<typename T, std::size_t N>
+	struct GetContainerNestedCount<T[N]> : std::integral_constant<int, GetContainerNestedCount<T>::value + 1> {};
 	template<typename T, typename U, typename _Pr, typename _Alloc>
 	struct GetContainerNestedCount<std::map<T, U, _Pr, _Alloc>> : std::integral_constant<int, GetContainerNestedCount<U>::value + 1> {};
 	template<typename T, typename U, typename _Hasher, typename _Keyeq, typename _Alloc>
@@ -185,6 +194,11 @@ namespace sh::core::reflection
 	struct GetContainerLastType<std::array<T, n>>
 	{
 		using type = typename GetContainerLastType<T>::type;
+	};
+	template<typename T, std::size_t n>
+	struct GetContainerLastType<T[n]>
+	{
+		using type = T;
 	};
 	template<typename T, typename U, typename _Pr, typename _Alloc>
 	struct GetContainerLastType<std::map<T, U, _Pr, _Alloc>>
@@ -278,7 +292,7 @@ namespace sh::core::reflection
 
 		constexpr bool operator==(const TypeInfo& other) const
 		{
-			return hash == other.hash;
+			return size == other.size && hash == other.hash;
 		}
 	};
 
@@ -286,9 +300,10 @@ namespace sh::core::reflection
 	/// @tparam T 타입
 	/// @return TypeInfo 구조체
 	template<typename T>
-	constexpr auto GetType() -> TypeInfo
+	constexpr auto GetType() -> TypeInfo&
 	{
-		return TypeInfo(TypeInfoData<T>());
+		static TypeInfo typeInfo{ TypeInfoData<T>{} };
+		return typeInfo;
 	}
 
 	/// @brief 리플렉션 데이터의 DLL간 공유를 위한 클래스
