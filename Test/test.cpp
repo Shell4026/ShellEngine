@@ -4,6 +4,7 @@
 #include "SingletonTest.hpp"
 #include "ContainerTest.hpp"
 #include "AllocatorTest.hpp"
+#include "OctreeTest.hpp"
 
 #include <gtest/gtest.h>
 

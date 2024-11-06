@@ -150,6 +150,14 @@ namespace sh::game
             else if constexpr (N >= 1)
                 return reactphysics3d::Vector3{ x, 0.f, 0.f };
         }
+        bool operator==(const Vec<N>& other) const
+        {
+            return x == other.x && y == other.y && z == other.z;
+        }
+        bool operator!=(const Vec<N>& other) const
+        {
+            return !operator==(other);
+        }
         auto operator=(const glm::vec2& other) -> Vec<N>
         {
             static_assert(N >= 1);

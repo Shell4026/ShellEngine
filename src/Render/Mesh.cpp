@@ -186,11 +186,11 @@ namespace sh::render
 		return topology;
 	}
 
-	auto Mesh::GetBoundingBox() const -> const Bounding&
+	auto Mesh::GetBoundingBox() const -> const AABB&
 	{
 		return bounding;
 	}
-	auto Mesh::GetBoundingBox() -> Bounding&
+	auto Mesh::GetBoundingBox() -> AABB&
 	{
 		return bounding;
 	}

@@ -1,153 +1,194 @@
 ﻿#include "PCH.h"
 #include "Octree.h"
 
-#include "GameObject.h"
+#include "IOctreeElement.h"
 
 #undef min
 #undef max
 
 namespace sh::game
 {
-	Octree::Octree(glm::vec3 min, glm::vec3 max, int capacity) :
-		capacity(capacity), minSize(2), min(min), max(max), childs(), objs(), hasChild(false)
+	SH_GAME_API Octree::Octree(const render::AABB& aabb, std::size_t capacity, uint32_t depth) :
+		capacity(capacity), depth(depth),
+		aabb(aabb), root(this)
 	{
 	}
-	Octree::Octree(Octree&& other) noexcept :
-		capacity(other.capacity), minSize(other.minSize), min(other.min), max(other.max), 
-		childs(std::move(other.childs)), objs(std::move(other.objs)), hasChild(other.hasChild)
+	SH_GAME_API Octree::Octree(Octree&& other) noexcept :
+		capacity(other.capacity), depth(other.depth),
+		aabb(std::move(other.aabb)),
+		childs(std::move(other.childs)), objs(std::move(other.objs))
 	{
 
 	}
-	Octree::~Octree()
+	SH_GAME_API Octree::~Octree()
 	{
 
 	}
 
-	auto Octree::Query(glm::vec3 pos) -> Octree*
+	void Octree::Subdivide()
 	{
-		if (min.x <= pos.x && min.y <= pos.y && min.z <= pos.z)
+		render::AABB childaabb[8];
+
+		Vec3 mid = aabb.GetCenter();
+		childaabb[0] = render::AABB{ aabb.GetMin(), mid};
+		childaabb[1] = render::AABB{ Vec3{ mid.x, aabb.GetMin().y, aabb.GetMin().z }, Vec3{ aabb.GetMax().x, mid.y, mid.z } };
+		childaabb[2] = render::AABB{ Vec3{ aabb.GetMin().x, mid.y, aabb.GetMin().z }, Vec3{ mid.x, aabb.GetMax().y, mid.z } };
+		childaabb[3] = render::AABB{ Vec3{ mid.x, mid.y, aabb.GetMin().z }, Vec3{ aabb.GetMax().x, aabb.GetMax().y, mid.z } };
+		childaabb[4] = render::AABB{ Vec3{ aabb.GetMin().x, aabb.GetMin().y, mid.z }, Vec3{ mid.x, mid.y, aabb.GetMax().z } };
+		childaabb[5] = render::AABB{ Vec3{ mid.x, aabb.GetMin().y, mid.z }, Vec3{ aabb.GetMax().x, mid.y, aabb.GetMax().z } };
+		childaabb[6] = render::AABB{ Vec3{ aabb.GetMin().x, mid.y, mid.z }, Vec3{ mid.x, aabb.GetMax().y, aabb.GetMax().z } };
+		childaabb[7] = render::AABB{ mid, aabb.GetMax() };
+
+		for (int i = 0; i < 8; ++i)
 		{
-			if (pos.x <= max.x && pos.y <= max.y && pos.z <= max.z)
-			{
-				if (!hasChild)
-					return this;
+			childs[i] = std::make_unique<Octree>(childaabb[i], this->capacity, depth + 1);
+			childs[i]->parent = this;
+			childs[i]->root = root;
+		}
+	}
+	bool Octree::InsertIntoChildren(IOctreeElement& obj)
+	{
+		bool check = false;
+		for (int i = 0; i < 8; ++i)
+		{
+			check |= childs[i]->Insert(obj);
+		}
+		return check;
+	}
 
-				glm::vec3 center = (max + min) / 2.0f;
-				
-				if (pos.x < center.x) //왼쪽
-				{
-					if (pos.y < center.y) //위
-					{
-						if (pos.z < center.z)
-							return childs[0]->Query(pos);
-						else
-							return childs[4]->Query(pos);
-					}
-					else //아래
-					{
-						if (pos.z < center.z)
-							return childs[3]->Query(pos);
-						else
-							return childs[7]->Query(pos);
-					}
-				}
-				if (pos.y < center.y) //오른쪽
-				{
-					if (pos.y < center.y) //위
-					{
-						if (pos.z < center.z)
-							return childs[1]->Query(pos);
-						else
-							return childs[5]->Query(pos);
-					}
-					else //아래
-					{
-						if (pos.z < center.z)
-							return childs[2]->Query(pos);
-						else
-							return childs[6]->Query(pos);
-					}
-				}
+	void Octree::Query(const IOctreeElement& obj, core::SVector<Octree*>& vec)
+	{
+		if (IsLeaf())
+		{
+			if (obj.Intersect(aabb))
+				return vec.push_back(this);
+		}
+		else
+		{
+			for (int i = 0; i < 8; ++i)
+			{
+				if (!obj.Intersect(childs[i]->aabb))
+					continue;
+				childs[i]->Query(obj, vec);
 			}
 		}
-		return nullptr;
 	}
-
-	bool Octree::Insert(GameObject* obj)
+	void Octree::Query(const render::AABB& aabb, core::SVector<IOctreeElement*>& vec)
 	{
-		if (!hasChild)
+		if (IsLeaf())
 		{
-			if (objs.size() + 1 > capacity)
+			if (aabb.Intersects(this->aabb))
 			{
-				glm::vec3 size = (max - min) / 2.0f;
-				if (size.x < minSize || size.y < minSize || size.z < minSize)
-					return false;
-
-				hasChild = true;
-				
-				glm::vec3 center = (max + min) / 2.0f;
-				
-				childs[0] = std::make_unique<Octree>(
-					glm::vec3{ center.x - size.x, center.y - size.y, center.z - size.z }, 
-					glm::vec3{ center.x         , center.y         , center.z          }, capacity);
-				childs[1] = std::make_unique<Octree>(
-					glm::vec3{ center.x         , center.y - size.y, center.z - size.z },
-					glm::vec3{ center.x + size.x, center.y         , center.z          }, capacity);
-				childs[2] = std::make_unique<Octree>(
-					glm::vec3{ center.x         , center.y         , center.z - size.z },
-					glm::vec3{ center.x + size.x, center.y + size.y, center.z }, capacity);
-				childs[3] = std::make_unique<Octree>(
-					glm::vec3{ center.x - size.x, center.y         , center.z - size.z },
-					glm::vec3{ center.x         , center.y + size.y, center.z          }, capacity);
-				childs[4] = std::make_unique<Octree>(
-					glm::vec3{ center.x - size.x, center.y - size.y, center.z          },
-					glm::vec3{ center.x         , center.y         , center.z + size.z }, capacity);
-				childs[5] = std::make_unique<Octree>(
-					glm::vec3{ center.x         , center.y - size.y, center.z          },
-					glm::vec3{ center.x + size.x, center.y         , center.z + size.z }, capacity);
-				childs[6] = std::make_unique<Octree>(
-					glm::vec3{ center.x         , center.y         , center.z          },
-					glm::vec3{ center.x + size.x, center.y + size.y, center.z + size.z }, capacity);
-				childs[7] = std::make_unique<Octree>(
-					glm::vec3{ center.x - size.x, center.y         , center.z          },
-					glm::vec3{ center.x         , center.y + size.y, center.z + size.z }, capacity);
-			
-				//기존에 있던 obj들을 자식에 재분배
-				for (auto obj : objs)
+				for (auto element : objs)
 				{
-					Octree* child = Query(obj->transform->position);
-					child->Insert(obj);
+					if (element->Intersect(aabb))
+						vec.push_back(element);
 				}
-				objs.clear();
-
-				Octree* child = Query(obj->transform->position);
-				if (child == nullptr)
-					return false;
-				return child->Insert(obj);
-			}
-			else
-			{
-				objs.push_back(obj);
-				return true;
 			}
 		}
 		else
 		{
-			Octree* child = Query(obj->transform->position);
-			if (child == nullptr)
-				return false;
-
-			return child->Insert(obj);
+			for (int i = 0; i < 8; ++i)
+			{
+				if (!aabb.Intersects(childs[i]->aabb))
+					continue;
+				childs[i]->Query(aabb, vec);
+			}
 		}
+	}
+
+	SH_GAME_API auto Octree::Query(const glm::vec3& pos) -> Octree*
+	{
+		if (IsLeaf())
+		{
+			if (aabb.Contains(pos))
+				return this;
+		}
+		else
+		{
+			for (int i = 0; i < 8; ++i)
+			{
+				if (!childs[i]->aabb.Contains(pos))
+					continue;
+				return childs[i]->Query(pos);
+			}
+		}
+		return nullptr;
+	}
+	SH_GAME_API auto Octree::Query(IOctreeElement& obj) -> core::SVector<Octree*>
+	{
+		core::SVector<Octree*> resultVec{};
+		Query(obj, resultVec);
+		return resultVec;
+	}
+	SH_GAME_API auto Octree::Query(const render::AABB& aabb) -> core::SVector<IOctreeElement*>
+	{
+		core::SVector<IOctreeElement*> resultVec{};
+		Query(aabb, resultVec);
+		return resultVec;
+	}
+
+	SH_GAME_API bool Octree::Insert(IOctreeElement& obj)
+	{
+		if (!obj.Intersect(aabb))
+		{
+			if (root != this)
+				return false;
+			
+			return false;
+		}
+
+		if (IsLeaf()) 
+		{
+			if (objs.size() < capacity || depth >= maxDepth) 
+			{
+				objs.insert(&obj);
+				return true;
+			}
+			else 
+			{
+				Subdivide();
+				for (IOctreeElement* elem : objs)
+					InsertIntoChildren(*elem);
+				objs.clear();
+				return InsertIntoChildren(obj);
+			}
+		}
+		else 
+		{
+			return InsertIntoChildren(obj);
+		}
+	}
+	SH_GAME_API bool Octree::Erase(IOctreeElement& obj)
+	{
+		core::SVector<Octree*> nodes{ Query(obj) };
+		if (nodes.empty())
+			return false;
+		for(auto& node : nodes)
+			node->objs.erase(&obj);
+
 		return true;
 	}
 
-	auto Octree::GetObjs() const -> const std::vector<GameObject*>&
+	SH_GAME_API bool Octree::IsLeaf() const
+	{
+		return childs[0] == nullptr;
+	}
+
+	SH_GAME_API auto Octree::GetRoot() const -> Octree&
+	{
+		return *root;
+	}
+	SH_GAME_API auto Octree::GetElements() const -> const core::SSet<IOctreeElement*>&
 	{
 		return objs;
 	}
-	auto Octree::GetObjs() -> std::vector<GameObject*>&
+	SH_GAME_API auto Octree::GetElements() -> core::SSet<IOctreeElement*>&
 	{
 		return objs;
+	}
+	SH_GAME_API auto Octree::GetBounds() const -> const render::AABB&
+	{
+		return aabb;
 	}
 }

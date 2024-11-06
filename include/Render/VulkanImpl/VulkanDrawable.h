@@ -36,10 +36,13 @@ namespace sh::render
 		core::SyncArray<core::SMap<uint32_t, std::unique_ptr<impl::VulkanBuffer>>> localFragBuffer;
 		core::SyncArray<std::unique_ptr<impl::VulkanUniformBuffer>> localDescSet;
 
+		impl::VulkanPipeline::Topology topology = impl::VulkanPipeline::Topology::Triangle;
+
 		bool bInit, bDirty, bBufferDirty, bPipelineDirty;
 	protected:
 		void Clean(core::ThreadType thr);
 		void CreateBuffer(core::ThreadType thr);
+		void BuildPipeline(core::ThreadType thr, impl::VulkanPipeline::Topology topology);
 	public:
 		SH_RENDER_API VulkanDrawable(VulkanRenderer& renderer);
 		SH_RENDER_API VulkanDrawable(VulkanDrawable&& other) noexcept;

@@ -2,6 +2,7 @@
 #include "Component/MeshRenderer.h"
 #include "Component/Camera.h"
 #include "Component/PickingRenderer.h"
+#include "Component/PointLight.h"
 
 #include "gameObject.h"
 
@@ -39,6 +40,13 @@ namespace sh::game
 			}
 		)
 	{
+		onMatrixUpdateListener.SetCallback([&](const glm::mat4& mat)
+			{
+				if (core::IsValid(mesh))
+					worldAABB = mesh->GetBoundingBox().GetWorldAABB(mat);
+			}
+		);
+		gameObject.transform->onMatrixUpdate.Register(onMatrixUpdateListener);
 	}
 
 	MeshRenderer::~MeshRenderer()
@@ -50,6 +58,8 @@ namespace sh::game
 		this->mesh = mesh;
 		if (core::IsValid(mesh))
 		{
+			worldAABB = mesh->GetBoundingBox().GetWorldAABB(gameObject.transform->localToWorldMatrix);
+
 			for (auto cam : gameObject.world.GetCameras())
 				CreateDrawable(cam);
 
@@ -78,6 +88,14 @@ namespace sh::game
 	void MeshRenderer::SetMaterial(sh::render::Material* mat)
 	{
 		this->mat = mat;
+		if (core::IsValid(mat))
+		{
+			auto shader = this->mat->GetShader();
+			if (shader->GetUniformBinding("lightCount"))
+				bShaderHasLight = true;
+
+			RebuildDrawables();
+		}
 	}
 
 	auto MeshRenderer::GetMaterial() const -> sh::render::Material*
@@ -130,9 +148,7 @@ namespace sh::game
 		Super::Awake();
 
 		if (!core::IsValid(mat))
-		{
 			mat = gameObject.world.materials.GetResource("ErrorMaterial");
-		}
 
 		for(auto cam : gameObject.world.GetCameras())
 			CreateDrawable(cam);
@@ -143,59 +159,6 @@ namespace sh::game
 
 	void MeshRenderer::Start()
 	{
-	}
-
-	void MeshRenderer::FillData(const render::Shader::UniformData& uniform, std::vector<unsigned char>& uniformData, Camera* cam)
-	{
-		if (uniform.type == sh::core::reflection::GetType<glm::mat4>())
-		{
-			if (uniform.name == "proj")
-				std::memcpy(uniformCopyData.data() + uniform.offset, &cam->GetProjMatrix()[0], sizeof(glm::mat4));
-			else if (uniform.name == "view")
-				std::memcpy(uniformCopyData.data() + uniform.offset, &cam->GetViewMatrix()[0], sizeof(glm::mat4));
-			else if (uniform.name == "model")
-				std::memcpy(uniformCopyData.data() + uniform.offset, &gameObject.transform->localToWorldMatrix[0], sizeof(glm::mat4));
-			else
-			{
-				auto matrix = mat->GetMatrix(uniform.name);
-				if (matrix == nullptr)
-				{
-					glm::mat4 defaultMat{ 0.f };
-					std::memcpy(uniformCopyData.data() + uniform.offset, &defaultMat[0], sizeof(glm::mat4));
-				}
-				else
-					std::memcpy(uniformCopyData.data() + uniform.offset, &matrix[0], sizeof(glm::mat4));
-			}
-		}
-		else if (uniform.type == sh::core::reflection::GetType<glm::vec4>())
-		{
-			auto vec = mat->GetVector(uniform.name);
-			if (vec == nullptr)
-				SetUniformData(glm::vec4{ 0.f }, uniformCopyData, uniform.offset);
-			else
-				SetUniformData(*vec, uniformCopyData, uniform.offset);
-		}
-		else if (uniform.type == sh::core::reflection::GetType<glm::vec3>())
-		{
-			auto vec = mat->GetVector(uniform.name);
-			if (vec == nullptr)
-				SetUniformData(glm::vec3{ 0.f }, uniformCopyData, uniform.offset);
-			else
-				SetUniformData(glm::vec3{ *vec }, uniformCopyData, uniform.offset);
-		}
-		else if (uniform.type == sh::core::reflection::GetType<glm::vec2>())
-		{
-			auto vec = mat->GetVector(uniform.name);
-			if (vec == nullptr)
-				SetUniformData(glm::vec2{ 0.f }, uniformCopyData, uniform.offset);
-			else
-				SetUniformData(glm::vec2{ *vec }, uniformCopyData, uniform.offset);
-		}
-		else if (uniform.type == sh::core::reflection::GetType<float>())
-		{
-			float value = mat->GetFloat(uniform.name);
-			SetUniformData(value, uniformCopyData, uniform.offset);
-		}
 	}
 
 	void MeshRenderer::Update()
@@ -214,8 +177,32 @@ namespace sh::game
 		render::Shader* shader = mat->GetShader();
 		if (!core::IsValid(shader))
 			return;
-
+	
 		mat->UpdateUniformBuffers();
+
+		// 광원 구조체 채우기
+		struct
+		{
+			alignas(16) glm::vec4 lightPosRange[10];
+			alignas(16) int lightCount = 0;
+		} lightStruct;
+		if (bShaderHasLight)
+		{
+			std::fill(lightStruct.lightPosRange, lightStruct.lightPosRange + 10, glm::vec4{ 0.f });
+			auto lights = world.GetLightOctree().Query(worldAABB);
+			if (lights.size() < 10)
+			{
+				int idx = 0;
+				for (int i = 0; i < lights.size(); ++i)
+				{
+					ILight* light = static_cast<ILight*>(lights[i]);
+					const Vec3& pos = light->gameObject.transform->GetWorldPosition();
+					if (light->GetType() == PointLight::GetStaticType())
+						lightStruct.lightPosRange[idx++] = { pos.x, pos.y, pos.z, static_cast<PointLight*>(light)->GetRadius() };
+				}
+				lightStruct.lightCount = idx;
+			}
+		}
 
 		for (auto&[cam, drawable] : drawables)
 		{
@@ -233,6 +220,8 @@ namespace sh::game
 			uniform.proj = cam->GetProjMatrix();
 
 			drawable->SetUniformData(0, &uniform, render::IDrawable::Stage::Vertex);
+			if (bShaderHasLight)
+				drawable->SetUniformData(1, &lightStruct, render::IDrawable::Stage::Fragment);
 
 			gameObject.world.renderer.PushDrawAble(drawable);
 		}//drawables

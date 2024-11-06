@@ -43,6 +43,7 @@ namespace sh::render
 		core::SMap<std::string, int, 4> ints;
 		core::SMap<std::string, glm::mat4, 4> mats;
 		core::SMap<std::string, glm::vec4, 4> vectors;
+		std::unique_ptr<core::SMap<std::string, std::vector<float>, 4>> floatArr;
 		core::SMap<std::string, std::vector<glm::vec4>, 4> vectorArrs;
 		PROPERTY(textures)
 		core::SMap<uint32_t, Texture*, 4> textures;
@@ -66,12 +67,18 @@ namespace sh::render
 		/// @param binding 텍스쳐 바인딩 번호
 		/// @param tex 텍스쳐 포인터
 		SH_RENDER_API void SetTextureData(uint32_t binding, Texture* tex);
+
 		template<typename T>
-		void SetData(const T& data, std::vector<unsigned char>& uniformData, size_t offset)
+		void SetData(const T& data, std::vector<uint8_t>& uniformData, std::size_t offset, std::size_t size)
+		{
+			std::memcpy(uniformData.data() + offset, &data, size);
+		}
+		template<typename T>
+		void SetData(const T& data, std::vector<uint8_t>& uniformData, std::size_t offset)
 		{
 			std::memcpy(uniformData.data() + offset, &data, sizeof(T));
 		}
-		void FillData(const Shader::UniformBlock& uniformBlock, std::vector<unsigned char>& dst, uint32_t binding);
+		void FillData(const Shader::UniformBlock& uniformBlock, std::vector<uint8_t>& dst, uint32_t binding);
 	public:
 		SH_RENDER_API Material();
 		SH_RENDER_API Material(Shader* shader);
@@ -102,8 +109,10 @@ namespace sh::render
 		SH_RENDER_API auto GetVector(std::string_view name) const -> const glm::vec4*;
 		SH_RENDER_API void SetMatrix(std::string_view name, const glm::mat4& value);
 		SH_RENDER_API auto GetMatrix(std::string_view name) const -> const glm::mat4*;
+		SH_RENDER_API void SetFloatArray(std::string_view name, const std::vector<float>& value);
+		SH_RENDER_API auto GetFloatArray(std::string_view name) const -> const std::vector<float>*;
 		SH_RENDER_API void SetVectorArray(std::string_view name, const std::vector<glm::vec4>& value);
-		SH_RENDER_API auto GetVectorArray(std::string_view name) -> const std::vector<glm::vec4>*;
+		SH_RENDER_API auto GetVectorArray(std::string_view name) const -> const std::vector<glm::vec4>*;
 		SH_RENDER_API void SetTexture(std::string_view name, Texture* tex);
 		SH_RENDER_API auto GetTexture(std::string_view name) const -> Texture*;
 	};

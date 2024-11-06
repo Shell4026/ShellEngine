@@ -3,6 +3,7 @@
 #include "Export.h"
 #include "ResourceManager.hpp"
 #include "ComponentModule.h"
+#include "Octree.h"
 
 #include "Core/NonCopyable.h"
 #include "Core/SObject.h"
@@ -61,6 +62,8 @@ namespace sh::game
 
 		phys::PhysWorld physWorld;
 
+		Octree lightOctree;
+
 		bool startLoop = false;
 	public:
 		sh::render::Renderer& renderer;
@@ -105,6 +108,8 @@ namespace sh::game
 		SH_GAME_API	auto GetMainCamera() const -> Camera*;
 
 		SH_GAME_API auto GetPhysWorld() -> phys::PhysWorld*;
+		SH_GAME_API auto GetLightOctree() -> Octree&;
+		SH_GAME_API auto GetLightOctree() const -> const Octree&;
 
 		SH_GAME_API virtual void Start();
 		SH_GAME_API virtual void Update(float deltaTime);

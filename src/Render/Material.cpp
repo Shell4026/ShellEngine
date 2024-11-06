@@ -157,7 +157,7 @@ namespace sh::render
 		SetDirty();
 	}
 
-	void Material::FillData(const Shader::UniformBlock& uniformBlock, std::vector<unsigned char>& dst, uint32_t binding)
+	void Material::FillData(const Shader::UniformBlock& uniformBlock, std::vector<uint8_t>& dst, uint32_t binding)
 	{
 		for (auto& data : uniformBlock.data)
 		{
@@ -174,14 +174,35 @@ namespace sh::render
 			}
 			else if (data.type == core::reflection::GetType<float>())
 			{
-				auto it = floats.find(data.name);
-				if (it == floats.end())
+				if (data.size == sizeof(float))
 				{
-					float value = 0.f;
-					SetData(value, dst, data.offset);
+					auto it = floats.find(data.name);
+					if (it == floats.end())
+					{
+						float value = 0.f;
+						SetData(value, dst, data.offset);
+					}
+					else
+						SetData(it->second, dst, data.offset);
 				}
 				else
-					SetData(it->second, dst, data.offset);
+				{
+					std::size_t count = data.size / sizeof(float);
+					std::memset(dst.data() + data.offset, 0, data.size);
+					if (floatArr)
+					{
+						auto it = floatArr->find(data.name);
+						if (it != floatArr->end())
+						{
+							for (std::size_t i = 0; i < count; ++i)
+							{
+								if (i >= it->second.size())
+									break;
+								SetData(it->second[i], dst, data.offset + sizeof(float) * i);
+							}
+						}
+					}
+				}
 			}
 			else if (data.type == core::reflection::GetType<glm::vec2>())
 			{
@@ -198,26 +219,49 @@ namespace sh::render
 			}
 			else if (data.type == core::reflection::GetType<glm::vec3>())
 			{
-				auto it = vectors.find(data.name);
-				if (it == vectors.end())
+				if (data.size == sizeof(glm::vec3))
 				{
-					SetData(glm::vec3{ 0.f }, dst, data.offset);
+					auto it = vectors.find(data.name);
+					if (it == vectors.end())
+						SetData(glm::vec3{ 0.f }, dst, data.offset);
+					else
+						SetData(glm::vec3{ it->second }, dst, data.offset);
 				}
 				else
 				{
-					SetData(glm::vec3{ it->second }, dst, data.offset);
+					std::memset(dst.data() + data.offset, 0, data.size);
+					std::size_t count = data.size / sizeof(glm::vec3);
+					auto it = vectorArrs.find(data.name);
+					if (it != vectorArrs.end())
+					{
+						for (std::size_t i = 0; i < count; ++i)
+						{
+							if (i >= it->second.size())
+								break;
+							SetData(it->second[i], dst, data.offset + sizeof(glm::vec4) * i); // vec3 패딩
+						}
+					}
 				}
 			}
 			else if (data.type == core::reflection::GetType<glm::vec4>())
 			{
-				auto it = vectors.find(data.name);
-				if (it == vectors.end())
+				if (!data.bArray)
 				{
-					SetData(glm::vec4{ 0.f }, dst, data.offset);
+					auto it = vectors.find(data.name);
+					if (it == vectors.end())
+						SetData(glm::vec4{ 0.f }, dst, data.offset);
+					else
+						SetData(glm::vec4{ it->second }, dst, data.offset);
 				}
 				else
 				{
-					SetData(glm::vec4{ it->second }, dst, data.offset);
+					std::memset(dst.data() + data.offset, 0, data.size);
+					auto it = vectorArrs.find(data.name);
+					if (it != vectorArrs.end())
+					{
+						if (data.idx < it->second.size())
+							SetData(it->second[data.idx], dst, data.offset);
+					}
 				}
 			}
 			else if (data.type == core::reflection::GetType<glm::mat4>())
@@ -404,6 +448,29 @@ namespace sh::render
 			return nullptr;
 		return &it->second;
 	}
+	SH_RENDER_API void Material::SetFloatArray(std::string_view name, const std::vector<float>& value)
+	{
+		if (!core::IsValid(shader))
+			return;
+		if (floatArr == nullptr)
+			floatArr = std::make_unique<core::SMap<std::string, std::vector<float>, 4>>();
+		auto binding = shader->GetUniformBinding(name);
+		if (binding)
+		{
+			floatArr->insert_or_assign(std::string{ name }, value);
+			bBufferDirty = true;
+		}
+	}
+	SH_RENDER_API auto Material::GetFloatArray(std::string_view name) const -> const std::vector<float>*
+	{
+		if (floatArr == nullptr)
+			return nullptr;
+		auto it = floatArr->find(std::string{ name });
+		if (it == floatArr->end())
+			return nullptr;
+		return &it->second;
+	}
+
 	SH_RENDER_API void Material::SetVectorArray(std::string_view name, const std::vector<glm::vec4>& value)
 	{
 		if (!core::IsValid(shader))
@@ -415,7 +482,7 @@ namespace sh::render
 			bBufferDirty = true;
 		}
 	}
-	SH_RENDER_API auto Material::GetVectorArray(std::string_view name) -> const std::vector<glm::vec4>*
+	SH_RENDER_API auto Material::GetVectorArray(std::string_view name) const -> const std::vector<glm::vec4>*
 	{
 		auto it = vectorArrs.find(std::string{ name });
 		if (it == vectorArrs.end())

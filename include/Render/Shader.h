@@ -43,15 +43,17 @@ namespace sh::render
 			uint32_t idx;
 			std::string_view typeName;
 			std::string name;
-			size_t size;
+			std::size_t size;
 		};
 		struct UniformData
 		{
 			uint32_t binding;
 			std::string name;
-			core::reflection::TypeInfo type;
-			size_t offset;
-			size_t size;
+			core::reflection::TypeInfo& type;
+			std::size_t offset;
+			std::size_t size;
+			std::size_t idx = 0; // 배열 인덱스
+			bool bArray = false;
 		};
 		struct UniformBlock
 		{
@@ -145,7 +147,18 @@ namespace sh::render
 	template<typename T>
 	inline void Shader::AddUniform(const std::string& name, UniformType type, uint32_t binding, ShaderStage stage)
 	{
-		UniformData uniform{ binding, name, core::reflection::GetType<T>(), 0, sizeof(T) };
+		std::size_t align = (sizeof(T) > 4) ? ((sizeof(T) == 8) ? 8 : 16) : 4; // 4바이트, 8바이트 16바이트 정렬로만 이루어짐
+		core::reflection::TypeInfo* typeinfo = &core::reflection::GetType<T>();
+		std::size_t size = sizeof(T);
+		// 배열인 경우
+		if constexpr (core::reflection::IsArray<T>::value)
+		{
+			typeinfo = &core::reflection::GetType<core::reflection::GetContainerLastType<T>::type>();
+			align = 16; // 배열의 경우 무조건 16바이트 정렬
+			size = sizeof(core::reflection::GetContainerLastType<T>::type);
+		}
+		
+		UniformData uniform{ binding, name, *typeinfo, 0, size };
 
 		auto uniformVec = &vertexUniforms;
 		if (stage == ShaderStage::Fragment)
@@ -156,25 +169,55 @@ namespace sh::render
 		{
 			if (block.binding == binding && block.type == type)
 			{
-				if (uniform.size > block.align)
-					block.align = 16;
+				uniformBindings.insert({ name, binding });
+
+				if (align > block.align)
+					block.align = align;
 
 				std::size_t size = block.data.back().offset + block.data.back().size;
 				uniform.offset = core::Util::AlignTo(size, block.align);
 				
-				uniformBindings.insert({ name, binding });
-				block.data.push_back(uniform);
+				// 배열인 경우
+				if constexpr (core::reflection::IsArray<T>::value)
+				{
+					std::size_t count = sizeof(T) / sizeof(core::reflection::GetContainerLastType<T>::type);
+					for (std::size_t i = 0; i < count; ++i)
+					{
+						uniform.bArray = true;
+						uniform.idx = i;
+						block.data.push_back(uniform);
+						uniform.offset += 16;
+					}
+				}
+				else
+					block.data.push_back(uniform);
+
 				return;
 			}
 		}
 		// 없는 경우 새로 만듦
+		uniformBindings.insert({ name, binding });
+
 		UniformBlock block{};
 		block.type = type;
 		block.binding = binding;
-		block.data.push_back(uniform);
-		block.align = (uniform.size > 4) ? 16 : 4;
+		block.align = align;
 
-		uniformBindings.insert({ name, binding });
+		// 배열인 경우
+		if constexpr (core::reflection::IsArray<T>::value)
+		{
+			std::size_t count = sizeof(T) / sizeof(core::reflection::GetContainerLastType<T>::type);
+			for(std::size_t i = 0; i < count; ++i)
+			{
+				uniform.bArray = true;
+				uniform.idx = i;
+				block.data.push_back(uniform);
+				uniform.offset += 16;
+			}
+		}
+		else
+			block.data.push_back(uniform);
+
 		uniformVec->push_back(block);
 	}
 

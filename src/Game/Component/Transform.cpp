@@ -114,6 +114,7 @@ namespace sh::game
 				it = childs.erase(it);
 			++it;
 		}
+		onMatrixUpdate.Notify(matModel);
 		bUpdateMatrix = false;
 	}
 
