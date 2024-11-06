@@ -659,6 +659,10 @@ namespace sh::render {
 		VkDescriptorSet localDescSet = drawable->GetDescriptorSet(core::ThreadType::Render);
 		VkDescriptorSet descSet = static_cast<impl::VulkanUniformBuffer*>(mat->GetUniformBuffer(core::ThreadType::Render))->GetVkDescriptorSet();
 		std::array<VkDescriptorSet, 2> descriptorSets = { localDescSet, descSet };
+		
+		//SH_INFO_FORMAT("{}: {}, {}: {}", (void*)localDescSet, (void*)shader->GetDescriptorSetLayout(0), (void*)descSet, (void*)shader->GetDescriptorSetLayout(1));
+		assert(localDescSet);
+		assert(descSet);
 
 		vkCmdBindDescriptorSets(cmd,
 			VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS,
@@ -804,7 +808,7 @@ namespace sh::render {
 					VkPipeline lastPipeline = nullptr;
 					for (auto iDrawable : drawables)
 					{
-						RenderDrawable(iDrawable, lastPipeline, buffer);
+						//RenderDrawable(iDrawable, lastPipeline, buffer);
 					}
 					for (auto& func : drawCalls)
 						func();

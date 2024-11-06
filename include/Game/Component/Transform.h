@@ -41,6 +41,8 @@ namespace sh::game
 		const Vec3& scale;
 		const Vec3& rotation;
 		const glm::mat4& localToWorldMatrix;
+
+		core::Observer<false, const glm::mat4&> onMatrixUpdate;
 	public:
 		SH_GAME_API Transform(GameObject& owner);
 		SH_GAME_API ~Transform();
@@ -53,7 +55,8 @@ namespace sh::game
 
 		SH_GAME_API auto GetParent() const -> Transform*;
 		SH_GAME_API auto GetChildren() const -> const core::SVector<Transform*>&;
-		/// @brief 자식 객체를 배열상에서 한칸 왼쪽으로 미는 함수. 제일 왼쪽이면 아무 일도 일어나지 않는다.
+		/// @brief 자식 객체를 배열상에서 한칸 왼쪽으로 미는 함수
+		/// @brief 제일 왼쪽이면 아무 일도 일어나지 않는다.
 		SH_GAME_API void ReorderChildAbove(Transform* child);
 		SH_GAME_API void SetPosition(const Vec3& pos);
 		SH_GAME_API void SetPosition(float x, float y, float z);

@@ -117,7 +117,7 @@ namespace sh::render
 		else
 			vkFrameBuffer = static_cast<const impl::VulkanFramebuffer*>(camera.GetRenderTexture()->GetFramebuffer(core::ThreadType::Game));
 
-		//토폴리지
+		// 토폴리지
 		impl::VulkanPipeline::Topology topology = impl::VulkanPipeline::Topology::Triangle;
 		switch (mesh->GetTopology())
 		{

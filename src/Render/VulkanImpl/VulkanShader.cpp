@@ -101,11 +101,11 @@ namespace sh::render
 	}
 	auto VulkanShader::CreateDescriptorLayout() -> VkResult
 	{
+		if (descriptorSetLayout.size() == 1)
+			descriptorSetLayout.push_back(nullptr);
+
 		VkResult result = VkResult::VK_SUCCESS;
 		{
-			if (descriptorSetLayout.size() == 1)
-				descriptorSetLayout.push_back(nullptr);
-
 			VkDescriptorSetLayoutCreateInfo info{};
 			info.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 			info.bindingCount = localDescriptorBindings.size();
@@ -141,7 +141,7 @@ namespace sh::render
 		pipelineLayoutInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 		pipelineLayoutInfo.setLayoutCount = descriptorSetLayout.size();
 		pipelineLayoutInfo.pSetLayouts = descriptorSetLayout.data();
-		pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
+		pipelineLayoutInfo.pushConstantRangeCount = 0; // 푸시 상수 쓸거면 수정
 		pipelineLayoutInfo.pPushConstantRanges = nullptr; // Optional
 
 		return vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &pipelineLayout);

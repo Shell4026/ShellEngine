@@ -16,7 +16,8 @@ namespace sh::game
 		renderer(renderer), componentModule(componentModule),
 		
 		shaders(renderer), materials(renderer), meshes(renderer), textures(renderer),
-		mainCamera(nullptr)
+		mainCamera(nullptr),
+		lightOctree(render::AABB{-1000, -1000, -1000, 1000, 1000, 1000})
 	{
 		gc = core::GarbageCollection::GetInstance();
 
@@ -28,7 +29,8 @@ namespace sh::game
 		_deltaTime(other._deltaTime), _fixedDeltaTime(other._fixedDeltaTime),
 		objs(std::move(other.objs)), objsMap(std::move(objsMap)), objsEmptyIdx(std::move(other.objsEmptyIdx)),
 		shaders(std::move(other.shaders)), materials(std::move(other.materials)), meshes(std::move(other.meshes)), textures(std::move(other.textures)),
-		mainCamera(nullptr)
+		mainCamera(nullptr),
+		lightOctree(std::move(other.lightOctree))
 	{
 		gc->RemoveRootSet(&other);
 		gc->SetRootSet(this);
@@ -326,5 +328,13 @@ namespace sh::game
 	SH_GAME_API auto World::GetPhysWorld() -> phys::PhysWorld*
 	{
 		return &physWorld;
+	}
+	SH_GAME_API auto World::GetLightOctree() -> Octree&
+	{
+		return lightOctree;
+	}
+	SH_GAME_API auto World::GetLightOctree() const -> const Octree&
+	{
+		return lightOctree;
 	}
 }

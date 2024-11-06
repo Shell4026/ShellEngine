@@ -53,8 +53,6 @@ namespace sh::game
 
 			drawable->SetUniformData(1, &points, render::IDrawable::Stage::Vertex);
 			drawable->SetUniformData(2, &color, render::IDrawable::Stage::Fragment);
-
-			gameObject.world.renderer.PushDrawAble(drawable);
 		}//drawables
 		Super::Update();
 	}

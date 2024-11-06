@@ -15,5 +15,6 @@ enable_testing()
 add_executable(ShellEngineTest test.cpp)
 target_link_libraries(ShellEngineTest gtest gtest_main)
 target_link_libraries(ShellEngineTest ShellEngine::Core)
+target_link_libraries(ShellEngineTest ShellEngine::Game)
 
 target_include_directories(ShellEngineTest PRIVATE ${CMAKE_SOURCE_DIR}/include)

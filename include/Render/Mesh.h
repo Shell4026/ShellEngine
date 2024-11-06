@@ -2,7 +2,7 @@
 
 #include "Export.h"
 #include "ShaderAttribute.h"
-#include "Bounding.h"
+#include "AABB.h"
 
 #include "Core/SObject.h"
 #include "Core/Reflection.hpp"
@@ -50,7 +50,7 @@ namespace sh::render
 
 		Topology topology;
 
-		Bounding bounding;
+		AABB bounding;
 	public:
 		const std::vector<std::unique_ptr<ShaderAttributeBase>>& attributes;
 
@@ -94,8 +94,8 @@ namespace sh::render
 		SH_RENDER_API void SetTopology(Topology topology);
 		SH_RENDER_API auto GetTopology() const -> Topology;
 
-		SH_RENDER_API auto GetBoundingBox() const -> const Bounding&;
-		SH_RENDER_API auto GetBoundingBox() -> Bounding&;
+		SH_RENDER_API auto GetBoundingBox() const -> const AABB&;
+		SH_RENDER_API auto GetBoundingBox() -> AABB&;
 
 		template<typename T>
 		void SetAttribute(const ShaderAttribute<T>& attr);

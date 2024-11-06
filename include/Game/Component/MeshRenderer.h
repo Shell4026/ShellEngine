@@ -28,6 +28,11 @@ namespace sh::game
 
 		core::Observer<false, Camera*>::Listener onCameraAddListener;
 		core::Observer<false, Camera*>::Listener onCameraRemoveListener;
+		core::Observer<false, const glm::mat4&>::Listener onMatrixUpdateListener;
+
+		render::AABB worldAABB;
+
+		bool bShaderHasLight = false;
 	protected:
 		PROPERTY(mesh);
 		const sh::render::Mesh* mesh;
@@ -38,7 +43,6 @@ namespace sh::game
 	private:
 		template <typename T>
 		void SetUniformData(const T& data, std::vector<unsigned char>& uniformData, size_t offset);
-		void FillData(const render::Shader::UniformData& uniform, std::vector<unsigned char>& uniformData, Camera* cam);
 	protected:
 		/// @brief Drawable을 생성하거나 이미 존재 시 갱신하는 함수.
 		/// @param camera 카메라 포인터
