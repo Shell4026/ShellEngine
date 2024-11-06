@@ -71,4 +71,19 @@ namespace sh::core
 	void SObject::OnDestroy()
 	{
 	}
+
+	SH_CORE_API auto SObject::Serialize() const -> nlohmann::json
+	{
+		nlohmann::json json{};
+		auto& stypeInfo = GetType();
+		for (auto& prop : stypeInfo.GetProperties())
+		{
+			//if (prop.second.get)
+			//json[prop.first] = prop.second.;
+		}
+		return json;
+	}
+	SH_CORE_API void SObject::Deserialize()
+	{
+	}
 }

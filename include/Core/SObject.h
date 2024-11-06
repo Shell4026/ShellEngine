@@ -2,6 +2,7 @@
 
 #include "Export.h"
 #include "Reflection.hpp"
+#include "ISerializable.h"
 
 #include "Observer.hpp"
 
@@ -15,7 +16,7 @@ namespace sh::core
 	class GarbageCollection;
 
 	/// @brief 엔진에서 쓰는 기본 객체. 리플렉션과 가비지 컬렉터를 쓰려면 해당 객체를 상속해야한다.
-	class SObject
+	class SObject : public ISerializable
 	{
 		SCLASS(SObject)
 
@@ -46,6 +47,9 @@ namespace sh::core
 		SH_CORE_API void Destroy();
 		/// @brief GC에서 소멸 되기전에 호출된다.
 		SH_CORE_API virtual void OnDestroy();
+
+		SH_CORE_API auto Serialize() const -> nlohmann::json override;
+		SH_CORE_API void Deserialize() override;
 		/// @brief SObject 객체를 생성한다. 생성시 GC에 등록되며 사용되지 않을 시 소멸된다.
 		/// @tparam T SObject를 상속 받는 객체
 		/// @param ...args 생성자에 전달할 인자

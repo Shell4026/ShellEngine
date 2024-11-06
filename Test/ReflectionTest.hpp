@@ -56,7 +56,7 @@ TEST(ReflectionTest, PropertyTest)
     ASSERT_NE(numbersProperty, nullptr);
 
     EXPECT_EQ(*numberProperty->Get<int>(&derived), 42);
-    EXPECT_EQ(numbersProperty->GetTypeName(), sh::core::reflection::GetTypeName<std::vector<int>>());
+    EXPECT_EQ(numbersProperty->type.name, sh::core::reflection::GetTypeName<std::vector<int>>());
 
     auto begin = numbersProperty->Begin(&derived);
     auto end = numbersProperty->End(&derived);

@@ -2,6 +2,7 @@
 
 #include "Export.h"
 #include "SContainer.hpp"
+#include "Util.h"
 
 #include <cstddef>
 #include <typeinfo>
@@ -293,6 +294,10 @@ namespace sh::core::reflection
 		constexpr bool operator==(const TypeInfo& other) const
 		{
 			return size == other.size && hash == other.hash;
+		}
+		constexpr bool operator!=(const TypeInfo& other) const
+		{
+			return !operator==(other);
 		}
 	};
 
@@ -596,8 +601,6 @@ namespace sh::core::reflection
 	/// @brief 타입을 숨긴 프로퍼티 추상 클래스
 	class PropertyDataBase
 	{
-	protected:
-		std::string_view typeName;
 	public:
 		STypeInfo& ownerType;
 
@@ -609,11 +612,11 @@ namespace sh::core::reflection
 		bool isConst = false;
 	public:
 		PropertyDataBase(STypeInfo& ownerType) :
-			ownerType(ownerType), typeName("")
+			ownerType(ownerType)
 		{
 		}
 
-		SH_CORE_API auto GetTypeName() const -> std::string_view;
+		virtual auto GetType() const -> TypeInfo = 0;
 		virtual auto Begin(void* sobject) const->PropertyIterator = 0;
 		virtual auto End(void* sobject) const->PropertyIterator = 0;
 	};
@@ -626,6 +629,10 @@ namespace sh::core::reflection
 			PropertyDataBase(ownerType)
 		{
 		}
+		auto GetType() const -> TypeInfo override
+		{
+			return reflection::GetType<T>();
+		}
 		virtual auto Get(void* sobject) const -> T& = 0;
 	};
 	
@@ -637,7 +644,6 @@ namespace sh::core::reflection
 		PropertyData(STypeInfo& ownerType) :
 			IPropertyData<T>(ownerType)
 		{
-			PropertyDataBase::typeName = sh::core::reflection::GetTypeName<T>();
 		}
 
 		auto Get(void* sobject) const -> T & override
@@ -775,6 +781,7 @@ namespace sh::core::reflection
 
 		const char* name;
 	public:
+		const TypeInfo type;
 		const int containerNestedLevel;
 		const bool bConstProperty;
 		const bool bVisibleProperty;
@@ -800,7 +807,7 @@ namespace sh::core::reflection
 		template<typename T, typename ThisType>
 		auto GetSafe(ThisType* sobject) const -> T*
 		{
-			if (data->GetTypeName() != reflection::GetTypeName<T>())
+			if (data->GetType() != reflection::GetType<T>())
 				return nullptr;
 			return Get<T, ThisType>(sobject);
 		}
@@ -815,9 +822,6 @@ namespace sh::core::reflection
 		/// @brief 변수의 이름을 반환한다.
 		/// @return 변수 이름
 		SH_CORE_API auto GetName() const -> std::string_view;
-		/// @brief 타입 이름을 반환한다.
-		/// @return 타입 이름
-		SH_CORE_API auto GetTypeName() const -> std::string_view;
 	};
 
 }//namespace

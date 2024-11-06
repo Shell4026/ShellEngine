@@ -77,16 +77,12 @@ namespace sh::core::reflection
 		return containers;
 	}
 
-	auto PropertyDataBase::GetTypeName() const -> std::string_view
-	{
-		return typeName;
-	}
-
 	Property::Property(PropertyDataBase* data, const char* name, bool isContainer, uint32_t containerNestedLevel) :
 		data(data), name(name),
 		bConstProperty(data->bConst), bVisibleProperty(data->bVisible),
 		isContainer(isContainer), containerNestedLevel(containerNestedLevel), isPointer(data->isPointer),
-		isSObject(data->isSObject), isSObjectPointer(data->isSObjectPointer), isConst(data->isConst)
+		isSObject(data->isSObject), isSObjectPointer(data->isSObjectPointer), isConst(data->isConst),
+		type(data->GetType())
 	{
 
 	}
@@ -94,11 +90,6 @@ namespace sh::core::reflection
 	auto Property::GetName() const -> std::string_view
 	{
 		return name;
-	}
-
-	auto Property::GetTypeName() const -> std::string_view
-	{
-		return data->GetTypeName();
 	}
 
 	auto Property::Begin(SObject* sobject) -> PropertyIterator
