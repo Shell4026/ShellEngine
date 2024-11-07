@@ -112,42 +112,77 @@ TEST(ContainerTest, SHashMapVectorTest)
 	hvec.Insert("test3", 3);
 
 	int i = 1;
-	for (auto& v : hvec)
-	{
-		if (v)
-		{
-			EXPECT_EQ(*v, i++);
-		}
-	}
-	hvec.Erase("test2");
-	EXPECT_FALSE(hvec[1].has_value());
-	EXPECT_EQ(hvec.Size(), 2);
-	EXPECT_EQ(hvec.AllocatedSize(), 3);
-	auto it = hvec.Find("Test2");
-	EXPECT_TRUE(it == hvec.end());
-	it = hvec.Find("test3");
-	EXPECT_FALSE(it == hvec.end());
-	EXPECT_EQ(it->value(), 3);
+	for (auto& [key, value] : hvec)
+		EXPECT_EQ(value, i++);
 
-	for (int i = 0; i < 7; ++i)
-	{
-		hvec.Insert("test" + std::to_string(4 + i), 4 + i);
-	}
-	EXPECT_EQ(hvec.Size(), 9);
-	EXPECT_EQ(hvec.AllocatedSize(), 9);
+	auto it = hvec.begin();
+	EXPECT_EQ(*it->first, "test1");
+	EXPECT_EQ(it->second, 1);
 
-	hvec.Clear();
-	EXPECT_EQ(hvec.Size(), 0);
-	EXPECT_EQ(hvec.AllocatedSize(), 0);
+	EXPECT_TRUE(hvec.Erase("test2"));
+	EXPECT_FALSE(hvec.Erase("test2"));
+
+	it = hvec.begin();
+	EXPECT_EQ((it++)->second, 1);
+	EXPECT_EQ((it++)->second, 3);
+	EXPECT_EQ(it, hvec.end());
+}
+
+TEST(ContainerTest, SHashSetVectorTest)
+{
+	using namespace sh;
+	core::SHashSetVector<int> set{};
+	set.Insert(0);
+	set.Insert(1);
+	set.Insert(2);
+
+	int i = 0;
+	for (auto e : set)
+		EXPECT_EQ(e, i++);
+	EXPECT_TRUE(set.Erase(1));
+
+	auto it = set.begin();
+	EXPECT_EQ(*(it++), 0);
+	EXPECT_EQ(*(it++), 2);
+
+	it = set.Find(2);
+	EXPECT_EQ(*it, 2);
+	it = set.Find(3);
+	EXPECT_EQ(it, set.end());
+
+	EXPECT_TRUE(set.Erase(0));
+	EXPECT_TRUE(set.Erase(2));
+	EXPECT_FALSE(set.Erase(3));
 
 	for (int i = 0; i < 10; ++i)
-	{
-		hvec.Insert("test" + std::to_string(i), i);
-	}
+		set.Insert(i);
+	EXPECT_EQ(set.AllocatedSize(), 10);
 	for (int i = 0; i < 8; ++i)
-	{
-		hvec.Erase("test" + std::to_string(i));
-	}
-	EXPECT_EQ(hvec.Size(), 2);
-	EXPECT_EQ(hvec.AllocatedSize(), 2);
+		set.Erase(i);
+	EXPECT_EQ(set.AllocatedSize(), 2);
+	
+	// 속도 측정 결과, 순회에서 더 빠름
+	//core::SHashSet<int> hashSet;
+	//for (int i = 0; i < 1000000; ++i)
+	//	hashSet.insert(i);
+	//core::SHashSetVector<int> hashSetVector{};
+	//for (int i = 0; i < 1000000; ++i)
+	//	hashSetVector.Insert(i);
+
+	//int64_t t1 = core::Util::GetElapsedTime([&]
+	//	{
+	//		int sum = 0;
+	//		for (auto i : hashSet)
+	//			sum += i;
+	//	}
+	//).count();
+
+	//int64_t t2 = core::Util::GetElapsedTime([&]
+	//	{
+	//		int sum = 0;
+	//		for (auto i : hashSetVector)
+	//			sum += i;
+	//	}
+	//).count();
+	//EXPECT_EQ(t1, t2);
 }

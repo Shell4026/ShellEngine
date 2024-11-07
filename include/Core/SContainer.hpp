@@ -10,6 +10,7 @@
 #include <optional>
 #include <queue>
 #include <assert.h>
+#include <stdexcept>
 
 namespace sh::core
 {
@@ -141,26 +142,93 @@ namespace sh::core
     /// @brief 연속된 메모리를 가지는 해쉬맵 + 벡터 컨테이너.
     /// @brief 검색: O(log N) 삽입: O(log N) 삭제: O(log N).
     /// @brief 삭제 시에는 벡터의 메모리를 해제 하지 않고 {}값으로 남으며 삽입시 그 메모리를 재활용한다.
-    /// @tparam Key 키 타입
-    /// @tparam Value 값 타입
-    template<typename Key, typename Value, std::size_t CleanSize = 8>
+    /// @tparam KeyT 키 타입
+    /// @tparam ValueT 값 타입
+    /// @tparam Hasher 해쉬 구조체
+    /// @tparam KeyEQ 동등 비교 구조체
+    /// @tparam CleanSize 삭제시 이 만큼의 빈 공간이 있으면 메모리 재배치
+    template<typename KeyT, typename ValueT, typename Hasher = std::hash<KeyT>, typename KeyEq = std::equal_to<KeyT>, std::size_t CleanSize = 8>
     class SHashMapVector
     {
     private:
-        core::SHashMap<Key, std::size_t, CleanSize> hashMap;
-        core::SVector<std::optional<Value>> vec;
+        using VectorType = core::SVector<std::optional<std::pair<const KeyT*, ValueT>>>;
+        using VecIterator = typename VectorType::iterator;
+
+        core::SHashMap<KeyT, std::size_t, CleanSize, Hasher> hashMap;
+        VectorType vec;
         std::queue<std::size_t> emptyIdx;
     public:
-        using VecIterator = typename core::SVector<std::optional<Value>>::iterator;
+        class Iterator
+        {
+        private:
+            VecIterator itVec;
+            VecIterator itVecEnd;
+        public:
+            using iterator_category = std::bidirectional_iterator_tag;
+            using value_type = std::pair<const KeyT*, ValueT>;
+            using difference_type = std::ptrdiff_t;
+            using pointer = value_type*;
+            using reference = value_type&;
+
+            Iterator(VecIterator it, VecIterator endIt) :
+                itVec(it), itVecEnd(endIt)
+            {
+                while (itVec != itVecEnd && !itVec->has_value())
+                    ++itVec;
+            }
+
+            auto operator*() const -> reference
+            {
+                return itVec->value();
+            }
+            auto operator->() const -> pointer
+            {
+                return &(itVec->value());
+            }
+
+            auto operator++() -> Iterator&
+            {
+                ++itVec;
+                while (itVec != itVecEnd && !itVec->has_value())
+                    ++itVec;
+                return *this;
+            }
+            auto operator++(int) -> Iterator
+            {
+                Iterator tmp = *this;
+                ++(*this);
+                return tmp;
+            }
+            auto operator--() -> Iterator&
+            {
+                if (itVec == vec.begin())
+                    return *this;
+
+                --itVec;
+                while (itVec != vec.begin() && !itVec->has_value())
+                    --itVec;
+                return *this;
+            }
+            auto operator--(int) -> Iterator
+            {
+                Iterator tmp = *this;
+                --(*this);
+                return tmp;
+            }
+
+            bool operator==(const Iterator& other) const { return itVec == other.itVec; }
+            bool operator!=(const Iterator& other) const { return itVec != other.itVec; }
+        };
     private:
         void CleanMemory()
         {
-            core::SVector<std::optional<Value>> newVec(hashMap.size());
+            VectorType newVec(hashMap.size());
+            hashMap.clear();
             int idx = 0;
-            for (auto it = hashMap.begin(); it != hashMap.end(); ++it, ++idx)
+            for (auto it = begin(); it != end(); ++it)
             {
-                it->second = idx;
-                newVec[idx] = std::move(vec[it->second]);
+                hashMap.insert({ *it->first, idx });
+                newVec[idx++] = std::move(*it);
             }
             vec = std::move(newVec);
 
@@ -168,8 +236,187 @@ namespace sh::core
                 emptyIdx.pop();
         }
     public:
-        bool Insert(const Key& key, const Value& value)
+        bool Insert(const KeyT& key, const ValueT& value)
         {
+            if (hashMap.find(key) != hashMap.end())
+                return false;
+
+            std::size_t idx;
+            if (emptyIdx.empty())
+            {
+                idx = vec.size();
+                auto result = hashMap.insert({ key, idx });
+                vec.push_back(std::make_pair(&result.first->first, value));
+            }
+            else
+            {
+                idx = emptyIdx.front();
+                auto result = hashMap.insert({ key, idx });
+                vec[idx] = { &result.first->first, value };
+                emptyIdx.pop();
+            }
+            return true;
+        }
+        bool Erase(const KeyT& key)
+        {
+            if (hashMap.empty())
+                return false;
+
+            auto it = hashMap.find(key);
+            if (it == hashMap.end())
+                return false;
+
+            vec[it->second].reset();
+            emptyIdx.push(it->second);
+            hashMap.erase(it);
+            if (emptyIdx.size() >= CleanSize)
+                CleanMemory();
+
+            return true;
+        }
+        auto Find(const KeyT& key) -> Iterator
+        {
+            auto it = hashMap.find(key);
+            if (it == hashMap.end())
+                return end();
+            return Iterator{ vec.begin() + it->second, vec.end() };
+        }
+        void Clear()
+        {
+            hashMap.clear();
+            vec.clear();
+            while (!emptyIdx.empty())
+                emptyIdx.pop();
+        }
+
+        auto begin() -> Iterator
+        {
+            return Iterator(vec.begin(), vec.end());
+        }
+
+        auto end() -> Iterator
+        {
+            return Iterator(vec.end(), vec.end());
+        }
+
+        auto operator[](std::size_t idx) -> std::optional<std::pair<KeyT*, ValueT>>&
+        {
+            if (idx >= vec.size())
+                throw std::out_of_range{};
+            assert(idx < vec.size());
+            return vec[idx];
+        }
+
+        auto Size() const -> std::size_t
+        {
+            return hashMap.size();
+        }
+        auto AllocatedSize() const -> std::size_t
+        {
+            return vec.size();
+        }
+    };
+
+    /// @brief 연속된 메모리를 가지는 해쉬셋 + 벡터 컨테이너.
+    /// @brief 검색: O(log N) 삽입: O(log N) 삭제: O(log N).
+    /// @brief 삭제 시에는 벡터의 메모리를 해제 하지 않고 {}값으로 남으며 삽입시 그 메모리를 재활용한다.
+    /// @tparam T 타입
+    /// @tparam Hasher 해쉬 구조체
+    /// @tparam KeyEQ 동등 비교 구조체
+    /// @tparam CleanSize 삭제시 이 만큼의 빈 공간이 있으면 메모리 재배치
+    template<typename T, typename Hasher = std::hash<T>, typename KeyEq = std::equal_to<T>, std::size_t CleanSize = 8>
+    class SHashSetVector
+    {
+    private:
+        using VecIterator = typename core::SVector<std::optional<T>>::iterator;
+
+        core::SHashMap<T, std::size_t, CleanSize, Hasher> hashMap;
+        core::SVector<std::optional<T>> vec;
+        std::queue<std::size_t> emptyIdx;
+    public:
+        class Iterator 
+        {
+        private:
+            VecIterator itVec;
+            VecIterator itVecEnd;
+        public:
+            using iterator_category = std::bidirectional_iterator_tag;
+            using value_type = T;
+            using difference_type = std::ptrdiff_t;
+            using pointer = T*;
+            using reference = T&;
+
+            Iterator(VecIterator it, VecIterator endIt) :
+                itVec(it), itVecEnd(endIt)
+            {
+                while (itVec != itVecEnd && !itVec->has_value())
+                    ++itVec;
+            }
+
+            auto operator*() const -> reference
+            { 
+                return itVec->value(); 
+            }
+            auto operator->() const -> pointer
+            { 
+                return &(itVec->value());
+            }
+
+            auto operator++() -> Iterator&
+            {
+                ++itVec;
+                while (itVec != itVecEnd && !itVec->has_value())
+                    ++itVec;
+                return *this;
+            }
+            auto operator++(int) -> Iterator
+            {
+                Iterator tmp = *this;
+                ++(*this);
+                return tmp;
+            }
+            auto operator--() -> Iterator&
+            {
+                if (itVec == vec.begin())
+                    return *this;
+
+                --itVec;
+                while (itVec != vec.begin() && !itVec->has_value())
+                    --itVec;
+                return *this;
+            }
+            auto operator--(int) -> Iterator
+            {
+                Iterator tmp = *this;
+                --(*this);
+                return tmp;
+            }
+
+            bool operator==(const Iterator& other) const { return itVec == other.itVec; }
+            bool operator!=(const Iterator& other) const { return itVec != other.itVec; }
+        };
+    private:
+        void CleanMemory()
+        {
+            core::SVector<std::optional<T>> newVec(hashMap.size());
+            hashMap.clear();
+            int idx = 0;
+            for (auto it = begin(); it != end(); ++it)
+            {
+                hashMap.insert({ *it, idx });
+                newVec[idx++] = std::move(*it);
+            }
+            vec = std::move(newVec);
+
+            while (!emptyIdx.empty())
+                emptyIdx.pop();
+        }
+    public:
+        bool Insert(const T& value)
+        {
+            if (hashMap.find(value) != hashMap.end())
+                return false;
+
             std::size_t idx;
             if (emptyIdx.empty())
             {
@@ -182,29 +429,32 @@ namespace sh::core
                 vec[idx] = value;
                 emptyIdx.pop();
             }
-            auto result = hashMap.insert({ key, idx });
+            auto result = hashMap.insert({ value, idx });
             return result.second;
         }
-        bool Erase(const Key& key)
+        bool Erase(const T& value)
         {
-            auto it = hashMap.find(key);
+            if (hashMap.empty())
+                return false;
+
+            auto it = hashMap.find(value);
             if (it == hashMap.end())
                 return false;
-            vec[it->second] = {};
+
+            vec[it->second].reset();
             emptyIdx.push(it->second);
             hashMap.erase(it);
             if (emptyIdx.size() >= CleanSize)
-            {
                 CleanMemory();
-            }
+
             return true;
         }
-        auto Find(const Key& key) -> VecIterator
+        auto Find(const T& value) -> Iterator
         {
-            auto it = hashMap.find(key);
+            auto it = hashMap.find(value);
             if (it == hashMap.end())
-                return vec.end();
-            return vec.begin() + it->second;
+                return end();
+            return Iterator{ vec.begin() + it->second, vec.end() };
         }
         void Clear()
         {
@@ -214,17 +464,20 @@ namespace sh::core
                 emptyIdx.pop();
         }
 
-        auto begin() -> VecIterator
+        auto begin() -> Iterator
         {
-            return vec.begin();
-        }
-        auto end() -> VecIterator
-        {
-            return vec.end();
+            return Iterator(vec.begin(), vec.end());
         }
 
-        auto operator[](std::size_t idx) -> std::optional<Value>&
+        auto end() -> Iterator
         {
+            return Iterator(vec.end(), vec.end());
+        }
+
+        auto operator[](std::size_t idx) -> std::optional<T>&
+        {
+            if (idx >= vec.size())
+                throw std::out_of_range{};
             assert(idx < vec.size());
             return vec[idx];
         }
