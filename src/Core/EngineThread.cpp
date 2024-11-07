@@ -1,4 +1,5 @@
-﻿#include "EngineThread.h"
+﻿#include "PCH.h"
+#include "EngineThread.h"
 
 namespace sh::core
 {

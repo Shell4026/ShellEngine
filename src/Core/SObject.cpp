@@ -1,4 +1,5 @@
-﻿#include "SObject.h"
+﻿#include "PCH.h"
+#include "SObject.h"
 
 #include "GarbageCollection.h"
 #include "Observer.hpp"

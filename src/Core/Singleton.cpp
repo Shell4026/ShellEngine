@@ -1,4 +1,5 @@
-﻿#include "Singleton.hpp"
+﻿#include "PCH.h"
+#include "Singleton.hpp"
 
 #include <cstring>
 namespace sh::core

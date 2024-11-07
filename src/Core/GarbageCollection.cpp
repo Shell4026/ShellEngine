@@ -1,4 +1,6 @@
-﻿#include "GarbageCollection.h"
+﻿#include "PCH.h"
+#include "GarbageCollection.h"
+#include "SObjectManager.h"
 
 #include "SObject.h"
 

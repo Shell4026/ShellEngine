@@ -1,4 +1,5 @@
-﻿#include "Util.h"
+﻿#include "PCH.h"
+#include "Util.h"
 #include "SObject.h"
 
 namespace sh::core {

@@ -1,4 +1,5 @@
-﻿#include "ThreadSyncManager.h"
+﻿#include "PCH.h"
+#include "ThreadSyncManager.h"
 
 #include "Logger.h"
 
