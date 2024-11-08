@@ -83,10 +83,6 @@ namespace sh::game
 
 	void EditorCamera::Zoom()
 	{
-		if (gui)
-		{
-			SH_INFO(gui->GetContext()->WheelingWindow->Name);
-		}
 		float delta = 1.f;
 		if (Input::mouseWheelDelta > 0)
 			delta = 0.9f;
@@ -115,14 +111,17 @@ namespace sh::game
 
 	SH_GAME_API void EditorCamera::BeginUpdate()
 	{
-		HandleMouseInput();
-		ClampAngles();
-		UpdateCameraPosition();
+		if (bFocus)
+		{
+			HandleMouseInput();
+			ClampAngles();
+			UpdateCameraPosition();
+		}
 		Super::BeginUpdate();
 	}
 
-	SH_GAME_API void EditorCamera::SetGUI(ImGUImpl& gui)
+	SH_GAME_API void EditorCamera::SetFocus(bool bfocus)
 	{
-		this->gui = &gui;
+		this->bFocus = bfocus;
 	}
 }//namespace

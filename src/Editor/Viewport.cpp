@@ -6,6 +6,7 @@
 #include "Game/ImGUImpl.h"
 #include "Game/Input.h"
 #include "Game/GameObject.h"
+#include "Game/Component/EditorCamera.h"
 #include "Game/Component/PickingRenderer.h"
 
 #include "Render/RenderTexture.h"
@@ -51,6 +52,8 @@ namespace sh::editor
 
 		if (pickingCamera == nullptr)
 			pickingCamera = world.GetGameObject("PickingCamera")->GetComponent<game::PickingCamera>();
+		if (editorCamera == nullptr)
+			editorCamera = world.GetGameObject("EditorCamera")->GetComponent<game::EditorCamera>();
 	}
 	Viewport::~Viewport()
 	{
@@ -59,10 +62,14 @@ namespace sh::editor
 
 	void Viewport::Update()
 	{
+		editorCamera->SetFocus(false);
 		if (!bFocus)
 			return;
+		editorCamera->SetFocus(true);
+
 		if (game::Input::GetKeyDown(game::Input::KeyCode::LAlt))
 			return;
+
 		if (!bMouseDown)
 		{
 			bMouseDown = game::Input::GetMouseDown(game::Input::MouseType::Left);
@@ -74,19 +81,6 @@ namespace sh::editor
 					return;
 				if (mousePos.x > viewportWidthLast || mousePos.y > viewportHeightLast)
 					return;
-
-				//game::GameObject* picking = world.GetGameObject("picking");
-				//if (picking == nullptr)
-				//{
-				//	picking = world.AddGameObject("picking");
-				//	picking->AddComponent<game::LineRenderer>();
-				//}
-				//game::LineRenderer* line = picking->GetComponent<game::LineRenderer>();
-				//game::Camera* cam = *world.GetCameras().begin();
-				//
-				//phys::Ray ray = cam->ScreenPointToRay(mousePos);
-				//line->SetStart(ray.origin);
-				//line->SetEnd(ray.origin + ray.direction * 5.f);
 
 				pickingCamera->SetPickingPos({ mousePos.x, mousePos.y });
 				pickingCamera->pickingCallback.Register(pickingListener);
@@ -116,7 +110,7 @@ namespace sh::editor
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 		ImGui::Begin(name);
-		bFocus = ImGui::IsWindowFocused();
+		bFocus = ImGui::IsWindowFocused() && ImGui::IsWindowHovered();
 		float width = ImGui::GetContentRegionAvail().x;
 		float height = ImGui::GetContentRegionAvail().y;
 

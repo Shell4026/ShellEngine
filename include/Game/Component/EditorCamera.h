@@ -4,13 +4,10 @@
 
 namespace sh::game
 {
-	class ImGUImpl;
-
 	class EditorCamera : public Camera
 	{
 		COMPONENT(EditorCamera)
 	private:
-		ImGUImpl* gui = nullptr;
 		float distance;
 
 		float xdir;
@@ -28,6 +25,7 @@ namespace sh::game
 
 		bool leftMousePressed;
 		bool middleMousePressed;
+		bool bFocus = false;
 	private:
 		inline void HandleMouseInput();
 		inline void HandleLeftMouseDrag();
@@ -39,6 +37,6 @@ namespace sh::game
 		SH_GAME_API EditorCamera(GameObject& owner);
 
 		SH_GAME_API void BeginUpdate() override;
-		SH_GAME_API void SetGUI(ImGUImpl& gui);
+		SH_GAME_API void SetFocus(bool bfocus);
 	};
 }//namespace

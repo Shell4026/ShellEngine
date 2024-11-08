@@ -18,6 +18,7 @@
 namespace sh::game
 {
 	class ImGUImpl;
+	class EditorCamera;
 }
 
 namespace sh::editor
@@ -40,6 +41,7 @@ namespace sh::editor
 		render::RenderTexture* renderTex;
 		core::SyncArray<VkDescriptorSet> viewportDescSet;
 		
+		game::EditorCamera* editorCamera = nullptr;
 		game::PickingCamera* pickingCamera = nullptr;
 
 		core::Observer<true,game::PickingCamera::PixelData>::Listener pickingListener{};
