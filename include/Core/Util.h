@@ -5,7 +5,9 @@
 #include <string>
 #include <chrono>
 #include <functional>
-namespace sh::core {
+
+namespace sh::core 
+{
 	class SObject;
 
 	class Util
@@ -85,6 +87,11 @@ namespace sh::core {
 			}
 			return hash;
 		}
+
+		SH_CORE_API static auto RandomRange(uint32_t min, uint32_t max) -> uint32_t;
+		SH_CORE_API static auto RandomRange(int min, int max) -> int;
+		SH_CORE_API static auto RandomRange(float min, float max) -> float;
+		SH_CORE_API static auto RandomRange(double min, double max) -> double;
 	};
 
 	/// @brief 해당 SObject가 nullptr이거나 앞으로 지워질 객체인지 검증 하는 함수.

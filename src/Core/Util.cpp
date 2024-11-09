@@ -2,6 +2,15 @@
 #include "Util.h"
 #include "SObject.h"
 
+#include <random>
+#include <limits>
+#include <sstream>
+#include <iomanip>
+
+#ifdef max
+#undef max
+#endif
+
 namespace sh::core {
 	auto Util::U8StringToWstring(const std::string& u8str) -> std::wstring
 	{
@@ -72,5 +81,34 @@ namespace sh::core {
 		// 35 = 0010'0011
 		// 0010'0011 & 1111'0000 = 0010'0000 = 32 
 		return (value + alignment - 1) & ~(alignment - 1);
+	}
+
+	SH_CORE_API auto Util::RandomRange(uint32_t min, uint32_t max) -> uint32_t
+	{
+		std::random_device seed{};
+		std::mt19937 gen{ seed() };
+		std::uniform_int_distribution<uint32_t> rnd{ min, max };
+		return rnd(gen);
+	}
+	SH_CORE_API auto Util::RandomRange(int min, int max) -> int
+	{
+		std::random_device seed{};
+		std::mt19937 gen{ seed() };
+		std::uniform_int_distribution<int> rnd{ min, max };
+		return rnd(gen);
+	}
+	SH_CORE_API auto Util::RandomRange(float min, float max) -> float
+	{
+		std::random_device seed{};
+		std::mt19937 gen{ seed() };
+		std::uniform_real_distribution<float> rnd{ min, max };
+		return rnd(gen);
+	}
+	SH_CORE_API auto Util::RandomRange(double min, double max) -> double
+	{
+		std::random_device seed{};
+		std::mt19937 gen{ seed() };
+		std::uniform_real_distribution<double> rnd{ min, max };
+		return rnd(gen);
 	}
 }
