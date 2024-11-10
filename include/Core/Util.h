@@ -5,6 +5,7 @@
 #include <string>
 #include <chrono>
 #include <functional>
+#include <random>
 
 namespace sh::core 
 {
@@ -12,6 +13,9 @@ namespace sh::core
 
 	class Util
 	{
+	private:
+		inline static std::random_device seed{};
+		inline static std::mt19937 gen{ seed() };
 	public:
 		enum class Platform {
 			Windows,
