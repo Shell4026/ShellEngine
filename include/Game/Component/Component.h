@@ -62,6 +62,9 @@ namespace sh::game
 		SH_GAME_API void Update() override;
 		SH_GAME_API void LateUpdate() override;
 		SH_GAME_API void OnDestroy() override;
+
+		SH_GAME_API auto Serialize() const -> core::Json override;
+		SH_GAME_API void Deserialize(const core::Json& json) override;
 	};
 
 	template<typename T>

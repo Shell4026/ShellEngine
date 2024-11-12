@@ -155,6 +155,7 @@ namespace sh::core
         using VectorType = core::SVector<VectorElementType>;
         using MapType = core::SHashMap<KeyT, std::size_t, CleanSize, Hasher>;
         using VecIterator = typename VectorType::iterator;
+        using ConstVecIterator = typename VectorType::const_iterator;
 
         MapType hashMap;
         VectorType vec;
@@ -204,6 +205,68 @@ namespace sh::core
             auto operator--() -> Iterator&
             {
                 do 
+                {
+                    if (itVec == vec.begin())
+                        break;
+                    --itVec;
+                } while (!itVec->has_value());
+
+                return *this;
+            }
+            auto operator--(int) -> Iterator
+            {
+                Iterator tmp = *this;
+                --(*this);
+                return tmp;
+            }
+
+            bool operator==(const Iterator& other) const { return itVec == other.itVec; }
+            bool operator!=(const Iterator& other) const { return itVec != other.itVec; }
+        };
+        class ConstIterator
+        {
+        private:
+            ConstVecIterator itVec;
+            ConstVecIterator itVecEnd;
+        public:
+            using iterator_category = std::bidirectional_iterator_tag;
+            using value_type = const std::pair<const KeyT*, ValueT>;
+            using difference_type = std::ptrdiff_t;
+            using pointer = const value_type*;
+            using reference = const value_type&;
+
+            ConstIterator(ConstVecIterator it, ConstVecIterator endIt) :
+                itVec(it), itVecEnd(endIt)
+            {
+                while (itVec != itVecEnd && !itVec->has_value())
+                    ++itVec;
+            }
+
+            auto operator*() const -> reference
+            {
+                return itVec->value();
+            }
+            auto operator->() const -> pointer
+            {
+                return &(itVec->value());
+            }
+
+            auto operator++() -> Iterator&
+            {
+                ++itVec;
+                while (itVec != itVecEnd && !itVec->has_value())
+                    ++itVec;
+                return *this;
+            }
+            auto operator++(int) -> Iterator
+            {
+                Iterator tmp = *this;
+                ++(*this);
+                return tmp;
+            }
+            auto operator--() -> Iterator&
+            {
+                do
                 {
                     if (itVec == vec.begin())
                         break;
@@ -294,10 +357,18 @@ namespace sh::core
         {
             return Iterator{ vec.begin(), vec.end() };
         }
+        auto begin() const -> ConstIterator
+        {
+            return ConstIterator{ vec.begin(), vec.end() };
+        }
 
         auto end() -> Iterator
         {
             return Iterator{ vec.end(), vec.end() };
+        }
+        auto end() const -> ConstIterator
+        {
+            return ConstIterator{ vec.end(), vec.end() };
         }
 
         auto operator[](std::size_t idx) -> std::optional<std::pair<KeyT*, ValueT>>&
@@ -330,6 +401,7 @@ namespace sh::core
     {
     private:
         using VecIterator = typename core::SVector<std::optional<T>>::iterator;
+        using ConstVecIterator = typename core::SVector<std::optional<T>>::const_iterator;
         using VectorType = core::SVector<std::optional<T>>;
         using MapType = core::SHashMap<T, std::size_t, CleanSize, Hasher>;
 
@@ -349,7 +421,7 @@ namespace sh::core
             using pointer = T*;
             using reference = T&;
 
-            Iterator(VecIterator it, VecIterator endIt) :
+            Iterator(const VecIterator& it, const VecIterator& endIt) :
                 itVec(it), itVecEnd(endIt)
             {
                 while (itVec != itVecEnd && !itVec->has_value())
@@ -362,6 +434,68 @@ namespace sh::core
             }
             auto operator->() const -> pointer
             { 
+                return &(itVec->value());
+            }
+
+            auto operator++() -> Iterator&
+            {
+                ++itVec;
+                while (itVec != itVecEnd && !itVec->has_value())
+                    ++itVec;
+                return *this;
+            }
+            auto operator++(int) -> Iterator
+            {
+                Iterator tmp = *this;
+                ++(*this);
+                return tmp;
+            }
+            auto operator--() -> Iterator&
+            {
+                do
+                {
+                    if (itVec == vec.begin())
+                        break;
+                    --itVec;
+                } while (!itVec->has_value());
+
+                return *this;
+            }
+            auto operator--(int) -> Iterator
+            {
+                Iterator tmp = *this;
+                --(*this);
+                return tmp;
+            }
+
+            bool operator==(const Iterator& other) const { return itVec == other.itVec; }
+            bool operator!=(const Iterator& other) const { return itVec != other.itVec; }
+        };
+        class ConstIterator
+        {
+        private:
+            ConstVecIterator itVec;
+            ConstVecIterator itVecEnd;
+        public:
+            using iterator_category = std::bidirectional_iterator_tag;
+            using value_type = const T;
+            using difference_type = std::ptrdiff_t;
+            using pointer = const T*;
+            using reference = const T&;
+
+            ConstIterator(ConstVecIterator it, ConstVecIterator endIt) :
+                itVec(it), itVecEnd(endIt)
+            {
+                while (itVec != itVecEnd && !itVec->has_value())
+                    ++itVec;
+            }
+
+            auto operator*() const -> reference
+            {
+                return itVec->value();
+            }
+            auto operator->() const -> pointer
+            {
                 return &(itVec->value());
             }
 
@@ -470,10 +604,18 @@ namespace sh::core
         {
             return Iterator(vec.begin(), vec.end());
         }
+        auto begin() const -> ConstIterator
+        {
+            return ConstIterator(vec.begin(), vec.end());
+        }
 
         auto end() -> Iterator
         {
-            return Iterator(vec.end(), vec.end());
+            return Iterator{ vec.end(), vec.end() };
+        }
+        auto end() const -> ConstIterator
+        {
+            return ConstIterator{ vec.end(), vec.end() };
         }
 
         auto operator[](std::size_t idx) -> std::optional<T>&

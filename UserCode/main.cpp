@@ -1,10 +1,5 @@
 ﻿#include "Export.h"
-
-#include "ComponentTest.h"
-#include "RotateObject.h"
-
 #include "Core/Logger.h"
-
 #include "Game/ComponentModule.h"
 
 extern "C"
@@ -15,6 +10,6 @@ extern "C"
 	}
 	SH_USER_API auto GetModule() -> sh::game::ComponentModule*
 	{
-		return ComponentModule::GetInstance();
+		return sh::game::ComponentModule::GetInstance();
 	}
 }

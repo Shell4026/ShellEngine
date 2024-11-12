@@ -7,6 +7,7 @@
 #include "IUniformBuffer.h"
 
 #include "Core/Util.h"
+#include "Core/SObjectManager.h"
 
 namespace sh::render
 {
@@ -53,6 +54,9 @@ namespace sh::render
 		ints.clear();
 		vectors.clear();
 		mats.clear();
+		floatArr.reset();
+		vectorArrs.clear();
+		textures.clear();
 	}
 
 	SH_RENDER_API void Material::SetShader(Shader* shader)
@@ -106,6 +110,7 @@ namespace sh::render
 
 		for (std::size_t thr = 0; thr < uniformBuffer.size(); ++thr)
 			uniformBuffer[thr] = BufferFactory::CreateUniformBuffer(renderer, *shader, Shader::UniformType::Material);
+		bBufferDirty = true;
 	}
 
 	void Material::SetUniformData(uint32_t binding, const void* data, Stage stage)
@@ -288,7 +293,7 @@ namespace sh::render
 		if (!bBufferDirty)
 			return;
 
-		std::vector<uint8_t> temp;
+		std::vector<uint8_t> temp{};
 
 		for (auto& [binding, buffer] : vertBuffers[core::ThreadType::Game])
 		{
@@ -320,13 +325,13 @@ namespace sh::render
 			}
 			SetUniformData(binding, temp.data(), Stage::Fragment);
 		}
-		for (auto& uniform : shader->GetSamplerUniforms())
+		for (auto& uniformData : shader->GetSamplerUniforms())
 		{
-			auto it = textures.find(uniform.binding);
+			auto it = textures.find(uniformData.name);
 			if (it == textures.end())
 				continue;
 
-			SetTextureData(uniform.binding, it->second);
+			SetTextureData(uniformData.binding, it->second);
 		}
 
 		bBufferDirty = false;
@@ -495,23 +500,164 @@ namespace sh::render
 		if (!core::IsValid(shader))
 			return;
 
-		auto binding = shader->GetUniformBinding(name);
-		if (binding)
-		{
-			textures.insert_or_assign(binding.value(), tex);
-			bBufferDirty = true;
-		}
+		textures.insert_or_assign(std::string{ name }, tex);
+		bBufferDirty = true;
 	}
 	SH_RENDER_API auto Material::GetTexture(std::string_view name) const -> Texture*
 	{
-		auto binding = shader->GetUniformBinding(name);
-		if (binding)
-		{
-			auto it = textures.find(binding.value());
-			if (it == textures.end())
-				return nullptr;
-			return it->second;
-		}
-		return nullptr;
+		auto it = textures.find(std::string{ name });
+		if (it == textures.end())
+			return nullptr;
+		return it->second;
 	}
-}
+
+	SH_RENDER_API bool Material::HasIntProperty(std::string_view name) const
+	{
+		auto it = ints.find(std::string{ name });
+		return it != ints.end();
+	}
+	SH_RENDER_API bool Material::HasFloatProperty(std::string_view name) const
+	{
+		auto it = floats.find(std::string{ name });
+		return it != floats.end();
+	}
+	SH_RENDER_API bool Material::HasVectorProperty(std::string_view name) const
+	{
+		auto it = vectors.find(std::string{ name });
+		return it != vectors.end();
+	}
+	SH_RENDER_API bool Material::HasMatrixProperty(std::string_view name) const
+	{
+		auto it = mats.find(std::string{ name });
+		return it != mats.end();
+	}
+	SH_RENDER_API bool Material::HasFloatArrayProperty(std::string_view name) const
+	{
+		if (floatArr == nullptr)
+			return false;
+		auto it = floatArr->find(std::string{ name });
+		return it != floatArr->end();
+	}
+	SH_RENDER_API bool Material::HasVectorArrayProperty(std::string_view name) const
+	{
+		auto it = vectorArrs.find(std::string{ name });
+		return it != vectorArrs.end();
+	}
+	SH_RENDER_API bool Material::HasTextureProperty(std::string_view name) const
+	{
+		auto it = textures.find(std::string{ name });
+		return it != textures.end();
+	}
+
+	SH_RENDER_API void Material::OnPropertyChanged(const core::reflection::Property& prop)
+	{
+		bBufferDirty = true;
+	}
+
+	SH_RENDER_API auto Material::Serialize() const -> core::Json
+	{
+		core::Json mainJson{ Super::Serialize() };
+		if (core::IsValid(shader))
+		{
+			core::Json propertiesJson{};
+
+			core::Json intJson{};
+			for (auto& [name, value] : ints)
+				intJson[name] = value;
+			propertiesJson["ints"] = intJson;
+
+			core::Json floatJson{};
+			for (auto& [name, value] : floats)
+				floatJson[name] = value;
+			propertiesJson["floats"] = floatJson;
+
+			core::Json vectorJson{};
+			for (auto& [name, value] : vectors)
+				vectorJson[name] = { value.x, value.y, value.z, value.w };
+			propertiesJson["vectors"] = vectorJson;
+
+			core::Json texJson{};
+			for (auto& [name, value] : textures)
+				texJson[name] = value->GetUUID().ToString();
+			propertiesJson["textures"] = texJson;
+
+			mainJson["properties"] = propertiesJson;
+		}
+		return mainJson;
+	}
+	SH_RENDER_API void Material::Deserialize(const core::Json& json)
+	{
+		Clean();
+
+		Super::Deserialize(json);
+
+		if (json.contains("name"))
+		{
+			std::string name = json["name"].get<std::string>();
+			SetName(name);
+		}
+		if (json.contains("shader"))
+		{
+			std::string shaderUuid = json["shader"].get<std::string>();
+			SObject* shaderObj = core::SObjectManager::GetInstance()->GetSObject(shaderUuid);
+			if (core::IsValid(shaderObj))
+			{
+				if (shaderObj->GetType() == Shader::GetStaticType())
+					SetShader(static_cast<Shader*>(shaderObj));
+			}
+		}
+		if (json.contains("properties"))
+		{
+			const auto& propertiesJson = json["properties"];
+
+			if (propertiesJson.contains("ints"))
+			{
+				const auto& intJson = propertiesJson["ints"];
+				for (const auto& [name, value] : intJson.items())
+				{
+					int intValue = value.get<int>();
+					SetInt(name, intValue);
+				}
+			}
+			if (propertiesJson.contains("floats"))
+			{
+				const auto& floatJson = propertiesJson["floats"];
+				for (const auto& [name, value] : floatJson.items())
+				{
+					float floatValue = value.get<float>();
+					SetFloat(name, floatValue);
+				}
+			}
+			if (propertiesJson.contains("vectors"))
+			{
+				const auto& vectorJson = propertiesJson["vectors"];
+				for (const auto& [name, value] : vectorJson.items())
+				{
+					if (value.is_array() && value.size() == 4)
+					{
+						glm::vec4 vecValue(
+							value[0].get<float>(),
+							value[1].get<float>(),
+							value[2].get<float>(),
+							value[3].get<float>()
+						);
+						SetVector(name, vecValue);
+					}
+				}
+			}
+			if (propertiesJson.contains("textures"))
+			{
+				const auto& texJson = propertiesJson["textures"];
+				for (const auto& [name, value] : texJson.items())
+				{
+					std::string uuid = value.get<std::string>();
+					auto ptr = core::SObjectManager::GetInstance()->GetSObject(uuid);
+					if (!core::IsValid(ptr))
+						continue;
+					if (ptr->GetType() == Texture::GetStaticType())
+						SetTexture(name, static_cast<Texture*>(ptr));
+				}
+			}
+		}
+	}
+}//namespace

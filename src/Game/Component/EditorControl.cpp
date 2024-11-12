@@ -12,7 +12,7 @@
 
 namespace sh::game
 {
-	EditorControl::EditorControl(GameObject& owner) :
+	SH_GAME_API EditorControl::EditorControl(GameObject& owner) :
 		Component(owner)
 	{
 		if (auto obj = world.GetGameObject("_Helper"); obj == nullptr)
@@ -73,8 +73,70 @@ namespace sh::game
 
 		gameObject.transform->SetPosition(pos);
 	}
+	inline void EditorControl::ScaleControl()
+	{
+		glm::vec3 linePoint = camera->gameObject.transform->position;
+		glm::vec3 facePoint = gameObject.transform->position;
 
-	void EditorControl::Update()
+		auto clickRay = camera->ScreenPointToRay(clickPos);
+		glm::vec3 clickHit = SMath::GetPlaneCollisionPoint(clickRay.origin, clickRay.direction, facePoint, forward).value_or(glm::vec3{ 0.f });
+		auto ray = camera->ScreenPointToRay(Input::mousePosition);
+		glm::vec3 hit = SMath::GetPlaneCollisionPoint(ray.origin, ray.direction, facePoint, forward).value_or(glm::vec3{ 0.f });
+
+		glm::vec3 facePointToHit = hit - facePoint;
+		glm::vec3 delta = hit - clickHit;
+		float len = glm::length(delta);
+		if (glm::dot(facePointToHit, delta) < 0)
+			len = -len;
+
+		glm::vec3 scale = scaleLast;
+		if (axis == Axis::None)
+			scale += len;
+		else if (axis == Axis::X)
+			scale.x += len;
+		else if (axis == Axis::Y)
+			scale.y += len;
+		else if (axis == Axis::Z)
+			scale.z += len;
+
+		gameObject.transform->SetScale(scale);
+	}
+	inline void EditorControl::RotateControl()
+	{
+		glm::vec3 linePoint = camera->gameObject.transform->position;
+		glm::vec3 facePoint = gameObject.transform->position;
+
+		auto clickRay = camera->ScreenPointToRay(clickPos);
+		glm::vec3 clickHit = SMath::GetPlaneCollisionPoint(clickRay.origin, clickRay.direction, facePoint, -glm::vec4{ forward }).value_or(glm::vec3{ 0.f });
+		auto ray = camera->ScreenPointToRay(Input::mousePosition);
+		glm::vec3 hit = SMath::GetPlaneCollisionPoint(ray.origin, ray.direction, facePoint, -glm::vec4{ forward }).value_or(glm::vec3{ 0.f });
+
+		glm::vec2 clickPoint;
+		clickPoint.x = glm::dot(clickHit - facePoint, glm::vec3{ right });
+		clickPoint.y = glm::dot(clickHit - facePoint, glm::vec3{ up });
+		SH_INFO_FORMAT("clickHit {}, {}, {}", clickHit.x, clickHit.y, clickHit.z);
+		SH_INFO_FORMAT("right {}, {}, {}", right.x, right.y, right.z);
+		SH_INFO_FORMAT("forward {}, {}, {}", forward.x, forward.y, forward.z);
+		SH_INFO_FORMAT("{}, {}", clickPoint.x, clickPoint.y);
+
+		glm::vec2 currentPoint;
+		currentPoint.x = glm::dot(hit - facePoint, glm::vec3{ right });
+		currentPoint.y = glm::dot(hit - facePoint, glm::vec3{ up });
+
+		float angleRad = atan2(currentPoint.y, currentPoint.x) - atan2(clickPoint.y, clickPoint.x);
+
+		//glm::vec3 cross = glm::cross(facePointToClickHit, facePointToHit);
+		//float direction = glm::dot(cross, glm::vec3{ forward }); // 양수면 한 방향, 음수면 반대 방향
+		//if (direction < 0.0f)
+		//	angleRad = -angleRad;
+
+		SH_INFO_FORMAT("{}", glm::degrees(angleRad));
+
+		glm::quat newQuat = glm::normalize(quatLast * glm::angleAxis(angleRad, glm::vec3{ forward }));
+		gameObject.transform->SetRotation(newQuat);
+	}
+
+	SH_GAME_API void EditorControl::Update()
 	{
 		if (!core::IsValid(camera))
 			return;
@@ -93,7 +155,35 @@ namespace sh::game
 				mode = Mode::Move;
 			}
 		}
-		else
+		if (mode != Mode::Scale)
+		{
+			if (Input::GetKeyDown(Input::KeyCode::S))
+			{
+				forward = glm::normalize(glm::vec3{ camera->GetLookPos() - camera->gameObject.transform->position });
+				up = camera->GetUpVector();
+				right = glm::normalize(glm::cross(glm::vec3{ forward }, glm::vec3{ up }));
+				up = glm::normalize(glm::cross(glm::vec3{ right }, glm::vec3{ forward }));
+
+				scaleLast = gameObject.transform->scale;
+				clickPos = Input::mousePosition;
+				mode = Mode::Scale;
+			}
+		}
+		if (mode != Mode::Rotate)
+		{
+			if (Input::GetKeyDown(Input::KeyCode::R))
+			{
+				forward = glm::normalize(glm::vec3{ camera->GetLookPos() - camera->gameObject.transform->position });
+				up = camera->GetUpVector();
+				right = glm::normalize(glm::cross(glm::vec3{ forward }, glm::vec3{ up }));
+				up = glm::normalize(glm::cross(glm::vec3{ right }, glm::vec3{ forward }));
+
+				quatLast = gameObject.transform->GetQuat();
+				clickPos = Input::mousePosition;
+				mode = Mode::Rotate;
+			}
+		}
+		if (mode != Mode::None)
 		{
 			if (Input::GetKeyDown(Input::KeyCode::X))
 			{
@@ -119,12 +209,15 @@ namespace sh::game
 				helper->SetStart(Vec3{ 0.f, 0.f, -100.f } + posLast);
 				helper->SetEnd(Vec3{ 0.f, 0.f, 100.f } + posLast);
 			}
-		}
-		if (mode != Mode::None)
-		{
+
 			if (Input::GetMouseDown(Input::MouseType::Right))
 			{
-				gameObject.transform->SetPosition(posLast);
+				if (mode == Mode::Move)
+					gameObject.transform->SetPosition(posLast);
+				if (mode == Mode::Scale)
+					gameObject.transform->SetScale(scaleLast);
+				if (mode == Mode::Rotate)
+					gameObject.transform->SetRotation(quatLast);
 				mode = Mode::None;
 				axis = Axis::None;
 				if (helper)
@@ -147,6 +240,12 @@ namespace sh::game
 		{
 		case Mode::Move:
 			MoveControl();
+			break;
+		case Mode::Scale:
+			ScaleControl();
+			break;
+		case Mode::Rotate:
+			RotateControl();
 			break;
 		}
 	}

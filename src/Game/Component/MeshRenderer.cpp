@@ -64,7 +64,7 @@ namespace sh::game
 				CreateDrawable(cam);
 
 #if SH_EDITOR
-			if (GetType().typeName == core::reflection::GetTypeName<MeshRenderer>())
+			if (GetType() == MeshRenderer::GetStaticType())
 			{
 				if (auto picking = gameObject.GetComponent<PickingRenderer>(); picking == nullptr)
 				{
@@ -93,8 +93,11 @@ namespace sh::game
 			auto shader = this->mat->GetShader();
 			if (shader->GetUniformBinding("lightCount"))
 				bShaderHasLight = true;
+			else
+				bShaderHasLight = false;
 
-			RebuildDrawables();
+			for (auto cam : gameObject.world.GetCameras())
+				CreateDrawable(cam);
 		}
 	}
 
@@ -227,13 +230,15 @@ namespace sh::game
 		}//drawables
 	}
 
-#if SH_EDITOR
 	SH_GAME_API void MeshRenderer::OnPropertyChanged(const core::reflection::Property& prop)
 	{
 		if (prop.GetName() == "mesh")
 		{
 			SetMesh(mesh);
 		}
+		else if (prop.GetName() == "mat")
+		{
+			SetMaterial(mat);
+		}
 	}
-#endif
 }//namespace

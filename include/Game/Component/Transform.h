@@ -29,7 +29,7 @@ namespace sh::game
 		glm::quat worldQuat;
 
 		Transform* parent;
-		PROPERTY(childs)
+		PROPERTY(childs, core::PropertyOption::invisible)
 		core::SVector<Transform*> childs;
 
 		bool bUpdateMatrix;
@@ -77,8 +77,10 @@ namespace sh::game
 		SH_GAME_API bool HasChild(const Transform& child) const;
 
 		SH_GAME_API void OnDestroy() override;
-#if SH_EDITOR
+
+		SH_GAME_API auto Serialize() const -> core::Json override;
+		SH_GAME_API void Deserialize(const core::Json& json) override;
+
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& property) override;
-#endif
 	};
 }

@@ -7,7 +7,7 @@ namespace sh::game
 	{
         float cos = glm::dot(planeNormal, lineDir);
 
-        if (glm::abs(cos) < 1e-6f)
+        if (glm::abs(cos) < 0.000001f)
         {
             if (glm::dot(planeNormal, linePoint - planePoint) == 0.0f) 
             {

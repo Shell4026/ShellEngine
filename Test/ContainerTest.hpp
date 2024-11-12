@@ -131,7 +131,7 @@ TEST(ContainerTest, SHashMapVectorTest)
 TEST(ContainerTest, SHashSetVectorTest)
 {
 	using namespace sh;
-	core::SHashSetVector<int> set{};
+	core::SHashSetVector<int, std::hash<int>, std::equal_to<int>, 8> set{};
 	set.Insert(0);
 	set.Insert(1);
 	set.Insert(2);

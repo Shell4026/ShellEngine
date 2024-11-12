@@ -39,16 +39,17 @@ namespace sh::render
 		core::SyncArray<core::SMap<uint32_t, std::unique_ptr<IBuffer>>> fragBuffers;
 		core::SyncArray<std::unique_ptr<IUniformBuffer>> uniformBuffer; // 메테리얼 공통 유니폼 버퍼
 
+		PROPERTY(floats)
 		core::SMap<std::string, float, 4> floats;
+		PROPERTY(ints)
 		core::SMap<std::string, int, 4> ints;
 		core::SMap<std::string, glm::mat4, 4> mats;
+		PROPERTY(vectors)
 		core::SMap<std::string, glm::vec4, 4> vectors;
 		std::unique_ptr<core::SMap<std::string, std::vector<float>, 4>> floatArr;
 		core::SMap<std::string, std::vector<glm::vec4>, 4> vectorArrs;
 		PROPERTY(textures)
-		core::SMap<uint32_t, Texture*, 4> textures;
-
-		
+		core::SMap<std::string, Texture*, 4> textures;
 	public:
 		bool bDirty, bBufferDirty, bBufferSync;
 		enum class Stage
@@ -115,5 +116,18 @@ namespace sh::render
 		SH_RENDER_API auto GetVectorArray(std::string_view name) const -> const std::vector<glm::vec4>*;
 		SH_RENDER_API void SetTexture(std::string_view name, Texture* tex);
 		SH_RENDER_API auto GetTexture(std::string_view name) const -> Texture*;
+		
+		SH_RENDER_API bool HasIntProperty(std::string_view name) const;
+		SH_RENDER_API bool HasFloatProperty(std::string_view name) const;
+		SH_RENDER_API bool HasVectorProperty(std::string_view name) const;
+		SH_RENDER_API bool HasMatrixProperty(std::string_view name) const;
+		SH_RENDER_API bool HasFloatArrayProperty(std::string_view name) const;
+		SH_RENDER_API bool HasVectorArrayProperty(std::string_view name) const;
+		SH_RENDER_API bool HasTextureProperty(std::string_view name) const;
+
+		SH_RENDER_API void OnPropertyChanged(const core::reflection::Property& prop) override;
+
+		SH_RENDER_API auto Serialize() const -> core::Json override;
+		SH_RENDER_API void Deserialize(const core::Json& json) override;
 	};
 }

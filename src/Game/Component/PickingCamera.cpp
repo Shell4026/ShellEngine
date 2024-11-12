@@ -27,9 +27,7 @@ namespace sh::game
 		renderTex->SetSize(1024, 768);
 		renderTex->Build(world.renderer);
 		screenSize = { 1024, 768 };
-#if SH_EDITOR
-		renderTex->editorName = "PickingFramebuffer";
-#endif
+		renderTex->SetName("PickingFramebuffer");
 
 		SetRenderTexture(*renderTex);
 

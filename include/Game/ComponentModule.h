@@ -42,6 +42,6 @@ namespace sh::game
 			group += name;
 		}
 		std::string newName{ group };
-		components.insert({ std::move(newName), std::make_unique<ComponentType<T>>()});
+		components.insert({ std::move(newName), std::make_unique<ComponentType<T>>(newName) });
 	}
 }

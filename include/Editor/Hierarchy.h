@@ -24,7 +24,7 @@ namespace sh::editor
 		EditorWorld& world;
 
 		std::list<game::GameObject*> objList;
-		//core::Observer<game::GameObject*>::Listener onGameObjectAddedListener;
+		core::Observer<false, game::GameObject*>::Listener onGameObjectAddedListener;
 		//core::Observer<game::GameObject*>::Listener onGameObjectRemovedListener;
 
 		bool isDocking;

@@ -2,6 +2,7 @@
 
 #include "Export.h"
 #include "SContainer.hpp"
+#include "Util.h"
 
 #include <cstddef>
 #include <typeinfo>
@@ -270,7 +271,7 @@ namespace sh::core::reflection
 		const std::size_t size;
 		const std::size_t hash;
 		constexpr TypeInfoData() :
-			name(GetTypeName<T>()), size(sizeof(T)), hash(Util::ConstexprHash(GetTypeName<T>()))
+			name(GetTypeName<std::remove_const_t<T>>()), size(sizeof(T)), hash(Util::ConstexprHash(GetTypeName<std::remove_const_t<T>>()))
 		{}
 	};
 
@@ -281,26 +282,36 @@ namespace sh::core::reflection
 		const std::string_view name;
 		const std::size_t size;
 		const std::size_t hash;
+		const bool isConst;
+		const bool isPointer;
+		const bool isSObject;
+		const bool isSObjectPointer;
 
 		template<typename T>
 		constexpr TypeInfo(TypeInfoData<T> data) :
-			name(data.name), size(data.size), hash(data.hash)
+			name(data.name), size(data.size), hash(data.hash), isConst(std::is_const_v<T>), isSObject(reflection::IsSObject<T>::value),
+			isPointer(std::is_pointer_v<T>), isSObjectPointer(std::is_pointer_v<T> && std::is_convertible_v<T, SObject*>)
 		{}
 		constexpr TypeInfo(const TypeInfo& other) :
-			name(other.name), size(other.size), hash(other.hash)
+			name(other.name), size(other.size), hash(other.hash), isConst(other.isConst), isSObject(other.isSObject),
+			isPointer(other.isPointer), isSObjectPointer(other.isSObjectPointer)
 		{}
 
 		constexpr bool operator==(const TypeInfo& other) const
 		{
 			return size == other.size && hash == other.hash;
 		}
+		constexpr bool operator!=(const TypeInfo& other) const
+		{
+			return !operator==(other);
+		}
 	};
 
-	/// @brief 해당 타입에 대한 TypeInfo 구조체를 컴파일 시간에 반환 하는 함수
+	/// @brief 해당 타입에 대한 TypeInfo 구조체를 반환 하는 함수
 	/// @tparam T 타입
 	/// @return TypeInfo 구조체
 	template<typename T>
-	constexpr auto GetType() -> TypeInfo&
+	auto GetType() -> TypeInfo&
 	{
 		static TypeInfo typeInfo{ TypeInfoData<T>{} };
 		return typeInfo;
@@ -359,6 +370,7 @@ namespace sh::core::reflection
 		/// @return 같으면 true, 아니면 false
 		SH_CORE_API bool IsA(const STypeInfo& other) const;
 		SH_CORE_API bool operator==(const STypeInfo& other) const;
+		SH_CORE_API bool operator!=(const STypeInfo& other) const;
 		/// @brief 현재 타입이 other의 자식인지
 		/// @return 자식이면 true 아니면 false
 		SH_CORE_API bool IsChildOf(const STypeInfo& other) const;
@@ -393,10 +405,25 @@ namespace sh::core::reflection
 		SH_CORE_API auto operator++()->PropertyIterator&;
 		SH_CORE_API auto operator=(PropertyIterator&& other) noexcept -> PropertyIterator&;
 
-		SH_CORE_API auto GetTypeName() const->std::string_view;
-
+		/// @brief 원소의 타입을 반환 하는 함수
+		/// @return 타입 객체
+		SH_CORE_API auto GetType() const -> TypeInfo;
+		/// @brief Pair타입 원소의 타입을 반환 하는 함수
+		/// @return Pair가 아니라면 {}를 반환, 맞다면 Pair의 first와 second 타입을 반환
+		SH_CORE_API auto GetPairType() const -> std::optional<std::pair<TypeInfo, TypeInfo>>;
 		template<typename T>
 		auto Get() -> T*;
+
+		/// @brief 값이 std::pair일 경우 페어의 첫번째 값을 반환 하는 함수
+		/// @brief pair가 아닐 시 nullptr를 반환한다.
+		/// @tparam T 타입
+		/// @return pair->first
+		template<typename T>
+		auto GetPairFirst() -> T*;
+		/// @brief 값이 std::pair일 경우 페어의 두번째 값을 반환 하는 함수
+		/// @brief pair가 아닐 시 nullptr를 반환한다.
+		/// @tparam T 타입
+		/// @return pair->second
 		template<typename T>
 		auto GetPairSecond() -> T*;
 
@@ -405,7 +432,7 @@ namespace sh::core::reflection
 		SH_CORE_API auto GetNestedBegin() -> PropertyIterator;
 		SH_CORE_API auto GetNestedEnd() -> PropertyIterator;
 
-		SH_CORE_API auto IsPair() const -> bool;\
+		SH_CORE_API auto IsPair() const -> bool;
 		/// @brief 원소가 const 변수인지 반환하는 함수.
 		/// @return 맞으면 true, 아니면 false
 		SH_CORE_API auto IsConst() const -> bool;
@@ -424,6 +451,11 @@ namespace sh::core::reflection
 		return &it->Get();
 	}
 	template<typename T>
+	auto PropertyIterator::GetPairFirst() -> T*
+	{
+		return reinterpret_cast<T*>(iteratorData->GetPairFirst());
+	}
+	template<typename T>
 	auto PropertyIterator::GetPairSecond() -> T*
 	{
 		return reinterpret_cast<T*>(iteratorData->GetPairSecond());
@@ -432,8 +464,6 @@ namespace sh::core::reflection
 	/// @brief 자료형과 컨테이너를 숨긴 프로퍼티 반복자 인터페이스
 	class IPropertyIteratorBase
 	{
-	public:
-		std::string_view typeName;
 	public:
 		virtual ~IPropertyIteratorBase() = default;
 		virtual void operator++() = 0;
@@ -446,9 +476,13 @@ namespace sh::core::reflection
 		virtual auto IsPair() const -> bool = 0;
 		virtual auto IsConst() const -> bool = 0;
 
+		virtual auto GetPairFirst() const -> void* = 0;
 		virtual auto GetPairSecond() const -> void* = 0;
 
 		virtual void Erase() = 0;
+
+		virtual auto GetType() const -> TypeInfo = 0;
+		virtual auto GetPairType() const -> std::optional<std::pair<TypeInfo, TypeInfo>> = 0;
 	};
 
 	/// @brief 컨테이너 타입을 숨긴 프로퍼티 반복자 인터페이스
@@ -457,6 +491,17 @@ namespace sh::core::reflection
 	class IPropertyIterator : public IPropertyIteratorBase
 	{
 	public:
+		auto GetType() const -> TypeInfo override
+		{
+			return reflection::GetType<T>();
+		}
+		auto GetPairType() const -> std::optional<std::pair<TypeInfo, TypeInfo>> override
+		{
+			if constexpr (reflection::IsPair<T>::value)
+				return std::make_pair(reflection::GetType<typename T::first_type>(), reflection::GetType<typename T::second_type>());
+			else
+				return {};
+		}
 		virtual void Begin() = 0;
 		virtual void End() = 0;
 		virtual auto Get() -> T& = 0;
@@ -476,7 +521,6 @@ namespace sh::core::reflection
 		PropertyIteratorData(TContainer* container) :
 			container(container)
 		{
-			IPropertyIteratorBase::typeName = GetTypeName<T>();
 		}
 
 		void Begin() override
@@ -484,7 +528,6 @@ namespace sh::core::reflection
 			assert(container);
 			it = container->begin();
 		}
-
 		void End() override
 		{
 			assert(container);
@@ -495,11 +538,14 @@ namespace sh::core::reflection
 		{
 			return const_cast<T&>(*it);
 		}
-
-		/// @brief 값이 std::pair일 경우 페어의 두번째 값을 반환 하는 함수
-		/// @brief pair가 아닐 시 nullptr를 반환한다.
-		/// @return pair->second
-		auto GetPairSecond() const -> void*
+		auto GetPairFirst() const -> void* override
+		{
+			if constexpr (!sh::core::reflection::IsPair<T>::value)
+				return nullptr;
+			else
+				return const_cast<void*>(reinterpret_cast<const void*>(&it->first)); // ptr*const*일 수도 있으니 const체크 잘 해야함
+		}
+		auto GetPairSecond() const -> void* override
 		{
 			if constexpr(!sh::core::reflection::IsPair<T>::value)
 				return nullptr;
@@ -596,8 +642,6 @@ namespace sh::core::reflection
 	/// @brief 타입을 숨긴 프로퍼티 추상 클래스
 	class PropertyDataBase
 	{
-	protected:
-		std::string_view typeName;
 	public:
 		STypeInfo& ownerType;
 
@@ -609,11 +653,11 @@ namespace sh::core::reflection
 		bool isConst = false;
 	public:
 		PropertyDataBase(STypeInfo& ownerType) :
-			ownerType(ownerType), typeName("")
+			ownerType(ownerType)
 		{
 		}
 
-		SH_CORE_API auto GetTypeName() const -> std::string_view;
+		virtual auto GetType() const -> TypeInfo = 0;
 		virtual auto Begin(void* sobject) const->PropertyIterator = 0;
 		virtual auto End(void* sobject) const->PropertyIterator = 0;
 	};
@@ -626,7 +670,12 @@ namespace sh::core::reflection
 			PropertyDataBase(ownerType)
 		{
 		}
+		auto GetType() const -> TypeInfo override
+		{
+			return reflection::GetType<T>();
+		}
 		virtual auto Get(void* sobject) const -> T& = 0;
+		virtual auto Get(const void* sobject) const-> const T& = 0;
 	};
 	
 	/// @brief 클래스의 맴버 변수마다 static영역에 하나씩 존재하는 클래스
@@ -637,13 +686,19 @@ namespace sh::core::reflection
 		PropertyData(STypeInfo& ownerType) :
 			IPropertyData<T>(ownerType)
 		{
-			PropertyDataBase::typeName = sh::core::reflection::GetTypeName<T>();
 		}
 
 		auto Get(void* sobject) const -> T & override
 		{
 			if constexpr (std::is_member_pointer_v<VariablePointer>)
 				return static_cast<ThisType*>(sobject)->*ptr;
+			else
+				return *ptr;
+		}
+		auto Get(const void* sobject) const -> const T& override
+		{
+			if constexpr (std::is_member_pointer_v<VariablePointer>)
+				return static_cast<const ThisType*>(sobject)->*ptr;
 			else
 				return *ptr;
 		}
@@ -775,6 +830,7 @@ namespace sh::core::reflection
 
 		const char* name;
 	public:
+		const TypeInfo type;
 		const int containerNestedLevel;
 		const bool bConstProperty;
 		const bool bVisibleProperty;
@@ -798,9 +854,14 @@ namespace sh::core::reflection
 			return &static_cast<IPropertyData<T>*>(data)->Get(sobject);
 		}
 		template<typename T, typename ThisType>
+		auto Get(const ThisType* sobject) const -> const T*
+		{
+			return &static_cast<IPropertyData<T>*>(data)->Get(sobject);
+		}
+		template<typename T, typename ThisType>
 		auto GetSafe(ThisType* sobject) const -> T*
 		{
-			if (data->GetTypeName() != reflection::GetTypeName<T>())
+			if (data->GetType() != reflection::GetType<T>())
 				return nullptr;
 			return Get<T, ThisType>(sobject);
 		}
@@ -808,16 +869,15 @@ namespace sh::core::reflection
 		/// @param SObject 프로퍼티 소유 객체
 		/// @return 컨테이너가 아니라면 빈 반복자를 반환한다.
 		SH_CORE_API auto Begin(SObject* SObject) -> PropertyIterator;
+		SH_CORE_API auto Begin(SObject* SObject) const -> PropertyIterator;
 		/// @brief 해당 프로퍼티가 컨테이너라면 시작 반복자를 반환한다.
 		/// @param SObject 프로퍼티 소유 객체
 		/// @return 컨테이너가 아니라면 빈 반복자를 반환한다.
 		SH_CORE_API auto End(SObject* SObject) -> PropertyIterator;
+		SH_CORE_API auto End(SObject* SObject) const -> PropertyIterator;
 		/// @brief 변수의 이름을 반환한다.
 		/// @return 변수 이름
 		SH_CORE_API auto GetName() const -> std::string_view;
-		/// @brief 타입 이름을 반환한다.
-		/// @return 타입 이름
-		SH_CORE_API auto GetTypeName() const -> std::string_view;
 	};
 
 }//namespace

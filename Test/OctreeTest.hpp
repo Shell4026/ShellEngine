@@ -25,9 +25,9 @@ TEST(OctreeTest, InsertTest)
 		{
 			return pos;
 		}
-		bool Intersect(const render::AABB& aabb) const override
+		bool Intersect(const render::AABB& other) const override
 		{
-			return aabb.Intersects(aabb);
+			return aabb.Intersects(other);
 		}
 	};
 	

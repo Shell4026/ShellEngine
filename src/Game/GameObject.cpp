@@ -3,21 +3,22 @@
 
 #include "Component/Component.h"
 
+#include "Core/SObjectManager.h"
+
 namespace sh::game
 {
 	SH_GAME_API GameObject::GameObject(World& world, const std::string& name) :
 		world(world),
-		objName(name), name(objName),
 		bInit(false), bEnable(true), activeSelf(bEnable)
 	{
 		transform = AddComponent<Transform>();
+		SetName(name);
 	}
 
 	SH_GAME_API GameObject::GameObject(GameObject&& other) noexcept :
 		SObject(std::move(other)),
 		world(other.world), transform(other.transform),
 		
-		objName(std::move(other.objName)), name(objName),
 		bInit(other.bInit), bEnable(other.bEnable), activeSelf(bEnable),
 		components(std::move(other.components))
 	{
@@ -26,7 +27,7 @@ namespace sh::game
 
 	SH_GAME_API GameObject::~GameObject()
 	{
-		SH_INFO_FORMAT("~GameObject: {}", name);
+		SH_INFO_FORMAT("~GameObject: {}", GetName());
 	}
 
 	SH_GAME_API void GameObject::Awake()
@@ -55,6 +56,15 @@ namespace sh::game
 			if(Component->active)
 				Component->OnEnable();
 		}
+	}
+	SH_GAME_API void GameObject::Destroy()
+	{
+		for (auto component : components)
+		{
+			component->Destroy();
+		}
+		components.clear();
+		Super::Destroy();
 	}
 
 	SH_GAME_API void GameObject::BeginUpdate()
@@ -89,15 +99,7 @@ namespace sh::game
 				Component->LateUpdate();
 		}
 	}
-	SH_GAME_API void GameObject::Destroy()
-	{
-		world.DestroyGameObject(name);
-		for (auto component : components)
-		{
-			component->Destroy();
-		}
-		SObject::Destroy();
-	}
+
 	SH_GAME_API void GameObject::SetActive(bool b)
 	{
 		if (!bEnable && b == true)
@@ -107,11 +109,6 @@ namespace sh::game
 			OnEnable();
 		}
 		bEnable = b;
-	}
-
-	SH_GAME_API void GameObject::SetName(const std::string& name)
-	{
-		objName = world.ChangeGameObjectName(objName, name);
 	}
 
 	SH_GAME_API auto GameObject::GetComponents() const -> const std::vector<Component*>&
@@ -124,10 +121,32 @@ namespace sh::game
 		if (!core::IsValid(component) || &component->gameObject != this)
 			return;
 
-#if SH_EDITOR
-		component->editorName = component->GetType().typeName;
-#endif
 		components.push_back(std::move(component));
 		components.back()->SetActive(true);
+	}
+
+	SH_GAME_API auto GameObject::Serialize() const -> core::Json
+	{
+		core::Json mainJson = Super::Serialize();
+		core::Json componentJsons = core::Json::array();
+		for (auto component : components)
+		{
+			if (!core::IsValid(component))
+				continue;
+			componentJsons.push_back(component->Serialize());
+		}
+		mainJson["Components"] = componentJsons;
+		return mainJson;
+	}
+	SH_GAME_API void GameObject::Deserialize(const core::Json& json)
+	{
+		Super::Deserialize(json);
+		core::SObjectManager* objManager = core::SObjectManager::GetInstance();
+		for (auto& compJson : json["Components"])
+		{
+			std::string uuid = compJson["uuid"].get<std::string>();
+			Component* comp = static_cast<Component*>(objManager->GetSObject(uuid));
+			comp->Deserialize(compJson);
+		}
 	}
 }

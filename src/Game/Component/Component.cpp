@@ -74,4 +74,75 @@ namespace sh::game
 	SH_GAME_API void Component::OnDestroy()
 	{
 	}
+
+	SH_GAME_API auto Component::Serialize() const -> core::Json
+	{
+		core::Json mainJson{ Super::Serialize() };
+		const core::reflection::STypeInfo* type = &GetType();
+		while (type)
+		{
+			core::Json json{};
+			for (auto& [name, prop]:type->GetProperties())
+			{
+				const core::reflection::TypeInfo& propType = prop.type;
+
+				if (propType == core::reflection::GetType<int>())
+					core::SerializeProperty(json, name, *prop.Get<int>(this));
+				else if (propType == core::reflection::GetType<float>())
+					core::SerializeProperty(json, name, *prop.Get<float>(this));
+				else if (propType == core::reflection::GetType<std::string>())
+					core::SerializeProperty(json, name, *prop.Get<std::string>(this));
+				else if (propType == core::reflection::GetType<bool>())
+					core::SerializeProperty(json, name, *prop.Get<bool>(this));
+				else if (propType == core::reflection::GetType<Vec4>())
+					core::SerializeProperty(json, name, *prop.Get<Vec4>(this));
+				else if (propType == core::reflection::GetType<Vec3>())
+					core::SerializeProperty(json, name, *prop.Get<Vec3>(this));
+				else if (propType == core::reflection::GetType<Vec2>())
+					core::SerializeProperty(json, name, *prop.Get<Vec2>(this));
+				else if (prop.isSObjectPointer)
+					core::SerializeProperty(json, name, *prop.Get<SObject*>(this));
+			}
+			if (!json.empty())
+				mainJson[type->name] = json;
+			type = type->GetSuper();
+		}
+		return mainJson;
+	}
+	SH_GAME_API void Component::Deserialize(const core::Json& json)
+	{
+		Super::Deserialize(json);
+		const core::reflection::STypeInfo* type = &GetType();
+		while (type)
+		{
+			if (!json.contains(type->name))
+			{
+				type = type->GetSuper();
+				continue;
+			}
+			core::Json compJson{ json.at(type->name) };
+			for (auto& [name, prop] : type->GetProperties())
+			{
+				const core::reflection::TypeInfo& propType = prop.type;
+
+				if (propType == core::reflection::GetType<int>())
+					core::DeserializeProperty(compJson, name, *prop.Get<int>(this));
+				else if (propType == core::reflection::GetType<float>())
+					core::DeserializeProperty(compJson, name, *prop.Get<float>(this));
+				else if (propType == core::reflection::GetType<std::string>())
+					core::DeserializeProperty(compJson, name, *prop.Get<std::string>(this));
+				else if (propType == core::reflection::GetType<bool>())
+					core::DeserializeProperty(compJson, name, *prop.Get<bool>(this));
+				else if (propType == core::reflection::GetType<Vec4>())
+					core::DeserializeProperty(compJson, name, *prop.Get<Vec4>(this));
+				else if (propType == core::reflection::GetType<Vec3>())
+					core::DeserializeProperty(compJson, name, *prop.Get<Vec3>(this));
+				else if (propType == core::reflection::GetType<Vec2>())
+					core::DeserializeProperty(compJson, name, *prop.Get<Vec2>(this));
+				else if (prop.isSObjectPointer)
+					core::DeserializeProperty(compJson, name, *prop.Get<SObject*>(this));
+			}
+			type = type->GetSuper();
+		}
+	}
 }

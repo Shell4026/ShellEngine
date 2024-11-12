@@ -11,12 +11,23 @@ namespace sh::editor
 		world(world),
 		isDocking(false)
 	{
+		onGameObjectAddedListener.SetCallback([&](game::GameObject* obj)
+			{
+				objList.push_back(obj);
+			}
+		);
+		world.onGameObjectAdded.Register(onGameObjectAddedListener);
+
+		for (auto obj : world.gameObjects)
+		{
+			objList.push_back(obj);
+		}
 	}
 
 	void Hierarchy::DrawInvisibleSpace(game::GameObject* obj)
 	{
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY() - ImGui::GetStyle().ItemSpacing.y);
-		ImGui::InvisibleButton(("ReorderDrop" + obj->name).c_str(), ImVec2(-1, 1));
+		ImGui::InvisibleButton(("ReorderDrop" + obj->GetName()).c_str(), ImVec2(-1, 1));
 
 		if (ImGui::BeginDragDropTarget())
 		{
@@ -25,13 +36,15 @@ namespace sh::editor
 				IM_ASSERT(payload->DataSize == sizeof(game::GameObject*));
 				game::GameObject* draggedObj = *(game::GameObject**)payload->Data;
 
+				// 순서 변경
 				if (obj->transform->GetParent() == nullptr)
 				{
-					world.ReorderObjectAbovePivot(draggedObj->name, obj->name);
-					if (draggedObj->transform->GetParent() != nullptr)
-					{
-						draggedObj->transform->SetParent(nullptr);
-					}
+					objList.erase(std::find(objList.begin(), objList.end(), draggedObj));
+					auto it = std::find(objList.begin(), objList.end(), obj);
+					if (it != objList.begin())
+						objList.insert(it, draggedObj);
+					else
+						objList.push_front(draggedObj);
 				}
 				else
 				{
@@ -66,11 +79,6 @@ namespace sh::editor
 
 	void Hierarchy::DrawGameObjectHierarchy(game::GameObject* obj, core::SHashSet<game::GameObject*>& drawSet)
 	{
-		if (drawSet.find(obj) != drawSet.end())
-			return;
-
-		drawSet.insert(obj);
-
 		bool isSelected = world.GetSelectedObject() == obj;
 		bool nodeOpen = false;
 		bool hasChildren = !obj->transform->GetChildren().empty();
@@ -80,16 +88,17 @@ namespace sh::editor
 		{
 			nodeOpen = ImGui::TreeNodeEx((void*)obj,
 				ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_OpenOnArrow | (isSelected ? ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_Selected : 0),
-				"%s", obj->name.c_str());
+				"%s", obj->GetName().c_str());
 		}
 		else {
 			nodeOpen = ImGui::TreeNodeEx((void*)obj,
 				ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_Leaf |
 				ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_NoTreePushOnOpen |
 				(isSelected ? ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_Selected : 0),
-				"%s", obj->name.c_str());
+				"%s", obj->GetName().c_str());
 		}
-		if (ImGui::BeginPopupContextItem((std::string{ "RightClickPopupGameObject" } + obj->name).c_str()))
+		// 객체 우클릭
+		if (ImGui::BeginPopupContextItem((std::string{ "RightClickPopupGameObject" } + obj->GetName()).c_str()))
 		{
 			if (ImGui::Selectable("Delete"))
 			{
@@ -99,7 +108,7 @@ namespace sh::editor
 			}
 			ImGui::EndPopup();
 		}
-
+		// 객체 선택
 		if (ImGui::IsItemHovered())
 		{
 			if (ImGui::IsMouseReleased(ImGuiMouseButton_::ImGuiMouseButton_Left))
@@ -112,7 +121,7 @@ namespace sh::editor
 		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_::ImGuiDragDropFlags_None))
 		{
 			ImGui::SetDragDropPayload("GameObject", &obj, sizeof(game::GameObject*));
-			ImGui::Text("%s", obj->name.c_str());
+			ImGui::Text("%s", obj->GetName().c_str());
 			ImGui::EndDragDropSource();
 		}
 		// 드래그 받는 대상의 시점
@@ -168,20 +177,28 @@ namespace sh::editor
 
 		core::SHashSet<game::GameObject*> drawSet{};
 
-		for (auto& obj : world.gameObjects)
+		for (auto it = objList.begin(); it != objList.end();)
 		{
+			auto obj = *it;
 			if (!core::IsValid(obj))
+			{
+				it = objList.erase(it);
 				continue;
+			}
 			if (obj->hideInspector)
+			{
+				++it;
 				continue;
+			}
 			if (obj->transform->GetParent() == nullptr)
 				DrawGameObjectHierarchy(obj, drawSet);
+			++it;
 		}
 
 		// 빈 공간 드래그 시 부모 제거
 		ImGui::PushStyleVar(ImGuiStyleVar_::ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
 		ImGui::InvisibleButton("HierarchyEmptySpace", ImGui::GetContentRegionAvail());
-		if (ImGui::BeginDragDropTarget()) // 드래그 받는 대상의 시점
+		if (ImGui::BeginDragDropTarget())
 		{
 			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("GameObject")) 
 			{
@@ -190,11 +207,15 @@ namespace sh::editor
 
 				if (draggedObj->transform->GetParent() != nullptr)
 					draggedObj->transform->SetParent(nullptr);
+
+				objList.erase(std::find(objList.begin(), objList.end(), draggedObj));
+				objList.push_back(draggedObj);
 			}
 			ImGui::EndDragDropTarget();
 		}
 		ImGui::PopStyleVar();
 
+		// 우클릭
 		if (ImGui::BeginPopupContextItem("RightClickPopup"))
 		{
 			if (ImGui::BeginMenu("Create"))

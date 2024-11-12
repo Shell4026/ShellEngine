@@ -87,4 +87,15 @@ namespace sh::game
 	{
 		return gameObject.transform->position;
 	}
+
+#if SH_EDITOR
+	SH_GAME_API void PointLight::OnPropertyChanged(const core::reflection::Property& prop)
+	{
+		if (prop.GetName() == "range")
+		{
+			world.GetLightOctree().Erase(*this);
+			world.GetLightOctree().Insert(*this);
+		}
+	}
+#endif
 }//namespace

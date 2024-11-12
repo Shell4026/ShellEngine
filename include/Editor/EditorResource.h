@@ -15,13 +15,14 @@ namespace sh::editor
 	private:
 		EditorWorld* world;
 
-		game::GUITexture folderIcon, fileIcon, meshIcon;
+		game::GUITexture folderIcon, fileIcon, meshIcon, materialIcon;
 	public:
 		enum class Icon
 		{
 			Folder,
 			File,
-			Mesh
+			Mesh,
+			Material
 		};
 	public:
 		SH_EDITOR_API void LoadAllAssets(EditorWorld& world);

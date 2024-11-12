@@ -7,11 +7,6 @@
 #include <string>
 namespace sh::core
 {
-	FileLoader::~FileLoader()
-	{
-
-	}
-
 	auto FileLoader::LoadBinary(std::string_view dir) -> std::optional<std::vector<unsigned char>>
 	{
 		std::vector<unsigned char> data;

@@ -46,13 +46,11 @@ namespace sh::game
 	private:
 		static constexpr float FIXED_TIME = 0.02f;
 
-		core::SVector<GameObject*> objs;
+		PROPERTY(objs)
+		core::SHashSet<GameObject*> objs;
 		core::SSet<Camera*> cameras;
-		core::SHashMap<std::string, uint32_t> objsMap;
-		std::queue<int> objsEmptyIdx;
 
-		std::queue<GameObject*> addedObjQueue; // 루프 도중 추가 된 객체
-		core::SHashMap<std::string, GameObject*> addedObjMap;
+		std::vector<GameObject*> addedObjs; // 루프 도중 추가 된 객체
 
 		float _deltaTime = 0.f;
 		float _fixedDeltaTime = 0.f;
@@ -66,40 +64,39 @@ namespace sh::game
 
 		bool startLoop = false;
 	public:
-		sh::render::Renderer& renderer;
+		render::Renderer& renderer;
 		const float& deltaTime = _deltaTime;
 		const float& fixedDeltaTime = _fixedDeltaTime;
 
-		sh::game::ResourceManager<sh::render::Shader> shaders;
-		sh::game::ResourceManager<sh::render::Material> materials;
-		sh::game::ResourceManager<sh::render::Mesh> meshes;
-		sh::game::ResourceManager<sh::render::Texture> textures;
+		ResourceManager<sh::render::Shader> shaders;
+		ResourceManager<sh::render::Material> materials;
+		ResourceManager<sh::render::Mesh> meshes;
+		ResourceManager<sh::render::Texture> textures;
 	public:
 		const ComponentModule& componentModule;
-		const core::SVector<GameObject*>& gameObjects = objs;
+		const core::SHashSet<GameObject*>& gameObjects = objs;
 		core::Observer<false, Camera*> onCameraAdd;
 		core::Observer<false, Camera*> onCameraRemove;
 		core::Observer<false, GameObject*> onGameObjectAdded;
 		core::Observer<false, GameObject*> onGameObjectRemoved;
+	protected:
+		SH_GAME_API void CleanObjs();
 	public:
-		SH_GAME_API World(sh::render::Renderer& renderer, const ComponentModule& componentModule);
+		SH_GAME_API World(render::Renderer& renderer, const ComponentModule& componentModule);
 		SH_GAME_API World(World&& other) noexcept;
 		SH_GAME_API virtual ~World();
 
 		SH_GAME_API virtual void Clean();
 
-		/// @brief 게임 오브젝트를 추가한다. 이름이 같은 오브젝트가 존재 시 숫자가 붙는다.
+		/// @brief 게임 오브젝트를 추가한다.
 		/// @param name 오브젝트 이름
-		SH_GAME_API auto AddGameObject(const std::string& name) -> GameObject*;
-		SH_GAME_API void DestroyGameObject(const std::string& name);
-		SH_GAME_API void DestroyGameObject(const GameObject& obj);
-		SH_GAME_API auto ChangeGameObjectName(GameObject& obj, const std::string& to) -> std::string;
-		SH_GAME_API auto ChangeGameObjectName(const std::string& objName, const std::string& to) -> std::string;
+		SH_GAME_API auto AddGameObject(std::string_view name) -> GameObject*;
+		SH_GAME_API void DestroyGameObject(std::string_view name);
+		SH_GAME_API void DestroyGameObject(GameObject& obj);
+		/// @brief 가장 먼저 발견 된 해당 이름을 가진 게임 오브젝트를 반환하는 함수 O(N)
+		/// @param name 이름
+		/// @return 못 찾을 시 nullptr, 찾을 시 게임 오브젝트 포인터
 		SH_GAME_API auto GetGameObject(std::string_view name) const -> GameObject*;
-		/// @brief obj를 pivotObj보다 배열에서 우선 배치하는 함수
-		/// @param obj 바꿀 오브젝트 이름
-		/// @param pivotObj 기준 오브젝트 이름
-		SH_GAME_API void ReorderObjectAbovePivot(std::string_view obj, std::string_view pivotObj);
 
 		SH_GAME_API void RegisterCamera(Camera* cam);
 		SH_GAME_API void UnRegisterCamera(Camera* cam);
@@ -113,5 +110,8 @@ namespace sh::game
 
 		SH_GAME_API virtual void Start();
 		SH_GAME_API virtual void Update(float deltaTime);
+
+		SH_GAME_API auto Serialize() const->core::Json override;
+		SH_GAME_API void Deserialize(const core::Json& json) override;
 	};
 }

@@ -6,6 +6,7 @@
 
 #include "Core/GarbageCollection.h"
 #include "Core/Util.h"
+#include "Core/SObjectManager.h"
 
 #include <utility>
 #include <cstdint>
@@ -27,7 +28,7 @@ namespace sh::game
 		renderer(other.renderer), gc(other.gc), componentModule(other.componentModule),
 		
 		_deltaTime(other._deltaTime), _fixedDeltaTime(other._fixedDeltaTime),
-		objs(std::move(other.objs)), objsMap(std::move(objsMap)), objsEmptyIdx(std::move(other.objsEmptyIdx)),
+		objs(std::move(other.objs)), addedObjs(std::move(other.addedObjs)),
 		shaders(std::move(other.shaders)), materials(std::move(other.materials)), meshes(std::move(other.meshes)), textures(std::move(other.textures)),
 		mainCamera(nullptr),
 		lightOctree(std::move(other.lightOctree))
@@ -49,8 +50,10 @@ namespace sh::game
 		shaders.Clean();
 		textures.Clean();
 
-		objsEmptyIdx = std::queue<int>{};
-		objsMap.clear();
+		CleanObjs();
+	}
+	SH_GAME_API void World::CleanObjs()
+	{
 		for (auto obj : objs)
 		{
 			if (core::IsValid(obj))
@@ -59,161 +62,51 @@ namespace sh::game
 		objs.clear();
 	}
 
-	SH_GAME_API auto World::AddGameObject(const std::string& name) -> GameObject*
+	SH_GAME_API auto World::AddGameObject(std::string_view name) -> GameObject*
 	{
-		std::string objName = name;
+		auto obj = Create<GameObject>(*this, std::string{ name });
+		objs.insert(obj);
+		gc->SetRootSet(obj);
+		onGameObjectAdded.Notify(obj);
 
-		//중복되는 이름이 있으면 뒤에 숫자를 붙인다.
-		int nameIdx = 0;
-		auto it = objsMap.find(objName);
-		while (it != objsMap.end())
-		{
-			objName = name + std::to_string(nameIdx++);
-			it = objsMap.find(objName);
-		}
-
-		if (objsEmptyIdx.empty())
-		{
-			auto obj = Create<GameObject>(*this, objName);
-			if (!startLoop)
-			{
-				objsMap.insert({ objName, objs.size() });
-				objs.push_back(obj);
-			}
-			else
-			{
-				objsMap.insert({ objName, objs.size() + addedObjMap.size() });
-				addedObjQueue.push(obj);
-				addedObjMap.insert({ objName, obj });
-			}
-			gc->SetRootSet(obj);
-			onGameObjectAdded.Notify(obj);
-#if SH_EDITOR
-			obj->editorName = objName;
-#endif
-			return obj;
-		}
-		else // 전에 제거된 게임 오브젝트가 있어서 빈 idx가 있는 상태
-		{
-			int idx = objsEmptyIdx.front();
-			objsMap.insert(std::make_pair(objName, idx));
-			objs[idx] = Create<GameObject>(*this, objName);
-			objsEmptyIdx.pop();
-
-			auto obj = objs[idx];
-			gc->SetRootSet(obj);
-			onGameObjectAdded.Notify(obj);
-#if SH_EDITOR
-			obj->editorName = objName;
-#endif
-			return obj;
-		}
+		return obj;
 	}
 
-	SH_GAME_API void World::DestroyGameObject(const std::string& name)
+	SH_GAME_API void World::DestroyGameObject(std::string_view name)
 	{
-		auto it = objsMap.find(name);
-		if (it == objsMap.end())
-			return;
-
-		int id = it->second;
-		if (objs[id] != nullptr)
-		{
-			objsMap.erase(it);
-			objsEmptyIdx.push(id);
-			objs[id]->Destroy();
-			onGameObjectRemoved.Notify(objs[id]);
-
-			objs[id] = nullptr;
-		}
+		GameObject* obj = GetGameObject(name);
+		if (obj != nullptr)
+			DestroyGameObject(*obj);
 	}
-	SH_GAME_API void World::DestroyGameObject(const GameObject& obj)
+	SH_GAME_API void World::DestroyGameObject(GameObject& obj)
 	{
-		DestroyGameObject(obj.name);
-	}
-
-	SH_GAME_API auto World::ChangeGameObjectName(const std::string& objName, const std::string& to) -> std::string
-	{
-		auto it = objsMap.find(objName);
-		if (it == objsMap.end())
-			return "";
-
-		std::string name{ to };
-		int nameIdx = 0;
-		it = objsMap.find(to);
-		while (it == objsMap.end())
-		{
-			name = to + std::to_string(nameIdx++);
-			it = objsMap.find(objName);
-		}
-
-		int idx = it->second;
-#if SH_EDITOR
-		objs[idx]->editorName = to;
-#endif
-		objsMap.insert(std::make_pair(name, idx));
-		objsMap.erase(it);
-
-		return name;
-	}
-	SH_GAME_API auto World::ChangeGameObjectName(GameObject& obj, const std::string& to) -> std::string
-	{
-		return ChangeGameObjectName(obj.name, to);
+		obj.Destroy();
+		objs.erase(&obj);
 	}
 
 	SH_GAME_API auto World::GetGameObject(std::string_view name) const -> GameObject*
 	{
 		std::string nameStr{ name };
-		if (addedObjMap.size() > 0)
+		if (!addedObjs.empty())
 		{
-			auto addedIt = addedObjMap.find(nameStr);
-			if (addedIt != addedObjMap.end())
-				return addedIt->second;
+			for (auto obj : addedObjs)
+			{
+				if (!core::IsValid(obj))
+					continue;
+				if (obj->GetName() == name)
+					return obj;
+			}
 		}
-		auto it = objsMap.find(nameStr);
-		if (it != objsMap.end())
-			return objs[it->second];
+
+		for (auto obj : objs)
+		{
+			if (!core::IsValid(obj))
+				continue;
+			if (obj->GetName() == name)
+				return obj;
+		}
 
 		return nullptr;
-	}
-
-	SH_GAME_API void World::ReorderObjectAbovePivot(std::string_view obj, std::string_view pivotObj)
-	{
-		if (obj == pivotObj)
-			return;
-		auto objIt = objsMap.find(std::string{ obj });
-		if (objIt == objsMap.end())
-			return;
-		auto pivotIt = objsMap.find(std::string{ pivotObj });
-		if (pivotIt == objsMap.end())
-			return;
-
-		uint32_t objIdx = objIt->second;
-		uint32_t pivotIdx = pivotIt->second;
-		
-		if (objIdx > pivotIdx)
-		{
-			pivotIt->second++;
-			objIt->second = pivotIdx;
-			auto objPtr = objs[objIdx];
-			for (std::size_t i = objIdx; i > pivotIdx; --i)
-			{
-				objsMap[objs[i - 1]->name] = i;
-				objs[i] = objs[i - 1];
-			}
-			objs[pivotIdx] = objPtr;
-		}
-		else
-		{
-			auto objPtr = objs[objIdx];
-			objIt->second = pivotIdx - 1;
-			for (std::size_t i = objIdx; i < pivotIdx - 1; ++i)
-			{
-				objsMap[objs[i + 1]->name] = i;
-				objs[i] = objs[i + 1];
-			}
-			objs[pivotIdx - 1] = objPtr;
-		}
 	}
 
 	SH_GAME_API void World::Start()
@@ -243,15 +136,10 @@ namespace sh::game
 		if (!startLoop)
 			startLoop = true;
 
-		while (!addedObjQueue.empty())
-		{
-			auto obj = addedObjQueue.front();
-			addedObjQueue.pop();
+		for (auto addedObj : addedObjs)
+			objs.insert(addedObj);
 
-			objsMap.insert({ obj->name, objs.size() });
-			objs.push_back(obj);
-		}
-		addedObjMap.clear();
+		addedObjs.clear();
 
 		for (auto& obj : objs)
 		{
@@ -336,5 +224,66 @@ namespace sh::game
 	SH_GAME_API auto World::GetLightOctree() const -> const Octree&
 	{
 		return lightOctree;
+	}
+
+	SH_GAME_API auto World::Serialize() const -> core::Json
+	{
+		core::Json mainJson{ Super::Serialize() };
+
+		core::Json objsJson = core::Json::array();
+		for (auto obj : objs)
+		{
+			if (obj->GetName() == "_Helper" || obj->GetName() == "Grid" || obj->GetName() == "EditorCamera" || obj->GetName() == "PickingCamera" || obj->GetName() == "_Axis")
+				continue;
+			core::Json objJson{ obj->Serialize() };
+			objsJson.push_back(objJson);
+		}
+		mainJson["objs"] = objsJson;
+
+		return mainJson;
+	}
+	SH_GAME_API void World::Deserialize(const core::Json& json)
+	{
+		if (!json.contains("objs"))
+			return;
+
+		core::SObjectManager* objManager = core::SObjectManager::GetInstance();
+		// 유효한 참조를 위해 두번 로드하는 과정을 거친다.
+		// 생성만 하는 과정
+		for (auto& objJson : json["objs"])
+		{
+			std::string name = objJson["name"].get<std::string>();
+			if (name == "_Helper" || name == "Grid" || name == "EditorCamera" || name == "PickingCamera" || name == "_Axis")
+				continue;
+			auto obj = this->AddGameObject(name);
+			obj->SetUUID(core::UUID{ objJson["uuid"].get<std::string>() });
+
+			for (auto& compJson : objJson["Components"])
+			{
+				std::string name = compJson["name"].get<std::string>();
+				std::string type = compJson["type"].get<std::string>();
+				std::string uuid = compJson["uuid"].get<std::string>();
+				if (type == "Transform") // 트랜스폼은 게임오브젝트 생성 시 이미 만들어져있다.
+				{
+					obj->transform->SetUUID(core::UUID{ uuid });
+					continue;
+				}
+				auto compType = ComponentModule::GetInstance()->GetComponent(name);
+				if (compType == nullptr)
+				{
+					SH_ERROR_FORMAT("Not found component - {}", type);
+					continue;
+				}
+				Component* component = compType->Create(*obj);
+				component->SetUUID(core::UUID{ uuid });
+				obj->AddComponent(component);
+			}
+		}
+		// 역 직렬화
+		for (auto& objJson : json["objs"])
+		{
+			GameObject* obj = static_cast<GameObject*>(objManager->GetSObject(objJson["uuid"].get<std::string>()));
+			obj->Deserialize(objJson);
+		}
 	}
 }

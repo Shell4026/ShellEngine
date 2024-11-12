@@ -25,7 +25,6 @@ namespace sh::editor
 		hierarchyWidth(0), hierarchyHeight(0),
 		explorer(imgui),
 
-		bOpenExplorer(false),
 		bDirty(false)
 	{
 	}
@@ -75,6 +74,44 @@ namespace sh::editor
 		ImGui::End();
 	}
 
+	inline void EditorUI::DrawMenu()
+	{
+		if (ImGui::BeginMainMenuBar())
+		{
+			if (ImGui::BeginMenu("File"))
+			{
+				if (ImGui::MenuItem("New project"))
+				{
+					explorer.AddCallback([&](std::filesystem::path dir)
+						{
+							project.CreateNewProject(dir);
+						}
+					);
+					explorer.Open(ExplorerUI::OpenMode::Create);
+				}
+				if (ImGui::MenuItem("Open project"))
+				{
+					explorer.AddCallback([&](std::filesystem::path dir)
+						{
+							project.OpenProject(dir);
+						}
+					);
+					explorer.Open();
+				}
+				if (ImGui::MenuItem("Save world", "Ctrl+S"))
+				{
+					project.SaveWorld();
+				}
+				if (ImGui::MenuItem("Load world", "Ctrl+O"))
+				{
+					project.LoadWorld();
+				}
+				ImGui::EndMenu();
+			}
+			ImGui::EndMainMenuBar();
+		}
+	}
+
 	SH_EDITOR_API void EditorUI::Update()
 	{
 		viewport.Update();
@@ -93,22 +130,9 @@ namespace sh::editor
 		inspector.Render();
 		project.Render();
 		viewport.Render();
-		
-		if (ImGui::BeginMainMenuBar())
-		{
-			if (ImGui::BeginMenu("File"))
-			{
-				if (ImGui::MenuItem("OpenProject", "Ctrl+O"))
-				{
-					bOpenExplorer = true;
-				}
-				ImGui::EndMenu();
-			}
-			ImGui::EndMainMenuBar();
-		}
-
-		if (bOpenExplorer)
-			explorer.Update();
+	
+		DrawMenu();
+		explorer.Render();
 
 		imgui.SetDirty();
 	}
