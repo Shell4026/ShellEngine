@@ -15,14 +15,12 @@ namespace sh::game
 		//SH_INFO_FORMAT("ID: {}", id);
 
 		this->mat = world.materials.GetResource("PickingMaterial");
-		auto renderer = owner.GetComponent<MeshRenderer>();
-		if (renderer)
+		renderer = owner.GetComponent<MeshRenderer>();
+		if (core::IsValid(renderer))
 		{
 			auto mesh = renderer->GetMesh();
 			if (core::IsValid(mesh))
-			{
 				this->mesh = mesh;
-			}
 		}
 	}
 	SH_GAME_API PickingRenderer::~PickingRenderer()
@@ -38,6 +36,12 @@ namespace sh::game
 	{
 		if (!core::IsValid(camera))
 			return;
+		if (core::IsValid(renderer))
+		{
+			if (this->mesh != renderer->GetMesh())
+				SetMesh(renderer->GetMesh());
+		}
+
 		if (!camera->pickingCallback.Empty())
 		{
 			for (auto& [cam, drawable] : drawables)

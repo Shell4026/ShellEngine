@@ -20,11 +20,13 @@ namespace sh::editor
 		camObj->transform->SetPosition({ 2.f, 2.f, 2.f });
 		camObj->hideInspector = true;
 		editorCamera = camObj->AddComponent<game::EditorCamera>();
+		editorCamera->SetUUID(core::UUID{ "61b7bc9f9fd2ca27dcbad8106745f62a" });
 		this->SetMainCamera(editorCamera);
 
 		auto PickingCamObj = AddGameObject("PickingCamera");
 		PickingCamObj->transform->SetParent(camObj->transform);
 		auto pickingCam = PickingCamObj->AddComponent<game::PickingCamera>();
+		pickingCam->SetUUID(core::UUID{ "af9cac824334bcaccd86aad8a18e3cba" });
 		pickingCam->SetFollowCamera(editorCamera);
 	}
 
@@ -39,28 +41,29 @@ namespace sh::editor
 		selected = nullptr;
 	}
 
-	SH_EDITOR_API void EditorWorld::SetSelectedObject(game::GameObject* gameObject)
+	SH_EDITOR_API void EditorWorld::SetSelectedObject(core::SObject* obj)
 	{
-		if (selected)
+		if (core::IsValid(selected) && selected->GetType() == game::GameObject::GetStaticType())
 		{
-			auto control = selected->GetComponent<game::EditorControl>();
-			if (core::IsValid(control))
+			if (core::IsValid(selected))
 			{
-				control->Destroy();
+				auto control = static_cast<game::GameObject*>(selected)->GetComponent<game::EditorControl>();
+				if (core::IsValid(control))
+					control->Destroy();
 			}
 		}
-		selected = gameObject;
-		if (selected)
+		selected = obj;
+		if (core::IsValid(selected) && selected->GetType() == game::GameObject::GetStaticType())
 		{
-			if (selected->GetComponent<game::EditorControl>() == nullptr)
+			if (static_cast<game::GameObject*>(selected)->GetComponent<game::EditorControl>() == nullptr)
 			{
-				auto control = selected->AddComponent<game::EditorControl>();
+				auto control = static_cast<game::GameObject*>(selected)->AddComponent<game::EditorControl>();
 				control->SetCamera(editorCamera);
 				control->hideInspector = true;
 			}
 		}
 	}
-	SH_EDITOR_API auto EditorWorld::GetSelectedObject() const -> game::GameObject*
+	SH_EDITOR_API auto EditorWorld::GetSelectedObject() const -> core::SObject*
 	{
 		return selected;
 	}
@@ -103,5 +106,14 @@ namespace sh::editor
 
 		guiContext.End();
 		Super::Update(deltaTime);
+	}
+
+	SH_EDITOR_API auto EditorWorld::Serialize() const -> core::Json
+	{
+		return Super::Serialize();
+	}
+	SH_EDITOR_API void EditorWorld::Deserialize(const core::Json& json)
+	{
+		Super::Deserialize(json);
 	}
 }

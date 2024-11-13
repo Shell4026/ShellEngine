@@ -23,8 +23,6 @@ namespace sh::game
 		PROPERTY(components)
 		std::vector<Component*> components;
 
-		std::string objName;
-
 		bool bEnable;
 		bool bInit;
 	public:
@@ -33,14 +31,16 @@ namespace sh::game
 		Transform* transform;
 
 		const bool& activeSelf;
-		const std::string& name;
 #if SH_EDITOR
+		PROPERTY(hideInspector, core::PropertyOption::invisible)
 		bool hideInspector = false;
 #endif
 	public:
 		SH_GAME_API GameObject(World& world, const std::string& name);
 		SH_GAME_API GameObject(GameObject&& other) noexcept;
 		SH_GAME_API ~GameObject();
+
+		SH_GAME_API void Destroy() override;
 
 		SH_GAME_API void Awake() override;
 		SH_GAME_API void Start() override;
@@ -50,10 +50,7 @@ namespace sh::game
 		SH_GAME_API void Update() override;
 		SH_GAME_API void LateUpdate() override;
 
-		SH_GAME_API void Destroy();
-
 		SH_GAME_API void SetActive(bool b);
-		SH_GAME_API void SetName(const std::string& name);
 
 		SH_GAME_API auto GetComponents() const -> const std::vector<Component*>&;
 
@@ -61,6 +58,9 @@ namespace sh::game
 		/// 해당 컴포넌트의 gameObject가 이 gameObject와 다르면 추가 되지 않는다.
 		/// @param component 컴포넌트 포인터
 		SH_GAME_API void AddComponent(Component* component);
+
+		SH_GAME_API auto Serialize() const -> core::Json override;
+		SH_GAME_API void Deserialize(const core::Json& json) override;
 	public:
 		/// @brief 새 컴포넌트를 추가하는 함수
 		/// @tparam T 컴포넌트 타입
@@ -69,9 +69,8 @@ namespace sh::game
 		{
 			components.push_back(core::SObject::Create<T>(*this));
 			components.back()->SetActive(true);
-#if SH_EDITOR
-			components.back()->editorName = components.back()->GetType().typeName;
-#endif
+			components.back()->SetName(components.back()->GetType().name);
+
 			return static_cast<T*>(components.back());
 		}
 		template<typename T>

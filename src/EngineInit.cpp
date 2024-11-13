@@ -2,6 +2,7 @@
 
 #include "Core/Logger.h"
 #include "Core/GarbageCollection.h"
+#include "Core/FileSystem.h"
 
 #include "Window/Window.h"
 
@@ -27,6 +28,7 @@
 #if SH_EDITOR
 #include "Editor/EditorUI.h"
 #include "Editor/EditorWorld.h"
+#include "Editor/AssetDatabase.h"
 #endif
 
 namespace sh
@@ -90,34 +92,27 @@ namespace sh
 		auto pickingShader = world->shaders.AddResource("PickingShader", loader.LoadShader<render::VulkanShader>("shaders/picking.vert.spv", "shaders/picking.frag.spv"));
 
 		auto errorMat = world->materials.AddResource("ErrorMaterial", sh::render::Material{ errorShader });
-		auto mat = world->materials.AddResource("Material", sh::render::Material{ defaultShader });
-		//auto catMat0 = world->materials.AddResource("Material2", sh::render::Material{ defaultShader });
-		//auto catMat1 = world->materials.AddResource("Material3", sh::render::Material{ defaultShader });
 		auto lineMat = world->materials.AddResource("LineMaterial", sh::render::Material{ lineShader });
 		auto gridMat = world->materials.AddResource("GridMaterial", sh::render::Material{ gridShader });
 		auto pickingMat = world->materials.AddResource("PickingMaterial", sh::render::Material{ pickingShader });
 
 		auto plane = world->meshes.AddResource("PlaneMesh", sh::render::Plane{});
-		auto cube = world->meshes.AddResource("Cube", modelLoader.Load("model/cube.obj"));
-		auto mesh2 = world->meshes.AddResource("Mesh2", modelLoader.Load("model/test.obj"));
 		auto grid = world->meshes.AddResource("GridMesh", sh::render::Grid{});
-
-		auto catTex0 = world->textures.AddResource("Texture0", texLoader.Load("textures/버터고양이.jpg"));
-		auto catTex1 = world->textures.AddResource("Texture1", texLoader.Load("textures/cat.jpg"));
-		auto tex = world->textures.AddResource("Texture2", texLoader.Load("textures/viking_room.png"));
-
-		defaultShader->AddAttribute<glm::vec2>("uvs", 1);
-		defaultShader->AddAttribute<glm::vec3>("normals", 2);
 
 		auto ObjectUniformType = render::Shader::UniformType::Object;
 		auto MaterialUniformType = render::Shader::UniformType::Material;
 
+		errorShader->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f0f" });
+		errorShader->SetName("ErrorShader");
 		errorShader->AddUniform<glm::mat4>("model", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
 		errorShader->AddUniform<glm::mat4>("view", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
 		errorShader->AddUniform<glm::mat4>("proj", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
 		errorShader->Build();
 
-		defaultShader->editorName = "defaultShader";
+		defaultShader->SetUUID(core::UUID{ "ad9217609f6c7e0f1163785746cc153e" });
+		defaultShader->SetName("DefaultShader");
+		defaultShader->AddAttribute<glm::vec2>("uvs", 1);
+		defaultShader->AddAttribute<glm::vec3>("normals", 2);
 		defaultShader->AddUniform<glm::mat4>("model", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
 		defaultShader->AddUniform<glm::mat4>("view", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
 		defaultShader->AddUniform<glm::mat4>("proj", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
@@ -156,44 +151,9 @@ namespace sh
 
 		gridMat->SetVector("color", glm::vec4{ 0.6f, 0.6f, 0.8f, 0.2f });
 		gridMat->Build(*renderer);
-		//catMat0->SetTexture("tex", catTex0);
-		//catMat0->Build(*renderer);
-		//catMat1->SetTexture("tex", catTex1);
-		//catMat1->Build(*renderer);
-
-		mat->SetFloat("ambient", 0.0f);
-		mat->SetTexture("tex", tex);
-		mat->Build(*renderer);
 
 		plane->Build(*renderer);
-		cube->Build(*renderer);
 		grid->Build(*renderer);
-
-		GameObject* obj = world->AddGameObject("Test");
-		GameObject* obj2 = world->AddGameObject("Test2");
-		GameObject* obj3 = world->AddGameObject("Empty");
-
-		//obj2->AddComponent(componentModule->GetComponent("ComponentTest")->New());
-
-		auto transform = obj->transform;
-		transform->SetRotation({ 0.f, 0.f, 0.f });
-		transform->SetPosition(0, 0, -1);
-		transform->SetScale(1.f);
-
-		obj2->transform->SetPosition(1, 1, 0);
-		obj2->transform->SetParent(obj->transform);
-
-		//auto meshRenderer = obj->AddComponent<MeshRenderer>();
-		//meshRenderer->SetMesh(cube);
-		//meshRenderer->SetMaterial(catMat0);
-
-		//meshRenderer = obj2->AddComponent<MeshRenderer>();
-		//meshRenderer->SetMesh(cube);
-		//meshRenderer->SetMaterial(catMat1);
-
-		auto meshRenderer = obj3->AddComponent<MeshRenderer>();
-		meshRenderer->SetMesh(mesh2);
-		meshRenderer->SetMaterial(mat);
 	}
 
 	void EngineInit::ProcessInput()

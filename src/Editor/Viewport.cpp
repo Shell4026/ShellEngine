@@ -92,6 +92,10 @@ namespace sh::editor
 
 	void Viewport::ChangeViewportSize()
 	{
+		//SH_INFO_FORMAT("Sampler {}, {}", 
+		//	(void*)static_cast<render::VulkanTextureBuffer*>(renderTex->GetBuffer(core::ThreadType::Game))->GetImageBuffer()->GetSampler(), 
+		//	(void*)static_cast<render::VulkanTextureBuffer*>(renderTex->GetBuffer(core::ThreadType::Render))->GetImageBuffer()->GetSampler());
+		//SH_INFO_FORMAT("DescriptorSets {}, {}", (void*)viewportDescSet[core::ThreadType::Game], (void*)viewportDescSet[core::ThreadType::Render]);
 		if (viewportDescSet[core::ThreadType::Game])
 			ImGui_ImplVulkan_RemoveTexture(viewportDescSet[core::ThreadType::Game]);
 		if (viewportWidthLast != 0.f && viewportHeightLast != 0.f)

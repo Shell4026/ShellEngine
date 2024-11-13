@@ -28,7 +28,7 @@ namespace sh::game
 		render::Renderer& renderer;
 
 		core::SHashMap<std::string, T*> resources;
-
+	public:
 		core::Observer<false, T*> onResourceDestroy;
 	public:
 		ResourceManager(sh::render::Renderer& renderer) :
@@ -70,9 +70,7 @@ namespace sh::game
 				name += std::to_string(idx);
 				it = resources.find(name);
 			}
-#if SH_EDITOR
-			resource->editorName = name;
-#endif
+
 			gc.SetRootSet(resource);
 			return resources.insert({ std::move(name), resource }).first->second;
 		}
@@ -89,9 +87,7 @@ namespace sh::game
 			}
 
 			auto resourcePtr = core::SObject::Create<T>(std::move(resource));
-#if SH_EDITOR
-			resourcePtr->editorName = name;
-#endif
+
 			gc.SetRootSet(resourcePtr);
 			return resources.insert({ std::move(name), resourcePtr }).first->second;
 		}
@@ -108,9 +104,6 @@ namespace sh::game
 			}
 
 			auto resourcePtr = core::SObject::Create<T>(resource);
-#if SH_EDITOR
-			resourcePtr->editorName = name;
-#endif
 			gc.SetRootSet(resourcePtr);
 			return resources.insert({ std::move(name), resourcePtr }).first->second.get();
 		}

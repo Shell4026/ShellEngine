@@ -29,6 +29,8 @@ public:
     Derived* sobjectPtr;
     PROPERTY(sobjectArr)
     std::array<Derived*, 2> sobjectArr;
+    PROPERTY(map)
+    sh::core::SMap<std::string, int> map;
 };
 
 TEST(ReflectionTest, TypeInfoTest) 
@@ -56,7 +58,7 @@ TEST(ReflectionTest, PropertyTest)
     ASSERT_NE(numbersProperty, nullptr);
 
     EXPECT_EQ(*numberProperty->Get<int>(&derived), 42);
-    EXPECT_EQ(numbersProperty->GetTypeName(), sh::core::reflection::GetTypeName<std::vector<int>>());
+    EXPECT_EQ(numbersProperty->type.name, sh::core::reflection::GetTypeName<std::vector<int>>());
 
     auto begin = numbersProperty->Begin(&derived);
     auto end = numbersProperty->End(&derived);
@@ -93,6 +95,24 @@ TEST(ReflectionTest, PropertyTest)
         EXPECT_EQ(prop->isContainer, true);
         auto arrIterator = prop->Begin(&derived);
         EXPECT_FALSE(arrIterator.IsConst());
+    }
+    // map 요소 변경 테스트
+    {
+        derived.map.insert({ "test0", 0 });
+        derived.map.insert({ "test1", 1 });
+        auto prop = derived.GetType().GetProperty("map");
+        EXPECT_TRUE(prop->isContainer);
+        for (auto it = prop->Begin(&derived); it != prop->End(&derived); ++it)
+        {
+            EXPECT_TRUE(it.IsPair());
+            EXPECT_TRUE(it.GetPairType()->first.isConst);
+            EXPECT_TRUE(it.GetPairType()->first == sh::core::reflection::GetType<std::string>());
+            EXPECT_TRUE(it.GetPairType()->second == sh::core::reflection::GetType<int>());
+            auto pair = it.Get<std::pair<const std::string, int>>();
+            pair->second++;
+        }
+        EXPECT_EQ(derived.map["test0"], 1);
+        EXPECT_EQ(derived.map["test1"], 2);
     }
 }
 

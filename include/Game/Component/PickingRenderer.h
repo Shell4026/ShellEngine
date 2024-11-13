@@ -26,9 +26,11 @@ namespace sh::game
 	{
 		COMPONENT(PickingRenderer)
 	private:
+		PROPERTY(renderer)
+		MeshRenderer* renderer = nullptr;
 		PROPERTY(camera)
 		PickingCamera* camera = nullptr;
-		
+		PROPERTY(id)
 		uint32_t id = 0;
 	public:
 		SH_GAME_API PickingRenderer(GameObject& owner);

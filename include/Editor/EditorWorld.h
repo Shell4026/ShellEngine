@@ -18,7 +18,7 @@ namespace sh::editor
 		SCLASS(EditorWorld)
 	private:
 		PROPERTY(selected)
-		game::GameObject* selected = nullptr;
+		core::SObject* selected = nullptr;
 		PROPERTY(editorCamera)
 		game::EditorCamera* editorCamera = nullptr;
 
@@ -31,10 +31,13 @@ namespace sh::editor
 
 		SH_EDITOR_API void Clean() override;
 
-		SH_EDITOR_API void SetSelectedObject(game::GameObject* gameObject);
-		SH_EDITOR_API auto GetSelectedObject() const -> game::GameObject*;
+		SH_EDITOR_API void SetSelectedObject(core::SObject* obj);
+		SH_EDITOR_API auto GetSelectedObject() const -> core::SObject*;
 
 		SH_EDITOR_API void Start() override;
 		SH_EDITOR_API void Update(float deltaTime) override;
+
+		SH_EDITOR_API auto Serialize() const -> core::Json override;
+		SH_EDITOR_API void Deserialize(const core::Json& json) override;
 	};
 }

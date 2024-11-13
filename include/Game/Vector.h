@@ -2,6 +2,8 @@
 
 #include "Export.h"
 
+#include "Core/ISerializable.h"
+
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
 #include "glm/vec4.hpp"
@@ -304,3 +306,25 @@ namespace sh::game
     using Vec3 = Vec<3>;
     using Vec4 = Vec<4>;
 }//namespace
+
+namespace sh::core
+{
+    // 직렬화, 역직렬화
+
+    template<std::size_t n>
+    inline void SerializeProperty(core::Json& json, const std::string& key, const game::Vec<n>& vec)
+    {
+        for (int i = 0; i < n; ++i)
+            json[key].push_back(vec.data[i]);
+    }
+
+    template<std::size_t n>
+    inline void DeserializeProperty(const core::Json& json, const std::string& key, game::Vec<n>& vec)
+    {
+        if (json.contains(key) && json[key].is_array() && json[key].size() == n) 
+        {
+            for(std::size_t i = 0; i < n; ++i)
+                vec.data[i] = json[key][i].get<float>();
+        }
+    }
+}

@@ -8,17 +8,14 @@
 
 namespace sh::core
 {
-	GarbageCollection::GarbageCollection()
+	GarbageCollection::GarbageCollection() :
+		objs(SObjectManager::GetInstance()->objs)
 	{
 	}
+
 	GarbageCollection::~GarbageCollection()
 	{
 		Update();
-	}
-
-	SH_CORE_API void GarbageCollection::AddObject(SObject* obj)
-	{
-		objs.insert(obj);
 	}
 
 	SH_CORE_API void GarbageCollection::SetRootSet(SObject* obj)
@@ -29,12 +26,6 @@ namespace sh::core
 	SH_CORE_API void GarbageCollection::RemoveRootSet(SObject* obj)
 	{
 		rootSets.erase(obj);
-	}
-
-	SH_CORE_API auto GarbageCollection::RemoveObject(SObject* obj) -> bool
-	{
-		RemoveRootSet(obj);
-		return objs.erase(obj) == 1; // 지워진 원소 수
 	}
 
 	void GarbageCollection::ContainerMark(SObject* parent, int depth, int maxDepth, sh::core::reflection::PropertyIterator& it)
@@ -59,7 +50,7 @@ namespace sh::core
 	SH_CORE_API void GarbageCollection::Update()
 	{
 		auto start = std::chrono::high_resolution_clock::now();
-		for (SObject* obj : objs)
+		for (auto &[id, obj] : objs)
 		{
 			obj->bMark = false;
 		}
@@ -72,18 +63,15 @@ namespace sh::core
 
 		// 모든 SObject를 순회하며 마킹이 안 됐으면 제거
 		std::queue<SObject*> deleted;
-		for (auto it = objs.begin(); it != objs.end();)
+		for (auto it = objs.begin(); it != objs.end(); ++it)
 		{
-			auto ptr = *it;
+			SObject* ptr = it->second;
 			if (!ptr->IsMark())
 			{
-				it = objs.erase(it);
 				ptr->bPendingKill.store(true, std::memory_order::memory_order_release);
 				ptr->OnDestroy();
 				deleted.push(ptr);
 			}
-			else
-				++it;
 		}
 
 		while (!deleted.empty())
@@ -161,7 +149,7 @@ namespace sh::core
 
 	SH_CORE_API void GarbageCollection::ForceDelete(SObject* obj)
 	{
-		auto it = objs.find(obj);
+		auto it = objs.find(obj->GetUUID().ToString());
 		if (it != objs.end())
 		{
 			RemoveRootSet(obj);

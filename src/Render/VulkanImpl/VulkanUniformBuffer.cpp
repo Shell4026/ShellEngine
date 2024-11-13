@@ -36,9 +36,7 @@ namespace sh::render::impl
 		this->renderer = &vkRenderer;
 		auto& vkShader = static_cast<const VulkanShader&>(shader);
 
-		std::string name = vkShader.editorName;
 		descSet = vkRenderer.GetDescriptorPool().AllocateDescriptorSet(vkShader.GetDescriptorSetLayout(type), 1);
-		SH_INFO_FORMAT("Shader: {}, DescriptorSet: {}, Layout: {}, type: {}", vkShader.editorName, (void*)descSet, (void*)vkShader.GetDescriptorSetLayout(type), type);
 	}
 	void VulkanUniformBuffer::Clean()
 	{

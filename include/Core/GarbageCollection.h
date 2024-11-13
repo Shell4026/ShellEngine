@@ -20,7 +20,7 @@ namespace sh::core
 	{
 		friend Singleton<GarbageCollection>;
 	private:
-		SHashSet<SObject*, 128> objs;
+		SHashMap<std::string, SObject*>& objs;
 		SHashSet<SObject*, 128> rootSets;
 
 		uint32_t elapseTime = 0;
@@ -43,10 +43,6 @@ namespace sh::core
 	public:
 		SH_CORE_API ~GarbageCollection();
 
-		/// @brief GC 목록에 추가하는 함수.
-		/// @param obj SObject 포인터
-		/// @return 
-		SH_CORE_API void AddObject(SObject* obj);
 		/// @brief 루트셋으로 지정하는 함수. 루트셋 객체는 참조하고 있는 객체가 없어도 메모리에서 유지된다.
 		/// @param obj 루트셋으로 지정할 SObject 포인터
 		SH_CORE_API void SetRootSet(SObject* obj);
@@ -55,11 +51,6 @@ namespace sh::core
 		/// @param obj SObject 포인터
 		/// @return 
 		SH_CORE_API void RemoveRootSet(SObject* obj);
-
-		/// @brief GC 목록에서 제거하는 함수.
-		/// @param obj SObject 포인터
-		/// @return 성공하면 true, 아니면 false
-		SH_CORE_API auto RemoveObject(SObject* obj) -> bool;
 
 		/// @brief GC를 갱신하여 쓰레기 수집 시작
 		SH_CORE_API void Update();

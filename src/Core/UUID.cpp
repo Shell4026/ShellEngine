@@ -6,6 +6,29 @@
 
 namespace sh::core
 {
+	SH_CORE_API UUID::UUID(std::string_view str)
+	{
+		if (str.size() == uuid.size() * 8)
+		{
+			try
+			{
+				for (int i = 0; i < str.size(); i += 8)
+				{
+					std::string sub{ str.substr(i, 8) };
+					uuid[i / 8] = std::stoul(sub, nullptr, 16);
+				}
+					
+			}
+			catch (const std::exception& e)
+			{
+				this->operator=(Generate());
+			}
+		}
+		else
+		{
+			this->operator=(Generate());
+		}
+	}
 	SH_CORE_API UUID::UUID(const UUID& other) noexcept
 	{
 		for (int i = 0; i < uuid.size(); ++i)

@@ -285,14 +285,44 @@ namespace sh::game
 		return glm::inverse(matModel);
 	}
 
-#if SH_EDITOR
+	SH_GAME_API auto Transform::Serialize() const -> core::Json
+	{
+		core::Json mainJson{ Super::Serialize() };
+		core::Json& transformJson = mainJson["Transform"];
+		transformJson["quat"] = {quat.x, quat.y, quat.z, quat.w};
+		if (parent)
+			transformJson["parent"] = parent->GetUUID().ToString();
+
+		return mainJson;
+	}
+	SH_GAME_API void Transform::Deserialize(const core::Json& json)
+	{
+		Super::Deserialize(json);
+		const core::Json& transformJson = json["Transform"];
+		if (transformJson.contains("quat") && transformJson["quat"].is_array() && transformJson["quat"].size() == 4)
+		{
+			quat.x = json["Transform"]["quat"][0].get<float>();
+			quat.y = json["Transform"]["quat"][1].get<float>();
+			quat.z = json["Transform"]["quat"][2].get<float>();
+			quat.w = json["Transform"]["quat"][3].get<float>();
+		}
+		if (transformJson.contains("parent"))
+		{
+			std::string uuid = transformJson["parent"].get<std::string>();
+			SetParent(static_cast<Transform*>(core::SObjectManager::GetInstance()->GetSObject(uuid)));
+		}
+
+		bUpdateMatrix = true;
+	}
+
 	void Transform::OnPropertyChanged(const core::reflection::Property& property)
 	{
+#if SH_EDITOR
 		if (property.GetName() == "vRotation")
 		{
 			quat = glm::quat{ glm::radians(glm::vec3{ vRotation }) };
 		}
+#endif
 		bUpdateMatrix = true;
 	}
-#endif
 }

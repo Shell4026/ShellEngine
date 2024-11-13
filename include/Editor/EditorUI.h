@@ -33,11 +33,11 @@ namespace sh::editor
 		Project project;
 		Inspector inspector;
 
-		bool bOpenExplorer;
 		bool bDirty;
 	private:
 		inline void SetDockNode();
 		inline void DrawInspector();
+		inline void DrawMenu();
 	public:
 		SH_EDITOR_API EditorUI(EditorWorld& world, game::ImGUImpl& imgui);
 		SH_EDITOR_API void Update();

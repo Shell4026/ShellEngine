@@ -38,7 +38,7 @@ namespace sh::game
 		const sh::render::Mesh* mesh;
 		PROPERTY(mat);
 		sh::render::Material* mat;
-		PROPERTY(drawables);
+		PROPERTY(drawables, core::PropertyOption::invisible);
 		core::SMap<Camera*, sh::render::IDrawable*> drawables;
 	private:
 		template <typename T>
@@ -65,9 +65,7 @@ namespace sh::game
 		SH_GAME_API void Start() override;
 		SH_GAME_API void Update() override;
 
-#if SH_EDITOR
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
-#endif
 	};
 
 	template<typename T>

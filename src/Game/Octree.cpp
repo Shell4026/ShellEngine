@@ -27,6 +27,8 @@ namespace sh::game
 
 	void Octree::Subdivide()
 	{
+		if (childs[0])
+			return;
 		render::AABB childaabb[8];
 
 		Vec3 mid = aabb.GetCenter();
@@ -48,6 +50,9 @@ namespace sh::game
 	}
 	bool Octree::InsertIntoChildren(IOctreeElement& obj)
 	{
+		if (childs[0] == nullptr)
+			return false;
+
 		bool check = false;
 		for (int i = 0; i < 8; ++i)
 		{
@@ -140,13 +145,16 @@ namespace sh::game
 
 		if (IsLeaf()) 
 		{
-			if (objs.size() < capacity || depth >= maxDepth) 
+			if (objs.size() < capacity) 
 			{
 				objs.insert(&obj);
 				return true;
 			}
 			else 
 			{
+				if (depth == maxDepth)
+					return false;
+
 				Subdivide();
 				for (IOctreeElement* elem : objs)
 					InsertIntoChildren(*elem);
@@ -154,10 +162,7 @@ namespace sh::game
 				return InsertIntoChildren(obj);
 			}
 		}
-		else 
-		{
-			return InsertIntoChildren(obj);
-		}
+		return InsertIntoChildren(obj);
 	}
 	SH_GAME_API bool Octree::Erase(IOctreeElement& obj)
 	{

@@ -153,9 +153,9 @@ namespace sh::render
 		// 배열인 경우
 		if constexpr (core::reflection::IsArray<T>::value)
 		{
-			typeinfo = &core::reflection::GetType<core::reflection::GetContainerLastType<T>::type>();
+			typeinfo = &core::reflection::GetType<typename core::reflection::GetContainerLastType<T>::type>();
 			align = 16; // 배열의 경우 무조건 16바이트 정렬
-			size = sizeof(core::reflection::GetContainerLastType<T>::type);
+			size = sizeof(typename core::reflection::GetContainerLastType<T>::type);
 		}
 		
 		UniformData uniform{ binding, name, *typeinfo, 0, size };
@@ -180,7 +180,7 @@ namespace sh::render
 				// 배열인 경우
 				if constexpr (core::reflection::IsArray<T>::value)
 				{
-					std::size_t count = sizeof(T) / sizeof(core::reflection::GetContainerLastType<T>::type);
+					std::size_t count = sizeof(T) / sizeof(typename core::reflection::GetContainerLastType<T>::type);
 					for (std::size_t i = 0; i < count; ++i)
 					{
 						uniform.bArray = true;
@@ -206,7 +206,7 @@ namespace sh::render
 		// 배열인 경우
 		if constexpr (core::reflection::IsArray<T>::value)
 		{
-			std::size_t count = sizeof(T) / sizeof(core::reflection::GetContainerLastType<T>::type);
+			std::size_t count = sizeof(T) / sizeof(typename core::reflection::GetContainerLastType<T>::type);
 			for(std::size_t i = 0; i < count; ++i)
 			{
 				uniform.bArray = true;

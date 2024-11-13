@@ -4,6 +4,8 @@
 
 #include "Game/Vector.h"
 
+#include "glm/gtc/quaternion.hpp"
+
 #ifdef None
 #undef None
 #endif
@@ -33,12 +35,15 @@ namespace sh::game
 		PROPERTY(helper, core::PropertyOption::invisible)
 		LineRenderer* helper = nullptr;
 
-		Vec3 posLast;
+		Vec3 posLast, scaleLast;
+		glm::quat quatLast;
 		Vec2 clickPos;
 
 		Vec3 up, right, forward;
 	private:
 		inline void MoveControl();
+		inline void ScaleControl();
+		inline void RotateControl();
 	public:
 		SH_GAME_API EditorControl(GameObject& owner);
 
