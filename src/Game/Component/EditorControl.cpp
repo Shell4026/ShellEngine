@@ -103,37 +103,22 @@ namespace sh::game
 	}
 	inline void EditorControl::RotateControl()
 	{
-		glm::vec3 linePoint = camera->gameObject.transform->position;
-		glm::vec3 facePoint = gameObject.transform->position;
+		glm::vec2 screenPos = glm::project(glm::vec3{ gameObject.transform->GetWorldPosition() }, 
+			camera->GetViewMatrix(), camera->GetProjMatrix(),
+			glm::vec4{ gameObject.world.renderer.GetViewportStart().x, gameObject.world.renderer.GetViewportStart().y, gameObject.world.renderer.GetViewportEnd().x, gameObject.world.renderer.GetViewportEnd().y });
 
-		auto clickRay = camera->ScreenPointToRay(clickPos);
-		glm::vec3 clickHit = SMath::GetPlaneCollisionPoint(clickRay.origin, clickRay.direction, facePoint, -glm::vec4{ forward }).value_or(glm::vec3{ 0.f });
-		auto ray = camera->ScreenPointToRay(Input::mousePosition);
-		glm::vec3 hit = SMath::GetPlaneCollisionPoint(ray.origin, ray.direction, facePoint, -glm::vec4{ forward }).value_or(glm::vec3{ 0.f });
+		screenPos.y = gameObject.world.renderer.GetViewportEnd().y - screenPos.y;
+		
+		glm::vec2 v = glm::normalize(screenPos - glm::vec2{ clickPos });
+		glm::vec2 v2 = glm::normalize(screenPos - Input::mousePosition);
 
-		glm::vec2 clickPoint;
-		clickPoint.x = glm::dot(clickHit - facePoint, glm::vec3{ right });
-		clickPoint.y = glm::dot(clickHit - facePoint, glm::vec3{ up });
-		SH_INFO_FORMAT("clickHit {}, {}, {}", clickHit.x, clickHit.y, clickHit.z);
-		SH_INFO_FORMAT("right {}, {}, {}", right.x, right.y, right.z);
-		SH_INFO_FORMAT("forward {}, {}, {}", forward.x, forward.y, forward.z);
-		SH_INFO_FORMAT("{}, {}", clickPoint.x, clickPoint.y);
+		float angleRad = glm::acos(glm::dot(v, v2));
 
-		glm::vec2 currentPoint;
-		currentPoint.x = glm::dot(hit - facePoint, glm::vec3{ right });
-		currentPoint.y = glm::dot(hit - facePoint, glm::vec3{ up });
+		float crossProduct = v.x * v2.y - v.y * v2.x;
+		if (crossProduct < 0)
+			angleRad = -angleRad;
 
-		float angleRad = atan2(currentPoint.y, currentPoint.x) - atan2(clickPoint.y, clickPoint.x);
-
-		//glm::vec3 cross = glm::cross(facePointToClickHit, facePointToHit);
-		//float direction = glm::dot(cross, glm::vec3{ forward }); // 양수면 한 방향, 음수면 반대 방향
-		//if (direction < 0.0f)
-		//	angleRad = -angleRad;
-
-		SH_INFO_FORMAT("{}", glm::degrees(angleRad));
-
-		glm::quat newQuat = glm::normalize(quatLast * glm::angleAxis(angleRad, glm::vec3{ forward }));
-		gameObject.transform->SetRotation(newQuat);
+		gameObject.transform->SetRotation(glm::angleAxis(angleRad, glm::vec3{ forward }) * quatLast);
 	}
 
 	SH_GAME_API void EditorControl::Update()
