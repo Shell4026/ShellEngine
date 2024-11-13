@@ -10,6 +10,14 @@ namespace sh::game
 	{
 		world.GetLightOctree().Insert(*this);
 	}
+	SH_GAME_API PointLight::~PointLight()
+	{
+	}
+
+	SH_GAME_API void PointLight::OnDestroy()
+	{
+		world.GetLightOctree().Erase(*this);
+	}
 
 	SH_GAME_API void PointLight::BeginUpdate()
 	{
@@ -88,7 +96,6 @@ namespace sh::game
 		return gameObject.transform->position;
 	}
 
-#if SH_EDITOR
 	SH_GAME_API void PointLight::OnPropertyChanged(const core::reflection::Property& prop)
 	{
 		if (prop.GetName() == "range")
@@ -97,5 +104,4 @@ namespace sh::game
 			world.GetLightOctree().Insert(*this);
 		}
 	}
-#endif
 }//namespace

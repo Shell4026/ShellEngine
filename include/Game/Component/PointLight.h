@@ -18,6 +18,9 @@ namespace sh::game
 		bool bUpdateOctree = false;
 	public:
 		SH_GAME_API PointLight(GameObject& owner);
+		SH_GAME_API ~PointLight();
+
+		SH_GAME_API void OnDestroy() override;
 
 		SH_GAME_API void BeginUpdate() override;
 
@@ -29,8 +32,7 @@ namespace sh::game
 		SH_GAME_API auto GetRadius() const -> float;
 		SH_GAME_API auto GetIntensity() const -> float;
 		SH_GAME_API auto GetPos() const -> const Vec3& override;
-#if SH_EDITOR
+		
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
-#endif
 	};
 }//namespace
