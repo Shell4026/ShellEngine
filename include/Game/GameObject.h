@@ -32,6 +32,7 @@ namespace sh::game
 
 		const bool& activeSelf;
 #if SH_EDITOR
+		PROPERTY(hideInspector, core::PropertyOption::invisible)
 		bool hideInspector = false;
 #endif
 	public:

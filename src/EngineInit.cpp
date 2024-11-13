@@ -103,12 +103,14 @@ namespace sh
 		auto MaterialUniformType = render::Shader::UniformType::Material;
 
 		errorShader->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f0f" });
+		errorShader->SetName("ErrorShader");
 		errorShader->AddUniform<glm::mat4>("model", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
 		errorShader->AddUniform<glm::mat4>("view", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
 		errorShader->AddUniform<glm::mat4>("proj", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
 		errorShader->Build();
 
 		defaultShader->SetUUID(core::UUID{ "ad9217609f6c7e0f1163785746cc153e" });
+		defaultShader->SetName("DefaultShader");
 		defaultShader->AddAttribute<glm::vec2>("uvs", 1);
 		defaultShader->AddAttribute<glm::vec3>("normals", 2);
 		defaultShader->AddUniform<glm::mat4>("model", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);

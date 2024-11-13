@@ -6,6 +6,8 @@
 #include "Game/ModelLoader.h"
 #include "Game/MaterialLoader.h"
 
+#include "Core/FileLoader.h"
+
 #include <random>
 #include <istream>
 #include <ostream>
@@ -22,23 +24,43 @@ namespace sh::editor
 		}
 	};
 
+	void AssetDatabase::CreateMeta(core::SObject* ptr, const std::filesystem::path& metaDir)
+	{
+		core::Json metaJson = ptr->Serialize();
+		std::ofstream os{ metaDir.string() };
+		if (os.is_open())
+		{
+			os << std::setw(4) << metaJson;
+			os.close();
+		}
+		else
+		{
+			SH_ERROR_FORMAT("Can't create meta: {}", metaDir.string());
+		}
+	}
 	void AssetDatabase::CreateOrLoadMeta(core::SObject* ptr, const std::filesystem::path& metaDir)
 	{
 		if (std::filesystem::exists(metaDir))
 		{
-			std::ifstream is{ metaDir.string()};
-			core::Json metaJson{};
-			is >> metaJson;
+			core::FileLoader loader;
+			auto file = loader.LoadText(metaDir.string());
+			if (!file)
+			{
+				SH_ERROR_FORMAT("Can't load file: {}", metaDir.string());
+				return;
+			}
+			if (file.value().empty())
+			{
+				CreateMeta(ptr, metaDir);
+				return;
+			}
+			core::Json metaJson{ core::Json::parse(file.value()) };
 			ptr->Deserialize(metaJson);
 			assert(ptr->GetUUID().ToString() == metaJson["uuid"].get<std::string>());
-			is.close();
 		}
 		else
 		{
-			core::Json metaJson = ptr->Serialize();
-			std::ofstream os{ metaDir.string() };
-			os << std::setw(4) << metaJson;
-			os.close();
+			CreateMeta(ptr, metaDir);
 		}
 	}
 
@@ -66,7 +88,7 @@ namespace sh::editor
 			return nullptr;
 
 		world.textures.AddResource(dir.string(), ptr);
-		ptr->SetName(dir.stem().string());
+		ptr->SetName(dir.stem().u8string());
 
 		CreateOrLoadMeta(ptr, metaDir);
 		uuids.insert_or_assign(dir, ptr->GetUUID());

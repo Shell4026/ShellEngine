@@ -278,7 +278,10 @@ namespace sh::editor
 			else
 				objName = (*parameter)->GetName().c_str();
 		}
-		ImGui::Button(objName, ImVec2{ buttonWidth, iconSize });
+		if (ImGui::Button(objName, ImVec2{ buttonWidth, iconSize }))
+		{
+			
+		}
 		if (ImGui::BeginDragDropTarget())
 		{
 			// 드래그로 받는 객체의 타입 이름 == 드래그 중인 객체의 타입 이름이면 받음

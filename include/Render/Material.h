@@ -80,6 +80,7 @@ namespace sh::render
 			std::memcpy(uniformData.data() + offset, &data, sizeof(T));
 		}
 		void FillData(const Shader::UniformBlock& uniformBlock, std::vector<uint8_t>& dst, uint32_t binding);
+		void SetDefaultProperties();
 	public:
 		SH_RENDER_API Material();
 		SH_RENDER_API Material(Shader* shader);
@@ -111,6 +112,7 @@ namespace sh::render
 		SH_RENDER_API void SetMatrix(std::string_view name, const glm::mat4& value);
 		SH_RENDER_API auto GetMatrix(std::string_view name) const -> const glm::mat4*;
 		SH_RENDER_API void SetFloatArray(std::string_view name, const std::vector<float>& value);
+		SH_RENDER_API void SetFloatArray(std::string_view name, std::vector<float>&& value);
 		SH_RENDER_API auto GetFloatArray(std::string_view name) const -> const std::vector<float>*;
 		SH_RENDER_API void SetVectorArray(std::string_view name, const std::vector<glm::vec4>& value);
 		SH_RENDER_API auto GetVectorArray(std::string_view name) const -> const std::vector<glm::vec4>*;

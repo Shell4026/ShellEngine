@@ -20,11 +20,13 @@ namespace sh::editor
 		camObj->transform->SetPosition({ 2.f, 2.f, 2.f });
 		camObj->hideInspector = true;
 		editorCamera = camObj->AddComponent<game::EditorCamera>();
+		editorCamera->SetUUID(core::UUID{ "61b7bc9f9fd2ca27dcbad8106745f62a" });
 		this->SetMainCamera(editorCamera);
 
 		auto PickingCamObj = AddGameObject("PickingCamera");
 		PickingCamObj->transform->SetParent(camObj->transform);
 		auto pickingCam = PickingCamObj->AddComponent<game::PickingCamera>();
+		pickingCam->SetUUID(core::UUID{ "af9cac824334bcaccd86aad8a18e3cba" });
 		pickingCam->SetFollowCamera(editorCamera);
 	}
 

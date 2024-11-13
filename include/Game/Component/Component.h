@@ -44,6 +44,7 @@ namespace sh::game
 		World& world;
 		const bool& active;
 #if SH_EDITOR
+		PROPERTY(hideInspector, core::PropertyOption::invisible)
 		bool hideInspector = false;
 #endif
 	public:

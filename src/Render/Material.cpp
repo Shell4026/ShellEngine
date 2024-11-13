@@ -68,6 +68,9 @@ namespace sh::render
 			return;
 
 		Clean();
+
+		SetDefaultProperties();
+
 		Build(*renderer);
 	}
 	
@@ -284,6 +287,74 @@ namespace sh::render
 			}
 		}
 	}
+	void Material::SetDefaultProperties()
+	{
+		if (!core::IsValid(shader))
+			return;
+
+		auto blocks = { &shader->GetVertexUniforms(), &shader->GetVertexUniforms() };
+		for (auto currentBlocks : blocks)
+		{
+			for (auto& uniformBlock : *currentBlocks)
+			{
+				for (auto& uniform : uniformBlock.data)
+				{
+					if (uniform.type == core::reflection::GetType<int>())
+					{
+						if (uniform.size == sizeof(int))
+							ints.insert_or_assign(uniform.name, 0);
+						else
+						{
+							// todo
+						}
+					}
+					else if (uniform.type == core::reflection::GetType<float>())
+					{
+						if (uniform.size == sizeof(float))
+							floats.insert_or_assign(uniform.name, 0.f);
+						else
+						{
+							std::size_t n = uniform.size / sizeof(float);
+							SetFloatArray(uniform.name, std::vector<float>(n, 0.f));
+						}
+					}
+					else if (uniform.type == core::reflection::GetType<glm::vec2>())
+					{
+						if (uniform.size == sizeof(glm::vec2))
+							vectors.insert_or_assign(uniform.name, glm::vec4{ 0.f });
+						else
+						{
+							std::size_t n = uniform.size / sizeof(glm::vec2);
+							SetVectorArray(uniform.name, std::vector<glm::vec4>(n, glm::vec4{ 0.f }));
+						}
+					}
+					else if (uniform.type == core::reflection::GetType<glm::vec3>())
+					{
+						if (uniform.size == sizeof(glm::vec3))
+							vectors.insert_or_assign(uniform.name, glm::vec4{ 0.f });
+						else
+						{
+							std::size_t n = uniform.size / sizeof(glm::vec3);
+							SetVectorArray(uniform.name, std::vector<glm::vec4>(n, glm::vec4{ 0.f }));
+						}
+					}
+					else if (uniform.type == core::reflection::GetType<glm::vec4>())
+					{
+						if (uniform.size == sizeof(glm::vec4))
+							vectors.insert_or_assign(uniform.name, glm::vec4{ 0.f });
+						else
+						{
+							std::size_t n = uniform.size / sizeof(glm::vec4);
+							SetVectorArray(uniform.name, std::vector<glm::vec4>(n, glm::vec4{ 0.f }));
+						}
+					}
+					else if (uniform.type == core::reflection::GetType<glm::mat4>())
+						mats.insert_or_assign(uniform.name, glm::mat4{ 0.f });
+				}
+			}
+		}
+		bBufferDirty = true;
+	}
 
 	SH_RENDER_API void Material::UpdateUniformBuffers()
 	{
@@ -463,6 +534,19 @@ namespace sh::render
 		if (binding)
 		{
 			floatArr->insert_or_assign(std::string{ name }, value);
+			bBufferDirty = true;
+		}
+	}
+	SH_RENDER_API void Material::SetFloatArray(std::string_view name, std::vector<float>&& value)
+	{
+		if (!core::IsValid(shader))
+			return;
+		if (floatArr == nullptr)
+			floatArr = std::make_unique<core::SMap<std::string, std::vector<float>, 4>>();
+		auto binding = shader->GetUniformBinding(name);
+		if (binding)
+		{
+			floatArr->insert_or_assign(std::string{ name }, std::move(value));
 			bBufferDirty = true;
 		}
 	}

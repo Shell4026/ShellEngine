@@ -69,6 +69,7 @@ namespace sh::editor
 		SH_EDITOR_API inline static std::priority_queue<AssetLoadData> loadingAssetsQueue{};
 		SH_EDITOR_API static core::Observer<false, core::SObject*>::Listener onDestroyListener;
 	private:
+		static void CreateMeta(core::SObject* ptr, const std::filesystem::path& metaDir);
 		static void CreateOrLoadMeta(core::SObject* ptr, const std::filesystem::path& metaDir);
 		static auto LoadMesh(game::World& world, const std::filesystem::path& dir, const std::filesystem::path& metaDir) -> render::Mesh*;
 		static auto LoadTexture(game::World& world, const std::filesystem::path& dir, const std::filesystem::path& metaDir) -> render::Texture*;
