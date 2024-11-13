@@ -309,7 +309,7 @@ namespace sh::editor
 					game::GameObject* obj = *reinterpret_cast<game::GameObject**>(ImGui::GetDragDropPayload()->Data);
 					for (auto payloadComponent : obj->GetComponents())
 					{
-						if (core::IsValid(payloadComponent))
+						if (!core::IsValid(payloadComponent))
 							continue;
 
 						const core::reflection::STypeInfo* componentType = &payloadComponent->GetType();
