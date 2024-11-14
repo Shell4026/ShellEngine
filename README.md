@@ -53,7 +53,5 @@ sudo apt install libx11-dev libxext-dev libgl1-mesa-dev
 VulkanSDK : https://vulkan.lunarg.com/sdk/home#linux
 
 # TODO
-- 조명
 - 스켈레탈 메쉬
 - 애니메이션, 애니메이터
-- 세이브, 로드 (직렬화)
