@@ -104,7 +104,6 @@ TEST(ObserverTest, AutoUnRegisterTesting)
 	int value = 0;
 
 	Target target{};
-
 	{
 		sh::core::Observer<false, int>::Listener listener
 		{
@@ -121,4 +120,37 @@ TEST(ObserverTest, AutoUnRegisterTesting)
 	value = 123;
 	target.ChangeValue(5);
 	EXPECT_EQ(value, 123);
+}
+
+TEST(observerTest, MultipleObserverToOneListener)
+{
+	Target target0{};
+	Target target1{};
+
+	int value = 0;
+	auto listener = new sh::core::Observer<false, int>::Listener
+	{
+		[&](int num)
+		{
+			value = num * 2;
+		}
+	};
+
+	target0.observer.Register(*listener);
+	target1.observer.Register(*listener);
+
+	target0.ChangeValue(3);
+	EXPECT_EQ(value, 6);
+	target1.ChangeValue(4);
+	EXPECT_EQ(value, 8);
+
+	target0.observer.UnRegister(*listener);
+	target0.ChangeValue(12);
+	EXPECT_NE(value, 24);
+	delete listener;
+
+	target0.ChangeValue(5);
+	EXPECT_NE(value, 10);
+	target1.ChangeValue(6);
+	EXPECT_NE(value, 12);
 }

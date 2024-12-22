@@ -31,7 +31,7 @@ namespace sh::core
 		private:
 			std::function<void(Args...)> func;
 
-			Observer* observer = nullptr;
+			std::set<Observer*> observers;
 		public:
 			const int priority;
 		public:
@@ -40,18 +40,22 @@ namespace sh::core
 			/// @param func 호출 될 함수
 			/// @param priority 우선 순위. 높을 수록 옵저버에서 우선 실행된다.
 			Listener(const std::function<void(Args...)>& func, int priority = 0) :
-				observer(nullptr), func(func), priority(priority)
+				func(func), priority(priority)
 			{}
 			Listener(Listener&& other) noexcept :
-				observer(other.observer), func(std::move(other.func)), priority(other.priority)
+				observers(std::move(other.observers)), func(std::move(other.func)), priority(other.priority)
 			{
-				other.observer = nullptr;
 			}
 			~Listener()
 			{
-				if (observer == nullptr) 
+				if (observers.empty())
 					return;
-				observer->UnRegister(*this);
+				std::vector<Observer*> tmp;
+				tmp.reserve(observers.size());
+				for (auto observer : observers)
+					tmp.push_back(observer);
+				for (auto observer : tmp)
+					observer->UnRegister(*this);
 			}
 
 			void SetCallback(const std::function<void(Args...)>& func)
@@ -118,13 +122,13 @@ namespace sh::core
 		for (Listener* listener : events)
 		{
 			if (listener)
-				listener->observer = nullptr;
+				listener->observers.erase(this);
 		}
 	}
 	template<bool OneTimeListener, typename ...Args>
 	void Observer<OneTimeListener, Args...>::Register(Listener& event)
 	{
-		event.observer = this;
+		event.observers.insert(this);
 		events.insert(&event);
 	}
 	template<bool OneTimeListener, typename ...Args>
@@ -134,7 +138,7 @@ namespace sh::core
 		if (it == events.end())
 			return false;
 
-		event.observer = nullptr;
+		event.observers.erase(this);
 		events.erase(it);
 
 		return true;
@@ -155,7 +159,7 @@ namespace sh::core
 	{
 		for (Listener* listener : events)
 		{
-			listener->observer = nullptr;
+			listener->observers.erase(this);
 		}
 		events.clear();
 	}
