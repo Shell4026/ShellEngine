@@ -30,7 +30,7 @@ namespace sh::render
 		};
 	public:
 		SH_RENDER_API virtual ~IDrawable() = default;
-		SH_RENDER_API virtual void Build(Camera& camera, const Mesh* mesh, const Material* mat) = 0;
+		SH_RENDER_API virtual void Build(Camera& camera, Mesh* mesh, Material* mat) = 0;
 
 		SH_RENDER_API virtual auto GetMaterial() const ->const Material* = 0;
 		SH_RENDER_API virtual auto GetMesh() const -> const Mesh* = 0;
@@ -41,5 +41,7 @@ namespace sh::render
 		/// @param data 데이터 위치 포인터
 		/// @param stage 셰이더 스테이지
 		SH_RENDER_API virtual void SetUniformData(uint32_t binding, const void* data, Stage stage) = 0;
+
+		SH_RENDER_API virtual bool CheckAssetValid() const = 0;
 	};
 }

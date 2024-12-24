@@ -3,7 +3,6 @@
 #include "IDrawable.h"
 
 #include "Core/Util.h"
-#include "Core/GarbageCollection.h"
 
 #include <cassert>
 namespace sh::render
@@ -16,76 +15,64 @@ namespace sh::render
 		bPause(false), bDirty(false)
 	{
 	}
-	void Renderer::Clean()
+
+	SH_RENDER_API void Renderer::Clean()
 	{
 		for (int thr = 0; thr < drawList.size(); ++thr)
-		{
-			for (auto& [cam, vec] : drawList[thr])
-			{
-				for (auto idrawable : vec)
-				{
-					if (core::IsValid(idrawable))
-						gc->ForceDelete(idrawable);
-				}
-			}
 			drawList[thr].clear();
-		}
 		drawCalls.clear();
 	}
 
-	bool Renderer::Init(sh::window::Window& win)
+	SH_RENDER_API bool Renderer::Init(sh::window::Window& win)
 	{
 		window = &win;
 		return true;
 	}
 
-	void Renderer::PushDrawAble(IDrawable* drawable)
+	SH_RENDER_API void Renderer::PushDrawAble(IDrawable* drawable)
 	{
 		if (!core::IsValid(drawable))
 			return;
 
-		auto it = drawList[core::ThreadType::Game].find(drawable->GetCamera());
-		if (it == drawList[core::ThreadType::Game].end())
-		{
-			drawList[core::ThreadType::Game].insert({ drawable->GetCamera(), core::SVector<IDrawable*>{drawable} });
-		}
-		else
-		{
-			it->second.push_back(drawable);
-		}
+		drawableQueue.push(drawable);
 		SetDirty();
 	}
 
-	void Renderer::AddDrawCall(const std::function<void()>& func)
+	SH_RENDER_API void Renderer::AddDrawCall(const std::function<void()>& func)
 	{
 		drawCalls.push_back(func);
 	}
 
-	void Renderer::ClearDrawList()
+	SH_RENDER_API void Renderer::ClearDrawList()
 	{
 		drawList[core::ThreadType::Game].clear();
 		SetDirty();
 	}
 
-	auto Renderer::GetViewportStart() const -> const glm::vec2&
+	SH_RENDER_API auto Renderer::GetViewportStart() const -> const glm::vec2&
 	{
 		return viewportStart;
 	}
-	auto Renderer::GetViewportEnd() const -> const glm::vec2&
+	SH_RENDER_API auto Renderer::GetViewportEnd() const -> const glm::vec2&
 	{
 		return viewportEnd;
 	}
-	auto Renderer::GetWindow() -> sh::window::Window&
+	SH_RENDER_API auto Renderer::GetWindow() -> sh::window::Window&
 	{
 		assert(window);
 		return *window;
 	}
-	void Renderer::Pause(bool b)
+
+	SH_RENDER_API void Renderer::Pause(bool b)
 	{
 		bPause.store(b, std::memory_order::memory_order_release);
 	}
+	SH_RENDER_API auto Renderer::IsPause() const -> bool
+	{
+		return bPause.load(std::memory_order::memory_order_acquire);
+	}
 
-	void Renderer::SetDirty()
+	SH_RENDER_API void Renderer::SetDirty()
 	{
 		if (bDirty)
 			return;
@@ -93,18 +80,33 @@ namespace sh::render
 		syncManager.PushSyncable(*this);
 		bDirty = true;
 	}
-	void Renderer::Sync()
+	SH_RENDER_API void Renderer::Sync()
 	{
+		while (!drawableQueue.empty())
+		{
+			IDrawable* drawable = drawableQueue.front();
+			drawableQueue.pop();
+			if (!core::IsValid(drawable))
+				continue;
+			if (!drawable->CheckAssetValid())
+				continue;
+
+			auto it = drawList[core::ThreadType::Game].find(drawable->GetCamera());
+			if (it == drawList[core::ThreadType::Game].end())
+			{
+				drawList[core::ThreadType::Game].insert({ drawable->GetCamera(), core::SVector<IDrawable*>{drawable} });
+			}
+			else
+			{
+				it->second.push_back(drawable);
+			}
+		}
+
 		drawList[core::ThreadType::Render] = std::move(drawList[core::ThreadType::Game]);
 		bDirty = false;
 	}
 
-	auto Renderer::IsPause() const -> bool
-	{
-		return bPause.load(std::memory_order::memory_order_acquire);
-	}
-
-	auto Renderer::GetThreadSyncManager() const -> core::ThreadSyncManager&
+	SH_RENDER_API auto Renderer::GetThreadSyncManager() const -> core::ThreadSyncManager&
 	{
 		return syncManager;
 	}

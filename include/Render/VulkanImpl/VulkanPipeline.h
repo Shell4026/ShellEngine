@@ -37,15 +37,13 @@ namespace sh::render::impl
 	private:
 		VkDevice device;
 		VkRenderPass renderPass;
-		VulkanShader* shader;
+		const VulkanShader* shader;
 
 		VkPipeline pipeline;
 
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 		std::vector<VkVertexInputBindingDescription> bindingDescriptions;
 		std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
-
-		int viewportX, viewportY;
 
 		CullMode cullMode;
 		Topology topology;
@@ -70,7 +68,7 @@ namespace sh::render::impl
 		SH_RENDER_API auto AddAttributeDescription(const VkVertexInputAttributeDescription& attributeDescription) -> VulkanPipeline&;
 		SH_RENDER_API auto ResetAttributeDescription() -> VulkanPipeline&;
 
-		SH_RENDER_API auto SetShader(VulkanShader* shader) -> VulkanPipeline&;
+		SH_RENDER_API auto SetShader(const VulkanShader* shader) -> VulkanPipeline&;
 
 		SH_RENDER_API auto SetCullMode(CullMode mode) -> VulkanPipeline&;
 

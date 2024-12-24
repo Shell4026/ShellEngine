@@ -35,7 +35,7 @@ namespace sh::game
 		bool bShaderHasLight = false;
 	protected:
 		PROPERTY(mesh);
-		const sh::render::Mesh* mesh;
+		sh::render::Mesh* mesh;
 		PROPERTY(mat);
 		sh::render::Material* mat;
 		PROPERTY(drawables, core::PropertyOption::invisible);
@@ -55,8 +55,9 @@ namespace sh::game
 		SH_GAME_API MeshRenderer(GameObject& owner);
 		SH_GAME_API ~MeshRenderer();
 
-		SH_GAME_API void SetMesh(const sh::render::Mesh* mesh);
+		SH_GAME_API void SetMesh(sh::render::Mesh* mesh);
 		SH_GAME_API auto GetMesh() const -> const sh::render::Mesh*;
+		SH_GAME_API auto GetMesh() -> sh::render::Mesh*;
 
 		SH_GAME_API void SetMaterial(sh::render::Material* mat);
 		SH_GAME_API auto GetMaterial() const -> sh::render::Material*;

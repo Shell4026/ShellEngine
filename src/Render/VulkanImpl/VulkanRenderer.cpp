@@ -12,6 +12,7 @@
 #include "VulkanShader.h"
 #include "VulkanDrawable.h"
 #include "VulkanUniformBuffer.h"
+#include "VulkanPipelineManager.h"
 
 #include "Mesh.h"
 #include "Material.h"
@@ -53,6 +54,7 @@ namespace sh::render {
 
 		vkDeviceWaitIdle(device);
 
+		pipelineManager.reset();
 		descPool.reset();
 
 		DestroySyncObjects();
@@ -444,7 +446,7 @@ namespace sh::render {
 		layers = std::make_unique<impl::VulkanLayer>();
 		surface = std::make_unique<impl::VulkanSurface>();
 
-		//표면 확장 탐색
+		// 표면 확장 탐색
 		if (layers->FindVulkanExtension(VK_KHR_SURFACE_EXTENSION_NAME))
 			requestedInstanceExtension.push_back(VK_KHR_SURFACE_EXTENSION_NAME);
 		else
@@ -472,23 +474,23 @@ namespace sh::render {
 		else
 			return false;
 #endif
-		//인스턴스 생성
+		// 인스턴스 생성
 		if (CreateInstance(requestedLayer, requestedInstanceExtension) != VkResult::VK_SUCCESS)
 			return false;
 		
-		//디버그 모드일시 디버그 레이어 생성
+		// 디버그 모드일시 디버그 레이어 생성
 		if (bEnableValidationLayers)
 			InitDebugMessenger();
 
-		//표면 생성
+		// 표면 생성
 		if (!surface->CreateSurface(win, instance))
 			return false;
 
-		//GPU 목록을 가져온다.
+		// GPU 목록을 가져온다.
 		if (GetPhysicalDevices() != VkResult::VK_SUCCESS)
 			return false;
 
-		//적당한 GPU 선택
+		// 적당한 GPU 선택
 		auto suitableFunc
 		{
 			[&](VkPhysicalDevice _gpu) -> bool
@@ -519,12 +521,12 @@ namespace sh::render {
 
 
 		requestedDeviceExtension = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
-		//가상 장치 생성
+		// 가상 장치 생성
 		if (CreateDevice(gpu) != VkResult::VK_SUCCESS)
 			return false;
 		surface->SetDevice(device);
 
-		//가상 장치에서 큐를 가져온다.
+		// 가상 장치에서 큐를 가져온다.
 		vkGetDeviceQueue(device, graphicsQueueIndex.first, graphicsQueueIndex.second, &graphicsQueue); // graphicsQueue를 가진 큐 패밀리에서 n번째 큐를 가져옴
 		assert(graphicsQueue);
 		vkGetDeviceQueue(device, surfaceQueueIndex.first, surfaceQueueIndex.second, &surfaceQueue);
@@ -532,13 +534,13 @@ namespace sh::render {
 		vkGetDeviceQueue(device, transferQueueIndex.first, transferQueueIndex.second, &transferQueue);
 		assert(transferQueue);
 
-		//메모리 할당자 생성(VMA라이브러리)
+		// 메모리 할당자 생성(VMA라이브러리)
 		CreateAllocator();
 
-		//스왑체인 생성
+		// 스왑체인 생성
 		surface->CreateSwapChain(gpu, graphicsQueueIndex.first, surfaceQueueIndex.first);
 
-		//프레임버퍼 생성 (렌더패스 생성 -> 프레임버퍼 생성)
+		// 프레임버퍼 생성 (렌더패스 생성 -> 프레임버퍼 생성)
 		auto& imgs = surface->GetSwapChainImageViews();
 		framebuffers.reserve(imgs.size());
 		for (size_t i = 0; i < imgs.size(); ++i)
@@ -550,19 +552,22 @@ namespace sh::render {
 				return false;
 		}
 
-		//커맨드 풀과 커맨드 버퍼 생성
+		// 커맨드 풀과 커맨드 버퍼 생성
 		CreateCommandPool(graphicsQueueIndex.first);
 
 		cmdBuffer[core::ThreadType::Game] = std::make_unique<impl::VulkanCommandBuffer>(device, cmdPool[core::ThreadType::Game]);
 		cmdBuffer[core::ThreadType::Game]->Create();
 		cmdBuffer[core::ThreadType::Render] = std::make_unique<impl::VulkanCommandBuffer>(device, cmdPool[core::ThreadType::Render]);
 		cmdBuffer[core::ThreadType::Render]->Create();
-		//세마포어와 펜스 생성 (동기화 변수)
+		// 세마포어와 펜스 생성 (동기화 변수)
 		if (CreateSyncObjects() != VkResult::VK_SUCCESS)
 			return false;
 
-		//디스크립터 풀 생성
+		// 디스크립터 풀 생성
 		descPool = std::make_unique<impl::VulkanDescriptorPool>(device, 16);
+
+		// 파이프라인 매니저 생성
+		pipelineManager = std::make_unique<impl::VulkanPipelineManager>(device);
 
 		isInit = true;
 		PrintLayer();
@@ -952,6 +957,10 @@ namespace sh::render {
 	SH_RENDER_API auto VulkanRenderer::GetGameThreadSemaphore() const -> VkSemaphore
 	{
 		return gameThreadSemaphore;
+	}
+	SH_RENDER_API auto VulkanRenderer::GetPipelineManager() -> impl::VulkanPipelineManager&
+	{
+		return *pipelineManager.get();
 	}
 }//namespace
 

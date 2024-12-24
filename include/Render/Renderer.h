@@ -3,7 +3,6 @@
 #include "Export.h"
 #include "Camera.h"
 
-#include "Core/SObject.h"
 #include "Core/ISyncable.h"
 #include "Core/ThreadSyncManager.h"
 #include "Core/SContainer.hpp"
@@ -27,7 +26,7 @@ namespace sh::render {
 	class IDrawable;
 	class Framebuffer;
 
-	class Renderer : public core::SObject, public core::ISyncable
+	class Renderer : public core::ISyncable
 	{
 		SCLASS(Renderer)
 	private:
@@ -45,8 +44,8 @@ namespace sh::render {
 
 		core::ThreadSyncManager& syncManager;
 	protected:
-		PROPERTY(drawList)
-		core::SyncArray<core::SMap<Camera*, core::SVector<IDrawable*>, 64, CameraCompare>> drawList;
+		std::queue<IDrawable*> drawableQueue;
+		core::SyncArray<std::map<Camera*, core::SVector<IDrawable*>, CameraCompare>> drawList;
 
 		std::vector<std::function<void()>> drawCalls;
 
@@ -81,6 +80,7 @@ namespace sh::render {
 
 		SH_RENDER_API void ClearDrawList();
 		/// @brief [게임 스레드 전용] 드로우 객체를 큐에 집어 넣는다.
+		/// @brief 큐에 들어간 객체는 sync 타이밍에 렌더러에 들어간다.
 		/// @param drawable 드로우 객체 포인터
 		/// @return 
 		SH_RENDER_API void PushDrawAble(IDrawable* drawable);

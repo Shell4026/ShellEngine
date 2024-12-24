@@ -9,7 +9,6 @@ namespace sh::render::impl
 	SH_RENDER_API VulkanPipeline::VulkanPipeline(VkDevice device, VkRenderPass renderPass) :
 		device(device), renderPass(renderPass),
 		pipeline(nullptr), shader(nullptr),
-		viewportX(0), viewportY(0),
 		cullMode(CullMode::Back),
 		topology(Topology::Triangle)
 	{
@@ -21,11 +20,13 @@ namespace sh::render::impl
 		shaderStages(std::move(other.shaderStages)),
 		bindingDescriptions(std::move(other.bindingDescriptions)),
 		attributeDescriptions(std::move(other.attributeDescriptions)),
-		viewportX(other.viewportX), viewportY(other.viewportY),
 		cullMode(other.cullMode),
 		topology(other.topology)
 	{
 		other.pipeline = nullptr;
+		other.device = nullptr;
+		other.renderPass = nullptr;
+		other.shader = nullptr;
 	}
 
 	SH_RENDER_API VulkanPipeline::~VulkanPipeline()
@@ -39,14 +40,14 @@ namespace sh::render::impl
 		bindingDescriptions.clear();
 		attributeDescriptions.clear();
 
-		if (pipeline)
+		if (pipeline != nullptr)
 		{
 			vkDestroyPipeline(device, pipeline, nullptr);
 			pipeline = nullptr;
 		}
 	}
 
-	SH_RENDER_API auto VulkanPipeline::SetShader(VulkanShader* shader) -> VulkanPipeline&
+	SH_RENDER_API auto VulkanPipeline::SetShader(const VulkanShader* shader) -> VulkanPipeline&
 	{
 		this->shader = shader;
 		return *this;
@@ -132,22 +133,6 @@ namespace sh::render::impl
 			inputAssembly.topology = VkPrimitiveTopology::VK_PRIMITIVE_TOPOLOGY_LINE_LIST;
 			break;
 		}
-		
-		VkViewport viewport{};
-		viewport.x = 0.0f;
-		viewport.y = 0.0f;
-		viewport.width = static_cast<float>(viewportX);
-		viewport.height = static_cast<float>(viewportY);
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
-
-		VkExtent2D scissorExtend;
-		scissorExtend.width = viewportX;
-		scissorExtend.height = viewportY;
-
-		VkRect2D scissor{};
-		scissor.offset = { 0, 0 };
-		scissor.extent = scissorExtend;
 
 		VkDynamicState dynamicStates[] = {
 			VkDynamicState::VK_DYNAMIC_STATE_VIEWPORT,

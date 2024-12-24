@@ -26,6 +26,7 @@ namespace sh::render {
 		class VulkanCommandBuffer;
 		class VulkanFramebuffer;
 		class VulkanDescriptorPool;
+		class VulkanPipelineManager;
 	}
 	class VulkanRenderer :
 		public Renderer, public sh::core::INonCopyable{
@@ -43,6 +44,7 @@ namespace sh::render {
 		std::unique_ptr<impl::VulkanLayer> layers;
 		core::SyncArray<std::unique_ptr<impl::VulkanCommandBuffer>> cmdBuffer;
 		std::unique_ptr<impl::VulkanDescriptorPool> descPool;
+		std::unique_ptr<impl::VulkanPipelineManager> pipelineManager;
 
 		VkInstance instance;
 		VkPhysicalDeviceProperties gpuProp;
@@ -146,5 +148,6 @@ namespace sh::render {
 		SH_RENDER_API auto GetGPUProperty() const -> const VkPhysicalDeviceProperties&;
 		SH_RENDER_API auto GetRenderFinshedSemaphore() const -> VkSemaphore;
 		SH_RENDER_API auto GetGameThreadSemaphore() const -> VkSemaphore;
+		SH_RENDER_API auto GetPipelineManager() -> impl::VulkanPipelineManager&;
 	};
 }//namespace

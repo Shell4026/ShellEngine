@@ -12,6 +12,7 @@
 #include "VulkanDescriptorPool.h"
 #include "VulkanVertexBuffer.h"
 #include "VulkanBuffer.h"
+#include "VulkanPipelineManager.h"
 
 #include "Core/Reflection.hpp"
 
@@ -58,7 +59,7 @@ namespace sh::render
 		localVertBuffer[thr].clear();
 		localFragBuffer[thr].clear();
 		localDescSet[thr].reset();
-		pipeline[thr].reset();
+		pipeline[thr] = nullptr;
 	}
 
 	void VulkanDrawable::CreateBuffer(core::ThreadType thr)
@@ -93,7 +94,7 @@ namespace sh::render
 		auto ptr = static_cast<impl::VulkanUniformBuffer*>(BufferFactory::CreateUniformBuffer(renderer, *this->mat->GetShader(), Shader::UniformType::Object).release());
 		localDescSet[thr] = std::unique_ptr<impl::VulkanUniformBuffer>(ptr);
 	}
-	void VulkanDrawable::BuildPipeline(core::ThreadType thr, impl::VulkanPipeline::Topology topology)
+	void VulkanDrawable::GetPipelineFromManager(core::ThreadType thr)
 	{
 		const impl::VulkanFramebuffer* vkFrameBuffer = nullptr;
 		if (camera->GetRenderTexture() == nullptr)
@@ -102,64 +103,21 @@ namespace sh::render
 			vkFrameBuffer = static_cast<const impl::VulkanFramebuffer*>(camera->GetRenderTexture()->GetFramebuffer(core::ThreadType::Game));
 
 		VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
-		pipeline[thr] = std::make_unique<impl::VulkanPipeline>(renderer.GetDevice(), vkFrameBuffer->GetRenderPass());
-		pipeline[thr]->SetTopology(topology);
-		pipeline[thr]->SetShader(shader);
-		pipeline[thr]->
-			AddShaderStage(impl::VulkanPipeline::ShaderStage::Vertex).
-			AddShaderStage(impl::VulkanPipeline::ShaderStage::Fragment);
+		assert(shader != nullptr);
 
-		//Attribute
-		auto& bindings = static_cast<VulkanVertexBuffer*>(mesh->GetVertexBuffer())->bindingDescriptions;
-		auto& attrs = static_cast<VulkanVertexBuffer*>(mesh->GetVertexBuffer())->attribDescriptions;
-
-		// binding 0과 attribute 0은 버텍스
-		for (int i = 0; i < attrs.size(); ++i)
-		{
-			auto data = shader->GetAttribute(mesh->attributes[i]->name);
-			if (!data)
-				continue;
-			if (data->typeName != mesh->attributes[i]->typeName)
-				continue;
-
-			VkVertexInputAttributeDescription attrDesc = attrs[i];
-			attrDesc.location = data->idx;
-
-			pipeline[thr]->AddBindingDescription(bindings[i]);
-			pipeline[thr]->AddAttributeDescription(attrDesc);
-		}
-
-		pipeline[thr]->SetLineWidth(mesh->lineWidth);
-
-		auto result = pipeline[thr]->Build(shader->GetPipelineLayout());
-		assert(result == VkResult::VK_SUCCESS);
+		pipeline[thr] = renderer.GetPipelineManager().GetPipeline(thr, vkFrameBuffer->GetRenderPass(), *shader, *mesh);
 	}
 
-	SH_RENDER_API void VulkanDrawable::Build(Camera& camera, const Mesh* mesh, const Material* mat)
+	SH_RENDER_API void VulkanDrawable::Build(Camera& camera, Mesh* mesh, Material* mat)
 	{
 		this->mat = mat;
 		this->mesh = mesh;
 		this->camera = &camera;
-
 		assert(mesh);
 		assert(mat);
 
 		VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
 		assert(shader);
-
-		// 토폴리지
-		switch (mesh->GetTopology())
-		{
-		case Mesh::Topology::Point:
-			topology = impl::VulkanPipeline::Topology::Point;
-			break;
-		case Mesh::Topology::Line:
-			topology = impl::VulkanPipeline::Topology::Line;
-			break;
-		case Mesh::Topology::Face:
-			topology = impl::VulkanPipeline::Topology::Triangle;
-			break;
-		}
 
 		Clean(core::ThreadType::Game);
 
@@ -168,7 +126,7 @@ namespace sh::render
 		{
 			core::ThreadType thr = static_cast<core::ThreadType>(thrIdx);
 			CreateBuffer(thr);
-			BuildPipeline(thr, topology);
+			GetPipelineFromManager(thr);
 		}
 
 		if (bInit)
@@ -222,7 +180,7 @@ namespace sh::render
 	}
 	SH_RENDER_API auto VulkanDrawable::GetPipeline(core::ThreadType thr) const -> impl::VulkanPipeline*
 	{
-		return pipeline[static_cast<int>(thr)].get();
+		return pipeline[static_cast<int>(thr)];
 	}
 	SH_RENDER_API auto VulkanDrawable::GetLocalUniformBuffer(core::ThreadType thr) const -> impl::VulkanUniformBuffer*
 	{
@@ -255,12 +213,17 @@ namespace sh::render
 			// 새로 빌드 했다는 뜻이므로 버퍼 교환 후 파이프라인을 새로 빌드 해준다.
 			std::swap(pipeline[core::ThreadType::Game], pipeline[core::ThreadType::Render]);
 
-			BuildPipeline(core::ThreadType::Game, topology);
+			GetPipelineFromManager(core::ThreadType::Game);
 			CreateBuffer(core::ThreadType::Game);
 		}
 
 		bPipelineDirty = false;
 		bBufferDirty = false;
 		bDirty = false;
+	}
+
+	SH_RENDER_API bool VulkanDrawable::CheckAssetValid() const
+	{
+		return core::IsValid(mesh) && core::IsValid(mat) && core::IsValid(mat->GetShader());
 	}
 }
