@@ -172,6 +172,7 @@ namespace sh::editor
 			//ImGuiWindowFlags_::ImGuiWindowFlags_NoBringToFrontOnFocus |
 			ImGuiWindowFlags_::ImGuiWindowFlags_NoCollapse;
 
+		ImGui::SetNextWindowSize({ 200, 500 });
 		ImGui::Begin("Hierarchy", nullptr, style);
 		isDocking = ImGui::IsWindowDocked();
 

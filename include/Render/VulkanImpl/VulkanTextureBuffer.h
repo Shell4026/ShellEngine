@@ -7,16 +7,16 @@
 #include "VulkanCommandBuffer.h"
 
 #include <memory>
-namespace sh::render
+namespace sh::render::vk
 {
 	class VulkanRenderer;
 
 	class VulkanTextureBuffer : public ITextureBuffer
 	{
 	private:
-		std::unique_ptr<impl::VulkanImageBuffer> buffer;
+		std::unique_ptr<VulkanImageBuffer> buffer;
 
-		std::unique_ptr<impl::VulkanCommandBuffer> cmd;
+		std::unique_ptr<VulkanCommandBuffer> cmd;
 
 		const Framebuffer* framebuffer;
 
@@ -29,10 +29,10 @@ namespace sh::render
 		SH_RENDER_API VulkanTextureBuffer(VulkanTextureBuffer&& other) noexcept;
 		SH_RENDER_API ~VulkanTextureBuffer();
 
-		SH_RENDER_API void Create(const VulkanRenderer& renderer, const void* data, uint32_t width, uint32_t height, Texture::TextureFormat format) override;
+		SH_RENDER_API void Create(const Renderer& renderer, const void* data, uint32_t width, uint32_t height, Texture::TextureFormat format) override;
 		SH_RENDER_API void Create(const Framebuffer& framebuffer) override;
 		SH_RENDER_API void Clean() override;
 
-		SH_RENDER_API auto GetImageBuffer() const -> impl::VulkanImageBuffer*;
+		SH_RENDER_API auto GetImageBuffer() const -> VulkanImageBuffer*;
 	};
 }

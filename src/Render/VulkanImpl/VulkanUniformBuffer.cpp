@@ -10,7 +10,7 @@
 
 #include <algorithm>
 
-namespace sh::render::impl
+namespace sh::render::vk
 {
 	VulkanUniformBuffer::VulkanUniformBuffer() :
 		renderer(nullptr),

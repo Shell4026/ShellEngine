@@ -7,7 +7,7 @@
 #include <vector>
 #include <string_view>
 
-namespace sh::render::impl
+namespace sh::render::vk
 {
 	class VulkanLayer
 	{

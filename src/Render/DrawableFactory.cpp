@@ -11,7 +11,7 @@ namespace sh::render
 	{
 		if (renderer.apiType == RenderAPI::Vulkan)
 		{
-			return core::SObject::Create<VulkanDrawable>(static_cast<VulkanRenderer&>(renderer));
+			return core::SObject::Create<vk::VulkanDrawable>(static_cast<vk::VulkanRenderer&>(renderer));
 		}
 		return nullptr;
 	}

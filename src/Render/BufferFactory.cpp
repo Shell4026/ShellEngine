@@ -12,9 +12,9 @@
 
 namespace sh::render
 {
-	auto BufferFactory::CreateVkUniformBuffer(const VulkanRenderer& renderer, std::size_t size, bool bTransferDst) -> std::unique_ptr<IBuffer>
+	auto BufferFactory::CreateVkUniformBuffer(const vk::VulkanRenderer& renderer, std::size_t size, bool bTransferDst) -> std::unique_ptr<IBuffer>
 	{
-		std::unique_ptr<impl::VulkanBuffer> buffer = std::make_unique<impl::VulkanBuffer>(renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator());
+		std::unique_ptr<vk::VulkanBuffer> buffer = std::make_unique<vk::VulkanBuffer>(renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator());
 
 		VkBufferUsageFlags usage = VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 		if (bTransferDst)
@@ -38,7 +38,7 @@ namespace sh::render
 		assert(renderer.apiType == RenderAPI::Vulkan);
 		if (renderer.apiType == RenderAPI::Vulkan)
 		{
-			return CreateVkUniformBuffer(static_cast<const VulkanRenderer&>(renderer), size, bTransferDst);
+			return CreateVkUniformBuffer(static_cast<const vk::VulkanRenderer&>(renderer), size, bTransferDst);
 		}
 		return nullptr;
 	}
@@ -46,7 +46,7 @@ namespace sh::render
 	{
 		if (renderer.apiType == RenderAPI::Vulkan)
 		{
-			auto ptr = std::make_unique<impl::VulkanUniformBuffer>();
+			auto ptr = std::make_unique<vk::VulkanUniformBuffer>();
 			ptr->Create(renderer, shader, (type == Shader::UniformType::Object) ? 0 : 1);
 			return ptr;
 		}

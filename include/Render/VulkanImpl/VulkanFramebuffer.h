@@ -11,7 +11,7 @@
 #include <vector>
 #include <memory>
 
-namespace sh::render::impl
+namespace sh::render::vk
 {
 	class VulkanFramebuffer : public Framebuffer
 	{

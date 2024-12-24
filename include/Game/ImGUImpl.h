@@ -23,7 +23,7 @@ namespace sh::game
 	{
 	private:
 		window::Window& window;
-		render::VulkanRenderer& renderer;
+		render::vk::VulkanRenderer& renderer;
 
 		ImDrawData drawData;
 
@@ -33,7 +33,7 @@ namespace sh::game
 		void WindowInit();
 	public:
 		//TODO: 다른 렌더러 구현
-		SH_GAME_API ImGUImpl(window::Window& window, render::VulkanRenderer& renderer);
+		SH_GAME_API ImGUImpl(window::Window& window, render::vk::VulkanRenderer& renderer);
 		SH_GAME_API ~ImGUImpl();
 		SH_GAME_API void Clean();
 

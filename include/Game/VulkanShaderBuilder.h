@@ -6,7 +6,7 @@
 
 #include <vector>
 
-namespace sh::render
+namespace sh::render::vk
 {
 	class VulkanRenderer;
 }
@@ -15,9 +15,9 @@ namespace sh::game
 	class VulkanShaderBuilder : public ShaderBuilder
 	{
 	private:
-		render::VulkanRenderer& renderer;
+		render::vk::VulkanRenderer& renderer;
 	public:
-		SH_GAME_API VulkanShaderBuilder(render::VulkanRenderer& renderer);
+		SH_GAME_API VulkanShaderBuilder(render::vk::VulkanRenderer& renderer);
 		SH_GAME_API ~VulkanShaderBuilder();
 
 		SH_GAME_API auto Build()->render::Shader* override;

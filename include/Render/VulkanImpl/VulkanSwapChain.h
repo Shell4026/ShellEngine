@@ -6,13 +6,15 @@
 #include "VulkanConfig.h"
 #include <vector>
 #include <iostream>
+
 namespace sh::window
 {
 	class Window;
 }
 
-namespace sh::render::impl {
-	class VulkanSurface : public core::INonCopyable
+namespace sh::render::vk 
+{
+	class VulkanSwapChain : public core::INonCopyable
 	{
 	public:
 		struct SwapChainSupportDetails 
@@ -25,9 +27,9 @@ namespace sh::render::impl {
 			SH_RENDER_API ~SwapChainSupportDetails();
 		};
 	private:
-		sh::window::Window* window;
-		VkDevice device;
 		VkInstance instance;
+		VkDevice device;
+		VkPhysicalDevice gpu;
 
 		VkSurfaceKHR surface;
 		VkSwapchainKHR swapChain;
@@ -41,23 +43,22 @@ namespace sh::render::impl {
 		uint32_t swapChainImageCount;
 	private:
 		void QuerySwapChainDetails(VkPhysicalDevice gpu);
-
-		auto SelectFormat()->VkSurfaceFormatKHR;
-		auto SelectPresentMode()->VkPresentModeKHR;
+		auto SelectSurfaceFormat()->VkSurfaceFormatKHR;
+		auto SelectPresentMode(bool bVsync)->VkPresentModeKHR;
 	public:
-		SH_RENDER_API VulkanSurface();
-		SH_RENDER_API VulkanSurface(VulkanSurface&& other) noexcept;
-		SH_RENDER_API ~VulkanSurface();
+		SH_RENDER_API VulkanSwapChain();
+		SH_RENDER_API VulkanSwapChain(VulkanSwapChain&& other) noexcept;
+		SH_RENDER_API ~VulkanSwapChain();
 
-		SH_RENDER_API bool CreateSurface(sh::window::Window& window, VkInstance instance);
+		SH_RENDER_API void SetContext(VkInstance instance, VkDevice device, VkPhysicalDevice gpu);
+
+		SH_RENDER_API void CreateSurface(const sh::window::Window& window);
 		SH_RENDER_API void DestroySurface();
 
-		SH_RENDER_API bool CreateSwapChain(VkPhysicalDevice gpu, uint32_t graphicsQueueFamily, uint32_t surfaceQueueFamily);
+		SH_RENDER_API void CreateSwapChain(uint32_t graphicsQueueIdx, uint32_t surfaceQueueIdx, bool bVsync);
 		SH_RENDER_API void DestroySwapChain();
-		
-		SH_RENDER_API bool IsSwapChainSupport(VkPhysicalDevice gpu);
 
-		SH_RENDER_API void SetDevice(VkDevice device);
+		SH_RENDER_API bool IsSwapChainSupport(VkPhysicalDevice gpu);
 
 		SH_RENDER_API auto GetDevice() const -> const VkDevice;
 		SH_RENDER_API auto GetSurface() const -> const VkSurfaceKHR;

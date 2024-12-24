@@ -4,7 +4,7 @@
 #include <cstring>
 #include <stdexcept>
 
-namespace sh::render::impl
+namespace sh::render::vk
 {
 	VulkanBuffer::VulkanBuffer(VkDevice device, VkPhysicalDevice gpu, VmaAllocator allocator) :
 		device(device), gpu(gpu), allocator(allocator),

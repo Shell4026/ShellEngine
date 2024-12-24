@@ -10,7 +10,7 @@ namespace sh::render
 	{
 		if (renderer.apiType == RenderAPI::Vulkan)
 		{
-			auto buffer = std::make_unique<VulkanVertexBuffer>(static_cast<const VulkanRenderer&>(renderer));
+			auto buffer = std::make_unique<vk::VulkanVertexBuffer>(static_cast<const vk::VulkanRenderer&>(renderer));
 			buffer->Create(mesh);
 			return buffer;
 		}

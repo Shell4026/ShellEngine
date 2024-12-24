@@ -8,7 +8,8 @@
 #include <functional>
 #include <initializer_list>
 
-namespace sh::render::impl {
+namespace sh::render::vk 
+{
 	class VulkanCommandBuffer : public core::INonCopyable
 	{
 	private:

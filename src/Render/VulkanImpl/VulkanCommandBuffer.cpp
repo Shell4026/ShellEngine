@@ -2,7 +2,8 @@
 
 #include <cassert>
 
-namespace sh::render::impl {
+namespace sh::render::vk 
+{
 	VulkanCommandBuffer::VulkanCommandBuffer(VkDevice device, VkCommandPool pool) :
 		buffer(nullptr), device(device), cmdPool(pool), waitStage(0)
 	{

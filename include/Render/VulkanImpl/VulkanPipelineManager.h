@@ -15,7 +15,7 @@ namespace sh::render
 	class VulkanShader;
 	class Mesh;
 }
-namespace sh::render::impl
+namespace sh::render::vk
 {
 	class VulkanPipelineManager : public core::INonCopyable
 	{

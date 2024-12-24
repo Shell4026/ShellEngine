@@ -1,9 +1,10 @@
 ﻿message("Build ShellEngine Renderer")
 file(GLOB SRC CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/Mesh/*.cpp)
+file(GLOB HEADERS CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/include/Render/*.h)
 file(GLOB VULKAN_SRC CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/VulkanImpl/*.cpp)
-file(GLOB VULKAN_HEADERS CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/include/VulkanImpl/*.h)
+file(GLOB VULKAN_HEADERS CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/include/Render/VulkanImpl/*.h)
 
-add_library(ShellEngineRender SHARED ${SRC} ${VULKAN_SRC} ${VULKAN_HEADERS})
+add_library(ShellEngineRender SHARED ${SRC} ${HEADERS} ${VULKAN_SRC} ${VULKAN_HEADERS})
 add_library(ShellEngine::Render ALIAS ShellEngineRender)
 
 target_link_libraries(ShellEngineRender PUBLIC ShellEngine::Core)

@@ -70,9 +70,9 @@ namespace sh::game
 					assert(world.renderer.apiType == render::RenderAPI::Vulkan);
 					if (world.renderer.apiType == render::RenderAPI::Vulkan)
 					{
-						auto vkFramebuffer = static_cast<render::impl::VulkanFramebuffer*>(renderTex->GetFramebuffer(core::ThreadType::Render));
-						auto& vkRenderer = static_cast<render::VulkanRenderer&>(world.renderer);
-						auto vkBuffer = static_cast<render::impl::VulkanBuffer*>(buffer.get());
+						auto vkFramebuffer = static_cast<render::vk::VulkanFramebuffer*>(renderTex->GetFramebuffer(core::ThreadType::Render));
+						auto& vkRenderer = static_cast<render::vk::VulkanRenderer&>(world.renderer);
+						auto vkBuffer = static_cast<render::vk::VulkanBuffer*>(buffer.get());
 
 						vkFramebuffer->TransferImageToBuffer(vkRenderer.GetCommandBuffer(core::ThreadType::Game), vkRenderer.GetTransferQueue(), vkBuffer->GetBuffer(), x, y);
 						pixels = reinterpret_cast<uint8_t*>(buffer->GetData());

@@ -9,7 +9,7 @@
 #include <stack>
 #include <unordered_map>
 
-namespace sh::render::impl
+namespace sh::render::vk
 {
 	class VulkanDescriptorPool : core::INonCopyable
 	{

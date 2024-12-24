@@ -5,7 +5,7 @@
 #include <cassert>
 #include <stdexcept>
 
-namespace sh::render::impl
+namespace sh::render::vk
 {
 	SH_RENDER_API VulkanFramebuffer::VulkanFramebuffer(VkDevice device, VkPhysicalDevice gpu, VmaAllocator alloc) :
 		device(device), gpu(gpu), alloc(alloc),

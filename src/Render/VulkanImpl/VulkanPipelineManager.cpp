@@ -4,7 +4,7 @@
 #include "VulkanShader.h"
 #include "VulkanVertexBuffer.h"
 
-namespace sh::render::impl
+namespace sh::render::vk
 {
 	VulkanPipelineManager::VulkanPipelineManager(VkDevice device) :
 		device(device)
@@ -56,25 +56,25 @@ namespace sh::render::impl
 
 		auto pipeline = std::make_unique<VulkanPipeline>(device, pass);
 
-		impl::VulkanPipeline::Topology topology = impl::VulkanPipeline::Topology::Triangle;
+		VulkanPipeline::Topology topology = VulkanPipeline::Topology::Triangle;
 		switch (mesh.GetTopology())
 		{
 		case Mesh::Topology::Point:
-			topology = impl::VulkanPipeline::Topology::Point;
+			topology = VulkanPipeline::Topology::Point;
 			break;
 		case Mesh::Topology::Line:
-			topology = impl::VulkanPipeline::Topology::Line;
+			topology = VulkanPipeline::Topology::Line;
 			break;
 		case Mesh::Topology::Face:
-			topology = impl::VulkanPipeline::Topology::Triangle;
+			topology = VulkanPipeline::Topology::Triangle;
 			break;
 		}
 
 		pipeline->SetTopology(topology);
 		pipeline->SetShader(&shader);
 		pipeline->
-			AddShaderStage(impl::VulkanPipeline::ShaderStage::Vertex).
-			AddShaderStage(impl::VulkanPipeline::ShaderStage::Fragment);
+			AddShaderStage(VulkanPipeline::ShaderStage::Vertex).
+			AddShaderStage(VulkanPipeline::ShaderStage::Fragment);
 
 		//Attribute
 		auto& bindings = static_cast<VulkanVertexBuffer*>(mesh.GetVertexBuffer())->bindingDescriptions;

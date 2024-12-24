@@ -9,7 +9,7 @@
 
 namespace sh::render{ class VulkanShader; }
 
-namespace sh::render::impl
+namespace sh::render::vk
 {
 	class VulkanSurface;
 

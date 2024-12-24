@@ -17,17 +17,16 @@
 #include <memory>
 #include <atomic>
 
-namespace sh::render {
-	namespace impl
-	{
-		class VulkanLayer;
-		class VulkanSurface;
-		class VulkanPipeline;
-		class VulkanCommandBuffer;
-		class VulkanFramebuffer;
-		class VulkanDescriptorPool;
-		class VulkanPipelineManager;
-	}
+namespace sh::render::vk
+{
+	class VulkanLayer;
+	class VulkanSwapChain;
+	class VulkanPipeline;
+	class VulkanCommandBuffer;
+	class VulkanFramebuffer;
+	class VulkanDescriptorPool;
+	class VulkanPipelineManager;
+
 	class VulkanRenderer :
 		public Renderer, public sh::core::INonCopyable{
 	public:
@@ -40,17 +39,17 @@ namespace sh::render {
 		std::vector<const char*> requestedInstanceExtension;
 		std::vector<const char*> requestedDeviceExtension;
 
-		std::unique_ptr<impl::VulkanSurface> surface;
-		std::unique_ptr<impl::VulkanLayer> layers;
-		core::SyncArray<std::unique_ptr<impl::VulkanCommandBuffer>> cmdBuffer;
-		std::unique_ptr<impl::VulkanDescriptorPool> descPool;
-		std::unique_ptr<impl::VulkanPipelineManager> pipelineManager;
+		std::unique_ptr<vk::VulkanSwapChain> swapChain;
+		std::unique_ptr<VulkanLayer> layers;
+		core::SyncArray<std::unique_ptr<VulkanCommandBuffer>> cmdBuffer;
+		std::unique_ptr<VulkanDescriptorPool> descPool;
+		std::unique_ptr<VulkanPipelineManager> pipelineManager;
 
 		VkInstance instance;
 		VkPhysicalDeviceProperties gpuProp;
 		VkPhysicalDevice gpu;
 		VkDevice device; // 논리적 장치
-		std::vector<impl::VulkanFramebuffer> framebuffers;
+		std::vector<VulkanFramebuffer> framebuffers;
 
 		core::SyncArray<VkCommandPool> cmdPool;
 
@@ -134,13 +133,13 @@ namespace sh::render {
 		SH_RENDER_API auto GetDevice() const -> VkDevice;
 		SH_RENDER_API auto GetGPU() const -> VkPhysicalDevice;
 		SH_RENDER_API auto GetCommandPool(core::ThreadType thr) const -> VkCommandPool;
-		SH_RENDER_API auto GetCommandBuffer(core::ThreadType thr) const -> impl::VulkanCommandBuffer*;
+		SH_RENDER_API auto GetCommandBuffer(core::ThreadType thr) const -> VulkanCommandBuffer*;
 		SH_RENDER_API auto GetGraphicsQueue() const -> VkQueue;
 		SH_RENDER_API auto GetGraphicsQueueIdx() const -> std::pair<uint8_t, uint8_t>;
 		SH_RENDER_API auto GetTransferQueue() const-> VkQueue;
 		SH_RENDER_API auto GetTransferQueueIdx() const->std::pair<uint8_t, uint8_t>;
 		SH_RENDER_API auto GetMainFramebuffer() const -> const Framebuffer* override;
-		SH_RENDER_API auto GetDescriptorPool() const -> impl::VulkanDescriptorPool&;
+		SH_RENDER_API auto GetDescriptorPool() const -> VulkanDescriptorPool&;
 		SH_RENDER_API auto GetCurrentFrame() const -> int;
 		SH_RENDER_API auto GetWidth() const -> uint32_t override;
 		SH_RENDER_API auto GetHeight() const -> uint32_t override;
@@ -148,6 +147,6 @@ namespace sh::render {
 		SH_RENDER_API auto GetGPUProperty() const -> const VkPhysicalDeviceProperties&;
 		SH_RENDER_API auto GetRenderFinshedSemaphore() const -> VkSemaphore;
 		SH_RENDER_API auto GetGameThreadSemaphore() const -> VkSemaphore;
-		SH_RENDER_API auto GetPipelineManager() -> impl::VulkanPipelineManager&;
+		SH_RENDER_API auto GetPipelineManager() -> VulkanPipelineManager&;
 	};
 }//namespace

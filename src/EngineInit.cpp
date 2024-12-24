@@ -78,7 +78,7 @@ namespace sh
 		SH_INFO("Resource initialization");
 		using namespace sh::game;
 
-		VulkanShaderBuilder shaderBuilder{ static_cast<render::VulkanRenderer&>(*renderer)};
+		VulkanShaderBuilder shaderBuilder{ static_cast<render::vk::VulkanRenderer&>(*renderer)};
 
 		ShaderLoader loader{ &shaderBuilder };
 		TextureLoader texLoader{ *renderer };
@@ -213,11 +213,11 @@ namespace sh
 		window->SetFps(limitFps);
 
 		SH_INFO("Renderer initialization");
-		renderer = std::make_unique<sh::render::VulkanRenderer>(threadSyncManager);
+		renderer = std::make_unique<sh::render::vk::VulkanRenderer>(threadSyncManager);
 		renderer->Init(*window);
 		renderer->SetViewport({ 150.f, 0.f }, { window->width - 150.f, window->height - 180 });
 
-		gui = std::make_unique<game::ImGUImpl>(*window, static_cast<render::VulkanRenderer&>(*renderer));
+		gui = std::make_unique<game::ImGUImpl>(*window, static_cast<render::vk::VulkanRenderer&>(*renderer));
 		gui->Init();
 #if SH_EDITOR
 		world = core::SObject::Create<editor::EditorWorld>(*renderer, *componentModule, *gui);

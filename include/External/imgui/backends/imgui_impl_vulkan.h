@@ -63,7 +63,7 @@
 #define IMGUI_IMPL_VULKAN_HAS_DYNAMIC_RENDERING
 #endif
 
-namespace sh::render::impl
+namespace sh::render::vk
 {
     class VulkanDescriptorPool;
 }
@@ -79,7 +79,7 @@ struct ImGui_ImplVulkan_InitInfo
     VkDevice                        Device;
     uint32_t                        QueueFamily;
     VkQueue                         Queue;
-    sh::render::impl::VulkanDescriptorPool* DescriptorPool;
+    sh::render::vk::VulkanDescriptorPool* DescriptorPool;
    // VkDescriptorPool                DescriptorPool;               // See requirements in note above
     VkRenderPass                    RenderPass;                   // Ignored if using dynamic rendering
     uint32_t                        MinImageCount;                // >= 2

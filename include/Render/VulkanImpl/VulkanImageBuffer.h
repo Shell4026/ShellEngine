@@ -7,7 +7,7 @@
 
 #include <cstdint>
 
-namespace sh::render::impl
+namespace sh::render::vk
 {
 	class VulkanImageBuffer : public core::INonCopyable
 	{

@@ -1,10 +1,10 @@
 ﻿#include "VulkanPipeline.h"
 
 #include "VulkanShader.h"
-#include "VulkanSurface.h"
+#include "VulkanSwapChain.h"
 
 #include <cassert>
-namespace sh::render::impl
+namespace sh::render::vk
 {
 	SH_RENDER_API VulkanPipeline::VulkanPipeline(VkDevice device, VkRenderPass renderPass) :
 		device(device), renderPass(renderPass),

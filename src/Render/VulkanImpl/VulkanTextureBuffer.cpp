@@ -5,7 +5,7 @@
 #include "VulkanImpl/VulkanBuffer.h"
 #include "VulkanImpl/VulkanFramebuffer.h"
 
-namespace sh::render
+namespace sh::render::vk
 {
 	VulkanTextureBuffer::VulkanTextureBuffer() :
 		isRenderTexture(false), framebuffer(nullptr)
@@ -115,11 +115,12 @@ namespace sh::render
 		&beginInfo);
 	}
 
-	void VulkanTextureBuffer::Create(const VulkanRenderer& renderer, const void* data, uint32_t width, uint32_t height, Texture::TextureFormat format)
+	void VulkanTextureBuffer::Create(const Renderer& renderer, const void* data, uint32_t width, uint32_t height, Texture::TextureFormat format)
 	{
 		isRenderTexture = false;
 
-		buffer = std::make_unique<impl::VulkanImageBuffer>(renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator());
+		const VulkanRenderer& vkRenderer = static_cast<const VulkanRenderer&>(renderer);
+		buffer = std::make_unique<VulkanImageBuffer>(vkRenderer.GetDevice(), vkRenderer.GetGPU(), vkRenderer.GetAllocator());
 		
 		VkFormat vkformat = VkFormat::VK_FORMAT_R8G8B8A8_SRGB;
 		size_t size = width * height * 4;
@@ -127,22 +128,22 @@ namespace sh::render
 		buffer->Create(width, height, vkformat, 
 			VkImageUsageFlagBits::VK_IMAGE_USAGE_TRANSFER_DST_BIT | VkImageUsageFlagBits::VK_IMAGE_USAGE_SAMPLED_BIT);
 
-		impl::VulkanBuffer stagingBuffer{ renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() };
+		VulkanBuffer stagingBuffer{ vkRenderer.GetDevice(), vkRenderer.GetGPU(), vkRenderer.GetAllocator() };
 		stagingBuffer.Create(size,
 			VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 			VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		stagingBuffer.SetData(data);
 
-		cmd = std::make_unique<impl::VulkanCommandBuffer>(renderer.GetDevice(), renderer.GetCommandPool(core::ThreadType::Game));
+		cmd = std::make_unique<VulkanCommandBuffer>(vkRenderer.GetDevice(), vkRenderer.GetCommandPool(core::ThreadType::Game));
 		cmd->Create();
 
-		TransitionImageLayout(renderer.GetGraphicsQueue(), buffer->GetImage(),
+		TransitionImageLayout(vkRenderer.GetGraphicsQueue(), buffer->GetImage(),
 			vkformat,
 			VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED, 
 			VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-		CopyBufferToImage(renderer.GetGraphicsQueue(), stagingBuffer.GetBuffer(), buffer->GetImage(), width, height);
-		TransitionImageLayout(renderer.GetGraphicsQueue(), buffer->GetImage(),
+		CopyBufferToImage(vkRenderer.GetGraphicsQueue(), stagingBuffer.GetBuffer(), buffer->GetImage(), width, height);
+		TransitionImageLayout(vkRenderer.GetGraphicsQueue(), buffer->GetImage(),
 			vkformat,
 			VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 			VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
@@ -153,11 +154,11 @@ namespace sh::render
 		this->framebuffer = &framebuffer;
 	}
 
-	auto VulkanTextureBuffer::GetImageBuffer() const -> impl::VulkanImageBuffer*
+	auto VulkanTextureBuffer::GetImageBuffer() const -> VulkanImageBuffer*
 	{
 		if(!isRenderTexture)
 			return buffer.get();
 		else
-			return static_cast<const impl::VulkanFramebuffer*>(framebuffer)->GetColorImg();
+			return static_cast<const VulkanFramebuffer*>(framebuffer)->GetColorImg();
 	}
 }

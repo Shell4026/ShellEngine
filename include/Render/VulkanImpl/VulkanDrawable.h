@@ -18,7 +18,9 @@ namespace sh::render
 {
 	class Framebuffer;
 	class Shader;
-
+}
+namespace sh::render::vk
+{
 	class VulkanDrawable : public IDrawable
 	{
 		SCLASS(VulkanDrawable)
@@ -31,12 +33,12 @@ namespace sh::render
 		Camera* camera;
 
 		//동기화 필요 목록
-		core::SyncArray<impl::VulkanPipeline*> pipeline;
-		core::SyncArray<core::SMap<uint32_t, std::unique_ptr<impl::VulkanBuffer>>> localVertBuffer;
-		core::SyncArray<core::SMap<uint32_t, std::unique_ptr<impl::VulkanBuffer>>> localFragBuffer;
-		core::SyncArray<std::unique_ptr<impl::VulkanUniformBuffer>> localDescSet;
+		core::SyncArray<VulkanPipeline*> pipeline;
+		core::SyncArray<core::SMap<uint32_t, std::unique_ptr<VulkanBuffer>>> localVertBuffer;
+		core::SyncArray<core::SMap<uint32_t, std::unique_ptr<VulkanBuffer>>> localFragBuffer;
+		core::SyncArray<std::unique_ptr<VulkanUniformBuffer>> localDescSet;
 
-		impl::VulkanPipeline::Topology topology = impl::VulkanPipeline::Topology::Triangle;
+		VulkanPipeline::Topology topology = VulkanPipeline::Topology::Triangle;
 
 		bool bInit, bDirty, bBufferDirty, bPipelineDirty;
 	protected:
@@ -61,9 +63,9 @@ namespace sh::render
 		SH_RENDER_API auto GetMesh() const-> const Mesh* override;
 		SH_RENDER_API auto GetCamera() const-> Camera* override;
 
-		SH_RENDER_API auto GetPipeline(core::ThreadType thr) const -> impl::VulkanPipeline*;
+		SH_RENDER_API auto GetPipeline(core::ThreadType thr) const -> VulkanPipeline*;
 
-		SH_RENDER_API auto GetLocalUniformBuffer(core::ThreadType thr) const -> impl::VulkanUniformBuffer*;
+		SH_RENDER_API auto GetLocalUniformBuffer(core::ThreadType thr) const -> VulkanUniformBuffer*;
 		SH_RENDER_API auto GetDescriptorSet(core::ThreadType thr) const -> VkDescriptorSet;
 
 		SH_RENDER_API void SetDirty() override;

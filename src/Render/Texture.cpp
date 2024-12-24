@@ -43,10 +43,10 @@ namespace sh::render
 		this->renderer = &renderer;
 		if (renderer.apiType == RenderAPI::Vulkan)
 		{
-			buffer[core::ThreadType::Game] = std::make_unique<VulkanTextureBuffer>();
-			buffer[core::ThreadType::Game]->Create(static_cast<const VulkanRenderer&>(renderer), pixels.data(), width, height, format);
-			buffer[core::ThreadType::Render] = std::make_unique<VulkanTextureBuffer>();
-			buffer[core::ThreadType::Render]->Create(static_cast<const VulkanRenderer&>(renderer), pixels.data(), width, height, format);
+			buffer[core::ThreadType::Game] = std::make_unique<vk::VulkanTextureBuffer>();
+			buffer[core::ThreadType::Game]->Create(static_cast<const vk::VulkanRenderer&>(renderer), pixels.data(), width, height, format);
+			buffer[core::ThreadType::Render] = std::make_unique<vk::VulkanTextureBuffer>();
+			buffer[core::ThreadType::Render]->Create(static_cast<const vk::VulkanRenderer&>(renderer), pixels.data(), width, height, format);
 		}
 
 		SetDirty();

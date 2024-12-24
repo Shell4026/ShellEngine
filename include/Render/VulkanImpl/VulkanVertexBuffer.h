@@ -13,7 +13,7 @@
 #include <string>
 #include <string_view>
 
-namespace sh::render
+namespace sh::render::vk
 {
 	class VulkanRenderer;
 
@@ -22,13 +22,13 @@ namespace sh::render
 	private:
 		const VulkanRenderer& renderer;
 
-		impl::VulkanCommandBuffer cmd;
+		VulkanCommandBuffer cmd;
 
 		std::vector<VkVertexInputBindingDescription> mBindingDescriptions;
 		std::vector<VkVertexInputAttributeDescription> mAttribDescriptions;
 
-		std::vector<impl::VulkanBuffer> buffers;
-		impl::VulkanBuffer indexBuffer;
+		std::vector<VulkanBuffer> buffers;
+		VulkanBuffer indexBuffer;
 	private:
 		inline void CreateVertexBuffer(const Mesh& mesh);
 		inline void CreateAttributeBuffers(const Mesh& mesh);

@@ -10,7 +10,7 @@
 
 namespace sh::game
 {
-	VulkanShaderBuilder::VulkanShaderBuilder(render::VulkanRenderer& renderer) :
+	VulkanShaderBuilder::VulkanShaderBuilder(render::vk::VulkanRenderer& renderer) :
 		renderer(renderer)
 	{
 	}

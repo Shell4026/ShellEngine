@@ -17,7 +17,7 @@ namespace sh::game
 			abort();
 	}
 
-	ImGUImpl::ImGUImpl(window::Window& window, render::VulkanRenderer& renderer) :
+	ImGUImpl::ImGUImpl(window::Window& window, render::vk::VulkanRenderer& renderer) :
 		window(window), renderer(renderer),
 		drawData(),
 		bInit(false), bDirty(false)
@@ -71,7 +71,7 @@ namespace sh::game
 		initInfo.QueueFamily = renderer.GetGraphicsQueueIdx().first;
 		initInfo.Queue = renderer.GetGraphicsQueue();
 		initInfo.DescriptorPool = &renderer.GetDescriptorPool();
-		initInfo.RenderPass = static_cast<const render::impl::VulkanFramebuffer*>(renderer.GetMainFramebuffer())->GetRenderPass();
+		initInfo.RenderPass = static_cast<const render::vk::VulkanFramebuffer*>(renderer.GetMainFramebuffer())->GetRenderPass();
 		initInfo.MinImageCount = 2;
 		initInfo.ImageCount = 2;
 		initInfo.MSAASamples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;

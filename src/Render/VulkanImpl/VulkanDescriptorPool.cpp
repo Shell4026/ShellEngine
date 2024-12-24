@@ -4,7 +4,7 @@
 #include <stdexcept>
 #include <cassert>
 
-namespace sh::render::impl
+namespace sh::render::vk
 {
 	VulkanDescriptorPool::VulkanDescriptorPool(VkDevice device, size_t size) :
 		device(device),

@@ -4,7 +4,7 @@
 
 #include <cassert>
 
-namespace sh::render::impl
+namespace sh::render::vk
 {
 	SH_RENDER_API VulkanImageBuffer::VulkanImageBuffer(VkDevice device, VkPhysicalDevice gpu, VmaAllocator allocator) :
 		device(device), gpu(gpu), allocator(allocator),

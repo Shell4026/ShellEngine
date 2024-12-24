@@ -37,9 +37,9 @@ namespace sh::render
 
 		if (renderer.apiType == RenderAPI::Vulkan)
 		{
-			auto& vkRenderer = static_cast<const VulkanRenderer&>(renderer);
-			framebuffer[core::ThreadType::Game] = std::make_unique<impl::VulkanFramebuffer>(vkRenderer.GetDevice(), vkRenderer.GetGPU(), vkRenderer.GetAllocator());
-			framebuffer[core::ThreadType::Render] = std::make_unique<impl::VulkanFramebuffer>(vkRenderer.GetDevice(), vkRenderer.GetGPU(), vkRenderer.GetAllocator());
+			auto& vkRenderer = static_cast<const vk::VulkanRenderer&>(renderer);
+			framebuffer[core::ThreadType::Game] = std::make_unique<vk::VulkanFramebuffer>(vkRenderer.GetDevice(), vkRenderer.GetGPU(), vkRenderer.GetAllocator());
+			framebuffer[core::ThreadType::Render] = std::make_unique<vk::VulkanFramebuffer>(vkRenderer.GetDevice(), vkRenderer.GetGPU(), vkRenderer.GetAllocator());
 
 			VkFormat format = VkFormat::VK_FORMAT_R8G8B8A8_SRGB;
 			switch (this->format)
@@ -55,12 +55,12 @@ namespace sh::render
 				break;
 			}
 
-			static_cast<impl::VulkanFramebuffer*>(framebuffer[core::ThreadType::Game].get())->CreateOffScreen(width, height, format, bReadUsage);
-			static_cast<impl::VulkanFramebuffer*>(framebuffer[core::ThreadType::Render].get())->CreateOffScreen(width, height, format, bReadUsage);
+			static_cast<vk::VulkanFramebuffer*>(framebuffer[core::ThreadType::Game].get())->CreateOffScreen(width, height, format, bReadUsage);
+			static_cast<vk::VulkanFramebuffer*>(framebuffer[core::ThreadType::Render].get())->CreateOffScreen(width, height, format, bReadUsage);
 		}
-		buffer[core::ThreadType::Game] = std::make_unique<VulkanTextureBuffer>();
+		buffer[core::ThreadType::Game] = std::make_unique<vk::VulkanTextureBuffer>();
 		buffer[core::ThreadType::Game]->Create(*framebuffer[core::ThreadType::Game].get());
-		buffer[core::ThreadType::Render] = std::make_unique<VulkanTextureBuffer>();
+		buffer[core::ThreadType::Render] = std::make_unique<vk::VulkanTextureBuffer>();
 		buffer[core::ThreadType::Render]->Create(*framebuffer[core::ThreadType::Render].get());
 	}
 
@@ -98,8 +98,8 @@ namespace sh::render
 				break;
 			}
 
-			static_cast<impl::VulkanFramebuffer*>(framebuffer[core::ThreadType::Game].get())->Clean();
-			static_cast<impl::VulkanFramebuffer*>(framebuffer[core::ThreadType::Game].get())->CreateOffScreen(width, height, format, bReadUsage);
+			static_cast<vk::VulkanFramebuffer*>(framebuffer[core::ThreadType::Game].get())->Clean();
+			static_cast<vk::VulkanFramebuffer*>(framebuffer[core::ThreadType::Game].get())->CreateOffScreen(width, height, format, bReadUsage);
 		}
 		buffer[core::ThreadType::Game]->Clean();
 		buffer[core::ThreadType::Game]->Create(*framebuffer[core::ThreadType::Game].get());

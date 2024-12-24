@@ -19,7 +19,7 @@
 #include <cstring>
 #include <utility>
 
-namespace sh::render
+namespace sh::render::vk
 {
 	SH_RENDER_API VulkanDrawable::VulkanDrawable(VulkanRenderer& renderer) :
 		renderer(renderer), 
@@ -75,8 +75,8 @@ namespace sh::render
 			std::size_t lastOffset = uniformBlock.data.back().offset + uniformBlock.data.back().size;
 			std::size_t size = core::Util::AlignTo(lastOffset, uniformBlock.align);
 
-			auto ptr = static_cast<impl::VulkanBuffer*>(BufferFactory::Create(renderer, size).release());
-			localVertBuffer[thr].insert_or_assign(uniformBlock.binding, std::unique_ptr<impl::VulkanBuffer>(ptr));
+			auto ptr = static_cast<VulkanBuffer*>(BufferFactory::Create(renderer, size).release());
+			localVertBuffer[thr].insert_or_assign(uniformBlock.binding, std::unique_ptr<VulkanBuffer>(ptr));
 		}
 		// 픽셀 유니폼
 		for (auto& uniformBlock : shader->GetFragmentUniforms())
@@ -87,20 +87,20 @@ namespace sh::render
 			std::size_t lastOffset = uniformBlock.data.back().offset + uniformBlock.data.back().size;
 			std::size_t size = core::Util::AlignTo(lastOffset, uniformBlock.align);
 
-			auto ptr = static_cast<impl::VulkanBuffer*>(BufferFactory::Create(renderer, size).release());
-			localFragBuffer[thr].insert_or_assign(uniformBlock.binding, std::unique_ptr<impl::VulkanBuffer>(ptr));
+			auto ptr = static_cast<VulkanBuffer*>(BufferFactory::Create(renderer, size).release());
+			localFragBuffer[thr].insert_or_assign(uniformBlock.binding, std::unique_ptr<VulkanBuffer>(ptr));
 		}
 
-		auto ptr = static_cast<impl::VulkanUniformBuffer*>(BufferFactory::CreateUniformBuffer(renderer, *this->mat->GetShader(), Shader::UniformType::Object).release());
-		localDescSet[thr] = std::unique_ptr<impl::VulkanUniformBuffer>(ptr);
+		auto ptr = static_cast<VulkanUniformBuffer*>(BufferFactory::CreateUniformBuffer(renderer, *this->mat->GetShader(), Shader::UniformType::Object).release());
+		localDescSet[thr] = std::unique_ptr<VulkanUniformBuffer>(ptr);
 	}
 	void VulkanDrawable::GetPipelineFromManager(core::ThreadType thr)
 	{
-		const impl::VulkanFramebuffer* vkFrameBuffer = nullptr;
+		const VulkanFramebuffer* vkFrameBuffer = nullptr;
 		if (camera->GetRenderTexture() == nullptr)
-			vkFrameBuffer = static_cast<const impl::VulkanFramebuffer*>(renderer.GetMainFramebuffer());
+			vkFrameBuffer = static_cast<const VulkanFramebuffer*>(renderer.GetMainFramebuffer());
 		else
-			vkFrameBuffer = static_cast<const impl::VulkanFramebuffer*>(camera->GetRenderTexture()->GetFramebuffer(core::ThreadType::Game));
+			vkFrameBuffer = static_cast<const VulkanFramebuffer*>(camera->GetRenderTexture()->GetFramebuffer(core::ThreadType::Game));
 
 		VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
 		assert(shader != nullptr);
@@ -178,11 +178,11 @@ namespace sh::render
 	{
 		return camera;
 	}
-	SH_RENDER_API auto VulkanDrawable::GetPipeline(core::ThreadType thr) const -> impl::VulkanPipeline*
+	SH_RENDER_API auto VulkanDrawable::GetPipeline(core::ThreadType thr) const -> VulkanPipeline*
 	{
 		return pipeline[static_cast<int>(thr)];
 	}
-	SH_RENDER_API auto VulkanDrawable::GetLocalUniformBuffer(core::ThreadType thr) const -> impl::VulkanUniformBuffer*
+	SH_RENDER_API auto VulkanDrawable::GetLocalUniformBuffer(core::ThreadType thr) const -> VulkanUniformBuffer*
 	{
 		return localDescSet[thr].get();
 	}

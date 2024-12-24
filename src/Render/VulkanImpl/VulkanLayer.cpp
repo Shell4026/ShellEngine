@@ -1,7 +1,7 @@
 ﻿#include "VulkanImpl/VulkanLayer.h"
 
 #include <cassert>
-namespace sh::render::impl
+namespace sh::render::vk
 {
 	VulkanLayer::VulkanLayer()
 	{

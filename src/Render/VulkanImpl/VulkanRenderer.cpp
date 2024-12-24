@@ -5,7 +5,7 @@
 #include "../Core/Util.h"
 
 #include "VulkanLayer.h"
-#include "VulkanSurface.h"
+#include "VulkanSwapChain.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanFramebuffer.h"
 #include "VulkanDescriptorPool.h"
@@ -24,7 +24,8 @@
 #undef min
 #undef max
 
-namespace sh::render {
+namespace sh::render::vk
+{
 	SH_RENDER_API VulkanRenderer::VulkanRenderer(core::ThreadSyncManager& syncManager) :
 		Renderer(RenderAPI::Vulkan, syncManager),
 		instance(nullptr), gpu(nullptr), device(nullptr), window(nullptr),
@@ -64,7 +65,7 @@ namespace sh::render {
 		DestroyCommandPool();
 
 		framebuffers.clear();
-		surface.reset();
+		swapChain.reset();
 		DestroyAllocator();
 		DestroyDevice();
 
@@ -192,7 +193,7 @@ namespace sh::render {
 		return 
 			((prop.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) ||
 			(prop.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_CPU)) && 
-			swapchainExSupport && surface->IsSwapChainSupport(gpu);
+			swapchainExSupport && swapChain->IsSwapChainSupport(gpu);
 	}
 
 	auto VulkanRenderer::SelectPhysicalDevice(const std::function<bool(VkPhysicalDevice)>& checkFunc) -> VkPhysicalDevice
@@ -228,13 +229,13 @@ namespace sh::render {
 
 	auto VulkanRenderer::GetSurfaceQueueFamily(VkPhysicalDevice gpu) -> std::optional<int>
 	{
-		assert(surface->GetSurface() != nullptr);
+		assert(swapChain->GetSurface() != nullptr);
 		assert(gpu != nullptr);
 		int idx = 0;
 		for (auto& prop : queueFamilies)
 		{
 			VkBool32 support = false;
-			vkGetPhysicalDeviceSurfaceSupportKHR(gpu, idx, surface->GetSurface(), &support);
+			vkGetPhysicalDeviceSurfaceSupportKHR(gpu, idx, swapChain->GetSurface(), &support);
 			if (support)
 				return idx;
 			++idx;
@@ -443,8 +444,7 @@ namespace sh::render {
 		window = &win;
 		winHandle = win.GetNativeHandle();
 
-		layers = std::make_unique<impl::VulkanLayer>();
-		surface = std::make_unique<impl::VulkanSurface>();
+		layers = std::make_unique<VulkanLayer>();
 
 		// 표면 확장 탐색
 		if (layers->FindVulkanExtension(VK_KHR_SURFACE_EXTENSION_NAME))
@@ -483,8 +483,9 @@ namespace sh::render {
 			InitDebugMessenger();
 
 		// 표면 생성
-		if (!surface->CreateSurface(win, instance))
-			return false;
+		swapChain = std::make_unique<VulkanSwapChain>();
+		swapChain->SetContext(instance, nullptr, nullptr);
+		swapChain->CreateSurface(win);
 
 		// GPU 목록을 가져온다.
 		if (GetPhysicalDevices() != VkResult::VK_SUCCESS)
@@ -519,12 +520,10 @@ namespace sh::render {
 		else
 			transferQueueIndex.first = *idx;
 
-
 		requestedDeviceExtension = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
 		// 가상 장치 생성
 		if (CreateDevice(gpu) != VkResult::VK_SUCCESS)
 			return false;
-		surface->SetDevice(device);
 
 		// 가상 장치에서 큐를 가져온다.
 		vkGetDeviceQueue(device, graphicsQueueIndex.first, graphicsQueueIndex.second, &graphicsQueue); // graphicsQueue를 가진 큐 패밀리에서 n번째 큐를 가져옴
@@ -538,15 +537,16 @@ namespace sh::render {
 		CreateAllocator();
 
 		// 스왑체인 생성
-		surface->CreateSwapChain(gpu, graphicsQueueIndex.first, surfaceQueueIndex.first);
+		swapChain->SetContext(instance, device, gpu);
+		swapChain->CreateSwapChain(graphicsQueueIndex.first, surfaceQueueIndex.first, false);
 
 		// 프레임버퍼 생성 (렌더패스 생성 -> 프레임버퍼 생성)
-		auto& imgs = surface->GetSwapChainImageViews();
+		auto& imgs = swapChain->GetSwapChainImageViews();
 		framebuffers.reserve(imgs.size());
 		for (size_t i = 0; i < imgs.size(); ++i)
 		{
-			framebuffers.push_back(impl::VulkanFramebuffer{ device, gpu, allocator });
-			VkResult result = framebuffers[i].Create(surface->GetSwapChainSize().width, surface->GetSwapChainSize().height, imgs[i], surface->GetSwapChainImageFormat());
+			framebuffers.push_back(VulkanFramebuffer{ device, gpu, allocator });
+			VkResult result = framebuffers[i].Create(swapChain->GetSwapChainSize().width, swapChain->GetSwapChainSize().height, imgs[i], swapChain->GetSwapChainImageFormat());
 			assert(result == VkResult::VK_SUCCESS);
 			if (result != VkResult::VK_SUCCESS)
 				return false;
@@ -555,19 +555,19 @@ namespace sh::render {
 		// 커맨드 풀과 커맨드 버퍼 생성
 		CreateCommandPool(graphicsQueueIndex.first);
 
-		cmdBuffer[core::ThreadType::Game] = std::make_unique<impl::VulkanCommandBuffer>(device, cmdPool[core::ThreadType::Game]);
+		cmdBuffer[core::ThreadType::Game] = std::make_unique<VulkanCommandBuffer>(device, cmdPool[core::ThreadType::Game]);
 		cmdBuffer[core::ThreadType::Game]->Create();
-		cmdBuffer[core::ThreadType::Render] = std::make_unique<impl::VulkanCommandBuffer>(device, cmdPool[core::ThreadType::Render]);
+		cmdBuffer[core::ThreadType::Render] = std::make_unique<VulkanCommandBuffer>(device, cmdPool[core::ThreadType::Render]);
 		cmdBuffer[core::ThreadType::Render]->Create();
 		// 세마포어와 펜스 생성 (동기화 변수)
 		if (CreateSyncObjects() != VkResult::VK_SUCCESS)
 			return false;
 
 		// 디스크립터 풀 생성
-		descPool = std::make_unique<impl::VulkanDescriptorPool>(device, 16);
+		descPool = std::make_unique<VulkanDescriptorPool>(device, 16);
 
 		// 파이프라인 매니저 생성
-		pipelineManager = std::make_unique<impl::VulkanPipelineManager>(device);
+		pipelineManager = std::make_unique<VulkanPipelineManager>(device);
 
 		isInit = true;
 		PrintLayer();
@@ -583,16 +583,14 @@ namespace sh::render {
 		CreateSyncObjects();
 
 		framebuffers.clear();
-		surface->DestroySwapChain();
+		swapChain->CreateSwapChain(graphicsQueueIndex.first, surfaceQueueIndex.first, false);
 
-		surface->CreateSwapChain(gpu, graphicsQueueIndex.first, surfaceQueueIndex.first);
-
-		auto& imgs = surface->GetSwapChainImageViews();
+		auto& imgs = swapChain->GetSwapChainImageViews();
 		framebuffers.reserve(imgs.size());
 		for (size_t i = 0; i < imgs.size(); ++i)
 		{
-			framebuffers.push_back(impl::VulkanFramebuffer{ device, gpu, allocator });
-			VkResult result = framebuffers[i].Create(surface->GetSwapChainSize().width, surface->GetSwapChainSize().height, imgs[i], surface->GetSwapChainImageFormat());
+			framebuffers.push_back(VulkanFramebuffer{ device, gpu, allocator });
+			VkResult result = framebuffers[i].Create(swapChain->GetSwapChainSize().width, swapChain->GetSwapChainSize().height, imgs[i], swapChain->GetSwapChainImageFormat());
 			assert(result == VkResult::VK_SUCCESS);
 			if (result != VkResult::VK_SUCCESS)
 				return false;
@@ -648,7 +646,7 @@ namespace sh::render {
 		if (!sh::core::IsValid(shader))
 			return;
 
-		impl::VulkanPipeline* currentPipeline = drawable->GetPipeline(core::ThreadType::Render);
+		VulkanPipeline* currentPipeline = drawable->GetPipeline(core::ThreadType::Render);
 		if (currentPipeline == nullptr)
 			return;
 		if (currentPipeline->GetPipeline() == nullptr)
@@ -662,7 +660,7 @@ namespace sh::render {
 		mesh->GetVertexBuffer()->Bind();
 
 		VkDescriptorSet localDescSet = drawable->GetDescriptorSet(core::ThreadType::Render);
-		VkDescriptorSet descSet = static_cast<impl::VulkanUniformBuffer*>(mat->GetUniformBuffer(core::ThreadType::Render))->GetVkDescriptorSet();
+		VkDescriptorSet descSet = static_cast<VulkanUniformBuffer*>(mat->GetUniformBuffer(core::ThreadType::Render))->GetVkDescriptorSet();
 		std::array<VkDescriptorSet, 2> descriptorSets = { localDescSet, descSet };
 		
 		assert(localDescSet);
@@ -696,7 +694,7 @@ namespace sh::render {
 		WaitForCurrentFrame();
 
 		uint32_t imgIdx;
-		VkResult result = vkAcquireNextImageKHR(device, surface->GetSwapChain(), UINT64_MAX, imageAvailableSemaphore, nullptr, &imgIdx);
+		VkResult result = vkAcquireNextImageKHR(device, swapChain->GetSwapChain(), UINT64_MAX, imageAvailableSemaphore, nullptr, &imgIdx);
 		if (result == VkResult::VK_SUBOPTIMAL_KHR || result == VK_ERROR_OUT_OF_DATE_KHR)
 		{
 			if (IsPause())
@@ -732,7 +730,7 @@ namespace sh::render {
 				// 프레임버퍼에 그림
 				if(renderTexture != nullptr)
 				{
-					auto framebuffer = static_cast<const impl::VulkanFramebuffer*>(renderTexture->GetFramebuffer(core::ThreadType::Render));
+					auto framebuffer = static_cast<const VulkanFramebuffer*>(renderTexture->GetFramebuffer(core::ThreadType::Render));
 					std::array<VkClearValue, 2> clear;
 					clear[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
 					clear[1].depthStencil = { 1.0f, 0 };
@@ -786,7 +784,7 @@ namespace sh::render {
 					renderPassInfo.renderPass = framebuffers[imgIdx].GetRenderPass();
 					renderPassInfo.framebuffer = framebuffers[imgIdx].GetVkFramebuffer();
 					renderPassInfo.renderArea.offset = { 0, 0 };
-					renderPassInfo.renderArea.extent = surface->GetSwapChainSize();
+					renderPassInfo.renderArea.extent = swapChain->GetSwapChainSize();
 					renderPassInfo.clearValueCount = static_cast<uint32_t>(clear.size());
 					renderPassInfo.pClearValues = clear.data();
 					vkCmdBeginRenderPass(buffer, &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
@@ -794,8 +792,8 @@ namespace sh::render {
 					VkViewport viewport{};
 					float width = viewportEnd.x - viewportStart.x;
 					float height = viewportEnd.y - viewportStart.y;
-					float surfWidth = static_cast<float>(surface->GetSwapChainSize().width);
-					float surfHeight = static_cast<float>(surface->GetSwapChainSize().height);
+					float surfWidth = static_cast<float>(swapChain->GetSwapChainSize().width);
+					float surfHeight = static_cast<float>(swapChain->GetSwapChainSize().height);
 					viewport.x = viewportStart.x;
 					viewport.y = viewportEnd.y;
 					viewport.width = std::min(width, surfWidth);
@@ -806,7 +804,7 @@ namespace sh::render {
 
 					VkRect2D scissor{};
 					scissor.offset = { 0, 0 };
-					scissor.extent = surface->GetSwapChainSize();
+					scissor.extent = swapChain->GetSwapChainSize();
 					vkCmdSetScissor(buffer, 0, 1, &scissor);
 
 					VkPipeline lastPipeline = nullptr;
@@ -832,7 +830,7 @@ namespace sh::render {
 				renderPassInfo.renderPass = framebuffers[imgIdx].GetRenderPass();
 				renderPassInfo.framebuffer = framebuffers[imgIdx].GetVkFramebuffer();
 				renderPassInfo.renderArea.offset = { 0, 0 };
-				renderPassInfo.renderArea.extent = surface->GetSwapChainSize();
+				renderPassInfo.renderArea.extent = swapChain->GetSwapChainSize();
 				renderPassInfo.clearValueCount = static_cast<uint32_t>(clear.size());
 				renderPassInfo.pClearValues = clear.data();
 				vkCmdBeginRenderPass(buffer, &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
@@ -840,8 +838,8 @@ namespace sh::render {
 				VkViewport viewport{};
 				float width = viewportEnd.x - viewportStart.x;
 				float height = viewportEnd.y - viewportStart.y;
-				float surfWidth = static_cast<float>(surface->GetSwapChainSize().width);
-				float surfHeight = static_cast<float>(surface->GetSwapChainSize().height);
+				float surfWidth = static_cast<float>(swapChain->GetSwapChainSize().width);
+				float surfHeight = static_cast<float>(swapChain->GetSwapChainSize().height);
 				viewport.x = viewportStart.x;
 				viewport.y = viewportEnd.y;
 				viewport.width = std::min(width, surfWidth);
@@ -861,7 +859,7 @@ namespace sh::render {
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 		presentInfo.waitSemaphoreCount = 1;
 		presentInfo.pWaitSemaphores = &renderFinishedSemaphore;
-		VkSwapchainKHR swapChains[] = { surface->GetSwapChain() };
+		VkSwapchainKHR swapChains[] = { swapChain->GetSwapChain() };
 		presentInfo.swapchainCount = 1;
 		presentInfo.pSwapchains = swapChains;
 		presentInfo.pImageIndices = &imgIdx;
@@ -904,7 +902,7 @@ namespace sh::render {
 	{
 		return cmdPool[thr];
 	}
-	SH_RENDER_API auto VulkanRenderer::GetCommandBuffer(core::ThreadType thr) const -> impl::VulkanCommandBuffer*
+	SH_RENDER_API auto VulkanRenderer::GetCommandBuffer(core::ThreadType thr) const -> VulkanCommandBuffer*
 	{
 		return cmdBuffer[static_cast<int>(thr)].get();
 	}
@@ -926,7 +924,7 @@ namespace sh::render {
 		return transferQueueIndex;
 	}
 
-	SH_RENDER_API auto VulkanRenderer::GetDescriptorPool() const -> impl::VulkanDescriptorPool&
+	SH_RENDER_API auto VulkanRenderer::GetDescriptorPool() const -> VulkanDescriptorPool&
 	{
 		return *descPool.get();
 	}
@@ -936,11 +934,11 @@ namespace sh::render {
 	}
 	SH_RENDER_API auto VulkanRenderer::GetWidth() const -> uint32_t
 	{
-		return surface->GetSwapChainSize().width;
+		return swapChain->GetSwapChainSize().width;
 	}
 	SH_RENDER_API auto VulkanRenderer::GetHeight() const -> uint32_t
 	{
-		return surface->GetSwapChainSize().height;
+		return swapChain->GetSwapChainSize().height;
 	}
 	SH_RENDER_API auto VulkanRenderer::GetAllocator() const -> VmaAllocator
 	{
@@ -958,7 +956,7 @@ namespace sh::render {
 	{
 		return gameThreadSemaphore;
 	}
-	SH_RENDER_API auto VulkanRenderer::GetPipelineManager() -> impl::VulkanPipelineManager&
+	SH_RENDER_API auto VulkanRenderer::GetPipelineManager() -> VulkanPipelineManager&
 	{
 		return *pipelineManager.get();
 	}
