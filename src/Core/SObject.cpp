@@ -95,7 +95,7 @@ namespace sh::core
 		return uuid;
 	}
 
-	SH_CORE_API auto SObject::Serialize() const -> nlohmann::json
+	SH_CORE_API auto SObject::Serialize() const -> core::Json
 	{
 		const reflection::STypeInfo* stypeInfo = &GetType();
 		core::Json mainJson;
