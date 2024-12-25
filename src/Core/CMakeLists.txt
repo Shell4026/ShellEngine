@@ -1,7 +1,8 @@
 ﻿message("Build ShellEngine Core")
 file(GLOB_RECURSE SRC CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/include/Core/*.h)
 
-add_library(ShellEngineCore SHARED ${SRC})
+add_library(ShellEngineCore SHARED ${SRC} ${HEADERS})
 add_library(ShellEngine::Core ALIAS ShellEngineCore)
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")

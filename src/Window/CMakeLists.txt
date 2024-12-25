@@ -1,5 +1,6 @@
 ﻿message("Build ShellEngine Window")
 file(GLOB SRC CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS${CMAKE_SOURCE_DIR}/include/Window/*.h)
 
 if(WIN32)
 	message(STATUS "OS: Window")

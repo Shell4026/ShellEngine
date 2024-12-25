@@ -1,8 +1,9 @@
 ﻿message("Build ShellEngine Game")
 file(GLOB SRC CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 file(GLOB COMPONENT_SRC CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/Component/*.cpp)
+file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/include/Game/*.h)
 
-add_library(ShellEngineGame SHARED ${SRC} ${COMPONENT_SRC})
+add_library(ShellEngineGame SHARED ${SRC} ${COMPONENT_SRC} ${HEADERS})
 add_library(ShellEngine::Game ALIAS ShellEngineGame)
 
 target_link_libraries(ShellEngineGame PUBLIC ShellEngine::Core)

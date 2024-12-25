@@ -1,7 +1,9 @@
 ﻿message("Build ShellEngine Physics")
 
 file(GLOB SRC CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
-add_library(ShellEnginePhysics SHARED ${SRC})
+file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/include/*.h)
+
+add_library(ShellEnginePhysics SHARED ${SRC} ${HEADERS})
 add_library(ShellEngine::Physics ALIAS ShellEnginePhysics)
 
 target_link_libraries(ShellEnginePhysics PUBLIC ShellEngine::Core)
