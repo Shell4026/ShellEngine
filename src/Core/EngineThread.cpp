@@ -32,7 +32,7 @@ namespace sh::core
 			while (endTasks.Dequeue(otherTask))
 				otherTask();
 
-			if (cv)
+			if (cv != nullptr)
 			{
 				bSleep = true;
 				cv->wait(lock, [&] { return !bSleep; }); // wait이 되는 순간 lock은 풀린다. <~ 동기화에 활용

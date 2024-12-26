@@ -1,19 +1,22 @@
 ﻿#include "VulkanImageBuffer.h"
-
 #include "VulkanBuffer.h"
+#include "VulkanRenderer.h"
+#include "VulkanQueueManager.h"
 
 #include <cassert>
 
 namespace sh::render::vk
 {
-	SH_RENDER_API VulkanImageBuffer::VulkanImageBuffer(VkDevice device, VkPhysicalDevice gpu, VmaAllocator allocator) :
-		device(device), gpu(gpu), allocator(allocator),
+	SH_RENDER_API VulkanImageBuffer::VulkanImageBuffer(const VulkanRenderer& renderer) :
+		renderer(renderer),
+		device(renderer.GetDevice()), gpu(renderer.GetGPU()), allocator(renderer.GetAllocator()),
 		img(nullptr), imgMem(nullptr), imgView(nullptr), sampler(nullptr),
 		bUseAnisotropy(false)
 	{
 
 	}
 	SH_RENDER_API VulkanImageBuffer::VulkanImageBuffer(VulkanImageBuffer&& other) noexcept :
+		renderer(other.renderer),
 		device(other.device), gpu(other.gpu), allocator(other.allocator),
 		img(other.img), imgMem(other.imgMem), imgView(other.imgView), sampler(other.sampler),
 		bUseAnisotropy(other.bUseAnisotropy)
@@ -149,7 +152,7 @@ namespace sh::render::vk
 		return result;
 	}
 
-	SH_RENDER_API void VulkanImageBuffer::TransitionImageLayout(VkQueue queue, VulkanCommandBuffer* cmd, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
+	SH_RENDER_API void VulkanImageBuffer::TransitionImageLayout(VulkanCommandBuffer* cmd, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
 	{
 		VkImageMemoryBarrier barrier{};
 		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -194,18 +197,19 @@ namespace sh::render::vk
 		beginInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		beginInfo.flags = VkCommandBufferUsageFlagBits::VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-		cmd->Submit(queue, [&]()
-			{
-				vkCmdPipelineBarrier(
-					cmd->GetCommandBuffer(),
-					sourceStage, destinationStage,
-					0,
-					0, nullptr,
-					0, nullptr,
-					1, &barrier
-				);
-			},
-			&beginInfo);
+		cmd->Build([&]()
+		{
+			vkCmdPipelineBarrier(
+				cmd->GetCommandBuffer(),
+				sourceStage, destinationStage,
+				0,
+				0, nullptr,
+				0, nullptr,
+				1, &barrier
+			);
+		}, &beginInfo);
+
+		renderer.GetQueueManager().SubmitCommand(*cmd);
 	}
 
 	SH_RENDER_API auto VulkanImageBuffer::GetImage() const -> VkImage

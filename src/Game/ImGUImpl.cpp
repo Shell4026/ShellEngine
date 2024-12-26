@@ -2,6 +2,7 @@
 #include "ImGUImpl.h"
 
 #include "Render/VulkanImpl/VulkanFramebuffer.h"
+#include "Render/VulkanImpl/VulkanQueueManager.h"
 
 #include <iostream>
 #include <algorithm>
@@ -68,8 +69,8 @@ namespace sh::game
 		initInfo.Instance = renderer.GetInstance();
 		initInfo.PhysicalDevice = renderer.GetGPU();
 		initInfo.Device = renderer.GetDevice();
-		initInfo.QueueFamily = renderer.GetGraphicsQueueIdx().first;
-		initInfo.Queue = renderer.GetGraphicsQueue();
+		initInfo.QueueFamily = renderer.GetQueueManager().GetGraphicsQueueFamilyIdx();
+		initInfo.Queue = renderer.GetQueueManager().GetGraphicsQueue();
 		initInfo.DescriptorPool = &renderer.GetDescriptorPool();
 		initInfo.RenderPass = static_cast<const render::vk::VulkanFramebuffer*>(renderer.GetMainFramebuffer())->GetRenderPass();
 		initInfo.MinImageCount = 2;

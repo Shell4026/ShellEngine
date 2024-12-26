@@ -13,6 +13,7 @@
 #include "VulkanDrawable.h"
 #include "VulkanUniformBuffer.h"
 #include "VulkanPipelineManager.h"
+#include "VulkanQueueManager.h"
 
 #include "Mesh.h"
 #include "Material.h"
@@ -29,8 +30,6 @@ namespace sh::render::vk
 	SH_RENDER_API VulkanRenderer::VulkanRenderer(core::ThreadSyncManager& syncManager) :
 		Renderer(RenderAPI::Vulkan, syncManager),
 		instance(nullptr), gpu(nullptr), device(nullptr), window(nullptr),
-		graphicsQueueIndex({ -1, 0 }), surfaceQueueIndex({ -1, 0 }),
-		graphicsQueue(nullptr), surfaceQueue(nullptr),
 		debugMessenger(nullptr), validationLayerName("VK_LAYER_KHRONOS_validation"),
 		currentFrame(0),
 		isInit(false), bFindValidationLayer(false), bEnableValidationLayers(sh::core::Util::IsDebug()),
@@ -62,7 +61,10 @@ namespace sh::render::vk
 
 		cmdBuffer[core::ThreadType::Game]->Clean();
 		cmdBuffer[core::ThreadType::Render]->Clean();
+
 		DestroyCommandPool();
+
+		queueManager.reset();
 
 		framebuffers.clear();
 		swapChain.reset();
@@ -207,42 +209,6 @@ namespace sh::render::vk
 		return nullptr;
 	}
 
-	void VulkanRenderer::GetQueueFamilyProperties(VkPhysicalDevice gpu)
-	{
-		uint32_t count = 0;
-		vkGetPhysicalDeviceQueueFamilyProperties(gpu, &count, nullptr);
-		queueFamilies.resize(count);
-		vkGetPhysicalDeviceQueueFamilyProperties(gpu, &count, queueFamilies.data());
-	}
-
-	auto VulkanRenderer::SelectQueueFamily(VkQueueFlagBits queueType) -> std::optional<int>
-	{
-		int idx = 0;
-		for (auto& prop : queueFamilies)
-		{
-			if (prop.queueFlags & queueType)
-				return idx;
-			++idx;
-		}
-		return {};
-	}
-
-	auto VulkanRenderer::GetSurfaceQueueFamily(VkPhysicalDevice gpu) -> std::optional<int>
-	{
-		assert(swapChain->GetSurface() != nullptr);
-		assert(gpu != nullptr);
-		int idx = 0;
-		for (auto& prop : queueFamilies)
-		{
-			VkBool32 support = false;
-			vkGetPhysicalDeviceSurfaceSupportKHR(gpu, idx, swapChain->GetSurface(), &support);
-			if (support)
-				return idx;
-			++idx;
-		}
-		return {};
-	}
-
 	auto VulkanRenderer::CreateDevice(VkPhysicalDevice gpu) -> VkResult
 	{
 		assert(gpu);
@@ -250,63 +216,41 @@ namespace sh::render::vk
 
 		VkPhysicalDeviceFeatures deviceFeatures{};
 
-		assert(graphicsQueueIndex.first != -1);
-		assert(surfaceQueueIndex.first != -1);
-		assert(transferQueueIndex.first != -1);
+		const float defaultPriority{ 0.f };
+
+		uint8_t graphicsIdx = queueManager->GetGraphicsQueueFamilyIdx();
+		uint8_t transferIdx = queueManager->GetTransferQueueFamilyIdx();
+		uint8_t surfaceIdx = queueManager->GetSurfaceQueueFamilyIdx();
+
 		std::vector<VkDeviceQueueCreateInfo> queueInfos;
 
-		struct QueueData
-		{
-			uint32_t count;
-			std::vector<float> priorities;
-		};
-		std::map<uint8_t, QueueData> queueCount{};
-
-		queueCount.insert({ graphicsQueueIndex.first, QueueData{ 1, std::vector<float>{ 1.f } } });
-
-		// surface 큐
-		auto it = queueCount.find(surfaceQueueIndex.first);
-		if (it == queueCount.end())
-		{
-			queueCount.insert({ surfaceQueueIndex.first, QueueData{ 1, std::vector<float>{ 1.f } } });
-		}
-		else
-		{
-			int maxCount = queueFamilies[it->first].queueCount;
-			if (it->second.count < maxCount)
-			{
-				it->second.count += 1;
-				it->second.priorities.push_back(1.f);
-			}
-			surfaceQueueIndex.second = it->second.count - 1;
-		}
-
-		// transfer 큐
-		it = queueCount.find(transferQueueIndex.first);
-		if (it == queueCount.end())
-		{
-			queueCount.insert({ transferQueueIndex.first, QueueData{ 1, std::vector<float>{ 1.f } } });
-		}
-		else
-		{
-			int maxCount = queueFamilies[it->first].queueCount;
-			if (it->second.count < maxCount)
-			{
-				it->second.count += 1;
-				it->second.priorities.push_back(1.f);
-			}
-			transferQueueIndex.second = it->second.count - 1;
-		}
-
-		for (auto& [idx, info] : queueCount)
 		{
 			VkDeviceQueueCreateInfo queueInfo = {};
-			queueInfo.queueFamilyIndex = idx;
+			queueInfo.queueFamilyIndex = graphicsIdx;
 			queueInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 			queueInfo.pNext = nullptr;
-			queueInfo.queueCount = info.count;
-			queueInfo.pQueuePriorities = info.priorities.data();
-
+			queueInfo.queueCount = 1;
+			queueInfo.pQueuePriorities = &defaultPriority;
+			queueInfos.push_back(queueInfo);
+		}
+		if (transferIdx != graphicsIdx)
+		{
+			VkDeviceQueueCreateInfo queueInfo = {};
+			queueInfo.queueFamilyIndex = transferIdx;
+			queueInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+			queueInfo.pNext = nullptr;
+			queueInfo.queueCount = 1;
+			queueInfo.pQueuePriorities = &defaultPriority;
+			queueInfos.push_back(queueInfo);
+		}
+		if (surfaceIdx != graphicsIdx && surfaceIdx != transferIdx)
+		{
+			VkDeviceQueueCreateInfo queueInfo = {};
+			queueInfo.queueFamilyIndex = surfaceIdx;
+			queueInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+			queueInfo.pNext = nullptr;
+			queueInfo.queueCount = 1;
+			queueInfo.pQueuePriorities = &defaultPriority;
 			queueInfos.push_back(queueInfo);
 		}
 
@@ -334,44 +278,34 @@ namespace sh::render::vk
 		}
 	}
 
-	void VulkanRenderer::CreateCommandPool(uint32_t queueFamily)
+	void VulkanRenderer::CreateCommandPool(uint32_t queueFamilyIdx)
 	{
+		assert(device != nullptr);
+
 		VkCommandPoolCreateInfo poolInfo = {};
 		poolInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 		poolInfo.pNext = nullptr;
-		poolInfo.queueFamilyIndex = queueFamily;
+		poolInfo.queueFamilyIndex = queueFamilyIdx;
 		poolInfo.flags = VkCommandPoolCreateFlagBits::VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; //명령 버퍼가 개별적으로 기록되도록 허용
 
-		for (int thr = 0; thr < cmdPool.size(); ++thr)
+		for (auto& cmdPool : cmdPools)
 		{
 			VkResult result;
-			result = vkCreateCommandPool(device, &poolInfo, nullptr, &cmdPool[thr]);
+			result = vkCreateCommandPool(device, &poolInfo, nullptr, &cmdPool);
 			if (result != VkResult::VK_SUCCESS)
-				throw std::runtime_error{ std::string{"Can't create VkCommandPool!: "} + string_VkResult(result) };
+				throw std::runtime_error{ std::string{"vkCreateCommandPool(): "} + string_VkResult(result) };
 		}
 	}
-
 	void VulkanRenderer::DestroyCommandPool()
 	{
-		for (int thr = 0; thr < cmdPool.size(); ++thr)
+		for (auto& cmdPool : cmdPools)
 		{
-			if (cmdPool[thr])
-			{
-				vkDestroyCommandPool(device, cmdPool[thr], nullptr);
-				cmdPool[thr] = nullptr;
-			}
-		}
-	}
+			if (cmdPool == nullptr)
+				continue;
 
-	auto VulkanRenderer::ResetCommandPool(uint32_t queue) -> VkResult
-	{
-		for (int thr = 0; thr < cmdPool.size(); ++thr)
-		{
-			auto result = vkResetCommandPool(device, cmdPool[thr], VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
-			if(result != VkResult::VK_SUCCESS)
-				throw std::runtime_error{ std::string{"Can't reset VkCommandPool!: "} + string_VkResult(result) };
+			vkDestroyCommandPool(device, cmdPool, nullptr);
+			cmdPool = nullptr;
 		}
-		return VkResult::VK_SUCCESS;
 	}
 
 	auto VulkanRenderer::CreateSyncObjects() -> VkResult
@@ -442,7 +376,6 @@ namespace sh::render::vk
 		Renderer::Init(win);
 
 		window = &win;
-		winHandle = win.GetNativeHandle();
 
 		layers = std::make_unique<VulkanLayer>();
 
@@ -505,47 +438,34 @@ namespace sh::render::vk
 		vkGetPhysicalDeviceProperties(gpu, &gpuProp);
 		fmt::print("GPU: {}\n", gpuProp.deviceName);
 
-		// 큐 선택
-		GetQueueFamilyProperties(gpu);
-		if (auto idx = SelectQueueFamily(VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT); !idx.has_value()) 
-			return false;
-		else 
-			graphicsQueueIndex.first = *idx;
-		if (auto idx = GetSurfaceQueueFamily(gpu); !idx.has_value()) 
-			return false;
-		else 
-			surfaceQueueIndex.first = *idx;
-		if (auto idx = SelectQueueFamily(VkQueueFlagBits::VK_QUEUE_TRANSFER_BIT); !idx.has_value())
-			return false;
-		else
-			transferQueueIndex.first = *idx;
-
 		requestedDeviceExtension = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+
+		// 큐 매니저 생성
+		queueManager = std::make_unique<VulkanQueueManager>(gpu);
+
 		// 가상 장치 생성
 		if (CreateDevice(gpu) != VkResult::VK_SUCCESS)
 			return false;
 
-		// 가상 장치에서 큐를 가져온다.
-		vkGetDeviceQueue(device, graphicsQueueIndex.first, graphicsQueueIndex.second, &graphicsQueue); // graphicsQueue를 가진 큐 패밀리에서 n번째 큐를 가져옴
-		assert(graphicsQueue);
-		vkGetDeviceQueue(device, surfaceQueueIndex.first, surfaceQueueIndex.second, &surfaceQueue);
-		assert(surfaceQueue);
-		vkGetDeviceQueue(device, transferQueueIndex.first, transferQueueIndex.second, &transferQueue);
-		assert(transferQueue);
+		// 큐 생성
+		queueManager->SetDevice(device);
+		queueManager->CreateGraphicsQueue();
+		queueManager->CreateTransferQueue();
+		queueManager->CreateSurfaceQueue(swapChain->GetSurface());
 
 		// 메모리 할당자 생성(VMA라이브러리)
 		CreateAllocator();
 
 		// 스왑체인 생성
 		swapChain->SetContext(instance, device, gpu);
-		swapChain->CreateSwapChain(graphicsQueueIndex.first, surfaceQueueIndex.first, false);
+		swapChain->CreateSwapChain(queueManager->GetGraphicsQueueFamilyIdx(), queueManager->GetSurfaceQueueFamilyIdx(), false);
 
 		// 프레임버퍼 생성 (렌더패스 생성 -> 프레임버퍼 생성)
 		auto& imgs = swapChain->GetSwapChainImageViews();
 		framebuffers.reserve(imgs.size());
 		for (size_t i = 0; i < imgs.size(); ++i)
 		{
-			framebuffers.push_back(VulkanFramebuffer{ device, gpu, allocator });
+			framebuffers.push_back(VulkanFramebuffer{ *this });
 			VkResult result = framebuffers[i].Create(swapChain->GetSwapChainSize().width, swapChain->GetSwapChainSize().height, imgs[i], swapChain->GetSwapChainImageFormat());
 			assert(result == VkResult::VK_SUCCESS);
 			if (result != VkResult::VK_SUCCESS)
@@ -553,12 +473,13 @@ namespace sh::render::vk
 		}
 
 		// 커맨드 풀과 커맨드 버퍼 생성
-		CreateCommandPool(graphicsQueueIndex.first);
+		CreateCommandPool(queueManager->GetGraphicsQueueFamilyIdx());
 
-		cmdBuffer[core::ThreadType::Game] = std::make_unique<VulkanCommandBuffer>(device, cmdPool[core::ThreadType::Game]);
+		cmdBuffer[core::ThreadType::Game] = std::make_unique<VulkanCommandBuffer>(device, cmdPools[core::ThreadType::Game]);
 		cmdBuffer[core::ThreadType::Game]->Create();
-		cmdBuffer[core::ThreadType::Render] = std::make_unique<VulkanCommandBuffer>(device, cmdPool[core::ThreadType::Render]);
+		cmdBuffer[core::ThreadType::Render] = std::make_unique<VulkanCommandBuffer>(device, cmdPools[core::ThreadType::Render]);
 		cmdBuffer[core::ThreadType::Render]->Create();
+
 		// 세마포어와 펜스 생성 (동기화 변수)
 		if (CreateSyncObjects() != VkResult::VK_SUCCESS)
 			return false;
@@ -583,13 +504,14 @@ namespace sh::render::vk
 		CreateSyncObjects();
 
 		framebuffers.clear();
-		swapChain->CreateSwapChain(graphicsQueueIndex.first, surfaceQueueIndex.first, false);
+		//swapChain->DestroySwapChain();
+		swapChain->CreateSwapChain(queueManager->GetGraphicsQueueFamilyIdx(), queueManager->GetSurfaceQueueFamilyIdx(), false);
 
 		auto& imgs = swapChain->GetSwapChainImageViews();
 		framebuffers.reserve(imgs.size());
 		for (size_t i = 0; i < imgs.size(); ++i)
 		{
-			framebuffers.push_back(VulkanFramebuffer{ device, gpu, allocator });
+			framebuffers.push_back(VulkanFramebuffer{ *this });
 			VkResult result = framebuffers[i].Create(swapChain->GetSwapChainSize().width, swapChain->GetSwapChainSize().height, imgs[i], swapChain->GetSwapChainImageFormat());
 			assert(result == VkResult::VK_SUCCESS);
 			if (result != VkResult::VK_SUCCESS)
@@ -699,8 +621,11 @@ namespace sh::render::vk
 		{
 			if (IsPause())
 				return;
-			SH_INFO("Resizing");
-			Resizing();
+			if (result == VkResult::VK_ERROR_OUT_OF_DATE_KHR)
+			{
+				SH_INFO("Resizing");
+				Resizing();
+			}
 			return;
 		}
 		if (result == VkResult::VK_ERROR_SURFACE_LOST_KHR)
@@ -720,7 +645,7 @@ namespace sh::render::vk
 		if (drawList[core::ThreadType::Render].empty())
 			return;
 
-		cmdBuffer[core::ThreadType::Render]->Submit(graphicsQueue, [&]()
+		cmdBuffer[core::ThreadType::Render]->Build([&]()
 		{
 			bool mainPassProcessed = false;
 
@@ -853,7 +778,9 @@ namespace sh::render::vk
 
 				vkCmdEndRenderPass(buffer);
 			}
-		}, nullptr, inFlightFence); //submitEnd
+		}, nullptr);
+
+		queueManager->SubmitCommand(*cmdBuffer[core::ThreadType::Render].get(), inFlightFence);
 
 		VkPresentInfoKHR presentInfo{};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -865,7 +792,7 @@ namespace sh::render::vk
 		presentInfo.pImageIndices = &imgIdx;
 		presentInfo.pResults = nullptr;
 
-		vkQueuePresentKHR(surfaceQueue, &presentInfo);
+		vkQueuePresentKHR(queueManager->GetSurfaceQueue(), &presentInfo);
 	}
 
 	void VulkanRenderer::SetViewport(const glm::vec2& start, const glm::vec2& end)
@@ -877,6 +804,17 @@ namespace sh::render::vk
 	void VulkanRenderer::SurfaceReady()
 	{
 		
+	}
+
+	SH_RENDER_API auto VulkanRenderer::ResetCommandPools() -> VkResult
+	{
+		for (auto& cmdPool : cmdPools)
+		{
+			auto result = vkResetCommandPool(device, cmdPool, VkCommandPoolResetFlagBits::VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
+			if (result != VkResult::VK_SUCCESS)
+				throw std::runtime_error{ std::string{"Can't reset VkCommandPool!: "} + string_VkResult(result) };
+		}
+		return VkResult::VK_SUCCESS;
 	}
 
 	SH_RENDER_API auto VulkanRenderer::GetInstance() const -> VkInstance
@@ -900,30 +838,17 @@ namespace sh::render::vk
 
 	SH_RENDER_API auto VulkanRenderer::GetCommandPool(core::ThreadType thr) const -> VkCommandPool
 	{
-		return cmdPool[thr];
+		return cmdPools[thr];
 	}
 	SH_RENDER_API auto VulkanRenderer::GetCommandBuffer(core::ThreadType thr) const -> VulkanCommandBuffer*
 	{
 		return cmdBuffer[static_cast<int>(thr)].get();
 	}
 
-	SH_RENDER_API auto VulkanRenderer::GetGraphicsQueue() const -> VkQueue
+	SH_RENDER_API auto VulkanRenderer::GetQueueManager() const->VulkanQueueManager&
 	{
-		return graphicsQueue;
+		return *queueManager.get();
 	}
-	SH_RENDER_API auto VulkanRenderer::GetGraphicsQueueIdx() const -> std::pair<uint8_t, uint8_t>
-	{
-		return graphicsQueueIndex;
-	}
-	SH_RENDER_API auto VulkanRenderer::GetTransferQueue() const -> VkQueue
-	{
-		return transferQueue;
-	}
-	SH_RENDER_API auto VulkanRenderer::GetTransferQueueIdx() const -> std::pair<uint8_t, uint8_t>
-	{
-		return transferQueueIndex;
-	}
-
 	SH_RENDER_API auto VulkanRenderer::GetDescriptorPool() const -> VulkanDescriptorPool&
 	{
 		return *descPool.get();

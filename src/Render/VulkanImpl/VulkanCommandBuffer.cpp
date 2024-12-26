@@ -4,15 +4,17 @@
 
 namespace sh::render::vk 
 {
-	VulkanCommandBuffer::VulkanCommandBuffer(VkDevice device, VkCommandPool pool) :
-		buffer(nullptr), device(device), cmdPool(pool), waitStage(0)
+	VulkanCommandBuffer::VulkanCommandBuffer(VkDevice device, VkCommandPool pool, VkQueueFlagBits queueType) :
+		buffer(nullptr), device(device), cmdPool(pool), waitStage(0),
+		queueType(queueType)
 	{
 
 	}
 
 	VulkanCommandBuffer::VulkanCommandBuffer(VulkanCommandBuffer&& other) noexcept :
 		buffer(other.buffer), device(other.device), cmdPool(other.cmdPool), waitStage(other.waitStage),
-		waitSemaphores(std::move(other.waitSemaphores)), signalSemaphores(std::move(other.signalSemaphores))
+		waitSemaphores(std::move(other.waitSemaphores)), signalSemaphores(std::move(other.signalSemaphores)),
+		queueType(other.queueType)
 	{
 		other.buffer = nullptr;
 	}
@@ -22,7 +24,7 @@ namespace sh::render::vk
 		Clean();
 	}
 
-	auto VulkanCommandBuffer::Create(const VkCommandBufferAllocateInfo* info)->VkResult
+	SH_RENDER_API auto VulkanCommandBuffer::Create(const VkCommandBufferAllocateInfo* info)->VkResult
 	{
 		Clean();
 		VkResult result;
@@ -92,53 +94,51 @@ namespace sh::render::vk
 		return result;
 	}
 
-	void VulkanCommandBuffer::SetWaitStage(const std::initializer_list<VkPipelineStageFlagBits> s)
+	SH_RENDER_API void VulkanCommandBuffer::SetWaitStage(const std::initializer_list<VkPipelineStageFlagBits> s)
 	{
 		for (auto i : s)
 			waitStage |= i;
 	}
+	SH_RENDER_API auto VulkanCommandBuffer::GetWaitStage() const -> VkPipelineStageFlags
+	{
+		return waitStage;
+	}
 
-	void VulkanCommandBuffer::SetWaitSemaphore(const std::initializer_list<VkSemaphore> s)
+	SH_RENDER_API void VulkanCommandBuffer::SetWaitSemaphore(const std::initializer_list<VkSemaphore> s)
 	{
 		waitSemaphores.resize(s.size());
 		int idx = 0;
 		for (auto i : s)
 			waitSemaphores[idx++] = i;
 	}
+	SH_RENDER_API auto VulkanCommandBuffer::GetWaitSemaphore() const -> const std::vector<VkSemaphore>&
+	{
+		return waitSemaphores;
+	}
 
-	void VulkanCommandBuffer::SetSignalSemaphore(const std::initializer_list<VkSemaphore> s)
+	SH_RENDER_API void VulkanCommandBuffer::SetSignalSemaphore(const std::initializer_list<VkSemaphore> s)
 	{
 		signalSemaphores.resize(s.size());
 		int idx = 0;
 		for (auto i : s)
 			signalSemaphores[idx++] = i;
 	}
+	SH_RENDER_API auto VulkanCommandBuffer::GetSignalSemaphore() const -> const std::vector<VkSemaphore>&
+	{
+		return signalSemaphores;
+	}
 
-	auto VulkanCommandBuffer::Submit(VkQueue queue, const std::function<void()>& commands, VkCommandBufferBeginInfo* beginInfo, VkFence fence) -> VkResult
+	SH_RENDER_API auto VulkanCommandBuffer::Build(const std::function<void()>& commands, VkCommandBufferBeginInfo* beginInfo) -> VkResult
 	{
 		VkResult result;
 		if (result = Begin(beginInfo); result != VkResult::VK_SUCCESS) return result;
 		commands();
 		if (result = End(); result != VkResult::VK_SUCCESS) return result;
 
-		VkSubmitInfo sinfo{};
-		sinfo.sType = VkStructureType::VK_STRUCTURE_TYPE_SUBMIT_INFO;
-		sinfo.pNext = nullptr;
-		sinfo.pWaitDstStageMask = &waitStage;
-		sinfo.commandBufferCount = 1;
-		sinfo.pCommandBuffers = &buffer;
-		sinfo.waitSemaphoreCount = static_cast<uint32_t>(waitSemaphores.size());
-		sinfo.pWaitSemaphores = waitSemaphores.data();
-		sinfo.signalSemaphoreCount = static_cast<uint32_t>(signalSemaphores.size());
-		sinfo.pSignalSemaphores = signalSemaphores.data();
-		
-		result = vkQueueSubmit(queue, 1, &sinfo, fence);
-		assert(result == VkResult::VK_SUCCESS);
-		result = vkQueueWaitIdle(queue);
-		return result;
+		return VkResult::VK_SUCCESS;
 	}
 
-	auto VulkanCommandBuffer::Reset() -> VkResult
+	SH_RENDER_API auto VulkanCommandBuffer::Reset() -> VkResult
 	{
 		waitSemaphores.clear();
 		signalSemaphores.clear();
@@ -153,7 +153,7 @@ namespace sh::render::vk
 		return VkResult::VK_ERROR_UNKNOWN;
 	}
 
-	void VulkanCommandBuffer::Clean()
+	SH_RENDER_API void VulkanCommandBuffer::Clean()
 	{
 		if (buffer)
 		{
@@ -165,8 +165,13 @@ namespace sh::render::vk
 		}
 	}
 
-	auto VulkanCommandBuffer::GetCommandBuffer() const -> VkCommandBuffer
+	SH_RENDER_API auto VulkanCommandBuffer::GetCommandBuffer() const -> VkCommandBuffer
 	{
 		return buffer;
+	}
+
+	SH_RENDER_API auto VulkanCommandBuffer::GetQueueType() const -> VkQueueFlagBits
+	{
+		return queueType;
 	}
 }

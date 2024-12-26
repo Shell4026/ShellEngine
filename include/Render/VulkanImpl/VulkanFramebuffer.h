@@ -13,9 +13,13 @@
 
 namespace sh::render::vk
 {
+	class VulkanRenderer;
+
 	class VulkanFramebuffer : public Framebuffer
 	{
 	private:
+		const VulkanRenderer& renderer;
+
 		VkDevice device;
 		VkPhysicalDevice gpu;
 		VmaAllocator alloc;
@@ -36,7 +40,7 @@ namespace sh::render::vk
 		auto FindSupportedDepthFormat() -> VkFormat;
 		void CreateDepthBuffer();
 	public:
-		SH_RENDER_API VulkanFramebuffer(VkDevice device, VkPhysicalDevice gpu, VmaAllocator alloc);
+		SH_RENDER_API VulkanFramebuffer(const VulkanRenderer& renderer);
 		SH_RENDER_API VulkanFramebuffer(VulkanFramebuffer&& other) noexcept;
 		SH_RENDER_API ~VulkanFramebuffer();
 
@@ -45,7 +49,7 @@ namespace sh::render::vk
 		SH_RENDER_API auto Create(uint32_t width, uint32_t height, VkImageView img, VkFormat format) -> VkResult;
 		SH_RENDER_API auto CreateOffScreen(uint32_t width, uint32_t height, VkFormat format = VkFormat::VK_FORMAT_R8G8B8A8_SRGB, bool bTransferSrc = false) -> VkResult;
 		SH_RENDER_API void Clean();
-		SH_RENDER_API void TransferImageToBuffer(VulkanCommandBuffer* cmd, VkQueue queue, VkBuffer buffer, int x, int y);
+		SH_RENDER_API void TransferImageToBuffer(VulkanCommandBuffer* cmd, VkBuffer buffer, int x, int y);
 
 		SH_RENDER_API auto GetRenderPass() const -> VkRenderPass;
 		SH_RENDER_API auto GetVkFramebuffer() const -> VkFramebuffer;

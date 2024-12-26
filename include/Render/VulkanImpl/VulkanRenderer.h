@@ -26,6 +26,7 @@ namespace sh::render::vk
 	class VulkanFramebuffer;
 	class VulkanDescriptorPool;
 	class VulkanPipelineManager;
+	class VulkanQueueManager;
 
 	class VulkanRenderer :
 		public Renderer, public sh::core::INonCopyable{
@@ -33,7 +34,6 @@ namespace sh::render::vk
 		static constexpr int VULKAN_API_VER = VK_API_VERSION_1_1;
 	private:
 		sh::window::Window* window;
-		sh::window::WinHandle winHandle;
 
 		std::vector<const char*> requestedLayer;
 		std::vector<const char*> requestedInstanceExtension;
@@ -41,6 +41,8 @@ namespace sh::render::vk
 
 		std::unique_ptr<vk::VulkanSwapChain> swapChain;
 		std::unique_ptr<VulkanLayer> layers;
+		std::unique_ptr<VulkanQueueManager> queueManager;
+		core::SyncArray<VkCommandPool> cmdPools;
 		core::SyncArray<std::unique_ptr<VulkanCommandBuffer>> cmdBuffer;
 		std::unique_ptr<VulkanDescriptorPool> descPool;
 		std::unique_ptr<VulkanPipelineManager> pipelineManager;
@@ -51,20 +53,10 @@ namespace sh::render::vk
 		VkDevice device; // 논리적 장치
 		std::vector<VulkanFramebuffer> framebuffers;
 
-		core::SyncArray<VkCommandPool> cmdPool;
-
 		std::vector<VkPhysicalDevice> gpus;
-		std::vector<VkQueueFamilyProperties> queueFamilies;
 
 		VkDebugUtilsMessengerEXT debugMessenger;
 		std::string validationLayerName;
-
-		std::pair<uint8_t, uint8_t> graphicsQueueIndex; // 큐패밀리, 큐
-		std::pair<uint8_t, uint8_t> surfaceQueueIndex;
-		std::pair<uint8_t, uint8_t> transferQueueIndex;
-		VkQueue graphicsQueue;
-		VkQueue surfaceQueue;
-		VkQueue transferQueue; // 큐 하나만 지원하면 nullptr
 
 		VkSemaphore imageAvailableSemaphore;
 		VkSemaphore renderFinishedSemaphore;
@@ -91,16 +83,11 @@ namespace sh::render::vk
 		auto SelectPhysicalDevice(const std::function<bool(VkPhysicalDevice)>& checkFunc)->VkPhysicalDevice;
 		bool IsDeviceSuitable(VkPhysicalDevice gpu);
 
-		void GetQueueFamilyProperties(VkPhysicalDevice gpu);
-		auto SelectQueueFamily(VkQueueFlagBits queueType) -> std::optional<int>;
-		auto GetSurfaceQueueFamily(VkPhysicalDevice gpu)->std::optional<int>;
-
 		auto CreateDevice(VkPhysicalDevice gpu)->VkResult;
 		void DestroyDevice();
 
-		void CreateCommandPool(uint32_t queueFamily);
+		void CreateCommandPool(uint32_t queueFamilyIdx);
 		void DestroyCommandPool();
-		auto ResetCommandPool(uint32_t queue) -> VkResult;
 
 		auto CreateSyncObjects() -> VkResult;
 		void DestroySyncObjects();
@@ -129,15 +116,14 @@ namespace sh::render::vk
 
 		SH_RENDER_API void SurfaceReady();
 
+		SH_RENDER_API auto ResetCommandPools() -> VkResult;
+
 		SH_RENDER_API auto GetInstance() const -> VkInstance;
 		SH_RENDER_API auto GetDevice() const -> VkDevice;
 		SH_RENDER_API auto GetGPU() const -> VkPhysicalDevice;
 		SH_RENDER_API auto GetCommandPool(core::ThreadType thr) const -> VkCommandPool;
 		SH_RENDER_API auto GetCommandBuffer(core::ThreadType thr) const -> VulkanCommandBuffer*;
-		SH_RENDER_API auto GetGraphicsQueue() const -> VkQueue;
-		SH_RENDER_API auto GetGraphicsQueueIdx() const -> std::pair<uint8_t, uint8_t>;
-		SH_RENDER_API auto GetTransferQueue() const-> VkQueue;
-		SH_RENDER_API auto GetTransferQueueIdx() const->std::pair<uint8_t, uint8_t>;
+		SH_RENDER_API auto GetQueueManager() const -> VulkanQueueManager&;
 		SH_RENDER_API auto GetMainFramebuffer() const -> const Framebuffer* override;
 		SH_RENDER_API auto GetDescriptorPool() const -> VulkanDescriptorPool&;
 		SH_RENDER_API auto GetCurrentFrame() const -> int;

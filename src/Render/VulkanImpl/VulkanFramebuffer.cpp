@@ -1,5 +1,7 @@
 ﻿#include "VulkanImpl/VulkanFramebuffer.h"
 #include "VulkanImpl/VulkanCommandBuffer.h"
+#include "VulkanImpl/VulkanQueueManager.h"
+#include "VulkanRenderer.h"
 
 #include <array>
 #include <cassert>
@@ -7,8 +9,9 @@
 
 namespace sh::render::vk
 {
-	SH_RENDER_API VulkanFramebuffer::VulkanFramebuffer(VkDevice device, VkPhysicalDevice gpu, VmaAllocator alloc) :
-		device(device), gpu(gpu), alloc(alloc),
+	SH_RENDER_API VulkanFramebuffer::VulkanFramebuffer(const VulkanRenderer& renderer) :
+		renderer(renderer),
+		device(renderer.GetDevice()), gpu(renderer.GetGPU()), alloc(renderer.GetAllocator()),
 		renderPass(nullptr),
 		framebuffer(nullptr), img(nullptr),
 		colorImg(nullptr), depthImg(nullptr),
@@ -17,6 +20,7 @@ namespace sh::render::vk
 	}
 
 	SH_RENDER_API VulkanFramebuffer::VulkanFramebuffer(VulkanFramebuffer&& other) noexcept :
+		renderer(other.renderer),
 		device(other.device), gpu(other.gpu), alloc(other.alloc),
 		framebuffer(other.framebuffer), img(other.img), renderPass(other.renderPass),
 		colorImg(std::move(other.colorImg)), depthImg(std::move(other.depthImg)),
@@ -272,7 +276,7 @@ namespace sh::render::vk
 		else
 			usage |= VkImageUsageFlagBits::VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
-		colorImg = std::make_unique<VulkanImageBuffer>(device, gpu, alloc);
+		colorImg = std::make_unique<VulkanImageBuffer>(renderer);
 		auto result = colorImg->Create(width, height, format, usage,
 			VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT);
 		assert(result == VkResult::VK_SUCCESS);
@@ -302,7 +306,7 @@ namespace sh::render::vk
 	void VulkanFramebuffer::CreateDepthBuffer()
 	{
 		VkFormat depthFormat = FindSupportedDepthFormat();
-		depthImg = std::make_unique<VulkanImageBuffer>(device, gpu, alloc);
+		depthImg = std::make_unique<VulkanImageBuffer>(renderer);
 		if(width == 0 || height == 0)
 			return;
 
@@ -330,7 +334,7 @@ namespace sh::render::vk
 			renderPass = nullptr;
 		}
 	}
-	SH_RENDER_API void VulkanFramebuffer::TransferImageToBuffer(VulkanCommandBuffer* cmd, VkQueue queue, VkBuffer buffer, int x, int y)
+	SH_RENDER_API void VulkanFramebuffer::TransferImageToBuffer(VulkanCommandBuffer* cmd, VkBuffer buffer, int x, int y)
 	{
 		VkImageMemoryBarrier barrier = {};
 		barrier.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -362,7 +366,7 @@ namespace sh::render::vk
 		toColorAttachmentBarrier.subresourceRange.baseArrayLayer = 0;
 		toColorAttachmentBarrier.subresourceRange.layerCount = 1;
 
-		cmd->Submit(queue, [&]
+		cmd->Build([&]
 		{
 			if (!bTransferSrc)
 			{
@@ -398,6 +402,8 @@ namespace sh::render::vk
 				0, 0, nullptr, 0, nullptr, 1, &toColorAttachmentBarrier
 			);
 		});
+
+		renderer.GetQueueManager().SubmitCommand(*cmd);
 	}
 
 	SH_RENDER_API auto VulkanFramebuffer::GetRenderPass() const -> VkRenderPass

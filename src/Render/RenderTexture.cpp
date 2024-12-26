@@ -38,8 +38,8 @@ namespace sh::render
 		if (renderer.apiType == RenderAPI::Vulkan)
 		{
 			auto& vkRenderer = static_cast<const vk::VulkanRenderer&>(renderer);
-			framebuffer[core::ThreadType::Game] = std::make_unique<vk::VulkanFramebuffer>(vkRenderer.GetDevice(), vkRenderer.GetGPU(), vkRenderer.GetAllocator());
-			framebuffer[core::ThreadType::Render] = std::make_unique<vk::VulkanFramebuffer>(vkRenderer.GetDevice(), vkRenderer.GetGPU(), vkRenderer.GetAllocator());
+			framebuffer[core::ThreadType::Game] = std::make_unique<vk::VulkanFramebuffer>(vkRenderer);
+			framebuffer[core::ThreadType::Render] = std::make_unique<vk::VulkanFramebuffer>(vkRenderer);
 
 			VkFormat format = VkFormat::VK_FORMAT_R8G8B8A8_SRGB;
 			switch (this->format)

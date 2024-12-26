@@ -55,7 +55,7 @@ namespace sh::render::vk
 		SH_RENDER_API void CreateSurface(const sh::window::Window& window);
 		SH_RENDER_API void DestroySurface();
 
-		SH_RENDER_API void CreateSwapChain(uint32_t graphicsQueueIdx, uint32_t surfaceQueueIdx, bool bVsync);
+		SH_RENDER_API void CreateSwapChain(uint8_t graphicsQueueIdx, uint8_t surfaceQueueIdx, bool bVsync);
 		SH_RENDER_API void DestroySwapChain();
 
 		SH_RENDER_API bool IsSwapChainSupport(VkPhysicalDevice gpu);

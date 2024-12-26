@@ -74,7 +74,7 @@ namespace sh::game
 						auto& vkRenderer = static_cast<render::vk::VulkanRenderer&>(world.renderer);
 						auto vkBuffer = static_cast<render::vk::VulkanBuffer*>(buffer.get());
 
-						vkFramebuffer->TransferImageToBuffer(vkRenderer.GetCommandBuffer(core::ThreadType::Game), vkRenderer.GetTransferQueue(), vkBuffer->GetBuffer(), x, y);
+						vkFramebuffer->TransferImageToBuffer(vkRenderer.GetCommandBuffer(core::ThreadType::Game), vkBuffer->GetBuffer(), x, y);
 						pixels = reinterpret_cast<uint8_t*>(buffer->GetData());
 					}
 

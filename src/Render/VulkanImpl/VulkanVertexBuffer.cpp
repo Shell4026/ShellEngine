@@ -1,7 +1,7 @@
 ﻿#include "pch.h"
 #include "VulkanVertexBuffer.h"
-
 #include "VulkanRenderer.h"
+#include "VulkanQueueManager.h"
 #include "Mesh.h"
 #include "../vma-src/include/vk_mem_alloc.h"
 
@@ -117,7 +117,8 @@ namespace sh::render::vk
 		info.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		info.flags = VkCommandBufferUsageFlagBits::VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-		cmd.Submit(renderer.GetGraphicsQueue(), [&]() {
+		cmd.Build([&]() 
+		{
 			VkBufferCopy cpy{};
 			cpy.srcOffset = 0; // Optional
 			cpy.dstOffset = 0; // Optional
@@ -129,7 +130,9 @@ namespace sh::render::vk
 			cpyIndices.size = sizeIndices;
 			vkCmdCopyBuffer(cmd.GetCommandBuffer(), stagingBuffer1.GetBuffer(), buffers[0].GetBuffer(), 1, &cpy);
 			vkCmdCopyBuffer(cmd.GetCommandBuffer(), stagingBuffer2.GetBuffer(), indexBuffer.GetBuffer(), 1, &cpyIndices);
-			}, &info);
+		}, &info);
+
+		renderer.GetQueueManager().SubmitCommand(cmd);
 	}
 
 	void VulkanVertexBuffer::CreateAttributeBuffers(const Mesh& mesh)
@@ -201,13 +204,16 @@ namespace sh::render::vk
 			info.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 			info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
 
-			cmd.Submit(renderer.GetGraphicsQueue(), [&]() {
+			cmd.Build([&]() 
+			{
 				VkBufferCopy cpy{};
 				cpy.srcOffset = 0; // Optional
 				cpy.dstOffset = 0; // Optional
 				cpy.size = size;
 				vkCmdCopyBuffer(cmd.GetCommandBuffer(), stagingBuffer.GetBuffer(), buffers.back().GetBuffer(), 1, &cpy);
 			}, &info);
+
+			renderer.GetQueueManager().SubmitCommand(cmd);
 
 			++idx;
 		}

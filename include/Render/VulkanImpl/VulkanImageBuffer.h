@@ -9,9 +9,13 @@
 
 namespace sh::render::vk
 {
+	class VulkanRenderer;
+
 	class VulkanImageBuffer : public core::INonCopyable
 	{
 	private:
+		const VulkanRenderer& renderer;
+
 		VkDevice device;
 		VkPhysicalDevice gpu;
 		VmaAllocator allocator;
@@ -24,7 +28,7 @@ namespace sh::render::vk
 
 		bool bUseAnisotropy;
 	public:
-		SH_RENDER_API VulkanImageBuffer(VkDevice device, VkPhysicalDevice gpu, VmaAllocator allocator);
+		SH_RENDER_API VulkanImageBuffer(const VulkanRenderer& renderer);
 		SH_RENDER_API VulkanImageBuffer(VulkanImageBuffer&& other) noexcept;
 		SH_RENDER_API ~VulkanImageBuffer();
 
@@ -37,7 +41,7 @@ namespace sh::render::vk
 			VkPhysicalDeviceProperties* gpuProp = nullptr) -> VkResult;
 		SH_RENDER_API void Clean();
 
-		SH_RENDER_API void TransitionImageLayout(VkQueue queue, VulkanCommandBuffer* cmd, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+		SH_RENDER_API void TransitionImageLayout(VulkanCommandBuffer* cmd, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
 
 		SH_RENDER_API auto GetImage() const ->VkImage;
 		SH_RENDER_API auto GetImageView() const -> VkImageView;

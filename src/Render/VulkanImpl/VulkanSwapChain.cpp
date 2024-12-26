@@ -146,7 +146,7 @@ namespace sh::render::vk
 		return outputMode;
 	}
 
-	SH_RENDER_API void VulkanSwapChain::CreateSwapChain(uint32_t graphicsQueueIdx, uint32_t surfaceQueueIdx, bool bVsync)
+	SH_RENDER_API void VulkanSwapChain::CreateSwapChain(uint8_t graphicsQueueIdx, uint8_t surfaceQueueIdx, bool bVsync)
 	{
 		VkSwapchainKHR oldSwapchain = swapChain;
 
