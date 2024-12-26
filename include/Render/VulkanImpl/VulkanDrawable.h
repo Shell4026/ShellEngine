@@ -32,19 +32,19 @@ namespace sh::render::vk
 		Mesh* mesh;
 		Camera* camera;
 
-		//동기화 필요 목록
-		core::SyncArray<VulkanPipeline*> pipeline;
+		uint64_t pipelineHandle = 0;
+
 		core::SyncArray<core::SMap<uint32_t, std::unique_ptr<VulkanBuffer>>> localVertBuffer;
 		core::SyncArray<core::SMap<uint32_t, std::unique_ptr<VulkanBuffer>>> localFragBuffer;
 		core::SyncArray<std::unique_ptr<VulkanUniformBuffer>> localDescSet;
 
 		VulkanPipeline::Topology topology = VulkanPipeline::Topology::Triangle;
 
-		bool bInit, bDirty, bBufferDirty, bPipelineDirty;
+		bool bInit, bDirty, bBufferDirty;
 	protected:
 		void Clean(core::ThreadType thr);
-		void CreateBuffer(core::ThreadType thr);
-		void GetPipelineFromManager(core::ThreadType thr);
+		void CreateBuffers(core::ThreadType thr);
+		void GetPipelineFromManager();
 	public:
 		SH_RENDER_API VulkanDrawable(VulkanRenderer& renderer);
 		SH_RENDER_API VulkanDrawable(VulkanDrawable&& other) noexcept;
@@ -63,7 +63,7 @@ namespace sh::render::vk
 		SH_RENDER_API auto GetMesh() const-> const Mesh* override;
 		SH_RENDER_API auto GetCamera() const-> Camera* override;
 
-		SH_RENDER_API auto GetPipeline(core::ThreadType thr) const -> VulkanPipeline*;
+		SH_RENDER_API auto GetPipelineHandle() const -> uint64_t;
 
 		SH_RENDER_API auto GetLocalUniformBuffer(core::ThreadType thr) const -> VulkanUniformBuffer*;
 		SH_RENDER_API auto GetDescriptorSet(core::ThreadType thr) const -> VkDescriptorSet;

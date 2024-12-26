@@ -3,50 +3,56 @@
 #include "Mesh.h"
 #include "VulkanShader.h"
 #include "VulkanVertexBuffer.h"
+#include "VulkanRenderer.h"
+
+#include <algorithm>
 
 namespace sh::render::vk
 {
-	VulkanPipelineManager::VulkanPipelineManager(VkDevice device) :
-		device(device)
+	VulkanPipelineManager::VulkanPipelineManager(const VulkanRenderer& renderer) :
+		renderer(renderer),
+		device(renderer.GetDevice())
 	{
 		shaderListener.SetCallback([&](core::SObject* obj)
+		{
+			auto shaderIt = shaderIdxs.find(static_cast<const VulkanShader*>(obj));
+			if (shaderIt != shaderIdxs.end())
 			{
-				auto shaderIt = shaderIdxs.find(static_cast<const VulkanShader*>(obj));
-				if (shaderIt != shaderIdxs.end())
+				for (auto idx : shaderIt->second)
 				{
-					for (auto idx : shaderIt->second)
-					{
-						pipelines[idx][core::ThreadType::Game].reset();
+					pipelines[idx][core::ThreadType::Game].reset();
+					dirtyPipelines.push(idx);
 
-						auto& info = pipelinesInfo[idx];
-						if (auto infoIt = infoIdx.find(info); infoIt != infoIdx.end())
-							infoIdx.erase(infoIt);
-						if (auto meshIt = meshIdxs.find(info.mesh); meshIt != meshIdxs.end())
-							meshIdxs.erase(meshIt);
-					}
-					shaderIdxs.erase(shaderIt);
+					auto& info = pipelinesInfo[idx];
+					if (auto infoIt = infoIdx.find(info); infoIt != infoIdx.end())
+						infoIdx.erase(infoIt);
+					if (auto meshIt = meshIdxs.find(info.mesh); meshIt != meshIdxs.end())
+						meshIdxs.erase(meshIt);
 				}
+				shaderIdxs.erase(shaderIt);
+				SetDirty();
 			}
-		);
+		});
 		meshListener.SetCallback([&](core::SObject* obj)
+		{
+			auto meshIt = meshIdxs.find(static_cast<const Mesh*>(obj));
+			if (meshIt != meshIdxs.end())
 			{
-				auto meshIt = meshIdxs.find(static_cast<const Mesh*>(obj));
-				if (meshIt != meshIdxs.end())
+				for (auto idx : meshIt->second)
 				{
-					for (auto idx : meshIt->second)
-					{
-						pipelines[idx][core::ThreadType::Game].reset();
+					pipelines[idx][core::ThreadType::Game].reset();
+					dirtyPipelines.push(idx);
 
-						auto& info = pipelinesInfo[idx];
-						if (auto infoIt = infoIdx.find(info); infoIt != infoIdx.end())
-							infoIdx.erase(infoIt);
-						if (auto shaderIt = shaderIdxs.find(info.shader); shaderIt != shaderIdxs.end())
-							shaderIdxs.erase(shaderIt);
-					}
-					meshIdxs.erase(meshIt);
+					auto& info = pipelinesInfo[idx];
+					if (auto infoIt = infoIdx.find(info); infoIt != infoIdx.end())
+						infoIdx.erase(infoIt);
+					if (auto shaderIt = shaderIdxs.find(info.shader); shaderIt != shaderIdxs.end())
+						shaderIdxs.erase(shaderIt);
 				}
+				meshIdxs.erase(meshIt);
+				SetDirty();
 			}
-		);
+		});
 	}
 
 	auto VulkanPipelineManager::BuildPipeline(const VkRenderPass& pass, VulkanShader& shader, Mesh& mesh) -> std::unique_ptr<VulkanPipeline>
@@ -103,14 +109,15 @@ namespace sh::render::vk
 		return pipeline;
 	}
 
-	SH_RENDER_API auto VulkanPipelineManager::GetPipeline(core::ThreadType thr, const VkRenderPass& pass, VulkanShader& shader, Mesh& mesh) -> VulkanPipeline*
+	SH_RENDER_API auto VulkanPipelineManager::GetPipelineHandle(const VkRenderPass& pass, VulkanShader& shader, Mesh& mesh) -> uint64_t
 	{
 		PipelineInfo info{ &pass, &shader, &mesh };
 		auto it = infoIdx.find(info);
 		if (it == infoIdx.end())
 		{
 			core::SyncArray<std::unique_ptr<VulkanPipeline>> syncArray{ nullptr, nullptr };
-			syncArray[thr] = BuildPipeline(pass, shader, mesh);
+			syncArray[core::ThreadType::Game] = BuildPipeline(pass, shader, mesh);
+			syncArray[core::ThreadType::Render] = BuildPipeline(pass, shader, mesh);
 			pipelines.push_back(std::move(syncArray));
 			pipelinesInfo.push_back(info);
 
@@ -131,14 +138,51 @@ namespace sh::render::vk
 				meshIdxs.insert({ &mesh, std::vector<std::size_t>{idx} });
 			else
 				it->second.push_back(idx);
-			return pipelines[idx][thr].get();
+			return idx;
 		}
 		else
 		{
-			VulkanPipeline* pipeline = pipelines[it->second][thr].get();
+			VulkanPipeline* pipeline = pipelines[it->second][core::ThreadType::Game].get();
 			if (pipeline == nullptr)
-				pipelines[it->second][thr] = BuildPipeline(pass, shader, mesh);
-			return pipelines[it->second][thr].get();
+				pipelines[it->second][core::ThreadType::Game] = BuildPipeline(pass, shader, mesh);
+
+			pipeline = pipelines[it->second][core::ThreadType::Render].get();
+			if (pipeline == nullptr)
+				pipelines[it->second][core::ThreadType::Render] = BuildPipeline(pass, shader, mesh);
+
+			return it->second;
 		}
+	}
+	SH_RENDER_API bool VulkanPipelineManager::BindPipeline(VkCommandBuffer cmd, uint64_t handle)
+	{
+		VulkanPipeline* pipeline = pipelines[handle][core::ThreadType::Render].get();
+		if (pipeline == nullptr)
+			return false;
+
+		if (lastBindingPipeline != pipeline)
+		{
+			vkCmdBindPipeline(cmd, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetPipeline());
+			lastBindingPipeline = pipeline;
+		}
+		return true;
+	}
+	SH_RENDER_API void sh::render::vk::VulkanPipelineManager::SetDirty()
+	{
+		if (bDirty)
+			return;
+
+		renderer.GetThreadSyncManager().PushSyncable(*this);
+		bDirty = true;
+	}
+	SH_RENDER_API void sh::render::vk::VulkanPipelineManager::Sync()
+	{
+		while (!dirtyPipelines.empty())
+		{
+			uint64_t idx = dirtyPipelines.top();
+			dirtyPipelines.pop();
+
+			pipelines[idx][core::ThreadType::Render].reset();
+		}
+		bDirty = false;
 	}
 }//namespace

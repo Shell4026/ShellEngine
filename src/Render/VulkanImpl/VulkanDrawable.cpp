@@ -25,26 +25,26 @@ namespace sh::render::vk
 		renderer(renderer), 
 		mat(nullptr), mesh(nullptr), camera(nullptr),
 		localDescSet(),
-		bInit(false), bDirty(false), bBufferDirty(false), bPipelineDirty(false)
+		bInit(false), bDirty(false), bBufferDirty(false)
 	{
 	}
 	SH_RENDER_API VulkanDrawable::VulkanDrawable(VulkanDrawable&& other) noexcept :
 		renderer(other.renderer),
 		mat(other.mat), mesh(other.mesh), camera(other.camera),
-		pipeline(std::move(other.pipeline)),
+		pipelineHandle(other.pipelineHandle),
 		localVertBuffer(std::move(other.localVertBuffer)),
 		localFragBuffer(std::move(other.localFragBuffer)),
 		localDescSet(std::move(other.localDescSet)),
-		bInit(other.bInit), bDirty(other.bDirty), bBufferDirty(other.bBufferDirty), bPipelineDirty(other.bPipelineDirty)
+		bInit(other.bInit), bDirty(other.bDirty), bBufferDirty(other.bBufferDirty)
 	{
 		other.mat = nullptr;
 		other.mesh = nullptr;
 		other.camera = nullptr;
+		other.pipelineHandle = 0;
 
 		other.bInit = false;
 		other.bDirty = false;
 		other.bBufferDirty = false;
-		other.bPipelineDirty = false;
 	}
 
 	SH_RENDER_API VulkanDrawable::~VulkanDrawable() noexcept
@@ -59,10 +59,9 @@ namespace sh::render::vk
 		localVertBuffer[thr].clear();
 		localFragBuffer[thr].clear();
 		localDescSet[thr].reset();
-		pipeline[thr] = nullptr;
 	}
 
-	void VulkanDrawable::CreateBuffer(core::ThreadType thr)
+	void VulkanDrawable::CreateBuffers(core::ThreadType thr)
 	{
 		VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
 
@@ -94,7 +93,7 @@ namespace sh::render::vk
 		auto ptr = static_cast<VulkanUniformBuffer*>(BufferFactory::CreateUniformBuffer(renderer, *this->mat->GetShader(), Shader::UniformType::Object).release());
 		localDescSet[thr] = std::unique_ptr<VulkanUniformBuffer>(ptr);
 	}
-	void VulkanDrawable::GetPipelineFromManager(core::ThreadType thr)
+	void VulkanDrawable::GetPipelineFromManager()
 	{
 		const VulkanFramebuffer* vkFrameBuffer = nullptr;
 		if (camera->GetRenderTexture() == nullptr)
@@ -105,7 +104,7 @@ namespace sh::render::vk
 		VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
 		assert(shader != nullptr);
 
-		pipeline[thr] = renderer.GetPipelineManager().GetPipeline(thr, vkFrameBuffer->GetRenderPass(), *shader, *mesh);
+		pipelineHandle = renderer.GetPipelineManager().GetPipelineHandle(vkFrameBuffer->GetRenderPass(), *shader, *mesh);
 	}
 
 	SH_RENDER_API void VulkanDrawable::Build(Camera& camera, Mesh* mesh, Material* mat)
@@ -121,18 +120,18 @@ namespace sh::render::vk
 
 		Clean(core::ThreadType::Game);
 
-		int thrCount = bInit ? 1 : 2; // 첫 초기화 시에는 두 번 반복, 아니면 Game스레드만
+		GetPipelineFromManager();
+
+		int thrCount = bInit ? 1 : 2; // 첫 초기화 시에는 두 스레드, 아니면 Game스레드만
 		for (int thrIdx = 0; thrIdx < thrCount; ++thrIdx)
 		{
 			core::ThreadType thr = static_cast<core::ThreadType>(thrIdx);
-			CreateBuffer(thr);
-			GetPipelineFromManager(thr);
+			CreateBuffers(thr);
 		}
 
 		if (bInit)
 		{
 			bBufferDirty = true;
-			bPipelineDirty = true;
 			SetDirty();
 		}
 		else
@@ -178,9 +177,9 @@ namespace sh::render::vk
 	{
 		return camera;
 	}
-	SH_RENDER_API auto VulkanDrawable::GetPipeline(core::ThreadType thr) const -> VulkanPipeline*
+	SH_RENDER_API auto VulkanDrawable::GetPipelineHandle() const -> uint64_t
 	{
-		return pipeline[static_cast<int>(thr)];
+		return pipelineHandle;
 	}
 	SH_RENDER_API auto VulkanDrawable::GetLocalUniformBuffer(core::ThreadType thr) const -> VulkanUniformBuffer*
 	{
@@ -208,16 +207,7 @@ namespace sh::render::vk
 			std::swap(localFragBuffer[core::ThreadType::Game], localFragBuffer[core::ThreadType::Render]);
 			std::swap(localDescSet[core::ThreadType::Game], localDescSet[core::ThreadType::Render]);
 		}
-		if (bPipelineDirty)
-		{
-			// 새로 빌드 했다는 뜻이므로 버퍼 교환 후 파이프라인을 새로 빌드 해준다.
-			std::swap(pipeline[core::ThreadType::Game], pipeline[core::ThreadType::Render]);
 
-			GetPipelineFromManager(core::ThreadType::Game);
-			CreateBuffer(core::ThreadType::Game);
-		}
-
-		bPipelineDirty = false;
 		bBufferDirty = false;
 		bDirty = false;
 	}

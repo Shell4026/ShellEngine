@@ -488,7 +488,7 @@ namespace sh::render::vk
 		descPool = std::make_unique<VulkanDescriptorPool>(device, 16);
 
 		// 파이프라인 매니저 생성
-		pipelineManager = std::make_unique<VulkanPipelineManager>(device);
+		pipelineManager = std::make_unique<VulkanPipelineManager>(*this);
 
 		isInit = true;
 		PrintLayer();
@@ -551,7 +551,7 @@ namespace sh::render::vk
 			fmt::print("Vulkan Renderer Init!\n");
 		}
 	}
-	inline void VulkanRenderer::RenderDrawable(IDrawable* iDrawable, VkPipeline& lastPipeline, VkCommandBuffer cmd)
+	inline void VulkanRenderer::RenderDrawable(IDrawable* iDrawable, VkCommandBuffer cmd)
 	{
 		if (!core::IsValid(iDrawable))
 			return;
@@ -568,17 +568,9 @@ namespace sh::render::vk
 		if (!sh::core::IsValid(shader))
 			return;
 
-		VulkanPipeline* currentPipeline = drawable->GetPipeline(core::ThreadType::Render);
-		if (currentPipeline == nullptr)
-			return;
-		if (currentPipeline->GetPipeline() == nullptr)
+		if (!pipelineManager->BindPipeline(cmd, drawable->GetPipelineHandle()))
 			return;
 
-		if (currentPipeline->GetPipeline() != lastPipeline)
-		{
-			lastPipeline = currentPipeline->GetPipeline();
-			vkCmdBindPipeline(cmd, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, lastPipeline);
-		}
 		mesh->GetVertexBuffer()->Bind();
 
 		VkDescriptorSet localDescSet = drawable->GetDescriptorSet(core::ThreadType::Render);
@@ -686,10 +678,9 @@ namespace sh::render::vk
 					scissor.extent = { framebuffer->GetWidth(), framebuffer->GetHeight() };
 					vkCmdSetScissor(buffer, 0, 1, &scissor);
 
-					VkPipeline lastPipeline = nullptr;
 					for (auto iDrawable : drawables)
 					{
-						RenderDrawable(iDrawable, lastPipeline, buffer);
+						RenderDrawable(iDrawable, buffer);
 					}
 					//End RenderPass
 					vkCmdEndRenderPass(buffer);
@@ -732,11 +723,6 @@ namespace sh::render::vk
 					scissor.extent = swapChain->GetSwapChainSize();
 					vkCmdSetScissor(buffer, 0, 1, &scissor);
 
-					VkPipeline lastPipeline = nullptr;
-					for (auto iDrawable : drawables)
-					{
-						//RenderDrawable(iDrawable, lastPipeline, buffer);
-					}
 					for (auto& func : drawCalls)
 						func();
 

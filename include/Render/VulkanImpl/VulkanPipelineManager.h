@@ -9,6 +9,7 @@
 #include "Core/Observer.hpp"
 
 #include <memory>
+#include <stack>
 
 namespace sh::render
 {
@@ -17,7 +18,9 @@ namespace sh::render
 }
 namespace sh::render::vk
 {
-	class VulkanPipelineManager : public core::INonCopyable
+	class VulkanRenderer;
+
+	class VulkanPipelineManager : public core::INonCopyable, public core::ISyncable
 	{
 	private:
 		struct PipelineInfo
@@ -43,7 +46,7 @@ namespace sh::render::vk
 				return Util::CombineHash(Util::CombineHash(hash0, hash1), hash2);
 			}
 		};
-
+		const VulkanRenderer& renderer;
 		VkDevice device = nullptr;
 		
 		core::SVector<core::SyncArray<std::unique_ptr<VulkanPipeline>>> pipelines;
@@ -55,16 +58,26 @@ namespace sh::render::vk
 
 		core::Observer<false, core::SObject*>::Listener shaderListener;
 		core::Observer<false, core::SObject*>::Listener meshListener;
+
+		VulkanPipeline* lastBindingPipeline = nullptr;
+
+		bool bDirty = false;
+		std::stack<uint64_t> dirtyPipelines;
 	private:
 		auto BuildPipeline(const VkRenderPass& pass, VulkanShader& shader, Mesh& mesh) -> std::unique_ptr<VulkanPipeline>;
 	public:
-		VulkanPipelineManager(VkDevice device);
+		VulkanPipelineManager(const VulkanRenderer& renderer);
 		/// @brief 파이프라인을 생성하거나 가져온다.
 		/// @param thr 스레드
 		/// @param pass 렌더 패스
 		/// @param mesh 메쉬
 		/// @param shader 셰이더
-		/// @return 파이프라인
-		SH_RENDER_API auto GetPipeline(core::ThreadType thr, const VkRenderPass& pass, VulkanShader& shader, Mesh& mesh) -> VulkanPipeline*;
+		/// @return 파이프라인 핸들
+		SH_RENDER_API auto GetPipelineHandle(const VkRenderPass& pass, VulkanShader& shader, Mesh& mesh) -> uint64_t;
+
+		SH_RENDER_API bool BindPipeline(VkCommandBuffer cmd, uint64_t handle);
+
+		SH_RENDER_API void SetDirty() override;
+		SH_RENDER_API void Sync() override;
 	};
 }//namespace

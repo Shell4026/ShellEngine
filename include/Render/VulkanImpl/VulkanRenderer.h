@@ -97,7 +97,7 @@ namespace sh::render::vk
 
 		void PrintLayer();
 
-		void RenderDrawable(IDrawable* drawable, VkPipeline& lastPipeline, VkCommandBuffer cmd);
+		void RenderDrawable(IDrawable* drawable, VkCommandBuffer cmd);
 	public:
 		SH_RENDER_API VulkanRenderer(core::ThreadSyncManager& syncManager);
 		SH_RENDER_API ~VulkanRenderer();

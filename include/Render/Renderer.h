@@ -7,8 +7,6 @@
 #include "Core/ThreadSyncManager.h"
 #include "Core/SContainer.hpp"
 
-#include "Window/Window.h"
-
 #include "glm/vec2.hpp"
 
 #include <array>
@@ -17,7 +15,12 @@
 #include <set>
 #include <utility>
 #include <functional>
-namespace sh::render {
+namespace sh::window
+{
+	class Window;
+}
+namespace sh::render 
+{
 	enum class RenderAPI
 	{
 		OpenGL,
