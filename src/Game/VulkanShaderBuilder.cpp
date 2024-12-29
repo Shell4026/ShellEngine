@@ -3,8 +3,6 @@
 
 #include "Render/VulkanImpl/VulkanRenderer.h"
 #include "Render/VulkanImpl/VulkanShader.h"
-#include "Render/VulkanImpl/VulkanPipeline.h"
-#include "Render/VulkanImpl/VulkanFramebuffer.h"
 
 #include <cassert>
 

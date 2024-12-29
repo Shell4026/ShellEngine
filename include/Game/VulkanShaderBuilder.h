@@ -4,8 +4,6 @@
 
 #include "Export.h"
 
-#include <vector>
-
 namespace sh::render::vk
 {
 	class VulkanRenderer;
@@ -20,6 +18,6 @@ namespace sh::game
 		SH_GAME_API VulkanShaderBuilder(render::vk::VulkanRenderer& renderer);
 		SH_GAME_API ~VulkanShaderBuilder();
 
-		SH_GAME_API auto Build()->render::Shader* override;
+		SH_GAME_API auto Build() -> render::Shader* override;
 	};
 }

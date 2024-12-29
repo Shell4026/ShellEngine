@@ -2,13 +2,11 @@
 
 #include "Core/Logger.h"
 #include "Core/GarbageCollection.h"
-#include "Core/FileSystem.h"
 
 #include "Window/Window.h"
 
 #include "Render/VulkanImpl/VulkanRenderer.h"
 #include "Render/VulkanImpl/VulkanShader.h"
-#include "Render/IUniformBuffer.h"
 #include "Render/Mesh/Plane.h"
 #include "Render/Mesh/Grid.h"
 
@@ -16,19 +14,14 @@
 #include "Game/ShaderLoader.h"
 #include "Game/TextureLoader.h"
 #include "Game/ModelLoader.h"
-#include "Game/GameObject.h"
 #include "Game/ImGUImpl.h"
 #include "Game/RenderThread.h"
 #include "Game/Input.h"
 
 #include "Game/ComponentModule.h"
-#include "Game/Component/LineRenderer.h"
-#include "Game/Component/EditorCamera.h"
 
 #if SH_EDITOR
-#include "Editor/EditorUI.h"
 #include "Editor/EditorWorld.h"
-#include "Editor/AssetDatabase.h"
 #endif
 
 namespace sh
