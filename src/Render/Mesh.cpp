@@ -206,4 +206,9 @@ namespace sh::render
 		}
 		return nullptr;
 	}
+
+	SH_RENDER_API void Mesh::ClearAttribute()
+	{
+		attrs.clear();
+	}
 }

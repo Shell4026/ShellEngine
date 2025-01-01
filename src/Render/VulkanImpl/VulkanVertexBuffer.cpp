@@ -76,6 +76,8 @@ namespace sh::render::vk
 
 	void VulkanVertexBuffer::CreateVertexBuffer(const Mesh& mesh)
 	{
+		if (mesh.GetVertexCount() == 0)
+			return;
 		// 버텍스
 		VkVertexInputBindingDescription bindingDesc{};
 		bindingDesc.binding = 0;
@@ -231,9 +233,13 @@ namespace sh::render::vk
 
 	void VulkanVertexBuffer::Bind()
 	{
+		if (buffers.size() == 0)
+			return;
+
 		std::vector<VkBuffer> vertexBuffers;
 		std::vector<VkDeviceSize> offsets;
 		vertexBuffers.resize(buffers.size());
+
 		offsets.resize(buffers.size());
 		for (int i = 0; i < vertexBuffers.size(); ++i)
 		{

@@ -101,7 +101,8 @@ namespace sh::render
 		void SetAttribute(const ShaderAttribute<T>& attr);
 		template<typename T>
 		void SetAttribute(ShaderAttribute<T>&& attr);
-		auto GetAttribute(std::string_view name) const -> const ShaderAttributeBase*;
+		SH_RENDER_API auto GetAttribute(std::string_view name) const -> const ShaderAttributeBase*;
+		SH_RENDER_API void ClearAttribute();
 	};
 
 	template<typename T>
