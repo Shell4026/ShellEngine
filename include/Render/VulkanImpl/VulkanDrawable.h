@@ -36,7 +36,7 @@ namespace sh::render::vk
 
 		VulkanPipeline::Topology topology = VulkanPipeline::Topology::Triangle;
 
-		bool bInit, bDirty, bBufferDirty;
+		bool bInit, bDirty, bBufferDirty, bRecreateBufferDirty = false;
 	protected:
 		void Clean(core::ThreadType thr);
 		void CreateBuffers(core::ThreadType thr);

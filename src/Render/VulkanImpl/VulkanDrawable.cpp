@@ -132,7 +132,7 @@ namespace sh::render::vk
 
 		if (bInit)
 		{
-			bBufferDirty = true;
+			bRecreateBufferDirty = true;
 			SetDirty();
 		}
 		else
@@ -202,13 +202,19 @@ namespace sh::render::vk
 
 	SH_RENDER_API void VulkanDrawable::Sync()
 	{
-		if (bBufferDirty)
+		if (bBufferDirty || bRecreateBufferDirty)
 		{
 			std::swap(localVertBuffer[core::ThreadType::Game], localVertBuffer[core::ThreadType::Render]);
 			std::swap(localFragBuffer[core::ThreadType::Game], localFragBuffer[core::ThreadType::Render]);
 			std::swap(localDescSet[core::ThreadType::Game], localDescSet[core::ThreadType::Render]);
+			if (bRecreateBufferDirty)
+			{
+				Clean(core::ThreadType::Game);
+				Build(*camera, mesh, mat);
+			}
 		}
 
+		bRecreateBufferDirty = false;
 		bBufferDirty = false;
 		bDirty = false;
 	}
