@@ -157,8 +157,8 @@ namespace sh::render::vk
 
 		auto result = vkQueueSubmit(queue, 1, &sinfo, fence);
 		assert(result == VkResult::VK_SUCCESS);
-		vkQueueWaitIdle(queue);
-
 		spinLock.UnLock();
+
+		vkQueueWaitIdle(queue);
 	}
 }//namespace
