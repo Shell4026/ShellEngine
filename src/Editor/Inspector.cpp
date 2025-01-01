@@ -450,7 +450,10 @@ namespace sh::editor
 			{
 				ImGui::LabelText("##ComponentsLabel", "Components");
 				int idx = 0;
-				for (auto component : static_cast<game::GameObject*>(obj)->GetComponents())
+				// 드래그 드랍으로 도중에 컴포넌트가 추가 되는 일이 발생한다.
+				// 그로인해 반복자가 깨지므로 컴포넌트 배열을 복사 해둬야 한다.
+				std::vector<game::Component*> components = static_cast<game::GameObject*>(obj)->GetComponents();
+				for (auto component : components)
 				{
 					if (!core::IsValid(component))
 						continue;
