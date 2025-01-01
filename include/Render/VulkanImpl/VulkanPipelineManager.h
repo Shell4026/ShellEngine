@@ -75,6 +75,8 @@ namespace sh::render::vk
 		/// @return 파이프라인 핸들
 		SH_RENDER_API auto GetPipelineHandle(const VkRenderPass& pass, VulkanShader& shader, Mesh& mesh) -> uint64_t;
 
+		/// @brief 매 렌더링 시작 할 때 호출해야 하는 함수
+		SH_RENDER_API void BeginRender();
 		SH_RENDER_API bool BindPipeline(VkCommandBuffer cmd, uint64_t handle);
 
 		SH_RENDER_API void SetDirty() override;

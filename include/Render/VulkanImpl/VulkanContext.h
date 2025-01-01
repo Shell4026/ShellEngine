@@ -94,7 +94,7 @@ namespace sh::render::vk
 		SH_RENDER_API auto ResetCommandPools() -> VkResult;
 
 		SH_RENDER_API auto GetInstance() const -> VkInstance;
-		SH_RENDER_API auto GetGPU() const->VkPhysicalDevice;
+		SH_RENDER_API auto GetGPU() const -> VkPhysicalDevice;
 		SH_RENDER_API auto GetGPUName() const->std::string_view;
 		SH_RENDER_API auto GetGPUProperty() const -> const VkPhysicalDeviceProperties&;
 		SH_RENDER_API auto GetDevice() const -> VkDevice;

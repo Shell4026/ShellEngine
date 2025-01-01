@@ -1,4 +1,5 @@
-﻿#include "pch.h"
+﻿#include "VulkanPipelineManager.h"
+#include "pch.h"
 #include "VulkanPipelineManager.h"
 #include "Mesh.h"
 #include "VulkanShader.h"
@@ -152,6 +153,10 @@ namespace sh::render::vk
 
 			return it->second;
 		}
+	}
+	SH_RENDER_API void VulkanPipelineManager::BeginRender()
+	{
+		lastBindingPipeline = nullptr;
 	}
 	SH_RENDER_API bool VulkanPipelineManager::BindPipeline(VkCommandBuffer cmd, uint64_t handle)
 	{

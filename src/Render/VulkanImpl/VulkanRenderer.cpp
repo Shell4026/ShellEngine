@@ -197,6 +197,7 @@ namespace sh::render::vk
 
 		VkCommandBuffer cmdBuffer = cmd->GetCommandBuffer();
 
+		context->GetPipelineManager().BeginRender();
 		cmd->Build([&]()
 		{
 			bool mainPassProcessed = false;
