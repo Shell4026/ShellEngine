@@ -98,7 +98,7 @@ namespace sh::editor
 				"%s", obj->GetName().c_str());
 		}
 		// 객체 우클릭
-		if (ImGui::BeginPopupContextItem((std::string{ "RightClickPopupGameObject" } + obj->GetName()).c_str()))
+		if (ImGui::BeginPopupContextItem((obj->GetUUID().ToString() + "RightClickPopup").c_str()))
 		{
 			if (ImGui::Selectable("Delete"))
 			{
