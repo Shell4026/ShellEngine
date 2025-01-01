@@ -1,11 +1,6 @@
 ﻿#include "PCH.h"
 #include "ThreadSyncManager.h"
 
-#include "Logger.h"
-
-#include <algorithm>
-#include <string>
-
 namespace sh::core
 {
 	void ThreadSyncManager::PushSyncable(ISyncable& syncable)

@@ -3,14 +3,14 @@
 #include "IDrawable.h"
 
 #include "Core/Util.h"
+#include "Core/ThreadSyncManager.h"
 
 #include <cassert>
 namespace sh::render
 {
-	Renderer::Renderer(RenderAPI api, core::ThreadSyncManager& syncManager) :
-		window(nullptr), syncManager(syncManager),
+	Renderer::Renderer() :
+		window(nullptr), 
 
-		apiType(api),
 		viewportStart(0.f), viewportEnd(100.f),
 		bPause(false), bDirty(false)
 	{
@@ -23,7 +23,7 @@ namespace sh::render
 		drawCalls.clear();
 	}
 
-	SH_RENDER_API bool Renderer::Init(sh::window::Window& win)
+	SH_RENDER_API bool Renderer::Init(const sh::window::Window& win)
 	{
 		window = &win;
 		return true;
@@ -49,6 +49,11 @@ namespace sh::render
 		SetDirty();
 	}
 
+	SH_RENDER_API void Renderer::SetViewport(const glm::vec2& start, const glm::vec2& end)
+	{
+		viewportStart = start;
+		viewportEnd = end;
+	}
 	SH_RENDER_API auto Renderer::GetViewportStart() const -> const glm::vec2&
 	{
 		return viewportStart;
@@ -57,7 +62,7 @@ namespace sh::render
 	{
 		return viewportEnd;
 	}
-	SH_RENDER_API auto Renderer::GetWindow() -> sh::window::Window&
+	SH_RENDER_API auto Renderer::GetWindow() const -> const sh::window::Window&
 	{
 		assert(window);
 		return *window;
@@ -77,7 +82,7 @@ namespace sh::render
 		if (bDirty)
 			return;
 
-		syncManager.PushSyncable(*this);
+		core::ThreadSyncManager::GetInstance()->PushSyncable(*this);
 		bDirty = true;
 	}
 	SH_RENDER_API void Renderer::Sync()
@@ -104,10 +109,5 @@ namespace sh::render
 
 		drawList[core::ThreadType::Render] = std::move(drawList[core::ThreadType::Game]);
 		bDirty = false;
-	}
-
-	SH_RENDER_API auto Renderer::GetThreadSyncManager() const -> core::ThreadSyncManager&
-	{
-		return syncManager;
 	}
 }

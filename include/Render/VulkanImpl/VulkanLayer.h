@@ -1,7 +1,5 @@
 ﻿#pragma once
-
 #include "Export.h"
-
 #include "VulkanConfig.h"
 
 #include <vector>
@@ -12,7 +10,8 @@ namespace sh::render::vk
 	class VulkanLayer
 	{
 	public:
-		struct LayerProperties {
+		struct LayerProperties 
+		{
 			VkLayerProperties properties;
 			std::vector<VkExtensionProperties> extensions;
 
@@ -24,6 +23,7 @@ namespace sh::render::vk
 	private:
 		std::vector<LayerProperties> layers;
 		std::vector<VkExtensionProperties> vulkanExtensions;
+
 		std::vector<LayerProperties> gpuLayers;
 		std::vector<VkExtensionProperties> gpuExtensions;
 	private:
@@ -34,10 +34,12 @@ namespace sh::render::vk
 		SH_RENDER_API VulkanLayer();
 		SH_RENDER_API ~VulkanLayer();
 
+		/// @brief 레이어와 확장을 탐색한다.
+		/// @param gpu nullptr일 시 인스턴스의 레이어와 확장을 탐색한다.
 		SH_RENDER_API void Query(VkPhysicalDevice gpu = nullptr);
 
 		SH_RENDER_API bool FindLayer(std::string_view layerName, VkPhysicalDevice gpu = nullptr);
-		SH_RENDER_API bool FindVulkanExtension(std::string_view extensionName);
+		SH_RENDER_API bool FindExtension(std::string_view extensionName);
 		SH_RENDER_API bool FindGPUExtension(VkPhysicalDevice gpu, std::string_view extensionName);
 
 		SH_RENDER_API auto GetLayerProperties() const->const std::vector<LayerProperties>&;

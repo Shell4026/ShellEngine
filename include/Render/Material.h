@@ -30,7 +30,7 @@ namespace sh::render
 	{
 		SCLASS(Material)
 	private:
-		const Renderer* renderer;
+		const IRenderContext* context = nullptr;
 
 		PROPERTY(shader)
 		Shader* shader;
@@ -92,7 +92,7 @@ namespace sh::render
 		
 		/// @brief 렌더러API에 맞는 버퍼와 유니폼 버퍼를 생성한다.
 		/// @param renderer 렌더러
-		SH_RENDER_API void Build(const Renderer& renderer) override;
+		SH_RENDER_API void Build(const IRenderContext& context) override;
 
 		SH_RENDER_API void SetDirty() override;
 		SH_RENDER_API void Sync() override;

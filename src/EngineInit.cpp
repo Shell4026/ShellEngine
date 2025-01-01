@@ -2,10 +2,12 @@
 
 #include "Core/Logger.h"
 #include "Core/GarbageCollection.h"
+#include "Core/ThreadSyncManager.h"
 
 #include "Window/Window.h"
 
 #include "Render/VulkanImpl/VulkanRenderer.h"
+#include "Render/VulkanImpl/VulkanContext.h"
 #include "Render/VulkanImpl/VulkanShader.h"
 #include "Render/Mesh/Plane.h"
 #include "Render/Mesh/Grid.h"
@@ -27,11 +29,7 @@
 namespace sh
 {
 	EngineInit::EngineInit() :
-		moduleLoader(), 
-		componentModule(nullptr), gc(nullptr), world(nullptr),
-		gameThread(nullptr), renderThread(nullptr),
-		limitFps(144),
-		bStop(false)
+		moduleLoader()
 	{
 	}
 	EngineInit::~EngineInit()
@@ -71,11 +69,11 @@ namespace sh
 		SH_INFO("Resource initialization");
 		using namespace sh::game;
 
-		VulkanShaderBuilder shaderBuilder{ static_cast<render::vk::VulkanRenderer&>(*renderer)};
+		VulkanShaderBuilder shaderBuilder{ static_cast<sh::render::vk::VulkanContext&>(*renderer->GetContext()) };
 
 		ShaderLoader loader{ &shaderBuilder };
-		TextureLoader texLoader{ *renderer };
-		ModelLoader modelLoader{ *renderer };
+		TextureLoader texLoader{ *renderer->GetContext() };
+		ModelLoader modelLoader{ *renderer->GetContext() };
 
 		auto defaultShader = world->shaders.AddResource("Default", loader.LoadShader<render::VulkanShader>("shaders/default.vert.spv", "shaders/default.frag.spv"));
 		auto lineShader = world->shaders.AddResource("Line", loader.LoadShader<render::VulkanShader>("shaders/line.vert.spv", "shaders/line.frag.spv"));
@@ -135,17 +133,17 @@ namespace sh
 		pickingShader->AddUniform<glm::vec4>("id", ObjectUniformType, 1, sh::render::Shader::ShaderStage::Fragment);
 		pickingShader->Build();
 
-		errorMat->Build(*renderer);
-		pickingMat->Build(*renderer);
+		errorMat->Build(*renderer->GetContext());
+		pickingMat->Build(*renderer->GetContext());
 
 		lineMat->SetVector("test", glm::vec4{ 1.f, 0.f, 0.f, 1.f });
-		lineMat->Build(*renderer);
+		lineMat->Build(*renderer->GetContext());
 
 		gridMat->SetVector("color", glm::vec4{ 0.6f, 0.6f, 0.8f, 0.2f });
-		gridMat->Build(*renderer);
+		gridMat->Build(*renderer->GetContext());
 
-		plane->Build(*renderer);
-		grid->Build(*renderer);
+		plane->Build(*renderer->GetContext());
+		grid->Build(*renderer->GetContext());
 	}
 
 	void EngineInit::ProcessInput()
@@ -198,7 +196,8 @@ namespace sh
 
 		SH_INFO_FORMAT("System thread count: {}", std::thread::hardware_concurrency());
 
-		gc = core::GarbageCollection::GetInstance(); //GC 초기화
+		gc = core::GarbageCollection::GetInstance(); // GC 초기화
+		threadSyncManager = core::ThreadSyncManager::GetInstance(); // 스레드 동기화 매니저 초기화
 
 		SH_INFO("Window initialization");
 		window = std::make_unique<window::Window>();
@@ -206,7 +205,7 @@ namespace sh
 		window->SetFps(limitFps);
 
 		SH_INFO("Renderer initialization");
-		renderer = std::make_unique<sh::render::vk::VulkanRenderer>(threadSyncManager);
+		renderer = std::make_unique<sh::render::vk::VulkanRenderer>();
 		renderer->Init(*window);
 		renderer->SetViewport({ 150.f, 0.f }, { window->width - 150.f, window->height - 180 });
 
@@ -228,7 +227,7 @@ namespace sh
 		renderThread = game::RenderThread::GetInstance();
 		renderThread->SetWaitableThread(true);
 		renderThread->Init(*renderer);
-		threadSyncManager.AddThread(*renderThread);
+		threadSyncManager->AddThread(*renderThread);
 
 		SH_INFO("Start loop");
 		Loop();
@@ -254,9 +253,9 @@ namespace sh
 
 			this->world->Update(window->GetDeltaTime());
 
-			threadSyncManager.Sync();
+			threadSyncManager->Sync();
 			gc->Update();
-			threadSyncManager.AwakeThread();
+			threadSyncManager->AwakeThread();
 		}
 	}
 }

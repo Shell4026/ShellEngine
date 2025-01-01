@@ -154,7 +154,7 @@ namespace sh::render
 		return faces;
 	}
 
-	void Mesh::Build(const Renderer& renderer)
+	void Mesh::Build(const IRenderContext& context)
 	{
 		if (topology == Topology::Face)
 		{
@@ -168,7 +168,7 @@ namespace sh::render
 			}
 		}
 
-		buffer = VertexBufferFactory::Create(renderer, *this);
+		buffer = VertexBufferFactory::Create(context, *this);
 	}
 
 	auto Mesh::GetVertexBuffer() const -> IVertexBuffer*

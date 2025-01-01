@@ -3,17 +3,20 @@
 #include "ISyncable.h"
 #include "EngineThread.h"
 #include "SContainer.hpp"
+#include "Singleton.hpp"
 
 #include "queue"
 namespace sh::core
 {
-	class ThreadSyncManager
+	class ThreadSyncManager : public Singleton<ThreadSyncManager>
 	{
+		friend Singleton<ThreadSyncManager>;
 	private:
 		std::queue<ISyncable*> syncables;
 		SVector<EngineThread*> threads;
-	public:
+	protected:
 		SH_CORE_API ThreadSyncManager() = default;
+	public:
 		SH_CORE_API ~ThreadSyncManager() = default;
 
 		SH_CORE_API void PushSyncable(ISyncable& syncable);

@@ -6,16 +6,16 @@
 
 namespace sh::render::vk
 {
-	class VulkanRenderer;
+	class VulkanContext;
 }
 namespace sh::game
 {
 	class VulkanShaderBuilder : public ShaderBuilder
 	{
 	private:
-		render::vk::VulkanRenderer& renderer;
+		const render::vk::VulkanContext& context;
 	public:
-		SH_GAME_API VulkanShaderBuilder(render::vk::VulkanRenderer& renderer);
+		SH_GAME_API VulkanShaderBuilder(const render::vk::VulkanContext& context);
 		SH_GAME_API ~VulkanShaderBuilder();
 
 		SH_GAME_API auto Build() -> render::Shader* override;

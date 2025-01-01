@@ -129,7 +129,7 @@ namespace sh::game
 		auto it = drawables.find(camera);
 		if (it == drawables.end())
 		{
-			render::IDrawable* drawable = render::DrawableFactory::Create(gameObject.world.renderer);
+			render::IDrawable* drawable = render::DrawableFactory::Create(*gameObject.world.renderer.GetContext());
 			drawable->Build(camera->GetNative(), mesh, mat);
 			drawables.insert({ camera, drawable });
 		}

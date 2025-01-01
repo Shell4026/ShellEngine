@@ -13,12 +13,12 @@
 
 namespace sh::render::vk
 {
-	class VulkanRenderer;
+	class VulkanContext;
 
 	class VulkanFramebuffer : public Framebuffer
 	{
 	private:
-		const VulkanRenderer& renderer;
+		const VulkanContext& context;
 
 		VkDevice device;
 		VkPhysicalDevice gpu;
@@ -40,7 +40,7 @@ namespace sh::render::vk
 		auto FindSupportedDepthFormat() -> VkFormat;
 		void CreateDepthBuffer();
 	public:
-		SH_RENDER_API VulkanFramebuffer(const VulkanRenderer& renderer);
+		SH_RENDER_API VulkanFramebuffer(const VulkanContext& context);
 		SH_RENDER_API VulkanFramebuffer(VulkanFramebuffer&& other) noexcept;
 		SH_RENDER_API ~VulkanFramebuffer();
 

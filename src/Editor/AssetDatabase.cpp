@@ -1,6 +1,8 @@
 ﻿#include "Game/PCH.h"
 #include "AssetDatabase.h"
 
+#include "Render/Renderer.h"
+
 #include "Game/World.h"
 #include "Game/TextureLoader.h"
 #include "Game/ModelLoader.h"
@@ -66,7 +68,7 @@ namespace sh::editor
 
 	auto AssetDatabase::LoadMesh(game::World& world, const std::filesystem::path& dir, const std::filesystem::path& metaDir) -> render::Mesh*
 	{
-		static game::ModelLoader loader{ world.renderer };
+		static game::ModelLoader loader{ *world.renderer.GetContext()};
 		auto ptr = loader.Load(dir.string());
 		if (ptr == nullptr)
 			return nullptr;
@@ -82,7 +84,7 @@ namespace sh::editor
 	}
 	auto AssetDatabase::LoadTexture(game::World& world, const std::filesystem::path& dir, const std::filesystem::path& metaDir) -> render::Texture*
 	{
-		static game::TextureLoader loader{ world.renderer };
+		static game::TextureLoader loader{ *world.renderer.GetContext() };
 		auto ptr = loader.Load(dir.string());
 		if (ptr == nullptr)
 			return nullptr;
@@ -98,7 +100,7 @@ namespace sh::editor
 	}
 	auto AssetDatabase::LoadMaterial(game::World& world, const std::filesystem::path& dir) -> render::Material*
 	{
-		static game::MaterialLoader loader{ world.renderer };
+		static game::MaterialLoader loader{ *world.renderer.GetContext() };
 		
 		auto ptr = loader.Load(dir.string());
 		if (ptr == nullptr)

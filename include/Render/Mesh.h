@@ -3,6 +3,7 @@
 #include "Export.h"
 #include "ShaderAttribute.h"
 #include "AABB.h"
+#include "IRenderResource.h"
 
 #include "Core/SObject.h"
 #include "Core/Reflection.hpp"
@@ -17,11 +18,10 @@
 
 namespace sh::render
 {
-	class Renderer;
 	class IVertexBuffer;
 
 	/// @brief 모델 데이터를 지니는 클래스. 반드시 사용전 Build를 호출 해야한다.
-	class Mesh : public sh::core::SObject, public sh::core::INonCopyable
+	class Mesh : public core::SObject, public core::INonCopyable, public render::IRenderResource
 	{
 		SCLASS(Mesh)
 	public:
@@ -87,7 +87,7 @@ namespace sh::render
 
 		SH_RENDER_API auto GetFaces() const -> const std::vector<Face>&;
 
-		SH_RENDER_API void Build(const Renderer& renderer);
+		SH_RENDER_API void Build(const IRenderContext& context) override;
 
 		SH_RENDER_API auto GetVertexBuffer() const ->IVertexBuffer*;
 

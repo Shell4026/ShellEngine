@@ -5,7 +5,7 @@
 
 namespace sh::render
 {
-	class Renderer;
+	class IRenderContext;
 	class Material;
 }
 
@@ -14,11 +14,11 @@ namespace sh::game
 	class MaterialLoader
 	{
 	private:
-		const render::Renderer& renderer;
+		const render::IRenderContext& context;
 	private:
 		static void SetDefaultProperty(render::Material* mat, const render::Shader::UniformData& uniformData);
 	public:
-		SH_GAME_API MaterialLoader(const render::Renderer& renderer);
+		SH_GAME_API MaterialLoader(const render::IRenderContext& context);
 
 		SH_GAME_API virtual auto Load(std::string_view filename) -> render::Material*;
 	};

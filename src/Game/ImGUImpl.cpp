@@ -1,11 +1,14 @@
 ﻿#include "PCH.h"
 #include "ImGUImpl.h"
 
+#include "Render/VulkanImpl/VulkanRenderer.h"
+#include "Render/VulkanImpl/VulkanContext.h"
 #include "Render/VulkanImpl/VulkanFramebuffer.h"
 #include "Render/VulkanImpl/VulkanQueueManager.h"
 
+#include "Core/ThreadSyncManager.h"
+
 #include <iostream>
-#include <algorithm>
 
 namespace sh::game
 {
@@ -18,7 +21,7 @@ namespace sh::game
 			abort();
 	}
 
-	ImGUImpl::ImGUImpl(window::Window& window, render::vk::VulkanRenderer& renderer) :
+	ImGUImpl::ImGUImpl(window::Window& window, render::Renderer& renderer) :
 		window(window), renderer(renderer),
 		drawData(),
 		bInit(false), bDirty(false)
@@ -65,33 +68,35 @@ namespace sh::game
 		};
 		ImGui::GetIO().Fonts->AddFontFromFileTTF("fonts/Pretendard-Medium.otf", 16.0f, nullptr, ranges);
 
-		ImGui_ImplVulkan_InitInfo initInfo{};
-		initInfo.Instance = renderer.GetInstance();
-		initInfo.PhysicalDevice = renderer.GetGPU();
-		initInfo.Device = renderer.GetDevice();
-		initInfo.QueueFamily = renderer.GetQueueManager().GetGraphicsQueueFamilyIdx();
-		initInfo.Queue = renderer.GetQueueManager().GetGraphicsQueue();
-		initInfo.DescriptorPool = &renderer.GetDescriptorPool();
-		initInfo.RenderPass = static_cast<const render::vk::VulkanFramebuffer*>(renderer.GetMainFramebuffer())->GetRenderPass();
-		initInfo.MinImageCount = 2;
-		initInfo.ImageCount = 2;
-		initInfo.MSAASamples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
-		initInfo.Subpass = 0;
-		initInfo.PipelineCache = nullptr;
-		initInfo.CheckVkResultFn = check_vk_result;
-		initInfo.UseDynamicRendering = false;
-		ImGui_ImplVulkan_Init(&initInfo);
-		ImGui_ImplVulkan_CreateFontsTexture();
-
-		renderer.AddDrawCall
-		(
-			[&]()
-			{
-				if (drawData.Valid)
-					ImGui_ImplVulkan_RenderDrawData(&drawData, renderer.GetCommandBuffer(core::ThreadType::Render)->GetCommandBuffer());
-			}
-		);
-
+		if (renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan)
+		{
+			render::vk::VulkanContext& vkContext = static_cast<render::vk::VulkanContext&>(*renderer.GetContext());
+			ImGui_ImplVulkan_InitInfo initInfo{};
+			initInfo.Instance = vkContext.GetInstance();
+			initInfo.PhysicalDevice = vkContext.GetGPU();
+			initInfo.Device = vkContext.GetDevice();
+			initInfo.QueueFamily = vkContext.GetQueueManager().GetGraphicsQueueFamilyIdx();
+			initInfo.Queue = vkContext.GetQueueManager().GetGraphicsQueue();
+			initInfo.DescriptorPool = &vkContext.GetDescriptorPool();
+			initInfo.RenderPass = static_cast<const render::vk::VulkanFramebuffer*>(vkContext.GetMainFramebuffer())->GetRenderPass();
+			initInfo.MinImageCount = 2;
+			initInfo.ImageCount = 2;
+			initInfo.MSAASamples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
+			initInfo.Subpass = 0;
+			initInfo.PipelineCache = nullptr;
+			initInfo.CheckVkResultFn = check_vk_result;
+			initInfo.UseDynamicRendering = false;
+			ImGui_ImplVulkan_Init(&initInfo);
+			ImGui_ImplVulkan_CreateFontsTexture();
+			renderer.AddDrawCall
+			(
+				[&]()
+				{
+					if (drawData.Valid)
+						ImGui_ImplVulkan_RenderDrawData(&drawData, vkContext.GetCommandBuffer(core::ThreadType::Render)->GetCommandBuffer());
+				}
+			);
+		}
 		bInit = true;
 	}
 
@@ -458,8 +463,10 @@ namespace sh::game
 	{
 		if (bDirty)
 			return;
+
+		core::ThreadSyncManager::GetInstance()->PushSyncable(*this);
+
 		bDirty = true;
-		renderer.GetThreadSyncManager().PushSyncable(*this);
 	}
 
 	void ImGUImpl::Sync()

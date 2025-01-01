@@ -1,22 +1,23 @@
 ﻿#include "pch.h"
 #include "Texture.h"
-
-#include "VulkanRenderer.h"
+#include "VulkanContext.h"
 #include "VulkanTextureBuffer.h"
+
+#include "Core/ThreadSyncManager.h"
 
 #include <cstring>
 
 namespace sh::render
 {
 	Texture::Texture(TextureFormat format, uint32_t width, uint32_t height) :
-		renderer(nullptr),
+		context(nullptr),
 		format(format), width(width), height(height),
 		bDirty(false)
 	{
 		pixels.resize(width * height * 4);
 	}
 	Texture::Texture(Texture&& other) noexcept :
-		renderer(other.renderer),
+		context(other.context),
 		format(other.format), width(other.width), height(other.height),
 		pixels(std::move(other.pixels)), buffer(std::move(other.buffer)),
 		bDirty(other.bDirty)
@@ -29,8 +30,8 @@ namespace sh::render
 	void Texture::SetPixelData(void* data)
 	{
 		std::memcpy(pixels.data(), data, pixels.size());
-		if (renderer)
-			Build(*renderer);
+		if (context != nullptr)
+			Build(*context);
 	}
 
 	auto Texture::GetPixelData() const -> const std::vector<Byte>&
@@ -38,17 +39,17 @@ namespace sh::render
 		return pixels;
 	}
 
-	void Texture::Build(Renderer& renderer)
+	void Texture::Build(const IRenderContext& context)
 	{
-		this->renderer = &renderer;
-		if (renderer.apiType == RenderAPI::Vulkan)
+		this->context = &context;
+		if (context.GetRenderAPIType()  == RenderAPI::Vulkan)
 		{
 			buffer[core::ThreadType::Game] = std::make_unique<vk::VulkanTextureBuffer>();
-			buffer[core::ThreadType::Game]->Create(static_cast<const vk::VulkanRenderer&>(renderer), width, height, format);
+			buffer[core::ThreadType::Game]->Create(context, width, height, format);
 			buffer[core::ThreadType::Game]->SetData(pixels.data());
 			
 			buffer[core::ThreadType::Render] = std::make_unique<vk::VulkanTextureBuffer>();
-			buffer[core::ThreadType::Render]->Create(static_cast<const vk::VulkanRenderer&>(renderer), width, height, format);
+			buffer[core::ThreadType::Render]->Create(context, width, height, format);
 			buffer[core::ThreadType::Render]->SetData(pixels.data());
 		}
 
@@ -65,11 +66,9 @@ namespace sh::render
 		if (bDirty)
 			return;
 
+		core::ThreadSyncManager::GetInstance()->PushSyncable(*this);
+
 		bDirty = true;
-		if (renderer != nullptr)
-			renderer->GetThreadSyncManager().PushSyncable(*this);
-		else
-			bDirty = false;
 	}
 	void Texture::Sync()
 	{

@@ -8,8 +8,6 @@
 #include "Game/GUITexture.h"
 
 #include <string>
-#include <string_view>
-#include <optional>
 #include <filesystem>
 
 namespace sh::editor

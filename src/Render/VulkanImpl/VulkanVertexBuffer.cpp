@@ -1,23 +1,24 @@
 ﻿#include "pch.h"
 #include "VulkanVertexBuffer.h"
-#include "VulkanRenderer.h"
+#include "VulkanContext.h"
 #include "VulkanQueueManager.h"
 #include "Mesh.h"
+
 #include "../vma-src/include/vk_mem_alloc.h"
 
 namespace sh::render::vk
 {
-	VulkanVertexBuffer::VulkanVertexBuffer(const VulkanRenderer& renderer) :
-		renderer(renderer),
+	VulkanVertexBuffer::VulkanVertexBuffer(const VulkanContext& context) :
+		context(context),
 		bindingDescriptions(mBindingDescriptions),
 		attribDescriptions(mAttribDescriptions),
 
-		indexBuffer(renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator()),
-		cmd(renderer.GetDevice(), renderer.GetCommandPool(core::ThreadType::Game))
+		indexBuffer(context.GetDevice(), context.GetGPU(), context.GetAllocator()),
+		cmd(context.GetDevice(), context.GetCommandPool(core::ThreadType::Game))
 	{
 	}
 	VulkanVertexBuffer::VulkanVertexBuffer(const VulkanVertexBuffer& other) :
-		renderer(other.renderer),
+		context(other.context),
 		bindingDescriptions(mBindingDescriptions),
 		attribDescriptions(mAttribDescriptions),
 
@@ -25,11 +26,11 @@ namespace sh::render::vk
 		mAttribDescriptions(other.mAttribDescriptions),
 		buffers(other.buffers),
 		indexBuffer(other.indexBuffer),
-		cmd(renderer.GetDevice(), renderer.GetCommandPool(core::ThreadType::Game))
+		cmd(context.GetDevice(), context.GetCommandPool(core::ThreadType::Game))
 	{
 	}
 	VulkanVertexBuffer::VulkanVertexBuffer(VulkanVertexBuffer&& other) noexcept :
-		renderer(other.renderer),
+		context(other.context),
 		bindingDescriptions(mBindingDescriptions),
 		attribDescriptions(mAttribDescriptions),
 
@@ -89,20 +90,20 @@ namespace sh::render::vk
 		mAttribDescriptions.push_back(attrDesc);
 
 		size_t size = sizeof(glm::vec3) * mesh.GetVertexCount();
-		VulkanBuffer stagingBuffer1{ renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() };
+		VulkanBuffer stagingBuffer1{ context.GetDevice(), context.GetGPU(), context.GetAllocator() };
 		stagingBuffer1.Create(size, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		stagingBuffer1.SetData(mesh.GetVertex().data());
 
-		buffers.push_back(VulkanBuffer{ renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() });
+		buffers.push_back(VulkanBuffer{ context.GetDevice(), context.GetGPU(), context.GetAllocator() });
 		buffers[0].Create(size,
 			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 		size_t sizeIndices = sizeof(uint32_t) * mesh.GetIndices().size();
-		VulkanBuffer stagingBuffer2{ renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() };
+		VulkanBuffer stagingBuffer2{ context.GetDevice(), context.GetGPU(), context.GetAllocator() };
 		stagingBuffer2.Create(sizeIndices, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -132,7 +133,7 @@ namespace sh::render::vk
 			vkCmdCopyBuffer(cmd.GetCommandBuffer(), stagingBuffer2.GetBuffer(), indexBuffer.GetBuffer(), 1, &cpyIndices);
 		}, &info);
 
-		renderer.GetQueueManager().SubmitCommand(cmd);
+		context.GetQueueManager().SubmitCommand(cmd);
 	}
 
 	void VulkanVertexBuffer::CreateAttributeBuffers(const Mesh& mesh)
@@ -188,13 +189,13 @@ namespace sh::render::vk
 			attrDesc.offset = 0;
 			mAttribDescriptions.push_back(attrDesc);
 
-			VulkanBuffer stagingBuffer{ renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() };
+			VulkanBuffer stagingBuffer{ context.GetDevice(), context.GetGPU(), context.GetAllocator() };
 			stagingBuffer.Create(size, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 				VK_SHARING_MODE_EXCLUSIVE,
 				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 			stagingBuffer.SetData(data);
 
-			buffers.push_back(VulkanBuffer{ renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator() });
+			buffers.push_back(VulkanBuffer{ context.GetDevice(), context.GetGPU(), context.GetAllocator() });
 			buffers.back().Create(size,
 				VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 				VK_SHARING_MODE_EXCLUSIVE,
@@ -213,7 +214,7 @@ namespace sh::render::vk
 				vkCmdCopyBuffer(cmd.GetCommandBuffer(), stagingBuffer.GetBuffer(), buffers.back().GetBuffer(), 1, &cpy);
 			}, &info);
 
-			renderer.GetQueueManager().SubmitCommand(cmd);
+			context.GetQueueManager().SubmitCommand(cmd);
 
 			++idx;
 		}
@@ -239,8 +240,8 @@ namespace sh::render::vk
 			vertexBuffers[i] = buffers[i].GetBuffer();
 			offsets[i] = 0;
 		}
-		vkCmdBindVertexBuffers(renderer.GetCommandBuffer(core::ThreadType::Render)->GetCommandBuffer(), 0, vertexBuffers.size(), vertexBuffers.data(), offsets.data());
-		vkCmdBindIndexBuffer(renderer.GetCommandBuffer(core::ThreadType::Render)->GetCommandBuffer(), indexBuffer.GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
+		vkCmdBindVertexBuffers(context.GetCommandBuffer(core::ThreadType::Render)->GetCommandBuffer(), 0, vertexBuffers.size(), vertexBuffers.data(), offsets.data());
+		vkCmdBindIndexBuffer(context.GetCommandBuffer(core::ThreadType::Render)->GetCommandBuffer(), indexBuffer.GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
 	}
 
 	auto VulkanVertexBuffer::Clone() const -> std::unique_ptr<IVertexBuffer>

@@ -1,8 +1,8 @@
 ﻿#pragma once
 
 #include "Export.h"
-#include "../IVertexBuffer.h"
-#include "../ShaderAttribute.h"
+#include "IVertexBuffer.h"
+#include "ShaderAttribute.h"
 
 #include "VulkanConfig.h"
 #include "VulkanBuffer.h"
@@ -15,12 +15,12 @@
 
 namespace sh::render::vk
 {
-	class VulkanRenderer;
+	class VulkanContext;
 
 	class VulkanVertexBuffer : public IVertexBuffer
 	{
 	private:
-		const VulkanRenderer& renderer;
+		const VulkanContext& context;
 
 		VulkanCommandBuffer cmd;
 
@@ -36,7 +36,7 @@ namespace sh::render::vk
 		const std::vector<VkVertexInputBindingDescription>& bindingDescriptions;
 		const std::vector<VkVertexInputAttributeDescription>& attribDescriptions;
 	public:
-		SH_RENDER_API VulkanVertexBuffer(const VulkanRenderer& renderer);
+		SH_RENDER_API VulkanVertexBuffer(const VulkanContext& context);
 		SH_RENDER_API VulkanVertexBuffer(const VulkanVertexBuffer& other);
 		SH_RENDER_API VulkanVertexBuffer(VulkanVertexBuffer&& other) noexcept;
 		SH_RENDER_API ~VulkanVertexBuffer();

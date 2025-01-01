@@ -2,7 +2,7 @@
 #include "BufferFactory.h"
 #include "Renderer.h"
 
-#include "VulkanRenderer.h"
+#include "VulkanContext.h"
 #include "VulkanImpl/VulkanBuffer.h"
 #include "VulkanImpl/VulkanUniformBuffer.h"
 
@@ -12,9 +12,9 @@
 
 namespace sh::render
 {
-	auto BufferFactory::CreateVkUniformBuffer(const vk::VulkanRenderer& renderer, std::size_t size, bool bTransferDst) -> std::unique_ptr<IBuffer>
+	auto BufferFactory::CreateVkUniformBuffer(const vk::VulkanContext& context, std::size_t size, bool bTransferDst) -> std::unique_ptr<IBuffer>
 	{
-		std::unique_ptr<vk::VulkanBuffer> buffer = std::make_unique<vk::VulkanBuffer>(renderer.GetDevice(), renderer.GetGPU(), renderer.GetAllocator());
+		std::unique_ptr<vk::VulkanBuffer> buffer = std::make_unique<vk::VulkanBuffer>(context.GetDevice(), context.GetGPU(), context.GetAllocator());
 
 		VkBufferUsageFlags usage = VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 		if (bTransferDst)
@@ -33,21 +33,20 @@ namespace sh::render
 		return buffer;
 	}
 
-	auto BufferFactory::Create(const Renderer& renderer, std::size_t size, bool bTransferDst) -> std::unique_ptr<IBuffer>
+	auto BufferFactory::Create(const IRenderContext& context, std::size_t size, bool bTransferDst) -> std::unique_ptr<IBuffer>
 	{
-		assert(renderer.apiType == RenderAPI::Vulkan);
-		if (renderer.apiType == RenderAPI::Vulkan)
-		{
-			return CreateVkUniformBuffer(static_cast<const vk::VulkanRenderer&>(renderer), size, bTransferDst);
-		}
+		assert(context.GetRenderAPIType() == RenderAPI::Vulkan);
+		if (context.GetRenderAPIType() == RenderAPI::Vulkan)
+			return CreateVkUniformBuffer(static_cast<const vk::VulkanContext&>(context), size, bTransferDst);
+
 		return nullptr;
 	}
-	auto BufferFactory::CreateUniformBuffer(const Renderer& renderer, const Shader& shader, Shader::UniformType type) -> std::unique_ptr<IUniformBuffer>
+	auto BufferFactory::CreateUniformBuffer(const IRenderContext& context, const Shader& shader, Shader::UniformType type) -> std::unique_ptr<IUniformBuffer>
 	{
-		if (renderer.apiType == RenderAPI::Vulkan)
+		if (context.GetRenderAPIType() == RenderAPI::Vulkan)
 		{
 			auto ptr = std::make_unique<vk::VulkanUniformBuffer>();
-			ptr->Create(renderer, shader, (type == Shader::UniformType::Object) ? 0 : 1);
+			ptr->Create(context, shader, (type == Shader::UniformType::Object) ? 0 : 1);
 			return ptr;
 		}
 		return nullptr;

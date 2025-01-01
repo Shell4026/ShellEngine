@@ -1,7 +1,6 @@
 ﻿#pragma once
 #include "Export.h"
 
-#include "Core/Singleton.hpp"
 #include "Core/ISerializable.h"
 #include "Core/SContainer.hpp"
 #include "Core/UUID.h"

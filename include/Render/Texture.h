@@ -13,7 +13,7 @@
 namespace sh::render
 {
 	class ITextureBuffer;
-	class Renderer;
+	class IRenderContext;
 
 	class Texture : 
 		public core::SObject, 
@@ -34,7 +34,7 @@ namespace sh::render
 
 		using Byte = unsigned char;
 	protected:
-		Renderer* renderer;
+		const IRenderContext* context;
 
 		core::SyncArray<std::unique_ptr<ITextureBuffer>> buffer;
 
@@ -51,7 +51,7 @@ namespace sh::render
 		SH_RENDER_API void SetPixelData(void* data);
 		SH_RENDER_API virtual auto GetPixelData() const -> const std::vector<Byte>&;
 
-		SH_RENDER_API virtual void Build(Renderer& renderer);
+		SH_RENDER_API virtual void Build(const IRenderContext& context);
 
 		/// @brief 네이티브 텍스쳐 버퍼를 가져온다.
 		/// @param thr 현재 스레드 종류

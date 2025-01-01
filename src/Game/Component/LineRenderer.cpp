@@ -20,7 +20,7 @@ namespace sh::game
 		mesh.SetIndices({ 0, 1 });
 		mesh.SetTopology(render::Mesh::Topology::Line);
 		mesh.lineWidth = 1.f;
-		mesh.Build(world.renderer);
+		mesh.Build(*world.renderer.GetContext());
 		Super::SetMesh(&mesh);
 
 		mat = world.materials.GetResource("LineMaterial");

@@ -10,16 +10,16 @@
 
 namespace sh::render
 {
-	class Renderer;
+	class IRenderContext;
 }
 namespace sh::game
 {
 	class TextureLoader
 	{
 	public:
-		render::Renderer& renderer;
+		const render::IRenderContext& context;
 	public:
-		SH_GAME_API TextureLoader(render::Renderer& renderer);
+		SH_GAME_API TextureLoader(const render::IRenderContext& context);
 		SH_GAME_API ~TextureLoader() = default;
 		SH_GAME_API auto Load(std::string_view filename, bool bGenerateMipmap = true) -> render::Texture*;
 	};

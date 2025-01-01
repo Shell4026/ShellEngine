@@ -4,6 +4,8 @@
 #include "EditorResource.h"
 #include "AssetDatabase.h"
 
+#include "Render/Renderer.h"
+
 #include "Game/ModelLoader.h"
 
 #include "Core/FileSystem.h"
@@ -94,7 +96,7 @@ namespace sh::editor
 				item = world.meshes.GetResource(pathStr);
 				if (item == nullptr)
 				{
-					game::ModelLoader loader{ world.renderer };
+					game::ModelLoader loader{ *world.renderer.GetContext()};
 					item = world.meshes.AddResource(pathStr, loader.Load(pathStr));
 				}
 			}
@@ -202,7 +204,7 @@ namespace sh::editor
 					std::string name{ core::FileSystem::CreateUniqueFileName(currentPath, "NewMaterial.mat") };
 					auto mat = world.materials.AddResource(name, render::Material{ defaultShader });
 					mat->SetName(name);
-					mat->Build(world.renderer);
+					mat->Build(*world.renderer.GetContext());
 					AssetDatabase::CreateAsset(world, currentPath / name, *mat);
 
 					GetAllFiles(currentPath);

@@ -9,12 +9,12 @@
 
 namespace sh::render::vk
 {
-	class VulkanRenderer;
+	class VulkanContext;
 
 	class VulkanImageBuffer : public core::INonCopyable
 	{
 	private:
-		const VulkanRenderer& renderer;
+		const VulkanContext& context;
 
 		VkDevice device;
 		VkPhysicalDevice gpu;
@@ -28,7 +28,7 @@ namespace sh::render::vk
 
 		bool bUseAnisotropy;
 	public:
-		SH_RENDER_API VulkanImageBuffer(const VulkanRenderer& renderer);
+		SH_RENDER_API VulkanImageBuffer(const VulkanContext& context);
 		SH_RENDER_API VulkanImageBuffer(VulkanImageBuffer&& other) noexcept;
 		SH_RENDER_API ~VulkanImageBuffer();
 

@@ -4,7 +4,6 @@
 #include "Camera.h"
 
 #include "Core/ISyncable.h"
-#include "Core/ThreadSyncManager.h"
 #include "Core/SContainer.hpp"
 
 #include "glm/vec2.hpp"
@@ -21,19 +20,15 @@ namespace sh::window
 }
 namespace sh::render 
 {
-	enum class RenderAPI
-	{
-		OpenGL,
-		Vulkan
-	};
 	class IDrawable;
 	class Framebuffer;
+	class IRenderContext;
 
 	class Renderer : public core::ISyncable
 	{
 		SCLASS(Renderer)
 	private:
-		sh::window::Window* window;
+		const sh::window::Window* window;
 
 		struct CameraCompare
 		{
@@ -44,8 +39,6 @@ namespace sh::render
 				return left->GetPriority() < right->GetPriority();
 			}
 		};
-
-		core::ThreadSyncManager& syncManager;
 	protected:
 		std::queue<IDrawable*> drawableQueue;
 		core::SyncArray<std::map<Camera*, core::SVector<IDrawable*>, CameraCompare>> drawList;
@@ -59,12 +52,10 @@ namespace sh::render
 	private:
 		bool bDirty;
 	public:
-		const RenderAPI apiType;
-	public:
-		SH_RENDER_API Renderer(RenderAPI api, core::ThreadSyncManager& syncManager);
+		SH_RENDER_API Renderer();
 		SH_RENDER_API virtual ~Renderer() = default;
 
-		SH_RENDER_API virtual bool Init(sh::window::Window& win);
+		SH_RENDER_API virtual bool Init(const sh::window::Window& win);
 		SH_RENDER_API virtual bool Resizing() = 0;
 		SH_RENDER_API virtual void Clean();
 
@@ -72,12 +63,11 @@ namespace sh::render
 		SH_RENDER_API virtual void Pause(bool b);
 
 		SH_RENDER_API virtual bool IsInit() const = 0;
-		SH_RENDER_API virtual auto GetMainFramebuffer() const -> const Framebuffer* = 0;
 
 		SH_RENDER_API virtual auto GetWidth() const -> uint32_t = 0;
 		SH_RENDER_API virtual auto GetHeight() const -> uint32_t = 0;
 
-		SH_RENDER_API virtual void SetViewport(const glm::vec2& start, const glm::vec2& end) = 0;
+		SH_RENDER_API virtual void SetViewport(const glm::vec2& start, const glm::vec2& end);
 		SH_RENDER_API auto GetViewportStart() const -> const glm::vec2&;
 		SH_RENDER_API auto GetViewportEnd() const -> const glm::vec2&;
 
@@ -92,7 +82,7 @@ namespace sh::render
 		/// @return 
 		SH_RENDER_API void AddDrawCall(const std::function<void()>& func);
 
-		SH_RENDER_API auto GetWindow() -> sh::window::Window&;
+		SH_RENDER_API auto GetWindow() const -> const sh::window::Window&;
 
 		/// @brief 렌더러가 일시정지 상태인지 반환한다.
 		/// @return 일시정지 시 true 그 외 false
@@ -101,6 +91,6 @@ namespace sh::render
 		SH_RENDER_API void SetDirty() override;
 		SH_RENDER_API void Sync() override;
 
-		SH_RENDER_API auto GetThreadSyncManager() const -> core::ThreadSyncManager&;
+		SH_RENDER_API virtual auto GetContext() const -> IRenderContext* = 0;
 	};
 }

@@ -9,8 +9,8 @@
 
 namespace sh::game
 {
-	SH_GAME_API MaterialLoader::MaterialLoader(const render::Renderer& renderer) :
-		renderer(renderer)
+	SH_GAME_API MaterialLoader::MaterialLoader(const render::IRenderContext& context) :
+		context(context)
 	{
 	}
 
@@ -129,7 +129,7 @@ namespace sh::game
 					mat->SetTexture(uniformData.name, nullptr);
 			}
 		}
-		mat->Build(renderer);
+		mat->Build(context);
 
 		return mat;
 	}

@@ -7,7 +7,7 @@
 
 #include "Render/VulkanImpl/VulkanFramebuffer.h"
 #include "Render/VulkanImpl/VulkanImageBuffer.h"
-#include "Render/VulkanImpl/VulkanRenderer.h"
+#include "Render/VulkanImpl/VulkanContext.h"
 #include "Render/VulkanImpl/VulkanBuffer.h"
 #include "Render/BufferFactory.h"
 
@@ -25,13 +25,13 @@ namespace sh::game
 		renderTex = core::SObject::Create<render::RenderTexture>(render::Texture::TextureFormat::RGBA32);
 		renderTex->SetReadUsage(true);
 		renderTex->SetSize(1024, 768);
-		renderTex->Build(world.renderer);
+		renderTex->Build(*world.renderer.GetContext());
 		screenSize = { 1024, 768 };
 		renderTex->SetName("PickingFramebuffer");
 
 		SetRenderTexture(*renderTex);
 
-		buffer = render::BufferFactory::Create(world.renderer, sizeof(uint8_t) * 4, true);
+		buffer = render::BufferFactory::Create(*world.renderer.GetContext(), sizeof(uint8_t) * 4, true);
 	}
 
 	SH_GAME_API void PickingCamera::Awake()
@@ -67,14 +67,14 @@ namespace sh::game
 					// 요청을 받은 후 적어도 1프레임 뒤에 알 수 있다.
 					// (에디터 요청 -> 렌더링 요청) -> 스레드 동기화 -> 렌더링 -> renderFinsihed에 신호 전달 - 0프레임
 					// 신호를 받았으면 처리, 아니면 다음 프레임 - 1프레임
-					assert(world.renderer.apiType == render::RenderAPI::Vulkan);
-					if (world.renderer.apiType == render::RenderAPI::Vulkan)
+					assert(world.renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan);
+					if (world.renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan)
 					{
 						auto vkFramebuffer = static_cast<render::vk::VulkanFramebuffer*>(renderTex->GetFramebuffer(core::ThreadType::Render));
-						auto& vkRenderer = static_cast<render::vk::VulkanRenderer&>(world.renderer);
+						auto& vkContext = static_cast<render::vk::VulkanContext&>(*world.renderer.GetContext());
 						auto vkBuffer = static_cast<render::vk::VulkanBuffer*>(buffer.get());
 
-						vkFramebuffer->TransferImageToBuffer(vkRenderer.GetCommandBuffer(core::ThreadType::Game), vkBuffer->GetBuffer(), x, y);
+						vkFramebuffer->TransferImageToBuffer(vkContext.GetCommandBuffer(core::ThreadType::Game), vkBuffer->GetBuffer(), x, y);
 						pixels = reinterpret_cast<uint8_t*>(buffer->GetData());
 					}
 

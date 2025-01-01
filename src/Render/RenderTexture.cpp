@@ -1,7 +1,6 @@
 ﻿#include "pch.h"
 #include "RenderTexture.h"
-
-#include "Renderer.h"
+#include "VulkanContext.h"
 #include "VulkanRenderer.h"
 #include "VulkanTextureBuffer.h"
 #include "VulkanImpl/VulkanFramebuffer.h"
@@ -31,15 +30,15 @@ namespace sh::render
 	{
 		this->bReadUsage = bReadUsage;
 	}
-	SH_RENDER_API void RenderTexture::Build(Renderer& renderer)
+	SH_RENDER_API void RenderTexture::Build(const IRenderContext& context)
 	{
-		this->renderer = &renderer;
+		this->context = &context;
 
-		if (renderer.apiType == RenderAPI::Vulkan)
+		if (context.GetRenderAPIType() == RenderAPI::Vulkan)
 		{
-			auto& vkRenderer = static_cast<const vk::VulkanRenderer&>(renderer);
-			framebuffer[core::ThreadType::Game] = std::make_unique<vk::VulkanFramebuffer>(vkRenderer);
-			framebuffer[core::ThreadType::Render] = std::make_unique<vk::VulkanFramebuffer>(vkRenderer);
+			auto& vkContext= static_cast<const vk::VulkanContext&>(context);
+			framebuffer[core::ThreadType::Game] = std::make_unique<vk::VulkanFramebuffer>(vkContext);
+			framebuffer[core::ThreadType::Render] = std::make_unique<vk::VulkanFramebuffer>(vkContext);
 
 			VkFormat format = VkFormat::VK_FORMAT_R8G8B8A8_SRGB;
 			switch (this->format)
@@ -70,8 +69,8 @@ namespace sh::render
 	}
 	SH_RENDER_API auto RenderTexture::GetPixelData() const -> const std::vector<Byte>&
 	{
-		assert(renderer->apiType == RenderAPI::Vulkan); // TODO
-		if (renderer->apiType == RenderAPI::Vulkan)
+		assert(context->GetRenderAPIType() == RenderAPI::Vulkan); // TODO
+		if (context->GetRenderAPIType() == RenderAPI::Vulkan)
 		{
 
 		}
@@ -79,10 +78,10 @@ namespace sh::render
 	}
 	inline void RenderTexture::Resize(uint32_t width, uint32_t height)
 	{
-		if (this->renderer == nullptr)
+		if (context == nullptr)
 			return;
 
-		if (this->renderer->apiType == RenderAPI::Vulkan)
+		if (context->GetRenderAPIType() == RenderAPI::Vulkan)
 		{
 			VkFormat format = VkFormat::VK_FORMAT_R8G8B8A8_SRGB;
 			switch (this->format)
@@ -132,11 +131,11 @@ namespace sh::render
 #if SH_EDITOR
 	SH_RENDER_API void RenderTexture::OnPropertyChanged(const core::reflection::Property& property)
 	{
-		if (this->renderer == nullptr)
+		if (context == nullptr)
 			return;
 		if (property.GetName() == "width" || property.GetName() == "height")
 		{
-			Build(*renderer);
+			Build(*context);
 		}
 	}
 #endif

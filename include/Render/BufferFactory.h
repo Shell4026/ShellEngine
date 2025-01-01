@@ -9,18 +9,18 @@ namespace sh::render
 {
 	class IBuffer;
 	class IUniformBuffer;
-	class Renderer;
+	class IRenderContext;
 	namespace vk
 	{
-		class VulkanRenderer;
+		class VulkanContext;
 	}
 
 	class BufferFactory
 	{
 	private:
-		static auto CreateVkUniformBuffer(const vk::VulkanRenderer& renderer, std::size_t size, bool bTransferDst) -> std::unique_ptr<IBuffer>;
+		static auto CreateVkUniformBuffer(const vk::VulkanContext& context, std::size_t size, bool bTransferDst) -> std::unique_ptr<IBuffer>;
 	public:
-		SH_RENDER_API static auto Create(const Renderer& renderer, std::size_t size, bool bTransferDst = false) -> std::unique_ptr<IBuffer>;
-		SH_RENDER_API static auto CreateUniformBuffer(const Renderer& renderer, const Shader& shader, Shader::UniformType type) -> std::unique_ptr<IUniformBuffer>;
+		SH_RENDER_API static auto Create(const IRenderContext& context, std::size_t size, bool bTransferDst = false) -> std::unique_ptr<IBuffer>;
+		SH_RENDER_API static auto CreateUniformBuffer(const IRenderContext& context, const Shader& shader, Shader::UniformType type) -> std::unique_ptr<IUniformBuffer>;
 	};
 }//namespace

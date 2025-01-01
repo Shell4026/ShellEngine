@@ -14,8 +14,8 @@
 
 namespace sh::game
 {
-	ModelLoader::ModelLoader(const render::Renderer& renderer) :
-		renderer(renderer)
+	ModelLoader::ModelLoader(const render::IRenderContext& context) :
+		context(context)
 	{
 	}
 
@@ -94,7 +94,7 @@ namespace sh::game
 		mesh->SetNormal(normals);
 		mesh->SetIndices(std::move(indices));
 
-		mesh->Build(renderer);
+		mesh->Build(context);
 
 		return mesh;
 	}

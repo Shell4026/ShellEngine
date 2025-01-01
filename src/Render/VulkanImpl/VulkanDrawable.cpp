@@ -5,7 +5,7 @@
 #include "Mesh.h"
 #include "BufferFactory.h"
 
-#include "VulkanRenderer.h"
+#include "VulkanContext.h"
 #include "VulkanShader.h"
 #include "VulkanTextureBuffer.h"
 #include "VulkanFramebuffer.h"
@@ -15,21 +15,22 @@
 #include "VulkanPipelineManager.h"
 
 #include "Core/Reflection.hpp"
+#include "Core/ThreadSyncManager.h"
 
 #include <cstring>
 #include <utility>
 
 namespace sh::render::vk
 {
-	SH_RENDER_API VulkanDrawable::VulkanDrawable(VulkanRenderer& renderer) :
-		renderer(renderer), 
+	SH_RENDER_API VulkanDrawable::VulkanDrawable(const VulkanContext& context) :
+		context(context),
 		mat(nullptr), mesh(nullptr), camera(nullptr),
 		localDescSet(),
 		bInit(false), bDirty(false), bBufferDirty(false)
 	{
 	}
 	SH_RENDER_API VulkanDrawable::VulkanDrawable(VulkanDrawable&& other) noexcept :
-		renderer(other.renderer),
+		context(other.context),
 		mat(other.mat), mesh(other.mesh), camera(other.camera),
 		pipelineHandle(other.pipelineHandle),
 		localVertBuffer(std::move(other.localVertBuffer)),
@@ -74,7 +75,7 @@ namespace sh::render::vk
 			std::size_t lastOffset = uniformBlock.data.back().offset + uniformBlock.data.back().size;
 			std::size_t size = core::Util::AlignTo(lastOffset, uniformBlock.align);
 
-			auto ptr = static_cast<VulkanBuffer*>(BufferFactory::Create(renderer, size).release());
+			auto ptr = static_cast<VulkanBuffer*>(BufferFactory::Create(context, size).release());
 			localVertBuffer[thr].insert_or_assign(uniformBlock.binding, std::unique_ptr<VulkanBuffer>(ptr));
 		}
 		// 픽셀 유니폼
@@ -86,25 +87,25 @@ namespace sh::render::vk
 			std::size_t lastOffset = uniformBlock.data.back().offset + uniformBlock.data.back().size;
 			std::size_t size = core::Util::AlignTo(lastOffset, uniformBlock.align);
 
-			auto ptr = static_cast<VulkanBuffer*>(BufferFactory::Create(renderer, size).release());
+			auto ptr = static_cast<VulkanBuffer*>(BufferFactory::Create(context, size).release());
 			localFragBuffer[thr].insert_or_assign(uniformBlock.binding, std::unique_ptr<VulkanBuffer>(ptr));
 		}
 
-		auto ptr = static_cast<VulkanUniformBuffer*>(BufferFactory::CreateUniformBuffer(renderer, *this->mat->GetShader(), Shader::UniformType::Object).release());
+		auto ptr = static_cast<VulkanUniformBuffer*>(BufferFactory::CreateUniformBuffer(context, *this->mat->GetShader(), Shader::UniformType::Object).release());
 		localDescSet[thr] = std::unique_ptr<VulkanUniformBuffer>(ptr);
 	}
 	void VulkanDrawable::GetPipelineFromManager()
 	{
 		const VulkanFramebuffer* vkFrameBuffer = nullptr;
 		if (camera->GetRenderTexture() == nullptr)
-			vkFrameBuffer = static_cast<const VulkanFramebuffer*>(renderer.GetMainFramebuffer());
+			vkFrameBuffer = static_cast<const VulkanFramebuffer*>(context.GetMainFramebuffer());
 		else
 			vkFrameBuffer = static_cast<const VulkanFramebuffer*>(camera->GetRenderTexture()->GetFramebuffer(core::ThreadType::Game));
 
 		VulkanShader* shader = static_cast<VulkanShader*>(mat->GetShader());
 		assert(shader != nullptr);
 
-		pipelineHandle = renderer.GetPipelineManager().GetPipelineHandle(vkFrameBuffer->GetRenderPass(), *shader, *mesh);
+		pipelineHandle = context.GetPipelineManager().GetPipelineHandle(vkFrameBuffer->GetRenderPass(), *shader, *mesh);
 	}
 
 	SH_RENDER_API void VulkanDrawable::Build(Camera& camera, Mesh* mesh, Material* mat)
@@ -195,7 +196,7 @@ namespace sh::render::vk
 		if (bDirty)
 			return;
 
-		renderer.GetThreadSyncManager().PushSyncable(*this);
+		core::ThreadSyncManager::GetInstance()->PushSyncable(*this);
 		bDirty = true;
 	}
 

@@ -9,8 +9,8 @@
 
 namespace sh::game
 {
-	TextureLoader::TextureLoader(render::Renderer& renderer) :
-		renderer(renderer)
+	TextureLoader::TextureLoader(const render::IRenderContext& context) :
+		context(context)
 	{
 	}
 
@@ -33,7 +33,7 @@ namespace sh::game
 		texture->SetPixelData(pixels);
 		stbi_image_free(pixels);
 
-		texture->Build(renderer);
+		texture->Build(context);
 
 		return texture;
 	}

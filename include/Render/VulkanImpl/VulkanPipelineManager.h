@@ -18,7 +18,7 @@ namespace sh::render
 }
 namespace sh::render::vk
 {
-	class VulkanRenderer;
+	class VulkanContext;
 
 	class VulkanPipelineManager : public core::INonCopyable, public core::ISyncable
 	{
@@ -46,7 +46,7 @@ namespace sh::render::vk
 				return Util::CombineHash(Util::CombineHash(hash0, hash1), hash2);
 			}
 		};
-		const VulkanRenderer& renderer;
+		const VulkanContext& context;
 		VkDevice device = nullptr;
 		
 		core::SVector<core::SyncArray<std::unique_ptr<VulkanPipeline>>> pipelines;
@@ -66,7 +66,7 @@ namespace sh::render::vk
 	private:
 		auto BuildPipeline(const VkRenderPass& pass, VulkanShader& shader, Mesh& mesh) -> std::unique_ptr<VulkanPipeline>;
 	public:
-		VulkanPipelineManager(const VulkanRenderer& renderer);
+		VulkanPipelineManager(const VulkanContext& context);
 		/// @brief 파이프라인을 생성하거나 가져온다.
 		/// @param thr 스레드
 		/// @param pass 렌더 패스

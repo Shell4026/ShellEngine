@@ -32,6 +32,9 @@ namespace sh::core
 		/// @param u8str utf-8 string
 		/// @return wstring
 		SH_CORE_API static auto U8StringToWstring(const std::string& u8str)->std::wstring;
+
+		/// @brief 디버그 환경인지 판별하는 함수
+		/// @return 맞으면 true 아니면 false
 		SH_CORE_API static constexpr bool IsDebug()
 		{
 #ifdef NDEBUG

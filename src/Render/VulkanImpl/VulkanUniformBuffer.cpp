@@ -1,53 +1,47 @@
 ﻿#include "PCH.h"
 #include "VulkanUniformBuffer.h"
-#include "VulkanDescriptorPool.h"
-#include "VulkanRenderer.h"
+#include "VulkanContext.h"
 #include "VulkanShader.h"
 #include "VulkanBuffer.h"
 #include "VulkanTextureBuffer.h"
-
-#include "Core/Logger.h"
-
-#include <algorithm>
+#include "VulkanDescriptorPool.h"
 
 namespace sh::render::vk
 {
 	VulkanUniformBuffer::VulkanUniformBuffer() :
-		renderer(nullptr),
+		context(nullptr),
 		descSet(nullptr)
 	{
 	}
 	VulkanUniformBuffer::VulkanUniformBuffer(VulkanUniformBuffer&& other) noexcept :
-		renderer(other.renderer),
+		context(other.context),
 		descSet(other.descSet)
 	{
-		other.renderer = nullptr;
+		other.context = nullptr;
 		other.descSet = nullptr;
 	}
 	VulkanUniformBuffer::~VulkanUniformBuffer()
 	{
 		Clean();
 	}
-	void VulkanUniformBuffer::Create(const Renderer& renderer, const Shader& shader, uint32_t type)
+	void VulkanUniformBuffer::Create(const IRenderContext& context, const Shader& shader, uint32_t type)
 	{
 		Clean();
 
-		auto& vkRenderer = static_cast<const VulkanRenderer&>(renderer);
-		this->renderer = &vkRenderer;
+		this->context = &static_cast<const VulkanContext&>(context);
 		auto& vkShader = static_cast<const VulkanShader&>(shader);
 
-		descSet = vkRenderer.GetDescriptorPool().AllocateDescriptorSet(vkShader.GetDescriptorSetLayout(type), 1);
+		descSet = this->context->GetDescriptorPool().AllocateDescriptorSet(vkShader.GetDescriptorSetLayout(type), 1);
 	}
 	void VulkanUniformBuffer::Clean()
 	{
-		if (descSet && renderer)
-		{
-			renderer->GetDescriptorPool().FreeDescriptorSet(descSet);
-		}
+		if (descSet == nullptr || context == nullptr)
+			return;
+		context->GetDescriptorPool().FreeDescriptorSet(descSet);
 	}
 	void VulkanUniformBuffer::Update(uint32_t binding, const IBuffer& buffer)
 	{
-		if (renderer == nullptr || descSet == nullptr)
+		if (context == nullptr || descSet == nullptr)
 			return;
 
 		auto& vkBuffer = static_cast<const VulkanBuffer&>(buffer);
@@ -68,11 +62,11 @@ namespace sh::render::vk
 		descriptorWrite.pImageInfo = nullptr;
 		descriptorWrite.pTexelBufferView = nullptr;
 
-		vkUpdateDescriptorSets(renderer->GetDevice(), 1, &descriptorWrite, 0, nullptr);
+		vkUpdateDescriptorSets(context->GetDevice(), 1, &descriptorWrite, 0, nullptr);
 	}
 	void VulkanUniformBuffer::Update(uint32_t binding, const Texture& texture)
 	{
-		if (renderer == nullptr || descSet == nullptr)
+		if (context == nullptr || descSet == nullptr)
 			return;
 
 		VkDescriptorImageInfo imgInfo{};
@@ -91,7 +85,7 @@ namespace sh::render::vk
 		descriptorWrite.pImageInfo = &imgInfo;
 		descriptorWrite.pTexelBufferView = nullptr;
 
-		vkUpdateDescriptorSets(renderer->GetDevice(), 1, &descriptorWrite, 0, nullptr);
+		vkUpdateDescriptorSets(context->GetDevice(), 1, &descriptorWrite, 0, nullptr);
 	}
 	auto VulkanUniformBuffer::GetVkDescriptorSet() const -> VkDescriptorSet
 	{

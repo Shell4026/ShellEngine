@@ -1,22 +1,21 @@
 ﻿#include "VulkanImageBuffer.h"
-#include "VulkanBuffer.h"
-#include "VulkanRenderer.h"
+#include "VulkanContext.h"
 #include "VulkanQueueManager.h"
 
 #include <cassert>
 
 namespace sh::render::vk
 {
-	SH_RENDER_API VulkanImageBuffer::VulkanImageBuffer(const VulkanRenderer& renderer) :
-		renderer(renderer),
-		device(renderer.GetDevice()), gpu(renderer.GetGPU()), allocator(renderer.GetAllocator()),
+	SH_RENDER_API VulkanImageBuffer::VulkanImageBuffer(const VulkanContext& context) :
+		context(context),
+		device(context.GetDevice()), gpu(context.GetGPU()), allocator(context.GetAllocator()),
 		img(nullptr), imgMem(nullptr), imgView(nullptr), sampler(nullptr),
 		bUseAnisotropy(false)
 	{
 
 	}
 	SH_RENDER_API VulkanImageBuffer::VulkanImageBuffer(VulkanImageBuffer&& other) noexcept :
-		renderer(other.renderer),
+		context(other.context),
 		device(other.device), gpu(other.gpu), allocator(other.allocator),
 		img(other.img), imgMem(other.imgMem), imgView(other.imgView), sampler(other.sampler),
 		bUseAnisotropy(other.bUseAnisotropy)
@@ -209,7 +208,7 @@ namespace sh::render::vk
 			);
 		}, &beginInfo);
 
-		renderer.GetQueueManager().SubmitCommand(*cmd);
+		context.GetQueueManager().SubmitCommand(*cmd);
 	}
 
 	SH_RENDER_API auto VulkanImageBuffer::GetImage() const -> VkImage

@@ -1,7 +1,6 @@
 ﻿#pragma once
 
 #include "Core/ModuleLoader.h"
-#include "Core/ThreadSyncManager.h"
 
 #include <memory>
 
@@ -10,6 +9,7 @@ namespace sh
 	namespace core
 	{
 		class GarbageCollection;
+		class ThreadSyncManager;
 	}
 	namespace window
 	{
@@ -32,22 +32,22 @@ namespace sh
 	{
 	private:
 		core::ModuleLoader moduleLoader;
-		core::ThreadSyncManager threadSyncManager;
 
-		core::GarbageCollection* gc;
-		game::GameThread* gameThread;
-		game::RenderThread* renderThread;
-		game::ComponentModule* componentModule;
+		core::GarbageCollection* gc = nullptr;
+		core::ThreadSyncManager* threadSyncManager = nullptr;
+		game::GameThread* gameThread = nullptr;
+		game::RenderThread* renderThread = nullptr;
+		game::ComponentModule* componentModule = nullptr;
 
 		std::unique_ptr<window::Window> window;
 		std::unique_ptr<game::ImGUImpl> gui;
 
 		std::unique_ptr<render::Renderer> renderer;
-		game::World* world;
+		game::World* world = nullptr;
 
-		int limitFps;
+		int limitFps = 144;
 
-		bool bStop;
+		bool bStop = false;
 	private:
 		inline void LoadModule();
 		inline void InitResource();

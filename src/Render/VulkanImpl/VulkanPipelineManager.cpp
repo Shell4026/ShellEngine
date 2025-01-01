@@ -3,15 +3,15 @@
 #include "Mesh.h"
 #include "VulkanShader.h"
 #include "VulkanVertexBuffer.h"
-#include "VulkanRenderer.h"
+#include "VulkanContext.h"
 
-#include <algorithm>
+#include "Core/ThreadSyncManager.h"
 
 namespace sh::render::vk
 {
-	VulkanPipelineManager::VulkanPipelineManager(const VulkanRenderer& renderer) :
-		renderer(renderer),
-		device(renderer.GetDevice())
+	VulkanPipelineManager::VulkanPipelineManager(const VulkanContext& context) :
+		context(context),
+		device(context.GetDevice())
 	{
 		shaderListener.SetCallback([&](core::SObject* obj)
 		{
@@ -171,7 +171,8 @@ namespace sh::render::vk
 		if (bDirty)
 			return;
 
-		renderer.GetThreadSyncManager().PushSyncable(*this);
+		core::ThreadSyncManager::GetInstance()->PushSyncable(*this);
+
 		bDirty = true;
 	}
 	SH_RENDER_API void sh::render::vk::VulkanPipelineManager::Sync()

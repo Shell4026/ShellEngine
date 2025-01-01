@@ -7,9 +7,9 @@
 #include "VulkanCommandBuffer.h"
 
 #include <memory>
+
 namespace sh::render::vk
 {
-	class VulkanRenderer;
 	class VulkanQueueManager;
 
 	class VulkanTextureBuffer : public ITextureBuffer
@@ -39,7 +39,7 @@ namespace sh::render::vk
 		SH_RENDER_API VulkanTextureBuffer(VulkanTextureBuffer&& other) noexcept;
 		SH_RENDER_API ~VulkanTextureBuffer();
 
-		SH_RENDER_API void Create(const Renderer& renderer, uint32_t width, uint32_t height, Texture::TextureFormat format) override;
+		SH_RENDER_API void Create(const IRenderContext& context, uint32_t width, uint32_t height, Texture::TextureFormat format) override;
 		SH_RENDER_API void Create(const Framebuffer& framebuffer) override;
 		SH_RENDER_API void Clean() override;
 

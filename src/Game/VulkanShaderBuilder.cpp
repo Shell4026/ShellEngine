@@ -1,15 +1,15 @@
 ﻿#include "PCH.h"
 #include "VulkanShaderBuilder.h"
 
-#include "Render/VulkanImpl/VulkanRenderer.h"
+#include "Render/VulkanImpl/VulkanContext.h"
 #include "Render/VulkanImpl/VulkanShader.h"
 
 #include <cassert>
 
 namespace sh::game
 {
-	VulkanShaderBuilder::VulkanShaderBuilder(render::vk::VulkanRenderer& renderer) :
-		renderer(renderer)
+	VulkanShaderBuilder::VulkanShaderBuilder(const render::vk::VulkanContext& context) :
+		context(context)
 	{
 	}
 
@@ -19,7 +19,7 @@ namespace sh::game
 
 	auto VulkanShaderBuilder::Build() -> render::Shader*
 	{
-		assert(renderer.GetDevice() != nullptr);
+		assert(context.GetDevice() != nullptr);
 		VkShaderModule vertShader{ nullptr }, fragShader{ nullptr };
 
 		assert(vertShaderData.data());
@@ -30,7 +30,7 @@ namespace sh::game
 		info.codeSize = vertShaderData.size();
 		info.pCode = reinterpret_cast<const uint32_t*>(vertShaderData.data());
 
-		VkResult result = vkCreateShaderModule(renderer.GetDevice(), &info, nullptr, &vertShader);
+		VkResult result = vkCreateShaderModule(context.GetDevice(), &info, nullptr, &vertShader);
 		assert(result == VkResult::VK_SUCCESS);
 		if (result != VkResult::VK_SUCCESS)
 			return nullptr;
@@ -39,12 +39,12 @@ namespace sh::game
 		info.codeSize = fragShaderData.size();
 		info.pCode = reinterpret_cast<const uint32_t*>(fragShaderData.data());
 
-		result = vkCreateShaderModule(renderer.GetDevice(), &info, nullptr, &fragShader);
+		result = vkCreateShaderModule(context.GetDevice(), &info, nullptr, &fragShader);
 		assert(result == VkResult::VK_SUCCESS);
 		if (result != VkResult::VK_SUCCESS)
 			return nullptr;
 
-		auto retShader = core::SObject::Create<render::VulkanShader>(GetNextId(), renderer.GetDevice());
+		auto retShader = core::SObject::Create<render::VulkanShader>(GetNextId(), context.GetDevice());
 
 		render::VulkanShader* shader = static_cast<render::VulkanShader*>(retShader);
 		shader->SetVertexShader(vertShader);

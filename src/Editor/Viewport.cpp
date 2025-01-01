@@ -12,6 +12,8 @@
 #include "Render/RenderTexture.h"
 #include "Render/VulkanImpl/VulkanTextureBuffer.h"
 
+#include "Core/ThreadSyncManager.h"
+
 namespace sh::editor
 {
 	Viewport::Viewport(game::ImGUImpl& imgui, EditorWorld& world) :
@@ -24,7 +26,7 @@ namespace sh::editor
 		bDirty(false), bMouseDown(false), bFocus(false)
 	{
 		renderTex = core::SObject::Create<render::RenderTexture>();
-		renderTex->Build(world.renderer);
+		renderTex->Build(*world.renderer.GetContext());
 		core::GarbageCollection::GetInstance()->SetRootSet(renderTex);
 
 		for (int thr = 0; thr < 2; ++thr)
@@ -175,8 +177,9 @@ namespace sh::editor
 		if (bDirty)
 			return;
 
+		core::ThreadSyncManager::GetInstance()->PushSyncable(*this);
+
 		bDirty = true;
-		world.renderer.GetThreadSyncManager().PushSyncable(*this);
 	}
 	void Viewport::Sync()
 	{

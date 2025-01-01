@@ -1,10 +1,9 @@
-﻿
+﻿#pragma once
 #include "Export.h"
 #include "IDrawable.h"
 #include "Camera.h"
 
 #include "VulkanVertexBuffer.h"
-#include "VulkanRenderer.h"
 #include "VulkanPipeline.h"
 #include "VulkanBuffer.h"
 #include "VulkanCommandBuffer.h"
@@ -14,18 +13,15 @@
 #include <memory>
 #include <array>
 
-namespace sh::render
-{
-	class Framebuffer;
-	class Shader;
-}
 namespace sh::render::vk
 {
+	class VulkanContext;
+
 	class VulkanDrawable : public IDrawable
 	{
 		SCLASS(VulkanDrawable)
 	private:
-		VulkanRenderer& renderer;
+		const VulkanContext& context;
 		PROPERTY(mat)
 		Material* mat;
 		PROPERTY(mesh)
@@ -46,7 +42,7 @@ namespace sh::render::vk
 		void CreateBuffers(core::ThreadType thr);
 		void GetPipelineFromManager();
 	public:
-		SH_RENDER_API VulkanDrawable(VulkanRenderer& renderer);
+		SH_RENDER_API VulkanDrawable(const VulkanContext& context);
 		SH_RENDER_API VulkanDrawable(VulkanDrawable&& other) noexcept;
 		SH_RENDER_API VulkanDrawable(const VulkanDrawable& other) = delete;
 		SH_RENDER_API ~VulkanDrawable() noexcept;

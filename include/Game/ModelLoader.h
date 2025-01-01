@@ -14,7 +14,7 @@
 
 namespace sh::render
 {
-	class Renderer;
+	class IRenderContext;
 	class Mesh;
 }
 namespace sh::game
@@ -37,9 +37,9 @@ namespace sh::game
 		};
 		friend std::hash<sh::game::ModelLoader::Indices>;
 	public:
-		const render::Renderer& renderer;
+		const render::IRenderContext& context;
 	public:
-		SH_GAME_API ModelLoader(const render::Renderer& renderer);
+		SH_GAME_API ModelLoader(const render::IRenderContext& context);
 		SH_GAME_API virtual ~ModelLoader() = default;
 		SH_GAME_API virtual auto Load(std::string_view filename) -> render::Mesh*;
 	};

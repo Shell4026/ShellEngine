@@ -1,24 +1,22 @@
 ﻿#include "pch.h"
 #include "Material.h"
 
-#include "Renderer.h"
 #include "BufferFactory.h"
 #include "IBuffer.h"
 #include "IUniformBuffer.h"
 
 #include "Core/Util.h"
 #include "Core/SObjectManager.h"
+#include "Core/ThreadSyncManager.h"
 
 namespace sh::render
 {
 	SH_RENDER_API Material::Material() :
-		renderer(nullptr),
 		shader(nullptr),
 		bDirty(false), bBufferDirty(false), bBufferSync(false)
 	{
 	}
 	SH_RENDER_API Material::Material(Shader* shader) :
-		renderer(nullptr),
 		shader(shader),
 		bDirty(false), bBufferDirty(false), bBufferSync(false)
 	{
@@ -30,11 +28,11 @@ namespace sh::render
 	}
 
 	SH_RENDER_API Material::Material(Material&& other) noexcept :
-		renderer(other.renderer),
+		context(other.context),
 		shader(other.shader),
 		bDirty(other.bDirty), bBufferDirty(other.bBufferDirty), bBufferSync(other.bBufferSync)
 	{
-		other.renderer = nullptr;
+		other.context = nullptr;
 		other.shader = nullptr;
 
 		other.bDirty = false;
@@ -64,14 +62,14 @@ namespace sh::render
 		this->shader = shader;
 		if (!core::IsValid(this->shader))
 			return;
-		if (renderer == nullptr)
+		if (context == nullptr)
 			return;
 
 		Clean();
 
 		SetDefaultProperties();
 
-		Build(*renderer);
+		Build(*context);
 	}
 	
 	SH_RENDER_API auto Material::GetShader() const -> Shader*
@@ -79,12 +77,12 @@ namespace sh::render
 		return shader;
 	}
 
-	SH_RENDER_API void Material::Build(const Renderer& renderer)
+	SH_RENDER_API void Material::Build(const IRenderContext& context)
 	{
 		if (!core::IsValid(shader))
 			return;
 
-		this->renderer = &renderer;
+		this->context = &context;
 
 		// 버텍스 유니폼
 		for (auto& uniformBlock : shader->GetVertexUniforms())
@@ -96,7 +94,7 @@ namespace sh::render
 			std::size_t size = core::Util::AlignTo(lastOffset, uniformBlock.align);
 
 			for (std::size_t thr = 0; thr < vertBuffers.size(); ++thr)
-				vertBuffers[thr].insert({ uniformBlock.binding, BufferFactory::Create(renderer, size) });
+				vertBuffers[thr].insert({ uniformBlock.binding, BufferFactory::Create(context, size) });
 		}
 		// 픽셀 유니폼
 		for (auto& uniformBlock : shader->GetFragmentUniforms())
@@ -108,11 +106,11 @@ namespace sh::render
 			std::size_t size = core::Util::AlignTo(lastOffset, uniformBlock.align);
 
 			for (std::size_t thr = 0; thr < fragBuffers.size(); ++thr)
-				fragBuffers[thr].insert({ uniformBlock.binding, BufferFactory::Create(renderer, size) });
+				fragBuffers[thr].insert({ uniformBlock.binding, BufferFactory::Create(context, size) });
 		}
 
 		for (std::size_t thr = 0; thr < uniformBuffer.size(); ++thr)
-			uniformBuffer[thr] = BufferFactory::CreateUniformBuffer(renderer, *shader, Shader::UniformType::Material);
+			uniformBuffer[thr] = BufferFactory::CreateUniformBuffer(context, *shader, Shader::UniformType::Material);
 		bBufferDirty = true;
 	}
 
@@ -144,7 +142,7 @@ namespace sh::render
 	}
 	void Material::SetTextureData(uint32_t binding, Texture* tex)
 	{
-		if (!core::IsValid(tex) || renderer == nullptr)
+		if (!core::IsValid(tex) || context == nullptr)
 			return;
 
 		bool find = false;
@@ -412,7 +410,9 @@ namespace sh::render
 	{
 		if (bDirty)
 			return;
-		renderer->GetThreadSyncManager().PushSyncable(*this);
+
+		core::ThreadSyncManager::GetInstance()->PushSyncable(*this);
+
 		bDirty = true;
 	}
 	SH_RENDER_API void Material::Sync()

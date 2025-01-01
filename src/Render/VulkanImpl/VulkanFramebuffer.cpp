@@ -1,7 +1,7 @@
 ﻿#include "VulkanImpl/VulkanFramebuffer.h"
 #include "VulkanImpl/VulkanCommandBuffer.h"
 #include "VulkanImpl/VulkanQueueManager.h"
-#include "VulkanRenderer.h"
+#include "VulkanContext.h"
 
 #include <array>
 #include <cassert>
@@ -9,9 +9,9 @@
 
 namespace sh::render::vk
 {
-	SH_RENDER_API VulkanFramebuffer::VulkanFramebuffer(const VulkanRenderer& renderer) :
-		renderer(renderer),
-		device(renderer.GetDevice()), gpu(renderer.GetGPU()), alloc(renderer.GetAllocator()),
+	SH_RENDER_API VulkanFramebuffer::VulkanFramebuffer(const VulkanContext& context) :
+		context(context),
+		device(context.GetDevice()), gpu(context.GetGPU()), alloc(context.GetAllocator()),
 		renderPass(nullptr),
 		framebuffer(nullptr), img(nullptr),
 		colorImg(nullptr), depthImg(nullptr),
@@ -20,7 +20,7 @@ namespace sh::render::vk
 	}
 
 	SH_RENDER_API VulkanFramebuffer::VulkanFramebuffer(VulkanFramebuffer&& other) noexcept :
-		renderer(other.renderer),
+		context(other.context),
 		device(other.device), gpu(other.gpu), alloc(other.alloc),
 		framebuffer(other.framebuffer), img(other.img), renderPass(other.renderPass),
 		colorImg(std::move(other.colorImg)), depthImg(std::move(other.depthImg)),
@@ -276,7 +276,7 @@ namespace sh::render::vk
 		else
 			usage |= VkImageUsageFlagBits::VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
-		colorImg = std::make_unique<VulkanImageBuffer>(renderer);
+		colorImg = std::make_unique<VulkanImageBuffer>(context);
 		auto result = colorImg->Create(width, height, format, usage,
 			VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT);
 		assert(result == VkResult::VK_SUCCESS);
@@ -306,7 +306,7 @@ namespace sh::render::vk
 	void VulkanFramebuffer::CreateDepthBuffer()
 	{
 		VkFormat depthFormat = FindSupportedDepthFormat();
-		depthImg = std::make_unique<VulkanImageBuffer>(renderer);
+		depthImg = std::make_unique<VulkanImageBuffer>(context);
 		if(width == 0 || height == 0)
 			return;
 
@@ -403,7 +403,7 @@ namespace sh::render::vk
 			);
 		});
 
-		renderer.GetQueueManager().SubmitCommand(*cmd);
+		context.GetQueueManager().SubmitCommand(*cmd);
 	}
 
 	SH_RENDER_API auto VulkanFramebuffer::GetRenderPass() const -> VkRenderPass

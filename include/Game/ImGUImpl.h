@@ -11,10 +11,14 @@
 
 #include "Window/Window.h"
 
-#include "Render/VulkanImpl/VulkanRenderer.h"
+#include "Render/IRenderContext.h"
 
 #include <array>
 
+namespace sh::render
+{
+	class Renderer;
+}
 namespace sh::game
 {
 	/// @brief ImGUI의 엔진 구현체 클래스.
@@ -23,7 +27,7 @@ namespace sh::game
 	{
 	private:
 		window::Window& window;
-		render::vk::VulkanRenderer& renderer;
+		render::Renderer& renderer;
 
 		ImDrawData drawData;
 
@@ -33,7 +37,7 @@ namespace sh::game
 		void WindowInit();
 	public:
 		//TODO: 다른 렌더러 구현
-		SH_GAME_API ImGUImpl(window::Window& window, render::vk::VulkanRenderer& renderer);
+		SH_GAME_API ImGUImpl(window::Window& window, render::Renderer& renderer);
 		SH_GAME_API ~ImGUImpl();
 		SH_GAME_API void Clean();
 
