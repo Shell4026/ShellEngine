@@ -2,6 +2,7 @@
 
 #include "Export.h"
 #include "Texture.h"
+#include "StencilState.h"
 
 #include "Core/SObject.h"
 #include "Core/Reflection.hpp"
@@ -21,6 +22,8 @@ namespace sh::render
 	class Shader : public sh::core::SObject, sh::core::INonCopyable
 	{
 		SCLASS(Shader)
+	private:
+		StencilState stencilState{};
 	public:
 		enum class ShaderType
 		{
@@ -72,8 +75,6 @@ namespace sh::render
 				type(other.type), binding(other.binding), align(other.align), data(std::move(other.data))
 			{}
 		};
-
-
 		using UniformMap = std::map<uint32_t, std::vector<UniformData>>;
 	protected:
 		std::vector<Data> attrs;
@@ -98,6 +99,8 @@ namespace sh::render
 		SH_RENDER_API virtual void Clean() = 0;
 		SH_RENDER_API virtual void Build() = 0;
 
+		SH_RENDER_API void SetStencilState(StencilState stencilState);
+		SH_RENDER_API auto GetStencilState() const -> const StencilState&;
 		SH_RENDER_API auto GetShaderType() const->ShaderType;
 		SH_RENDER_API auto GetAttributes() const -> const std::vector<Data>&;
 		SH_RENDER_API auto GetVertexUniforms() const -> const std::vector<UniformBlock>&;

@@ -6,7 +6,6 @@ namespace sh::render
 	Shader::Shader(int id, ShaderType type) :
 		id(id), type(type) 
 	{
-		AddAttribute<glm::vec3>("vertex", 0);
 	}
 
 
@@ -40,6 +39,16 @@ namespace sh::render
 	auto Shader::operator==(const Shader& other) -> bool
 	{
 		return id == other.id;
+	}
+
+	SH_RENDER_API void Shader::SetStencilState(StencilState stencilState)
+	{
+		this->stencilState = stencilState;
+	}
+
+	SH_RENDER_API auto Shader::GetStencilState() const -> const StencilState&
+	{
+		return stencilState;
 	}
 
 	auto Shader::GetId() const -> int
