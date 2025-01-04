@@ -3,7 +3,7 @@
 
 namespace sh::core::reflection
 {
-	SHashMap<uint32_t, STypeInfo*> STypes::types{};
+	SHashMap<std::size_t, STypeInfo*> STypes::types{};
 
 	SH_CORE_API auto STypeInfo::GetSuper() const -> const STypeInfo*
 	{

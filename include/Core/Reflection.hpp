@@ -32,7 +32,7 @@ public:\
 	{\
 		if(stypeInfo == nullptr)\
 		{\
-			uint32_t hash = typeid(class_name).hash_code();\
+			std::size_t hash = typeid(class_name).hash_code();\
 			auto it = sh::core::reflection::STypes::types.find(hash);\
 			if (it == sh::core::reflection::STypes::types.end())\
 			{\
@@ -321,7 +321,7 @@ namespace sh::core::reflection
 	class STypes
 	{
 	public:
-		SH_CORE_API static SHashMap<uint32_t, STypeInfo*> types; // 해쉬, 타입 포인터
+		SH_CORE_API static SHashMap<std::size_t, STypeInfo*> types; // 해쉬, 타입 포인터
 	};
 
 	/// @brief TypeInfo를 만드는데 필요한 구조체
