@@ -48,4 +48,5 @@ file(
 	COPY 
 	${CMAKE_SOURCE_DIR}/resource/textures
 	${CMAKE_SOURCE_DIR}/resource/model
+	${CMAKE_SOURCE_DIR}/resource/fonts
 	DESTINATION ${CMAKE_BINARY_DIR}/bin)
