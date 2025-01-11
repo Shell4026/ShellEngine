@@ -6,6 +6,8 @@
 #include <vector>
 #include <queue>
 #include <functional>
+#include <filesystem>
+
 namespace sh::editor
 {
 	class ExplorerUI : public UI

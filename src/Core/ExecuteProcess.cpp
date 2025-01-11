@@ -3,7 +3,7 @@
 
 #if _WIN32
 #include <windows.h>
-#else __linux__
+#elif __linux__
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/wait.h>
@@ -100,7 +100,7 @@ namespace sh::core
             return false;
         }
 
-        pid_t pid = fork();
+        pid_t pid = fork(); // Copy-On-Write (COW)기법으로 인해 부하가 그리 크지 않음?
         if (pid == -1) 
         {
             SH_ERROR_FORMAT("fork failed: {}", strerror(errno));
@@ -132,7 +132,7 @@ namespace sh::core
 
             if (execvp(exe.c_str(), execArgs.data()) == -1)
             {
-                SH_ERROR_FORMAT("execvp failed");
+                SH_ERROR_FORMAT("execvp failed: {}", strerror(errno));
                 _exit(EXIT_FAILURE);
             }
         }
@@ -158,7 +158,7 @@ namespace sh::core
             int status;
             if (waitpid(pid, &status, 0) == -1) 
             {
-                SH_ERROR_FORMAT("waitpid failed!");
+                SH_ERROR_FORMAT("waitpid failed: {}", strerror(errno));
                 return false;
             }
             if (WIFEXITED(status)) 
@@ -171,5 +171,6 @@ namespace sh::core
             }
         }
 #endif
+        return true;
 	}
 }//namespace

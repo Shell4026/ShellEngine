@@ -27,6 +27,6 @@ target_link_libraries(ShellEngineCore PUBLIC glm)
 target_link_libraries(ShellEngineCore PUBLIC fmt)
 target_link_libraries(ShellEngineCore PUBLIC nlohmann_json)
 
-target_precompile_headers(ShellEngineCore PUBLIC ${CMAKE_SOURCE_DIR}/include/Core/PCH.h)
+target_precompile_headers(ShellEngineCore PRIVATE ${CMAKE_SOURCE_DIR}/include/Core/PCH.h)
 
 target_include_directories(ShellEngineCore PRIVATE ${CMAKE_SOURCE_DIR}/include/Core)

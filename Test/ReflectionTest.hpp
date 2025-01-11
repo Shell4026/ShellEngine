@@ -1,4 +1,7 @@
 ﻿#pragma once
+#ifdef Bool
+#undef Bool
+#endif
 
 #include "../include/Core/SObject.h"
 #include "../include/Core/Reflection.hpp"

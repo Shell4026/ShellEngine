@@ -12,7 +12,7 @@ target_link_libraries(ShellEngineGame PUBLIC ShellEngine::Render)
 target_link_libraries(ShellEngineGame PUBLIC ShellEngine::Physics)
 target_link_libraries(ShellEngineGame PUBLIC IMGUI)
 
-target_precompile_headers(ShellEngineGame PUBLIC ${CMAKE_SOURCE_DIR}/include/Game/PCH.h)
+target_precompile_headers(ShellEngineGame PRIVATE ${CMAKE_SOURCE_DIR}/include/Game/PCH.h)
 
 target_include_directories(ShellEngineGame PRIVATE ${CMAKE_SOURCE_DIR}/include/Game)
 target_include_directories(ShellEngineGame PRIVATE ${CMAKE_SOURCE_DIR}/include/external)

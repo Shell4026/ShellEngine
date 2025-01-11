@@ -5,6 +5,10 @@
 #include "ContainerTest.hpp"
 #include "AllocatorTest.hpp"
 #include "OctreeTest.hpp"
+#include "ShaderParserTest.hpp"
+#ifdef Bool
+#undef Bool
+#endif
 
 #include <gtest/gtest.h>
 

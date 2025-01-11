@@ -8,6 +8,7 @@
 
 #include <utility>
 #include <optional>
+#include <vector>
 
 namespace sh::render::vk
 {

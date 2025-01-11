@@ -3,13 +3,13 @@
 #include <glm/glm.hpp>
 
 #if _WIN32
-#ifndef VK_USE_PLATFORM_WIN32_KHR
-#define VK_USE_PLATFORM_WIN32_KHR
-#endif
-#elif __unix__
-#ifndef VK_USE_PLATFORM_XLIB_KHR
-#define VK_USE_PLATFORM_XLIB_KHR
-#endif
+	#ifndef VK_USE_PLATFORM_WIN32_KHR
+	#define VK_USE_PLATFORM_WIN32_KHR
+	#endif
+#elif __linux__
+	#ifndef VK_USE_PLATFORM_XLIB_KHR
+	#define VK_USE_PLATFORM_XLIB_KHR
+	#endif
 #endif
 #include <vulkan/vulkan.h>
 #include <vulkan/vk_enum_string_helper.h>
@@ -31,3 +31,11 @@
 
 #undef min
 #undef max
+
+#ifdef None
+#undef None
+#endif
+
+#ifdef Always
+#undef Always
+#endif

@@ -1,9 +1,4 @@
 ﻿#include "VulkanQueueManager.h"
-#include "VulkanQueueManager.h"
-#include "VulkanQueueManager.h"
-#include "VulkanQueueManager.h"
-#include "pch.h"
-#include "VulkanQueueManager.h"
 #include "VulkanCommandBuffer.h"
 
 namespace sh::render::vk
