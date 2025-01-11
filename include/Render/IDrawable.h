@@ -40,7 +40,7 @@ namespace sh::render
 		/// @param binding 바인딩 번호
 		/// @param data 데이터 위치 포인터
 		/// @param stage 셰이더 스테이지
-		SH_RENDER_API virtual void SetUniformData(uint32_t binding, const void* data, Stage stage) = 0;
+		SH_RENDER_API virtual void SetUniformData(std::size_t passIdx, uint32_t binding, const void* data, Stage stage) = 0;
 
 		SH_RENDER_API virtual bool CheckAssetValid() const = 0;
 	};

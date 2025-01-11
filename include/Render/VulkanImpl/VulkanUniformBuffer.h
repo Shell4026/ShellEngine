@@ -19,7 +19,7 @@ namespace sh::render::vk
 		SH_RENDER_API VulkanUniformBuffer(VulkanUniformBuffer&& other) noexcept;
 		SH_RENDER_API ~VulkanUniformBuffer();
 
-		SH_RENDER_API void Create(const IRenderContext& context, const Shader& shader, uint32_t type) override;
+		SH_RENDER_API void Create(const IRenderContext& context, const ShaderPass& shader, uint32_t type) override;
 		SH_RENDER_API void Clean() override;
 		SH_RENDER_API void Update(uint32_t binding, const IBuffer& buffer) override;
 		SH_RENDER_API void Update(uint32_t binding, const Texture& texture) override;

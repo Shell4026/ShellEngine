@@ -1,7 +1,7 @@
 ﻿#include "PCH.h"
 #include "VulkanUniformBuffer.h"
 #include "VulkanContext.h"
-#include "VulkanShader.h"
+#include "VulkanShaderPass.h"
 #include "VulkanBuffer.h"
 #include "VulkanTextureBuffer.h"
 #include "VulkanDescriptorPool.h"
@@ -24,12 +24,12 @@ namespace sh::render::vk
 	{
 		Clean();
 	}
-	void VulkanUniformBuffer::Create(const IRenderContext& context, const Shader& shader, uint32_t type)
+	void VulkanUniformBuffer::Create(const IRenderContext& context, const ShaderPass& shader, uint32_t type)
 	{
 		Clean();
 
 		this->context = &static_cast<const VulkanContext&>(context);
-		auto& vkShader = static_cast<const VulkanShader&>(shader);
+		auto& vkShader = static_cast<const VulkanShaderPass&>(shader);
 
 		descSet = this->context->GetDescriptorPool().AllocateDescriptorSet(vkShader.GetDescriptorSetLayout(type), 1);
 	}

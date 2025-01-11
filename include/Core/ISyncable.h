@@ -4,10 +4,11 @@
 
 namespace sh::core
 {
+	constexpr std::size_t SYNC_THREAD_NUM = 2;
 	/// @brief 0 = 게임 스레드, 1 = 렌더 스레드 데이터를 나타내는 배열 타입
 	/// @tparam T 타입
 	/// @tparam size 사이즈(기본 2)
-	template<typename T, std::size_t size = 2>
+	template<typename T, std::size_t size = SYNC_THREAD_NUM>
 	using SyncArray = std::array<T, size>;
 
 	enum ThreadType

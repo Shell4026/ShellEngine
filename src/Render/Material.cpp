@@ -1,5 +1,4 @@
-﻿#include "pch.h"
-#include "Material.h"
+﻿#include "Material.h"
 
 #include "BufferFactory.h"
 #include "IBuffer.h"
@@ -30,7 +29,15 @@ namespace sh::render
 	SH_RENDER_API Material::Material(Material&& other) noexcept :
 		context(other.context),
 		shader(other.shader),
-		bDirty(other.bDirty), bBufferDirty(other.bBufferDirty), bBufferSync(other.bBufferSync)
+		bDirty(other.bDirty), bBufferDirty(other.bBufferDirty), bBufferSync(other.bBufferSync),
+		perPassData(std::move(other.perPassData)),
+		floats(std::move(other.floats)),
+		ints(std::move(other.ints)),
+		mats(std::move(other.mats)),
+		vectors(std::move(other.vectors)),
+		floatArr(std::move(other.floatArr)),
+		vectorArrs(std::move(other.vectorArrs)),
+		textures(std::move(other.textures))
 	{
 		other.context = nullptr;
 		other.shader = nullptr;
@@ -42,12 +49,9 @@ namespace sh::render
 
 	void Material::Clean()
 	{
-		for (int thr = 0; thr < vertBuffers.size(); ++thr)
-		{
-			vertBuffers[thr].clear();
-			fragBuffers[thr].clear();
-			uniformBuffer[thr].reset();
-		}
+		for (int thr = 0; thr < core::SYNC_THREAD_NUM; ++thr)
+			perPassData[thr].clear();
+
 		floats.clear();
 		ints.clear();
 		vectors.clear();
@@ -84,69 +88,73 @@ namespace sh::render
 
 		this->context = &context;
 
-		// 버텍스 유니폼
-		for (auto& uniformBlock : shader->GetVertexUniforms())
+		for (auto& shaderPass : shader->GetPasses())
 		{
-			if (uniformBlock.type == Shader::UniformType::Object)
-				continue;
+			for (std::size_t thr = 0; thr < core::SYNC_THREAD_NUM; ++thr)
+				perPassData[thr].push_back(PassData{});
 
-			std::size_t lastOffset = uniformBlock.data.back().offset + uniformBlock.data.back().size;
-			std::size_t size = core::Util::AlignTo(lastOffset, uniformBlock.align);
+			// 버텍스 유니폼
+			for (auto& uniformBlock : shaderPass->GetVertexUniforms())
+			{
+				if (uniformBlock.type == ShaderPass::UniformType::Object)
+					continue;
 
-			for (std::size_t thr = 0; thr < vertBuffers.size(); ++thr)
-				vertBuffers[thr].insert({ uniformBlock.binding, BufferFactory::Create(context, size) });
+				std::size_t lastOffset = uniformBlock.data.back().offset + uniformBlock.data.back().size;
+				std::size_t size = core::Util::AlignTo(lastOffset, uniformBlock.align);
+
+				for (std::size_t thr = 0; thr < core::SYNC_THREAD_NUM; ++thr)
+					perPassData[thr].back().vertShaderData.insert({uniformBlock.binding, BufferFactory::Create(context, size)});
+			}
+			// 픽셀 유니폼
+			for (auto& uniformBlock : shaderPass->GetFragmentUniforms())
+			{
+				if (uniformBlock.type == ShaderPass::UniformType::Object)
+					continue;
+
+				std::size_t lastOffset = uniformBlock.data.back().offset + uniformBlock.data.back().size;
+				std::size_t size = core::Util::AlignTo(lastOffset, uniformBlock.align);
+
+				for (std::size_t thr = 0; thr < core::SYNC_THREAD_NUM; ++thr)
+					perPassData[thr].back().fragShaderData.insert({ uniformBlock.binding, BufferFactory::Create(context, size) });
+			}
+			for (std::size_t thr = 0; thr < core::SYNC_THREAD_NUM; ++thr)
+				perPassData[thr].back().uniformBuffer = BufferFactory::CreateUniformBuffer(context, *shaderPass, ShaderPass::UniformType::Material);
 		}
-		// 픽셀 유니폼
-		for (auto& uniformBlock : shader->GetFragmentUniforms())
-		{
-			if (uniformBlock.type == Shader::UniformType::Object)
-				continue;
-
-			std::size_t lastOffset = uniformBlock.data.back().offset + uniformBlock.data.back().size;
-			std::size_t size = core::Util::AlignTo(lastOffset, uniformBlock.align);
-
-			for (std::size_t thr = 0; thr < fragBuffers.size(); ++thr)
-				fragBuffers[thr].insert({ uniformBlock.binding, BufferFactory::Create(context, size) });
-		}
-
-		for (std::size_t thr = 0; thr < uniformBuffer.size(); ++thr)
-			uniformBuffer[thr] = BufferFactory::CreateUniformBuffer(context, *shader, Shader::UniformType::Material);
 		bBufferDirty = true;
 	}
 
-	void Material::SetUniformData(uint32_t binding, const void* data, Stage stage)
+	void Material::SetUniformData(std::size_t passIdx, uint32_t binding, const void* data, ShaderPass::ShaderStage stage)
 	{
-		if (stage == Stage::Vertex)
+		auto& uniformData = perPassData[core::ThreadType::Game][passIdx];
+		if (stage == ShaderPass::ShaderStage::Vertex)
 		{
-			auto it = vertBuffers[core::ThreadType::Game].find(binding);
-			if (it == vertBuffers[core::ThreadType::Game].end())
+			auto it = uniformData.vertShaderData.find(binding);
+			if (it == uniformData.vertShaderData.end())
 				return;
 
 			it->second->SetData(data);
-			uniformBuffer[core::ThreadType::Game]->Update(binding, *it->second);
-			
-			bBufferSync = true;
+			uniformData.uniformBuffer->Update(binding, *it->second);
 		}
-		else if (stage == Stage::Fragment)
+		else if (stage == ShaderPass::ShaderStage::Fragment)
 		{
-			auto it = fragBuffers[core::ThreadType::Game].find(binding);
-			if (it == fragBuffers[core::ThreadType::Game].end())
+			auto it = uniformData.fragShaderData.find(binding);
+			if (it == uniformData.fragShaderData.end())
 				return;
 
 			it->second->SetData(data);
-			uniformBuffer[core::ThreadType::Game]->Update(binding, *it->second);
-
-			bBufferSync = true;
+			uniformData.uniformBuffer->Update(binding, *it->second);
 		}
+		bBufferSync = true;
 		SetDirty();
 	}
-	void Material::SetTextureData(uint32_t binding, Texture* tex)
+	void Material::SetTextureData(std::size_t passIdx, uint32_t binding, Texture* tex)
 	{
 		if (!core::IsValid(tex) || context == nullptr)
 			return;
 
+		ShaderPass* shaderPass = shader->GetPass(passIdx);
 		bool find = false;
-		for (auto& uniform : shader->GetSamplerUniforms())
+		for (auto& uniform : shaderPass->GetSamplerUniforms())
 		{
 			if (uniform.binding == binding)
 			{
@@ -157,13 +165,13 @@ namespace sh::render
 		if (!find)
 			return;
 
-		uniformBuffer[core::ThreadType::Game]->Update(binding, *tex);
+		perPassData[core::ThreadType::Game][passIdx].uniformBuffer->Update(binding, *tex);
 
 		bBufferSync = true;
 		SetDirty();
 	}
 
-	void Material::FillData(const Shader::UniformBlock& uniformBlock, std::vector<uint8_t>& dst, uint32_t binding)
+	void Material::FillData(const ShaderPass::UniformBlock& uniformBlock, std::vector<uint8_t>& dst, uint32_t binding)
 	{
 		for (auto& data : uniformBlock.data)
 		{
@@ -290,64 +298,67 @@ namespace sh::render
 		if (!core::IsValid(shader))
 			return;
 
-		auto blocks = { &shader->GetVertexUniforms(), &shader->GetVertexUniforms() };
-		for (auto currentBlocks : blocks)
+		for (auto& pass : shader->GetPasses())
 		{
-			for (auto& uniformBlock : *currentBlocks)
+			auto blocks = { &pass->GetVertexUniforms(), &pass->GetVertexUniforms() };
+			for (auto currentBlocks : blocks)
 			{
-				for (auto& uniform : uniformBlock.data)
+				for (auto& uniformBlock : *currentBlocks)
 				{
-					if (uniform.type == core::reflection::GetType<int>())
+					for (auto& uniform : uniformBlock.data)
 					{
-						if (uniform.size == sizeof(int))
-							ints.insert_or_assign(uniform.name, 0);
-						else
+						if (uniform.type == core::reflection::GetType<int>())
 						{
-							// todo
+							if (uniform.size == sizeof(int))
+								ints.insert_or_assign(uniform.name, 0);
+							else // 배열
+							{
+								// todo
+							}
 						}
-					}
-					else if (uniform.type == core::reflection::GetType<float>())
-					{
-						if (uniform.size == sizeof(float))
-							floats.insert_or_assign(uniform.name, 0.f);
-						else
+						else if (uniform.type == core::reflection::GetType<float>())
 						{
-							std::size_t n = uniform.size / sizeof(float);
-							SetFloatArray(uniform.name, std::vector<float>(n, 0.f));
+							if (uniform.size == sizeof(float))
+								floats.insert_or_assign(uniform.name, 0.f);
+							else
+							{
+								std::size_t n = uniform.size / sizeof(float);
+								SetFloatArray(uniform.name, std::vector<float>(n, 0.f));
+							}
 						}
-					}
-					else if (uniform.type == core::reflection::GetType<glm::vec2>())
-					{
-						if (uniform.size == sizeof(glm::vec2))
-							vectors.insert_or_assign(uniform.name, glm::vec4{ 0.f });
-						else
+						else if (uniform.type == core::reflection::GetType<glm::vec2>())
 						{
-							std::size_t n = uniform.size / sizeof(glm::vec2);
-							SetVectorArray(uniform.name, std::vector<glm::vec4>(n, glm::vec4{ 0.f }));
+							if (uniform.size == sizeof(glm::vec2))
+								vectors.insert_or_assign(uniform.name, glm::vec4{ 0.f });
+							else
+							{
+								std::size_t n = uniform.size / sizeof(glm::vec2);
+								SetVectorArray(uniform.name, std::vector<glm::vec4>(n, glm::vec4{ 0.f }));
+							}
 						}
-					}
-					else if (uniform.type == core::reflection::GetType<glm::vec3>())
-					{
-						if (uniform.size == sizeof(glm::vec3))
-							vectors.insert_or_assign(uniform.name, glm::vec4{ 0.f });
-						else
+						else if (uniform.type == core::reflection::GetType<glm::vec3>())
 						{
-							std::size_t n = uniform.size / sizeof(glm::vec3);
-							SetVectorArray(uniform.name, std::vector<glm::vec4>(n, glm::vec4{ 0.f }));
+							if (uniform.size == sizeof(glm::vec3))
+								vectors.insert_or_assign(uniform.name, glm::vec4{ 0.f });
+							else
+							{
+								std::size_t n = uniform.size / sizeof(glm::vec3);
+								SetVectorArray(uniform.name, std::vector<glm::vec4>(n, glm::vec4{ 0.f }));
+							}
 						}
-					}
-					else if (uniform.type == core::reflection::GetType<glm::vec4>())
-					{
-						if (uniform.size == sizeof(glm::vec4))
-							vectors.insert_or_assign(uniform.name, glm::vec4{ 0.f });
-						else
+						else if (uniform.type == core::reflection::GetType<glm::vec4>())
 						{
-							std::size_t n = uniform.size / sizeof(glm::vec4);
-							SetVectorArray(uniform.name, std::vector<glm::vec4>(n, glm::vec4{ 0.f }));
+							if (uniform.size == sizeof(glm::vec4))
+								vectors.insert_or_assign(uniform.name, glm::vec4{ 0.f });
+							else
+							{
+								std::size_t n = uniform.size / sizeof(glm::vec4);
+								SetVectorArray(uniform.name, std::vector<glm::vec4>(n, glm::vec4{ 0.f }));
+							}
 						}
+						else if (uniform.type == core::reflection::GetType<glm::mat4>())
+							mats.insert_or_assign(uniform.name, glm::mat4{ 0.f });
 					}
-					else if (uniform.type == core::reflection::GetType<glm::mat4>())
-						mats.insert_or_assign(uniform.name, glm::mat4{ 0.f });
 				}
 			}
 		}
@@ -362,45 +373,49 @@ namespace sh::render
 		if (!bBufferDirty)
 			return;
 
-		std::vector<uint8_t> temp{};
-
-		for (auto& [binding, buffer] : vertBuffers[core::ThreadType::Game])
+		int passIdx = 0;
+		for (auto& passData : perPassData[core::ThreadType::Game])
 		{
+			std::vector<uint8_t> temp{};
+			for (auto& [binding, buffer] : passData.vertShaderData)
+			{
+				temp.clear();
+				temp.resize(buffer->GetSize());
+				for (auto& uniformBlock : shader->GetPass(passIdx)->GetVertexUniforms())
+				{
+					if (uniformBlock.type == ShaderPass::UniformType::Object)
+						continue;
+					if (uniformBlock.binding != binding)
+						continue;
+
+					FillData(uniformBlock, temp, binding);
+				}
+				SetUniformData(passIdx, binding, temp.data(), ShaderPass::ShaderStage::Vertex);
+			}
 			temp.clear();
-			temp.resize(buffer->GetSize());
-			for (auto& uniformBlock : shader->GetVertexUniforms())
+			for (auto& [binding, buffer] : passData.fragShaderData)
 			{
-				if (uniformBlock.type == Shader::UniformType::Object)
-					continue;
-				if (uniformBlock.binding != binding)
-					continue;
+				temp.resize(buffer->GetSize());
+				for (auto& uniformBlock : shader->GetPass(passIdx)->GetFragmentUniforms())
+				{
+					if (uniformBlock.type == ShaderPass::UniformType::Object)
+						continue;
+					if (uniformBlock.binding != binding)
+						continue;
 
-				FillData(uniformBlock, temp, binding);
+					FillData(uniformBlock, temp, binding);
+				}
+				SetUniformData(passIdx, binding, temp.data(), ShaderPass::ShaderStage::Fragment);
 			}
-			SetUniformData(binding, temp.data(), Stage::Vertex);
-		}
-		temp.clear();
-		for (auto& [binding, buffer] : fragBuffers[core::ThreadType::Game])
-		{
-			temp.resize(buffer->GetSize());
-			for (auto& uniformBlock : shader->GetFragmentUniforms())
+			for (auto& uniformData : shader->GetPass(passIdx)->GetSamplerUniforms())
 			{
-				if (uniformBlock.type == Shader::UniformType::Object)
-					continue;
-				if (uniformBlock.binding != binding)
+				auto it = textures.find(uniformData.name);
+				if (it == textures.end())
 					continue;
 
-				FillData(uniformBlock, temp, binding);
+				SetTextureData(passIdx, uniformData.binding, it->second);
 			}
-			SetUniformData(binding, temp.data(), Stage::Fragment);
-		}
-		for (auto& uniformData : shader->GetSamplerUniforms())
-		{
-			auto it = textures.find(uniformData.name);
-			if (it == textures.end())
-				continue;
-
-			SetTextureData(uniformData.binding, it->second);
+			++passIdx;
 		}
 
 		bBufferDirty = false;
@@ -419,217 +434,248 @@ namespace sh::render
 	{
 		if (bBufferSync)
 		{
-			std::swap(vertBuffers[core::ThreadType::Game], vertBuffers[core::ThreadType::Render]);
-			std::swap(fragBuffers[core::ThreadType::Game], fragBuffers[core::ThreadType::Render]);
-			std::swap(uniformBuffer[core::ThreadType::Game], uniformBuffer[core::ThreadType::Render]);
+			std::swap(perPassData[core::ThreadType::Game], perPassData[core::ThreadType::Render]);
 		}
 		bBufferSync = false;
 		bDirty = false;
 	}
 
-	SH_RENDER_API auto Material::GetShaderBuffer(Stage stage, uint32_t binding, core::ThreadType thr) const -> IBuffer*
+	SH_RENDER_API auto Material::GetShaderBuffer(std::size_t passIdx, ShaderPass::ShaderStage stage, uint32_t binding, core::ThreadType thr) const -> IBuffer*
 	{
-		if (stage == Stage::Vertex)
+		auto& passUniformData = perPassData[thr][passIdx];
+		if (stage == ShaderPass::ShaderStage::Vertex)
 		{
-			auto it = vertBuffers[thr].find(binding);
-			if (it == vertBuffers[thr].end())
+			auto it = passUniformData.vertShaderData.find(binding);
+			if (it == passUniformData.vertShaderData.end())
 				return nullptr;
 			else
 				return it->second.get();
 		}
 		else
 		{
-			auto it = fragBuffers[thr].find(binding);
-			if (it == fragBuffers[thr].end())
+			auto it = passUniformData.fragShaderData.find(binding);
+			if (it == passUniformData.fragShaderData.end())
 				return nullptr;
 			else
 				return it->second.get();
 		}
 		return nullptr;
 	}
-	SH_RENDER_API auto Material::GetUniformBuffer(core::ThreadType thr) const -> IUniformBuffer*
+	SH_RENDER_API auto Material::GetUniformBuffer(std::size_t passIdx, core::ThreadType thr) const -> IUniformBuffer*
 	{
-		return uniformBuffer[thr].get();
+		return perPassData[thr][passIdx].uniformBuffer.get();
 	}
 
-	SH_RENDER_API void Material::SetInt(std::string_view name, int value)
+	SH_RENDER_API void Material::SetInt(const std::string& name, int value)
 	{
 		if (!core::IsValid(shader))
 			return;
-		auto binding = shader->GetUniformBinding(name);
-		if (binding)
+
+		for (auto& pass : shader->GetPasses())
 		{
-			ints.insert_or_assign(std::string{ name }, value);
-			bBufferDirty = true;
+			auto binding = pass->GetUniformBinding(name);
+			if (binding)
+			{
+				ints.insert_or_assign(name, value);
+				bBufferDirty = true;
+				break;
+			}
 		}
 	}
-	SH_RENDER_API auto Material::GetInt(std::string_view name) const -> int
+	SH_RENDER_API auto Material::GetInt(const std::string& name) const -> int
 	{
-		auto it = ints.find(std::string{ name });
+		auto it = ints.find(name);
 		if (it == ints.end())
 			return 0;
 		return it->second;
 	}
-	SH_RENDER_API void Material::SetFloat(std::string_view name, float value)
+	SH_RENDER_API void Material::SetFloat(const std::string& name, float value)
 	{
 		if (!core::IsValid(shader))
 			return;
-		auto binding = shader->GetUniformBinding(name);
-		if (binding)
+
+		for (auto& pass : shader->GetPasses())
 		{
-			floats.insert_or_assign(std::string{ name }, value);
-			bBufferDirty = true;
+			auto binding = pass->GetUniformBinding(name);
+			if (binding)
+			{
+				floats.insert_or_assign(name, value);
+				bBufferDirty = true;
+				break;
+			}
 		}
 	}
-	SH_RENDER_API auto Material::GetFloat(std::string_view name) const -> float
+	SH_RENDER_API auto Material::GetFloat(const std::string& name) const -> float
 	{
-		auto it = floats.find(std::string{ name });
+		auto it = floats.find(name);
 		if (it == floats.end())
 			return 0.f;
 		return it->second;
 	}
-	SH_RENDER_API void Material::SetVector(std::string_view name, const glm::vec4& value)
+	SH_RENDER_API void Material::SetVector(const std::string& name, const glm::vec4& value)
 	{
 		if (!core::IsValid(shader))
 			return;
-		auto uniform = shader->GetUniformBinding(name);
-		if (uniform)
+
+		for (auto& pass : shader->GetPasses())
 		{
-			vectors.insert_or_assign(std::string{ name }, value);
-			bBufferDirty = true;
+			auto uniform = pass->GetUniformBinding(name);
+			if (uniform)
+			{
+				vectors.insert_or_assign(name, value);
+				bBufferDirty = true;
+				break;
+			}
 		}
 	}
-	SH_RENDER_API auto Material::GetVector(std::string_view name) const -> const glm::vec4*
+	SH_RENDER_API auto Material::GetVector(const std::string& name) const -> const glm::vec4*
 	{
-		auto it = vectors.find(std::string{ name });
+		auto it = vectors.find(name);
 		if (it == vectors.end())
 			return nullptr;
 		return &it->second;
 	}
-	SH_RENDER_API void Material::SetMatrix(std::string_view name, const glm::mat4& value)
+	SH_RENDER_API void Material::SetMatrix(const std::string& name, const glm::mat4& value)
 	{
 		if (!core::IsValid(shader))
 			return;
-		auto binding = shader->GetUniformBinding(name);
-		if (binding)
+
+		for (auto& pass : shader->GetPasses())
 		{
-			mats.insert_or_assign(std::string{ name }, value);
-			bBufferDirty = true;
+			auto binding = pass->GetUniformBinding(name);
+			if (binding)
+			{
+				mats.insert_or_assign(name, value);
+				bBufferDirty = true;
+			}
 		}
 	}
-	SH_RENDER_API auto Material::GetMatrix(std::string_view name) const -> const glm::mat4*
+	SH_RENDER_API auto Material::GetMatrix(const std::string& name) const -> const glm::mat4*
 	{
-		auto it = mats.find(std::string{ name });
+		auto it = mats.find(name);
 		if (it == mats.end())
 			return nullptr;
 		return &it->second;
 	}
-	SH_RENDER_API void Material::SetFloatArray(std::string_view name, const std::vector<float>& value)
+	SH_RENDER_API void Material::SetFloatArray(const std::string& name, const std::vector<float>& value)
 	{
 		if (!core::IsValid(shader))
 			return;
 		if (floatArr == nullptr)
 			floatArr = std::make_unique<core::SMap<std::string, std::vector<float>, 4>>();
-		auto binding = shader->GetUniformBinding(name);
-		if (binding)
+
+		for (auto& pass : shader->GetPasses())
 		{
-			floatArr->insert_or_assign(std::string{ name }, value);
-			bBufferDirty = true;
+			auto binding = pass->GetUniformBinding(name);
+			if (binding)
+			{
+				floatArr->insert_or_assign(name, value);
+				bBufferDirty = true;
+				break;
+			}
 		}
 	}
-	SH_RENDER_API void Material::SetFloatArray(std::string_view name, std::vector<float>&& value)
+	SH_RENDER_API void Material::SetFloatArray(const std::string& name, std::vector<float>&& value)
 	{
 		if (!core::IsValid(shader))
 			return;
 		if (floatArr == nullptr)
 			floatArr = std::make_unique<core::SMap<std::string, std::vector<float>, 4>>();
-		auto binding = shader->GetUniformBinding(name);
-		if (binding)
+
+		for (auto& pass : shader->GetPasses())
 		{
-			floatArr->insert_or_assign(std::string{ name }, std::move(value));
-			bBufferDirty = true;
+			auto binding = pass->GetUniformBinding(name);
+			if (binding)
+			{
+				floatArr->insert_or_assign(name, std::move(value));
+				bBufferDirty = true;
+			}
 		}
 	}
-	SH_RENDER_API auto Material::GetFloatArray(std::string_view name) const -> const std::vector<float>*
+	SH_RENDER_API auto Material::GetFloatArray(const std::string& name) const -> const std::vector<float>*
 	{
 		if (floatArr == nullptr)
 			return nullptr;
-		auto it = floatArr->find(std::string{ name });
+		auto it = floatArr->find(name);
 		if (it == floatArr->end())
 			return nullptr;
 		return &it->second;
 	}
 
-	SH_RENDER_API void Material::SetVectorArray(std::string_view name, const std::vector<glm::vec4>& value)
+	SH_RENDER_API void Material::SetVectorArray(const std::string& name, const std::vector<glm::vec4>& value)
 	{
 		if (!core::IsValid(shader))
 			return;
-		auto binding = shader->GetUniformBinding(name);
-		if (binding)
+
+		for (auto& pass : shader->GetPasses())
 		{
-			vectorArrs.insert_or_assign(std::string{ name }, value);
-			bBufferDirty = true;
+			auto binding = pass->GetUniformBinding(name);
+			if (binding)
+			{
+				vectorArrs.insert_or_assign(name, value);
+				bBufferDirty = true;
+			}
 		}
 	}
-	SH_RENDER_API auto Material::GetVectorArray(std::string_view name) const -> const std::vector<glm::vec4>*
+	SH_RENDER_API auto Material::GetVectorArray(const std::string& name) const -> const std::vector<glm::vec4>*
 	{
-		auto it = vectorArrs.find(std::string{ name });
+		auto it = vectorArrs.find(name);
 		if (it == vectorArrs.end())
 			return nullptr;
 		return &it->second;
 	}
 
-	SH_RENDER_API void Material::SetTexture(std::string_view name, Texture* tex)
+	SH_RENDER_API void Material::SetTexture(const std::string& name, Texture* tex)
 	{
 		if (!core::IsValid(shader))
 			return;
 
-		textures.insert_or_assign(std::string{ name }, tex);
+		textures.insert_or_assign(name, tex);
 		bBufferDirty = true;
 	}
-	SH_RENDER_API auto Material::GetTexture(std::string_view name) const -> Texture*
+	SH_RENDER_API auto Material::GetTexture(const std::string& name) const -> Texture*
 	{
-		auto it = textures.find(std::string{ name });
+		auto it = textures.find(name);
 		if (it == textures.end())
 			return nullptr;
 		return it->second;
 	}
 
-	SH_RENDER_API bool Material::HasIntProperty(std::string_view name) const
+	SH_RENDER_API bool Material::HasIntProperty(const std::string& name) const
 	{
-		auto it = ints.find(std::string{ name });
+		auto it = ints.find(name);
 		return it != ints.end();
 	}
-	SH_RENDER_API bool Material::HasFloatProperty(std::string_view name) const
+	SH_RENDER_API bool Material::HasFloatProperty(const std::string& name) const
 	{
-		auto it = floats.find(std::string{ name });
+		auto it = floats.find(name);
 		return it != floats.end();
 	}
-	SH_RENDER_API bool Material::HasVectorProperty(std::string_view name) const
+	SH_RENDER_API bool Material::HasVectorProperty(const std::string& name) const
 	{
-		auto it = vectors.find(std::string{ name });
+		auto it = vectors.find(name);
 		return it != vectors.end();
 	}
-	SH_RENDER_API bool Material::HasMatrixProperty(std::string_view name) const
+	SH_RENDER_API bool Material::HasMatrixProperty(const std::string& name) const
 	{
-		auto it = mats.find(std::string{ name });
+		auto it = mats.find(name);
 		return it != mats.end();
 	}
-	SH_RENDER_API bool Material::HasFloatArrayProperty(std::string_view name) const
+	SH_RENDER_API bool Material::HasFloatArrayProperty(const std::string& name) const
 	{
 		if (floatArr == nullptr)
 			return false;
-		auto it = floatArr->find(std::string{ name });
+		auto it = floatArr->find(name);
 		return it != floatArr->end();
 	}
-	SH_RENDER_API bool Material::HasVectorArrayProperty(std::string_view name) const
+	SH_RENDER_API bool Material::HasVectorArrayProperty(const std::string& name) const
 	{
-		auto it = vectorArrs.find(std::string{ name });
+		auto it = vectorArrs.find(name);
 		return it != vectorArrs.end();
 	}
-	SH_RENDER_API bool Material::HasTextureProperty(std::string_view name) const
+	SH_RENDER_API bool Material::HasTextureProperty(const std::string& name) const
 	{
-		auto it = textures.find(std::string{ name });
+		auto it = textures.find(name);
 		return it != textures.end();
 	}
 

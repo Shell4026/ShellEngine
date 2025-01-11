@@ -81,7 +81,7 @@ namespace sh::editor
 		meshRenderer->SetMesh(this->meshes.GetResource("GridMesh"));
 		meshRenderer->SetMaterial(this->materials.GetResource("GridMaterial"));
 
-		auto axis = AddGameObject("_Axis");
+		auto axis = AddGameObject("Axis");
 		axis->transform->SetPosition(0.f, 0.01f, 0.f);
 		axis->transform->SetParent(grid->transform);
 		auto line = axis->AddComponent<game::LineRenderer>();

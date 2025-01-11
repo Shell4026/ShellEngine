@@ -7,7 +7,7 @@
 namespace sh::render
 {
 	class IRenderContext;
-	class Shader;
+	class ShaderPass;
 	class Texture;
 	class IBuffer;
 
@@ -16,7 +16,7 @@ namespace sh::render
 	public:
 		SH_RENDER_API virtual ~IUniformBuffer() = default;
 
-		SH_RENDER_API virtual void Create(const IRenderContext& context, const Shader& shader, uint32_t type) = 0;
+		SH_RENDER_API virtual void Create(const IRenderContext& context, const ShaderPass& shader, uint32_t type) = 0;
 		SH_RENDER_API virtual void Clean() = 0;
 		SH_RENDER_API virtual void Update(uint32_t binding, const IBuffer& buffer) = 0;
 		SH_RENDER_API virtual void Update(uint32_t binding, const Texture& texture) = 0;

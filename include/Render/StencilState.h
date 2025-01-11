@@ -1,6 +1,9 @@
 ﻿#pragma once
 
 #include <cstdint>
+#ifdef Always
+#undef Always
+#endif
 
 namespace sh::render
 {
@@ -15,7 +18,7 @@ namespace sh::render
 			DecrementClamp = 4,
 			Invert = 5,
 			IncrementWrap = 6,
-			DecrementWrap = 7,
+			DecrementWrap = 7
 		};
 		enum class CompareOp
 		{
@@ -29,12 +32,12 @@ namespace sh::render
 			Always = 7,
 		};
 
-		uint32_t ref;
-		uint32_t compareMask;
-		uint32_t writeMask;
-		CompareOp compareOp;
-		StencilOp passOp;
-		StencilOp failOp;
-		StencilOp depthFailOp;
+		uint32_t ref = 0;
+		uint32_t compareMask = 255;
+		uint32_t writeMask = 255;
+		CompareOp compareOp = CompareOp::Always;
+		StencilOp passOp = StencilOp::Keep;
+		StencilOp failOp = StencilOp::Keep;
+		StencilOp depthFailOp = StencilOp::Keep;
 	};
 }

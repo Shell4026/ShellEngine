@@ -95,10 +95,16 @@ namespace sh::game
 		if (core::IsValid(mat))
 		{
 			auto shader = this->mat->GetShader();
-			if (shader->GetUniformBinding("lightCount"))
-				bShaderHasLight = true;
-			else
-				bShaderHasLight = false;
+			for (auto& shaderPass : shader->GetPasses())
+			{
+				if (shaderPass->GetUniformBinding("lightCount"))
+				{
+					bShaderHasLight = true;
+					break;
+				}
+				else
+					bShaderHasLight = false;
+			}
 
 			for (auto cam : gameObject.world.GetCameras())
 				CreateDrawable(cam);
@@ -182,8 +188,6 @@ namespace sh::game
 			return;
 
 		render::Shader* shader = mat->GetShader();
-		if (!core::IsValid(shader))
-			return;
 	
 		mat->UpdateUniformBuffers();
 
@@ -226,10 +230,12 @@ namespace sh::game
 			uniform.view = cam->GetViewMatrix();
 			uniform.proj = cam->GetProjMatrix();
 
-			drawable->SetUniformData(0, &uniform, render::IDrawable::Stage::Vertex);
-			if (bShaderHasLight)
-				drawable->SetUniformData(1, &lightStruct, render::IDrawable::Stage::Fragment);
-
+			for (std::size_t passIdx = 0; passIdx < mat->GetShader()->GetPasses().size(); ++passIdx)
+			{
+				drawable->SetUniformData(passIdx, 0, &uniform, render::IDrawable::Stage::Vertex);
+				if (bShaderHasLight)
+					drawable->SetUniformData(passIdx, 1, &lightStruct, render::IDrawable::Stage::Fragment);
+			}
 			gameObject.world.renderer.PushDrawAble(drawable);
 		}//drawables
 	}

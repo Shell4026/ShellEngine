@@ -6,6 +6,7 @@
 #include <array>
 #include <cassert>
 #include <stdexcept>
+#include <string>
 
 namespace sh::render::vk
 {
@@ -90,9 +91,11 @@ namespace sh::render::vk
 		depthAttachment.format = FindSupportedDepthFormat();
 		depthAttachment.samples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
 		depthAttachment.loadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR;
-		depthAttachment.storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		depthAttachment.stencilLoadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		depthAttachment.stencilStoreOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depthAttachment.storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE;
+		depthAttachment.stencilLoadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR;
+		depthAttachment.stencilStoreOp = 
+			bUseStencil ? 
+			VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE : VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		depthAttachment.initialLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
 		depthAttachment.finalLayout = VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
@@ -110,7 +113,7 @@ namespace sh::render::vk
 		subpass.pipelineBindPoint = VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS;
 		subpass.colorAttachmentCount = 1;
 		subpass.pColorAttachments = &colorAttachmentRef;
-		subpass.pDepthStencilAttachment = &depthAttachmentRef;
+		subpass.pDepthStencilAttachment = bUseDepth ? &depthAttachmentRef : nullptr;
 		
 		std::vector<VkSubpassDependency> dependencies;
 		if (colorImg == nullptr)
@@ -125,11 +128,14 @@ namespace sh::render::vk
 			dependencies[0].dstStageMask = // 첫 서브패스의 픽셀 테스트 단계전에 srcStageMask가 완료돼야 함
 				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | 
 				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-			dependencies[0].srcAccessMask = // 외부작업은 깊이/스텐실에 쓰기 작업을 수행
-				VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-			dependencies[0].dstAccessMask = // 첫 번째 서브패스는 깊이/스텐실에 쓰기와 읽기 작업을 수행
-				VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT | 
-				VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+			if (bUseDepth)
+			{
+				dependencies[0].srcAccessMask = // 외부작업은 깊이/스텐실에 쓰기 작업을 수행
+					VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+				dependencies[0].dstAccessMask = // 첫 번째 서브패스는 깊이/스텐실에 쓰기와 읽기 작업을 수행
+					VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+					VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+			}
 			dependencies[0].dependencyFlags = 0;
 
 			dependencies[1].srcSubpass = VK_SUBPASS_EXTERNAL;
@@ -160,11 +166,14 @@ namespace sh::render::vk
 				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | 
 				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT | 
 				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
-			dependencies[0].dstAccessMask = 
-				VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | 
-				VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | 
+			dependencies[0].dstAccessMask =
+				VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+				VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			if (bUseDepth)
+				dependencies[0].dstAccessMask |= 
 				VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | 
 				VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
 			dependencies[0].dependencyFlags = VkDependencyFlagBits::VK_DEPENDENCY_BY_REGION_BIT; //프레임버퍼 로컬
 
 			// 두 번째 종속성
@@ -212,7 +221,7 @@ namespace sh::render::vk
 		VkResult result = vkCreateRenderPass(device, &renderPassInfo, nullptr, &renderPass);
 		assert(result == VkResult::VK_SUCCESS);
 		if (result != VkResult::VK_SUCCESS)
-			throw std::exception();
+			throw std::runtime_error(std::string{ "Failed vkCreateRenderPass()" } + string_VkResult(result));
 	}
 
 	auto VulkanFramebuffer::FindSupportedDepthFormat() -> VkFormat
@@ -220,7 +229,11 @@ namespace sh::render::vk
 		std::array<VkFormat, 3> formats = { VkFormat::VK_FORMAT_D32_SFLOAT, VkFormat::VK_FORMAT_D32_SFLOAT_S8_UINT, VkFormat::VK_FORMAT_D24_UNORM_S8_UINT };
 
 		auto feature = VkFormatFeatureFlagBits::VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
-		for (VkFormat format : formats) {
+		for (VkFormat format : formats) 
+		{
+			if (bUseStencil && format == VkFormat::VK_FORMAT_D32_SFLOAT)
+				continue;
+
 			VkFormatProperties props;
 			vkGetPhysicalDeviceFormatProperties(gpu, format, &props);
 
@@ -252,7 +265,7 @@ namespace sh::render::vk
 		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		framebufferInfo.pNext = nullptr;
 		framebufferInfo.renderPass = renderPass;
-		framebufferInfo.attachmentCount = static_cast<uint32_t>(views.size());
+		framebufferInfo.attachmentCount = bUseDepth ? static_cast<uint32_t>(views.size()) : 1;
 		framebufferInfo.pAttachments = views.data();
 		framebufferInfo.width = width;
 		framebufferInfo.height = height;
@@ -281,7 +294,8 @@ namespace sh::render::vk
 			VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT);
 		assert(result == VkResult::VK_SUCCESS);
 
-		CreateDepthBuffer();
+		if (bUseDepth)
+			CreateDepthBuffer();
 		CreateRenderPass();
 
 		std::array<VkImageView, 2> views = {
@@ -292,7 +306,7 @@ namespace sh::render::vk
 		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		framebufferInfo.pNext = nullptr;
 		framebufferInfo.renderPass = renderPass;
-		framebufferInfo.attachmentCount = static_cast<uint32_t>(views.size());
+		framebufferInfo.attachmentCount = bUseDepth ? static_cast<uint32_t>(views.size()) : 1;
 		framebufferInfo.pAttachments = views.data();
 		framebufferInfo.width = width;
 		framebufferInfo.height = height;
@@ -404,6 +418,17 @@ namespace sh::render::vk
 		});
 
 		context.GetQueueManager().SubmitCommand(*cmd);
+	}
+
+	SH_RENDER_API auto VulkanFramebuffer::UseDepthBuffer(bool bUse) -> VulkanFramebuffer&
+	{
+		bUseDepth = bUse;
+		return *this;
+	}
+	SH_RENDER_API auto VulkanFramebuffer::UseStencilBuffer(bool bUse) -> VulkanFramebuffer&
+	{
+		bUseStencil = bUse;
+		return *this;
 	}
 
 	SH_RENDER_API auto VulkanFramebuffer::GetRenderPass() const -> VkRenderPass

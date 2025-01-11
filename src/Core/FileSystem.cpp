@@ -1,5 +1,4 @@
-﻿#include "PCH.h"
-#include "FileSystem.h"
+﻿#include "FileSystem.h"
 
 #include <utility>
 #include <filesystem>
@@ -7,6 +6,8 @@
 #include <Windows.h>
 #include <shlobj_core.h>
 #endif
+
+#include <array>
 
 namespace sh::core
 {
@@ -63,5 +64,86 @@ namespace sh::core
 			filePath = path / (newFileName + extension);
 		}
 		return newFileName + extension;
+	}
+
+	SH_CORE_API auto FileSystem::LoadBinary(const std::filesystem::path& path) -> std::optional<std::vector<unsigned char>>
+	{
+		std::vector<unsigned char> data;
+
+		FILE* file = nullptr;
+#if WIN32
+		file = _wfopen(path.c_str(), L"rb");
+#else
+		file = fopen(path.c_str(), "rb");
+#endif
+		if (file == nullptr)
+			return {};
+
+		std::array<unsigned char, 100> buffer{};
+		size_t size = 0;
+		while ((size = fread(buffer.data(), sizeof(unsigned char), 100, file)) > 0)
+		{
+			for (int i = 0; i < size; ++i)
+				data.push_back(buffer[i]);
+		}
+		fclose(file);
+
+		return data;
+	}
+	SH_CORE_API auto FileSystem::SaveBinary(const std::vector<uint8_t>& binary, const std::filesystem::path& path) -> bool
+	{
+		FILE* file;
+#if WIN32
+		file = _wfopen(path.c_str(), L"wb");
+#else
+		file = fopen(path.c_str(), "wb");
+#endif
+		if (file == nullptr)
+			return false;
+
+		fwrite(binary.data(), sizeof(uint8_t), binary.size(), file);
+		fclose(file);
+
+		return true;
+	}
+	SH_CORE_API auto FileSystem::LoadText(const std::filesystem::path& path) -> std::optional<std::string>
+	{
+		std::string strData;
+
+		FILE* file = nullptr;
+#if WIN32
+		file = _wfopen(path.c_str(), L"rb");
+#else
+		file = fopen(path.c_str(), "rb");
+#endif
+		if (file == nullptr)
+			return {};
+
+		std::array<char, 100> buffer{};
+		size_t size = 0;
+		while ((size = fread(buffer.data(), sizeof(unsigned char), 100, file)) > 0)
+		{
+			for (int i = 0; i < size; ++i)
+				strData.push_back(buffer[i]);
+		}
+		fclose(file);
+
+		return strData;
+	}
+	SH_CORE_API auto FileSystem::SaveText(const std::string& text, const std::filesystem::path& path) -> bool
+	{
+		FILE* file;
+#if WIN32
+		file = _wfopen(path.c_str(), L"w");
+#else
+		file = fopen(path.c_str(), "w");
+#endif
+		if (file == nullptr)
+			return false;
+
+		fwrite(text.data(), sizeof(char), text.size(), file);
+		fclose(file);
+
+		return true;
 	}
 }//namespace

@@ -94,14 +94,18 @@ namespace sh::editor
 
 	void Viewport::ChangeViewportSize()
 	{
-		//SH_INFO_FORMAT("Sampler {}, {}", 
-		//	(void*)static_cast<render::VulkanTextureBuffer*>(renderTex->GetBuffer(core::ThreadType::Game))->GetImageBuffer()->GetSampler(), 
-		//	(void*)static_cast<render::VulkanTextureBuffer*>(renderTex->GetBuffer(core::ThreadType::Render))->GetImageBuffer()->GetSampler());
-		//SH_INFO_FORMAT("DescriptorSets {}, {}", (void*)viewportDescSet[core::ThreadType::Game], (void*)viewportDescSet[core::ThreadType::Render]);
+		SH_INFO_FORMAT("Sampler {}, {}", 
+			(void*)static_cast<render::vk::VulkanTextureBuffer*>(renderTex->GetBuffer(core::ThreadType::Game))->GetImageBuffer()->GetSampler(), 
+			(void*)static_cast<render::vk::VulkanTextureBuffer*>(renderTex->GetBuffer(core::ThreadType::Render))->GetImageBuffer()->GetSampler());
+		SH_INFO_FORMAT("DescriptorSets {}, {}", (void*)viewportDescSet[core::ThreadType::Game], (void*)viewportDescSet[core::ThreadType::Render]);
 		if (viewportDescSet[core::ThreadType::Game])
+		{
 			ImGui_ImplVulkan_RemoveTexture(viewportDescSet[core::ThreadType::Game]);
+			viewportDescSet[core::ThreadType::Game] = nullptr;
+		}
 		if (viewportWidthLast != 0.f && viewportHeightLast != 0.f)
-			renderTex->SetSize(viewportWidthLast, viewportHeightLast);
+			renderTex->SetSize(viewportWidthLast, viewportHeightLast); // renderTex dirty등록
+
 		auto vkTexBuffer = static_cast<render::vk::VulkanTextureBuffer*>(renderTex->GetBuffer(core::ThreadType::Game));
 		auto imgBuffer = vkTexBuffer->GetImageBuffer();
 		viewportDescSet[core::ThreadType::Game] = ImGui_ImplVulkan_AddTexture(imgBuffer->GetSampler(), imgBuffer->GetImageView(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);

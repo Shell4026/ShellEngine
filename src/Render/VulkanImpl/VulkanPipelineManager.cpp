@@ -1,8 +1,7 @@
 ﻿#include "VulkanPipelineManager.h"
-#include "pch.h"
-#include "VulkanPipelineManager.h"
 #include "Mesh.h"
-#include "VulkanShader.h"
+#include "Shader.h"
+#include "VulkanShaderPass.h"
 #include "VulkanVertexBuffer.h"
 #include "VulkanContext.h"
 
@@ -14,26 +13,6 @@ namespace sh::render::vk
 		context(context),
 		device(context.GetDevice())
 	{
-		shaderListener.SetCallback([&](core::SObject* obj)
-		{
-			auto shaderIt = shaderIdxs.find(static_cast<const VulkanShader*>(obj));
-			if (shaderIt != shaderIdxs.end())
-			{
-				for (auto idx : shaderIt->second)
-				{
-					pipelines[idx][core::ThreadType::Game].reset();
-					dirtyPipelines.push(idx);
-
-					auto& info = pipelinesInfo[idx];
-					if (auto infoIt = infoIdx.find(info); infoIt != infoIdx.end())
-						infoIdx.erase(infoIt);
-					if (auto meshIt = meshIdxs.find(info.mesh); meshIt != meshIdxs.end())
-						meshIdxs.erase(meshIt);
-				}
-				shaderIdxs.erase(shaderIt);
-				SetDirty();
-			}
-		});
 		meshListener.SetCallback([&](core::SObject* obj)
 		{
 			auto meshIt = meshIdxs.find(static_cast<const Mesh*>(obj));
@@ -56,9 +35,8 @@ namespace sh::render::vk
 		});
 	}
 
-	auto VulkanPipelineManager::BuildPipeline(const VkRenderPass& pass, VulkanShader& shader, Mesh& mesh) -> std::unique_ptr<VulkanPipeline>
+	auto VulkanPipelineManager::BuildPipeline(const VkRenderPass& pass, VulkanShaderPass& shader, Mesh& mesh) -> std::unique_ptr<VulkanPipeline>
 	{
-		shader.onDestroy.Register(shaderListener);
 		mesh.onDestroy.Register(meshListener);
 
 		auto pipeline = std::make_unique<VulkanPipeline>(device, pass);
@@ -110,7 +88,7 @@ namespace sh::render::vk
 		return pipeline;
 	}
 
-	SH_RENDER_API auto VulkanPipelineManager::GetPipelineHandle(const VkRenderPass& pass, VulkanShader& shader, Mesh& mesh) -> uint64_t
+	SH_RENDER_API auto VulkanPipelineManager::GetPipelineHandle(const VkRenderPass& pass, VulkanShaderPass& shader, Mesh& mesh) -> uint64_t
 	{
 		PipelineInfo info{ &pass, &shader, &mesh };
 		auto it = infoIdx.find(info);

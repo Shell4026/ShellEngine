@@ -103,4 +103,39 @@ namespace sh::core {
 		std::uniform_real_distribution<double> rnd{ min, max };
 		return rnd(gen);
 	}
+
+	SH_CORE_API auto Util::ReplaceSpaceString(const std::string& str) -> std::string
+	{
+		std::string result;
+		result.reserve(str.size());
+		for (char c : str)
+		{
+			if (std::isalnum(static_cast<unsigned char>(c)))
+				result.push_back(c);
+			else
+				result.push_back('_');
+		}
+		return result;
+	}
+
+	SH_CORE_API auto Util::ConvertByteToWord(const std::vector<uint8_t>& bytes) -> std::vector<uint32_t>
+	{
+		std::vector<uint32_t> result;
+		uint32_t word = 0;
+		for (int i = 0; i < bytes.size(); ++i)
+		{
+			word |= static_cast<uint32_t>(bytes[i]) << (i % 4) * 8;
+			if ((i + 1) % 4 == 0)
+			{
+				result.push_back(word);
+				word = 0;
+			}
+		}
+
+		if (bytes.size() % 4 != 0)
+		{
+			result.push_back(word);
+		}
+		return result;
+	}
 }

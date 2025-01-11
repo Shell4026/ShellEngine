@@ -1,17 +1,13 @@
 ﻿#pragma once
 #include "Export.h"
-#include "IDrawable.h"
-#include "Camera.h"
+#include "../IDrawable.h"
+#include "../Camera.h"
 
-#include "VulkanVertexBuffer.h"
 #include "VulkanPipeline.h"
-#include "VulkanBuffer.h"
-#include "VulkanCommandBuffer.h"
 #include "VulkanUniformBuffer.h"
 
 #include <vector>
 #include <memory>
-#include <array>
 
 namespace sh::render::vk
 {
@@ -21,6 +17,14 @@ namespace sh::render::vk
 	{
 		SCLASS(VulkanDrawable)
 	private:
+		struct PassData
+		{
+			uint64_t pipelineHandle = 0;
+			core::SMap<uint32_t, std::unique_ptr<IBuffer>> vertShaderData;
+			core::SMap<uint32_t, std::unique_ptr<IBuffer>> fragShaderData;
+			std::unique_ptr<IUniformBuffer> uniformBuffer; // 오브젝트 개별 유니폼 버퍼
+		};
+	private:
 		const VulkanContext& context;
 		PROPERTY(mat)
 		Material* mat;
@@ -28,11 +32,7 @@ namespace sh::render::vk
 		Mesh* mesh;
 		Camera* camera;
 
-		uint64_t pipelineHandle = 0;
-
-		core::SyncArray<core::SMap<uint32_t, std::unique_ptr<VulkanBuffer>>> localVertBuffer;
-		core::SyncArray<core::SMap<uint32_t, std::unique_ptr<VulkanBuffer>>> localFragBuffer;
-		core::SyncArray<std::unique_ptr<VulkanUniformBuffer>> localDescSet;
+		core::SyncArray<std::vector<PassData>> perPassData;
 
 		VulkanPipeline::Topology topology = VulkanPipeline::Topology::Triangle;
 
@@ -40,7 +40,7 @@ namespace sh::render::vk
 	protected:
 		void Clean(core::ThreadType thr);
 		void CreateBuffers(core::ThreadType thr);
-		void GetPipelineFromManager();
+		void GetPipelineFromManager(core::ThreadType thr);
 	public:
 		SH_RENDER_API VulkanDrawable(const VulkanContext& context);
 		SH_RENDER_API VulkanDrawable(VulkanDrawable&& other) noexcept;
@@ -53,16 +53,16 @@ namespace sh::render::vk
 		/// @param binding 바인딩 번호
 		/// @param data 데이터 위치 포인터
 		/// @param stage 셰이더 스테이지
-		SH_RENDER_API void SetUniformData(uint32_t binding, const void* data, Stage stage) override;
+		SH_RENDER_API void SetUniformData(std::size_t passIdx, uint32_t binding, const void* data, Stage stage) override;
 
 		SH_RENDER_API auto GetMaterial() const -> const Material* override;
 		SH_RENDER_API auto GetMesh() const-> const Mesh* override;
 		SH_RENDER_API auto GetCamera() const-> Camera* override;
 
-		SH_RENDER_API auto GetPipelineHandle() const -> uint64_t;
+		SH_RENDER_API auto GetPipelineHandle(std::size_t passIdx, core::ThreadType thr) const -> uint64_t;
 
-		SH_RENDER_API auto GetLocalUniformBuffer(core::ThreadType thr) const -> VulkanUniformBuffer*;
-		SH_RENDER_API auto GetDescriptorSet(core::ThreadType thr) const -> VkDescriptorSet;
+		SH_RENDER_API auto GetLocalUniformBuffer(std::size_t passIdx, core::ThreadType thr) const -> VulkanUniformBuffer*;
+		SH_RENDER_API auto GetDescriptorSet(std::size_t passIdx, core::ThreadType thr) const -> VkDescriptorSet;
 
 		SH_RENDER_API void SetDirty() override;
 		SH_RENDER_API void Sync() override;

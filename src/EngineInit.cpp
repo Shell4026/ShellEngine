@@ -8,11 +8,11 @@
 
 #include "Render/VulkanImpl/VulkanRenderer.h"
 #include "Render/VulkanImpl/VulkanContext.h"
-#include "Render/VulkanImpl/VulkanShader.h"
+#include "Render/VulkanImpl/VulkanShaderPass.h"
+#include "Render/VulkanImpl/VulkanShaderPassBuilder.h"
 #include "Render/Mesh/Plane.h"
 #include "Render/Mesh/Grid.h"
 
-#include "Game/VulkanShaderBuilder.h"
 #include "Game/ShaderLoader.h"
 #include "Game/TextureLoader.h"
 #include "Game/ModelLoader.h"
@@ -69,17 +69,18 @@ namespace sh
 		SH_INFO("Resource initialization");
 		using namespace sh::game;
 
-		VulkanShaderBuilder shaderBuilder{ static_cast<sh::render::vk::VulkanContext&>(*renderer->GetContext()) };
+		render::vk::VulkanShaderPassBuilder shaderBuilder{ static_cast<sh::render::vk::VulkanContext&>(*renderer->GetContext()) };
 
 		ShaderLoader loader{ &shaderBuilder };
 		TextureLoader texLoader{ *renderer->GetContext() };
 		ModelLoader modelLoader{ *renderer->GetContext() };
 
-		auto defaultShader = world->shaders.AddResource("Default", loader.LoadShader<render::VulkanShader>("shaders/default.vert.spv", "shaders/default.frag.spv"));
-		auto lineShader = world->shaders.AddResource("Line", loader.LoadShader<render::VulkanShader>("shaders/line.vert.spv", "shaders/line.frag.spv"));
-		auto errorShader = world->shaders.AddResource("ErrorShader", loader.LoadShader<render::VulkanShader>("shaders/error.vert.spv", "shaders/error.frag.spv"));
-		auto gridShader = world->shaders.AddResource("GridShader", loader.LoadShader<render::VulkanShader>("shaders/grid.vert.spv", "shaders/grid.frag.spv"));
-		auto pickingShader = world->shaders.AddResource("PickingShader", loader.LoadShader<render::VulkanShader>("shaders/picking.vert.spv", "shaders/picking.frag.spv"));
+		auto defaultShader = world->shaders.AddResource("Default", loader.LoadShader("shaders/default.shader"));
+		auto lineShader = world->shaders.AddResource("Line", loader.LoadShader("shaders/line.shader"));
+		auto errorShader = world->shaders.AddResource("ErrorShader", loader.LoadShader("shaders/error.shader"));
+		auto gridShader = world->shaders.AddResource("GridShader", loader.LoadShader("shaders/grid.shader"));
+		auto pickingShader = world->shaders.AddResource("PickingShader", loader.LoadShader("shaders/picking.shader"));
+		auto outlineShader = world->shaders.AddResource("OutlineShader", loader.LoadShader("shaders/outline.shader"));
 
 		auto errorMat = world->materials.AddResource("ErrorMaterial", sh::render::Material{ errorShader });
 		auto lineMat = world->materials.AddResource("LineMaterial", sh::render::Material{ lineShader });
@@ -89,49 +90,14 @@ namespace sh
 		auto plane = world->meshes.AddResource("PlaneMesh", sh::render::Plane{});
 		auto grid = world->meshes.AddResource("GridMesh", sh::render::Grid{});
 
-		auto ObjectUniformType = render::Shader::UniformType::Object;
-		auto MaterialUniformType = render::Shader::UniformType::Material;
+		auto ObjectUniformType = render::ShaderPass::UniformType::Object;
+		auto MaterialUniformType = render::ShaderPass::UniformType::Material;
 
 		errorShader->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f0f" });
 		errorShader->SetName("ErrorShader");
-		errorShader->AddUniform<glm::mat4>("model", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
-		errorShader->AddUniform<glm::mat4>("view", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
-		errorShader->AddUniform<glm::mat4>("proj", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
-		errorShader->Build();
 
 		defaultShader->SetUUID(core::UUID{ "ad9217609f6c7e0f1163785746cc153e" });
 		defaultShader->SetName("DefaultShader");
-		defaultShader->AddAttribute<glm::vec2>("uvs", 1);
-		defaultShader->AddAttribute<glm::vec3>("normals", 2);
-		defaultShader->AddUniform<glm::mat4>("model", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
-		defaultShader->AddUniform<glm::mat4>("view", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
-		defaultShader->AddUniform<glm::mat4>("proj", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
-		defaultShader->AddUniform<glm::vec4[10]>("lightPosRange", ObjectUniformType, 1, sh::render::Shader::ShaderStage::Fragment);
-		defaultShader->AddUniform<int>("lightCount", ObjectUniformType, 1, sh::render::Shader::ShaderStage::Fragment);
-		defaultShader->AddUniform<float>("ambient", MaterialUniformType, 0, sh::render::Shader::ShaderStage::Fragment);
-		defaultShader->AddUniform<sh::render::Texture>("tex", MaterialUniformType, 1, sh::render::Shader::ShaderStage::Fragment);
-		defaultShader->Build();
-
-		lineShader->AddUniform<glm::mat4>("model", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
-		lineShader->AddUniform<glm::mat4>("view", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
-		lineShader->AddUniform<glm::mat4>("proj", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
-		lineShader->AddUniform<glm::vec3>("start", ObjectUniformType, 1, sh::render::Shader::ShaderStage::Vertex);
-		lineShader->AddUniform<glm::vec3>("end", ObjectUniformType, 1, sh::render::Shader::ShaderStage::Vertex);
-		lineShader->AddUniform<glm::vec4>("color", ObjectUniformType, 2, sh::render::Shader::ShaderStage::Fragment);
-		lineShader->AddUniform<glm::vec4>("test", MaterialUniformType, 0, sh::render::Shader::ShaderStage::Fragment);
-		lineShader->Build();
-
-		gridShader->AddUniform<glm::mat4>("model", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
-		gridShader->AddUniform<glm::mat4>("view", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
-		gridShader->AddUniform<glm::mat4>("proj", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
-		gridShader->AddUniform<glm::vec4>("color", MaterialUniformType, 0, sh::render::Shader::ShaderStage::Fragment);
-		gridShader->Build();
-
-		pickingShader->AddUniform<glm::mat4>("model", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
-		pickingShader->AddUniform<glm::mat4>("view", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
-		pickingShader->AddUniform<glm::mat4>("proj", ObjectUniformType, 0, sh::render::Shader::ShaderStage::Vertex);
-		pickingShader->AddUniform<glm::vec4>("id", ObjectUniformType, 1, sh::render::Shader::ShaderStage::Fragment);
-		pickingShader->Build();
 
 		errorMat->Build(*renderer->GetContext());
 		pickingMat->Build(*renderer->GetContext());

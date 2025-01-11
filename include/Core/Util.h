@@ -6,6 +6,7 @@
 #include <chrono>
 #include <functional>
 #include <random>
+#include <cstdint>
 
 namespace sh::core 
 {
@@ -99,6 +100,15 @@ namespace sh::core
 		SH_CORE_API static auto RandomRange(int min, int max) -> int;
 		SH_CORE_API static auto RandomRange(float min, float max) -> float;
 		SH_CORE_API static auto RandomRange(double min, double max) -> double;
+
+		/// @brief 문자열에서 공백을 제거하고 _로 대체하는 함수
+		/// @param str 문자열
+		/// @return 공백이 대체된 문자열
+		SH_CORE_API static auto ReplaceSpaceString(const std::string& str) -> std::string;
+		/// @brief 바이트 배열을 리틀 엔디안 워드(4바이트) 배열로 바꾸는 함수.
+		/// @param bytes 바이트 배열
+		/// @return 워드 배열
+		SH_CORE_API static auto ConvertByteToWord(const std::vector<uint8_t>& bytes) -> std::vector<uint32_t>;
 	};
 
 	/// @brief 해당 SObject가 nullptr이거나 앞으로 지워질 객체인지 검증 하는 함수.

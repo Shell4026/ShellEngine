@@ -1,5 +1,4 @@
-﻿#include "pch.h"
-#include "VulkanContext.h"
+﻿#include "VulkanContext.h"
 #include "VulkanLayer.h"
 #include "VulkanSwapChain.h"
 #include "VulkanQueueManager.h"
@@ -64,8 +63,8 @@ namespace sh::render::vk
 		else
 			throw std::runtime_error(std::string{ "Can't found Vulkan extension: " } + VK_KHR_WIN32_SURFACE_EXTENSION_NAME);
 #elif __linux__
-		if (layers->FindVulkanExtension(VK_KHR_XLIB_SURFACE_EXTENSION_NAME))
-			requestedInstanceExtension.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
+		if (layers->FindExtension(VK_KHR_XLIB_SURFACE_EXTENSION_NAME))
+			requestedExtension.push_back(VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
 		else
 			throw std::runtime_error(std::string{ "Can't found Vulkan extension: " } + VK_KHR_XLIB_SURFACE_EXTENSION_NAME);
 #endif
@@ -409,6 +408,7 @@ namespace sh::render::vk
 			if (result != VkResult::VK_SUCCESS)
 				return false;
 		}
+		return true;
 	}
 	SH_RENDER_API void VulkanContext::PrintLayers()
 	{

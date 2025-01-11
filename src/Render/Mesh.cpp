@@ -9,7 +9,7 @@ namespace sh::render
 		attributes(attrs),
 		topology(Topology::Face)
 	{
-		this->SetAttribute<glm::vec3>(ShaderAttribute<glm::vec3>{ "vertex" });
+		this->SetAttribute<glm::vec3>(ShaderAttribute<glm::vec3>{ "verts" });
 		this->SetAttribute<glm::vec2>(ShaderAttribute<glm::vec2>{ "uvs" });
 		this->SetAttribute<glm::vec3>(ShaderAttribute<glm::vec3>{ "normals" });
 	}

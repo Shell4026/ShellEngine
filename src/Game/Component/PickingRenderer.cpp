@@ -58,7 +58,7 @@ namespace sh::game
 					glm::vec4 color;
 				} uniform{ {r, g, b, a} };
 
-				drawable->SetUniformData(1, &uniform, render::IDrawable::Stage::Fragment);
+				drawable->SetUniformData(0, 1, &uniform, render::IDrawable::Stage::Fragment);
 			}
 			Super::Update();
 		}

@@ -35,6 +35,8 @@ namespace sh::render::vk
 		VkFormat format;
 
 		bool bTransferSrc = false;
+		bool bUseDepth = true;
+		bool bUseStencil = false;
 	private:
 		void CreateRenderPass();
 		auto FindSupportedDepthFormat() -> VkFormat;
@@ -50,6 +52,9 @@ namespace sh::render::vk
 		SH_RENDER_API auto CreateOffScreen(uint32_t width, uint32_t height, VkFormat format = VkFormat::VK_FORMAT_R8G8B8A8_SRGB, bool bTransferSrc = false) -> VkResult;
 		SH_RENDER_API void Clean();
 		SH_RENDER_API void TransferImageToBuffer(VulkanCommandBuffer* cmd, VkBuffer buffer, int x, int y);
+
+		SH_RENDER_API auto UseDepthBuffer(bool bUse) -> VulkanFramebuffer&;
+		SH_RENDER_API auto UseStencilBuffer(bool bUse) -> VulkanFramebuffer&;
 
 		SH_RENDER_API auto GetRenderPass() const -> VkRenderPass;
 		SH_RENDER_API auto GetVkFramebuffer() const -> VkFramebuffer;

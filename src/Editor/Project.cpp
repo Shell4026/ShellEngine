@@ -9,7 +9,6 @@
 #include "Game/ModelLoader.h"
 
 #include "Core/FileSystem.h"
-#include "Core/FileLoader.h"
 
 namespace sh::editor
 {
@@ -267,6 +266,7 @@ namespace sh::editor
 	SH_EDITOR_API void Project::OpenProject(const std::filesystem::path& dir)
 	{
 		rootPath = dir;
+		assetPath = rootPath / "Assets";
 		currentPath = dir;
 		GetAllFiles(currentPath);
 
@@ -275,14 +275,13 @@ namespace sh::editor
 
 	SH_EDITOR_API void Project::SaveWorld()
 	{
-		std::ofstream os{ rootPath / "test.world" };
+		std::ofstream os{ assetPath / "test.world" };
 		os << std::setw(4) << world.Serialize();
 		os.close();
 	}
 	SH_EDITOR_API void Project::LoadWorld()
 	{
-		core::FileLoader loader{};
-		auto file = loader.LoadText((rootPath / "test.world").string());
+		auto file = core::FileSystem::LoadText(assetPath / "test.world");
 		if (file)
 		{
 			world.Deserialize(core::Json::parse(file.value()));

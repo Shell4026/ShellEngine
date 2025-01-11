@@ -8,21 +8,22 @@
 #include "Game/ModelLoader.h"
 #include "Game/MaterialLoader.h"
 
-#include "Core/FileLoader.h"
+#include "Core/FileSystem.h"
 
 #include <random>
 #include <istream>
 #include <ostream>
 #include <cassert>
 #include <algorithm>
+#include <fstream>
 
 namespace sh::editor
 {
-	core::Observer<false, core::SObject*>::Listener AssetDatabase::onDestroyListener{ [&](core::SObject* destoryedObj)
+	core::Observer<false, core::SObject*>::Listener AssetDatabase::onDestroyListener{ [](core::SObject* destoryedObj)
 		{
-			auto it = std::find(dirtyObjs.begin(), dirtyObjs.end(), destoryedObj);
-			if (it != dirtyObjs.end())
-				dirtyObjs.erase(it);
+			auto it = std::find(AssetDatabase::dirtyObjs.begin(), AssetDatabase::dirtyObjs.end(), destoryedObj);
+			if (it != AssetDatabase::dirtyObjs.end())
+				AssetDatabase::dirtyObjs.erase(it);
 		}
 	};
 
@@ -44,8 +45,7 @@ namespace sh::editor
 	{
 		if (std::filesystem::exists(metaDir))
 		{
-			core::FileLoader loader;
-			auto file = loader.LoadText(metaDir.string());
+			auto file = core::FileSystem::LoadText(metaDir);
 			if (!file)
 			{
 				SH_ERROR_FORMAT("Can't load file: {}", metaDir.string());

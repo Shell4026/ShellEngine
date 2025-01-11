@@ -13,7 +13,7 @@
 
 namespace sh::render
 {
-	class VulkanShader;
+	class Shader;
 	class Mesh;
 }
 namespace sh::render::vk
@@ -26,7 +26,7 @@ namespace sh::render::vk
 		struct PipelineInfo
 		{
 			const VkRenderPass* pass;
-			const VulkanShader* shader;
+			const VulkanShaderPass* shader;
 			const Mesh* mesh;
 
 			bool operator==(const PipelineInfo& other) const
@@ -53,10 +53,9 @@ namespace sh::render::vk
 		core::SVector<PipelineInfo> pipelinesInfo;
 		std::unordered_map<PipelineInfo, std::size_t, PipelineInfoHasher> infoIdx;
 		std::unordered_map<const VkRenderPass*, core::SVector<std::size_t>> renderpassIdxs;
-		std::unordered_map<const VulkanShader*, core::SVector<std::size_t>> shaderIdxs;
+		std::unordered_map<const VulkanShaderPass*, core::SVector<std::size_t>> shaderIdxs;
 		std::unordered_map<const Mesh*, core::SVector<std::size_t>> meshIdxs;
 
-		core::Observer<false, core::SObject*>::Listener shaderListener;
 		core::Observer<false, core::SObject*>::Listener meshListener;
 
 		VulkanPipeline* lastBindingPipeline = nullptr;
@@ -64,7 +63,7 @@ namespace sh::render::vk
 		bool bDirty = false;
 		std::stack<uint64_t> dirtyPipelines;
 	private:
-		auto BuildPipeline(const VkRenderPass& pass, VulkanShader& shader, Mesh& mesh) -> std::unique_ptr<VulkanPipeline>;
+		auto BuildPipeline(const VkRenderPass& pass, VulkanShaderPass& shader, Mesh& mesh) -> std::unique_ptr<VulkanPipeline>;
 	public:
 		VulkanPipelineManager(const VulkanContext& context);
 		/// @brief 파이프라인을 생성하거나 가져온다.
@@ -73,7 +72,7 @@ namespace sh::render::vk
 		/// @param mesh 메쉬
 		/// @param shader 셰이더
 		/// @return 파이프라인 핸들
-		SH_RENDER_API auto GetPipelineHandle(const VkRenderPass& pass, VulkanShader& shader, Mesh& mesh) -> uint64_t;
+		SH_RENDER_API auto GetPipelineHandle(const VkRenderPass& pass, VulkanShaderPass& shader, Mesh& mesh) -> uint64_t;
 
 		/// @brief 매 렌더링 시작 할 때 호출해야 하는 함수
 		SH_RENDER_API void BeginRender();

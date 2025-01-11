@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "../Export.h"
-#include "../Shader.h"
+#include "../ShaderPass.h"
 #include "VulkanConfig.h"
 #include "VulkanPipeline.h"
 
@@ -11,11 +11,11 @@
 #include <vector>
 #include <memory>
 
-namespace sh::render
+namespace sh::render::vk
 {
-	class VulkanShader : public Shader
+	class VulkanShaderPass : public ShaderPass
 	{
-		SCLASS(VulkanShader)
+		SCLASS(VulkanShaderPass)
 	private:
 		VkDevice device;
 
@@ -34,9 +34,9 @@ namespace sh::render
 
 		void CleanDescriptors();
 	public:
-		SH_RENDER_API VulkanShader(int id, VkDevice device);
-		SH_RENDER_API VulkanShader(VulkanShader&& other) noexcept;
-		SH_RENDER_API ~VulkanShader();
+		SH_RENDER_API VulkanShaderPass(int id, VkDevice device);
+		SH_RENDER_API VulkanShaderPass(VulkanShaderPass&& other) noexcept;
+		SH_RENDER_API ~VulkanShaderPass();
 		
 		SH_RENDER_API void Clean() override;
 

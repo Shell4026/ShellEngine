@@ -41,12 +41,12 @@ namespace sh::render
 
 		return nullptr;
 	}
-	auto BufferFactory::CreateUniformBuffer(const IRenderContext& context, const Shader& shader, Shader::UniformType type) -> std::unique_ptr<IUniformBuffer>
+	auto BufferFactory::CreateUniformBuffer(const IRenderContext& context, const ShaderPass& shader, ShaderPass::UniformType type) -> std::unique_ptr<IUniformBuffer>
 	{
 		if (context.GetRenderAPIType() == RenderAPI::Vulkan)
 		{
 			auto ptr = std::make_unique<vk::VulkanUniformBuffer>();
-			ptr->Create(context, shader, (type == Shader::UniformType::Object) ? 0 : 1);
+			ptr->Create(context, shader, (type == ShaderPass::UniformType::Object) ? 0 : 1);
 			return ptr;
 		}
 		return nullptr;

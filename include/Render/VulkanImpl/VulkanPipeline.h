@@ -1,5 +1,4 @@
 ﻿#pragma once
-
 #include "Render/Export.h"
 #include "VulkanConfig.h"
 #include "Core/NonCopyable.h"
@@ -7,16 +6,16 @@
 #include <vector>
 #include <initializer_list>
 
-namespace sh::render{ class VulkanShader; }
-
 namespace sh::render::vk
 {
+	class VulkanShaderPass;
 	class VulkanSurface;
 
 	class VulkanPipeline : public core::INonCopyable
 	{
 	public:
-		 enum class ShaderStage {
+		 enum class ShaderStage 
+		 {
 			Vertex,
 			Fragment
 		};
@@ -37,7 +36,7 @@ namespace sh::render::vk
 	private:
 		VkDevice device;
 		VkRenderPass renderPass;
-		const VulkanShader* shader;
+		const VulkanShaderPass* shader;
 
 		VkPipeline pipeline;
 
@@ -47,8 +46,11 @@ namespace sh::render::vk
 
 		CullMode cullMode;
 		Topology topology;
+		VkStencilOpState stencilState{};
 
 		float lineWidth = 1.f;
+
+		bool bUseStencil = false;
 	public:
 		SH_RENDER_API VulkanPipeline(VkDevice device, VkRenderPass renderPass);
 		SH_RENDER_API VulkanPipeline(VulkanPipeline&& other) noexcept;
@@ -68,7 +70,7 @@ namespace sh::render::vk
 		SH_RENDER_API auto AddAttributeDescription(const VkVertexInputAttributeDescription& attributeDescription) -> VulkanPipeline&;
 		SH_RENDER_API auto ResetAttributeDescription() -> VulkanPipeline&;
 
-		SH_RENDER_API auto SetShader(const VulkanShader* shader) -> VulkanPipeline&;
+		SH_RENDER_API auto SetShader(const VulkanShaderPass* shader) -> VulkanPipeline&;
 
 		SH_RENDER_API auto SetCullMode(CullMode mode) -> VulkanPipeline&;
 
@@ -77,5 +79,8 @@ namespace sh::render::vk
 
 		SH_RENDER_API void SetLineWidth(float width);
 		SH_RENDER_API auto GetLineWidth() const -> float;
+
+		SH_RENDER_API auto SetStencilState(bool bUse, VkStencilOpState stencilState) -> VulkanPipeline&;
+		SH_RENDER_API auto GetStencilState() const -> const VkStencilOpState&;
 	};
 }

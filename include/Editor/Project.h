@@ -21,6 +21,7 @@ namespace sh::editor
 		
 		std::string dir;
 		std::filesystem::path rootPath;
+		std::filesystem::path assetPath;
 		std::filesystem::path currentPath;
 
 		core::SVector<std::filesystem::path> foldersPath;

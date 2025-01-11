@@ -51,8 +51,8 @@ namespace sh::game
 				alignas(16) glm::vec4 color;
 			} color{ this->color };
 
-			drawable->SetUniformData(1, &points, render::IDrawable::Stage::Vertex);
-			drawable->SetUniformData(2, &color, render::IDrawable::Stage::Fragment);
+			drawable->SetUniformData(0, 1, &points, render::IDrawable::Stage::Vertex);
+			drawable->SetUniformData(0, 2, &color, render::IDrawable::Stage::Fragment);
 		}//drawables
 		Super::Update();
 	}

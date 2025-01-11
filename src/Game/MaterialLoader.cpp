@@ -1,10 +1,10 @@
 ﻿#include "PCH.h"
 #include "MaterialLoader.h"
 
-#include "Core/FileLoader.h"
+#include "Core/FileSystem.h"
 #include "Core/ISerializable.h"
 
-#include "Render/Shader.h"
+#include "Render/ShaderPass.h"
 #include "Render/Material.h"
 
 namespace sh::game
@@ -14,7 +14,7 @@ namespace sh::game
 	{
 	}
 
-	void MaterialLoader::SetDefaultProperty(render::Material* mat, const render::Shader::UniformData& uniformData)
+	void MaterialLoader::SetDefaultProperty(render::Material* mat, const render::ShaderPass::UniformData& uniformData)
 	{
 		if (uniformData.type == core::reflection::GetType<int>())
 		{
@@ -97,7 +97,7 @@ namespace sh::game
 	}
 	SH_GAME_API auto MaterialLoader::Load(std::string_view filename) -> render::Material*
 	{
-		auto file = core::FileLoader::LoadText(filename);
+		auto file = core::FileSystem::LoadText(filename);
 		if (!file.has_value())
 			return nullptr;
 		
@@ -110,20 +110,19 @@ namespace sh::game
 
 		render::Material* mat = core::SObject::Create<render::Material>();
 		mat->Deserialize(matJson);
-		render::Shader* shader = mat->GetShader();
-		if (core::IsValid(shader))
+		for (auto& shaderPass : mat->GetShader()->GetPasses())
 		{
-			for (auto& uniformBlock : shader->GetVertexUniforms())
+			for (auto& uniformBlock : shaderPass->GetVertexUniforms())
 			{
 				for (auto& uniformData : uniformBlock.data)
 					SetDefaultProperty(mat, uniformData);
 			}
-			for (auto& uniformBlock : shader->GetFragmentUniforms())
+			for (auto& uniformBlock : shaderPass->GetFragmentUniforms())
 			{
 				for (auto& uniformData : uniformBlock.data)
 					SetDefaultProperty(mat, uniformData);
 			}
-			for (auto& uniformData : shader->GetSamplerUniforms())
+			for (auto& uniformData : shaderPass->GetSamplerUniforms())
 			{
 				if (!mat->HasTextureProperty(uniformData.name))
 					mat->SetTexture(uniformData.name, nullptr);

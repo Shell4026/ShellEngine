@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "Export.h"
 
-#include "Render/Shader.h"
+#include "Render/ShaderPass.h"
 
 namespace sh::render
 {
@@ -16,7 +16,7 @@ namespace sh::game
 	private:
 		const render::IRenderContext& context;
 	private:
-		static void SetDefaultProperty(render::Material* mat, const render::Shader::UniformData& uniformData);
+		static void SetDefaultProperty(render::Material* mat, const render::ShaderPass::UniformData& uniformData);
 	public:
 		SH_GAME_API MaterialLoader(const render::IRenderContext& context);
 

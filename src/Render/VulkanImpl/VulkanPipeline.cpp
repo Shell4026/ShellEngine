@@ -1,7 +1,5 @@
 ﻿#include "VulkanPipeline.h"
-
-#include "VulkanShader.h"
-#include "VulkanSwapChain.h"
+#include "VulkanShaderPass.h"
 
 #include <cassert>
 namespace sh::render::vk
@@ -12,6 +10,13 @@ namespace sh::render::vk
 		cullMode(CullMode::Back),
 		topology(Topology::Triangle)
 	{
+		stencilState.reference = 0;
+		stencilState.compareMask = 0xFF;
+		stencilState.compareOp = VkCompareOp::VK_COMPARE_OP_ALWAYS;
+		stencilState.passOp = VkStencilOp::VK_STENCIL_OP_KEEP;
+		stencilState.failOp = VkStencilOp::VK_STENCIL_OP_KEEP;
+		stencilState.depthFailOp = VkStencilOp::VK_STENCIL_OP_KEEP;
+		stencilState.writeMask = 0xFF;
 	}
 
 	SH_RENDER_API VulkanPipeline::VulkanPipeline(VulkanPipeline&& other) noexcept :
@@ -21,7 +26,10 @@ namespace sh::render::vk
 		bindingDescriptions(std::move(other.bindingDescriptions)),
 		attributeDescriptions(std::move(other.attributeDescriptions)),
 		cullMode(other.cullMode),
-		topology(other.topology)
+		topology(other.topology),
+		stencilState(other.stencilState),
+		lineWidth(other.lineWidth),
+		bUseStencil(other.bUseStencil)
 	{
 		other.pipeline = nullptr;
 		other.device = nullptr;
@@ -36,6 +44,8 @@ namespace sh::render::vk
 
 	SH_RENDER_API void VulkanPipeline::Clean()
 	{
+		lineWidth = 1.f;
+		bUseStencil = false;
 		shaderStages.clear();
 		bindingDescriptions.clear();
 		attributeDescriptions.clear();
@@ -47,7 +57,7 @@ namespace sh::render::vk
 		}
 	}
 
-	SH_RENDER_API auto VulkanPipeline::SetShader(const VulkanShader* shader) -> VulkanPipeline&
+	SH_RENDER_API auto VulkanPipeline::SetShader(const VulkanShaderPass* shader) -> VulkanPipeline&
 	{
 		this->shader = shader;
 		return *this;
@@ -221,13 +231,13 @@ namespace sh::render::vk
 		depthStencil.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 		depthStencil.depthTestEnable = true;
 		depthStencil.depthWriteEnable = true;
-		depthStencil.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS;
+		depthStencil.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS_OR_EQUAL;
 		depthStencil.depthBoundsTestEnable = false;
-		depthStencil.minDepthBounds = 0.0f; // Optional
-		depthStencil.maxDepthBounds = 1.0f; // Optional
-		depthStencil.stencilTestEnable = false;
-		depthStencil.front = {}; // Optional
-		depthStencil.back = {}; // Optional
+		depthStencil.minDepthBounds = 0.0f;
+		depthStencil.maxDepthBounds = 1.0f;
+		depthStencil.stencilTestEnable = bUseStencil;
+		depthStencil.front = stencilState;
+		depthStencil.back = stencilState;
 		
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -279,5 +289,17 @@ namespace sh::render::vk
 	SH_RENDER_API auto VulkanPipeline::GetLineWidth() const -> float
 	{
 		return lineWidth;
+	}
+
+	SH_RENDER_API auto VulkanPipeline::SetStencilState(bool bUse, VkStencilOpState stencilState) -> VulkanPipeline&
+	{
+		bUseStencil = bUse;
+		this->stencilState = stencilState;
+
+		return *this;
+	}
+	SH_RENDER_API auto VulkanPipeline::GetStencilState() const -> const VkStencilOpState&
+	{
+		return stencilState;
 	}
 }

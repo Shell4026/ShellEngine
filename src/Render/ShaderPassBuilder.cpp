@@ -1,32 +1,29 @@
-﻿#include "PCH.h"
-#include "ShaderBuilder.h"
+﻿#include "ShaderPassBuilder.h"
 
-namespace sh::game
+namespace sh::render
 {
-	int ShaderBuilder::idCount = 0;
-
-	ShaderBuilder::ShaderBuilder()
+	ShaderPassBuilder::ShaderPassBuilder()
 	{
 	}
 
-	ShaderBuilder::ShaderBuilder(const ShaderBuilder& other)
+	ShaderPassBuilder::ShaderPassBuilder(const ShaderPassBuilder& other)
 	{
 		this->vertShaderData = other.vertShaderData;
 		this->fragShaderData = other.fragShaderData;
 	}
 
-	ShaderBuilder::ShaderBuilder(ShaderBuilder&& other) noexcept
+	ShaderPassBuilder::ShaderPassBuilder(ShaderPassBuilder&& other) noexcept
 	{
 		this->vertShaderData = std::move(other.vertShaderData);
 		this->fragShaderData = std::move(other.fragShaderData);
 	}
 
-	auto ShaderBuilder::GetNextId() -> int
+	SH_RENDER_API auto ShaderPassBuilder::GetNextId() -> int
 	{
 		return idCount++;
 	}
 
-	void ShaderBuilder::SetData(shaderType type, const std::vector<unsigned char>& data)
+	SH_RENDER_API void ShaderPassBuilder::SetData(shaderType type, const std::vector<uint8_t>& data)
 	{
 		if (type == shaderType::Vertex)
 			vertShaderData = data;
@@ -34,7 +31,7 @@ namespace sh::game
 			fragShaderData = data;
 	}
 
-	void ShaderBuilder::SetData(shaderType type, std::vector<unsigned char>&& data)
+	SH_RENDER_API void ShaderPassBuilder::SetData(shaderType type, std::vector<uint8_t>&& data)
 	{
 		if (type == shaderType::Vertex)
 			vertShaderData = std::move(data);
@@ -42,7 +39,7 @@ namespace sh::game
 			fragShaderData = std::move(data);
 	}
 
-	void ShaderBuilder::ClearData()
+	SH_RENDER_API void ShaderPassBuilder::ClearData()
 	{
 		vertShaderData.clear();
 		fragShaderData.clear();
