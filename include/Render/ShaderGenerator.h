@@ -17,6 +17,7 @@ namespace sh::render
 		/// @return 공백이 대체된 문자열
 		static auto ReplaceSpaceString(const std::string& str) -> std::string;
 	public:
+
 		/// @brief 경로에 셰이더 파일을 생성하는 함수.
 		/// @param shaderName 셰이더 이름
 		/// @param versionNode 셰이더 AST트리의 버전 노드

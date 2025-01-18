@@ -83,8 +83,9 @@ namespace sh::game
 			SH_ERROR_FORMAT("Can't load file: {}", path.string());
 			return nullptr;
 		}
+		render::ShaderLexer lexer{};
 		render::ShaderParser parser{};
-		render::ShaderAST::ShaderNode shaderNode = parser.Parse(src.value());
+		render::ShaderAST::ShaderNode shaderNode = parser.Parse(lexer.Lex(src.value()));
 
 		render::Shader* shader = core::SObject::Create<render::Shader>();
 		for (auto& pass : shaderNode.passes)
@@ -126,7 +127,7 @@ namespace sh::game
 			if (shaderPass == nullptr)
 				return nullptr;
 
-			shaderPass->SetStencilState(pass.stencil.state);
+			shaderPass->SetStencilState(pass.stencil);
 			FillPassAttributes(pass, *shaderPass.get());
 			shaderPass->Build();
 			shader->AddPass(std::move(shaderPass));

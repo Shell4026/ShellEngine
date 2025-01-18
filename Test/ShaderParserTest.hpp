@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "Core/ExecuteProcess.h"
 
+#include "Render/ShaderLexer.h"
 #include "Render/ShaderParser.h"
 #include "Render/ShaderGenerator.h"
 #include "Render/VulkanImpl/VulkanShaderPassBuilder.h"
@@ -18,44 +19,42 @@ TEST(ShaderParserTest, ParserTest)
 	const char* shaderCode = R"(
 #version 430 core
 
-Shader "Default Shader"
+Shader "Outline Shader"
 {
+	Property
+	{
+		float ambient;
+		float outlineWidth;
+		vec4 outlineColor;
+		sampler2D tex;
+	}
+
 	Pass "Default Pass"
 	{
-		Stencil
+		LightingPass "Forward"
+
+		Stencil // 항상 버퍼를 1로 쓴다.
 		{
 			Ref 1;
 			ReadMask 255;
 			WriteMask 255;
 			Comp Always;
-			Pass Keep;
+			Pass Replace;
 			Fail Keep;
 			ZFail Keep;
 		}
-
 		Stage Vertex
 		{
-			layout(location = 0) in vec3 verts;
-			layout(location = 1) in vec2 uvs;
-			layout(location = 2) in vec3 normals;
-
 			layout(location = 0) out vec2 fragUvs;
 			layout(location = 1) out vec3 fragPos;
 			layout(location = 2) out vec3 fragNormals;
 
-			layout(set = 0, binding = 0) uniform MVP
-			{
-				mat4 model;
-				mat4 view;
-				mat4 proj;
-			} mvp;
-
 			void main()
 			{
-				gl_Position = mvp.proj * mvp.view * mvp.model * vec4(verts, 1.0f);
-				fragUvs = uvs;
-				fragPos = (mvp.model * vec4(verts, 1.0f)).xyz;
-				fragNormals = normalize((mvp.model * vec4(normals, 0.0f)).xyz);
+				gl_Position = MVP.proj * MVP.view * MVP.model * vec4(VERTEX, 1.0f);
+				fragUvs = UV;
+				fragPos = (MVP.model * vec4(VERTEX, 1.0f)).xyz;
+				fragNormals = normalize((MVP.model * vec4(NORMAL, 0.0f)).xyz);
 			}
 		}
 		Stage Fragment
@@ -66,31 +65,62 @@ Shader "Default Shader"
 			layout(location = 1) in vec3 fragPos;
 			layout(location = 2) in vec3 fragNormals;
 
-			layout(set = 0, binding = 1) uniform Lights
+			uniform float ambient;
+			uniform sampler2D tex;
+
+			void RedColor(out vec4 color)
 			{
-				vec4 lightPosRange[10];
-				int lightCount;
-			} lights;
-			layout(set = 1, binding = 0) uniform Material
-			{
-				float ambient;
-			} material;
-			layout(set = 1, binding = 1) uniform sampler2D tex;
+				color = vec4(1.f, 0.f, 0.f, 1.0f);
+			}
 
 			void main() 
 			{
 				float diffuse = 0.f;
-				for (int i = 0; i < lights.lightCount; ++i)
+				for (int i = 0; i < LIGHT.count; ++i)
 				{
-					vec3 toLightVec = lights.lightPosRange[i].xyz - fragPos;
+					vec3 toLightVec = LIGHT.pos[i].xyz - fragPos;
 					vec3 toLightDir = normalize(toLightVec);
 					float lightDis = length(toLightVec);
-					float attenuation = clamp(1.0 - (lightDis / lights.lightPosRange[i].w), 0.0, 1.0);
+					float attenuation = clamp(1.0 - (lightDis / LIGHT.range[i]), 0.0, 1.0);
 					
 					diffuse += max(dot(fragNormals, toLightDir), 0.0) * attenuation;
 				}
 				outColor = texture(tex, uvs);
-				outColor.xyz *= diffuse + material.ambient;
+				outColor.xyz *= diffuse + ambient;
+			}
+		}
+	}
+	Pass "Outline Pass"
+	{
+		LightingPass "Forward"
+
+		Stencil // 1이 아닌 곳에 그린다.
+		{
+			Ref 1;
+			Comp NotEqual;
+		}
+
+		Stage Vertex
+		{
+			uniform float outlineWidth;
+			
+			void main()
+			{
+				vec3 vert = VERTEX;
+				vert.xyz *= NORMAL * outlineWidth;
+				gl_Position = MVP.proj * MVP.view * MVP.model * vec4(VERTEX, 1.0f);
+			}
+		}
+		Stage Fragment
+		{
+			layout(location = 0) out vec4 outColor;
+
+			uniform vec4 outlineColor;
+			const float offset = 0.5f;
+
+			void main() 
+			{
+				outColor = outlineColor * offset;
 			}
 		}
 	}
@@ -98,109 +128,31 @@ Shader "Default Shader"
 )";
 	using namespace sh;
 
+	render::ShaderLexer lexer{};
 	render::ShaderParser parser{};
-	auto shaderNode = parser.Parse(shaderCode);
+	render::ShaderAST::ShaderNode shaderNode{};
+	auto tokens = lexer.Lex(shaderCode);
+	shaderNode = parser.Parse(tokens);
 
-	EXPECT_EQ(shaderNode.shaderName, "Default Shader");
+	EXPECT_EQ(shaderNode.shaderName, "Outline Shader");
 	EXPECT_EQ(shaderNode.version.versionNumber, 430);
 	EXPECT_EQ(shaderNode.version.profile, "core");
 
 	auto& passNodes = shaderNode.passes;
-	EXPECT_EQ(passNodes.size(), 1);
+	EXPECT_EQ(passNodes.size(), 2);
 
-	auto& passNode = passNodes.front();
-	EXPECT_EQ(passNode.name, "Default Pass");
-	EXPECT_EQ(passNode.stages.size(), 2);
-	EXPECT_EQ(passNode.stencil.state.ref, 1);
+	EXPECT_EQ(shaderNode.properties[0].name, "ambient");
+	EXPECT_EQ(shaderNode.properties[1].name, "outlineWidth");
+	EXPECT_EQ(shaderNode.properties[2].name, "outlineColor");
+	EXPECT_EQ(shaderNode.properties[3].name, "tex");
+	EXPECT_EQ(shaderNode.properties[3].type, render::ShaderAST::VariableType::Sampler);
 
-	auto& vertexStage = passNode.stages[0];
-	EXPECT_EQ(vertexStage.type, render::ShaderAST::StageType::Vertex);
-	EXPECT_EQ(vertexStage.in.size(), 3);
-	EXPECT_EQ(vertexStage.in[0].binding, 0);
-	EXPECT_EQ(vertexStage.in[0].var.type, render::ShaderAST::VariableType::Vec3);
-	EXPECT_EQ(vertexStage.in[0].var.size, 1);
-	EXPECT_EQ(vertexStage.in[0].var.name, "verts");
-	EXPECT_EQ(vertexStage.in[1].var.type, render::ShaderAST::VariableType::Vec2);
-	EXPECT_EQ(vertexStage.in[1].var.size, 1);
-	EXPECT_EQ(vertexStage.in[1].var.name, "uvs");
-	EXPECT_EQ(vertexStage.in[2].var.type, render::ShaderAST::VariableType::Vec3);
-	EXPECT_EQ(vertexStage.in[2].var.size, 1);
-	EXPECT_EQ(vertexStage.in[2].var.name, "normals");
-
-	EXPECT_EQ(vertexStage.out.size(), 3);
-	EXPECT_EQ(vertexStage.out[0].var.type, render::ShaderAST::VariableType::Vec2);
-	EXPECT_EQ(vertexStage.out[0].var.size, 1);
-	EXPECT_EQ(vertexStage.out[0].var.name, "fragUvs");
-	EXPECT_EQ(vertexStage.out[1].var.type, render::ShaderAST::VariableType::Vec3);
-	EXPECT_EQ(vertexStage.out[1].var.size, 1);
-	EXPECT_EQ(vertexStage.out[1].var.name, "fragPos");
-	EXPECT_EQ(vertexStage.out[2].var.type, render::ShaderAST::VariableType::Vec3);
-	EXPECT_EQ(vertexStage.out[2].var.size, 1);
-	EXPECT_EQ(vertexStage.out[2].var.name, "fragNormals");
-
-	EXPECT_EQ(vertexStage.uniforms.size(), 1);
-	EXPECT_EQ(vertexStage.uniforms[0].set, 0);
-	EXPECT_EQ(vertexStage.uniforms[0].binding, 0);
-	EXPECT_EQ(vertexStage.uniforms[0].bSampler, false);
-	EXPECT_EQ(vertexStage.uniforms[0].name, "mvp");
-	EXPECT_EQ(vertexStage.uniforms[0].vars.size(), 3);
-	EXPECT_EQ(vertexStage.uniforms[0].vars[0].name, "model");
-	EXPECT_EQ(vertexStage.uniforms[0].vars[0].type, render::ShaderAST::VariableType::Mat4);
-	EXPECT_EQ(vertexStage.uniforms[0].vars[0].size, 1);
-	EXPECT_EQ(vertexStage.uniforms[0].vars[1].name, "view");
-	EXPECT_EQ(vertexStage.uniforms[0].vars[1].type, render::ShaderAST::VariableType::Mat4);
-	EXPECT_EQ(vertexStage.uniforms[0].vars[1].size, 1);
-	EXPECT_EQ(vertexStage.uniforms[0].vars[2].name, "proj");
-	EXPECT_EQ(vertexStage.uniforms[0].vars[2].type, render::ShaderAST::VariableType::Mat4);
-	EXPECT_EQ(vertexStage.uniforms[0].vars[2].size, 1);
-
-	auto& fragmentStage = passNode.stages[1];
-	EXPECT_EQ(fragmentStage.type, render::ShaderAST::StageType::Fragment);
-	EXPECT_EQ(fragmentStage.in.size(), 3);
-	EXPECT_EQ(fragmentStage.in[0].binding, 0);
-	EXPECT_EQ(fragmentStage.in[0].var.name, "uvs");
-	EXPECT_EQ(fragmentStage.in[0].var.type, render::ShaderAST::VariableType::Vec2);
-	EXPECT_EQ(fragmentStage.in[0].var.size, 1);
-	EXPECT_EQ(fragmentStage.in[1].binding, 1);
-	EXPECT_EQ(fragmentStage.in[1].var.name, "fragPos");
-	EXPECT_EQ(fragmentStage.in[1].var.type, render::ShaderAST::VariableType::Vec3);
-	EXPECT_EQ(fragmentStage.in[1].var.size, 1);
-	EXPECT_EQ(fragmentStage.in[2].binding, 2);
-	EXPECT_EQ(fragmentStage.in[2].var.name, "fragNormals");
-	EXPECT_EQ(fragmentStage.in[2].var.type, render::ShaderAST::VariableType::Vec3);
-	EXPECT_EQ(fragmentStage.in[2].var.size, 1);
-
-	EXPECT_EQ(fragmentStage.out.size(), 1);
-	EXPECT_EQ(fragmentStage.out[0].binding, 0);
-	EXPECT_EQ(fragmentStage.out[0].var.name, "outColor");
-	EXPECT_EQ(fragmentStage.out[0].var.type, render::ShaderAST::VariableType::Vec4);
-	EXPECT_EQ(fragmentStage.out[0].var.size, 1);
-
-	EXPECT_EQ(fragmentStage.uniforms.size(), 3);
-	EXPECT_EQ(fragmentStage.uniforms[0].bSampler, false);
-	EXPECT_EQ(fragmentStage.uniforms[0].set, 0);
-	EXPECT_EQ(fragmentStage.uniforms[0].binding, 1);
-	EXPECT_EQ(fragmentStage.uniforms[0].name, "lights");
-	EXPECT_EQ(fragmentStage.uniforms[0].vars.size(), 2);
-	EXPECT_EQ(fragmentStage.uniforms[0].vars[0].name, "lightPosRange");
-	EXPECT_EQ(fragmentStage.uniforms[0].vars[0].type, render::ShaderAST::VariableType::Vec4);
-	EXPECT_EQ(fragmentStage.uniforms[0].vars[0].size, 10);
-	EXPECT_EQ(fragmentStage.uniforms[0].vars[1].name, "lightCount");
-	EXPECT_EQ(fragmentStage.uniforms[0].vars[1].type, render::ShaderAST::VariableType::Int);
-	EXPECT_EQ(fragmentStage.uniforms[0].vars[1].size, 1);
-	EXPECT_EQ(fragmentStage.uniforms[1].bSampler, false);
-	EXPECT_EQ(fragmentStage.uniforms[1].set, 1);
-	EXPECT_EQ(fragmentStage.uniforms[1].binding, 0);
-	EXPECT_EQ(fragmentStage.uniforms[1].name, "material");
-	EXPECT_EQ(fragmentStage.uniforms[1].vars.size(), 1);
-	EXPECT_EQ(fragmentStage.uniforms[1].vars[0].name, "ambient");
-	EXPECT_EQ(fragmentStage.uniforms[1].vars[0].type, render::ShaderAST::VariableType::Float);
-	EXPECT_EQ(fragmentStage.uniforms[1].vars[0].size, 1);
-	EXPECT_EQ(fragmentStage.uniforms[2].bSampler, true);
-	EXPECT_EQ(fragmentStage.uniforms[2].set, 1);
-	EXPECT_EQ(fragmentStage.uniforms[2].binding, 1);
-	EXPECT_EQ(fragmentStage.uniforms[2].name, "tex");
-	EXPECT_EQ(fragmentStage.uniforms[2].vars.size(), 0);
+	EXPECT_EQ(passNodes[0].name, "Default Pass");
+	EXPECT_EQ(passNodes[0].lightingPass, "Forward");
+	EXPECT_EQ(passNodes[0].stencil.ref, 1);
+	EXPECT_EQ(passNodes[1].name, "Outline Pass");
+	EXPECT_EQ(passNodes[1].lightingPass, "Forward");
+	EXPECT_EQ(passNodes[1].stencil.compareOp, render::StencilState::CompareOp::NotEqual);
 }
 
 TEST(ShaderParserTest, ShaderCompileTest)

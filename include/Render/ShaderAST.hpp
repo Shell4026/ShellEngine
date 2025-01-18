@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <memory>
 
 namespace sh::render
 {
@@ -18,11 +19,13 @@ namespace sh::render
 		{
 			Mat4,
 			Mat3,
+			Mat2,
 			Vec4,
 			Vec3,
 			Vec2,
 			Float,
-			Int
+			Int,
+			Sampler
 		};
 
 		struct VariableNode
@@ -44,24 +47,22 @@ namespace sh::render
 			bool bSampler = false;
 			std::vector<VariableNode> vars;
 		};
-		struct StencilNode
-		{
-			StencilState state;
-		};
-
 		struct StageNode
 		{
 			StageType type;
 			std::vector<LayoutNode> in;
 			std::vector<LayoutNode> out;
 			std::vector<UBONode> uniforms;
+			std::vector<std::string> declaration;
+			std::vector<std::string> functions;
 			std::string code;
 		};
 
 		struct PassNode
 		{
 			std::string name;
-			StencilNode stencil;
+			std::string lightingPass;
+			StencilState stencil;
 			std::vector<StageNode> stages;
 		};
 
@@ -75,8 +76,8 @@ namespace sh::render
 		{
 			VersionNode version;
 			std::string shaderName;
+			std::vector<VariableNode> properties;
 			std::vector<PassNode> passes;
 		};
-
 	};
 }//namespace

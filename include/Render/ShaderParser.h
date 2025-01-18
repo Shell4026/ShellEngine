@@ -1,6 +1,9 @@
 ﻿#pragma once
 #include "Export.h"
 #include "ShaderAST.hpp"
+#include "ShaderLexer.h"
+
+#include "Core/ArrayView.hpp"
 
 #include <string>
 #include <vector>
@@ -12,76 +15,56 @@ namespace sh::render
 	class ShaderParser
 	{
 	private:
-		enum class TokenType
-		{
-			Preprocessor,
-			Shader, Pass, Stage,
-			Stencil,
-			Vertex, Fragment,
-			Layout, Uniform, In, Out, Sampler2D,
-			LBracket, // (
-			RBracket, // )
-			LBrace, // {
-			RBrace, // }
-			LSquareBracket, // [
-			RSquareBracket, // ]
-			String, Identifier, Literal, Number, Operator, Semicolon,
-			EndOfFile,
-			Unknown
-		};
-		struct Token
-		{
-			TokenType type;
-			std::string text;
-			int line;
-			int column;
-		};
-
-		std::vector<Token> tokens;
+		const std::vector<ShaderLexer::Token>* tokens;
 
 		std::size_t pos; // 현재 토큰 위치
+
+		uint32_t lastObjectUniformBinding = 0;
+		uint32_t lastMaterialUniformBinding = 0;
 	private:
-		/// @brief 어휘 분석 함수.
-		/// @param source 
-		void Lex(const std::string& source);
-		/// @brief 알파벳/숫자/언더스코어로 구성된 식별자인지 검사하는 헬퍼 함수.
-		/// @param c 문자
-		auto IsIdentifierChar(char c) -> bool;
 		/// @brief 현재 토큰을 반환하는 함수.
 		/// @return 토큰
-		auto PeekToken() const -> const Token&;
+		auto PeekToken() const -> const ShaderLexer::Token&;
 		/// @brief 현재 토큰 타입 검사 함수.
 		/// @return 토큰이 일치하면 true
-		auto CheckToken(TokenType token) const -> bool;
+		auto CheckToken(ShaderLexer::TokenType token) const -> bool;
 		/// @brief 다음 토큰으로 이동하는 함수.
 		/// @return 현재 토큰
-		auto NextToken() -> const Token&;
+		auto NextToken() -> const ShaderLexer::Token&;
 		/// @brief 직전에 소모된 토큰을 반환 하는 함수.
 		/// @return 직전에 소모된 토큰
-		auto PreviousToken() -> const Token&;
+		auto PreviousToken() -> const ShaderLexer::Token&;
 		/// @brief 해당 토큰이 존재하면 다음 토큰으로 이동하며 없다면 예외를 던진다.
 		/// @param token 토큰
-		void ConsumeToken(TokenType token);
+		void ConsumeToken(ShaderLexer::TokenType token);
 		/// @brief 해당 토큰들 중 하나라도 존재하면 다음 토큰으로 이동하며 없다면 예외를 던진다.
 		/// @param tokens 토큰 목록
-		void ConsumeToken(const std::initializer_list<TokenType>& tokens);
+		void ConsumeToken(const std::initializer_list<ShaderLexer::TokenType>& tokens);
 
-		auto IdentifierToVaraibleType(const Token& token) const -> ShaderAST::VariableType;
+		auto IdentifierToVaraibleType(const ShaderLexer::Token& token) const -> ShaderAST::VariableType;
+		auto VariableTypeToString(ShaderAST::VariableType type) const -> std::string;
 
-		auto GetNotFoundTokenString(const std::initializer_list<TokenType>& tokens) -> std::string;
+		auto GetNotFoundTokenString(const std::initializer_list<ShaderLexer::TokenType>& tokens) -> std::string;
 		auto GetTokenErrorString(const std::string& msg) const -> std::string;
 
 		auto ParseShader() -> ShaderAST::ShaderNode;
 		void ParsePreprocessor(ShaderAST::ShaderNode& shaderNode);
-		auto ParsePass() -> ShaderAST::PassNode;
+		void ParseProperty(ShaderAST::ShaderNode& shaderNode);
+		auto ParsePass(const ShaderAST::ShaderNode& shaderNode) -> ShaderAST::PassNode;
+		void ParseLightingPass(ShaderAST::PassNode& passNode);
 		void ParseStencil(ShaderAST::PassNode& passNode);
-		auto ParseStage() -> ShaderAST::StageNode;
-		auto GetStageBody() -> std::string;
-		void ParseStageBody(ShaderAST::StageNode& stageNode);
+		auto ParseStage(const ShaderAST::ShaderNode& shaderNode) -> ShaderAST::StageNode;
+		void ParseStageBody(const ShaderAST::ShaderNode& shaderNode, ShaderAST::StageNode& stageNode);
+		void ParseDeclaration(ShaderAST::StageNode& stageNode, const std::string& qualifer = "");
+		auto ParseFunctionBody(ShaderAST::StageNode& stageNode) -> std::string;
 		void ParseLayout(ShaderAST::StageNode& stageNode);
+		void ParseUniform(const ShaderAST::ShaderNode& shaderNode, ShaderAST::StageNode& stageNode);
 		void ParseUniformBody(ShaderAST::UBONode& uboNode);
+
+		void Optimize(ShaderAST::ShaderNode& shaderNode);
+		void GenerateStageCode(int stageIdx, const ShaderAST::ShaderNode& shaderNode, ShaderAST::StageNode& stageNode);
 	public:
-		SH_RENDER_API auto Parse(const std::string& source) -> ShaderAST::ShaderNode;
+		SH_RENDER_API auto Parse(const std::vector<ShaderLexer::Token>& tokens) -> ShaderAST::ShaderNode;
 	};
 
 	class ShaderParserException : public std::runtime_error

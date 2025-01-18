@@ -9,39 +9,35 @@
 
 namespace sh::render
 {
-	auto ShaderParser::IsIdentifierChar(char c) -> bool
+	auto ShaderParser::PeekToken() const -> const ShaderLexer::Token&
 	{
-		return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
+		return (*tokens)[pos];
 	}
-	auto ShaderParser::PeekToken() const -> const Token&
-	{
-		return tokens[pos];
-	}
-	auto ShaderParser::CheckToken(TokenType token) const -> bool
+	auto ShaderParser::CheckToken(ShaderLexer::TokenType token) const -> bool
 	{
 		return (PeekToken().type == token);
 	}
-	auto ShaderParser::NextToken() -> const Token&
+	auto ShaderParser::NextToken() -> const ShaderLexer::Token&
 	{
-		if (pos < tokens.size())
-			return tokens[pos++];
-		return tokens[pos];
+		if (pos < tokens->size())
+			return (*tokens)[pos++];
+		return (*tokens)[pos];
 	}
-	auto ShaderParser::PreviousToken() -> const Token&
+	auto ShaderParser::PreviousToken() -> const ShaderLexer::Token&
 	{
-		return tokens[pos - 1];
+		return (*tokens)[pos - 1];
 	}
-	void ShaderParser::ConsumeToken(TokenType token)
+	void ShaderParser::ConsumeToken(ShaderLexer::TokenType token)
 	{
 		if (CheckToken(token))
 			NextToken();
 		else
 		{
-			const Token& tk = PeekToken();
+			const ShaderLexer::Token& tk = PeekToken();
 			throw ShaderParserException{ GetNotFoundTokenString({ token }).c_str() };
 		}
 	}
-	void ShaderParser::ConsumeToken(const std::initializer_list<TokenType>& tokens)
+	void ShaderParser::ConsumeToken(const std::initializer_list<ShaderLexer::TokenType>& tokens)
 	{
 		for (auto token : tokens)
 		{
@@ -51,11 +47,11 @@ namespace sh::render
 				return;
 			}
 		}
-		const Token& tk = PeekToken();
+		const ShaderLexer::Token& tk = PeekToken();
 		throw ShaderParserException{ GetNotFoundTokenString(tokens).c_str() };
 	}
 
-	auto ShaderParser::IdentifierToVaraibleType(const Token& token) const -> ShaderAST::VariableType
+	auto ShaderParser::IdentifierToVaraibleType(const ShaderLexer::Token& token) const -> ShaderAST::VariableType
 	{
 		auto& type = token.text;
 		if (type == "vec4")
@@ -68,38 +64,66 @@ namespace sh::render
 			return ShaderAST::VariableType::Mat4;
 		if (type == "mat3")
 			return ShaderAST::VariableType::Mat3;
+		if (type == "mat2")
+			return ShaderAST::VariableType::Mat2;
 		if (type == "int")
 			return ShaderAST::VariableType::Int;
 		if (type == "float")
 			return ShaderAST::VariableType::Float;
 		throw ShaderParserException{ GetTokenErrorString("Not found valid variable token").c_str() };
 	}
-	auto ShaderParser::GetNotFoundTokenString(const std::initializer_list<TokenType>& tokens) -> std::string
+	auto ShaderParser::VariableTypeToString(ShaderAST::VariableType type) const -> std::string
+	{
+		switch (type)
+		{
+		case ShaderAST::VariableType::Mat4:
+			return "mat4";
+		case ShaderAST::VariableType::Mat3:
+			return "mat3";
+		case ShaderAST::VariableType::Mat2:
+			return "mat2";
+		case ShaderAST::VariableType::Vec4:
+			return "vec4";
+		case ShaderAST::VariableType::Vec3:
+			return "vec3";
+		case ShaderAST::VariableType::Vec2:
+			return "vec2";
+		case ShaderAST::VariableType::Float:
+			return "float";
+		case ShaderAST::VariableType::Int:
+			return "int";
+		case ShaderAST::VariableType::Sampler:
+			return "sampler2D";
+		default:
+			return "unknown";
+		}
+	}
+	auto ShaderParser::GetNotFoundTokenString(const std::initializer_list<ShaderLexer::TokenType>& tokens) -> std::string
 	{
 		std::string msg = "Not found token (";
 		for (auto token : tokens)
 		{
-			if (token == TokenType::LBracket)
+			if (token == ShaderLexer::TokenType::LBracket)
 				msg += "'{'";
-			else if (token == TokenType::RBracket)
+			else if (token == ShaderLexer::TokenType::RBracket)
 				msg += "'}'";
-			else if (token == TokenType::LBrace)
+			else if (token == ShaderLexer::TokenType::LBrace)
 				msg += "'('";
-			else if (token == TokenType::RBrace)
+			else if (token == ShaderLexer::TokenType::RBrace)
 				msg += "')'";
-			else if (token == TokenType::Pass)
+			else if (token == ShaderLexer::TokenType::Pass)
 				msg += "Pass";
-			else if (token == TokenType::Stage)
+			else if (token == ShaderLexer::TokenType::Stage)
 				msg += "'Stage'";
-			else if (token == TokenType::Stencil)
+			else if (token == ShaderLexer::TokenType::Stencil)
 				msg += "'Stencil'";
-			else if (token == TokenType::Layout)
+			else if (token == ShaderLexer::TokenType::Layout)
 				msg += "'Layout'";
-			else if (token == TokenType::Uniform)
+			else if (token == ShaderLexer::TokenType::Uniform)
 				msg += "'Uniform'";
-			else if (token == TokenType::In)
+			else if (token == ShaderLexer::TokenType::In)
 				msg += "'In'";
-			else if (token == TokenType::Out)
+			else if (token == ShaderLexer::TokenType::Out)
 				msg += "'Out'";
 		}
 		msg += ')';
@@ -107,7 +131,7 @@ namespace sh::render
 	}
 	auto ShaderParser::GetTokenErrorString(const std::string& msg) const -> std::string
 	{
-		const Token& tk = PeekToken();
+		const ShaderLexer::Token& tk = PeekToken();
 		return fmt::format("{} (line: {}, col: {})", msg, tk.line, tk.column);
 	}
 
@@ -115,15 +139,15 @@ namespace sh::render
 	{
 		ShaderAST::ShaderNode shaderNode;
 		
-		while (CheckToken(TokenType::Preprocessor))
+		while (CheckToken(ShaderLexer::TokenType::Preprocessor))
 		{
 			NextToken();
 			ParsePreprocessor(shaderNode);
 		}
 
-		ConsumeToken(TokenType::Shader);
+		ConsumeToken(ShaderLexer::TokenType::Shader);
 
-		if (auto& token = PeekToken(); token.type == TokenType::String)
+		if (auto& token = PeekToken(); token.type == ShaderLexer::TokenType::String)
 		{
 			shaderNode.shaderName = token.text;
 			NextToken();
@@ -131,25 +155,29 @@ namespace sh::render
 		else
 			throw ShaderParserException{ "Need to name a Shader!" };
 
-		ConsumeToken(TokenType::LBrace);
+		ConsumeToken(ShaderLexer::TokenType::LBrace);
 
-		while (!CheckToken(TokenType::RBrace) && !CheckToken(TokenType::EndOfFile))
+		// 프로퍼티가 있으면 파싱 (없을 수도 있음)
+		if (CheckToken(ShaderLexer::TokenType::Property))
+			ParseProperty(shaderNode);
+
+		while (!CheckToken(ShaderLexer::TokenType::RBrace) && !CheckToken(ShaderLexer::TokenType::EndOfFile))
 		{
-			shaderNode.passes.push_back(ParsePass());
+			shaderNode.passes.push_back(ParsePass(shaderNode));
 		}
 
-		ConsumeToken(TokenType::RBrace);
+		ConsumeToken(ShaderLexer::TokenType::RBrace);
 		return shaderNode;
 	}
 	void ShaderParser::ParsePreprocessor(ShaderAST::ShaderNode& shaderNode)
 	{ 
-		ConsumeToken(TokenType::Identifier);
+		ConsumeToken(ShaderLexer::TokenType::Identifier);
 		if (PreviousToken().text == "version")
 		{
 			ShaderAST::VersionNode versionNode{};
-			ConsumeToken(TokenType::Number);
+			ConsumeToken(ShaderLexer::TokenType::Number);
 			versionNode.versionNumber = std::stoi(PreviousToken().text);
-			ConsumeToken(TokenType::Identifier);
+			ConsumeToken(ShaderLexer::TokenType::Identifier);
 			versionNode.profile = PreviousToken().text;
 			shaderNode.version = versionNode;
 			return;
@@ -157,37 +185,77 @@ namespace sh::render
 		else
 			throw ShaderParserException{ fmt::format("Unknown preprocessor identifier {} (line: {}, col: {})", PeekToken().text, PeekToken().line, PeekToken().column).c_str()};
 	}
-	auto ShaderParser::ParsePass() -> ShaderAST::PassNode
+	void ShaderParser::ParseProperty(ShaderAST::ShaderNode& shaderNode)
+	{
+		ConsumeToken(ShaderLexer::TokenType::Property);
+		ConsumeToken(ShaderLexer::TokenType::LBrace);
+
+		while (!CheckToken(ShaderLexer::TokenType::RBrace))
+		{
+			ShaderAST::VariableNode varNode;
+			ConsumeToken({ ShaderLexer::TokenType::Identifier, ShaderLexer::TokenType::Sampler2D });
+			if (PreviousToken().type == ShaderLexer::TokenType::Identifier)
+				varNode.type = IdentifierToVaraibleType(PreviousToken());
+			else
+				varNode.type = ShaderAST::VariableType::Sampler;
+			ConsumeToken(ShaderLexer::TokenType::Identifier);
+			varNode.name = PreviousToken().text;
+			ConsumeToken({ ShaderLexer::TokenType::Semicolon, ShaderLexer::TokenType::LSquareBracket });
+			// 배열
+			if (PreviousToken().type == ShaderLexer::TokenType::LSquareBracket)
+			{
+				ConsumeToken(ShaderLexer::TokenType::Number);
+				varNode.size = std::stoi(PreviousToken().text);
+				ConsumeToken(ShaderLexer::TokenType::RSquareBracket);
+				ConsumeToken(ShaderLexer::TokenType::Semicolon);
+			}
+			shaderNode.properties.push_back(std::move(varNode));
+		}
+
+		ConsumeToken(ShaderLexer::TokenType::RBrace);
+	}
+	auto ShaderParser::ParsePass(const ShaderAST::ShaderNode& shaderNode) -> ShaderAST::PassNode
 	{
 		ShaderAST::PassNode passNode;
-		ConsumeToken(TokenType::Pass);
-		ConsumeToken({ TokenType::LBrace, TokenType::String });
-		if (PreviousToken().type == TokenType::String)
+		ConsumeToken(ShaderLexer::TokenType::Pass);
+		ConsumeToken({ ShaderLexer::TokenType::LBrace, ShaderLexer::TokenType::String }); // 새 패스 시작
+		lastObjectUniformBinding = 0;
+		lastMaterialUniformBinding = 0;
+		if (PreviousToken().type == ShaderLexer::TokenType::String)
 		{
 			passNode.name = PreviousToken().text;
-			ConsumeToken(TokenType::LBrace);
+			ConsumeToken(ShaderLexer::TokenType::LBrace);
 		}
 
-		while (!CheckToken(TokenType::RBrace) && !CheckToken(TokenType::EndOfFile))
+		while (!CheckToken(ShaderLexer::TokenType::RBrace) && !CheckToken(ShaderLexer::TokenType::EndOfFile))
 		{
+			ParseLightingPass(passNode);
 			ParseStencil(passNode);
-			passNode.stages.push_back(ParseStage());
+			passNode.stages.push_back(ParseStage(shaderNode));
 		}
 
-		ConsumeToken(TokenType::RBrace);
+		ConsumeToken(ShaderLexer::TokenType::RBrace);
 		return passNode;
+	}
+	void ShaderParser::ParseLightingPass(ShaderAST::PassNode& passNode)
+	{
+		if (!CheckToken(ShaderLexer::TokenType::LightingPass))
+			return;
+		NextToken();
+
+		ConsumeToken(ShaderLexer::TokenType::String);
+		passNode.lightingPass = PreviousToken().text;
 	}
 	void ShaderParser::ParseStencil(ShaderAST::PassNode& passNode)
 	{
-		ShaderAST::StencilNode stencilNode{};
-		if (!CheckToken(TokenType::Stencil))
+		if (!CheckToken(ShaderLexer::TokenType::Stencil))
 			return;
 
-		ConsumeToken(TokenType::Stencil);
-		ConsumeToken(TokenType::LBrace);
-		while (!CheckToken(TokenType::RBrace))
+		ConsumeToken(ShaderLexer::TokenType::Stencil);
+		ConsumeToken(ShaderLexer::TokenType::LBrace);
+		while (!CheckToken(ShaderLexer::TokenType::RBrace))
 		{
-			ConsumeToken({ TokenType::Identifier, TokenType::Pass });
+			ConsumeToken({ ShaderLexer::TokenType::Identifier, ShaderLexer::TokenType::Pass });
 			{
 				//Comp Always;
 				//Pass Keep;
@@ -196,17 +264,17 @@ namespace sh::render
 				auto& token = PreviousToken().text;
 				if (token == "Ref" || token == "ReadMask" || token == "WriteMask")
 				{
-					ConsumeToken(TokenType::Number);
+					ConsumeToken(ShaderLexer::TokenType::Number);
 					if (token == "Ref")
-						stencilNode.state.ref = std::stoi(PreviousToken().text);
+						passNode.stencil.ref = std::stoi(PreviousToken().text);
 					else if (token == "ReadMask")
-						stencilNode.state.compareMask = std::stoi(PreviousToken().text);
+						passNode.stencil.compareMask = std::stoi(PreviousToken().text);
 					else if (token == "WriteMask")
-						stencilNode.state.writeMask = std::stoi(PreviousToken().text);
+						passNode.stencil.writeMask = std::stoi(PreviousToken().text);
 				}
 				else if (token == "Comp")
 				{
-					ConsumeToken(TokenType::Identifier);
+					ConsumeToken(ShaderLexer::TokenType::Identifier);
 					std::array<const char*, 8> compTokens = { "Never", "Less", "Equal", "LessEqual", "Greater", "NotEqual", "GreaterEqual", "Always" };
 					const char* compToken = PreviousToken().text.c_str();
 					auto it = std::find_if(compTokens.begin(), compTokens.end(), [&](const char* s) { return std::strcmp(s, compToken) == 0; });
@@ -224,12 +292,12 @@ namespace sh::render
 					else
 					{
 						int idx = static_cast<int>(std::distance(compTokens.begin(), it));
-						stencilNode.state.compareOp = static_cast<StencilState::CompareOp>(idx);
+						passNode.stencil.compareOp = static_cast<StencilState::CompareOp>(idx);
 					}
 				}
 				else if (token == "Pass" || token == "Fail" || token == "ZFail")
 				{
-					ConsumeToken(TokenType::Identifier);
+					ConsumeToken(ShaderLexer::TokenType::Identifier);
 					std::array<const char*, 8> stencilTokens = { "Keep", "Zero", "Replace", "IncrementClamp", "DecrementClamp", "Invert", "IncrementWrap", "DecrementWrap" };
 					const char* compToken = PreviousToken().text.c_str();
 					auto it = std::find_if(stencilTokens.begin(), stencilTokens.end(), [&](const char* s) { return std::strcmp(s, compToken) == 0; });
@@ -248,11 +316,11 @@ namespace sh::render
 					{
 						int idx = static_cast<int>(std::distance(stencilTokens.begin(), it));
 						if (token == "Pass")
-							stencilNode.state.passOp = static_cast<StencilState::StencilOp>(idx);
+							passNode.stencil.passOp = static_cast<StencilState::StencilOp>(idx);
 						else if (token == "Fail")
-							stencilNode.state.failOp = static_cast<StencilState::StencilOp>(idx);
+							passNode.stencil.failOp = static_cast<StencilState::StencilOp>(idx);
 						else if (token == "ZFail")
-							stencilNode.state.depthFailOp = static_cast<StencilState::StencilOp>(idx);
+							passNode.stencil.depthFailOp = static_cast<StencilState::StencilOp>(idx);
 					}
 				}
 				else
@@ -260,23 +328,22 @@ namespace sh::render
 					std::string err = "Allowed identifiers: Ref, ReadMask, WriteMask, Comp, Pass, Fail, ZFail";
 					throw ShaderParserException{ GetTokenErrorString(err).c_str() };
 				}
-				ConsumeToken(TokenType::Semicolon);
+				ConsumeToken(ShaderLexer::TokenType::Semicolon);
 			}
 		}
-		ConsumeToken(TokenType::RBrace);
-		passNode.stencil = stencilNode;
+		ConsumeToken(ShaderLexer::TokenType::RBrace);
 	}
-	auto ShaderParser::ParseStage() -> ShaderAST::StageNode
+	auto ShaderParser::ParseStage(const ShaderAST::ShaderNode& shaderNode) -> ShaderAST::StageNode
 	{
 		ShaderAST::StageNode stage;
-		ConsumeToken(TokenType::Stage);
+		ConsumeToken(ShaderLexer::TokenType::Stage);
 
-		if (CheckToken(TokenType::Vertex))
+		if (CheckToken(ShaderLexer::TokenType::Vertex))
 		{
 			stage.type = ShaderAST::StageType::Vertex;
 			NextToken();
 		}
-		else if (CheckToken(TokenType::Fragment))
+		else if (CheckToken(ShaderLexer::TokenType::Fragment))
 		{
 			stage.type = ShaderAST::StageType::Fragment;
 			NextToken();
@@ -288,124 +355,308 @@ namespace sh::render
 			NextToken();
 		}
 
-		ConsumeToken(TokenType::LBrace);
-
-		stage.code = GetStageBody();
-		ParseStageBody(stage);
-
-		ConsumeToken(TokenType::RBrace);
+		ConsumeToken(ShaderLexer::TokenType::LBrace);
+		ParseStageBody(shaderNode, stage);
+		ConsumeToken(ShaderLexer::TokenType::RBrace);
 
 		return stage;
 	}
-	auto ShaderParser::GetStageBody() -> std::string
+	void ShaderParser::ParseStageBody(const ShaderAST::ShaderNode& shaderNode, ShaderAST::StageNode& stageNode)
 	{
-		std::string code{};
-		int curPos = pos;
 		// 이미 '{'는 읽은 뒤라 nesting = 1 로 시작
 		int nesting = 1;
-		while (!CheckToken(TokenType::EndOfFile))
+		while (!CheckToken(ShaderLexer::TokenType::EndOfFile))
 		{
-			if (PeekToken().type == TokenType::Literal)
-				code.pop_back();
-
-			code += PeekToken().text;
-			code += ' ';
-			if (CheckToken(TokenType::LBrace))
+			if (CheckToken(ShaderLexer::TokenType::LBrace)) // {
 			{
 				NextToken();
 				nesting++;
 			}
-			else if (CheckToken(TokenType::RBrace))
+			else if (CheckToken(ShaderLexer::TokenType::RBrace)) // }
 			{
 				nesting--;
 				if (nesting == 0) // Stage 끝
-				{
-					code.erase(code.size() - 2); // 마지막에 들어간 } 지우기
 					break;
-				}
 				else
 					NextToken();
+			}
+			else if (CheckToken(ShaderLexer::TokenType::Layout))
+				ParseLayout(stageNode);
+			else if (CheckToken(ShaderLexer::TokenType::Uniform))
+				ParseUniform(shaderNode, stageNode);
+			else if (CheckToken(ShaderLexer::TokenType::Const))
+			{
+				NextToken();
+				ParseDeclaration(stageNode, "const");
+			}
+			else if (CheckToken(ShaderLexer::TokenType::Identifier))
+			{
+				ParseDeclaration(stageNode);
 			}
 			else
 				NextToken();
 		}
-		pos = curPos;
+	}
+	void ShaderParser::ParseDeclaration(ShaderAST::StageNode& stageNode, const std::string& qualifer)
+	{
+		// <정의> ::= <ident> <ident> <rest>
+		// <rest> ::= ';' | '=' <expr> ';' | '(' <parameters> ')' <function body>
+		ConsumeToken(ShaderLexer::TokenType::Identifier);
+		const std::string& type = PreviousToken().text;
+		ConsumeToken(ShaderLexer::TokenType::Identifier);
+		const std::string& name = PreviousToken().text;
+		ConsumeToken({ ShaderLexer::TokenType::Semicolon, ShaderLexer::TokenType::Operator, ShaderLexer::TokenType::LBracket });
+		auto& prevToken = PreviousToken();
+		if (prevToken.type == ShaderLexer::TokenType::Semicolon) // 변수 선언
+		{
+			stageNode.declaration.push_back(fmt::format("{} {} {};", qualifer, type, name));
+		}
+		else if (prevToken.type == ShaderLexer::TokenType::Operator) // 변수 선언과 정의
+		{
+			if (prevToken.text != "=")
+				throw ShaderParserException{ GetTokenErrorString("Not found =").c_str() };
+			std::string expr;
+			while (!CheckToken(ShaderLexer::TokenType::Semicolon))
+			{
+				if (PeekToken().type == ShaderLexer::TokenType::Literal)
+					expr.pop_back();
+				expr += PeekToken().text;
+				expr += " ";
+				NextToken();
+			}
+			NextToken(); // ;
+			stageNode.declaration.push_back(fmt::format("{} {} {} = {};", qualifer, type, name, std::move(expr)));
+		}
+		else if (prevToken.type == ShaderLexer::TokenType::LBracket) // 함수 정의
+		{
+			std::string parameters;
+			while (!CheckToken(ShaderLexer::TokenType::RBracket))
+			{
+				if (PeekToken().type == ShaderLexer::TokenType::Literal)
+					parameters.pop_back();
+				parameters += PeekToken().text;
+				parameters += " ";
+				NextToken();
+			}
+			ConsumeToken(ShaderLexer::TokenType::RBracket);
+			ConsumeToken(ShaderLexer::TokenType::LBrace);
+			std::string functionBody{ ParseFunctionBody(stageNode) };
+			ConsumeToken(ShaderLexer::TokenType::RBrace);
+			stageNode.functions.push_back(fmt::format("{} {} {}({}) {{ {} }}", qualifer, type, name, std::move(parameters), std::move(functionBody)));
+		}
+	}
+
+	auto ShaderParser::ParseFunctionBody(ShaderAST::StageNode& stageNode) -> std::string
+	{
+		auto uboit = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(), [&](const ShaderAST::UBONode& ubo)
+		{
+			return ubo.name == "UBO";
+		});
+
+		std::string code{};
+		int nested = 1;
+		bool usingVertex = false;
+		bool usingNormal = false;
+		bool usingUV = false;
+		bool usingMVP = false;
+		bool usingLIGHT = false;
+		while (nested != 0 || PeekToken().type != ShaderLexer::TokenType::EndOfFile)
+		{
+			auto& token = PeekToken();
+			if (token.type == ShaderLexer::TokenType::RBrace)
+			{
+				--nested;
+				if (nested == 0)
+					break;
+			}
+			else if (token.type == ShaderLexer::TokenType::LBrace)
+				++nested;
+			else if (token.type == ShaderLexer::TokenType::Literal)
+			{
+				if (!code.empty())
+					code.pop_back();
+			}
+			else if (CheckToken(ShaderLexer::TokenType::VERTEX))
+			{
+				if (!usingVertex)
+				{
+					auto it = std::find_if(stageNode.in.begin(), stageNode.in.end(), [&](const ShaderAST::LayoutNode& layoutNode)
+						{
+							return layoutNode.var.name == "VERTEX";
+						});
+					if (it == stageNode.in.end())
+					{
+						ShaderAST::LayoutNode layoutNode{};
+						layoutNode.binding = 0;
+						layoutNode.var.name = "VERTEX";
+						layoutNode.var.type = ShaderAST::VariableType::Vec3;
+						layoutNode.var.size = 1;
+						stageNode.in.push_back(std::move(layoutNode));
+						usingVertex = true;
+					}
+				}
+			}
+			else if (CheckToken(ShaderLexer::TokenType::UV))
+			{
+				if (!usingUV)
+				{
+					auto it = std::find_if(stageNode.in.begin(), stageNode.in.end(), [&](const ShaderAST::LayoutNode& layoutNode)
+						{
+							return layoutNode.var.name == "UV";
+						});
+					if (it == stageNode.in.end())
+					{
+						ShaderAST::LayoutNode layoutNode{};
+						layoutNode.binding = 1;
+						layoutNode.var.name = "UV";
+						layoutNode.var.type = ShaderAST::VariableType::Vec2;
+						layoutNode.var.size = 1;
+						stageNode.in.push_back(std::move(layoutNode));
+						usingUV = true;
+					}
+				}
+			}
+			else if (CheckToken(ShaderLexer::TokenType::NORMAL))
+			{
+				if (!usingNormal)
+				{
+					auto it = std::find_if(stageNode.in.begin(), stageNode.in.end(), [&](const ShaderAST::LayoutNode& layoutNode)
+					{
+						return layoutNode.var.name == "NORMAL";
+					});
+					if (it == stageNode.in.end())
+					{
+						ShaderAST::LayoutNode layoutNode{};
+						layoutNode.binding = 2;
+						layoutNode.var.name = "NORMAL";
+						layoutNode.var.type = ShaderAST::VariableType::Vec3;
+						layoutNode.var.size = 1;
+						stageNode.in.push_back(std::move(layoutNode));
+						usingNormal = true;
+					}
+				}
+			}
+			else if (CheckToken(ShaderLexer::TokenType::MVP))
+			{
+				if (!usingMVP)
+				{
+					auto it = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(), [&](const ShaderAST::UBONode& ubo)
+					{
+						return ubo.name == "MVP";
+					});
+					if (it == stageNode.uniforms.end())
+					{
+						ShaderAST::UBONode uboNode{};
+						uboNode.name = "MVP";
+						uboNode.set = 0;
+						uboNode.binding = lastObjectUniformBinding++;
+						uboNode.bSampler = false;
+						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 1, "model" });
+						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 1, "view" });
+						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 1, "proj" });
+						stageNode.uniforms.push_back(std::move(uboNode));
+						uboit = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(), [&](const ShaderAST::UBONode& ubo)
+						{
+							return ubo.name == "UBO";
+						});
+					}
+					usingMVP = true;
+				}
+			}
+			else if (CheckToken(ShaderLexer::TokenType::LIGHT))
+			{
+				if (!usingLIGHT)
+				{
+					auto it = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(), [&](const ShaderAST::UBONode& ubo)
+					{
+						return ubo.name == "LIGHT";
+					});
+					if (it == stageNode.uniforms.end())
+					{
+						ShaderAST::UBONode uboNode{};
+						uboNode.name = "LIGHT";
+						uboNode.set = 0;
+						uboNode.binding = lastObjectUniformBinding++;
+						uboNode.bSampler = false;
+						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Int, 1, "count" });
+						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Float, 10, "range" });
+						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec3, 10, "pos" });
+						stageNode.uniforms.push_back(std::move(uboNode));
+						usingLIGHT = true;
+						uboit = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(), [&](const ShaderAST::UBONode& ubo)
+						{
+							return ubo.name == "UBO";
+						});
+					}
+				}
+			}
+			else if (token.type == ShaderLexer::TokenType::Identifier)
+			{
+				if (uboit != stageNode.uniforms.end())
+				{
+					auto varit = std::find_if(uboit->vars.begin(), uboit->vars.end(), [&](const ShaderAST::VariableNode& var)
+					{
+						return var.name == token.text;
+					});
+					if (varit != uboit->vars.end())
+						code += "UBO.";
+				}
+			}
+			code += token.text + " ";
+			NextToken();
+		}
 		return code;
 	}
-	void ShaderParser::ParseStageBody(ShaderAST::StageNode& stageNode)
-	{
-		// 이미 '{'는 읽은 뒤라 nesting = 1 로 시작
-		int nesting = 1;
-		while (!CheckToken(TokenType::EndOfFile))
-		{
-			if (CheckToken(TokenType::LBrace))
-			{
-				NextToken();
-				nesting++;
-			}
-			else if (CheckToken(TokenType::RBrace))
-			{
-				nesting--;
-				if (nesting == 0) // Stage 끝
-					break;
-				else
-					NextToken();
-			}
-			else if (CheckToken(TokenType::Layout))
-				ParseLayout(stageNode);
-			else
-				NextToken();
-		}
-	}
+
 	void ShaderParser::ParseLayout(ShaderAST::StageNode& stageNode)
 	{
-		NextToken();
+		ConsumeToken(ShaderLexer::TokenType::Layout);
 		ShaderAST::LayoutNode layoutNode{};
 		ShaderAST::UBONode uboNode{};
-		ConsumeToken(TokenType::LBracket); // (
+		ConsumeToken(ShaderLexer::TokenType::LBracket); // (
 
-		ConsumeToken(TokenType::Identifier);
+		ConsumeToken(ShaderLexer::TokenType::Identifier);
 
 		bool bUniform = false;
 		if (PreviousToken().text == "location") // 어트리뷰트
 		{
-			ConsumeToken(TokenType::Operator);
-			ConsumeToken(TokenType::Number);
+			ConsumeToken(ShaderLexer::TokenType::Operator);
+			ConsumeToken(ShaderLexer::TokenType::Number);
 			layoutNode.binding = std::stoi(PreviousToken().text);
 		}
 		else if (PreviousToken().text == "set") // 유니폼
 		{
 			bUniform = true;
-			ConsumeToken(TokenType::Operator);
-			ConsumeToken(TokenType::Number);
+			ConsumeToken(ShaderLexer::TokenType::Operator);
+			ConsumeToken(ShaderLexer::TokenType::Number);
 			uboNode.set = std::stoi(PreviousToken().text);
-			ConsumeToken(TokenType::Unknown); // ','
-			ConsumeToken(TokenType::Identifier);
+			ConsumeToken(ShaderLexer::TokenType::Unknown); // ','
+			ConsumeToken(ShaderLexer::TokenType::Identifier);
 			if (PreviousToken().text == "binding")
 			{
-				ConsumeToken(TokenType::Operator);
-				ConsumeToken(TokenType::Number);
+				ConsumeToken(ShaderLexer::TokenType::Operator);
+				ConsumeToken(ShaderLexer::TokenType::Number);
 				uboNode.binding = std::stoi(PreviousToken().text);
 			}
 			else
 				throw ShaderParserException{ GetTokenErrorString("Not found binding token").c_str() };
 		}
-		ConsumeToken(TokenType::RBracket); // )
+		ConsumeToken(ShaderLexer::TokenType::RBracket); // )
 
 		if (!bUniform) // 어트리뷰트 in, out 처리
 		{
 			auto& inoutToken = PeekToken();
-			if (CheckToken(TokenType::In) || CheckToken(TokenType::Out))
+			if (CheckToken(ShaderLexer::TokenType::In) || CheckToken(ShaderLexer::TokenType::Out))
 			{
 				NextToken();
 				ShaderAST::VariableNode varNode{};
-				ConsumeToken(TokenType::Identifier);
+				ConsumeToken(ShaderLexer::TokenType::Identifier);
 				varNode.type = IdentifierToVaraibleType(PreviousToken());
-				ConsumeToken(TokenType::Identifier);
+				ConsumeToken(ShaderLexer::TokenType::Identifier);
 				varNode.name = PreviousToken().text;
 
 				layoutNode.var = std::move(varNode);
-				if (inoutToken.type == TokenType::In)
+				if (inoutToken.type == ShaderLexer::TokenType::In)
 					stageNode.in.push_back(layoutNode);
 				else
 					stageNode.out.push_back(layoutNode);
@@ -415,22 +666,22 @@ namespace sh::render
 		}
 		else // Uniform
 		{
-			ConsumeToken(TokenType::Uniform);
-			if (CheckToken(TokenType::Identifier))
+			ConsumeToken(ShaderLexer::TokenType::Uniform);
+			if (CheckToken(ShaderLexer::TokenType::Identifier))
 			{
 				NextToken();
 				ParseUniformBody(uboNode);
-				ConsumeToken(TokenType::Identifier);
+				ConsumeToken(ShaderLexer::TokenType::Identifier);
 				uboNode.name = PreviousToken().text;
-				ConsumeToken(TokenType::Semicolon);
+				ConsumeToken(ShaderLexer::TokenType::Semicolon);
 			}
-			else if (CheckToken(TokenType::Sampler2D))
+			else if (CheckToken(ShaderLexer::TokenType::Sampler2D))
 			{
 				uboNode.bSampler = true;
 				NextToken();
-				ConsumeToken(TokenType::Identifier);
+				ConsumeToken(ShaderLexer::TokenType::Identifier);
 				uboNode.name = PreviousToken().text;
-				ConsumeToken(TokenType::Semicolon);
+				ConsumeToken(ShaderLexer::TokenType::Semicolon);
 			}
 			else
 				throw ShaderParserException({ GetTokenErrorString("Not found Identifier or Sampler2D keyword").c_str()});
@@ -438,301 +689,185 @@ namespace sh::render
 			stageNode.uniforms.push_back(std::move(uboNode));
 		}
 	}
+	void ShaderParser::ParseUniform(const ShaderAST::ShaderNode& shaderNode, ShaderAST::StageNode& stageNode)
+	{
+		ConsumeToken(ShaderLexer::TokenType::Uniform);
+		ConsumeToken({ ShaderLexer::TokenType::Identifier, ShaderLexer::TokenType::Sampler2D });
+
+		ShaderAST::VariableNode varNode{};
+		std::string varType;
+		if (PreviousToken().type == ShaderLexer::TokenType::Identifier)
+		{
+			varType = PreviousToken().text;
+			varNode.type = IdentifierToVaraibleType(PreviousToken());
+		}
+		else
+		{
+			varType = "Sampler2D";
+			varNode.type = ShaderAST::VariableType::Sampler;
+		}
+
+		ConsumeToken(ShaderLexer::TokenType::Identifier);
+		varNode.name = PreviousToken().text;
+
+		ConsumeToken({ ShaderLexer::TokenType::Semicolon, ShaderLexer::TokenType::LSquareBracket });
+		if (PreviousToken().type == ShaderLexer::TokenType::LSquareBracket)
+		{
+			ConsumeToken(ShaderLexer::TokenType::Number);
+			varNode.size = std::stoi(PreviousToken().text);
+			ConsumeToken(ShaderLexer::TokenType::RSquareBracket);
+			ConsumeToken(ShaderLexer::TokenType::Semicolon);
+		}
+
+		bool hasProperty = false;
+		for (auto& property : shaderNode.properties)
+		{
+			if (property.type == varNode.type && property.size == varNode.size && property.name == varNode.name)
+			{
+				hasProperty = true;
+				break;
+			}
+		}
+		if (!hasProperty)
+			throw ShaderParserException(fmt::format("Variable({} {}) is not declared in property", varType, varNode.name).c_str());
+
+		if (varNode.type != ShaderAST::VariableType::Sampler)
+		{
+			if (stageNode.uniforms.empty())
+			{
+				ShaderAST::UBONode uboNode{};
+				uboNode.set = 1;
+				uboNode.binding = lastMaterialUniformBinding++;
+				uboNode.name = "UBO";
+				uboNode.bSampler = false;
+				uboNode.vars.push_back(std::move(varNode));
+				stageNode.uniforms.push_back(std::move(uboNode));
+			}
+			else
+			{
+				ShaderAST::UBONode& uboNode = stageNode.uniforms[0];
+				uboNode.vars.push_back(std::move(varNode));
+			}
+		}
+		else
+		{
+			ShaderAST::UBONode uboNode{};
+			uboNode.bSampler = true;
+			uboNode.name = varNode.name;
+			uboNode.set = 1;
+			uboNode.binding = lastMaterialUniformBinding++;
+			stageNode.uniforms.push_back(std::move(uboNode));
+		}
+	}
 	void ShaderParser::ParseUniformBody(ShaderAST::UBONode& uboNode)
 	{
-		ConsumeToken(TokenType::LBrace); // {
+		ConsumeToken(ShaderLexer::TokenType::LBrace); // {
 
-		while (!CheckToken(TokenType::RBrace))
+		while (!CheckToken(ShaderLexer::TokenType::RBrace))
 		{
 			ShaderAST::VariableNode varNode{};
-			ConsumeToken(TokenType::Identifier);
+			ConsumeToken(ShaderLexer::TokenType::Identifier);
 			varNode.type = IdentifierToVaraibleType(PreviousToken());
-			ConsumeToken(TokenType::Identifier);
+			ConsumeToken(ShaderLexer::TokenType::Identifier);
 			varNode.name = PreviousToken().text;
-			if (CheckToken(TokenType::LSquareBracket)) // 배열
+			if (CheckToken(ShaderLexer::TokenType::LSquareBracket)) // 배열
 			{
 				NextToken();
-				ConsumeToken(TokenType::Number);
+				ConsumeToken(ShaderLexer::TokenType::Number);
 				varNode.size = std::stoi(PreviousToken().text);
-				ConsumeToken(TokenType::RSquareBracket);
+				ConsumeToken(ShaderLexer::TokenType::RSquareBracket);
 			}
-			ConsumeToken(TokenType::Semicolon);
+			ConsumeToken(ShaderLexer::TokenType::Semicolon);
 
 			uboNode.vars.push_back(std::move(varNode));
 		}
 
-		ConsumeToken(TokenType::RBrace); // }
+		ConsumeToken(ShaderLexer::TokenType::RBrace); // }
 	}
-	void ShaderParser::Lex(const std::string& source)
+
+	void ShaderParser::Optimize(ShaderAST::ShaderNode& shaderNode)
 	{
-		int line = 1;
-		int column = 1;
-		const std::size_t length = source.size();
-		std::size_t i = 0;
-
-		auto AddToken = [&](TokenType t, const std::string& txt)
-			{
-				tokens.push_back({ t, txt, line, column });
-			};
-
-		while (i < length)
+		for (auto& passNode : shaderNode.passes)
 		{
-			char c = source[i];
-			if (c == ' ' || c == '\t' || c == '\r')
+			for (auto& stageNode : passNode.stages)
 			{
-				++i;
-				++column;
-				continue;
-			}
-			if (c == '\n')
-			{
-				++i;
-				++line;
-				column = 0;
-				continue;
-			}
-
-			if (c == '{')
-			{
-				AddToken(TokenType::LBrace, "{");
-				++i;
-				++column;
-				continue;
-			}
-			if (c == '}')
-			{
-				AddToken(TokenType::RBrace, "}");
-				++i;
-				++column;
-				continue;
-			}
-			if (c == '(')
-			{
-				AddToken(TokenType::LBracket, "(");
-				++i;
-				++column;
-				continue;
-			}
-			if (c == ')')
-			{
-				AddToken(TokenType::RBracket, ")");
-				++i;
-				++column;
-				continue;
-			}
-			if (c == '[')
-			{
-				AddToken(TokenType::LSquareBracket, "[");
-				++i;
-				++column;
-				continue;
-			}
-			if (c == ']')
-			{
-				AddToken(TokenType::RSquareBracket, "]");
-				++i;
-				++column;
-				continue;
-			}
-			if (c == '=')
-			{
-				++i;
-				++column;
-				if (i + 1 < source.size())
+				// UBO 유니폼 변수 정렬 (레이아웃 재배치)
+				auto it = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(), [&](const ShaderAST::UBONode& uboNode)
 				{
-					if (source[i] == '=')
-					{
-						AddToken(TokenType::Operator, "==");
-						++i;
-						++column;
-						continue;
-					}
-				}
-				AddToken(TokenType::Operator, "=");
-				continue;
-			}
-			if (c == '+')
-			{
-				++i;
-				++column;
-				if (i < source.size())
+					return uboNode.name == "UBO";
+				});
+				if (it == stageNode.uniforms.end())
+					continue;
+
+				ShaderAST::UBONode& uboNode = *it;
+
+				std::sort(uboNode.vars.begin(), uboNode.vars.end(), [&](const ShaderAST::VariableNode& varNode1, const ShaderAST::VariableNode& varNode2)
 				{
-					if (source[i] == '+' || source[i] == '=')
-					{
-						AddToken(TokenType::Operator, std::string{ c } + source[i]);
-						++i;
-						++column;
-						continue;
-					}
-				}
-				AddToken(TokenType::Operator, std::string{ c });
-				continue;
+					bool scalarA = varNode1.type == ShaderAST::VariableType::Int || varNode1.type == ShaderAST::VariableType::Float;
+					bool scalarB = varNode2.type == ShaderAST::VariableType::Int || varNode2.type == ShaderAST::VariableType::Float;
+					bool vec2A = varNode1.type == ShaderAST::VariableType::Vec2;
+					bool vec2B = varNode2.type == ShaderAST::VariableType::Vec2;
+					bool bigA = !scalarA && !vec2A;
+					bool bigB = !scalarB && !vec2B;
+					if (scalarA && !scalarB)
+						return true;
+					if (vec2A && bigB)
+						return true;
+					return false;
+				});
 			}
-			if (c == '-')
-			{
-				++i;
-				++column;
-				if (i < source.size())
-				{
-					if (source[i] == '-' || source[i] == '=')
-					{
-						AddToken(TokenType::Operator, std::string{ c } + source[i]);
-						++i;
-						++column;
-						continue;
-					}
-				}
-				AddToken(TokenType::Operator, std::string{ c });
-				continue;
-			}
-			if (c == '*')
-			{
-				++i;
-				++column;
-				if (i < source.size())
-				{
-					if (source[i] == '=')
-					{
-						AddToken(TokenType::Operator, std::string{ c } + source[i]);
-						++i;
-						++column;
-						continue;
-					}
-				}
-				AddToken(TokenType::Operator, std::string{ c });
-				continue;
-			}
-			if (c == '/')
-			{
-				++i;
-				++column;
-				if (i < source.size())
-				{
-					if (source[i] == '=')
-					{
-						AddToken(TokenType::Operator, std::string{ c } + source[i]);
-						++i;
-						++column;
-						continue;
-					}
-				}
-				AddToken(TokenType::Operator, std::string{ c });
-				continue;
-			}
-
-			if (c == ';')
-			{
-				AddToken(TokenType::Semicolon, ";");
-				++i;
-				++column;
-				continue;
-			}
-
-			if (c == '\"')
-			{
-				++i;
-				++column;
-
-				std::string strValue;
-				bool closed = false;
-
-				while (i < length)
-				{
-					char c2 = source[i];
-					if (c2 == '\"')
-					{
-						closed = true;
-						++i;
-						++column;
-						break;
-					}
-					strValue.push_back(c2);
-					++i;
-					++column;
-				}
-				if (!closed)
-					throw ShaderParserException{ fmt::format("}} not found! (line: {})", line).c_str() };
-
-				AddToken(TokenType::String, strValue);
-				continue;
-			}
-			// 숫자
-			if (std::isdigit(c))
-			{
-				std::string number;
-				while (i < length && (std::isdigit(source[i]) || source[i] == '.'))
-				{
-					number.push_back(source[i]);
-					++i;
-					++column;
-				}
-				AddToken(TokenType::Number, number);
-				if (source[i] == 'f')
-				{
-					++i;
-					++column;
-					AddToken(TokenType::Literal, "f");
-				}
-				continue;
-			}
-			// 식별자 또는 키워드
-			if (std::isalpha(c))
-			{
-				std::string ident;
-				while (i < length && IsIdentifierChar(source[i]))
-				{
-					ident.push_back(source[i]);
-					++i;
-					++column;
-				}
-
-				if (ident == "Shader")
-					AddToken(TokenType::Shader, ident);
-				else if (ident == "Pass")
-					AddToken(TokenType::Pass, ident);
-				else if (ident == "Stage")
-					AddToken(TokenType::Stage, ident);
-				else if (ident == "Vertex")
-					AddToken(TokenType::Vertex, ident);
-				else if (ident == "Fragment")
-					AddToken(TokenType::Fragment, ident);
-				else if (ident == "layout")
-					AddToken(TokenType::Layout, ident);
-				else if (ident == "in")
-					AddToken(TokenType::In, ident);
-				else if (ident == "out")
-					AddToken(TokenType::Out, ident);
-				else if (ident == "uniform")
-					AddToken(TokenType::Uniform, ident);
-				else if (ident == "sampler2D")
-					AddToken(TokenType::Sampler2D, ident);
-				else if (ident == "Stencil")
-					AddToken(TokenType::Stencil, ident);
-				else
-					AddToken(TokenType::Identifier, ident);
-
-				continue;
-			}
-
-			if (c == '#')
-			{
-				AddToken(TokenType::Preprocessor, "#");
-				++i;
-				++column;
-				continue;
-			}
-
-			AddToken(TokenType::Unknown, std::string{ c });
-			++i;
-			++column;
 		}
-
-		AddToken(TokenType::EndOfFile, "");
 	}
-	SH_RENDER_API auto sh::render::ShaderParser::Parse(const std::string& source) -> ShaderAST::ShaderNode
-	{
-		Lex(source);
 
-		return ParseShader();
+	void ShaderParser::GenerateStageCode(int stageIdx, const ShaderAST::ShaderNode& shaderNode, ShaderAST::StageNode& stageNode)
+	{
+		std::string code = fmt::format("#version {} {}\n", shaderNode.version.versionNumber, shaderNode.version.profile);
+		for (auto& in : stageNode.in)
+			code += fmt::format("layout(location = {}) in {} {};\n", in.binding, VariableTypeToString(in.var.type), in.var.name);
+		for (auto& out : stageNode.out)
+			code += fmt::format("layout(location = {}) out {} {};\n", out.binding, VariableTypeToString(out.var.type), out.var.name);
+
+		for (auto& uniform : stageNode.uniforms)
+		{
+			if (!uniform.bSampler)
+			{
+				std::string uniformMembers;
+				for (auto& member : uniform.vars)
+				{
+					if (member.size == 1)
+						uniformMembers += fmt::format("{} {};\n", VariableTypeToString(member.type), member.name);
+					else
+						uniformMembers += fmt::format("{} {}[{}];\n", VariableTypeToString(member.type), member.name, member.size);
+				}
+				code += fmt::format("layout(set = {}, binding = {}) uniform {} {{\n {} }} {};\n", uniform.set, uniform.binding, "UNIFORM_" + uniform.name, uniformMembers, uniform.name);
+			}
+			else
+				code += fmt::format("layout(set = {}, binding = {}) uniform sampler2D {};\n", uniform.set, uniform.binding, uniform.name);
+		}
+		for (auto& decl : stageNode.declaration)
+			code += decl + '\n';
+		for (auto& function : stageNode.functions)
+			code += function + '\n';
+		stageNode.code = std::move(code);
+	}
+
+	SH_RENDER_API auto sh::render::ShaderParser::Parse(const std::vector<ShaderLexer::Token>& tokens) -> ShaderAST::ShaderNode
+	{
+		this->tokens = &tokens;
+		pos = 0;
+		lastObjectUniformBinding = 0;
+		lastMaterialUniformBinding = 0;
+
+		ShaderAST::ShaderNode& shaderNode = ParseShader();
+		Optimize(shaderNode);
+		int idx = 0;
+		for (auto& passNode : shaderNode.passes)
+		{
+			for (auto& stageNode : passNode.stages)
+			{
+				GenerateStageCode(idx++, shaderNode, stageNode);
+			}
+		}
+		return shaderNode;
 	}
 }//namespace
