@@ -90,7 +90,7 @@ namespace sh::game
 		render::Shader* shader = core::SObject::Create<render::Shader>();
 		for (auto& pass : shaderNode.passes)
 		{
-			auto shaderPaths = render::ShaderGenerator::GenerateShaderFile(shaderNode.shaderName, shaderNode.version, pass, path.parent_path());
+			auto shaderPaths = render::ShaderGenerator::GenerateShaderFile(shaderNode.shaderName, pass, path.parent_path());
 
 			for (auto& shaderPath : shaderPaths)
 			{

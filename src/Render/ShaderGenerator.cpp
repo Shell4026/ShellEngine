@@ -24,12 +24,10 @@ namespace sh::render
 
 	SH_RENDER_API auto ShaderGenerator::GenerateShaderFile(
 		const std::string& shaderName,
-		const ShaderAST::VersionNode& versionNode, 
 		const ShaderAST::PassNode& passNode, 
 		const std::filesystem::path& path) -> std::vector<std::filesystem::path>
 	{
 		std::vector<std::filesystem::path> results;
-		std::string version{ fmt::format("#version {} {}", versionNode.versionNumber, versionNode.profile) };
 		for (auto& stage : passNode.stages)
 		{
 			std::string fileName{ ReplaceSpaceString(shaderName + "_" + passNode.name) };
@@ -38,9 +36,7 @@ namespace sh::render
 			else if (stage.type == ShaderAST::StageType::Fragment)
 				fileName += ".frag";
 
-			std::string code = fmt::format("{}\n{}", version, stage.code);
-
-			if (core::FileSystem::SaveText(code, path / fileName))
+			if (core::FileSystem::SaveText(stage.code, path / fileName))
 				results.push_back(path / fileName);
 		}
 		return results;

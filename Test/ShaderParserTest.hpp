@@ -134,6 +134,8 @@ Shader "Outline Shader"
 	auto tokens = lexer.Lex(shaderCode);
 	shaderNode = parser.Parse(tokens);
 
+	render::ShaderGenerator::GenerateShaderFile(shaderNode.shaderName, shaderNode.passes[0], std::filesystem::current_path());
+
 	EXPECT_EQ(shaderNode.shaderName, "Outline Shader");
 	EXPECT_EQ(shaderNode.version.versionNumber, 430);
 	EXPECT_EQ(shaderNode.version.profile, "core");
