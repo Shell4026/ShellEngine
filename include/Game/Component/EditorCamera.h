@@ -36,7 +36,9 @@ namespace sh::game
 	public:
 		SH_GAME_API EditorCamera(GameObject& owner);
 
+		SH_GAME_API void Start() override;
 		SH_GAME_API void BeginUpdate() override;
+		SH_GAME_API void Update() override;
 		SH_GAME_API void SetFocus(bool bfocus);
 	};
 }//namespace

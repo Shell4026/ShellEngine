@@ -72,7 +72,7 @@ namespace sh::game
 		}
 
 		glm::vec3 to = lookPos - glm::vec3{ gameObject.transform->position };
-		glm::vec3 right = glm::normalize(glm::cross(to, glm::vec3{ this->up }));
+		glm::vec3 right = glm::normalize(glm::cross(to, glm::vec3{GetUpVector()}));
 		glm::vec3 up = glm::normalize(glm::cross(right, to));
 
 		glm::vec2 delta = (Input::mousePosition - middlePressedPos);
@@ -98,7 +98,9 @@ namespace sh::game
 		xdir = (xdir >= 360.f) ? xdir - 360.f : (xdir < 0) ? xdir + 360.f : xdir;
 		ydir = (ydir >= 360.f) ? ydir - 360.f : (ydir < 0) ? ydir + 360.f : ydir;
 
+		Vec3 up = camera.GetUpVector();
 		up.y = (xdir >= 90 && xdir < 270) ? -1 : 1;
+		camera.SetUpVector(up);
 	}
 
 	void EditorCamera::UpdateCameraPosition()
@@ -109,15 +111,26 @@ namespace sh::game
 		gameObject.transform->SetPosition(x, y, z);
 	}
 
+	SH_GAME_API void EditorCamera::Start()
+	{
+		glm::vec3 v = gameObject.transform->GetWorldPosition() - lookPos;
+		glm::vec3 cross = glm::cross(glm::vec3{ 1.0f, 0.f, 0.f }, glm::normalize(glm::vec3{ v.x, 0.f, v.z }));
+		xdir = glm::degrees(glm::asin(glm::length(cross)));
+		cross = glm::cross(glm::vec3{ 1.0f, 0.f, 0.f }, glm::normalize(glm::vec3{ v.x, v.y, 0.f }));
+		ydir = glm::degrees(glm::asin(glm::length(cross)));
+	}
+
 	SH_GAME_API void EditorCamera::BeginUpdate()
 	{
 		if (bFocus)
-		{
 			HandleMouseInput();
-			ClampAngles();
-			UpdateCameraPosition();
-		}
+		ClampAngles();
+		UpdateCameraPosition();
 		Super::BeginUpdate();
+	}
+
+	SH_GAME_API void EditorCamera::Update()
+	{
 	}
 
 	SH_GAME_API void EditorCamera::SetFocus(bool bfocus)
