@@ -18,6 +18,8 @@ namespace sh::render
 	{
 		materialData = std::make_unique<MaterialData>();
 		propertyBlock = core::SObject::Create<MaterialPropertyBlock>();
+
+		SetDefaultProperties();
 	}
 
 	SH_RENDER_API Material::Material(Material&& other) noexcept :
@@ -39,7 +41,7 @@ namespace sh::render
 	{
 		if (propertyBlock)
 			propertyBlock->Clear();
-		materialData.reset();
+		materialData->Clear();
 	}
 
 	void Material::SetDefaultProperties()
@@ -203,9 +205,55 @@ namespace sh::render
 	{
 		bPropertyDirty = true;
 	}
+
+	SH_RENDER_API auto Material::Serialize() const -> core::Json
+	{
+		core::Json mainJson = Super::Serialize();
+		mainJson["MaterialPropertyBlock"] = propertyBlock->Serialize();
+		return mainJson;
+	}
 	SH_RENDER_API void Material::Deserialize(const core::Json& json)
 	{
 		Clear();
 		Super::Deserialize(json);
+		auto& propertyJson = json["MaterialPropertyBlock"];
+		if (propertyJson.contains("scalar"))
+		{
+			const auto& intJson = propertyJson["scalar"];
+			for (const auto& [name, value] : intJson.items())
+			{
+				SetProperty(name, value.get<float>());
+			}
+		}
+		if (propertyJson.contains("vector"))
+		{
+			const auto& vectorJson = propertyJson["vector"];
+			for (const auto& [name, value] : vectorJson.items())
+			{
+				if (value.is_array() && value.size() == 4)
+				{
+					glm::vec4 vecValue(
+						value[0].get<float>(),
+						value[1].get<float>(),
+						value[2].get<float>(),
+						value[3].get<float>()
+					);
+					SetProperty(name, vecValue);
+				}
+			}
+		}
+		if (propertyJson.contains("textures"))
+		{
+			const auto& texJson = propertyJson["textures"];
+			for (const auto& [name, value] : texJson.items())
+			{
+				std::string uuid = value.get<std::string>();
+				auto ptr = core::SObjectManager::GetInstance()->GetSObject(uuid);
+				if (!core::IsValid(ptr))
+					continue;
+				if (ptr->GetType() == Texture::GetStaticType())
+					SetProperty(name, reinterpret_cast<const Texture*>(ptr));
+			}
+		}
 	}
 }//namespace

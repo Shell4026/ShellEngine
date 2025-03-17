@@ -106,7 +106,7 @@ namespace sh::render
 				if (!core::IsValid(ptr))
 					continue;
 				if (ptr->GetType() == Texture::GetStaticType())
-					SetProperty(name, reinterpret_cast<Texture*>(ptr));
+					SetProperty(name, reinterpret_cast<const Texture*>(ptr));
 			}
 		}
 	}

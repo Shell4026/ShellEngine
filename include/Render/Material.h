@@ -22,6 +22,7 @@
 #include <any>
 #include <unordered_set>
 #include <cassert>
+#include <optional>
 
 namespace sh::render
 {
@@ -75,11 +76,14 @@ namespace sh::render
 		              template<typename T>
 		              void SetProperty(const std::string& name, const T& data);
 		SH_RENDER_API void SetProperty(const std::string& name, const Texture* data);
+		              template<typename T>
+					  auto GetProperty(const std::string& name) const -> std::optional<T>;
 
 		SH_RENDER_API auto GetMaterialData() const -> const MaterialData&;
 
 		SH_RENDER_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 
+		SH_RENDER_API auto Serialize() const -> core::Json override;
 		SH_RENDER_API void Deserialize(const core::Json& json) override;
 	};
 
@@ -104,5 +108,63 @@ namespace sh::render
 			dirtyPropSet.insert({ location.passPtr, location.layoutPtr });
 
 		bPropertyDirty = true;
+	}
+	template<typename T>
+	inline auto Material::GetProperty(const std::string& name) const -> std::optional<T>
+	{
+		if constexpr (std::is_arithmetic_v<T>)
+		{
+			auto scalar = propertyBlock->GetScalarProperty(name);
+			if (scalar.has_value())
+				return scalar.value();
+			return {};
+		}
+		else if constexpr (std::is_same_v<T, glm::vec2>)
+		{
+			auto ptr = propertyBlock->GetVectorProperty(name);
+			if (!ptr)
+				return {};
+			return glm::vec2{ ptr->x, ptr->y };
+		}
+		else if constexpr (std::is_same_v<T, glm::vec3>)
+		{
+			auto ptr = propertyBlock->GetVectorProperty(name);
+			if (!ptr)
+				return {};
+			return glm::vec3{ ptr->x, ptr->y, ptr->z };
+		}
+		else if constexpr (std::is_same_v<T, glm::vec4>)
+		{
+			auto ptr = propertyBlock->GetVectorProperty(name);
+			return *ptr;
+		}
+		else if constexpr (std::is_same_v<T, glm::mat2>)
+		{
+			auto ptr = propertyBlock->GetMatrixProperty(name);
+			if (!ptr)
+				return {};
+			return core::Util::ConvertMat4ToMat2(*ptr);
+		}
+		else if constexpr (std::is_same_v<T, glm::mat3>)
+		{
+			auto ptr = propertyBlock->GetMatrixProperty(name);
+			if (!ptr)
+				return {};
+			return core::Util::ConvertMat4ToMat3(*ptr);
+		}
+		else if constexpr (std::is_same_v<T, glm::mat4>)
+		{
+			auto ptr = propertyBlock->GetMatrixProperty(name);
+			if (!ptr)
+				return {};
+			return *ptr;
+		}
+		else if constexpr (std::is_same_v<T, const Texture*>)
+		{
+			return propertyBlock->GetTextureProperty(name);
+		}
+		else
+			static_assert(true);
+		return {};
 	}
 }
