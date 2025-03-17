@@ -1,18 +1,16 @@
 ﻿#pragma once
-
 #include "VulkanConfig.h"
-#include "Render/IBuffer.h"
 
+#include "Render/IBuffer.h"
 #include "Render/Export.h"
 
 namespace sh::render::vk
 {
+	class VulkanContext;
 	class VulkanBuffer : public IBuffer
 	{
 	private:
-		VkDevice device;
-		VkPhysicalDevice gpu;
-		VmaAllocator allocator;
+		const VulkanContext& context;
 
 		VkBuffer buffer;
 		VmaAllocation bufferMem;
@@ -26,7 +24,7 @@ namespace sh::render::vk
 	private:
 		auto FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) -> uint32_t;
 	public:
-		SH_RENDER_API VulkanBuffer(VkDevice device, VkPhysicalDevice gpu, VmaAllocator allocator);
+		SH_RENDER_API VulkanBuffer(const VulkanContext& context);
 		SH_RENDER_API VulkanBuffer(const VulkanBuffer& other);
 		SH_RENDER_API VulkanBuffer(VulkanBuffer&& other) noexcept;
 		SH_RENDER_API ~VulkanBuffer();

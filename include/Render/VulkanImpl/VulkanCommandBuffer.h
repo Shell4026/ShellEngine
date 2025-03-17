@@ -44,7 +44,7 @@ namespace sh::render::vk
 
 		SH_RENDER_API auto Create(const VkCommandBufferAllocateInfo* info = nullptr) -> VkResult;
 		SH_RENDER_API auto Reset() -> VkResult;
-		SH_RENDER_API void Clean();
+		SH_RENDER_API void Clear();
 
 		SH_RENDER_API auto GetCommandBuffer() const-> VkCommandBuffer;
 

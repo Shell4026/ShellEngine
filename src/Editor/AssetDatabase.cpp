@@ -1,12 +1,11 @@
-﻿#include "Game/PCH.h"
-#include "AssetDatabase.h"
+﻿#include "AssetDatabase.h"
+#include "TextureLoader.h"
+#include "ModelLoader.h"
+#include "MaterialLoader.h"
 
 #include "Render/Renderer.h"
 
 #include "Game/World.h"
-#include "Game/TextureLoader.h"
-#include "Game/ModelLoader.h"
-#include "Game/MaterialLoader.h"
 
 #include "Core/FileSystem.h"
 
@@ -68,7 +67,7 @@ namespace sh::editor
 
 	auto AssetDatabase::LoadMesh(game::World& world, const std::filesystem::path& dir, const std::filesystem::path& metaDir) -> render::Mesh*
 	{
-		static game::ModelLoader loader{ *world.renderer.GetContext()};
+		static ModelLoader loader{ *world.renderer.GetContext()};
 		auto ptr = loader.Load(dir.string());
 		if (ptr == nullptr)
 			return nullptr;
@@ -84,7 +83,7 @@ namespace sh::editor
 	}
 	auto AssetDatabase::LoadTexture(game::World& world, const std::filesystem::path& dir, const std::filesystem::path& metaDir) -> render::Texture*
 	{
-		static game::TextureLoader loader{ *world.renderer.GetContext() };
+		static TextureLoader loader{ *world.renderer.GetContext() };
 		auto ptr = loader.Load(dir.string());
 		if (ptr == nullptr)
 			return nullptr;
@@ -100,7 +99,7 @@ namespace sh::editor
 	}
 	auto AssetDatabase::LoadMaterial(game::World& world, const std::filesystem::path& dir) -> render::Material*
 	{
-		static game::MaterialLoader loader{ *world.renderer.GetContext() };
+		static MaterialLoader loader{ *world.renderer.GetContext() };
 		
 		auto ptr = loader.Load(dir.string());
 		if (ptr == nullptr)

@@ -5,6 +5,8 @@
 
 #include "Core/ISyncable.h"
 
+#include <glm/vec2.hpp>
+
 #include <vector>
 #include <memory>
 
@@ -23,6 +25,8 @@ namespace sh::render::vk
 	class VulkanDescriptorPool;
 	class VulkanPipelineManager;
 	class VulkanQueueManager;
+	class VulkanRenderPass;
+	class VulkanRenderPassManager;
 
 	class VulkanContext : public IRenderContext
 	{
@@ -50,7 +54,8 @@ namespace sh::render::vk
 		VkDevice device = VK_NULL_HANDLE;
 
 		VmaAllocator allocator = VK_NULL_HANDLE;
-
+		
+		VulkanRenderPass* mainRenderPass = nullptr;
 		std::vector<VulkanFramebuffer> framebuffers;
 
 		std::unique_ptr<VulkanQueueManager> queueManager;
@@ -59,6 +64,13 @@ namespace sh::render::vk
 		core::SyncArray<std::unique_ptr<VulkanCommandBuffer>> cmdBuffer;
 		std::unique_ptr<VulkanDescriptorPool> descPool;
 		std::unique_ptr<VulkanPipelineManager> pipelineManager;
+		std::unique_ptr<VulkanRenderPassManager> renderPassManager;
+
+		VkDescriptorSetLayout emptyDescLayout;
+		VkDescriptorSet emptyDescSet;
+
+		glm::vec2 viewportStart;
+		glm::vec2 viewportEnd;
 
 		bool bFindValidationLayer = false;
 		bool bEnableValidationLayers = false;
@@ -76,11 +88,13 @@ namespace sh::render::vk
 		void DestroyDevice();
 		void CreateAllocator();
 		void DestroyAllocator();
+		void CreateRenderPass();
 		void CreateFrameBuffer();
 		void CreateCommandPool(uint32_t queueFamilyIdx);
 		void DestroyCommandPool();
 		void CreateCommandBuffers();
 		void DestroyCommandBuffers();
+		void CreateEmptyDescriptor();
 	public:
 		SH_RENDER_API VulkanContext(const sh::window::Window& window);
 
@@ -93,6 +107,8 @@ namespace sh::render::vk
 		SH_RENDER_API void PrintLayers();
 		SH_RENDER_API auto ResetCommandPools() -> VkResult;
 
+		SH_RENDER_API auto FindSupportedDepthFormat(bool bUseStencil) const -> VkFormat;
+
 		SH_RENDER_API auto GetInstance() const -> VkInstance;
 		SH_RENDER_API auto GetGPU() const -> VkPhysicalDevice;
 		SH_RENDER_API auto GetGPUName() const->std::string_view;
@@ -102,9 +118,17 @@ namespace sh::render::vk
 		SH_RENDER_API auto GetCommandPool(core::ThreadType thr) const -> VkCommandPool;
 		SH_RENDER_API auto GetCommandBuffer(core::ThreadType thr) const -> VulkanCommandBuffer*;
 		SH_RENDER_API auto GetQueueManager() const -> VulkanQueueManager&;
+		SH_RENDER_API auto GetMainRenderPass() const -> VkRenderPass;
 		SH_RENDER_API auto GetMainFramebuffer(uint32_t idx = 0) const -> const VulkanFramebuffer*;
 		SH_RENDER_API auto GetDescriptorPool() const -> VulkanDescriptorPool&;
 		SH_RENDER_API auto GetAllocator() const -> VmaAllocator;
 		SH_RENDER_API auto GetPipelineManager() const -> VulkanPipelineManager&;
+		SH_RENDER_API auto GetRenderPassManager() const -> VulkanRenderPassManager&;
+		SH_RENDER_API auto GetEmptyDescriptorSetLayout() const -> VkDescriptorSetLayout;
+		SH_RENDER_API auto GetEmptyDescriptorSet() const->VkDescriptorSet;
+
+		SH_RENDER_API void SetViewport(const glm::vec2& start, const glm::vec2& end) override;
+		SH_RENDER_API auto GetViewportStart() const -> const glm::vec2& override;
+		SH_RENDER_API auto GetViewportEnd() const -> const glm::vec2& override;
 	};
 }

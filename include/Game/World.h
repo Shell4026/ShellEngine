@@ -88,6 +88,9 @@ namespace sh::game
 
 		SH_GAME_API virtual void Clean();
 
+		/// @brief 기본 리소스를 로드한다.
+		SH_GAME_API virtual void InitResource();
+
 		/// @brief 게임 오브젝트를 추가한다.
 		/// @param name 오브젝트 이름
 		SH_GAME_API auto AddGameObject(std::string_view name) -> GameObject*;

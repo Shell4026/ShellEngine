@@ -5,6 +5,7 @@
 #include "Render/VulkanImpl/VulkanContext.h"
 #include "Render/VulkanImpl/VulkanFramebuffer.h"
 #include "Render/VulkanImpl/VulkanQueueManager.h"
+#include "Render/VulkanImpl/VulkanRenderPass.h"
 
 #include "Core/ThreadSyncManager.h"
 
@@ -78,7 +79,7 @@ namespace sh::game
 			initInfo.QueueFamily = vkContext.GetQueueManager().GetGraphicsQueueFamilyIdx();
 			initInfo.Queue = vkContext.GetQueueManager().GetGraphicsQueue();
 			initInfo.DescriptorPool = &vkContext.GetDescriptorPool();
-			initInfo.RenderPass = static_cast<const render::vk::VulkanFramebuffer*>(vkContext.GetMainFramebuffer())->GetRenderPass();
+			initInfo.RenderPass = static_cast<const render::vk::VulkanFramebuffer*>(vkContext.GetMainFramebuffer())->GetRenderPass()->GetVkRenderPass();
 			initInfo.MinImageCount = 2;
 			initInfo.ImageCount = 2;
 			initInfo.MSAASamples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;

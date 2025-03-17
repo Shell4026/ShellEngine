@@ -1,5 +1,4 @@
-﻿#include "PCH.h"
-#include "Component/MeshRenderer.h"
+﻿#include "Component/MeshRenderer.h"
 #include "Component/Camera.h"
 #include "Component/PickingRenderer.h"
 #include "Component/PointLight.h"
@@ -8,9 +7,7 @@
 
 #include "Core/Reflection.hpp"
 
-#include "Render/DrawableFactory.h"
-#include "Render/IDrawable.h"
-#include "Render/IUniformBuffer.h"
+#include "Render/Drawable.h"
 
 #include <cstring>
 #include <algorithm>
@@ -19,26 +16,7 @@ namespace sh::game
 {
 	MeshRenderer::MeshRenderer(GameObject& owner) :
 		Component(owner),
-
-		mesh(nullptr), mat(nullptr),
-		onCameraAddListener
-		(
-			[&](Camera* cam)
-			{
-				CreateDrawable(cam);
-			}
-		),
-		onCameraRemoveListener
-		(
-			[&](Camera* cam)
-			{
-				auto it = drawables.find(cam);
-				if (it == drawables.end())
-					return;
-
-				drawables.erase(it);
-			}
-		)
+		mesh(nullptr), mat(nullptr), drawable(nullptr)
 	{
 		onMatrixUpdateListener.SetCallback([&](const glm::mat4& mat)
 			{
@@ -60,9 +38,6 @@ namespace sh::game
 		{
 			worldAABB = mesh->GetBoundingBox().GetWorldAABB(gameObject.transform->localToWorldMatrix);
 
-			for (auto cam : gameObject.world.GetCameras())
-				CreateDrawable(cam);
-
 #if SH_EDITOR
 			if (GetType() == MeshRenderer::GetStaticType())
 			{
@@ -77,6 +52,10 @@ namespace sh::game
 					picking->SetMesh(mesh);
 			}
 #endif
+			if (drawable == nullptr)
+				CreateDrawable();
+			else
+				drawable->SetMesh(*this->mesh);
 		}
 	}
 
@@ -91,24 +70,18 @@ namespace sh::game
 
 	void MeshRenderer::SetMaterial(sh::render::Material* mat)
 	{
-		this->mat = mat;
 		if (core::IsValid(mat))
-		{
-			auto shader = this->mat->GetShader();
-			for (auto& shaderPass : shader->GetPasses())
-			{
-				if (shaderPass->GetUniformBinding("lightCount"))
-				{
-					bShaderHasLight = true;
-					break;
-				}
-				else
-					bShaderHasLight = false;
-			}
+			this->mat = mat;
+		else
+			this->mat = gameObject.world.materials.GetResource("ErrorMaterial");
 
-			for (auto cam : gameObject.world.GetCameras())
-				CreateDrawable(cam);
-		}
+		if (drawable == nullptr)
+			CreateDrawable();
+		else
+			drawable->SetMaterial(*this->mat);
+
+		if (propertyBlock != nullptr) 
+			SetMaterialPropertyBlock(propertyBlock); // 로컬 프로퍼티 처리를 위해 다시 호출
 	}
 
 	auto MeshRenderer::GetMaterial() const -> sh::render::Material*
@@ -116,7 +89,99 @@ namespace sh::game
 		return mat;
 	}
 
-	void MeshRenderer::CreateDrawable(Camera* camera)
+	void MeshRenderer::UpdateMaterialData()
+	{
+		if (drawable == nullptr || propertyBlock == nullptr || !core::IsValid(mat))
+			return;
+		render::Shader* shader = mat->GetShader();
+		if (!core::IsValid(shader))
+			return;
+		
+		for (auto& [passPtr, layoutPtr] : localUniformLocations)
+		{
+			std::vector<uint8_t> data(layoutPtr->GetSize());
+			bool isSampler = false;
+			for (auto& member : layoutPtr->GetMembers())
+			{
+				if (member.type == core::reflection::GetType<int>())
+				{
+					auto var = propertyBlock->GetScalarProperty(member.name);
+					if (var.has_value())
+						SetData(static_cast<int>(var.value()), data, member.offset);
+					else
+						SetData(0, data, member.offset);
+				}
+				else if (member.type == core::reflection::GetType<float>())
+				{
+					auto var = propertyBlock->GetScalarProperty(member.name);
+					if (var.has_value())
+						SetData(var.value(), data, member.offset);
+					else
+						SetData(0.0f, data, member.offset);
+				}
+				else if (member.type == core::reflection::GetType<glm::vec2>())
+				{
+					auto var = propertyBlock->GetVectorProperty(member.name);
+					if (var)
+						SetData(glm::vec2{ var->x, var->y }, data, member.offset);
+					else
+						SetData(glm::vec2{ 0.f }, data, member.offset);
+				}
+				else if (member.type == core::reflection::GetType<glm::vec3>())
+				{
+					auto var = propertyBlock->GetVectorProperty(member.name);
+					if (var)
+						SetData(glm::vec3{ var->x, var->y, var->z }, data, member.offset);
+					else
+						SetData(glm::vec3{ 0.f }, data, member.offset);
+				}
+				else if (member.type == core::reflection::GetType<glm::vec4>())
+				{
+					auto var = propertyBlock->GetVectorProperty(member.name);
+					if (var)
+						SetData(*var, data, member.offset);
+					else
+						SetData(glm::vec4{ 0.f }, data, member.offset);
+				}
+				else if (member.type == core::reflection::GetType<glm::mat2>())
+				{
+					auto var = propertyBlock->GetMatrixProperty(member.name);
+					if (var)
+						SetData(core::Util::ConvertMat4ToMat2(*var), data, member.offset);
+					else
+						SetData(glm::mat2{ 1.f }, data, member.offset);
+				}
+				else if (member.type == core::reflection::GetType<glm::mat3>())
+				{
+					auto var = propertyBlock->GetMatrixProperty(member.name);
+					if (var)
+						SetData(core::Util::ConvertMat4ToMat3(*var), data, member.offset);
+					else
+						SetData(glm::mat3{ 1.f }, data, member.offset);
+				}
+				else if (member.type == core::reflection::GetType<glm::mat4>())
+				{
+					auto var = propertyBlock->GetMatrixProperty(member.name);
+					if (var)
+						SetData(*var, data, member.offset);
+					else
+						SetData(glm::mat2{ 1.f }, data, member.offset);
+				}
+				else if (member.type == core::reflection::GetType<render::Texture>())
+				{
+					auto var = propertyBlock->GetTextureProperty(member.name);
+					if (var)
+						drawable->GetMaterialData().SetTextureData(*passPtr, layoutPtr->type, layoutPtr->binding, var);
+
+					isSampler = true;
+				}
+			}
+			if (!isSampler)
+				drawable->GetMaterialData().SetUniformData(*passPtr, layoutPtr->type, layoutPtr->binding, data.data(), core::ThreadType::Game);
+		}
+	}
+
+	void MeshRenderer::CreateDrawable()
 	{
 		if (!core::IsValid(mesh))
 		{
@@ -130,30 +195,10 @@ namespace sh::game
 		}
 		if (!core::IsValid(mat->GetShader()))
 			return;
-		if (!core::IsValid(camera))
-			return;
-		auto it = drawables.find(camera);
-		if (it == drawables.end())
-		{
-			render::IDrawable* drawable = render::DrawableFactory::Create(*gameObject.world.renderer.GetContext());
-			drawable->Build(camera->GetNative(), mesh, mat);
-			drawables.insert({ camera, drawable });
-		}
-		else
-		{
-			it->second->Build(camera->GetNative(), mesh, mat);
-		}
-	}
-	void MeshRenderer::RebuildDrawables()
-	{
-		for (auto& [cam, drawable] : drawables)
-		{
-			drawable->Build(cam->GetNative(), mesh, mat);
-		}
-	}
-	void MeshRenderer::CleanDrawables()
-	{
-		drawables.clear();
+
+		drawable = core::SObject::Create<render::Drawable>(*mat, *mesh);
+		drawable->SetRenderTagId(renderTag);
+		drawable->Build(*world.renderer.GetContext());
 	}
 
 	void MeshRenderer::Awake()
@@ -162,82 +207,90 @@ namespace sh::game
 
 		if (!core::IsValid(mat))
 			mat = gameObject.world.materials.GetResource("ErrorMaterial");
-
-		for(auto cam : gameObject.world.GetCameras())
-			CreateDrawable(cam);
-
-		gameObject.world.onCameraAdd.Register(onCameraAddListener);
-		gameObject.world.onCameraRemove.Register(onCameraRemoveListener);
 	}
 
 	void MeshRenderer::Start()
 	{
+		if (drawable == nullptr)
+			CreateDrawable();
 	}
 
 	void MeshRenderer::Update()
 	{
-		if (!sh::core::IsValid(mesh))
-			return;
-		if (!sh::core::IsValid(mat))
-			return;
-		if (!sh::core::IsValid(mat->GetShader()))
+		if (!sh::core::IsValid(mesh) || !sh::core::IsValid(mat) || !sh::core::IsValid(mat->GetShader()))
 			return;
 
 		sh::render::Renderer* renderer = &gameObject.world.renderer;
 		if (renderer->IsPause())
 			return;
 
-		render::Shader* shader = mat->GetShader();
-	
 		mat->UpdateUniformBuffers();
+		UpdateMaterialData();
 
+		drawable->SetModelMatrix(gameObject.transform->localToWorldMatrix);
+		gameObject.world.renderer.PushDrawAble(drawable);
 		// 광원 구조체 채우기
-		struct
+		//struct
+		//{
+		//	alignas(16) glm::vec4 lightPosRange[10];
+		//	alignas(16) int lightCount = 0;
+		//} lightStruct;
+		//if (bShaderHasLight)
+		//{
+		//	std::fill(lightStruct.lightPosRange, lightStruct.lightPosRange + 10, glm::vec4{ 0.f });
+		//	auto lights = world.GetLightOctree().Query(worldAABB);
+		//	if (lights.size() < 10)
+		//	{
+		//		int idx = 0;
+		//		for (int i = 0; i < lights.size(); ++i)
+		//		{
+		//			ILight* light = static_cast<ILight*>(lights[i]);
+		//			const Vec3& pos = light->gameObject.transform->GetWorldPosition();
+		//			if (light->GetType() == PointLight::GetStaticType())
+		//				lightStruct.lightPosRange[idx++] = { pos.x, pos.y, pos.z, static_cast<PointLight*>(light)->GetRadius() };
+		//		}
+		//		lightStruct.lightCount = idx;
+		//	}
+		//}
+	}
+
+	SH_GAME_API void MeshRenderer::SetMaterialPropertyBlock(render::MaterialPropertyBlock* block)
+	{
+		propertyBlock = block;
+
+		// 로컬 프로퍼티 위치 파악
+		localUniformLocations.clear();
+
+		render::Shader* shader = mat->GetShader();
+		if (core::IsValid(shader))
 		{
-			alignas(16) glm::vec4 lightPosRange[10];
-			alignas(16) int lightCount = 0;
-		} lightStruct;
-		if (bShaderHasLight)
-		{
-			std::fill(lightStruct.lightPosRange, lightStruct.lightPosRange + 10, glm::vec4{ 0.f });
-			auto lights = world.GetLightOctree().Query(worldAABB);
-			if (lights.size() < 10)
+			for (auto& [propName, propInfo] : shader->GetProperties())
 			{
-				int idx = 0;
-				for (int i = 0; i < lights.size(); ++i)
+				for (auto& location : propInfo.locations)
 				{
-					ILight* light = static_cast<ILight*>(lights[i]);
-					const Vec3& pos = light->gameObject.transform->GetWorldPosition();
-					if (light->GetType() == PointLight::GetStaticType())
-						lightStruct.lightPosRange[idx++] = { pos.x, pos.y, pos.z, static_cast<PointLight*>(light)->GetRadius() };
+					if (location.layoutPtr->type != render::UniformStructLayout::Type::Object)
+						continue;
+					auto it = std::find(localUniformLocations.begin(), localUniformLocations.end(), std::pair{ location.passPtr, location.layoutPtr });
+					if (it == localUniformLocations.end())
+						localUniformLocations.push_back({ location.passPtr, location.layoutPtr });
 				}
-				lightStruct.lightCount = idx;
 			}
 		}
+	}
 
-		for (auto&[cam, drawable] : drawables)
-		{
-			if (!cam->active)
-				continue;
+	SH_GAME_API auto MeshRenderer::GetMaterialPropertyBlock() const -> render::MaterialPropertyBlock*
+	{
+		return propertyBlock;
+	}
 
-			struct alignas(16) Uniform
-			{
-				glm::mat4 model;
-				glm::mat4 view;
-				glm::mat4 proj;
-			} uniform{};
-			uniform.model = gameObject.transform->localToWorldMatrix;
-			uniform.view = cam->GetViewMatrix();
-			uniform.proj = cam->GetProjMatrix();
+	SH_GAME_API void MeshRenderer::SetRenderTagId(uint32_t tagId)
+	{
+		renderTag = tagId;
+	}
 
-			for (std::size_t passIdx = 0; passIdx < mat->GetShader()->GetPasses().size(); ++passIdx)
-			{
-				drawable->SetUniformData(passIdx, 0, &uniform, render::IDrawable::Stage::Vertex);
-				if (bShaderHasLight)
-					drawable->SetUniformData(passIdx, 1, &lightStruct, render::IDrawable::Stage::Fragment);
-			}
-			gameObject.world.renderer.PushDrawAble(drawable);
-		}//drawables
+	SH_GAME_API auto MeshRenderer::GetRenderTagId() const -> uint32_t
+	{
+		return renderTag;
 	}
 
 	SH_GAME_API void MeshRenderer::OnPropertyChanged(const core::reflection::Property& prop)
@@ -249,6 +302,11 @@ namespace sh::game
 		else if (prop.GetName() == "mat")
 		{
 			SetMaterial(mat);
+		}
+		else if (prop.GetName() == "renderTag")
+		{
+			if (drawable != nullptr)
+				drawable->SetRenderTagId(renderTag);
 		}
 	}
 }//namespace

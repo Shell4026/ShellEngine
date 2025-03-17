@@ -1,5 +1,4 @@
-﻿#include "pch.h"
-#include "Mesh/Plane.h"
+﻿#include "Mesh/Plane.h"
 
 namespace sh::render
 {
@@ -7,23 +6,15 @@ namespace sh::render
 	{
 		this->SetVertex(
 			{
-				{-0.5f, 0.0f, -0.5f},
-				{-0.5f, 0.0f, 0.5f},
-				{0.5f, 0.0f, 0.5f},
-				{0.5f, 0.0f, -0.5f}
+				Mesh::Vertex{ {-0.5f, -0.5f, 0.0f}, {0.0f, 0.0f} },
+				Mesh::Vertex{ {-0.5f, 0.5f,  0.0f}, {0.0f, 1.0f} },
+				Mesh::Vertex{ {0.5f, 0.5f,  0.0f}, {1.0f, 1.0f} },
+				Mesh::Vertex{ {0.5f, -0.5f,  0.0f}, {1.0f, 0.0f} }
 			}
 		);
 		this->SetIndices(
 			{
 				0, 1, 2, 2, 3, 0
-			}
-		);
-		this->SetUV( 
-			{
-				{0.0f, 0.0f},
-				{0.0f, 1.0f},
-				{1.0f, 1.0f},
-				{1.0f, 0.0f}
 			}
 		);
 	}

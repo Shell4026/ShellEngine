@@ -1,5 +1,6 @@
 ﻿#include "ShaderParser.h"
 #include "StencilState.h"
+#include "UniformStructLayout.h"
 
 #include <fmt/core.h>
 
@@ -98,6 +99,11 @@ namespace sh::render
 			return "unknown";
 		}
 	}
+	auto ShaderParser::GetCurrentTokenPosString() const -> std::string
+	{
+		const ShaderLexer::Token& tk = PeekToken();
+		return fmt::format("(line: {}, col: {})", tk.line, tk.column);
+	}
 	auto ShaderParser::GetNotFoundTokenString(const std::initializer_list<ShaderLexer::TokenType>& tokens) -> std::string
 	{
 		std::string msg = "Not found token (";
@@ -193,11 +199,26 @@ namespace sh::render
 		while (!CheckToken(ShaderLexer::TokenType::RBrace))
 		{
 			ShaderAST::VariableNode varNode;
-			ConsumeToken({ ShaderLexer::TokenType::Identifier, ShaderLexer::TokenType::Sampler2D });
-			if (PreviousToken().type == ShaderLexer::TokenType::Identifier)
+			varNode.attribute = ShaderAST::VariableAttribute::None;
+
+			ConsumeToken({ ShaderLexer::TokenType::LSquareBracket, ShaderLexer::TokenType::Identifier, ShaderLexer::TokenType::Sampler2D });
+			if (PreviousToken().type == ShaderLexer::TokenType::Identifier) // type
 				varNode.type = IdentifierToVaraibleType(PreviousToken());
-			else
+			else if(PreviousToken().type == ShaderLexer::TokenType::Sampler2D)
 				varNode.type = ShaderAST::VariableType::Sampler;
+			else // [Local]...
+			{
+				ConsumeToken(ShaderLexer::TokenType::Identifier);
+				std::string attribute = PreviousToken().text;
+				ConsumeToken(ShaderLexer::TokenType::RSquareBracket);
+				if (attribute == "Local")
+					varNode.attribute = ShaderAST::VariableAttribute::Local;
+				else
+					throw ShaderParserException(fmt::format("Unknown attribute: {} {}", attribute, GetCurrentTokenPosString()).c_str());
+				ConsumeToken(ShaderLexer::TokenType::Identifier); // type
+				varNode.type = IdentifierToVaraibleType(PreviousToken());
+			}
+
 			ConsumeToken(ShaderLexer::TokenType::Identifier);
 			varNode.name = PreviousToken().text;
 			ConsumeToken({ ShaderLexer::TokenType::Semicolon, ShaderLexer::TokenType::LSquareBracket });
@@ -217,6 +238,9 @@ namespace sh::render
 	auto ShaderParser::ParsePass(const ShaderAST::ShaderNode& shaderNode) -> ShaderAST::PassNode
 	{
 		ShaderAST::PassNode passNode;
+		passNode.name = fmt::format("Pass{}", passCount++);
+		passNode.cullMode = CullMode::Back;
+
 		ConsumeToken(ShaderLexer::TokenType::Pass);
 		ConsumeToken({ ShaderLexer::TokenType::LBrace, ShaderLexer::TokenType::String }); // 새 패스 시작
 		lastObjectUniformBinding = 0;
@@ -229,9 +253,18 @@ namespace sh::render
 
 		while (!CheckToken(ShaderLexer::TokenType::RBrace) && !CheckToken(ShaderLexer::TokenType::EndOfFile))
 		{
-			ParseLightingPass(passNode);
-			ParseStencil(passNode);
-			passNode.stages.push_back(ParseStage(shaderNode));
+			if (CheckToken(ShaderLexer::TokenType::LightingPass))
+				ParseLightingPass(passNode);
+			else if (CheckToken(ShaderLexer::TokenType::Stencil))
+				ParseStencil(passNode);
+			else if (CheckToken(ShaderLexer::TokenType::Cull))
+				ParseCull(passNode);
+			else if (CheckToken(ShaderLexer::TokenType::ZWrite))
+				ParseZWrite(passNode);
+			else if (CheckToken(ShaderLexer::TokenType::ColorMask))
+				ParseColorMask(passNode);
+			else
+				passNode.stages.push_back(ParseStage(shaderNode));
 		}
 
 		ConsumeToken(ShaderLexer::TokenType::RBrace);
@@ -333,6 +366,68 @@ namespace sh::render
 		}
 		ConsumeToken(ShaderLexer::TokenType::RBrace);
 	}
+	void ShaderParser::ParseCull(ShaderAST::PassNode& passNode)
+	{
+		ConsumeToken(ShaderLexer::TokenType::Cull);
+		ConsumeToken(ShaderLexer::TokenType::Identifier);
+		const std::string& ident = PreviousToken().text;
+		if (ident == "Off" || ident == "off")
+			passNode.cullMode = CullMode::Off;
+		else if (ident == "Front" || ident == "front")
+			passNode.cullMode = CullMode::Front;
+		else if (ident == "Back" || ident == "back")
+			passNode.cullMode = CullMode::Back;
+		else
+			throw ShaderParserException{"Allowed identifiers: Off, Front, Back"};
+		ConsumeToken(ShaderLexer::TokenType::Semicolon);
+	}
+	void ShaderParser::ParseZWrite(ShaderAST::PassNode& passNode)
+	{
+		ConsumeToken(ShaderLexer::TokenType::ZWrite);
+		ConsumeToken(ShaderLexer::TokenType::Identifier);
+		const std::string& ident = PreviousToken().text;
+		if (ident == "Off" || ident == "off")
+			passNode.zwrite = false;
+		else if (ident == "On" || ident == "on")
+			passNode.zwrite = true;
+		else
+			throw ShaderParserException{ "Allowed ZWrite identifiers: Off, On" };
+		ConsumeToken(ShaderLexer::TokenType::Semicolon);
+	}
+	void ShaderParser::ParseColorMask(ShaderAST::PassNode& passNode)
+	{
+		ConsumeToken(ShaderLexer::TokenType::ColorMask);
+		ConsumeToken({ ShaderLexer::TokenType::Identifier, ShaderLexer::TokenType::Number });
+		auto& prevToken = PreviousToken();
+		passNode.colorMask = 0;
+		if (prevToken.type != ShaderLexer::TokenType::Number)
+		{
+			bool allow = false;
+			if (prevToken.text.find("R") != prevToken.text.npos)
+			{
+				passNode.colorMask |= 1;
+				allow = true;
+			}
+			if(prevToken.text.find("G") != prevToken.text.npos)
+			{
+				passNode.colorMask |= 2;
+				allow = true;
+			}
+			if (prevToken.text.find("B") != prevToken.text.npos)
+			{
+				passNode.colorMask |= 4;
+				allow = true;
+			}
+			if (prevToken.text.find("A") != prevToken.text.npos)
+			{
+				passNode.colorMask |= 8;
+				allow = true;
+			}
+			if (!allow)
+				throw ShaderParserException{ "Allowed ZWrite identifiers: R, G, B, A" };
+		}
+		ConsumeToken(ShaderLexer::TokenType::Semicolon);
+	}
 	auto ShaderParser::ParseStage(const ShaderAST::ShaderNode& shaderNode) -> ShaderAST::StageNode
 	{
 		ShaderAST::StageNode stage;
@@ -405,11 +500,24 @@ namespace sh::render
 		const std::string& type = PreviousToken().text;
 		ConsumeToken(ShaderLexer::TokenType::Identifier);
 		const std::string& name = PreviousToken().text;
-		ConsumeToken({ ShaderLexer::TokenType::Semicolon, ShaderLexer::TokenType::Operator, ShaderLexer::TokenType::LBracket });
+		bool array = false;
+		std::size_t arraySize = 0;
+		if (PeekToken().type == ShaderLexer::TokenType::LSquareBracket)
+		{
+			NextToken();
+			ConsumeToken(ShaderLexer::TokenType::Number);
+			arraySize = std::stoi(PreviousToken().text);
+			ConsumeToken(ShaderLexer::TokenType::RSquareBracket);
+			array = true;
+		}
+		ConsumeToken({ ShaderLexer::TokenType::Semicolon, ShaderLexer::TokenType::Operator, ShaderLexer::TokenType::LBracket});
 		auto& prevToken = PreviousToken();
 		if (prevToken.type == ShaderLexer::TokenType::Semicolon) // 변수 선언
 		{
-			stageNode.declaration.push_back(fmt::format("{} {} {};", qualifer, type, name));
+			if (!array)
+				stageNode.declaration.push_back(fmt::format("{} {} {};", qualifer, type, name));
+			else
+				stageNode.declaration.push_back(fmt::format("{} {} {}[{}];", qualifer, type, name, arraySize));
 		}
 		else if (prevToken.type == ShaderLexer::TokenType::Operator) // 변수 선언과 정의
 		{
@@ -425,7 +533,10 @@ namespace sh::render
 				NextToken();
 			}
 			NextToken(); // ;
-			stageNode.declaration.push_back(fmt::format("{} {} {} = {};", qualifer, type, name, std::move(expr)));
+			if (!array)
+				stageNode.declaration.push_back(fmt::format("{} {} {} = {};", qualifer, type, name, std::move(expr)));
+			else
+				stageNode.declaration.push_back(fmt::format("{} {} {}[{}] = {};", qualifer, type, name, arraySize, std::move(expr)));
 		}
 		else if (prevToken.type == ShaderLexer::TokenType::LBracket) // 함수 정의
 		{
@@ -458,7 +569,8 @@ namespace sh::render
 		bool usingVertex = false;
 		bool usingNormal = false;
 		bool usingUV = false;
-		bool usingMVP = false;
+		bool usingMatrixModel = false;
+		bool usingCamera = false;
 		bool usingLIGHT = false;
 		while (nested != 0 || PeekToken().type != ShaderLexer::TokenType::EndOfFile)
 		{
@@ -536,22 +648,21 @@ namespace sh::render
 					}
 				}
 			}
-			else if (CheckToken(ShaderLexer::TokenType::MVP))
+			else if (CheckToken(ShaderLexer::TokenType::MATRIX_VIEW) || CheckToken(ShaderLexer::TokenType::MATRIX_PROJ))
 			{
-				if (!usingMVP)
+				if (!usingCamera)
 				{
 					auto it = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(), [&](const ShaderAST::UBONode& ubo)
 					{
-						return ubo.name == "MVP";
+						return ubo.name == "CAMERA";
 					});
 					if (it == stageNode.uniforms.end())
 					{
 						ShaderAST::UBONode uboNode{};
-						uboNode.name = "MVP";
-						uboNode.set = 0;
-						uboNode.binding = lastObjectUniformBinding++;
+						uboNode.name = "CAMERA";
+						uboNode.set = static_cast<uint32_t>(UniformStructLayout::Type::Camera);
+						uboNode.binding = 0;
 						uboNode.bSampler = false;
-						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 1, "model" });
 						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 1, "view" });
 						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 1, "proj" });
 						stageNode.uniforms.push_back(std::move(uboNode));
@@ -560,7 +671,33 @@ namespace sh::render
 							return ubo.name == "UBO";
 						});
 					}
-					usingMVP = true;
+					usingCamera = true;
+				}
+			}
+			else if (CheckToken(ShaderLexer::TokenType::MATRIX_MODEL))
+			{
+				if (!usingMatrixModel)
+				{
+					auto it = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(), [&](const ShaderAST::UBONode& ubo)
+					{
+						return ubo.name == "CONSTANTS";
+					});
+					if (it == stageNode.uniforms.end())
+					{
+						ShaderAST::UBONode uboNode{};
+						uboNode.name = "CONSTANTS";
+						uboNode.set = static_cast<uint32_t>(UniformStructLayout::Type::Object); // 의미 없음
+						uboNode.binding = 0; // 의미 없음
+						uboNode.bConstant = true;
+						uboNode.bSampler = false;
+						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 1, "model" });
+						stageNode.uniforms.push_back(std::move(uboNode));
+						uboit = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(), [&](const ShaderAST::UBONode& ubo)
+						{
+							return ubo.name == "UBO";
+						});
+					}
+					usingMatrixModel = true;
 				}
 			}
 			else if (CheckToken(ShaderLexer::TokenType::LIGHT))
@@ -575,7 +712,7 @@ namespace sh::render
 					{
 						ShaderAST::UBONode uboNode{};
 						uboNode.name = "LIGHT";
-						uboNode.set = 0;
+						uboNode.set = static_cast<uint32_t>(UniformStructLayout::Type::Object);
 						uboNode.binding = lastObjectUniformBinding++;
 						uboNode.bSampler = false;
 						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Int, 1, "count" });
@@ -602,7 +739,7 @@ namespace sh::render
 						code += "UBO.";
 				}
 			}
-			code += token.text + " ";
+			code += SubstitutionFunctionToken(token) + " ";
 			NextToken();
 		}
 		return code;
@@ -719,11 +856,15 @@ namespace sh::render
 			ConsumeToken(ShaderLexer::TokenType::Semicolon);
 		}
 
+		// 프로퍼티 구문에 있는지 검사
 		bool hasProperty = false;
+		uint32_t set = static_cast<uint32_t>(UniformStructLayout::Type::Material);
 		for (auto& property : shaderNode.properties)
 		{
 			if (property.type == varNode.type && property.size == varNode.size && property.name == varNode.name)
 			{
+				set = (property.attribute == ShaderAST::VariableAttribute::Local) ? 
+					static_cast<uint32_t>(UniformStructLayout::Type::Object) : static_cast<uint32_t>(UniformStructLayout::Type::Material);
 				hasProperty = true;
 				break;
 			}
@@ -736,7 +877,7 @@ namespace sh::render
 			if (stageNode.uniforms.empty())
 			{
 				ShaderAST::UBONode uboNode{};
-				uboNode.set = 1;
+				uboNode.set = set;
 				uboNode.binding = lastMaterialUniformBinding++;
 				uboNode.name = "UBO";
 				uboNode.bSampler = false;
@@ -754,7 +895,7 @@ namespace sh::render
 			ShaderAST::UBONode uboNode{};
 			uboNode.bSampler = true;
 			uboNode.name = varNode.name;
-			uboNode.set = 1;
+			uboNode.set = static_cast<uint32_t>(UniformStructLayout::Type::Material);
 			uboNode.binding = lastMaterialUniformBinding++;
 			stageNode.uniforms.push_back(std::move(uboNode));
 		}
@@ -829,26 +970,44 @@ namespace sh::render
 
 		for (auto& uniform : stageNode.uniforms)
 		{
-			if (!uniform.bSampler)
+			if (uniform.bSampler)
 			{
-				std::string uniformMembers;
-				for (auto& member : uniform.vars)
-				{
-					if (member.size == 1)
-						uniformMembers += fmt::format("{} {};\n", VariableTypeToString(member.type), member.name);
-					else
-						uniformMembers += fmt::format("{} {}[{}];\n", VariableTypeToString(member.type), member.name, member.size);
-				}
-				code += fmt::format("layout(set = {}, binding = {}) uniform {} {{\n {} }} {};\n", uniform.set, uniform.binding, "UNIFORM_" + uniform.name, uniformMembers, uniform.name);
-			}
-			else
 				code += fmt::format("layout(set = {}, binding = {}) uniform sampler2D {};\n", uniform.set, uniform.binding, uniform.name);
+				continue;
+			}
+			std::string uniformMembers;
+			for (auto& member : uniform.vars)
+			{
+				if (member.size == 1)
+					uniformMembers += fmt::format("{} {};\n", VariableTypeToString(member.type), member.name);
+				else
+					uniformMembers += fmt::format("{} {}[{}];\n", VariableTypeToString(member.type), member.name, member.size);
+			}
+			if (uniform.bConstant)
+			{
+				code += fmt::format("layout(push_constant) uniform UNIFORM_{} {{\n {} }} {};\n", uniform.name, uniformMembers, uniform.name);
+				continue;
+			}
+			code += fmt::format("layout(set = {}, binding = {}) uniform {} {{\n {} }} {};\n", uniform.set, uniform.binding, "UNIFORM_" + uniform.name, uniformMembers, uniform.name);
 		}
 		for (auto& decl : stageNode.declaration)
 			code += decl + '\n';
 		for (auto& function : stageNode.functions)
 			code += function + '\n';
 		stageNode.code = std::move(code);
+	}
+	auto ShaderParser::SubstitutionFunctionToken(const ShaderLexer::Token& token) const -> std::string
+	{
+		static const std::unordered_map<std::string, std::string> replaceMap =
+		{
+			{"MATRIX_MODEL", "CONSTANTS.model"},
+			{"MATRIX_VIEW", "CAMERA.view"},
+			{"MATRIX_PROJ", "CAMERA.proj"},
+		};
+		auto it = replaceMap.find(token.text);
+		if (it == replaceMap.end())
+			return token.text;
+		return it->second;
 	}
 
 	SH_RENDER_API auto sh::render::ShaderParser::Parse(const std::vector<ShaderLexer::Token>& tokens) -> ShaderAST::ShaderNode

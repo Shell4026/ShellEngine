@@ -21,7 +21,8 @@ namespace sh::render
 
 		uint32_t lastObjectUniformBinding = 0;
 		uint32_t lastMaterialUniformBinding = 0;
-	private:
+		uint32_t passCount = 1;
+	protected:
 		/// @brief 현재 토큰을 반환하는 함수.
 		/// @return 토큰
 		auto PeekToken() const -> const ShaderLexer::Token&;
@@ -44,6 +45,8 @@ namespace sh::render
 		auto IdentifierToVaraibleType(const ShaderLexer::Token& token) const -> ShaderAST::VariableType;
 		auto VariableTypeToString(ShaderAST::VariableType type) const -> std::string;
 
+		/// @brief (line: {}, col: {}) 형식의 현재 토큰 위치의 문자열을 반환한다.
+		auto GetCurrentTokenPosString() const -> std::string;
 		auto GetNotFoundTokenString(const std::initializer_list<ShaderLexer::TokenType>& tokens) -> std::string;
 		auto GetTokenErrorString(const std::string& msg) const -> std::string;
 
@@ -53,6 +56,9 @@ namespace sh::render
 		auto ParsePass(const ShaderAST::ShaderNode& shaderNode) -> ShaderAST::PassNode;
 		void ParseLightingPass(ShaderAST::PassNode& passNode);
 		void ParseStencil(ShaderAST::PassNode& passNode);
+		void ParseCull(ShaderAST::PassNode& passNode);
+		void ParseZWrite(ShaderAST::PassNode& passNode);
+		void ParseColorMask(ShaderAST::PassNode& passNode);
 		auto ParseStage(const ShaderAST::ShaderNode& shaderNode) -> ShaderAST::StageNode;
 		void ParseStageBody(const ShaderAST::ShaderNode& shaderNode, ShaderAST::StageNode& stageNode);
 		void ParseDeclaration(ShaderAST::StageNode& stageNode, const std::string& qualifer = "");
@@ -63,6 +69,7 @@ namespace sh::render
 
 		void Optimize(ShaderAST::ShaderNode& shaderNode);
 		void GenerateStageCode(int stageIdx, const ShaderAST::ShaderNode& shaderNode, ShaderAST::StageNode& stageNode);
+		auto SubstitutionFunctionToken(const ShaderLexer::Token& token) const -> std::string;
 	public:
 		SH_RENDER_API auto Parse(const std::vector<ShaderLexer::Token>& tokens) -> ShaderAST::ShaderNode;
 	};

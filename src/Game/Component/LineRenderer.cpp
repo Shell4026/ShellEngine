@@ -1,6 +1,7 @@
-﻿#include "PCH.h"
-#include "Component/LineRenderer.h"
+﻿#include "Component/LineRenderer.h"
 #include "Component/Camera.h"
+
+#include "Render/Mesh.h"
 
 #include "GameObject.h"
 
@@ -16,7 +17,7 @@ namespace sh::game
 		start({ 0, 0, 0 }), end({ 0, 1, 0 }), mesh(),
 		color({ 1.f, 0.f, 0.f, 1.f })
 	{
-		mesh.SetVertex({ start, end });
+		mesh.SetVertex({ { start, end } });
 		mesh.SetIndices({ 0, 1 });
 		mesh.SetTopology(render::Mesh::Topology::Line);
 		mesh.lineWidth = 1.f;
@@ -26,6 +27,8 @@ namespace sh::game
 		mat = world.materials.GetResource("LineMaterial");
 		assert(mat);
 		Super::SetMaterial(mat);
+
+		SetMaterialPropertyBlock(SObject::Create<render::MaterialPropertyBlock>());
 	}
 
 	SH_GAME_API void LineRenderer::Awake()
@@ -35,25 +38,10 @@ namespace sh::game
 
 	SH_GAME_API void LineRenderer::Update()
 	{
-		for (auto& [cam, drawable] : drawables)
-		{
-			if (!cam->active)
-				continue;
-
-			struct Points
-			{
-				alignas(16) glm::vec3 start;
-				alignas(16) glm::vec3 end;
-			} points{ start, end };
-
-			struct Color
-			{
-				alignas(16) glm::vec4 color;
-			} color{ this->color };
-
-			drawable->SetUniformData(0, 1, &points, render::IDrawable::Stage::Vertex);
-			drawable->SetUniformData(0, 2, &color, render::IDrawable::Stage::Fragment);
-		}//drawables
+		auto propertyBlock = GetMaterialPropertyBlock();
+		propertyBlock->SetProperty("start", glm::vec3{ start });
+		propertyBlock->SetProperty("end", glm::vec3{ end });
+		propertyBlock->SetProperty("color", glm::vec4{ color });
 		Super::Update();
 	}
 	SH_GAME_API void LineRenderer::SetStart(const Vec3& start)

@@ -1,5 +1,4 @@
 ﻿#pragma once
-
 #include "Export.h"
 #include "ShaderAttribute.h"
 #include "AABB.h"
@@ -25,6 +24,12 @@ namespace sh::render
 	{
 		SCLASS(Mesh)
 	public:
+		struct Vertex
+		{
+			glm::vec3 vertex;
+			glm::vec2 uv;
+			glm::vec3 normal;
+		};
 		struct Face
 		{
 			std::array<uint32_t, 3> vertexIdx;
@@ -37,14 +42,9 @@ namespace sh::render
 			Face
 		};
 	private:
-		static constexpr uint8_t VERTEX_ID = 0;
-		static constexpr uint8_t UV_ID = 1;
-		static constexpr uint8_t NORMAL_ID = 2;
-
+		std::vector<Vertex> verts;
 		std::vector<uint32_t> indices;
 		std::vector<Face> faces;
-
-		std::vector<std::unique_ptr<ShaderAttributeBase>> attrs;
 
 		std::unique_ptr<IVertexBuffer> buffer;
 
@@ -52,7 +52,9 @@ namespace sh::render
 
 		AABB bounding;
 	public:
-		const std::vector<std::unique_ptr<ShaderAttributeBase>>& attributes;
+		static constexpr uint8_t VERTEX_ID = 0;
+		static constexpr uint8_t UV_ID = 1;
+		static constexpr uint8_t NORMAL_ID = 2;
 
 		float lineWidth = 1.f;
 	public:
@@ -64,26 +66,15 @@ namespace sh::render
 		SH_RENDER_API auto operator=(const Mesh& other) -> Mesh&;
 		SH_RENDER_API auto operator=(Mesh&& other) noexcept -> Mesh&;
 
-		SH_RENDER_API void SetVertex(const std::vector<glm::vec3>& verts);
-		SH_RENDER_API void SetVertex(std::vector<glm::vec3>&& verts) noexcept;
-		SH_RENDER_API void SetVertex(const std::initializer_list<glm::vec3>& verts);
-		SH_RENDER_API auto GetVertex() const -> const std::vector<glm::vec3>&;
+		SH_RENDER_API void SetVertex(const std::vector<Vertex>& verts);
+		SH_RENDER_API void SetVertex(const std::initializer_list<Vertex>& verts);
+		SH_RENDER_API auto GetVertex() const -> const std::vector<Vertex>&;
 		SH_RENDER_API auto GetVertexCount() const -> size_t;
 
 		SH_RENDER_API void SetIndices(const std::vector<uint32_t >&indices);
 		SH_RENDER_API void SetIndices(std::vector<uint32_t>&& indices);
 		SH_RENDER_API void SetIndices(const std::initializer_list<uint32_t>& indices);
 		SH_RENDER_API auto GetIndices() const -> const std::vector<uint32_t>&;
-
-		SH_RENDER_API void SetNormal(const std::vector<glm::vec3>& normals);
-		SH_RENDER_API void SetNormal(std::vector<glm::vec3>&& normals) noexcept;
-		SH_RENDER_API void SetNormal(const std::initializer_list<glm::vec3>& normals);
-		SH_RENDER_API auto GetNormal() const -> const std::vector<glm::vec3>&;
-
-		SH_RENDER_API void SetUV(const std::vector<glm::vec2>& uvs);
-		SH_RENDER_API void SetUV(std::vector<glm::vec2>&& uvs) noexcept;
-		SH_RENDER_API void SetUV(const std::initializer_list<glm::vec2>& uvs);
-		SH_RENDER_API auto GetUV() const -> const std::vector<glm::vec2>&;
 
 		SH_RENDER_API auto GetFaces() const -> const std::vector<Face>&;
 
@@ -96,39 +87,5 @@ namespace sh::render
 
 		SH_RENDER_API auto GetBoundingBox() const -> const AABB&;
 		SH_RENDER_API auto GetBoundingBox() -> AABB&;
-
-		template<typename T>
-		void SetAttribute(const ShaderAttribute<T>& attr);
-		template<typename T>
-		void SetAttribute(ShaderAttribute<T>&& attr);
-		SH_RENDER_API auto GetAttribute(std::string_view name) const -> const ShaderAttributeBase*;
-		SH_RENDER_API void ClearAttribute();
 	};
-
-	template<typename T>
-	inline void Mesh::SetAttribute(const ShaderAttribute<T>& attr)
-	{
-		for (auto& attrPtr : attrs)
-		{
-			if (attrPtr->name == attr.name)
-			{
-				static_cast<ShaderAttribute<T>&>(*attrPtr.get()).SetData(attr.GetData());
-				return;
-			}
-		}
-		attrs.push_back(attr.Clone());
-	}
-	template<typename T>
-	inline void Mesh::SetAttribute(ShaderAttribute<T>&& attr)
-	{
-		for (auto& attrPtr : attrs)
-		{
-			if (attrPtr->name == attr.name)
-			{
-				static_cast<ShaderAttribute<T>&>(*attrPtr.get()) = std::move(attr);
-				return;
-			}
-		}
-		attrs.push_back(std::make_unique<ShaderAttribute<T>>(std::move(attr)));
-	}
 }

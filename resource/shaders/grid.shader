@@ -2,36 +2,29 @@
 
 Shader "Grid Shader"
 {
+	Property
+	{
+		vec4 color;
+	}
 	Pass
 	{
+		LightingPass "Forward"
 		Stage Vertex
 		{
-			layout(location = 0) in vec3 verts;
-
-			layout(set = 0, binding = 0) uniform MVP
-			{
-				mat4 model;
-				mat4 view;
-				mat4 proj;
-			} mvp;
-
 			void main()
 			{
-				gl_Position = mvp.proj * mvp.view * mvp.model * vec4(verts, 1.0);
+				gl_Position = MATRIX_PROJ * MATRIX_VIEW * MATRIX_MODEL * vec4(VERTEX, 1.0);
 			}
 		}
 		Stage Fragment
 		{
 			layout(location = 0) out vec4 outColor;
 
-			layout(set = 1, binding = 0) uniform Uniform
-			{
-				vec4 color;
-			} uniforms;
+			uniform vec4 color;
 
 			void main() 
 			{
-				outColor = uniforms.color;
+				outColor = color;
 			}
 		}
 	}

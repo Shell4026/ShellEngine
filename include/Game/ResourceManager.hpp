@@ -70,6 +70,7 @@ namespace sh::game
 				name += std::to_string(idx);
 				it = resources.find(name);
 			}
+			resource->SetName(name);
 
 			gc.SetRootSet(resource);
 			return resources.insert({ std::move(name), resource }).first->second;
@@ -87,6 +88,7 @@ namespace sh::game
 			}
 
 			auto resourcePtr = core::SObject::Create<T>(std::move(resource));
+			resourcePtr->SetName(name);
 
 			gc.SetRootSet(resourcePtr);
 			return resources.insert({ std::move(name), resourcePtr }).first->second;

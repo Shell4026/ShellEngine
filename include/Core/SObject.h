@@ -27,8 +27,6 @@ namespace sh::core
 		std::string name{};
 		std::atomic<bool> bPendingKill;
 		bool bMark;
-	protected:
-		GarbageCollection* gc;
 	public:
 		Observer<false, SObject*> onDestroy;
 	private:
@@ -36,8 +34,9 @@ namespace sh::core
 	protected:
 		SH_CORE_API auto operator new(std::size_t count) -> void*;
 		SH_CORE_API void operator delete(void* ptr);
-	public:
+
 		SH_CORE_API SObject();
+	public:
 		SH_CORE_API SObject(const SObject& other);
 		SH_CORE_API SObject(SObject&& other) noexcept;
 		SH_CORE_API virtual ~SObject();

@@ -1,5 +1,4 @@
-﻿#include "PCH.h"
-#include "VulkanUniformBuffer.h"
+﻿#include "VulkanUniformBuffer.h"
 #include "VulkanContext.h"
 #include "VulkanShaderPass.h"
 #include "VulkanBuffer.h"
@@ -15,31 +14,39 @@ namespace sh::render::vk
 	}
 	VulkanUniformBuffer::VulkanUniformBuffer(VulkanUniformBuffer&& other) noexcept :
 		context(other.context),
-		descSet(other.descSet)
+		descSet(other.descSet),
+		bDynamic(other.bDynamic)
 	{
 		other.context = nullptr;
 		other.descSet = nullptr;
 	}
 	VulkanUniformBuffer::~VulkanUniformBuffer()
 	{
-		Clean();
+		Clear();
 	}
-	void VulkanUniformBuffer::Create(const IRenderContext& context, const ShaderPass& shader, uint32_t type)
+	void VulkanUniformBuffer::Create(const IRenderContext& context, const ShaderPass& shader, UniformStructLayout::Type type)
 	{
-		Clean();
+		Clear();
 
 		this->context = &static_cast<const VulkanContext&>(context);
 		auto& vkShader = static_cast<const VulkanShaderPass&>(shader);
 
-		descSet = this->context->GetDescriptorPool().AllocateDescriptorSet(vkShader.GetDescriptorSetLayout(type), 1);
+		set = static_cast<uint32_t>(type);
+
+		auto layoutInfo = vkShader.GetDescriptorSetLayout(set);
+		VkDescriptorSetLayout layout = layoutInfo.layout;
+		bDynamic = layoutInfo.bDynamic;
+
+		if (layout != VK_NULL_HANDLE)
+			descSet = this->context->GetDescriptorPool().AllocateDescriptorSet(layout, 1);
 	}
-	void VulkanUniformBuffer::Clean()
+	void VulkanUniformBuffer::Clear()
 	{
 		if (descSet == nullptr || context == nullptr)
 			return;
 		context->GetDescriptorPool().FreeDescriptorSet(descSet);
 	}
-	void VulkanUniformBuffer::Update(uint32_t binding, const IBuffer& buffer)
+	void VulkanUniformBuffer::Link(uint32_t binding, const IBuffer& buffer, std::size_t bufferSize)
 	{
 		if (context == nullptr || descSet == nullptr)
 			return;
@@ -49,14 +56,15 @@ namespace sh::render::vk
 		VkDescriptorBufferInfo bufferInfo{};
 		bufferInfo.buffer = vkBuffer.GetBuffer();
 		bufferInfo.offset = 0;
-		bufferInfo.range = vkBuffer.GetSize();
+		bufferInfo.range = (bufferSize == 0) ? vkBuffer.GetSize() : bufferSize;
 
 		VkWriteDescriptorSet descriptorWrite{};
 		descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descriptorWrite.dstSet = descSet;
 		descriptorWrite.dstBinding = binding;
 		descriptorWrite.dstArrayElement = 0;
-		descriptorWrite.descriptorType = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descriptorWrite.descriptorType = bDynamic ? 
+			VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC : VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		descriptorWrite.descriptorCount = 1;
 		descriptorWrite.pBufferInfo = &bufferInfo;
 		descriptorWrite.pImageInfo = nullptr;
@@ -64,7 +72,7 @@ namespace sh::render::vk
 
 		vkUpdateDescriptorSets(context->GetDevice(), 1, &descriptorWrite, 0, nullptr);
 	}
-	void VulkanUniformBuffer::Update(uint32_t binding, const Texture& texture)
+	void VulkanUniformBuffer::Link(uint32_t binding, const Texture& texture)
 	{
 		if (context == nullptr || descSet == nullptr)
 			return;
@@ -87,7 +95,11 @@ namespace sh::render::vk
 
 		vkUpdateDescriptorSets(context->GetDevice(), 1, &descriptorWrite, 0, nullptr);
 	}
-	auto VulkanUniformBuffer::GetVkDescriptorSet() const -> VkDescriptorSet
+	SH_RENDER_API auto VulkanUniformBuffer::GetSetNumber() const -> uint32_t
+	{
+		return set;
+	}
+	SH_RENDER_API auto VulkanUniformBuffer::GetVkDescriptorSet() const -> VkDescriptorSet
 	{
 		return descSet;
 	}

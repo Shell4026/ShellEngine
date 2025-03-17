@@ -2,43 +2,77 @@
 
 Shader "Outline Shader"
 {
+	Property
+	{
+		float outlineWidth;
+		vec4 color;
+	}
 	Pass
 	{
+		LightingPass "Forward"
+		ColorMask 0;
+		
+		Stencil
+		{
+			Ref 1;
+			ReadMask 255;
+			WriteMask 255;
+			Comp Always;
+			Pass Replace;
+			Fail Replace;
+			ZFail Replace;
+		}
+		
 		Stage Vertex
 		{
-			layout(location = 0) in vec3 verts;
-			layout(location = 1) in vec3 normals;
-
-			layout(set = 0, binding = 0) uniform MVP
+			void main()
 			{
-				mat4 model;
-				mat4 view;
-				mat4 proj;
-			} mvp;
-
-			layout(set = 1, binding = 0) uniform UBO
+				gl_Position = MATRIX_PROJ * MATRIX_VIEW * MATRIX_MODEL * vec4(VERTEX, 1.0f);
+			}
+		}
+		Stage Fragment
+		{
+			layout(location = 0) out vec4 outColor;
+			void main()
 			{
-				float outlineWidth;
-			} ubo;
+				outColor = vec4(0.0f, 0.0f, 0.0f, 0.0f);
+			}
+		}
+	}
+	Pass
+	{
+		LightingPass "Forward"
+		Stencil
+		{
+			Ref 1;
+			ReadMask 255;
+			WriteMask 255;
+			Comp NotEqual;
+			Pass Replace;
+			Fail Keep;
+			ZFail Keep;
+		}
+		Cull Back;
+		
+		Stage Vertex
+		{
+			uniform float outlineWidth;
 
 			void main()
 			{
-				vec4 vert = vec4(verts + normals * ubo.outlineWidth, 1.0f);
-				gl_Position = mvp.proj * mvp.view * mvp.model * vert;
+				vec4 vert = vec4(VERTEX + NORMAL * outlineWidth, 1.0f);
+				gl_Position = MATRIX_PROJ * MATRIX_VIEW * MATRIX_MODEL * vert;
 			}
 		}
 		Stage Fragment
 		{
 			layout(location = 0) out vec4 outColor;
 
-			layout(set = 1, binding = 1) uniform Material
-			{
-				vec4 color;
-			} material;
+			uniform vec4 color;
 
 			void main() 
 			{
-				outColor = material.color;
+				outColor = color;
 			}
 		}
 	}

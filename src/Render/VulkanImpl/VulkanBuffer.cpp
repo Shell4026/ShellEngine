@@ -1,4 +1,5 @@
-﻿#include "VulkanImpl/VulkanBuffer.h"
+﻿#include "VulkanBuffer.h"
+#include "VulkanContext.h"
 
 #include <cassert>
 #include <cstring>
@@ -6,8 +7,8 @@
 
 namespace sh::render::vk
 {
-	VulkanBuffer::VulkanBuffer(VkDevice device, VkPhysicalDevice gpu, VmaAllocator allocator) :
-		device(device), gpu(gpu), allocator(allocator),
+	VulkanBuffer::VulkanBuffer(const VulkanContext& context) :
+		context(context),
 		buffer(nullptr), bufferMem(nullptr), data(nullptr),
 		bufferInfo(), memProperty(0),
 		persistentMapping(false),
@@ -15,7 +16,7 @@ namespace sh::render::vk
 	{
 	}
 	VulkanBuffer::VulkanBuffer(const VulkanBuffer& other) :
-		device(other.device), gpu(other.gpu), allocator(other.allocator),
+		context(other.context),
 		buffer(nullptr), bufferMem(nullptr), data(nullptr),
 		bufferInfo(other.bufferInfo), memProperty(other.memProperty),
 		persistentMapping(other.persistentMapping),
@@ -24,16 +25,12 @@ namespace sh::render::vk
 		operator=(other);
 	}
 	VulkanBuffer::VulkanBuffer(VulkanBuffer&& other) noexcept :
-		device(other.device), gpu(other.gpu), allocator(other.allocator),
+		context(other.context),
 		buffer(other.buffer), bufferMem(other.bufferMem), data(other.data),
 		bufferInfo(other.bufferInfo), memProperty(other.memProperty),
 		persistentMapping(other.persistentMapping),
 		size(other.size)
 	{
-		other.device = nullptr;
-		other.gpu = nullptr;
-		other.allocator = nullptr;
-
 		other.buffer = nullptr;
 		other.bufferMem = nullptr;
 		other.data = nullptr;
@@ -42,19 +39,15 @@ namespace sh::render::vk
 	{
 		Clean();
 	}
-	auto VulkanBuffer::operator=(const VulkanBuffer& other)->VulkanBuffer&
+	auto VulkanBuffer::operator=(const VulkanBuffer& other) -> VulkanBuffer&
 	{
-		Create(size, bufferInfo.usage, bufferInfo.sharingMode, memProperty, persistentMapping);
+		Create(other.size, other.bufferInfo.usage, other.bufferInfo.sharingMode, other.memProperty, other.persistentMapping);
 		SetData(other.data);
 		
 		return *this;
 	}
 	auto VulkanBuffer::operator=(VulkanBuffer&& other) noexcept -> VulkanBuffer&
 	{
-		device = other.device;
-		gpu = other.gpu;
-		allocator = other.allocator;
-
 		buffer = other.buffer;
 		bufferMem = other.bufferMem;
 		data = other.data;
@@ -62,10 +55,6 @@ namespace sh::render::vk
 		memProperty = other.memProperty;
 		persistentMapping = other.persistentMapping;
 		size = other.size;
-
-		other.device = nullptr;
-		other.gpu = nullptr;
-		other.allocator = nullptr;
 
 		other.buffer = nullptr;
 		other.bufferMem = nullptr;
@@ -78,7 +67,7 @@ namespace sh::render::vk
 	{
 		if (buffer)
 		{
-			vmaDestroyBuffer(allocator, buffer, bufferMem);
+			vmaDestroyBuffer(context.GetAllocator(), buffer, bufferMem);
 			//vkDestroyBuffer(device, buffer, nullptr);
 			buffer = nullptr;
 			bufferMem = nullptr;
@@ -94,7 +83,7 @@ namespace sh::render::vk
 	auto VulkanBuffer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) -> uint32_t
 	{
 		VkPhysicalDeviceMemoryProperties memProperties;
-		vkGetPhysicalDeviceMemoryProperties(gpu, &memProperties);
+		vkGetPhysicalDeviceMemoryProperties(context.GetGPU(), &memProperties);
 
 		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
 			if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties)
@@ -132,7 +121,7 @@ namespace sh::render::vk
 
 		result = vkAllocateMemory(device, &allocInfo, nullptr, &bufferMem);*/
 
-		bool bUseMap = (memPropFlagBits & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT) == VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+		bool bUseMap = (memPropFlagBits & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
 		VmaAllocationCreateInfo allocCreateInfo{};
 		allocCreateInfo.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO;
@@ -142,7 +131,7 @@ namespace sh::render::vk
 			allocCreateInfo.flags |= VmaAllocationCreateFlagBits::VMA_ALLOCATION_CREATE_MAPPED_BIT;
 
 		VmaAllocationInfo allocInfo{};
-		auto result = vmaCreateBuffer(allocator, &bufferInfo, &allocCreateInfo, &buffer, &bufferMem, &allocInfo);
+		auto result = vmaCreateBuffer(context.GetAllocator(), &bufferInfo, &allocCreateInfo, &buffer, &bufferMem, &allocInfo);
 
 		assert(result == VkResult::VK_SUCCESS);
 		
@@ -163,10 +152,10 @@ namespace sh::render::vk
 		if (!persistentMapping)
 		{
 			//vkMapMemory(device, bufferMem, 0, bufferInfo.size, 0, &this->data);
-			vmaMapMemory(allocator, bufferMem, &this->data);
+			vmaMapMemory(context.GetAllocator(), bufferMem, &this->data);
 			std::memcpy(this->data, data, static_cast<size_t>(bufferInfo.size));
 			//vkUnmapMemory(device, bufferMem);
-			vmaUnmapMemory(allocator, bufferMem);
+			vmaUnmapMemory(context.GetAllocator(), bufferMem);
 
 		}
 		else

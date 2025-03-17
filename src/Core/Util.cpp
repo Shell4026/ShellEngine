@@ -138,4 +138,42 @@ namespace sh::core {
 		}
 		return result;
 	}
+
+	SH_CORE_API auto Util::ConvertMat2ToMat4(const glm::mat2& mat) -> glm::mat4
+	{
+		return glm::mat4
+		{
+			mat[0][0], mat[0][1], 0.f, 0.f,
+			mat[1][0], mat[1][1], 0.f, 0.f,
+			0.f, 0.f, 0.f, 0.f,
+			0.f, 0.f, 0.f, 0.f
+		};
+	}
+	SH_CORE_API auto Util::ConvertMat4ToMat2(const glm::mat4& mat) -> glm::mat2
+	{
+		return glm::mat2
+		{
+			mat[0][0], mat[0][1],
+			mat[1][0], mat[1][1],
+		};
+	}
+	SH_CORE_API auto Util::ConvertMat3ToMat4(const glm::mat3& mat) -> glm::mat4
+	{
+		return glm::mat4
+		{
+			mat[0][0], mat[0][1], mat[0][2], 0.f,
+			mat[1][0], mat[1][1], mat[1][2], 0.f,
+			mat[2][0], mat[2][1], mat[2][2], 0.f,
+			0.f, 0.f, 0.f, 0.f
+		};
+	}
+	SH_CORE_API auto Util::ConvertMat4ToMat3(const glm::mat4& mat) -> glm::mat3
+	{
+		return glm::mat3
+		{
+			mat[0][0], mat[0][1], mat[0][2],
+			mat[1][0], mat[1][1], mat[1][2],
+			mat[2][0], mat[2][1], mat[2][2]
+		};
+	}
 }

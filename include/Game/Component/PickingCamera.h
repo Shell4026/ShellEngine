@@ -1,5 +1,4 @@
 ﻿#pragma once
-
 #include "Camera.h"
 #include "Game/Vector.h"
 

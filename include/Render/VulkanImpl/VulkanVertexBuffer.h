@@ -1,17 +1,11 @@
 ﻿#pragma once
-
 #include "Export.h"
 #include "IVertexBuffer.h"
-#include "ShaderAttribute.h"
-
-#include "VulkanConfig.h"
 #include "VulkanBuffer.h"
 #include "VulkanCommandBuffer.h"
 
 #include <cstdint>
 #include <vector>
-#include <string>
-#include <string_view>
 
 namespace sh::render::vk
 {
@@ -24,17 +18,12 @@ namespace sh::render::vk
 
 		VulkanCommandBuffer cmd;
 
-		std::vector<VkVertexInputBindingDescription> mBindingDescriptions;
-		std::vector<VkVertexInputAttributeDescription> mAttribDescriptions;
-
-		std::vector<VulkanBuffer> buffers;
+		VulkanBuffer vertexBuffer;
 		VulkanBuffer indexBuffer;
+
+		SH_RENDER_API static inline std::vector<VkVertexInputAttributeDescription> attribDescriptions;
 	private:
 		inline void CreateVertexBuffer(const Mesh& mesh);
-		inline void CreateAttributeBuffers(const Mesh& mesh);
-	public:
-		const std::vector<VkVertexInputBindingDescription>& bindingDescriptions;
-		const std::vector<VkVertexInputAttributeDescription>& attribDescriptions;
 	public:
 		SH_RENDER_API VulkanVertexBuffer(const VulkanContext& context);
 		SH_RENDER_API VulkanVertexBuffer(const VulkanVertexBuffer& other);
@@ -50,5 +39,8 @@ namespace sh::render::vk
 		SH_RENDER_API void Bind() override;
 
 		SH_RENDER_API auto Clone() const -> std::unique_ptr<IVertexBuffer> override;
+
+		SH_RENDER_API static auto GetBindingDescription() -> VkVertexInputBindingDescription;
+		SH_RENDER_API static auto GetAttributeDescriptions() -> std::vector<VkVertexInputAttributeDescription>;
 	};
 }

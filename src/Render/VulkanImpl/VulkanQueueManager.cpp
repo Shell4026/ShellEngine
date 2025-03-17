@@ -144,15 +144,15 @@ namespace sh::render::vk
 
 		VkQueue queue = nullptr;
 		auto queueType = cmd.GetQueueType();
-		if (queueType == VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT)
+		if (queueType & VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT)
 			queue = graphicsQueue;
-		else if (queueType == VkQueueFlagBits::VK_QUEUE_TRANSFER_BIT)
+		else if (queueType & VkQueueFlagBits::VK_QUEUE_TRANSFER_BIT)
 			queue = transferQueue;
 		assert(queue != nullptr);
 
 		auto result = vkQueueSubmit(queue, 1, &sinfo, fence);
-		assert(result == VkResult::VK_SUCCESS);
 		spinLock.UnLock();
+		assert(result == VkResult::VK_SUCCESS);
 
 		vkQueueWaitIdle(queue);
 	}

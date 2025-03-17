@@ -39,7 +39,7 @@ namespace sh::render
 			fragShaderData = std::move(data);
 	}
 
-	SH_RENDER_API void ShaderPassBuilder::ClearData()
+	SH_RENDER_API void ShaderPassBuilder::Clear()
 	{
 		vertShaderData.clear();
 		fragShaderData.clear();

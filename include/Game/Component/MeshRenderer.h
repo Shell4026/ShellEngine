@@ -1,12 +1,10 @@
 ﻿#pragma once
-
 #include "Component.h"
-
 #include "Game/Export.h"
 
-#include "Render/IDrawable.h"
 #include "Render/Material.h"
 #include "Render/Mesh.h"
+#include "Render/MaterialPropertyBlock.h"
 
 #include "Core/Util.h"
 #include "Core/SContainer.hpp"
@@ -16,41 +14,54 @@
 #include <unordered_map>
 #include <memory>
 
+namespace sh::render
+{
+	class Drawable;
+}
 namespace sh::game
 {
 	class Camera;
 
 	class MeshRenderer : public Component
 	{
-		COMPONENT(MeshRenderer);
+		COMPONENT(MeshRenderer)
 	private:
-		core::SVector<unsigned char> uniformCopyData;
-
-		core::Observer<false, Camera*>::Listener onCameraAddListener;
-		core::Observer<false, Camera*>::Listener onCameraRemoveListener;
 		core::Observer<false, const glm::mat4&>::Listener onMatrixUpdateListener;
 
 		render::AABB worldAABB;
 
+		PROPERTY(propertyBlock, core::PropertyOption::invisible)
+		render::MaterialPropertyBlock* propertyBlock = nullptr;
+
+		core::SVector<std::pair<const render::ShaderPass*, const render::UniformStructLayout*>> localUniformLocations;
+
+		PROPERTY(renderTag)
+		uint32_t renderTag = 1;
+
 		bool bShaderHasLight = false;
 	protected:
 		PROPERTY(mesh);
-		sh::render::Mesh* mesh;
+		render::Mesh* mesh;
 		PROPERTY(mat);
-		sh::render::Material* mat;
-		PROPERTY(drawables, core::PropertyOption::invisible);
-		core::SMap<Camera*, sh::render::IDrawable*> drawables;
+		render::Material* mat;
+		PROPERTY(drawable, core::PropertyOption::invisible);
+		render::Drawable* drawable;
 	private:
-		template <typename T>
-		void SetUniformData(const T& data, std::vector<unsigned char>& uniformData, size_t offset);
+		void UpdateMaterialData();
+
+		template<typename T>
+		void SetData(const T& data, std::vector<uint8_t>& uniformData, std::size_t offset, std::size_t size)
+		{
+			std::memcpy(uniformData.data() + offset, &data, size);
+		}
+		template<typename T>
+		void SetData(const T& data, std::vector<uint8_t>& uniformData, std::size_t offset)
+		{
+			std::memcpy(uniformData.data() + offset, &data, sizeof(T));
+		}
 	protected:
 		/// @brief Drawable을 생성하거나 이미 존재 시 갱신하는 함수.
-		/// @param camera 카메라 포인터
-		void CreateDrawable(Camera* camera);
-
-		/// @brief 모든 Drawable들을 갱신하는 함수.
-		void RebuildDrawables();
-		void CleanDrawables();
+		void CreateDrawable();
 	public:
 		SH_GAME_API MeshRenderer(GameObject& owner);
 		SH_GAME_API ~MeshRenderer();
@@ -66,12 +77,12 @@ namespace sh::game
 		SH_GAME_API void Start() override;
 		SH_GAME_API void Update() override;
 
+		SH_GAME_API void SetMaterialPropertyBlock(render::MaterialPropertyBlock* block);
+		SH_GAME_API auto GetMaterialPropertyBlock() const -> render::MaterialPropertyBlock*;
+
+		SH_GAME_API void SetRenderTagId(uint32_t tagId);
+		SH_GAME_API auto GetRenderTagId() const -> uint32_t;
+
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 	};
-
-	template<typename T>
-	void MeshRenderer::SetUniformData(const T& data, std::vector<unsigned char>& uniformData, size_t offset)
-	{
-		std::memcpy(uniformData.data() + offset, &data, sizeof(T));
-	}
 }

@@ -1,6 +1,7 @@
-﻿#include "PCH.h"
-#include "Component/Camera.h"
+﻿#include "Component/Camera.h"
 #include "GameObject.h"
+
+#include "Render/IRenderContext.h"
 
 #include "Physics/Ray.h"
 
@@ -13,48 +14,38 @@ namespace sh::game
 	Camera::Camera(GameObject& owner) :
 		Component(owner),
 
-		worldToCameraMatrix(matView),
-		matProj(), matView(),
-		fov(60.f), fovRadians(glm::radians(60.f)), nearPlane(0.1f), farPlane(1000.f),
-		camera(), depth(0), lookPos({ 0.f, 0.f, 0.f }), up({ 0.f, 1.f, 0.f }),
+		fov(60.f),
+		camera(), depth(0),
 
 		renderTexture(nullptr)
 	{
+		owner.world.RegisterCamera(this);
+		camera.SetNearPlane(0.1f);
+		camera.SetFarPlane(1000.f);
 	}
 	Camera::~Camera()
 	{
 	}
 	
-	void Camera::Awake()
-	{
-		Super::Awake();
-		gameObject.world.RegisterCamera(this);
-	}
-	void Camera::Start()
-	{
-	}
 	void Camera::BeginUpdate()
 	{
 		if (renderTexture == nullptr)
-			screenSize = gameObject.world.renderer.GetViewportEnd() - gameObject.world.renderer.GetViewportStart();
+		{
+			glm::vec2 size = gameObject.world.renderer.GetContext()->GetViewportEnd() - gameObject.world.renderer.GetContext()->GetViewportStart();
+			camera.SetWidth(size.x);
+			camera.SetHeight(size.y);
+		}
 		else
-			screenSize = renderTexture->GetSize();
-		
-		CalcMatrix();
+		{
+			glm::vec2 size = renderTexture->GetSize();
+			camera.SetWidth(size.x);
+			camera.SetHeight(size.y);
+		}
+		camera.SetPos(gameObject.transform->GetWorldPosition());
+		camera.SetLookPos(lookPos);
+		camera.UpdateMatrix();
 	}
-	void Camera::CalcMatrix()
-	{
-		fovRadians = glm::radians(fov);
-
-		matProj = glm::perspectiveFov(fovRadians,
-			static_cast<float>(screenSize.x),
-			static_cast<float>(screenSize.y),
-			nearPlane, farPlane);
-
-		matView = glm::lookAt(glm::vec3{ gameObject.transform->position }, glm::vec3{ lookPos }, glm::vec3{ up });
-	}
-
-	void Camera::OnDestroy()
+	void Camera::Destroy()
 	{
 		if (gameObject.world.GetMainCamera() == this)
 		{
@@ -69,53 +60,65 @@ namespace sh::game
 			}
 		}
 		gameObject.world.UnRegisterCamera(this);
+		Super::Destroy();
 	}
 
 	auto Camera::GetProjMatrix() const -> const glm::mat4&
 	{
-		return matProj;
+		return camera.GetProjMatrix();
 	}
 
 	auto Camera::GetViewMatrix() const -> const glm::mat4&
 	{
-		return matView;
+		return camera.GetViewMatrix();
 	}
 
-	void Camera::SetDepth(int depth)
+	SH_GAME_API void Camera::SetDepth(int depth)
 	{
 		this->depth = depth;
 		camera.SetPriority(depth);
 	}
-
-	void Camera::SetRenderTexture(render::RenderTexture& renderTexture)
+	SH_GAME_API void Camera::SetFov(float degree)
 	{
-		this->renderTexture = &renderTexture;
-		camera.SetRenderTexture(&renderTexture);
+		camera.SetFov(degree);
 	}
-	auto Camera::GetRenderTexture() const -> render::RenderTexture*
+
+	SH_GAME_API void Camera::SetRenderTexture(render::RenderTexture* renderTexture)
+	{
+		this->renderTexture = renderTexture;
+		camera.SetRenderTexture(renderTexture);
+	}
+	SH_GAME_API auto Camera::GetRenderTexture() const -> render::RenderTexture*
 	{
 		return renderTexture;
 	}
 
-	auto Camera::GetNative() -> render::Camera&
+	SH_GAME_API auto Camera::GetNative() -> render::Camera&
 	{
 		return camera;
 	}
 
-	auto Camera::ScreenPointToRay(const Vec2& mousePos) const -> phys::Ray
+	SH_GAME_API auto Camera::GetNative() const -> const render::Camera&
 	{
-		float aspect = screenSize.x / screenSize.y;
+		return camera;
+	}
 
-		float ndcX = 2.f * mousePos.x / screenSize.x - 1.0f;
-		float ndcY = 1.0f -2.f * mousePos.y / screenSize.y;
+	SH_GAME_API auto Camera::ScreenPointToRay(const Vec2& mousePos) const -> phys::Ray
+	{
+		float w = camera.GetWidth();
+		float h = camera.GetHeight();
+		float aspect = w / h;
+
+		float ndcX = 2.f * mousePos.x / w - 1.0f;
+		float ndcY = 1.0f - 2.f * mousePos.y / h;
 
 		glm::vec4 camCoord{ 0.f, 0.f, 0.f, 1.f };
 
 		camCoord.x = aspect * ndcX;
 		camCoord.y = ndcY;
-		camCoord.z = -1.f / glm::tan(fovRadians / 2.f);
+		camCoord.z = -1.f / glm::tan(camera.GetFovRadian() / 2.f);
 
-		glm::vec3 worldCoord{ glm::inverse(matView) * camCoord };
+		glm::vec3 worldCoord{ glm::inverse(camera.GetViewMatrix()) * camCoord };
 		glm::vec3 dir = glm::normalize(worldCoord - glm::vec3{ gameObject.transform->position });
 
 		return phys::Ray(gameObject.transform->position, dir);
@@ -131,11 +134,11 @@ namespace sh::game
 	}
 	SH_GAME_API void Camera::SetUpVector(const Vec3& up)
 	{
-		this->up = up;
+		camera.SetUpVector(up);
 	}
-	SH_GAME_API auto Camera::GetUpVector() const -> const Vec3&
+	SH_GAME_API auto Camera::GetUpVector() const -> Vec3
 	{
-		return up;
+		return camera.GetUpVector();
 	}
 
 #ifdef SH_EDITOR
@@ -144,6 +147,10 @@ namespace sh::game
 		if (prop.GetName() == "depth")
 		{
 			SetDepth(depth);
+		}
+		else if (prop.GetName() == "fov")
+		{
+			SetFov(fov);
 		}
 	}
 #endif

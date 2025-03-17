@@ -38,7 +38,6 @@ namespace sh::game
 
 		SH_GAME_API void Awake() override;
 		SH_GAME_API void BeginUpdate() override;
-		SH_GAME_API void Update() override;
 
 		SH_GAME_API void SetCamera(PickingCamera& camera);
 

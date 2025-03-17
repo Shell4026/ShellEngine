@@ -19,6 +19,7 @@
 namespace sh::render::vk
 {
 	class VulkanContext;
+	class VulkanCameraBuffers;
 
 	class VulkanRenderer :
 		public Renderer, public sh::core::INonCopyable
@@ -31,25 +32,28 @@ namespace sh::render::vk
 		VkSemaphore gameThreadSemaphore;
 		VkFence inFlightFence;
 
+		VulkanCameraBuffers* camManager = nullptr;
+
 		int currentFrame;
 
 		bool isInit = false;
 	private:
 		auto CreateSyncObjects() -> VkResult;
 		void DestroySyncObjects();
-
-		void RenderDrawable(IDrawable* drawable, VkCommandBuffer cmd);
+	protected:
+		void OnCameraAdded(const Camera* camera) override;
+		void OnCameraRemoved(const Camera* camera) override;
 	public:
 		SH_RENDER_API VulkanRenderer();
 		SH_RENDER_API ~VulkanRenderer();
 
 		SH_RENDER_API bool Init(const sh::window::Window& win) override;
 		SH_RENDER_API bool Resizing() override;
-		SH_RENDER_API void Clean() override;
+		SH_RENDER_API void Clear() override;
 
 		SH_RENDER_API bool IsInit() const override;
 
-		SH_RENDER_API void Render(float deltaTime) override;
+		SH_RENDER_API void Render() override;
 
 		SH_RENDER_API void WaitForCurrentFrame();
 
@@ -61,5 +65,7 @@ namespace sh::render::vk
 		SH_RENDER_API auto GetGameThreadSemaphore() const -> VkSemaphore;
 
 		SH_RENDER_API auto GetContext() const -> IRenderContext* override;
+
+		SH_RENDER_API void Sync() override;
 	};
 }//namespace

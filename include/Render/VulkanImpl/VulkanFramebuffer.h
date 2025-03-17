@@ -14,6 +14,7 @@
 namespace sh::render::vk
 {
 	class VulkanContext;
+	class VulkanRenderPass;
 
 	class VulkanFramebuffer : public Framebuffer
 	{
@@ -26,7 +27,8 @@ namespace sh::render::vk
 
 		VkFramebuffer framebuffer;
 		VkImageView img;
-		VkRenderPass renderPass;
+		
+		const VulkanRenderPass* renderPass = nullptr;
 
 		std::unique_ptr<VulkanImageBuffer> colorImg; //Only Offscreen
 		std::unique_ptr<VulkanImageBuffer> depthImg;
@@ -38,8 +40,6 @@ namespace sh::render::vk
 		bool bUseDepth = true;
 		bool bUseStencil = false;
 	private:
-		void CreateRenderPass();
-		auto FindSupportedDepthFormat() -> VkFormat;
 		void CreateDepthBuffer();
 	public:
 		SH_RENDER_API VulkanFramebuffer(const VulkanContext& context);
@@ -48,15 +48,15 @@ namespace sh::render::vk
 
 		SH_RENDER_API auto operator=(VulkanFramebuffer&& other) noexcept -> VulkanFramebuffer&;
 
-		SH_RENDER_API auto Create(uint32_t width, uint32_t height, VkImageView img, VkFormat format) -> VkResult;
-		SH_RENDER_API auto CreateOffScreen(uint32_t width, uint32_t height, VkFormat format = VkFormat::VK_FORMAT_R8G8B8A8_SRGB, bool bTransferSrc = false) -> VkResult;
+		SH_RENDER_API auto Create(const VulkanRenderPass& renderPass, uint32_t width, uint32_t height, VkImageView img, VkFormat format) -> VkResult;
+		SH_RENDER_API auto CreateOffScreen(const VulkanRenderPass& renderPass, uint32_t width, uint32_t height, VkFormat format = VkFormat::VK_FORMAT_R8G8B8A8_SRGB, bool bTransferSrc = false) -> VkResult;
 		SH_RENDER_API void Clean();
 		SH_RENDER_API void TransferImageToBuffer(VulkanCommandBuffer* cmd, VkBuffer buffer, int x, int y);
 
 		SH_RENDER_API auto UseDepthBuffer(bool bUse) -> VulkanFramebuffer&;
 		SH_RENDER_API auto UseStencilBuffer(bool bUse) -> VulkanFramebuffer&;
 
-		SH_RENDER_API auto GetRenderPass() const -> VkRenderPass;
+		SH_RENDER_API auto GetRenderPass() const -> const VulkanRenderPass*;
 		SH_RENDER_API auto GetVkFramebuffer() const -> VkFramebuffer;
 
 		SH_RENDER_API auto GetColorImg() const -> VulkanImageBuffer*;

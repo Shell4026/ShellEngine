@@ -6,6 +6,8 @@
 #include "VulkanCommandBuffer.h"
 #include "VulkanDescriptorPool.h"
 #include "VulkanPipelineManager.h"
+#include "VulkanRenderPass.h"
+#include "VulkanRenderPassManager.h"
 
 #include "Core/Util.h"
 #include "Core/Logger.h"
@@ -250,14 +252,29 @@ namespace sh::render::vk
 
 		vmaDestroyAllocator(allocator);
 	}
+	void VulkanContext::CreateRenderPass()
+	{
+		renderPassManager = std::make_unique<VulkanRenderPassManager>(*this);
+		VulkanRenderPass::Config config{};
+		config.format = swapChain->GetSwapChainImageFormat();
+		config.depthFormat = FindSupportedDepthFormat(true);
+		config.bOffScreen = false;
+		config.bTransferSrc = false;
+		config.bUseStencil = true;
+
+		mainRenderPass = &renderPassManager->GetOrCreateRenderPass(config);
+	}
 	void VulkanContext::CreateFrameBuffer()
 	{
+		framebuffers.clear();
+
 		auto& imgViews = swapChain->GetSwapChainImageViews();
 		framebuffers.reserve(imgViews.size());
 		for (size_t i = 0; i < imgViews.size(); ++i)
 		{
 			framebuffers.push_back(VulkanFramebuffer{ *this });
-			VkResult result = framebuffers[i].Create(swapChain->GetSwapChainSize().width, swapChain->GetSwapChainSize().height, imgViews[i], swapChain->GetSwapChainImageFormat());
+
+			VkResult result = framebuffers[i].Create(*mainRenderPass, swapChain->GetSwapChainSize().width, swapChain->GetSwapChainSize().height, imgViews[i], swapChain->GetSwapChainImageFormat());
 			assert(result == VkResult::VK_SUCCESS);
 			if (result != VkResult::VK_SUCCESS)
 				throw std::runtime_error(std::string{ "Can't create framebuffer: " } + string_VkResult(result));
@@ -309,15 +326,28 @@ namespace sh::render::vk
 	}
 	void VulkanContext::DestroyCommandBuffers()
 	{
-		cmdBuffer[core::ThreadType::Game]->Clean();
-		cmdBuffer[core::ThreadType::Render]->Clean();
+		cmdBuffer[core::ThreadType::Game]->Clear();
+		cmdBuffer[core::ThreadType::Render]->Clear();
+	}
+	void VulkanContext::CreateEmptyDescriptor()
+	{
+		VkDescriptorSetLayoutCreateInfo info{};
+		info.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		info.bindingCount = 0;
+
+		vkCreateDescriptorSetLayout(device, &info, nullptr, &emptyDescLayout);
+
+		emptyDescSet = descPool->AllocateDescriptorSet(emptyDescLayout, 1);
 	}
 	VulkanContext::VulkanContext(const sh::window::Window& window) :
 		window(window)
 	{
 		bEnableValidationLayers = core::Util::IsDebug();
 
-		requestedDeviceExtension = { VK_KHR_SWAPCHAIN_EXTENSION_NAME };
+		requestedDeviceExtension = 
+		{ 
+			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+		};
 	}
 	SH_RENDER_API void VulkanContext::Init()
 	{
@@ -360,12 +390,14 @@ namespace sh::render::vk
 		swapChain->SetContext(instance, device, gpu);
 		swapChain->CreateSwapChain(queueManager->GetGraphicsQueueFamilyIdx(), queueManager->GetSurfaceQueueFamilyIdx(), false);
 
+		CreateRenderPass();
 		CreateFrameBuffer();
 
 		CreateCommandPool(queueManager->GetGraphicsQueueFamilyIdx());
 		CreateCommandBuffers();
 
 		descPool = std::make_unique<VulkanDescriptorPool>(device);
+		CreateEmptyDescriptor();
 
 		pipelineManager = std::make_unique<VulkanPipelineManager>(*this);
 	}
@@ -374,10 +406,16 @@ namespace sh::render::vk
 		vkDeviceWaitIdle(device);
 
 		pipelineManager.reset();
+		if (emptyDescLayout)
+		{
+			vkDestroyDescriptorSetLayout(device, emptyDescLayout, nullptr);
+			emptyDescLayout = nullptr;
+		}
 		descPool.reset();
 		DestroyCommandBuffers();
 		DestroyCommandPool();
 		framebuffers.clear();
+		renderPassManager.reset();
 		swapChain.reset();
 		queueManager.reset();
 		DestroyAllocator();
@@ -400,14 +438,8 @@ namespace sh::render::vk
 
 		auto& imgs = swapChain->GetSwapChainImageViews();
 		framebuffers.reserve(imgs.size());
-		for (size_t i = 0; i < imgs.size(); ++i)
-		{
-			framebuffers.push_back(VulkanFramebuffer{ *this });
-			VkResult result = framebuffers[i].Create(swapChain->GetSwapChainSize().width, swapChain->GetSwapChainSize().height, imgs[i], swapChain->GetSwapChainImageFormat());
-			assert(result == VkResult::VK_SUCCESS);
-			if (result != VkResult::VK_SUCCESS)
-				return false;
-		}
+
+		CreateFrameBuffer();
 		return true;
 	}
 	SH_RENDER_API void VulkanContext::PrintLayers()
@@ -442,6 +474,22 @@ namespace sh::render::vk
 				throw std::runtime_error{ std::string{"Can't reset VkCommandPool!: "} + string_VkResult(result) };
 		}
 		return VkResult::VK_SUCCESS;
+	}
+	SH_RENDER_API auto VulkanContext::FindSupportedDepthFormat(bool bUseStencil) const -> VkFormat
+	{
+		const std::array<VkFormat, 3> formats = { VkFormat::VK_FORMAT_D32_SFLOAT_S8_UINT, VkFormat::VK_FORMAT_D24_UNORM_S8_UINT, VkFormat::VK_FORMAT_D16_UNORM_S8_UINT };
+
+		auto feature = VkFormatFeatureFlagBits::VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+		for (VkFormat format : formats)
+		{
+			VkFormatProperties props;
+			vkGetPhysicalDeviceFormatProperties(gpu, format, &props);
+
+			if (props.optimalTilingFeatures & feature)
+				return format;
+		}
+
+		throw std::runtime_error("Failed to find supported Depth format!");
 	}
 	SH_RENDER_API auto sh::render::vk::VulkanContext::GetGPUName() const -> std::string_view
 	{
@@ -479,6 +527,10 @@ namespace sh::render::vk
 	{
 		return *queueManager.get();
 	}
+	SH_RENDER_API auto VulkanContext::GetMainRenderPass() const -> VkRenderPass
+	{
+		return mainRenderPass->GetVkRenderPass();
+	}
 	SH_RENDER_API auto sh::render::vk::VulkanContext::GetMainFramebuffer(uint32_t idx) const -> const VulkanFramebuffer*
 	{
 		if (idx >= framebuffers.size())
@@ -496,5 +548,31 @@ namespace sh::render::vk
 	SH_RENDER_API auto sh::render::vk::VulkanContext::GetPipelineManager() const -> VulkanPipelineManager&
 	{
 		return *pipelineManager.get();
+	}
+	SH_RENDER_API auto VulkanContext::GetRenderPassManager() const -> VulkanRenderPassManager&
+	{
+		return *renderPassManager.get();
+	}
+	SH_RENDER_API auto VulkanContext::GetEmptyDescriptorSetLayout() const -> VkDescriptorSetLayout
+	{
+		return emptyDescLayout;
+	}
+	SH_RENDER_API auto VulkanContext::GetEmptyDescriptorSet() const -> VkDescriptorSet
+	{
+		return emptyDescSet;
+	}
+
+	SH_RENDER_API void VulkanContext::SetViewport(const glm::vec2& start, const glm::vec2& end)
+	{
+		viewportStart = start;
+		viewportEnd = end;
+	}
+	SH_RENDER_API auto VulkanContext::GetViewportStart() const -> const glm::vec2&
+	{
+		return viewportStart;
+	}
+	SH_RENDER_API auto VulkanContext::GetViewportEnd() const -> const glm::vec2&
+	{
+		return viewportEnd;
 	}
 }//namespace

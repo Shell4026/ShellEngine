@@ -1,5 +1,4 @@
 ﻿#pragma once
-
 #include "Export.h"
 
 #include "Game/World.h"
@@ -30,6 +29,8 @@ namespace sh::editor
 		SH_EDITOR_API ~EditorWorld();
 
 		SH_EDITOR_API void Clean() override;
+
+		SH_EDITOR_API void InitResource() override;
 
 		SH_EDITOR_API void SetSelectedObject(core::SObject* obj);
 		SH_EDITOR_API auto GetSelectedObject() const -> core::SObject*;

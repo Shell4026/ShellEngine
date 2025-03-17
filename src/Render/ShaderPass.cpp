@@ -2,16 +2,85 @@
 
 namespace sh::render
 {
-	ShaderPass::ShaderPass(int id, ShaderType type) :
-		id(id), type(type) 
+	void ShaderPass::FillAttributes(const render::ShaderAST::PassNode& passNode)
 	{
+		for (auto& stage : passNode.stages)
+		{
+			auto stageType = (stage.type == render::ShaderAST::StageType::Vertex) ?
+				render::ShaderStage::Vertex :
+				render::ShaderStage::Fragment;
+
+			if (stage.type == render::ShaderAST::StageType::Vertex)
+			{
+				for (auto& in : stage.in)
+				{
+					switch (in.var.type)
+					{
+					case render::ShaderAST::VariableType::Vec4:  AddAttribute<glm::vec4>(in.var.name, in.binding); break;
+					case render::ShaderAST::VariableType::Vec3:  AddAttribute<glm::vec3>(in.var.name, in.binding); break;
+					case render::ShaderAST::VariableType::Vec2:  AddAttribute<glm::vec2>(in.var.name, in.binding); break;
+					case render::ShaderAST::VariableType::Mat4:  AddAttribute<glm::mat4>(in.var.name, in.binding); break;
+					case render::ShaderAST::VariableType::Mat3:  AddAttribute<glm::mat3>(in.var.name, in.binding); break;
+					case render::ShaderAST::VariableType::Float: AddAttribute<    float>(in.var.name, in.binding); break;
+					case render::ShaderAST::VariableType::Int:   AddAttribute<      int>(in.var.name, in.binding); break;
+					}
+				}
+			}
+			for (auto& uniform : stage.uniforms)
+			{
+				UniformStructLayout::Type uniformType = static_cast<UniformStructLayout::Type>(uniform.set);
+
+				render::UniformStructLayout uniformLayout{ uniform.name, uniform.binding, uniformType, stageType, uniform.bConstant };
+
+				bHasConstant |= uniform.bConstant;
+
+				if (!uniform.bSampler)
+				{
+					for (auto& var : uniform.vars)
+					{
+						switch (var.type)
+						{
+						case render::ShaderAST::VariableType::Vec4:  uniformLayout.AddArrayMember<glm::vec4>(var.name, var.size); break;
+						case render::ShaderAST::VariableType::Vec3:  uniformLayout.AddArrayMember<glm::vec3>(var.name, var.size); break;
+						case render::ShaderAST::VariableType::Vec2:  uniformLayout.AddArrayMember<glm::vec2>(var.name, var.size); break;
+						case render::ShaderAST::VariableType::Mat4:  uniformLayout.AddArrayMember<glm::mat4>(var.name, var.size); break;
+						case render::ShaderAST::VariableType::Mat3:  uniformLayout.AddArrayMember<glm::mat3>(var.name, var.size); break;
+						case render::ShaderAST::VariableType::Float: uniformLayout.AddArrayMember<    float>(var.name, var.size); break;
+						case render::ShaderAST::VariableType::Int:   uniformLayout.AddArrayMember<      int>(var.name, var.size); break;
+						}
+					}
+				}
+				else
+					uniformLayout.AddMember<render::Texture>(uniform.name);
+
+				AddUniformLayout(stageType, std::move(uniformLayout));
+			}
+		}
+	}
+	auto ShaderPass::IsSamplerLayout(const UniformStructLayout& layout) const -> bool
+	{
+		for (auto& member : layout.GetMembers())
+		{
+			if (member.isSampler)
+				return true;
+		}
+		return false;
 	}
 
+	ShaderPass::ShaderPass(const ShaderAST::PassNode& pass, ShaderType type) :
+		type(type) 
+	{
+		SetStencilState(pass.stencil);
+		SetLightingPassName(pass.lightingPass);
+		cull = pass.cullMode;
+		bZWrite = pass.zwrite;
+		colorMask = pass.colorMask;
+		FillAttributes(pass);
+	}
 
 	ShaderPass::ShaderPass(ShaderPass&& other) noexcept :
-		id(other.id), type(other.type),
+		type(other.type),
 		attrs(std::move(other.attrs)), attridx(std::move(other.attridx)),
-		uniformBindings(std::move(other.uniformBindings)),
 		vertexUniforms(std::move(other.vertexUniforms)),
 		fragmentUniforms(std::move(other.fragmentUniforms)),
 		samplerUniforms(std::move(other.samplerUniforms))
@@ -25,22 +94,64 @@ namespace sh::render
 
 	void ShaderPass::operator=(ShaderPass&& other) noexcept
 	{
-		id = other.id;
-
 		attrs = std::move(other.attrs);
 		attridx = std::move(other.attridx);
-		uniformBindings = std::move(other.uniformBindings);
 		vertexUniforms = std::move(other.vertexUniforms);
 		fragmentUniforms = std::move(other.fragmentUniforms);
 		samplerUniforms = std::move(other.samplerUniforms);
 	}
 
-	auto ShaderPass::operator==(const ShaderPass& other) -> bool
+	void ShaderPass::AddUniformLayout(ShaderStage stage, const UniformStructLayout& layout)
 	{
-		return id == other.id;
+		if (stage == ShaderStage::Vertex)
+			vertexUniforms.push_back(layout);
+		else if (stage == ShaderStage::Fragment)
+		{
+			if (IsSamplerLayout(layout) == false)
+				fragmentUniforms.push_back(layout);
+			else
+				samplerUniforms.push_back(layout);
+		}
+	}
+	void ShaderPass::AddUniformLayout(ShaderStage stage, UniformStructLayout&& layout)
+	{
+		if (stage == ShaderStage::Vertex)
+			vertexUniforms.push_back(std::move(layout));
+		else if (stage == ShaderStage::Fragment)
+		{
+			if (IsSamplerLayout(layout) == false)
+				fragmentUniforms.push_back(std::move(layout));
+			else
+				samplerUniforms.push_back(std::move(layout));
+		}
+	}
+	SH_RENDER_API auto ShaderPass::HasUniformMember(const std::string& name, ShaderStage stage) const -> const UniformStructLayout*
+	{
+		if (stage == ShaderStage::Vertex)
+		{
+			for (auto& uniformStruct : GetVertexUniforms())
+			{
+				if (uniformStruct.HasMember(name))
+					return &uniformStruct;
+			}
+		}
+		else if (stage == ShaderStage::Fragment)
+		{
+			for (auto& uniformStruct : GetFragmentUniforms())
+			{
+				if (uniformStruct.HasMember(name))
+					return &uniformStruct;
+			}
+			for (auto& uniformStruct : GetSamplerUniforms())
+			{
+				if (uniformStruct.HasMember(name))
+					return &uniformStruct;
+			}
+		}
+		return nullptr;
 	}
 
-	SH_RENDER_API void ShaderPass::SetStencilState(StencilState stencilState)
+	void ShaderPass::SetStencilState(StencilState stencilState)
 	{
 		this->stencilState = stencilState;
 	}
@@ -49,10 +160,26 @@ namespace sh::render
 	{
 		return stencilState;
 	}
-
-	auto ShaderPass::GetId() const -> int
+	SH_RENDER_API auto ShaderPass::GetCullMode() const -> CullMode
 	{
-		return id;
+		return cull;
+	}
+	SH_RENDER_API auto ShaderPass::GetZWrite() const -> bool
+	{
+		return bZWrite;
+	}
+	SH_RENDER_API auto ShaderPass::GetColorMask() const -> uint8_t
+	{
+		return colorMask;
+	}
+
+	void ShaderPass::SetLightingPassName(const std::string& name)
+	{
+		lightingPassName = name;
+	}
+	SH_RENDER_API auto ShaderPass::GetLightingPassName() const -> const std::string&
+	{
+		return lightingPassName;
 	}
 
 	bool ShaderPass::HasAttribute(const std::string& name) const
@@ -63,7 +190,7 @@ namespace sh::render
 		return true;
 	}
 
-	auto ShaderPass::GetAttribute(const std::string& name) const -> std::optional<Data>
+	auto ShaderPass::GetAttribute(const std::string& name) const -> std::optional<AttributeData>
 	{
 		auto it = attridx.find(name);
 		if (it == attridx.end())
@@ -71,27 +198,24 @@ namespace sh::render
 		
 		return attrs[it->second];
 	}
-	auto ShaderPass::GetAttributes() const -> const std::vector<Data>&
+	auto ShaderPass::GetAttributes() const -> const std::vector<AttributeData>&
 	{
 		return attrs;
 	}
-	auto ShaderPass::GetVertexUniforms() const -> const std::vector<UniformBlock>&
+	auto ShaderPass::GetVertexUniforms() const -> const std::vector<UniformStructLayout>&
 	{
 		return vertexUniforms;
 	}
-	auto ShaderPass::GetFragmentUniforms() const -> const std::vector<UniformBlock>&
+	auto ShaderPass::GetFragmentUniforms() const -> const std::vector<UniformStructLayout>&
 	{
 		return fragmentUniforms;
 	}
-	auto ShaderPass::GetSamplerUniforms() const -> const std::vector<UniformData>&
+	auto ShaderPass::GetSamplerUniforms() const -> const std::vector<UniformStructLayout>&
 	{
 		return samplerUniforms;
 	}
-	auto ShaderPass::GetUniformBinding(const std::string& name) const -> std::optional<uint32_t>
+	SH_RENDER_API auto ShaderPass::HasConstantUniform() const -> bool
 	{
-		auto it = uniformBindings.find(name);
-		if (it == uniformBindings.end())
-			return {};
-		return it->second;
+		return bHasConstant;
 	}
 }

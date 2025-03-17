@@ -9,11 +9,13 @@ namespace sh::render::vk
 	class VulkanShaderPassBuilder : public ShaderPassBuilder
 	{
 	private:
-		const render::vk::VulkanContext& context;
+		const VulkanContext& context;
 	public:
 		SH_RENDER_API VulkanShaderPassBuilder(const render::vk::VulkanContext& context);
 		SH_RENDER_API ~VulkanShaderPassBuilder();
 
-		SH_RENDER_API auto Build() -> std::unique_ptr<render::ShaderPass> override;
+		SH_RENDER_API auto GetContext() const -> const VulkanContext&;
+
+		SH_RENDER_API auto Build(const ShaderAST::PassNode& passNode) -> std::unique_ptr<render::ShaderPass> override;
 	};
 }

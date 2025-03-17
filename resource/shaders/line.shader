@@ -2,41 +2,37 @@
 
 Shader "Line Shader"
 {
+	Property
+	{
+		[Local] vec3 start;
+		[Local] vec3 end;
+		[Local] vec4 color;
+	}
 	Pass
 	{
+		LightingPass "Forward"
+		
 		Stage Vertex
 		{
-			layout(set = 0, binding = 0) uniform MVP
-			{
-				mat4 model;
-				mat4 view;
-				mat4 proj;
-			} mvp;
-			layout(set = 0, binding = 1) uniform Points
-			{
-				vec3 start;
-				vec3 end;
-			} points;
-
+			uniform vec3 start;
+			uniform vec3 end;
+			
 			void main()
 			{
-				vec3 point = points.start;
+				vec3 point = start;
 				if(gl_VertexIndex == 1)
-					point = points.end;
-				gl_Position = mvp.proj * mvp.view * mvp.model * vec4(point, 1.0);
+					point = end;
+				gl_Position = MATRIX_PROJ * MATRIX_VIEW * MATRIX_MODEL * vec4(point, 1.0);
 			}
 		}
 		Stage Fragment
 		{
 			layout(location = 0) out vec4 outColor;
 
-			layout(set = 0, binding = 2) uniform Color
-			{
-				vec4 color;
-			} color;
+			uniform vec4 color;
 
 			void main() {
-				outColor = color.color;
+				outColor = color;
 			}
 		}
 	}

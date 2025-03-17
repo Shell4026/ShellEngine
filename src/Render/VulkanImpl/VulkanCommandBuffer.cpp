@@ -21,12 +21,12 @@ namespace sh::render::vk
 
 	VulkanCommandBuffer::~VulkanCommandBuffer()
 	{
-		Clean();
+		Clear();
 	}
 
 	SH_RENDER_API auto VulkanCommandBuffer::Create(const VkCommandBufferAllocateInfo* info)->VkResult
 	{
-		Clean();
+		Clear();
 		VkResult result;
 		if (info)
 		{
@@ -96,6 +96,7 @@ namespace sh::render::vk
 
 	SH_RENDER_API void VulkanCommandBuffer::SetWaitStage(const std::initializer_list<VkPipelineStageFlagBits> s)
 	{
+		waitStage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_NONE;
 		for (auto i : s)
 			waitStage |= i;
 	}
@@ -106,6 +107,7 @@ namespace sh::render::vk
 
 	SH_RENDER_API void VulkanCommandBuffer::SetWaitSemaphore(const std::initializer_list<VkSemaphore> s)
 	{
+		waitSemaphores.clear();
 		waitSemaphores.resize(s.size());
 		int idx = 0;
 		for (auto i : s)
@@ -118,6 +120,7 @@ namespace sh::render::vk
 
 	SH_RENDER_API void VulkanCommandBuffer::SetSignalSemaphore(const std::initializer_list<VkSemaphore> s)
 	{
+		signalSemaphores.clear();
 		signalSemaphores.resize(s.size());
 		int idx = 0;
 		for (auto i : s)
@@ -140,8 +143,6 @@ namespace sh::render::vk
 
 	SH_RENDER_API auto VulkanCommandBuffer::Reset() -> VkResult
 	{
-		waitSemaphores.clear();
-		signalSemaphores.clear();
 		if (buffer)
 		{
 			VkResult result = vkResetCommandBuffer(buffer, VK_COMMAND_BUFFER_RESET_RELEASE_RESOURCES_BIT);
@@ -153,15 +154,14 @@ namespace sh::render::vk
 		return VkResult::VK_ERROR_UNKNOWN;
 	}
 
-	SH_RENDER_API void VulkanCommandBuffer::Clean()
+	SH_RENDER_API void VulkanCommandBuffer::Clear()
 	{
+		waitSemaphores.clear();
+		signalSemaphores.clear();
 		if (buffer)
 		{
 			vkFreeCommandBuffers(device, cmdPool, 1, &buffer);
 			buffer = nullptr;
-
-			waitSemaphores.clear();
-			signalSemaphores.clear();
 		}
 	}
 

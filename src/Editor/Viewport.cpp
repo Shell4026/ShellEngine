@@ -25,9 +25,7 @@ namespace sh::editor
 		viewportWidthLast(100.f), viewportHeightLast(100.f),
 		bDirty(false), bMouseDown(false), bFocus(false)
 	{
-		renderTex = core::SObject::Create<render::RenderTexture>();
-		renderTex->Build(*world.renderer.GetContext());
-		core::GarbageCollection::GetInstance()->SetRootSet(renderTex);
+		renderTex = world.GetGameObject("EditorCamera")->GetComponent<game::Camera>()->GetRenderTexture();
 
 		for (int thr = 0; thr < 2; ++thr)
 		{
@@ -39,7 +37,7 @@ namespace sh::editor
 
 		pickingListener.SetCallback([&world](game::PickingCamera::PixelData pixel)
 			{
-				SH_INFO_FORMAT("Pick R:{}, G:{}, B:{}, A:{}", pixel.r, pixel.g, pixel.b, pixel.a);
+				//SH_INFO_FORMAT("Pick R:{}, G:{}, B:{}, A:{}", pixel.r, pixel.g, pixel.b, pixel.a);
 				uint32_t id = pixel;
 				if (id == 0)
 				{
@@ -94,10 +92,10 @@ namespace sh::editor
 
 	void Viewport::ChangeViewportSize()
 	{
-		SH_INFO_FORMAT("Sampler {}, {}", 
-			(void*)static_cast<render::vk::VulkanTextureBuffer*>(renderTex->GetBuffer(core::ThreadType::Game))->GetImageBuffer()->GetSampler(), 
-			(void*)static_cast<render::vk::VulkanTextureBuffer*>(renderTex->GetBuffer(core::ThreadType::Render))->GetImageBuffer()->GetSampler());
-		SH_INFO_FORMAT("DescriptorSets {}, {}", (void*)viewportDescSet[core::ThreadType::Game], (void*)viewportDescSet[core::ThreadType::Render]);
+		//SH_INFO_FORMAT("Sampler {}, {}", 
+		//	(void*)static_cast<render::vk::VulkanTextureBuffer*>(renderTex->GetBuffer(core::ThreadType::Game))->GetImageBuffer()->GetSampler(), 
+		//	(void*)static_cast<render::vk::VulkanTextureBuffer*>(renderTex->GetBuffer(core::ThreadType::Render))->GetImageBuffer()->GetSampler());
+		//SH_INFO_FORMAT("DescriptorSets {}, {}", (void*)viewportDescSet[core::ThreadType::Game], (void*)viewportDescSet[core::ThreadType::Render]);
 		if (viewportDescSet[core::ThreadType::Game])
 		{
 			ImGui_ImplVulkan_RemoveTexture(viewportDescSet[core::ThreadType::Game]);
@@ -172,8 +170,6 @@ namespace sh::editor
 			ImGui_ImplVulkan_RemoveTexture(viewportDescSet[core::ThreadType::Render]);
 			viewportDescSet[core::ThreadType::Render] = nullptr;
 		}
-
-		renderTex->Destroy();
 	}
 
 	void Viewport::SetDirty()

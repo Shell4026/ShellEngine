@@ -1,8 +1,10 @@
-﻿#include "pch.h"
-#include "VulkanVertexBuffer.h"
+﻿#include "VulkanVertexBuffer.h"
 #include "VulkanContext.h"
 #include "VulkanQueueManager.h"
 #include "Mesh.h"
+
+#include <cstddef>
+#include <array>
 
 #include "../vma-src/include/vk_mem_alloc.h"
 
@@ -10,33 +12,21 @@ namespace sh::render::vk
 {
 	VulkanVertexBuffer::VulkanVertexBuffer(const VulkanContext& context) :
 		context(context),
-		bindingDescriptions(mBindingDescriptions),
-		attribDescriptions(mAttribDescriptions),
-
-		indexBuffer(context.GetDevice(), context.GetGPU(), context.GetAllocator()),
-		cmd(context.GetDevice(), context.GetCommandPool(core::ThreadType::Game))
+		vertexBuffer(context),
+		indexBuffer(context),
+		cmd(context.GetDevice(), context.GetCommandPool(core::ThreadType::Game), VkQueueFlagBits::VK_QUEUE_TRANSFER_BIT)
 	{
 	}
 	VulkanVertexBuffer::VulkanVertexBuffer(const VulkanVertexBuffer& other) :
 		context(other.context),
-		bindingDescriptions(mBindingDescriptions),
-		attribDescriptions(mAttribDescriptions),
-
-		mBindingDescriptions(other.mBindingDescriptions),
-		mAttribDescriptions(other.mAttribDescriptions),
-		buffers(other.buffers),
+		vertexBuffer(other.vertexBuffer),
 		indexBuffer(other.indexBuffer),
-		cmd(context.GetDevice(), context.GetCommandPool(core::ThreadType::Game))
+		cmd(context.GetDevice(), context.GetCommandPool(core::ThreadType::Game), VkQueueFlagBits::VK_QUEUE_TRANSFER_BIT)
 	{
 	}
 	VulkanVertexBuffer::VulkanVertexBuffer(VulkanVertexBuffer&& other) noexcept :
 		context(other.context),
-		bindingDescriptions(mBindingDescriptions),
-		attribDescriptions(mAttribDescriptions),
-
-		mBindingDescriptions(std::move(other.mBindingDescriptions)),
-		mAttribDescriptions(std::move(other.mAttribDescriptions)),
-		buffers(std::move(other.buffers)),
+		vertexBuffer(std::move(other.vertexBuffer)),
 		indexBuffer(std::move(other.indexBuffer)),
 		cmd(std::move(other.cmd))
 	{
@@ -47,30 +37,23 @@ namespace sh::render::vk
 	}
 	auto VulkanVertexBuffer::operator=(const VulkanVertexBuffer& other) -> VulkanVertexBuffer&
 	{
-		mBindingDescriptions = other.bindingDescriptions;
-		mAttribDescriptions = other.mAttribDescriptions;
-		buffers = other.buffers;
+		vertexBuffer = other.vertexBuffer;
 		indexBuffer = other.indexBuffer;
 
 		return *this;
 	}
 	auto VulkanVertexBuffer::operator=(VulkanVertexBuffer&& other) noexcept ->VulkanVertexBuffer&
 	{
-		mBindingDescriptions = std::move(other.mBindingDescriptions);
-		mAttribDescriptions = std::move(other.mAttribDescriptions);
-		buffers = std::move(other.buffers);
+		vertexBuffer = std::move(other.vertexBuffer);
 		indexBuffer = std::move(other.indexBuffer);
 		return *this;
 	}
 
 	void VulkanVertexBuffer::Clean()
 	{
-		cmd.Clean();
+		cmd.Clear();
 
-		mBindingDescriptions.clear();
-		mAttribDescriptions.clear();
-
-		buffers.clear();
+		vertexBuffer.Clean();
 		indexBuffer.Clean();
 	}
 
@@ -78,148 +61,53 @@ namespace sh::render::vk
 	{
 		if (mesh.GetVertexCount() == 0)
 			return;
-		// 버텍스
-		VkVertexInputBindingDescription bindingDesc{};
-		bindingDesc.binding = 0;
-		bindingDesc.stride = sizeof(glm::vec3);
-		bindingDesc.inputRate = VkVertexInputRate::VK_VERTEX_INPUT_RATE_VERTEX;
-		mBindingDescriptions.push_back(bindingDesc);
-		VkVertexInputAttributeDescription attrDesc{};
-		attrDesc.binding = 0;
-		attrDesc.location = 0;
-		attrDesc.format = VkFormat::VK_FORMAT_R32G32B32_SFLOAT;
-		attrDesc.offset = 0;
-		mAttribDescriptions.push_back(attrDesc);
 
-		size_t size = sizeof(glm::vec3) * mesh.GetVertexCount();
-		VulkanBuffer stagingBuffer1{ context.GetDevice(), context.GetGPU(), context.GetAllocator() };
-		stagingBuffer1.Create(size, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		// 버텍스 버퍼
+		size_t vertexBufferSize = sizeof(Mesh::Vertex) * mesh.GetVertexCount();
+		VulkanBuffer stagingBuffer1{ context };
+		stagingBuffer1.Create(vertexBufferSize, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		stagingBuffer1.SetData(mesh.GetVertex().data());
 
-		buffers.push_back(VulkanBuffer{ context.GetDevice(), context.GetGPU(), context.GetAllocator() });
-		buffers[0].Create(size,
+		vertexBuffer.Create(vertexBufferSize,
 			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-		size_t sizeIndices = sizeof(uint32_t) * mesh.GetIndices().size();
-		VulkanBuffer stagingBuffer2{ context.GetDevice(), context.GetGPU(), context.GetAllocator() };
-		stagingBuffer2.Create(sizeIndices, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+		// 인덱스 버퍼
+		size_t indicesSize = sizeof(uint32_t) * mesh.GetIndices().size();
+		VulkanBuffer stagingBuffer2{ context };
+		stagingBuffer2.Create(indicesSize, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		stagingBuffer2.SetData(mesh.GetIndices().data());
 
-		indexBuffer.Create(sizeIndices,
+		indexBuffer.Create(indicesSize,
 			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
 			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
+		// 스테이징 버퍼에서 실제 버퍼로 복사
 		VkCommandBufferBeginInfo info{};
 		info.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 		info.flags = VkCommandBufferUsageFlagBits::VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-		cmd.Build([&]() 
+		cmd.Build([&]()
 		{
 			VkBufferCopy cpy{};
-			cpy.srcOffset = 0; // Optional
-			cpy.dstOffset = 0; // Optional
-			cpy.size = size;
+			cpy.srcOffset = 0;
+			cpy.dstOffset = 0;
+			cpy.size = vertexBufferSize;
+			vkCmdCopyBuffer(cmd.GetCommandBuffer(), stagingBuffer1.GetBuffer(), vertexBuffer.GetBuffer(), 1, &cpy);
 
 			VkBufferCopy cpyIndices{};
-			cpyIndices.srcOffset = 0; // Optional
-			cpyIndices.dstOffset = 0; // Optional
-			cpyIndices.size = sizeIndices;
-			vkCmdCopyBuffer(cmd.GetCommandBuffer(), stagingBuffer1.GetBuffer(), buffers[0].GetBuffer(), 1, &cpy);
+			cpyIndices.srcOffset = 0;
+			cpyIndices.dstOffset = 0;
+			cpyIndices.size = indicesSize;
 			vkCmdCopyBuffer(cmd.GetCommandBuffer(), stagingBuffer2.GetBuffer(), indexBuffer.GetBuffer(), 1, &cpyIndices);
 		}, &info);
 
 		context.GetQueueManager().SubmitCommand(cmd);
-	}
-
-	void VulkanVertexBuffer::CreateAttributeBuffers(const Mesh& mesh)
-	{
-		int idx = 0;
-		for (auto& attr : mesh.attributes)
-		{
-			// 0은 버텍스 버퍼
-			// CreateVertexBuffer()에서 수행
-			if (idx == 0)
-			{
-				++idx;
-				continue;
-			}
-
-			VkFormat format = VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT;
-			size_t size = attr->GetSize();
-			if (size == 0)
-				continue;
-			const void* data = attr->GetData();
-
-			switch (attr->GetStride())
-			{
-			case 4:
-				if (attr->isInteger)
-					format = VkFormat::VK_FORMAT_R32_SINT;
-				else
-					format = VkFormat::VK_FORMAT_R32_SFLOAT;
-				break;
-			case 8:
-				format = VkFormat::VK_FORMAT_R32G32_SFLOAT;
-				break;
-			case 12:
-				format = VkFormat::VK_FORMAT_R32G32B32_SFLOAT;
-				break;
-			case 16:
-				format = VkFormat::VK_FORMAT_R32G32B32A32_SFLOAT;
-				break;
-			default:
-				continue;
-			}
-
-			VkVertexInputBindingDescription bindingDesc{};
-			bindingDesc.binding = idx;
-			bindingDesc.stride = static_cast<uint32_t>(attr->GetStride());
-			bindingDesc.inputRate = VkVertexInputRate::VK_VERTEX_INPUT_RATE_VERTEX;
-			mBindingDescriptions.push_back(bindingDesc);
-
-			VkVertexInputAttributeDescription attrDesc{};
-			attrDesc.binding = idx;
-			attrDesc.location = 0;
-			attrDesc.format = format;
-			attrDesc.offset = 0;
-			mAttribDescriptions.push_back(attrDesc);
-
-			VulkanBuffer stagingBuffer{ context.GetDevice(), context.GetGPU(), context.GetAllocator() };
-			stagingBuffer.Create(size, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-				VK_SHARING_MODE_EXCLUSIVE,
-				VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-			stagingBuffer.SetData(data);
-
-			buffers.push_back(VulkanBuffer{ context.GetDevice(), context.GetGPU(), context.GetAllocator() });
-			buffers.back().Create(size,
-				VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-				VK_SHARING_MODE_EXCLUSIVE,
-				VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-			VkCommandBufferBeginInfo info{};
-			info.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-			info.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-			cmd.Build([&]() 
-			{
-				VkBufferCopy cpy{};
-				cpy.srcOffset = 0; // Optional
-				cpy.dstOffset = 0; // Optional
-				cpy.size = size;
-				vkCmdCopyBuffer(cmd.GetCommandBuffer(), stagingBuffer.GetBuffer(), buffers.back().GetBuffer(), 1, &cpy);
-			}, &info);
-
-			context.GetQueueManager().SubmitCommand(cmd);
-
-			++idx;
-		}
 	}
 
 	void VulkanVertexBuffer::Create(const Mesh& mesh)
@@ -228,30 +116,53 @@ namespace sh::render::vk
 
 		cmd.Create();
 		CreateVertexBuffer(mesh);
-		CreateAttributeBuffers(mesh);
 	}
 
 	void VulkanVertexBuffer::Bind()
 	{
-		if (buffers.size() == 0)
-			return;
+		std::array<VkBuffer, 1> buffers = { vertexBuffer.GetBuffer() };
 
-		std::vector<VkBuffer> vertexBuffers;
-		std::vector<VkDeviceSize> offsets;
-		vertexBuffers.resize(buffers.size());
-
-		offsets.resize(buffers.size());
-		for (int i = 0; i < vertexBuffers.size(); ++i)
-		{
-			vertexBuffers[i] = buffers[i].GetBuffer();
-			offsets[i] = 0;
-		}
-		vkCmdBindVertexBuffers(context.GetCommandBuffer(core::ThreadType::Render)->GetCommandBuffer(), 0, vertexBuffers.size(), vertexBuffers.data(), offsets.data());
+		assert(vertexBuffer.GetBuffer() != VK_NULL_HANDLE);
+		assert(indexBuffer.GetBuffer() != VK_NULL_HANDLE);
+		assert(context.GetCommandBuffer(core::ThreadType::Render)->GetCommandBuffer() != VK_NULL_HANDLE);
+		
+		VkDeviceSize offsets[1] = { 0 };
+		vkCmdBindVertexBuffers(context.GetCommandBuffer(core::ThreadType::Render)->GetCommandBuffer(), 0, 1, buffers.data(), offsets);
 		vkCmdBindIndexBuffer(context.GetCommandBuffer(core::ThreadType::Render)->GetCommandBuffer(), indexBuffer.GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
 	}
 
 	auto VulkanVertexBuffer::Clone() const -> std::unique_ptr<IVertexBuffer>
 	{
 		return std::make_unique<VulkanVertexBuffer>(*this);
+	}
+	SH_RENDER_API auto sh::render::vk::VulkanVertexBuffer::GetBindingDescription() -> VkVertexInputBindingDescription
+	{
+		static VkVertexInputBindingDescription bindingDescription;
+		bindingDescription.binding = 0;
+		bindingDescription.stride = sizeof(Mesh::Vertex);
+		bindingDescription.inputRate = VkVertexInputRate::VK_VERTEX_INPUT_RATE_VERTEX;
+
+		return bindingDescription;
+	}
+	SH_RENDER_API auto sh::render::vk::VulkanVertexBuffer::GetAttributeDescriptions() -> std::vector<VkVertexInputAttributeDescription>
+	{
+		if (attribDescriptions.empty())
+		{
+			VkVertexInputAttributeDescription attrDesc{};
+			attrDesc.binding = 0;
+			attrDesc.location = Mesh::VERTEX_ID;
+			attrDesc.format = VkFormat::VK_FORMAT_R32G32B32_SFLOAT;
+			attrDesc.offset = offsetof(Mesh::Vertex, vertex);
+			attribDescriptions.push_back(attrDesc);
+			attrDesc.location = Mesh::UV_ID;
+			attrDesc.format = VkFormat::VK_FORMAT_R32G32_SFLOAT;
+			attrDesc.offset = offsetof(Mesh::Vertex, uv);
+			attribDescriptions.push_back(attrDesc);
+			attrDesc.location = Mesh::NORMAL_ID;
+			attrDesc.format = VkFormat::VK_FORMAT_R32G32B32_SFLOAT;
+			attrDesc.offset = offsetof(Mesh::Vertex, normal);
+			attribDescriptions.push_back(attrDesc);
+		}
+		return attribDescriptions;
 	}
 }

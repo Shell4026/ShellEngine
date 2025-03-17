@@ -7,15 +7,8 @@
 #include "Window/Window.h"
 
 #include "Render/VulkanImpl/VulkanRenderer.h"
-#include "Render/VulkanImpl/VulkanContext.h"
-#include "Render/VulkanImpl/VulkanShaderPass.h"
-#include "Render/VulkanImpl/VulkanShaderPassBuilder.h"
-#include "Render/Mesh/Plane.h"
-#include "Render/Mesh/Grid.h"
+#include "Render/VulkanImpl/VulkanBasePass.h"
 
-#include "Game/ShaderLoader.h"
-#include "Game/TextureLoader.h"
-#include "Game/ModelLoader.h"
 #include "Game/ImGUImpl.h"
 #include "Game/RenderThread.h"
 #include "Game/Input.h"
@@ -67,49 +60,7 @@ namespace sh
 	inline void EngineInit::InitResource()
 	{
 		SH_INFO("Resource initialization");
-		using namespace sh::game;
-
-		render::vk::VulkanShaderPassBuilder shaderBuilder{ static_cast<sh::render::vk::VulkanContext&>(*renderer->GetContext()) };
-
-		ShaderLoader loader{ &shaderBuilder };
-		TextureLoader texLoader{ *renderer->GetContext() };
-		ModelLoader modelLoader{ *renderer->GetContext() };
-
-		auto defaultShader = world->shaders.AddResource("Default", loader.LoadShader("shaders/default.shader"));
-		auto lineShader = world->shaders.AddResource("Line", loader.LoadShader("shaders/line.shader"));
-		auto errorShader = world->shaders.AddResource("ErrorShader", loader.LoadShader("shaders/error.shader"));
-		auto gridShader = world->shaders.AddResource("GridShader", loader.LoadShader("shaders/grid.shader"));
-		auto pickingShader = world->shaders.AddResource("PickingShader", loader.LoadShader("shaders/picking.shader"));
-		auto outlineShader = world->shaders.AddResource("OutlineShader", loader.LoadShader("shaders/outline.shader"));
-
-		auto errorMat = world->materials.AddResource("ErrorMaterial", sh::render::Material{ errorShader });
-		auto lineMat = world->materials.AddResource("LineMaterial", sh::render::Material{ lineShader });
-		auto gridMat = world->materials.AddResource("GridMaterial", sh::render::Material{ gridShader });
-		auto pickingMat = world->materials.AddResource("PickingMaterial", sh::render::Material{ pickingShader });
-
-		auto plane = world->meshes.AddResource("PlaneMesh", sh::render::Plane{});
-		auto grid = world->meshes.AddResource("GridMesh", sh::render::Grid{});
-
-		auto ObjectUniformType = render::ShaderPass::UniformType::Object;
-		auto MaterialUniformType = render::ShaderPass::UniformType::Material;
-
-		errorShader->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f0f" });
-		errorShader->SetName("ErrorShader");
-
-		defaultShader->SetUUID(core::UUID{ "ad9217609f6c7e0f1163785746cc153e" });
-		defaultShader->SetName("DefaultShader");
-
-		errorMat->Build(*renderer->GetContext());
-		pickingMat->Build(*renderer->GetContext());
-
-		lineMat->SetVector("test", glm::vec4{ 1.f, 0.f, 0.f, 1.f });
-		lineMat->Build(*renderer->GetContext());
-
-		gridMat->SetVector("color", glm::vec4{ 0.6f, 0.6f, 0.8f, 0.2f });
-		gridMat->Build(*renderer->GetContext());
-
-		plane->Build(*renderer->GetContext());
-		grid->Build(*renderer->GetContext());
+		world->InitResource();
 	}
 
 	void EngineInit::ProcessInput()
@@ -137,7 +88,7 @@ namespace sh
 					renderThread->AddBeginTaskFromOtherThread(
 						[&, width = window->width, height = window->height]
 						{
-							renderer->SetViewport({ 0, 0.f }, { width, height }); 
+							renderer->GetContext()->SetViewport({ 0, 0.f }, { width, height }); 
 						}
 					);
 					gui->Resize();
@@ -173,7 +124,8 @@ namespace sh
 		SH_INFO("Renderer initialization");
 		renderer = std::make_unique<sh::render::vk::VulkanRenderer>();
 		renderer->Init(*window);
-		renderer->SetViewport({ 150.f, 0.f }, { window->width - 150.f, window->height - 180 });
+		renderer->GetContext()->SetViewport({ 150.f, 0.f }, { window->width - 150.f, window->height - 180 });
+		renderer->AddRenderPass<sh::render::vk::VulkanBasePass>();
 
 		gui = std::make_unique<game::ImGUImpl>(*window, static_cast<render::vk::VulkanRenderer&>(*renderer));
 		gui->Init();

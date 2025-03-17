@@ -1,5 +1,4 @@
 ﻿#pragma once
-
 #include "Export.h"
 
 #include "Core/Util.h"
@@ -17,7 +16,7 @@ namespace sh::render
 	class IRenderContext;
 	class Mesh;
 }
-namespace sh::game
+namespace sh::editor
 {
 	class ModelLoader
 	{
@@ -35,23 +34,23 @@ namespace sh::game
 					&& uv == other.uv;
 			}
 		};
-		friend std::hash<sh::game::ModelLoader::Indices>;
+		friend std::hash<sh::editor::ModelLoader::Indices>;
 	public:
 		const render::IRenderContext& context;
 	public:
-		SH_GAME_API ModelLoader(const render::IRenderContext& context);
-		SH_GAME_API virtual ~ModelLoader() = default;
-		SH_GAME_API virtual auto Load(std::string_view filename) -> render::Mesh*;
+		SH_EDITOR_API ModelLoader(const render::IRenderContext& context);
+		SH_EDITOR_API virtual ~ModelLoader() = default;
+		SH_EDITOR_API virtual auto Load(std::string_view filename) -> render::Mesh*;
 	};
 }//namespace
 
 namespace std
 {
 	template <>
-	class hash<sh::game::ModelLoader::Indices>
+	class hash<sh::editor::ModelLoader::Indices>
 	{
 	public:
-		auto operator()(const sh::game::ModelLoader::Indices& indices) const -> std::uint64_t
+		auto operator()(const sh::editor::ModelLoader::Indices& indices) const -> std::uint64_t
 		{
 			std::hash<uint32_t> hasher{};
 			std::size_t hash1 = sh::core::Util::CombineHash(hasher(indices.vert), hasher(indices.normal));

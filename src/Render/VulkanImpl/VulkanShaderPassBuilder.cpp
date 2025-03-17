@@ -15,13 +15,20 @@ namespace sh::render::vk
 	{
 	}
 
-	SH_RENDER_API auto VulkanShaderPassBuilder::Build() -> std::unique_ptr<render::ShaderPass>
+	SH_RENDER_API auto VulkanShaderPassBuilder::GetContext() const -> const VulkanContext&
+	{
+		return context;
+	}
+
+	SH_RENDER_API auto VulkanShaderPassBuilder::Build(const ShaderAST::PassNode& passNode) -> std::unique_ptr<render::ShaderPass>
 	{
 		assert(context.GetDevice() != nullptr);
-		VkShaderModule vertShader{ nullptr }, fragShader{ nullptr };
 
 		assert(vertShaderData.data());
 		assert(fragShaderData.data());
+
+		VkShaderModule vertShader = VK_NULL_HANDLE;
+		VkShaderModule fragShader = VK_NULL_HANDLE;
 
 		// Vertex shader
 		{
@@ -49,10 +56,12 @@ namespace sh::render::vk
 				return nullptr;
 		}
 
+		render::vk::VulkanShaderPass::ShaderModules shaderModules{};
+		shaderModules.vert = vertShader;
+		shaderModules.frag = fragShader;
 
-		auto retShader = std::make_unique<render::vk::VulkanShaderPass>(GetNextId(), context.GetDevice());
-		retShader->SetVertexShader(vertShader);
-		retShader->SetFragmentShader(fragShader);
+		auto retShader = std::make_unique<render::vk::VulkanShaderPass>(context, shaderModules, passNode);
+		retShader->Build();
 
 		return retShader;
 	}

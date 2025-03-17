@@ -126,7 +126,7 @@ namespace sh::render::vk
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 		vertexInputInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 		vertexInputInfo.vertexBindingDescriptionCount = bindingDescriptions.size();
-		vertexInputInfo.pVertexBindingDescriptions = bindingDescriptions.data(); //버텍스 바인딩
+		vertexInputInfo.pVertexBindingDescriptions = bindingDescriptions.data(); // 버텍스 버퍼 바인딩
 		vertexInputInfo.vertexAttributeDescriptionCount = attributeDescriptions.size();
 		vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data(); // 버텍스 어트리뷰트
 
@@ -144,10 +144,10 @@ namespace sh::render::vk
 			break;
 		}
 
-		VkDynamicState dynamicStates[] = {
+		VkDynamicState dynamicStates[] = 
+		{
 			VkDynamicState::VK_DYNAMIC_STATE_VIEWPORT,
 			VkDynamicState::VK_DYNAMIC_STATE_SCISSOR,
-			//VkDynamicState::VK_DYNAMIC_STATE_VERTEX_INPUT_BINDING_STRIDE
 		};
 
 		VkPipelineDynamicStateCreateInfo dynamicState{};
@@ -170,9 +170,9 @@ namespace sh::render::vk
 		rasterizer.lineWidth = lineWidth;
 		rasterizer.frontFace = VkFrontFace::VK_FRONT_FACE_COUNTER_CLOCKWISE;
 		rasterizer.depthBiasEnable = VK_FALSE;
-		rasterizer.depthBiasConstantFactor = 0.0f; // Optional
-		rasterizer.depthBiasClamp = 0.0f; // Optional
-		rasterizer.depthBiasSlopeFactor = 0.0f; // Optional
+		rasterizer.depthBiasConstantFactor = 0.0f;
+		rasterizer.depthBiasClamp = 0.0f;
+		rasterizer.depthBiasSlopeFactor = 0.0f;
 		switch (cullMode)
 		{
 		case CullMode::Off:
@@ -196,11 +196,11 @@ namespace sh::render::vk
 		multisampling.alphaToOneEnable = VK_FALSE; // Optional
 
 		VkPipelineColorBlendAttachmentState colorBlendAttachment{};
-		colorBlendAttachment.colorWriteMask = 
-			VkColorComponentFlagBits::VK_COLOR_COMPONENT_R_BIT | 
-			VkColorComponentFlagBits::VK_COLOR_COMPONENT_G_BIT |
-			VkColorComponentFlagBits::VK_COLOR_COMPONENT_B_BIT |
-			VkColorComponentFlagBits::VK_COLOR_COMPONENT_A_BIT;
+		colorBlendAttachment.colorWriteMask = shader->GetColorMask();
+			//VkColorComponentFlagBits::VK_COLOR_COMPONENT_R_BIT | 
+			//VkColorComponentFlagBits::VK_COLOR_COMPONENT_G_BIT |
+			//VkColorComponentFlagBits::VK_COLOR_COMPONENT_B_BIT |
+			//VkColorComponentFlagBits::VK_COLOR_COMPONENT_A_BIT;
 		colorBlendAttachment.blendEnable = VK_TRUE;
 		//기본 공식
 		//finalColor.rgb = (srcColorBlendFactor * newColor.rgb) <colorBlendOp> (dstColorBlendFactor * oldColor.rgb);
@@ -219,18 +219,18 @@ namespace sh::render::vk
 		VkPipelineColorBlendStateCreateInfo colorBlending{};
 		colorBlending.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 		colorBlending.logicOpEnable = VK_FALSE;
-		colorBlending.logicOp = VK_LOGIC_OP_COPY; // Optional
+		colorBlending.logicOp = VkLogicOp::VK_LOGIC_OP_COPY;
 		colorBlending.attachmentCount = 1;
 		colorBlending.pAttachments = &colorBlendAttachment;
-		colorBlending.blendConstants[0] = 0.0f; // Optional
-		colorBlending.blendConstants[1] = 0.0f; // Optional
-		colorBlending.blendConstants[2] = 0.0f; // Optional
-		colorBlending.blendConstants[3] = 0.0f; // Optional
+		colorBlending.blendConstants[0] = 0.0f;
+		colorBlending.blendConstants[1] = 0.0f;
+		colorBlending.blendConstants[2] = 0.0f;
+		colorBlending.blendConstants[3] = 0.0f;
 
 		VkPipelineDepthStencilStateCreateInfo depthStencil{};
 		depthStencil.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
 		depthStencil.depthTestEnable = true;
-		depthStencil.depthWriteEnable = true;
+		depthStencil.depthWriteEnable = bZWrite;
 		depthStencil.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS_OR_EQUAL;
 		depthStencil.depthBoundsTestEnable = false;
 		depthStencil.minDepthBounds = 0.0f;
@@ -254,8 +254,8 @@ namespace sh::render::vk
 		pipelineInfo.layout = layout;
 		pipelineInfo.renderPass = renderPass;
 		pipelineInfo.subpass = 0;
-		pipelineInfo.basePipelineHandle = nullptr; // Optional
-		pipelineInfo.basePipelineIndex = -1; // Optional
+		pipelineInfo.basePipelineHandle = nullptr;
+		pipelineInfo.basePipelineIndex = -1;
 
 		auto result = vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineInfo, nullptr, &pipeline);
 		assert(result == VkResult::VK_SUCCESS);
@@ -271,6 +271,10 @@ namespace sh::render::vk
 	{
 		cullMode = mode;
 		return *this;
+	}
+	SH_RENDER_API auto sh::render::vk::VulkanPipeline::GetCullMode() const -> CullMode
+	{
+		return cullMode;
 	}
 	SH_RENDER_API auto VulkanPipeline::SetTopology(Topology topology) -> VulkanPipeline&
 	{
@@ -301,5 +305,14 @@ namespace sh::render::vk
 	SH_RENDER_API auto VulkanPipeline::GetStencilState() const -> const VkStencilOpState&
 	{
 		return stencilState;
+	}
+	SH_RENDER_API auto VulkanPipeline::SetZWrite(bool zwrite) -> VulkanPipeline&
+	{
+		bZWrite = zwrite;
+		return *this;
+	}
+	SH_RENDER_API auto VulkanPipeline::GetZWrite() const -> bool
+	{
+		return bZWrite;
 	}
 }

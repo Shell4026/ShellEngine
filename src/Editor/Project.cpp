@@ -1,12 +1,10 @@
-﻿#include "Game/PCH.h"
-#include "Project.h"
+﻿#include "Project.h"
 #include "EditorWorld.h"
 #include "EditorResource.h"
+#include "ModelLoader.h"
 #include "AssetDatabase.h"
 
 #include "Render/Renderer.h"
-
-#include "Game/ModelLoader.h"
 
 #include "Core/FileSystem.h"
 
@@ -95,7 +93,7 @@ namespace sh::editor
 				item = world.meshes.GetResource(pathStr);
 				if (item == nullptr)
 				{
-					game::ModelLoader loader{ *world.renderer.GetContext()};
+					ModelLoader loader{ *world.renderer.GetContext()};
 					item = world.meshes.AddResource(pathStr, loader.Load(pathStr));
 				}
 			}

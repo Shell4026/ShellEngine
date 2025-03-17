@@ -1,5 +1,4 @@
-﻿#include "PCH.h"
-#include "Reflection.hpp"
+﻿#include "Reflection.hpp"
 
 namespace sh::core::reflection
 {

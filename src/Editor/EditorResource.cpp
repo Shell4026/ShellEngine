@@ -1,16 +1,14 @@
-﻿#include "Game/PCH.h"
-#include "EditorResource.h"
+﻿#include "EditorResource.h"
 #include "EditorWorld.h"
-
-#include "Game/TextureLoader.h"
-#include "Game/ModelLoader.h"
+#include "TextureLoader.h"
+#include "ModelLoader.h"
 
 namespace sh::editor
 {
 	SH_EDITOR_API void EditorResource::LoadAllAssets(EditorWorld& world)
 	{
 		auto& ctx = *world.renderer.GetContext();
-		game::TextureLoader texLoader{ ctx };
+		TextureLoader texLoader{ ctx };
 
 		folderIcon.Create(ctx, *world.textures.AddResource("FolderIcon", texLoader.Load("textures/folder.png")));
 		fileIcon.Create(ctx, *world.textures.AddResource("FileIcon", texLoader.Load("textures/file.png")));

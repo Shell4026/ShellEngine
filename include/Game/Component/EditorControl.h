@@ -1,7 +1,5 @@
 ﻿#pragma once
-
 #include "Game/Component/Component.h"
-
 #include "Game/Vector.h"
 
 #include "glm/gtc/quaternion.hpp"

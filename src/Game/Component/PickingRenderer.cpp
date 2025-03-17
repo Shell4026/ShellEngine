@@ -22,6 +22,9 @@ namespace sh::game
 			if (core::IsValid(mesh))
 				this->mesh = mesh;
 		}
+
+		SetMaterialPropertyBlock(SObject::Create<render::MaterialPropertyBlock>());
+		SetRenderTagId(1 << 31);
 	}
 	SH_GAME_API PickingRenderer::~PickingRenderer()
 	{
@@ -44,47 +47,28 @@ namespace sh::game
 
 		if (!camera->pickingCallback.Empty())
 		{
-			for (auto& [cam, drawable] : drawables)
-			{
-				if (!cam->active)
-					continue;
+			float r = ((id & 0x000000FF) >> 0) / 255.0f;
+			float g = ((id & 0x0000FF00) >> 8) / 255.0f;
+			float b = ((id & 0x00FF0000) >> 16) / 255.0f;
+			float a = 1.f;
 
-				float r = ((id & 0x000000FF) >> 0) / 255.0f;
-				float g = ((id & 0x0000FF00) >> 8) / 255.0f;
-				float b = ((id & 0x00FF0000) >> 16) / 255.0f;
-				float a = 1.f;
-				struct alignas(16) Uniform
-				{
-					glm::vec4 color;
-				} uniform{ {r, g, b, a} };
+			auto propertyBlock = GetMaterialPropertyBlock();
+			propertyBlock->SetProperty("id", glm::vec4{ r, g, b, a });
 
-				drawable->SetUniformData(0, 1, &uniform, render::IDrawable::Stage::Fragment);
-			}
-			Super::Update();
+			
 		}
-	}
-	SH_GAME_API void PickingRenderer::Update()
-	{
 	}
 
 	SH_GAME_API void PickingRenderer::SetCamera(PickingCamera& camera)
 	{
 		this->camera = &camera;
-		CleanDrawables();
-		CreateDrawable(this->camera);
 	}
 
 	SH_GAME_API void PickingRenderer::OnPropertyChanged(const core::reflection::Property& prop)
 	{
-		if (prop.GetName() == "mesh")
-		{
-			CleanDrawables();
-			CreateDrawable(this->camera);
-		}
+		Super::OnPropertyChanged(prop);
 		if (prop.GetName() == "camera")
-		{
 			SetCamera(*camera);
-		}
 	}
 
 	SH_GAME_API auto PickingIdManager::AssignId(PickingRenderer* renderer) -> uint32_t

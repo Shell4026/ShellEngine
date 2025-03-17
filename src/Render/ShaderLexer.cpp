@@ -295,6 +295,9 @@ namespace sh::render
 					{"uniform", TokenType::Uniform},
 					{"sampler2D", TokenType::Sampler2D},
 					{"Stencil", TokenType::Stencil},
+					{"Cull", TokenType::Cull},
+					{"ZWrite", TokenType::Cull},
+					{"ColorMask", TokenType::ColorMask},
 					{"LightingPass", TokenType::LightingPass},
 					{"Property", TokenType::Property},
 					{"MVP", TokenType::MVP},
@@ -302,7 +305,10 @@ namespace sh::render
 					{"VERTEX", TokenType::VERTEX},
 					{"UV", TokenType::UV},
 					{"NORMAL", TokenType::NORMAL},
-					{"const", TokenType::Const}
+					{"const", TokenType::Const},
+					{"MATRIX_MODEL", TokenType::MATRIX_MODEL},
+					{"MATRIX_VIEW", TokenType::MATRIX_VIEW},
+					{"MATRIX_PROJ", TokenType::MATRIX_PROJ},
 				};
 				auto it = keywordMap.find(ident);
 				if (it == keywordMap.end()) 

@@ -1,5 +1,4 @@
-﻿#include "PCH.h"
-#include "Component/PickingCamera.h"
+﻿#include "Component/PickingCamera.h"
 
 #include "Game/World.h"
 #include "Game/GameObject.h"
@@ -26,34 +25,38 @@ namespace sh::game
 		renderTex->SetReadUsage(true);
 		renderTex->SetSize(1024, 768);
 		renderTex->Build(*world.renderer.GetContext());
-		screenSize = { 1024, 768 };
+		camera.SetWidth(1024);
+		camera.SetHeight(768);
 		renderTex->SetName("PickingFramebuffer");
 
-		SetRenderTexture(*renderTex);
+		SetRenderTexture(renderTex);
 
 		buffer = render::BufferFactory::Create(*world.renderer.GetContext(), sizeof(uint8_t) * 4, true);
+
+		camera.SetRenderTagMask(1 << 31);
 	}
 
 	SH_GAME_API void PickingCamera::Awake()
 	{
+		Super::Awake();
 	}
 
 	SH_GAME_API void PickingCamera::BeginUpdate()
 	{
+		//SH_INFO_FORMAT("{}, {}, {}", gameObject.transform->GetWorldPosition().x, gameObject.transform->GetWorldPosition().y, gameObject.transform->GetWorldPosition().z);
+		if (core::IsValid(followCamera))
+		{
+			SetLookPos(followCamera->GetLookPos());
+			SetUpVector(followCamera->GetUpVector());
+		}
+		Super::BeginUpdate();
 		if (!pickingCallback.Empty())
 		{
-			if (core::IsValid(followCamera))
-			{
-				if (&gameObject != &followCamera->gameObject)
-					gameObject.transform->SetPosition(followCamera->gameObject.transform->position);
-				this->SetLookPos(followCamera->GetLookPos());
-				this->SetUpVector(followCamera->GetUpVector());
-			}
-			CalcMatrix();
+
 
 			if (!addTask)
 			{
-				game::RenderThread::GetInstance()->AddEndTaskFromOtherThread([&]
+				RenderThread::GetInstance()->AddEndTaskFromOtherThread([&]
 					{
 						renderFinished.store(true, std::memory_order::memory_order_release);
 					}
@@ -93,7 +96,8 @@ namespace sh::game
 
 	SH_GAME_API void PickingCamera::SetTextureSize(const Vec2& size)
 	{
-		screenSize = size;
+		camera.SetWidth(size.x);
+		camera.SetHeight(size.y);
 		renderTex->SetSize(size.x, size.y);
 	}
 

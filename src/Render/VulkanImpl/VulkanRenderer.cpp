@@ -1,16 +1,11 @@
 ﻿#include "VulkanRenderer.h"
-#include "VulkanLayer.h"
-#include "VulkanDescriptorPool.h"
 #include "VulkanContext.h"
 #include "VulkanSwapChain.h"
-#include "VulkanDrawable.h"
-#include "VulkanShaderPass.h"
 #include "VulkanQueueManager.h"
 #include "VulkanPipelineManager.h"
 #include "VulkanFramebuffer.h"
-#include "IVertexBuffer.h"
-#include "Mesh.h"
-#include "Material.h"
+#include "VulkanRenderPass.h"
+#include "VulkanCameraBuffers.h"
 
 #include "Core/Util.h"
 
@@ -33,13 +28,14 @@ namespace sh::render::vk
 	SH_RENDER_API VulkanRenderer::~VulkanRenderer()
 	{
 		if(isInit)
-			Clean();
+			Clear();
 	}
 
-	SH_RENDER_API void VulkanRenderer::Clean()
+	SH_RENDER_API void VulkanRenderer::Clear()
 	{
-		Renderer::Clean();
+		Renderer::Clear();
 
+		camManager->Destroy();
 		vkDeviceWaitIdle(context->GetDevice());
 		DestroySyncObjects();
 		context->Clean();
@@ -87,6 +83,14 @@ namespace sh::render::vk
 		vkDestroySemaphore(context->GetDevice(), gameThreadSemaphore, nullptr);
 		vkDestroyFence(context->GetDevice(), inFlightFence, nullptr);
 	}
+	void VulkanRenderer::OnCameraAdded(const Camera* camera)
+	{
+		VulkanCameraBuffers::GetInstance()->AddCamera(*camera);
+	}
+	void VulkanRenderer::OnCameraRemoved(const Camera* camera)
+	{
+		VulkanCameraBuffers::GetInstance()->AddCamera(*camera);
+	}
 
 	SH_RENDER_API bool VulkanRenderer::Init(const sh::window::Window& win)
 	{
@@ -94,6 +98,9 @@ namespace sh::render::vk
 
 		context = std::make_unique<VulkanContext>(win);
 		context->Init();
+
+		camManager = VulkanCameraBuffers::GetInstance();
+		camManager->Init(*context);
 
 		if (CreateSyncObjects() != VkResult::VK_SUCCESS)
 			return false;
@@ -112,52 +119,6 @@ namespace sh::render::vk
 		return context->ReSizing();
 	}
 
-	inline void VulkanRenderer::RenderDrawable(IDrawable* iDrawable, VkCommandBuffer cmd)
-	{
-		if (!core::IsValid(iDrawable))
-			return;
-		VulkanDrawable* drawable = static_cast<VulkanDrawable*>(iDrawable);
-		const Mesh* mesh = drawable->GetMesh();
-		const Material* mat = drawable->GetMaterial();
-
-		assert(mesh);
-		assert(mat);
-		if (!sh::core::IsValid(mesh) || !sh::core::IsValid(mat))
-			return;
-
-		Shader* shader = mat->GetShader();
-		if (!sh::core::IsValid(shader))
-			return;
-
-		std::size_t passIdx = 0;
-		for (auto& pass : shader->GetPasses())
-		{
-			if (!context->GetPipelineManager().BindPipeline(cmd, drawable->GetPipelineHandle(passIdx, core::ThreadType::Render)))
-			{
-				passIdx++;
-				continue;
-			}
-
-			mesh->GetVertexBuffer()->Bind();
-
-			VkDescriptorSet localDescSet = drawable->GetDescriptorSet(passIdx, core::ThreadType::Render);
-			VkDescriptorSet descSet = static_cast<VulkanUniformBuffer*>(mat->GetUniformBuffer(passIdx, core::ThreadType::Render))->GetVkDescriptorSet();
-			std::array<VkDescriptorSet, 2> descriptorSets = { localDescSet, descSet };
-
-			assert(localDescSet);
-			assert(descSet);
-
-			vkCmdBindDescriptorSets(cmd,
-				VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS,
-				static_cast<VulkanShaderPass&>(*pass).GetPipelineLayout(), 0, descriptorSets.size(),
-				descriptorSets.data(), 0, nullptr);
-
-			vkCmdDrawIndexed(cmd, mesh->GetIndices().size(), 1, 0, 0, 0);
-
-			passIdx++;
-		}
-	}
-
 	SH_RENDER_API bool VulkanRenderer::IsInit() const
 	{
 		return isInit;
@@ -168,11 +129,9 @@ namespace sh::render::vk
 		vkWaitForFences(context->GetDevice(), 1, &inFlightFence, VK_TRUE, UINT64_MAX);
 	}
 
-	SH_RENDER_API void VulkanRenderer::Render(float deltaTime)
+	SH_RENDER_API void VulkanRenderer::Render()
 	{
 		if (!isInit || bPause.load(std::memory_order::memory_order_acquire))
-			return;
-		if (drawList[core::ThreadType::Render].empty())
 			return;
 
 		WaitForCurrentFrame();
@@ -203,144 +162,60 @@ namespace sh::render::vk
 			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
 		});
 
-		if (drawList[core::ThreadType::Render].empty())
-			return;
-
-		VkCommandBuffer cmdBuffer = cmd->GetCommandBuffer();
-
 		context->GetPipelineManager().BeginRender();
-		cmd->Build([&]()
+
+		for (auto camera : cameras)
+			camManager->UploadDataToGPU(*camera);
+
+		cmd->Build([&]
 		{
-			bool mainPassProcessed = false;
-
-			for (auto& [camera, drawables] : drawList[core::ThreadType::Render])
+			for (auto& lightPass : lightingPasses)
 			{
-				auto renderTexture = camera->GetRenderTexture();
-				// 프레임버퍼에 그림
-				if(renderTexture != nullptr)
+				for (auto camera : cameras)
 				{
-					auto framebuffer = static_cast<const VulkanFramebuffer*>(renderTexture->GetFramebuffer(core::ThreadType::Render));
-					std::array<VkClearValue, 2> clear;
-					clear[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-					clear[1].depthStencil = { 1.0f, 0 };
-
-					VkRenderPassBeginInfo renderPassInfo{};
-					renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-					renderPassInfo.renderPass = framebuffer->GetRenderPass();
-					renderPassInfo.framebuffer = framebuffer->GetVkFramebuffer();
-					renderPassInfo.renderArea.offset = { 0, 0 };
-					renderPassInfo.renderArea.extent = { framebuffer->GetWidth(), framebuffer->GetHeight() };
-					renderPassInfo.clearValueCount = static_cast<uint32_t>(clear.size());
-					renderPassInfo.pClearValues = clear.data();
-
-					//Begin RenderPass
-					vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
-
-					VkViewport viewport{};
-					viewport.x = 0;
-					viewport.y = framebuffer->GetHeight();
-					viewport.width = framebuffer->GetWidth();
-					viewport.height = -static_cast<float>(framebuffer->GetHeight());
-					viewport.minDepth = 0.0f;
-					viewport.maxDepth = 1.0f;
-					vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
-
-					VkRect2D scissor{};
-					scissor.offset = { 0, 0 };
-					scissor.extent = { framebuffer->GetWidth(), framebuffer->GetHeight() };
-					vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
-
-					for (auto iDrawable : drawables)
-						RenderDrawable(iDrawable, cmdBuffer);
-
-					//End RenderPass
-					vkCmdEndRenderPass(cmdBuffer);
-
-					renderTexture->SetDirty();
+					lightPass->RecordCommand(*camera, imgIdx);
 				}
-				//MainPass
-				else
-				{
-					mainPassProcessed = true;
-
-					const VulkanFramebuffer* mainFramebuffer = static_cast<const VulkanFramebuffer*>(context->GetMainFramebuffer(imgIdx));
-
-					VkRenderPassBeginInfo renderPassInfo{};
-					std::array<VkClearValue, 2> clear;
-					clear[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-					clear[1].depthStencil = { 1.0f, 0 };
-
-					renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-					renderPassInfo.renderPass = mainFramebuffer->GetRenderPass();
-					renderPassInfo.framebuffer = mainFramebuffer->GetVkFramebuffer();
-					renderPassInfo.renderArea.offset = { 0, 0 };
-					renderPassInfo.renderArea.extent = context->GetSwapChain().GetSwapChainSize();
-					renderPassInfo.clearValueCount = static_cast<uint32_t>(clear.size());
-					renderPassInfo.pClearValues = clear.data();
-					vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
-
-					VkViewport viewport{};
-					float width = viewportEnd.x - viewportStart.x;
-					float height = viewportEnd.y - viewportStart.y;
-					float surfWidth = static_cast<float>(context->GetSwapChain().GetSwapChainSize().width);
-					float surfHeight = static_cast<float>(context->GetSwapChain().GetSwapChainSize().height);
-					viewport.x = viewportStart.x;
-					viewport.y = viewportEnd.y;
-					viewport.width = std::min(width, surfWidth);
-					viewport.height = -std::min(height, surfHeight);
-					viewport.minDepth = 0.0f;
-					viewport.maxDepth = 1.0f;
-					vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
-
-					VkRect2D scissor{};
-					scissor.offset = { 0, 0 };
-					scissor.extent = context->GetSwapChain().GetSwapChainSize();
-					vkCmdSetScissor(cmdBuffer, 0, 1, &scissor);
-
-					for (auto& func : drawCalls)
-						func();
-
-					vkCmdEndRenderPass(cmdBuffer);
-				}
-			}//for (auto& [camera, drawables] : drawList[RENDER_THREAD])
-			// 모든 카메라에 프레임 버퍼가 존재하는 특수한 경우
-			if (mainPassProcessed == false)
-			{
-				const VulkanFramebuffer* mainFramebuffer = static_cast<const VulkanFramebuffer*>(context->GetMainFramebuffer(imgIdx));
-
-				VkRenderPassBeginInfo renderPassInfo{};
-				std::array<VkClearValue, 2> clear;
-				clear[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-				clear[1].depthStencil = { 1.0f, 0 };
-
-				renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-				renderPassInfo.renderPass = mainFramebuffer->GetRenderPass();
-				renderPassInfo.framebuffer = mainFramebuffer->GetVkFramebuffer();
-				renderPassInfo.renderArea.offset = { 0, 0 };
-				renderPassInfo.renderArea.extent = context->GetSwapChain().GetSwapChainSize();
-				renderPassInfo.clearValueCount = static_cast<uint32_t>(clear.size());
-				renderPassInfo.pClearValues = clear.data();
-				vkCmdBeginRenderPass(cmdBuffer, &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
-
-				VkViewport viewport{};
-				float width = viewportEnd.x - viewportStart.x;
-				float height = viewportEnd.y - viewportStart.y;
-				float surfWidth = static_cast<float>(context->GetSwapChain().GetSwapChainSize().width);
-				float surfHeight = static_cast<float>(context->GetSwapChain().GetSwapChainSize().height);
-				viewport.x = viewportStart.x;
-				viewport.y = viewportEnd.y;
-				viewport.width = std::min(width, surfWidth);
-				viewport.height = -std::min(height, surfHeight);
-				viewport.minDepth = 0.0f;
-				viewport.maxDepth = 1.0f;
-				vkCmdSetViewport(cmdBuffer, 0, 1, &viewport);
-
-				for (auto& func : drawCalls)
-					func();
-
-				vkCmdEndRenderPass(cmdBuffer);
 			}
-		}, nullptr);
+
+			const VulkanFramebuffer* mainFramebuffer = static_cast<const VulkanFramebuffer*>(context->GetMainFramebuffer(imgIdx));
+
+			VkRenderPassBeginInfo renderPassInfo{};
+			std::array<VkClearValue, 2> clear;
+			clear[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+			clear[1].depthStencil = { 1.0f, 0 };
+
+			renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+			renderPassInfo.renderPass = mainFramebuffer->GetRenderPass()->GetVkRenderPass();
+			renderPassInfo.framebuffer = mainFramebuffer->GetVkFramebuffer();
+			renderPassInfo.renderArea.offset = { 0, 0 };
+			renderPassInfo.renderArea.extent = context->GetSwapChain().GetSwapChainSize();
+			renderPassInfo.clearValueCount = static_cast<uint32_t>(clear.size());
+			renderPassInfo.pClearValues = clear.data();
+			vkCmdBeginRenderPass(cmd->GetCommandBuffer(), &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
+
+			VkViewport viewport{};
+			float width = context->GetViewportEnd().x - context->GetViewportStart().x;
+			float height = context->GetViewportEnd().y - context->GetViewportStart().y;
+			float surfWidth = static_cast<float>(context->GetSwapChain().GetSwapChainSize().width);
+			float surfHeight = static_cast<float>(context->GetSwapChain().GetSwapChainSize().height);
+			viewport.x = context->GetViewportStart().x;
+			viewport.y = context->GetViewportEnd().y;
+			viewport.width = std::min(width, surfWidth);
+			viewport.height = -std::min(height, surfHeight);
+			viewport.minDepth = 0.0f;
+			viewport.maxDepth = 1.0f;
+			vkCmdSetViewport(cmd->GetCommandBuffer(), 0, 1, &viewport);
+
+			VkRect2D scissor{};
+			scissor.offset = { 0, 0 };
+			scissor.extent = context->GetSwapChain().GetSwapChainSize();
+			vkCmdSetScissor(cmd->GetCommandBuffer(), 0, 1, &scissor);
+
+			for (auto& func : drawCalls)
+				func();
+
+			vkCmdEndRenderPass(cmd->GetCommandBuffer());
+		});
 
 		context->GetQueueManager().SubmitCommand(*cmd, inFlightFence);
 
@@ -380,6 +255,10 @@ namespace sh::render::vk
 	SH_RENDER_API auto VulkanRenderer::GetContext() const -> IRenderContext*
 	{
 		return context.get();
+	}
+	SH_RENDER_API void VulkanRenderer::Sync()
+	{
+		Renderer::Sync();
 	}
 }//namespace
 

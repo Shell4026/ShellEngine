@@ -1,110 +1,130 @@
 ﻿#include "VulkanPipelineManager.h"
-#include "Mesh.h"
-#include "Shader.h"
+#include "VulkanPipelineManager.h"
 #include "VulkanShaderPass.h"
 #include "VulkanVertexBuffer.h"
 #include "VulkanContext.h"
 
-#include "Core/ThreadSyncManager.h"
-
 namespace sh::render::vk
 {
 	VulkanPipelineManager::VulkanPipelineManager(const VulkanContext& context) :
-		context(context),
-		device(context.GetDevice())
+		context(context), device(context.GetDevice())
 	{
-		meshListener.SetCallback([&](core::SObject* obj)
-		{
-			auto meshIt = meshIdxs.find(static_cast<const Mesh*>(obj));
-			if (meshIt != meshIdxs.end())
-			{
-				for (auto idx : meshIt->second)
-				{
-					pipelines[idx][core::ThreadType::Game].reset();
-					dirtyPipelines.push(idx);
-
-					auto& info = pipelinesInfo[idx];
-					if (auto infoIt = infoIdx.find(info); infoIt != infoIdx.end())
-						infoIdx.erase(infoIt);
-					if (auto shaderIt = shaderIdxs.find(info.shader); shaderIt != shaderIdxs.end())
-						shaderIdxs.erase(shaderIt);
-				}
-				meshIdxs.erase(meshIt);
-				SetDirty();
-			}
-		});
 	}
 
-	auto VulkanPipelineManager::BuildPipeline(const VkRenderPass& pass, VulkanShaderPass& shader, Mesh& mesh) -> std::unique_ptr<VulkanPipeline>
+	VulkanPipelineManager::VulkanPipelineManager(VulkanPipelineManager&& other) noexcept :
+		context(other.context), device(other.device),
+		pipelines(std::move(other.pipelines)), pipelinesInfo(std::move(other.pipelinesInfo)),
+		infoIdx(std::move(other.infoIdx)), renderpassIdxs(std::move(other.renderpassIdxs)), shaderIdxs(std::move(other.shaderIdxs))
 	{
-		mesh.onDestroy.Register(meshListener);
+	}
 
-		auto pipeline = std::make_unique<VulkanPipeline>(device, pass);
+	auto VulkanPipelineManager::BuildPipeline(VkRenderPass renderPass, VulkanShaderPass& shader, Mesh::Topology topology) -> std::unique_ptr<VulkanPipeline>
+	{
+		auto pipeline = std::make_unique<VulkanPipeline>(device, renderPass);
 
-		VulkanPipeline::Topology topology = VulkanPipeline::Topology::Triangle;
-		switch (mesh.GetTopology())
+		VulkanPipeline::Topology topol = VulkanPipeline::Topology::Triangle;
+		switch (topology)
 		{
 		case Mesh::Topology::Point:
-			topology = VulkanPipeline::Topology::Point;
+			topol = VulkanPipeline::Topology::Point;
 			break;
 		case Mesh::Topology::Line:
-			topology = VulkanPipeline::Topology::Line;
+			topol = VulkanPipeline::Topology::Line;
 			break;
 		case Mesh::Topology::Face:
-			topology = VulkanPipeline::Topology::Triangle;
+			topol = VulkanPipeline::Topology::Triangle;
 			break;
 		}
 
-		pipeline->SetTopology(topology);
-		pipeline->SetShader(&shader);
+		pipeline->
+			SetCullMode(shader.GetCullMode()).
+			SetTopology(topol).
+			SetShader(&shader).
+			SetZWrite(shader.GetZWrite());
 		pipeline->
 			AddShaderStage(VulkanPipeline::ShaderStage::Vertex).
 			AddShaderStage(VulkanPipeline::ShaderStage::Fragment);
 
-		//Attribute
-		auto& bindings = static_cast<VulkanVertexBuffer*>(mesh.GetVertexBuffer())->bindingDescriptions;
-		auto& attrs = static_cast<VulkanVertexBuffer*>(mesh.GetVertexBuffer())->attribDescriptions;
-
-		// binding 0과 attribute 0은 버텍스
-		for (int i = 0; i < attrs.size(); ++i)
-		{
-			auto data = shader.GetAttribute(mesh.attributes[i]->name);
-			if (!data)
-				continue;
-			if (data->typeName != mesh.attributes[i]->typeName)
-				continue;
-
-			VkVertexInputAttributeDescription attrDesc = attrs[i];
-			attrDesc.location = data->idx;
-
-			pipeline->AddBindingDescription(bindings[i]);
+		pipeline->AddBindingDescription(VulkanVertexBuffer::GetBindingDescription());
+		for (auto& attrDesc : VulkanVertexBuffer::GetAttributeDescriptions())
 			pipeline->AddAttributeDescription(attrDesc);
-		}
 
-		pipeline->SetLineWidth(mesh.lineWidth);
+		pipeline->SetLineWidth(1.0f);
+		pipeline->SetStencilState(true, ConvertStencilState(shader.GetStencilState()));
 
 		auto result = pipeline->Build(shader.GetPipelineLayout());
 		assert(result == VkResult::VK_SUCCESS);
 		return pipeline;
 	}
 
-	SH_RENDER_API auto VulkanPipelineManager::GetPipelineHandle(const VkRenderPass& pass, VulkanShaderPass& shader, Mesh& mesh) -> uint64_t
+	auto VulkanPipelineManager::ConvertStencilState(const StencilState& stencilState) const -> VkStencilOpState
 	{
-		PipelineInfo info{ &pass, &shader, &mesh };
+		VkStencilOpState state{};
+		state.reference = stencilState.ref;
+		state.compareMask = stencilState.compareMask;
+		state.writeMask = stencilState.writeMask;
+		switch (stencilState.compareOp)
+		{
+		case StencilState::CompareOp::Always:
+			state.compareOp = VkCompareOp::VK_COMPARE_OP_ALWAYS; break;
+		case StencilState::CompareOp::Equal:
+			state.compareOp = VkCompareOp::VK_COMPARE_OP_EQUAL; break;
+		case StencilState::CompareOp::Greater:
+			state.compareOp = VkCompareOp::VK_COMPARE_OP_GREATER; break;
+		case StencilState::CompareOp::GreaterEqual:
+			state.compareOp = VkCompareOp::VK_COMPARE_OP_GREATER_OR_EQUAL; break;
+		case StencilState::CompareOp::Less:
+			state.compareOp = VkCompareOp::VK_COMPARE_OP_LESS; break;
+		case StencilState::CompareOp::LessEqual:
+			state.compareOp = VkCompareOp::VK_COMPARE_OP_LESS_OR_EQUAL; break;
+		case StencilState::CompareOp::Never:
+			state.compareOp = VkCompareOp::VK_COMPARE_OP_NEVER; break;
+		case StencilState::CompareOp::NotEqual:
+			state.compareOp = VkCompareOp::VK_COMPARE_OP_NOT_EQUAL; break;
+		}
+		auto fn = 
+			[&](StencilState::StencilOp stencilOp) -> VkStencilOp
+			{
+				switch (stencilOp)
+				{
+				case StencilState::StencilOp::Zero:
+					return VkStencilOp::VK_STENCIL_OP_ZERO;
+				case StencilState::StencilOp::Replace:
+					return VkStencilOp::VK_STENCIL_OP_REPLACE;
+				case StencilState::StencilOp::Keep:
+					return VkStencilOp::VK_STENCIL_OP_KEEP;
+				case StencilState::StencilOp::Invert:
+					return VkStencilOp::VK_STENCIL_OP_INVERT;
+				case StencilState::StencilOp::IncrementClamp:
+					return VkStencilOp::VK_STENCIL_OP_INCREMENT_AND_CLAMP;
+				case StencilState::StencilOp::IncrementWrap:
+					return VkStencilOp::VK_STENCIL_OP_INCREMENT_AND_WRAP;
+				case StencilState::StencilOp::DecrementClamp:
+					return VkStencilOp::VK_STENCIL_OP_DECREMENT_AND_CLAMP;
+				case StencilState::StencilOp::DecrementWrap:
+					return VkStencilOp::VK_STENCIL_OP_DECREMENT_AND_WRAP;
+				}
+			};
+		state.passOp = fn(stencilState.passOp);
+		state.failOp = fn(stencilState.failOp);
+		state.depthFailOp = fn(stencilState.depthFailOp);
+		return state;
+	}
+
+	SH_RENDER_API auto VulkanPipelineManager::GetOrCreatePipelineHandle(VkRenderPass renderPass, VulkanShaderPass& shader, Mesh::Topology topology) -> uint64_t
+	{
+		PipelineInfo info{ renderPass, &shader, topology };
 		auto it = infoIdx.find(info);
 		if (it == infoIdx.end())
 		{
-			core::SyncArray<std::unique_ptr<VulkanPipeline>> syncArray{ nullptr, nullptr };
-			syncArray[core::ThreadType::Game] = BuildPipeline(pass, shader, mesh);
-			syncArray[core::ThreadType::Render] = BuildPipeline(pass, shader, mesh);
-			pipelines.push_back(std::move(syncArray));
+			pipelines.push_back(BuildPipeline(renderPass, shader, topology));
 			pipelinesInfo.push_back(info);
 
 			std::size_t idx = pipelines.size() - 1;
 			infoIdx.insert({ info, idx });
 
-			if (auto it = renderpassIdxs.find(&pass); it == renderpassIdxs.end())
-				renderpassIdxs.insert({ &pass, std::vector<std::size_t>{idx} });
+			if (auto it = renderpassIdxs.find(renderPass); it == renderpassIdxs.end())
+				renderpassIdxs.insert({ renderPass, std::vector<std::size_t>{idx} });
 			else
 				it->second.push_back(idx);
 
@@ -113,21 +133,13 @@ namespace sh::render::vk
 			else
 				it->second.push_back(idx);
 
-			if (auto it = meshIdxs.find(&mesh); it == meshIdxs.end())
-				meshIdxs.insert({ &mesh, std::vector<std::size_t>{idx} });
-			else
-				it->second.push_back(idx);
 			return idx;
 		}
 		else
 		{
-			VulkanPipeline* pipeline = pipelines[it->second][core::ThreadType::Game].get();
+			VulkanPipeline* pipeline = pipelines[it->second].get();
 			if (pipeline == nullptr)
-				pipelines[it->second][core::ThreadType::Game] = BuildPipeline(pass, shader, mesh);
-
-			pipeline = pipelines[it->second][core::ThreadType::Render].get();
-			if (pipeline == nullptr)
-				pipelines[it->second][core::ThreadType::Render] = BuildPipeline(pass, shader, mesh);
+				pipelines[it->second] = BuildPipeline(renderPass, shader, topology);
 
 			return it->second;
 		}
@@ -138,7 +150,7 @@ namespace sh::render::vk
 	}
 	SH_RENDER_API bool VulkanPipelineManager::BindPipeline(VkCommandBuffer cmd, uint64_t handle)
 	{
-		VulkanPipeline* pipeline = pipelines[handle][core::ThreadType::Render].get();
+		VulkanPipeline* pipeline = pipelines[handle].get();
 		if (pipeline == nullptr)
 			return false;
 
@@ -148,25 +160,5 @@ namespace sh::render::vk
 			lastBindingPipeline = pipeline;
 		}
 		return true;
-	}
-	SH_RENDER_API void sh::render::vk::VulkanPipelineManager::SetDirty()
-	{
-		if (bDirty)
-			return;
-
-		core::ThreadSyncManager::GetInstance()->PushSyncable(*this);
-
-		bDirty = true;
-	}
-	SH_RENDER_API void sh::render::vk::VulkanPipelineManager::Sync()
-	{
-		while (!dirtyPipelines.empty())
-		{
-			uint64_t idx = dirtyPipelines.top();
-			dirtyPipelines.pop();
-
-			pipelines[idx][core::ThreadType::Render].reset();
-		}
-		bDirty = false;
 	}
 }//namespace

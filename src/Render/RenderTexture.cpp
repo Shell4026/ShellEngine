@@ -1,9 +1,9 @@
-﻿#include "pch.h"
-#include "RenderTexture.h"
+﻿#include "RenderTexture.h"
 #include "VulkanContext.h"
-#include "VulkanRenderer.h"
 #include "VulkanTextureBuffer.h"
-#include "VulkanImpl/VulkanFramebuffer.h"
+#include "VulkanFramebuffer.h"
+#include "VulkanRenderPass.h"
+#include "VulkanRenderPassManager.h"
 
 namespace sh::render
 {
@@ -54,8 +54,17 @@ namespace sh::render
 				break;
 			}
 
-			static_cast<vk::VulkanFramebuffer*>(framebuffer[core::ThreadType::Game].get())->CreateOffScreen(width, height, format, bReadUsage);
-			static_cast<vk::VulkanFramebuffer*>(framebuffer[core::ThreadType::Render].get())->CreateOffScreen(width, height, format, bReadUsage);
+			vk::VulkanRenderPass::Config config;
+			config.format = format;
+			config.depthFormat = vkContext.FindSupportedDepthFormat(true);
+			config.bOffScreen = true;
+			config.bTransferSrc = bReadUsage;
+			config.bUseStencil = true;
+
+			auto& renderPass = vkContext.GetRenderPassManager().GetOrCreateRenderPass(config);
+			
+			static_cast<vk::VulkanFramebuffer*>(framebuffer[core::ThreadType::Game].get())->CreateOffScreen(renderPass, width, height, format, bReadUsage);
+			static_cast<vk::VulkanFramebuffer*>(framebuffer[core::ThreadType::Render].get())->CreateOffScreen(renderPass, width, height, format, bReadUsage);
 		}
 		buffer[core::ThreadType::Game] = std::make_unique<vk::VulkanTextureBuffer>();
 		buffer[core::ThreadType::Game]->Create(*framebuffer[core::ThreadType::Game].get());
@@ -83,6 +92,7 @@ namespace sh::render
 
 		if (context->GetRenderAPIType() == RenderAPI::Vulkan)
 		{
+			auto& vkContext = static_cast<const vk::VulkanContext&>(*context);
 			VkFormat format = VkFormat::VK_FORMAT_R8G8B8A8_SRGB;
 			switch (this->format)
 			{
@@ -97,8 +107,17 @@ namespace sh::render
 				break;
 			}
 
+			vk::VulkanRenderPass::Config config;
+			config.format = format;
+			config.depthFormat = vkContext.FindSupportedDepthFormat(true);
+			config.bOffScreen = true;
+			config.bTransferSrc = bReadUsage;
+			config.bUseStencil = true;
+
+			auto& renderPass = vkContext.GetRenderPassManager().GetOrCreateRenderPass(config);
+
 			static_cast<vk::VulkanFramebuffer*>(framebuffer[core::ThreadType::Game].get())->Clean();
-			static_cast<vk::VulkanFramebuffer*>(framebuffer[core::ThreadType::Game].get())->CreateOffScreen(width, height, format, bReadUsage);
+			static_cast<vk::VulkanFramebuffer*>(framebuffer[core::ThreadType::Game].get())->CreateOffScreen(renderPass, width, height, format, bReadUsage);
 		}
 		buffer[core::ThreadType::Game]->Clean();
 		buffer[core::ThreadType::Game]->Create(*framebuffer[core::ThreadType::Game].get());

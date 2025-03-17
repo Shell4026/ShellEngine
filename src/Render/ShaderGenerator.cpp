@@ -2,8 +2,6 @@
 
 #include "Core/FileSystem.h"
 
-#include <fmt/core.h>
-
 #include <cctype>
 
 namespace sh::render

@@ -31,11 +31,13 @@ namespace sh::render::vk
 	{
 		if (readyPool.empty())
 		{
-			std::array<VkDescriptorPoolSize, 2> poolSizes{};
+			std::array<VkDescriptorPoolSize, 3> poolSizes{};
 			poolSizes[0].type = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			poolSizes[0].descriptorCount = 1;
-			poolSizes[1].type = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			poolSizes[1].descriptorCount = 1;
+			poolSizes[0].descriptorCount = size;
+			poolSizes[1].type = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+			poolSizes[1].descriptorCount = size;
+			poolSizes[2].type = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+			poolSizes[2].descriptorCount = size;
 
 			VkDescriptorPoolCreateInfo poolInfo{};
 			poolInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;

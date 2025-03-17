@@ -52,6 +52,10 @@ namespace sh::game
 
 		CleanObjs();
 	}
+	SH_GAME_API void World::InitResource()
+	{
+		SH_INFO("Init resource");
+	}
 	SH_GAME_API void World::CleanObjs()
 	{
 		for (auto obj : objs)
@@ -186,6 +190,7 @@ namespace sh::game
 		if (!core::IsValid(cam))
 			return;
 		cameras.insert(cam);
+		renderer.AddCamera(cam->GetNative());
 
 		onCameraAdd.Notify(cam);
 	}
@@ -194,6 +199,7 @@ namespace sh::game
 		if (!core::IsValid(cam))
 			return;
 		cameras.erase(cam);
+		renderer.RemoveCamera(cam->GetNative());
 
 		onCameraRemove.Notify(cam);
 	}

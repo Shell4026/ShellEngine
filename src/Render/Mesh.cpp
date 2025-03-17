@@ -1,55 +1,38 @@
-﻿#include "pch.h"
-#include "Mesh.h"
+﻿#include "Mesh.h"
 
 #include "VertexBufferFactory.h"
 
 namespace sh::render
 {
 	Mesh::Mesh() :
-		attributes(attrs),
 		topology(Topology::Face)
 	{
-		this->SetAttribute<glm::vec3>(ShaderAttribute<glm::vec3>{ "verts" });
-		this->SetAttribute<glm::vec2>(ShaderAttribute<glm::vec2>{ "uvs" });
-		this->SetAttribute<glm::vec3>(ShaderAttribute<glm::vec3>{ "normals" });
 	}
 	Mesh::Mesh(const Mesh& other) :
-		attributes(attrs),
-
-		indices(other.indices), faces(other.faces),
-		attrs(other.attrs.size()), buffer(),
+		verts(other.verts), indices(other.indices), faces(other.faces),
 		topology(other.topology), 
 		bounding(other.bounding)
 	{
-		for (std::size_t i = 0; i < other.attrs.size(); ++i)
-		{
-			attrs[i] = other.attrs[i]->Clone();
-		}
 		buffer = other.buffer->Clone();
 	}
 	Mesh::Mesh(Mesh&& other) noexcept :
-		attributes(attrs),
-
-		indices(std::move(other.indices)), faces(std::move(other.faces)),
-		attrs(std::move(other.attrs)), buffer(std::move(other.buffer)),
+		verts(std::move(other.verts)), indices(std::move(other.indices)), faces(std::move(other.faces)),
+		buffer(std::move(other.buffer)),
 		topology(other.topology),
 		bounding(std::move(other.bounding))
 	{
 	}
 	Mesh::~Mesh()
 	{
-		SH_INFO("~?");
+		SH_INFO("~Mesh");
 	}
 
 	auto Mesh::operator=(const Mesh& other) -> Mesh&
 	{
+		verts = other.verts;
 		indices = other.indices;
 		faces = other.faces;
 
-		for (std::size_t i = 0; i < other.attrs.size(); ++i)
-		{
-			attrs[i] = other.attrs[i]->Clone();
-		}
 		buffer = other.buffer->Clone();
 
 		topology = other.topology;
@@ -62,7 +45,7 @@ namespace sh::render
 		indices = std::move(other.indices);
 		faces = std::move(other.faces);
 
-		attrs = std::move(other.attrs);
+		verts = std::move(other.verts);
 		buffer = std::move(other.buffer);
 		topology = other.topology;
 		bounding = std::move(other.bounding);
@@ -70,28 +53,24 @@ namespace sh::render
 		return *this;
 	}
 
-	void Mesh::SetVertex(const std::vector<glm::vec3>& verts)
+	void Mesh::SetVertex(const std::vector<Vertex>& verts)
 	{
-		static_cast<ShaderAttribute<glm::vec3>&>(*attrs[VERTEX_ID]).SetData(verts);
+		this->verts = verts;
 	}
-	void Mesh::SetVertex(std::vector<glm::vec3>&& verts) noexcept
+	void Mesh::SetVertex(const std::initializer_list<Vertex>& verts)
 	{
-		static_cast<ShaderAttribute<glm::vec3>&>(*attrs[VERTEX_ID]).SetData(verts);
+		this->verts.clear();
+		this->verts.reserve(verts.size());
+		for (auto& vert : verts)
+			this->verts.push_back(vert);
 	}
-	void Mesh::SetVertex(const std::initializer_list<glm::vec3>& verts)
+	auto Mesh::GetVertex() const -> const std::vector<Vertex>&
 	{
-		std::vector<glm::vec3> vec(verts.size());
-		for (int i = 0; i < vec.size(); ++i)
-			vec[i] = *(verts.begin() + i);
-		static_cast<ShaderAttribute<glm::vec3>&>(*attrs[VERTEX_ID]).SetData(vec);
-	}
-	auto Mesh::GetVertex() const -> const std::vector<glm::vec3>&
-	{
-		return static_cast<ShaderAttribute<glm::vec3>&>(*attrs[VERTEX_ID]).GetDataT();
+		return verts;
 	}
 	auto Mesh::GetVertexCount() const -> size_t
 	{
-		return static_cast<ShaderAttribute<glm::vec3>&>(*attrs[VERTEX_ID]).GetDataT().size();
+		return verts.size();
 	}
 
 	void Mesh::SetIndices(const std::vector<uint32_t>& indices)
@@ -113,40 +92,6 @@ namespace sh::render
 	auto Mesh::GetIndices() const -> const std::vector<uint32_t>&
 	{
 		return indices;
-	}
-
-	void Mesh::SetNormal(const std::vector<glm::vec3>& normals)
-	{
-		static_cast<ShaderAttribute<glm::vec3>&>(*attrs[NORMAL_ID]).SetData(normals);
-	}
-	void Mesh::SetNormal(std::vector<glm::vec3>&& normals) noexcept
-	{
-		static_cast<ShaderAttribute<glm::vec3>&>(*attrs[NORMAL_ID]).SetData(normals);
-	}
-	void Mesh::SetNormal(const std::initializer_list<glm::vec3>& normals)
-	{
-		static_cast<ShaderAttribute<glm::vec3>&>(*attrs[NORMAL_ID]).SetData(normals);
-	}
-	auto Mesh::GetNormal() const -> const std::vector<glm::vec3>&
-	{
-		return static_cast<ShaderAttribute<glm::vec3>&>(*attrs[NORMAL_ID]).GetDataT();
-	}
-
-	void Mesh::SetUV(const std::vector<glm::vec2>& uvs)
-	{
-		static_cast<ShaderAttribute<glm::vec2>&>(*attrs[UV_ID]).SetData(uvs);
-	}
-	void Mesh::SetUV(std::vector<glm::vec2>&& uvs) noexcept
-	{
-		static_cast<ShaderAttribute<glm::vec2>&>(*attrs[UV_ID]).SetData(uvs);
-	}
-	void Mesh::SetUV(const std::initializer_list<glm::vec2>& uvs)
-	{
-		static_cast<ShaderAttribute<glm::vec2>&>(*attrs[UV_ID]).SetData(uvs);
-	}
-	auto Mesh::GetUV() const -> const std::vector<glm::vec2>&
-	{
-		return static_cast<ShaderAttribute<glm::vec2>&>(*attrs[UV_ID]).GetDataT();
 	}
 
 	auto Mesh::GetFaces() const -> const std::vector<Face>&
@@ -193,22 +138,5 @@ namespace sh::render
 	auto Mesh::GetBoundingBox() -> AABB&
 	{
 		return bounding;
-	}
-
-	auto Mesh::GetAttribute(std::string_view name) const -> const ShaderAttributeBase*
-	{
-		for (auto& attr : attrs)
-		{
-			if (attr->name == name)
-			{
-				return attr.get();
-			}
-		}
-		return nullptr;
-	}
-
-	SH_RENDER_API void Mesh::ClearAttribute()
-	{
-		attrs.clear();
 	}
 }

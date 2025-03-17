@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include "Render/Export.h"
+#include "Render/ShaderEnum.h"
 #include "VulkanConfig.h"
+
 #include "Core/NonCopyable.h"
 
 #include <vector>
@@ -19,13 +21,6 @@ namespace sh::render::vk
 			Vertex,
 			Fragment
 		};
-
-		 enum class CullMode
-		 {
-			 Off,
-			 Front,
-			 Back
-		 };
 
 		 enum class Topology
 		 {
@@ -50,7 +45,8 @@ namespace sh::render::vk
 
 		float lineWidth = 1.f;
 
-		bool bUseStencil = false;
+		bool bUseStencil = true;
+		bool bZWrite = true;
 	public:
 		SH_RENDER_API VulkanPipeline(VkDevice device, VkRenderPass renderPass);
 		SH_RENDER_API VulkanPipeline(VulkanPipeline&& other) noexcept;
@@ -73,6 +69,7 @@ namespace sh::render::vk
 		SH_RENDER_API auto SetShader(const VulkanShaderPass* shader) -> VulkanPipeline&;
 
 		SH_RENDER_API auto SetCullMode(CullMode mode) -> VulkanPipeline&;
+		SH_RENDER_API auto GetCullMode() const -> CullMode;
 
 		SH_RENDER_API auto SetTopology(Topology topology) -> VulkanPipeline&;
 		SH_RENDER_API auto GetTopology() const -> Topology;
@@ -82,5 +79,8 @@ namespace sh::render::vk
 
 		SH_RENDER_API auto SetStencilState(bool bUse, VkStencilOpState stencilState) -> VulkanPipeline&;
 		SH_RENDER_API auto GetStencilState() const -> const VkStencilOpState&;
+
+		SH_RENDER_API auto SetZWrite(bool zwrite) -> VulkanPipeline&;
+		SH_RENDER_API auto GetZWrite() const -> bool;
 	};
 }

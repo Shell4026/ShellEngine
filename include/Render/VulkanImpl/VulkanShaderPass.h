@@ -13,20 +13,21 @@
 
 namespace sh::render::vk
 {
+	class VulkanContext;
 	class VulkanShaderPass : public ShaderPass
 	{
-		SCLASS(VulkanShaderPass)
 	private:
-		VkDevice device;
+		const VulkanContext& context;
 
 		VkShaderModule vertShader;
 		VkShaderModule fragShader;
 
-		core::SVector<VkDescriptorSetLayoutBinding> localDescriptorBindings;
-		core::SVector<VkDescriptorSetLayoutBinding> descriptorBindings;
+		core::SVector<core::SVector<VkDescriptorSetLayoutBinding>> descriptorBindings; // set, binding
 		core::SVector<VkDescriptorSetLayout> descriptorSetLayout;
 
 		VkPipelineLayout pipelineLayout;
+
+		bool bUseMatrixModel = false;
 	private:
 		void AddDescriptorBinding(uint32_t set, uint32_t binding, VkDescriptorType type, VkShaderStageFlagBits stage);
 		auto CreateDescriptorLayout() -> VkResult;
@@ -34,14 +35,22 @@ namespace sh::render::vk
 
 		void CleanDescriptors();
 	public:
-		SH_RENDER_API VulkanShaderPass(int id, VkDevice device);
+		struct ShaderModules
+		{
+			VkShaderModule vert;
+			VkShaderModule frag;
+		};
+		struct DescryptorSetLayoutInfo
+		{
+			VkDescriptorSetLayout layout;
+			bool bDynamic;
+		};
+	public:
+		SH_RENDER_API VulkanShaderPass(const VulkanContext& context, const ShaderModules& shaderModules, const ShaderAST::PassNode& passNode);
 		SH_RENDER_API VulkanShaderPass(VulkanShaderPass&& other) noexcept;
 		SH_RENDER_API ~VulkanShaderPass();
 		
-		SH_RENDER_API void Clean() override;
-
-		SH_RENDER_API void SetVertexShader(VkShaderModule shader);
-		SH_RENDER_API void SetFragmentShader(VkShaderModule shader);
+		SH_RENDER_API void Clear() override;
 
 		SH_RENDER_API auto GetVertexShader() const -> const VkShaderModule;
 		SH_RENDER_API auto GetFragmentShader() const -> const VkShaderModule;
@@ -51,7 +60,8 @@ namespace sh::render::vk
 		/// @brief 디스크립터셋 레이아웃을 반환 하는 함수
 		/// @param set 세트 번호
 		/// @return 디스크립터셋 레이아웃 포인터
-		SH_RENDER_API auto GetDescriptorSetLayout(uint32_t set) const -> VkDescriptorSetLayout;
+		SH_RENDER_API auto GetDescriptorSetLayout(uint32_t set) const -> DescryptorSetLayoutInfo;
+		SH_RENDER_API auto GetSetCount() const -> uint32_t;
 		SH_RENDER_API auto GetPipelineLayout() const -> VkPipelineLayout;
 	};
 }

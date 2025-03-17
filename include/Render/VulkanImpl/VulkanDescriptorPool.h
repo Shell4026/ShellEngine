@@ -48,7 +48,7 @@ namespace sh::render::vk
 	private:
 		auto GetPool() -> Pool&;
 	public:
-		SH_RENDER_API VulkanDescriptorPool(VkDevice device, size_t size = 32);
+		SH_RENDER_API VulkanDescriptorPool(VkDevice device, size_t size = 128);
 		SH_RENDER_API VulkanDescriptorPool(VulkanDescriptorPool&& other) noexcept;
 		SH_RENDER_API ~VulkanDescriptorPool();
 

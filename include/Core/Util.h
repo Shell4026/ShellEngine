@@ -2,6 +2,9 @@
 
 #include "Export.h"
 
+#include <glm/mat2x2.hpp>
+#include <glm/mat4x4.hpp>
+
 #include <string>
 #include <chrono>
 #include <functional>
@@ -109,6 +112,11 @@ namespace sh::core
 		/// @param bytes 바이트 배열
 		/// @return 워드 배열
 		SH_CORE_API static auto ConvertByteToWord(const std::vector<uint8_t>& bytes) -> std::vector<uint32_t>;
+
+		SH_CORE_API static auto ConvertMat2ToMat4(const glm::mat2& mat) -> glm::mat4;
+		SH_CORE_API static auto ConvertMat4ToMat2(const glm::mat4& mat) -> glm::mat2;
+		SH_CORE_API static auto ConvertMat3ToMat4(const glm::mat3& mat) -> glm::mat4;
+		SH_CORE_API static auto ConvertMat4ToMat3(const glm::mat4& mat) -> glm::mat3;
 	};
 
 	/// @brief 해당 SObject가 nullptr이거나 앞으로 지워질 객체인지 검증 하는 함수.

@@ -1,20 +1,18 @@
-﻿#include "PCH.h"
-#define STB_IMAGE_IMPLEMENTATION
-
+﻿#define STB_IMAGE_IMPLEMENTATION
 #include "TextureLoader.h"
 
 #include "Core/SObject.h"
 
 #include <glm/ext.hpp>
 
-namespace sh::game
+namespace sh::editor
 {
 	TextureLoader::TextureLoader(const render::IRenderContext& context) :
 		context(context)
 	{
 	}
 
-	auto TextureLoader::Load(std::string_view filename, bool bGenerateMipmap) -> render::Texture*
+	SH_EDITOR_API auto TextureLoader::Load(std::string_view filename, bool bGenerateMipmap) -> render::Texture*
 	{
 		int width, height, channel;
 		int info = stbi_info(filename.data(), &width, &height, &channel);

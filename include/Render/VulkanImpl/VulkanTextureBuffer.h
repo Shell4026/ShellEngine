@@ -1,5 +1,4 @@
 ﻿#pragma once
-
 #include "../Export.h"
 #include "../ITextureBuffer.h"
 
@@ -10,15 +9,13 @@
 
 namespace sh::render::vk
 {
+	class VulkanContext;
 	class VulkanQueueManager;
 
 	class VulkanTextureBuffer : public ITextureBuffer
 	{
 	private:
-		VkDevice device = nullptr;
-		VkPhysicalDevice gpu = nullptr;
-		VmaAllocator allocator = nullptr;
-		VkCommandPool cmdPool = nullptr;
+		const VulkanContext* context = nullptr;
 		VulkanQueueManager* queueManager = nullptr;
 
 		std::unique_ptr<VulkanImageBuffer> buffer;

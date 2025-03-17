@@ -1,5 +1,4 @@
-﻿#include "PCH.h"
-#include "SObject.h"
+﻿#include "SObject.h"
 
 #include "GarbageCollection.h"
 #include "Observer.hpp"
@@ -11,21 +10,18 @@
 namespace sh::core
 {
 	SH_CORE_API SObject::SObject() :
-		gc(GarbageCollection::GetInstance()),
 		bPendingKill(false), bMark(false),
 		uuid(UUID::Generate())
 	{
 		
 	}
 	SH_CORE_API SObject::SObject(const SObject& other) :
-		gc(other.gc), 
 		bPendingKill(other.bPendingKill.load(std::memory_order::memory_order_relaxed)),
 		bMark(other.bMark),
 		uuid(other.uuid), name(other.name)
 	{
 	}
 	SH_CORE_API SObject::SObject(SObject&& other) noexcept :
-		gc(other.gc),
 		bPendingKill(other.bPendingKill.load(std::memory_order::memory_order_relaxed)),
 		bMark(other.bMark),
 		uuid(other.uuid), name(std::move(other.name))
@@ -68,7 +64,7 @@ namespace sh::core
 	SH_CORE_API void SObject::Destroy()
 	{
 		bPendingKill.store(true, std::memory_order::memory_order_release);
-		gc->RemoveRootSet(this);
+		GarbageCollection::GetInstance()->RemoveRootSet(this);
 	}
 
 	SH_CORE_API void SObject::OnDestroy()

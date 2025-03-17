@@ -41,7 +41,7 @@ add_subdirectory(Editor)
 target_link_libraries(ShellEngine PUBLIC ShellEngine::Editor)
 endif()
 
-file(GLOB_RECURSE spvFiles "${CMAKE_SOURCE_DIR}/resource/shaders/*.spv")
+file(GLOB_RECURSE spvFiles "${CMAKE_SOURCE_DIR}/resource/shaders/*.shader")
 
 file(COPY ${spvFiles} DESTINATION ${CMAKE_BINARY_DIR}/bin/shaders)
 file(

@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "StencilState.h"
+#include "ShaderEnum.h"
 
 #include <string>
 #include <vector>
@@ -27,12 +28,18 @@ namespace sh::render
 			Int,
 			Sampler
 		};
+		enum class VariableAttribute
+		{
+			None,
+			Local
+		};
 
 		struct VariableNode
 		{
 			VariableType type;
 			int size = 1;
 			std::string name;
+			VariableAttribute attribute;
 		};
 		struct LayoutNode
 		{
@@ -41,10 +48,11 @@ namespace sh::render
 		};
 		struct UBONode
 		{
-			int set;
-			int binding;
+			uint32_t set;
+			uint32_t binding;
 			std::string name;
 			bool bSampler = false;
+			bool bConstant = false;
 			std::vector<VariableNode> vars;
 		};
 		struct StageNode
@@ -63,7 +71,10 @@ namespace sh::render
 			std::string name;
 			std::string lightingPass;
 			StencilState stencil;
+			CullMode cullMode;
+			uint8_t colorMask = 15;
 			std::vector<StageNode> stages;
+			bool zwrite = true;
 		};
 
 		struct VersionNode

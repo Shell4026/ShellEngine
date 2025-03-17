@@ -1,5 +1,4 @@
-﻿#include "PCH.h"
-#include "Component/EditorControl.h"
+﻿#include "Component/EditorControl.h"
 #include "Component/Camera.h"
 #include "Component/LineRenderer.h"
 
@@ -7,6 +6,9 @@
 #include "World.h"
 #include "Input.h"
 #include "SMath.h"
+
+#include "Render/Renderer.h"
+#include "Render/IRenderContext.h"
 
 #include "Physics/Ray.h"
 
@@ -103,11 +105,13 @@ namespace sh::game
 	}
 	inline void EditorControl::RotateControl()
 	{
+		glm::vec2 start = gameObject.world.renderer.GetContext()->GetViewportStart();
+		glm::vec2 end = gameObject.world.renderer.GetContext()->GetViewportEnd();
 		glm::vec2 screenPos = glm::project(glm::vec3{ gameObject.transform->GetWorldPosition() }, 
 			camera->GetViewMatrix(), camera->GetProjMatrix(),
-			glm::vec4{ gameObject.world.renderer.GetViewportStart().x, gameObject.world.renderer.GetViewportStart().y, gameObject.world.renderer.GetViewportEnd().x, gameObject.world.renderer.GetViewportEnd().y });
+			glm::vec4{ start.x, start.y, end.x, end.y });
 
-		screenPos.y = gameObject.world.renderer.GetViewportEnd().y - screenPos.y;
+		screenPos.y = end.y - screenPos.y;
 		
 		glm::vec2 v = glm::normalize(screenPos - glm::vec2{ clickPos });
 		glm::vec2 v2 = glm::normalize(screenPos - Input::mousePosition);

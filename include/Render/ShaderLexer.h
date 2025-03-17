@@ -12,11 +12,12 @@ namespace sh::render
 		{
 			Preprocessor,
 			Shader, Pass, Stage, LightingPass, Property,
-			Stencil,
+			Stencil, Cull, ZWrite, ColorMask,
 			Vertex, Fragment,
 			Layout, Uniform, In, Out, Sampler2D,
 			Const,
 			VERTEX, UV, NORMAL, MVP, LIGHT,
+			MATRIX_MODEL, MATRIX_VIEW, MATRIX_PROJ,
 			LBracket, // (
 			RBracket, // )
 			LBrace, // {

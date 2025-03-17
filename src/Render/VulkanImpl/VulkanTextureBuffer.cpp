@@ -1,5 +1,4 @@
-﻿#include "pch.h"
-#include "VulkanTextureBuffer.h"
+﻿#include "VulkanTextureBuffer.h"
 #include "VulkanContext.h"
 #include "VulkanBuffer.h"
 #include "VulkanFramebuffer.h"
@@ -12,15 +11,13 @@ namespace sh::render::vk
 	{
 	}
 	VulkanTextureBuffer::VulkanTextureBuffer(VulkanTextureBuffer&& other) noexcept :
-		device(other.device), gpu(other.gpu), allocator(other.allocator), cmdPool(other.cmdPool), 
+		context(other.context), queueManager(other.queueManager),
 		buffer(std::move(other.buffer)), cmd(std::move(other.cmd)),
 		isRenderTexture(other.isRenderTexture), framebuffer(other.framebuffer),
 		width(other.width), height(other.height)
 	{
-		other.device = nullptr;
-		other.gpu = nullptr;
-		other.allocator = nullptr;
-		other.cmdPool = nullptr;
+		other.context = nullptr;
+		other.queueManager = nullptr;
 
 		other.framebuffer = nullptr;
 	}
@@ -133,6 +130,8 @@ namespace sh::render::vk
 
 	SH_RENDER_API void VulkanTextureBuffer::Create(const IRenderContext& context, uint32_t width, uint32_t height, Texture::TextureFormat format)
 	{
+		this->context = &static_cast<const VulkanContext&>(context);
+
 		isRenderTexture = false;
 		size = width * height * 4;
 		this->width = width;
@@ -152,19 +151,14 @@ namespace sh::render::vk
 			this->format = VkFormat::VK_FORMAT_R8G8B8A8_UNORM;
 			break;
 		}
-
-		const VulkanContext& vkContext = static_cast<const VulkanContext&>(context);
-
-		device = vkContext.GetDevice();
-		gpu = vkContext.GetGPU();
-		allocator = vkContext.GetAllocator();
-		cmdPool = vkContext.GetCommandPool(core::ThreadType::Game);
-
-		buffer = std::make_unique<VulkanImageBuffer>(vkContext);
+		buffer = std::make_unique<VulkanImageBuffer>(*this->context);
 		buffer->Create(width, height, this->format, 
 			VkImageUsageFlagBits::VK_IMAGE_USAGE_TRANSFER_DST_BIT | VkImageUsageFlagBits::VK_IMAGE_USAGE_SAMPLED_BIT);
 
-		queueManager = &vkContext.GetQueueManager();
+		queueManager = &this->context->GetQueueManager();
+
+		cmd = std::make_unique<VulkanCommandBuffer>(this->context->GetDevice(), this->context->GetCommandPool(core::ThreadType::Game), VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
+		cmd->Create();
 	}
 	SH_RENDER_API void VulkanTextureBuffer::Create(const Framebuffer& framebuffer)
 	{
@@ -174,15 +168,12 @@ namespace sh::render::vk
 
 	SH_RENDER_API void VulkanTextureBuffer::SetData(const void* data)
 	{
-		VulkanBuffer stagingBuffer{ device, gpu, allocator };
+		VulkanBuffer stagingBuffer{ *this->context };
 		stagingBuffer.Create(size,
 			VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 			VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		stagingBuffer.SetData(data);
-
-		cmd = std::make_unique<VulkanCommandBuffer>(device, cmdPool, VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
-		cmd->Create();
 
 		TransitionImageLayout(buffer->GetImage(),
 			format,

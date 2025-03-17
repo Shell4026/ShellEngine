@@ -1,5 +1,4 @@
-﻿#include "PCH.h"
-#include "ModelLoader.h"
+﻿#include "ModelLoader.h"
 
 #include "Core/SObject.h"
 #include "Core/Logger.h"
@@ -12,14 +11,14 @@
 #include <string>
 #include <fmt/core.h>
 
-namespace sh::game
+namespace sh::editor
 {
 	ModelLoader::ModelLoader(const render::IRenderContext& context) :
 		context(context)
 	{
 	}
 
-	auto ModelLoader::Load(std::string_view filename) -> render::Mesh*
+	SH_EDITOR_API auto ModelLoader::Load(std::string_view filename) -> render::Mesh*
 	{
 		tinyobj::attrib_t attrib;
 		std::vector<tinyobj::shape_t> shapes;
@@ -34,9 +33,7 @@ namespace sh::game
 		}
 
 		std::unordered_map<Indices, uint32_t> uniqueVerts;
-		std::vector<glm::vec3> verts;
-		std::vector<glm::vec3> normals;
-		std::vector<glm::vec2> uvs;
+		std::vector<render::Mesh::Vertex> verts;
 		std::vector<uint32_t> indices;
 		
 		glm::vec3 min{}, max{};
@@ -78,9 +75,7 @@ namespace sh::game
 				{
 					uniqueVerts.insert({ indexList, n });
 
-					verts.push_back(vert);
-					uvs.push_back(uv);
-					normals.push_back(normal);
+					verts.push_back({ vert, uv, normal });
 					indices.push_back(n++);
 				}
 				else
@@ -90,8 +85,6 @@ namespace sh::game
 		mesh->GetBoundingBox().Set(min, max);
 
 		mesh->SetVertex(std::move(verts));
-		mesh->SetUV(uvs);
-		mesh->SetNormal(normals);
 		mesh->SetIndices(std::move(indices));
 
 		mesh->Build(context);

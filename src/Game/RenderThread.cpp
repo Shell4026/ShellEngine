@@ -18,7 +18,7 @@ namespace sh::game
 
 		AddTask([&]
 			{
-				this->renderer->Render(0);
+				this->renderer->Render();
 			}
 		);
 	}

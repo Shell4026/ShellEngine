@@ -1,5 +1,4 @@
-﻿#include "PCH.h"
-#include "BufferFactory.h"
+﻿#include "BufferFactory.h"
 #include "Renderer.h"
 
 #include "VulkanContext.h"
@@ -14,11 +13,11 @@ namespace sh::render
 {
 	auto BufferFactory::CreateVkUniformBuffer(const vk::VulkanContext& context, std::size_t size, bool bTransferDst) -> std::unique_ptr<IBuffer>
 	{
-		std::unique_ptr<vk::VulkanBuffer> buffer = std::make_unique<vk::VulkanBuffer>(context.GetDevice(), context.GetGPU(), context.GetAllocator());
+		std::unique_ptr<vk::VulkanBuffer> buffer = std::make_unique<vk::VulkanBuffer>(context);
 
 		VkBufferUsageFlags usage = VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 		if (bTransferDst)
-			usage = VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+			usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
 		auto result = buffer->Create(size, usage,
 			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
@@ -41,14 +40,16 @@ namespace sh::render
 
 		return nullptr;
 	}
-	auto BufferFactory::CreateUniformBuffer(const IRenderContext& context, const ShaderPass& shader, ShaderPass::UniformType type) -> std::unique_ptr<IUniformBuffer>
+	auto BufferFactory::CreateUniformBuffer(const IRenderContext& context, const ShaderPass& shader, UniformStructLayout::Type type) -> std::unique_ptr<IUniformBuffer>
 	{
 		if (context.GetRenderAPIType() == RenderAPI::Vulkan)
 		{
 			auto ptr = std::make_unique<vk::VulkanUniformBuffer>();
-			ptr->Create(context, shader, (type == ShaderPass::UniformType::Object) ? 0 : 1);
+			ptr->Create(context, shader, type);
 			return ptr;
 		}
+		else
+			assert(false);
 		return nullptr;
 	}
 }//namespace
