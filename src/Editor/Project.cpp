@@ -196,7 +196,7 @@ namespace sh::editor
 				}
 				if (ImGui::MenuItem("Material"))
 				{
-					static render::Shader* defaultShader = world.shaders.GetResource("Default");
+					static render::Shader* defaultShader = world.shaders.GetResource("DefaultShader");
 					assert(defaultShader);
 					std::string name{ core::FileSystem::CreateUniqueFileName(currentPath, "NewMaterial.mat") };
 					auto mat = world.materials.AddResource(name, render::Material{ defaultShader });
