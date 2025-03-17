@@ -3,6 +3,7 @@
 #include "EditorWorld.h"
 #include "EditorResource.h"
 #include "AssetDatabase.h"
+#include "CustomInspector.h"
 
 #include "Core/Logger.h"
 #include "Core/SObject.h"
@@ -16,9 +17,10 @@ namespace sh::editor
 		UI(imgui),
 		world(world)
 	{
+		customInspectorManager = CustomInspectorManager::GetInstance();
 	}
 
-	inline auto Inspector::GetIcon(std::string_view typeName) const -> const game::GUITexture*
+	SH_EDITOR_API auto Inspector::GetIcon(std::string_view typeName) -> const game::GUITexture*
 	{
 		if (typeName == core::reflection::GetTypeName<render::Mesh*>())
 		{
@@ -92,6 +94,13 @@ namespace sh::editor
 	{
 		if (type == nullptr)
 			return;
+
+		ICustomInspector* customInspector = customInspectorManager->GetCustomInspector(type);
+		if (customInspector)
+		{
+			customInspector->RenderUI(obj);
+			return;
+		}
 
 		auto currentType = type;
 		do

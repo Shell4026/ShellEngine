@@ -16,11 +16,13 @@ namespace sh::game
 namespace sh::editor
 {
 	class EditorWorld;
+	class CustomInspectorManager;
 
 	class Inspector : public UI
 	{
 	private:
 		EditorWorld& world;
+		CustomInspectorManager* customInspectorManager;
 
 		core::SMap<std::string, core::SVector<std::string>> componentItems;
 
@@ -28,7 +30,6 @@ namespace sh::editor
 	public:
 		constexpr static const char* name = "Inspector";
 	private:
-		inline auto GetIcon(std::string_view typeName) const -> const game::GUITexture*;
 		inline auto GetComponentGroupAndName(std::string_view fullname) -> std::pair<std::string, std::string>;
 		inline void RenderAddComponent(game::GameObject& gameObject);
 		inline void RenderProperties(const core::reflection::STypeInfo* type, core::SObject* obj, int idx);
@@ -40,5 +41,7 @@ namespace sh::editor
 
 		SH_EDITOR_API void Update() override;
 		SH_EDITOR_API void Render() override;
+
+		SH_EDITOR_API static auto GetIcon(std::string_view typeName) -> const game::GUITexture*;
 	};
 }//namespace

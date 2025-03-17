@@ -881,3 +881,15 @@ namespace sh::core::reflection
 	};
 
 }//namespace
+
+namespace std
+{
+	template<>
+	struct hash<sh::core::reflection::TypeInfo>
+	{
+		auto operator()(const sh::core::reflection::TypeInfo& type) const -> std::size_t
+		{
+			return type.hash;
+		}
+	};
+}
