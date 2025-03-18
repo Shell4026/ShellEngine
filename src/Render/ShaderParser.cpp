@@ -1017,7 +1017,7 @@ namespace sh::render
 		lastObjectUniformBinding = 0;
 		lastMaterialUniformBinding = 0;
 
-		ShaderAST::ShaderNode& shaderNode = ParseShader();
+		ShaderAST::ShaderNode shaderNode = ParseShader();
 		Optimize(shaderNode);
 		int idx = 0;
 		for (auto& passNode : shaderNode.passes)

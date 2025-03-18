@@ -97,6 +97,7 @@ namespace sh::render::vk
 		void CreateEmptyDescriptor();
 	public:
 		SH_RENDER_API VulkanContext(const sh::window::Window& window);
+		SH_RENDER_API ~VulkanContext();
 
 		SH_RENDER_API void Init() override;
 		SH_RENDER_API void Clean() override;

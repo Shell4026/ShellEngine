@@ -12,7 +12,7 @@ namespace sh::render
 {
 	void MaterialData::CreateBuffers(core::ThreadType thread, const IRenderContext& context, const Shader& shader, bool bPerObject)
 	{
-		auto usages = { UniformStructLayout::Type::Camera, UniformStructLayout::Type::Material };
+		std::vector<UniformStructLayout::Type> usages = { UniformStructLayout::Type::Camera, UniformStructLayout::Type::Material };
 		if (bPerObject)
 			usages = { UniformStructLayout::Type::Object };
 

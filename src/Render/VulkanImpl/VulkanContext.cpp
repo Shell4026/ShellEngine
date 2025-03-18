@@ -349,6 +349,11 @@ namespace sh::render::vk
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
 		};
 	}
+	VulkanContext::~VulkanContext()
+	{
+
+	}
+
 	SH_RENDER_API void VulkanContext::Init()
 	{
 		layers = std::make_unique<VulkanLayer>();
