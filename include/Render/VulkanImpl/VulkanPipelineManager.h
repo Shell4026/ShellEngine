@@ -57,8 +57,6 @@ namespace sh::render::vk
 		std::unordered_map<PipelineInfo, std::size_t, PipelineInfoHasher> infoIdx;
 		std::unordered_map<VkRenderPass, core::SVector<std::size_t>> renderpassIdxs;
 		std::unordered_map<const VulkanShaderPass*, core::SVector<std::size_t>> shaderIdxs;
-
-		VulkanPipeline* lastBindingPipeline = nullptr;
 	private:
 		auto BuildPipeline(VkRenderPass renderPass, VulkanShaderPass& shader, Mesh::Topology topology) -> std::unique_ptr<VulkanPipeline>;
 		auto ConvertStencilState(const StencilState& stencilState) const -> VkStencilOpState;
@@ -72,8 +70,6 @@ namespace sh::render::vk
 		/// @return 파이프라인 핸들
 		SH_RENDER_API auto GetOrCreatePipelineHandle(VkRenderPass renderPass, VulkanShaderPass& shader, Mesh::Topology topology) -> uint64_t;
 
-		/// @brief 매 렌더링 시작 할 때 호출해야 하는 함수
-		SH_RENDER_API void BeginRender();
 		SH_RENDER_API bool BindPipeline(VkCommandBuffer cmd, uint64_t handle);
 	};
 }//namespace

@@ -162,8 +162,6 @@ namespace sh::render::vk
 			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
 		});
 
-		context->GetPipelineManager().BeginRender();
-
 		for (auto camera : cameras)
 			camManager->UploadDataToGPU(*camera);
 

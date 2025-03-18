@@ -19,73 +19,92 @@
 
 namespace sh::render::vk
 {
-	SH_RENDER_API void VulkanBasePass::RenderDrawable(const Camera& camera, VkRenderPass renderPass, Drawable* drawable)
+	SH_RENDER_API void VulkanBasePass::RenderDrawable(const Camera& camera, VkRenderPass renderPass)
 	{
-		assert(cmd != nullptr);
-		if (!core::IsValid(drawable) || cmd == nullptr)
-			return;
-		const Mesh* mesh = drawable->GetMesh();
-		const Material* mat = drawable->GetMaterial();
+		assert(cmd);
 
-		assert(mesh);
-		assert(mat);
-		if (!sh::core::IsValid(mesh) || !sh::core::IsValid(mat))
-			return;
+		uint32_t cameraOffset = cameraManager->GetDynamicOffset(camera);
 
-		Shader* shader = mat->GetShader();
-		if (!sh::core::IsValid(shader))
-			return;
-
-		auto passVectorPtr = shader->GetShaderPasses(passName);
-		if (passVectorPtr == nullptr)
-			return;
-
-		for (auto& pass : *passVectorPtr)
+		for (auto& renderGroup : renderGroups)
 		{
-			auto pipelineHandle = context->GetPipelineManager().
-				GetOrCreatePipelineHandle(renderPass, static_cast<VulkanShaderPass&>(*pass.get()), mesh->GetTopology());
+			const Material* mat = renderGroup.material;
+			assert(mat);
 
-			if (!context->GetPipelineManager().BindPipeline(cmd->GetCommandBuffer(), pipelineHandle))
+			auto passVectorPtr = renderGroup.material->GetShader()->GetShaderPasses(passName);
+			if (passVectorPtr == nullptr)
 				continue;
-
-			mesh->GetVertexBuffer()->Bind();
-
-			uint32_t setSize = static_cast<VulkanShaderPass*>(pass.get())->GetSetCount();
-
-			std::array<VkDescriptorSet, 3> descriptorSets{};
-			descriptorSets.fill(nullptr);
-
-			bool bDynamic = true;
-			for (int i = 0; i < setSize; ++i)
+			for (auto& pass : *passVectorPtr)
 			{
-				const MaterialData* matData = nullptr;
-				if (i == 1)
-					matData = &drawable->GetMaterialData();
-				else
-					matData = &mat->GetMaterialData();
+				auto pipelineHandle = context->GetPipelineManager().
+					GetOrCreatePipelineHandle(renderPass, static_cast<VulkanShaderPass&>(*pass.get()), renderGroup.topology);
+				context->GetPipelineManager().BindPipeline(cmd->GetCommandBuffer(), pipelineHandle);
+				VkPipelineLayout layout = static_cast<VulkanShaderPass&>(*pass).GetPipelineLayout();
+				uint32_t setSize = static_cast<VulkanShaderPass*>(pass.get())->GetSetCount();
 
-				auto uniformBuffer = static_cast<VulkanUniformBuffer*>(matData->GetUniformBuffer(*pass.get(), static_cast<UniformStructLayout::Type>(i), core::ThreadType::Render));
-				if (uniformBuffer == nullptr)
-					descriptorSets[i] = context->GetEmptyDescriptorSet();
-				else
-					descriptorSets[i] = uniformBuffer->GetVkDescriptorSet();
+				if (setSize > 0)
+				{
+					auto cameraUniformBuffer = static_cast<VulkanUniformBuffer*>(mat->GetMaterialData().GetUniformBuffer(*pass.get(),
+						UniformStructLayout::Type::Camera, core::ThreadType::Render));
+
+					VkDescriptorSet cameraDescriptorSet = VK_NULL_HANDLE;
+					uint32_t dynamicCount = 0;
+					if (cameraUniformBuffer)
+					{
+						cameraDescriptorSet = cameraUniformBuffer->GetVkDescriptorSet();
+						dynamicCount = 1;
+					}
+					else
+						cameraDescriptorSet = context->GetEmptyDescriptorSet();
+
+					vkCmdBindDescriptorSets(cmd->GetCommandBuffer(),
+						VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, layout, static_cast<uint32_t>(UniformStructLayout::Type::Camera), 1,
+						&cameraDescriptorSet, dynamicCount, &cameraOffset);
+				}
+				if (setSize > 2)
+				{
+					auto materialUniformBuffer = static_cast<VulkanUniformBuffer*>(mat->GetMaterialData().GetUniformBuffer(*pass.get(),
+						UniformStructLayout::Type::Material, core::ThreadType::Render));
+
+					VkDescriptorSet materialDescriptorSet = VK_NULL_HANDLE;
+					if (materialUniformBuffer)
+						materialDescriptorSet = materialUniformBuffer->GetVkDescriptorSet();
+					else
+						materialDescriptorSet = context->GetEmptyDescriptorSet();
+
+					vkCmdBindDescriptorSets(cmd->GetCommandBuffer(),
+						VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, layout, static_cast<uint32_t>(UniformStructLayout::Type::Material), 1,
+						&materialDescriptorSet, 0, nullptr);
+				}
+
+				for (auto& drawable : renderGroup.drawables)
+				{
+					if (!camera.CheckRenderTag(drawable->GetRenderTagId()))
+						continue;
+
+					const Mesh* mesh = drawable->GetMesh();
+					mesh->GetVertexBuffer()->Bind();
+
+					if (setSize > 1)
+					{
+						auto objectUniformBuffer = static_cast<VulkanUniformBuffer*>(drawable->GetMaterialData().GetUniformBuffer(*pass.get(),
+							UniformStructLayout::Type::Object, core::ThreadType::Render));
+
+						VkDescriptorSet objectDescriptorSet = VK_NULL_HANDLE;
+						if (objectUniformBuffer)
+							objectDescriptorSet = objectUniformBuffer->GetVkDescriptorSet();
+						else
+							objectDescriptorSet = context->GetEmptyDescriptorSet();
+
+						vkCmdBindDescriptorSets(cmd->GetCommandBuffer(),
+							VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, layout, static_cast<uint32_t>(UniformStructLayout::Type::Object), 1,
+							&objectDescriptorSet, 0, nullptr);
+					}
+					if (pass->HasConstantUniform())
+						vkCmdPushConstants(cmd->GetCommandBuffer(), layout, VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &drawable->GetModelMatrix());
+
+					vkCmdDrawIndexed(cmd->GetCommandBuffer(), mesh->GetIndices().size(), 1, 0, 0, 0);
+				}
 			}
-			if (descriptorSets[0] == context->GetEmptyDescriptorSet())
-				bDynamic = false;
-
-			uint32_t offset = cameraManager->GetDynamicOffset(camera);
-
-			vkCmdBindDescriptorSets(cmd->GetCommandBuffer(),
-				VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS,
-				static_cast<VulkanShaderPass&>(*pass).GetPipelineLayout(), 0, setSize,
-				descriptorSets.data(), bDynamic ? 1 : 0, &offset);
-
-			if (pass->HasConstantUniform())
-				vkCmdPushConstants(cmd->GetCommandBuffer(),
-					static_cast<VulkanShaderPass*>(pass.get())->GetPipelineLayout(),
-					VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &drawable->GetModelMatrix());
-
-			vkCmdDrawIndexed(cmd->GetCommandBuffer(), mesh->GetIndices().size(), 1, 0, 0, 0);
 		}
 	}
 	SH_RENDER_API void VulkanBasePass::Init(IRenderContext& context)
@@ -102,13 +121,32 @@ namespace sh::render::vk
 		if (drawable->GetMaterial()->GetShader()->GetShaderPasses(passName) == nullptr)
 			return;
 
-		drawables.push_back(drawable);
+		const Material* mat = drawable->GetMaterial();
+		Mesh::Topology topology = drawable->GetMesh()->GetTopology();
+
+		auto it = std::find_if(renderGroups.begin(), renderGroups.end(), [&](const RenderGroup& renderGroup)
+			{
+				return renderGroup.material == mat && renderGroup.topology == topology;
+			}
+		);
+		if (it == renderGroups.end())
+		{
+			RenderGroup group{};
+			group.material = mat;
+			group.topology = topology;
+			group.drawables.push_back(drawable);
+			renderGroups.push_back(std::move(group));
+		}
+		else
+		{
+			it->drawables.push_back(drawable);
+		}
 	}
 	SH_RENDER_API void VulkanBasePass::ClearDrawable()
 	{
-		drawables.clear();
+		renderGroups.clear();
 	}
-	SH_RENDER_API void sh::render::vk::VulkanBasePass::RecordCommand(const Camera& camera, uint32_t imgIdx)
+	SH_RENDER_API void VulkanBasePass::RecordCommand(const Camera& camera, uint32_t imgIdx)
 	{
 		assert(cmd != nullptr);
 		std::array<VkClearValue, 2> clear;
@@ -173,17 +211,11 @@ namespace sh::render::vk
 		vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-		for (auto drawable : drawables)
-		{
-			if (!camera.CheckRenderTag(drawable->GetRenderTagId()))
-				continue;
-
-			RenderDrawable(camera, renderPass, drawable);
-		}
+		RenderDrawable(camera, renderPass);
 
 		vkCmdEndRenderPass(commandBuffer);
 	}
-	SH_RENDER_API auto sh::render::vk::VulkanBasePass::GetName() const -> const std::string&
+	SH_RENDER_API auto VulkanBasePass::GetName() const -> const std::string&
 	{
 		return passName;
 	}

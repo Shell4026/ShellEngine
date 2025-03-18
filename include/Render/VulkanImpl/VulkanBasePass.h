@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "Export.h"
-#include "../ILightingPass.h"
+#include "Render/ILightingPass.h"
+#include "Render/Mesh.h"
 
 #include <vector>
 #include <string>
@@ -11,19 +12,26 @@ namespace sh::render::vk
 	class VulkanContext;
 	class VulkanCommandBuffer;
 	class VulkanCameraBuffers;
+	class VulkanShaderPass;
 
 	class VulkanBasePass : public ILightingPass
 	{
 	private:
+		struct RenderGroup
+		{
+			const Material* material;
+			Mesh::Topology topology;
+			std::vector<Drawable*> drawables;
+		};
 		VulkanContext* context = nullptr;
 		VulkanCommandBuffer* cmd = nullptr;
 		std::string passName = "Forward";
 
-		std::vector<Drawable*> drawables;
+		std::vector<RenderGroup> renderGroups;
 
 		VulkanCameraBuffers* cameraManager;
 	protected:
-		SH_RENDER_API virtual void RenderDrawable(const Camera& camera, VkRenderPass renderPass, Drawable* drawable);
+		SH_RENDER_API virtual void RenderDrawable(const Camera& camera, VkRenderPass renderPass);
 	public:
 		SH_RENDER_API void Init(IRenderContext& context) override;
 		SH_RENDER_API void PushDrawable(Drawable* drawable) override;

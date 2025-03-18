@@ -59,7 +59,7 @@ namespace sh::editor
 		auto outlineShader = shaders.AddResource("OutlineShader", loader.LoadShader("shaders/outline.shader"));
 		auto triangleShader = shaders.AddResource("TriangleShader", loader.LoadShader("shaders/triangle.shader"));
 
-		auto errorMat = materials.AddResource("ErrorMaterial", render::Material{ outlineShader });
+		auto errorMat = materials.AddResource("ErrorMaterial", render::Material{ errorShader });
 		auto lineMat = materials.AddResource("LineMaterial", render::Material{ lineShader });
 		auto gridMat = materials.AddResource("GridMaterial", render::Material{ gridShader });
 		auto pickingMat = materials.AddResource("PickingMaterial", render::Material{ pickingShader });
@@ -67,12 +67,13 @@ namespace sh::editor
 
 		auto plane = meshes.AddResource("PlaneMesh", render::Plane{});
 		auto grid = meshes.AddResource("GridMesh", render::Grid{});
+		auto box = meshes.AddResource("BoxMesh", modelLoader.Load("model/cube.obj"));
 
 		errorShader->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f0f" });
 		defaultShader->SetUUID(core::UUID{ "ad9217609f6c7e0f1163785746cc153e" });
 
-		errorMat->SetProperty("outlineWidth", 0.2f);
-		errorMat->SetProperty("color", glm::vec4{ 1.0f, 0.f, 0.f, 1.0f });
+		//errorMat->SetProperty("outlineWidth", 0.2f);
+		//errorMat->SetProperty("color", glm::vec4{ 1.0f, 0.f, 0.f, 1.0f });
 		errorMat->Build(*renderer.GetContext());
 		pickingMat->Build(*renderer.GetContext());
 

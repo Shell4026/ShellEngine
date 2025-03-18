@@ -144,21 +144,13 @@ namespace sh::render::vk
 			return it->second;
 		}
 	}
-	SH_RENDER_API void VulkanPipelineManager::BeginRender()
-	{
-		lastBindingPipeline = nullptr;
-	}
 	SH_RENDER_API bool VulkanPipelineManager::BindPipeline(VkCommandBuffer cmd, uint64_t handle)
 	{
 		VulkanPipeline* pipeline = pipelines[handle].get();
 		if (pipeline == nullptr)
 			return false;
 
-		if (lastBindingPipeline != pipeline)
-		{
-			vkCmdBindPipeline(cmd, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetPipeline());
-			lastBindingPipeline = pipeline;
-		}
+		vkCmdBindPipeline(cmd, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetPipeline());
 		return true;
 	}
 }//namespace
