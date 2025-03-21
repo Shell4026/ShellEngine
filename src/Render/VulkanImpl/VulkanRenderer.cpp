@@ -105,6 +105,15 @@ namespace sh::render::vk
 		if (CreateSyncObjects() != VkResult::VK_SUCCESS)
 			return false;
 
+		VulkanCommandBuffer* cmd = context->GetCommandBuffer(core::ThreadType::Render);
+		cmd->SetWaitSemaphore({ imageAvailableSemaphore });
+		cmd->SetSignalSemaphore({ renderFinishedSemaphore });
+		cmd->SetWaitStage(
+			{
+				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+			}
+		);
+
 		isInit = true;
 		return true;
 	}
@@ -115,6 +124,17 @@ namespace sh::render::vk
 
 		DestroySyncObjects();
 		CreateSyncObjects();
+
+		VulkanCommandBuffer* cmd = context->GetCommandBuffer(core::ThreadType::Render);
+		cmd->Reset();
+
+		cmd->SetWaitSemaphore({ imageAvailableSemaphore });
+		cmd->SetSignalSemaphore({ renderFinishedSemaphore });
+		cmd->SetWaitStage(
+			{
+				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+			}
+		);
 
 		return context->ReSizing();
 	}
@@ -156,11 +176,6 @@ namespace sh::render::vk
 
 		VulkanCommandBuffer* cmd = context->GetCommandBuffer(core::ThreadType::Render);
 		cmd->Reset();
-		cmd->SetWaitSemaphore({ imageAvailableSemaphore });
-		cmd->SetSignalSemaphore({ renderFinishedSemaphore });
-		cmd->SetWaitStage({
-			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
-		});
 
 		for (auto camera : cameras)
 			camManager->UploadDataToGPU(*camera);
