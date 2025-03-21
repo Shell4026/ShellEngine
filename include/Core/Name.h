@@ -7,6 +7,7 @@
 namespace sh::core
 {
 	/// @brief 비교가 빠른 문자열 클래스. 스레드 안전하다.
+	/// @brief 같은 문자열은 메모리 상에서 같은 주소를 가르킨다.
 	class Name
 	{
 	private:
