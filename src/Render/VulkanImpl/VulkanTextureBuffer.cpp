@@ -12,7 +12,7 @@ namespace sh::render::vk
 	}
 	VulkanTextureBuffer::VulkanTextureBuffer(VulkanTextureBuffer&& other) noexcept :
 		context(other.context), queueManager(other.queueManager),
-		buffer(std::move(other.buffer)), cmd(std::move(other.cmd)),
+		imgBuffer(std::move(other.imgBuffer)), cmd(std::move(other.cmd)),
 		isRenderTexture(other.isRenderTexture), framebuffer(other.framebuffer),
 		width(other.width), height(other.height)
 	{
@@ -27,7 +27,7 @@ namespace sh::render::vk
 	SH_RENDER_API void VulkanTextureBuffer::Clean()
 	{
 		isRenderTexture = false;
-		buffer.reset();
+		imgBuffer.reset();
 		cmd.reset();
 		framebuffer = nullptr;
 	}
@@ -52,18 +52,7 @@ namespace sh::render::vk
 			1
 		};
 
-		VkCommandBufferBeginInfo beginInfo{};
-		beginInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		beginInfo.flags = VkCommandBufferUsageFlagBits::VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-		cmd->Build([&]()
-		{
-			vkCmdCopyBufferToImage(cmd->GetCommandBuffer(), buffer, image, VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
-		},
-		&beginInfo);
-
-		assert(queueManager != nullptr);
-		queueManager->SubmitCommand(*cmd);
+		vkCmdCopyBufferToImage(cmd->GetCommandBuffer(), buffer, image, VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 	}
 
 	void VulkanTextureBuffer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
@@ -74,14 +63,14 @@ namespace sh::render::vk
 		barrier.newLayout = newLayout;
 		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.image = buffer->GetImage();
+		barrier.image = imgBuffer->GetImage();
 		barrier.subresourceRange.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
 		barrier.subresourceRange.baseMipLevel = 0;
 		barrier.subresourceRange.levelCount = 1;
 		barrier.subresourceRange.baseArrayLayer = 0;
 		barrier.subresourceRange.layerCount = 1;
-		barrier.srcAccessMask = 0; // TODO
-		barrier.dstAccessMask = 0; // TODO
+		barrier.srcAccessMask = 0;
+		barrier.dstAccessMask = 0;
 
 		VkPipelineStageFlags sourceStage;
 		VkPipelineStageFlags destinationStage;
@@ -107,25 +96,14 @@ namespace sh::render::vk
 			throw std::invalid_argument("Unsupported layout transition!");
 		}
 
-		VkCommandBufferBeginInfo beginInfo{};
-		beginInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		beginInfo.flags = VkCommandBufferUsageFlagBits::VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-		cmd->Build([&]() 
-		{
-			vkCmdPipelineBarrier(
-				cmd->GetCommandBuffer(),
-				sourceStage, destinationStage,
-				0,
-				0, nullptr,
-				0, nullptr,
-				1, &barrier
-			);
-		}, 
-		&beginInfo);
-
-		assert(queueManager != nullptr);
-		queueManager->SubmitCommand(*cmd);
+		vkCmdPipelineBarrier(
+			cmd->GetCommandBuffer(),
+			sourceStage, destinationStage,
+			0,
+			0, nullptr,
+			0, nullptr,
+			1, &barrier
+		);
 	}
 
 	SH_RENDER_API void VulkanTextureBuffer::Create(const IRenderContext& context, uint32_t width, uint32_t height, Texture::TextureFormat format)
@@ -151,14 +129,11 @@ namespace sh::render::vk
 			this->format = VkFormat::VK_FORMAT_R8G8B8A8_UNORM;
 			break;
 		}
-		buffer = std::make_unique<VulkanImageBuffer>(*this->context);
-		buffer->Create(width, height, this->format, 
+		imgBuffer = std::make_unique<VulkanImageBuffer>(*this->context);
+		imgBuffer->Create(width, height, this->format,
 			VkImageUsageFlagBits::VK_IMAGE_USAGE_TRANSFER_DST_BIT | VkImageUsageFlagBits::VK_IMAGE_USAGE_SAMPLED_BIT);
 
 		queueManager = &this->context->GetQueueManager();
-
-		cmd = std::make_unique<VulkanCommandBuffer>(this->context->GetDevice(), this->context->GetCommandPool(core::ThreadType::Game), VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
-		cmd->Create();
 	}
 	SH_RENDER_API void VulkanTextureBuffer::Create(const Framebuffer& framebuffer)
 	{
@@ -175,21 +150,33 @@ namespace sh::render::vk
 			VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		stagingBuffer.SetData(data);
 
-		TransitionImageLayout(buffer->GetImage(),
-			format,
-			VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED,
-			VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-		CopyBufferToImage(stagingBuffer.GetBuffer(), buffer->GetImage(), width, height);
-		TransitionImageLayout(buffer->GetImage(),
-			format,
-			VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-			VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		cmd = std::make_unique<VulkanCommandBuffer>(this->context->GetDevice(), this->context->GetCommandPool(core::ThreadType::Game), VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
+		cmd->Create();
+
+		cmd->Build([&]
+			{
+				TransitionImageLayout(imgBuffer->GetImage(),
+					format,
+					VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED,
+					VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+				CopyBufferToImage(stagingBuffer.GetBuffer(), imgBuffer->GetImage(), width, height);
+				TransitionImageLayout(imgBuffer->GetImage(),
+					format,
+					VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+					VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+			}
+		);
+
+		assert(queueManager != nullptr);
+		queueManager->SubmitCommand(*cmd);
+
+		cmd->Reset();
 	}
 
 	SH_RENDER_API auto VulkanTextureBuffer::GetImageBuffer() const -> VulkanImageBuffer*
 	{
 		if(!isRenderTexture)
-			return buffer.get();
+			return imgBuffer.get();
 		else
 			return static_cast<const VulkanFramebuffer*>(framebuffer)->GetColorImg();
 	}

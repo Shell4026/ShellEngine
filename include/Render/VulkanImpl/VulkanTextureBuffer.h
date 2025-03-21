@@ -18,7 +18,7 @@ namespace sh::render::vk
 		const VulkanContext* context = nullptr;
 		VulkanQueueManager* queueManager = nullptr;
 
-		std::unique_ptr<VulkanImageBuffer> buffer;
+		std::unique_ptr<VulkanImageBuffer> imgBuffer;
 		std::unique_ptr<VulkanCommandBuffer> cmd;
 		const Framebuffer* framebuffer;
 		
