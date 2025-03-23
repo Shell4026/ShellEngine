@@ -15,10 +15,28 @@ namespace sh::core
 			map.insert({ hash, std::string{str} });
 		lock.UnLock();
 	}
+	Name::Name(const Name& other) noexcept :
+		hash(other.hash)
+	{
+	}
+	Name::Name(Name&& other) noexcept :
+		hash(other.hash)
+	{
+	}
 	Name::~Name()
 	{
 	}
 
+	SH_CORE_API auto Name::operator=(const Name& other) noexcept -> Name&
+	{
+		hash = other.hash;
+		return *this;
+	}
+	SH_CORE_API auto Name::operator=(Name&& other) noexcept -> Name&
+	{
+		hash = other.hash;
+		return *this;
+	}
 	SH_CORE_API auto Name::operator==(const Name& other) const -> bool
 	{
 		return hash == other.hash;
