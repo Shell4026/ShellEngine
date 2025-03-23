@@ -1,70 +1,52 @@
 ﻿#include "Name.h"
+#include "Util.h"
 
 namespace sh::core
 {
-	std::unordered_map<std::string, int> Name::dic{};
-	std::mutex Name::mu{};
+	std::unordered_map<std::size_t, std::pair<std::string, int>> Name::map{};
+	SpinLock Name::lock{};
 
-	Name::Name(const std::string& str)
+	Name::Name(std::string_view str) :
+		hash(Util::ConstexprHash(str))
 	{
-		mu.lock();
-		auto it = dic.find(str);
-		if (it == dic.end())
-			ptr = &dic.insert_or_assign(str, 1).first->first;
+		lock.Lock();
+		auto it = map.find(hash);
+		if (it == map.end())
+			map.insert({ hash, {std::string{str}, 1} });
 		else
-		{
-			ptr = &it->first;
-			++it->second;
-		}
-		mu.unlock();
-;	}
-	Name::Name(const char* _str)
-	{
-		mu.lock();
-		std::string str(_str);
-		auto it = dic.find(str);
-		if (it == dic.end())
-			ptr = &dic.insert_or_assign(std::move(str), 1).first->first;
-		else
-		{
-			ptr = &it->first;
-			++it->second;
-		}
-		mu.unlock();
+			++it->second.second;
+		lock.UnLock();
 	}
 	Name::~Name()
 	{
-		mu.lock();
-		auto it = dic.find(*ptr);
-		if (--it->second == 0)
-			dic.erase(it);
-		mu.unlock();
+		lock.Lock();
+		auto it = map.find(hash);
+		if (--it->second.second == 0)
+			map.erase(it);
+		lock.UnLock();
 	}
+
 	SH_CORE_API auto Name::operator==(const Name& other) const -> bool
 	{
-		return ptr == other.ptr;
-	}
-	SH_CORE_API auto Name::operator==(const std::string& str) const -> bool
-	{
-		auto it = dic.find(str);
-		if (it == dic.end())
-			return false;
-		return ptr == &it->first;
+		return hash == other.hash;
 	}
 	SH_CORE_API auto Name::operator!=(const Name& other) const -> bool
 	{
-		return  ptr != other.ptr;
+		return hash != other.hash;
+	}
+	SH_CORE_API auto Name::operator==(const std::string& str) const -> bool
+	{
+		return hash == core::Util::ConstexprHash(str);
 	}
 	SH_CORE_API auto Name::operator!=(const std::string& str) const -> bool
 	{
-		return !operator==(str);
+		return hash != core::Util::ConstexprHash(str);
 	}
-	SH_CORE_API Name::operator const std::string& () const
+	SH_CORE_API auto Name::ToString() const -> const std::string&
 	{
-		return *ptr;
-	}
-	SH_CORE_API auto Name::GetString() const -> const std::string&
-	{
-		return *ptr;
+		lock.Lock();
+		const std::string& result = map[hash].first;
+		lock.UnLock();
+		return result;
 	}
 }//namespace
