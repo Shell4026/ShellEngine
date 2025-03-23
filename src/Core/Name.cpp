@@ -3,7 +3,7 @@
 
 namespace sh::core
 {
-	std::unordered_map<std::size_t, std::pair<std::string, int>> Name::map{};
+	std::unordered_map<std::size_t, std::string> Name::map{};
 	SpinLock Name::lock{};
 
 	Name::Name(std::string_view str) :
@@ -12,18 +12,11 @@ namespace sh::core
 		lock.Lock();
 		auto it = map.find(hash);
 		if (it == map.end())
-			map.insert({ hash, {std::string{str}, 1} });
-		else
-			++it->second.second;
+			map.insert({ hash, std::string{str} });
 		lock.UnLock();
 	}
 	Name::~Name()
 	{
-		lock.Lock();
-		auto it = map.find(hash);
-		if (--it->second.second == 0)
-			map.erase(it);
-		lock.UnLock();
 	}
 
 	SH_CORE_API auto Name::operator==(const Name& other) const -> bool
@@ -45,7 +38,7 @@ namespace sh::core
 	SH_CORE_API auto Name::ToString() const -> const std::string&
 	{
 		lock.Lock();
-		const std::string& result = map[hash].first;
+		const std::string& result = map[hash];
 		lock.UnLock();
 		return result;
 	}

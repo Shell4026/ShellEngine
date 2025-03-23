@@ -12,7 +12,7 @@ namespace sh::core
 	private:
 		friend class std::hash<sh::core::Name>;
 
-		static std::unordered_map<std::size_t, std::pair<std::string, int>> map;
+		static std::unordered_map<std::size_t, std::string> map;
 		static SpinLock lock;
 
 		const std::size_t hash;
