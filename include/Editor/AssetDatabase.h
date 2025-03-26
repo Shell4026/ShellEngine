@@ -66,7 +66,7 @@ namespace sh::editor
 		SH_EDITOR_API inline static core::SHashMap<std::string, std::filesystem::path> paths{};
 		SH_EDITOR_API inline static core::SVector<core::SObject*> dirtyObjs{};
 		SH_EDITOR_API inline static std::priority_queue<AssetLoadData> loadingAssetsQueue{};
-		SH_EDITOR_API static core::Observer<false, core::SObject*>::Listener onDestroyListener;
+		SH_EDITOR_API static core::Observer<false, const core::SObject*>::Listener onDestroyListener;
 	private:
 		static void CreateMeta(core::SObject* ptr, const std::filesystem::path& metaDir);
 		static void CreateOrLoadMeta(core::SObject* ptr, const std::filesystem::path& metaDir);

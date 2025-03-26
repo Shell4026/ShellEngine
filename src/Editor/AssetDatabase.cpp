@@ -18,7 +18,7 @@
 
 namespace sh::editor
 {
-	core::Observer<false, core::SObject*>::Listener AssetDatabase::onDestroyListener{ [](core::SObject* destoryedObj)
+	core::Observer<false, const core::SObject*>::Listener AssetDatabase::onDestroyListener{ [](const core::SObject* destoryedObj)
 		{
 			auto it = std::find(AssetDatabase::dirtyObjs.begin(), AssetDatabase::dirtyObjs.end(), destoryedObj);
 			if (it != AssetDatabase::dirtyObjs.end())

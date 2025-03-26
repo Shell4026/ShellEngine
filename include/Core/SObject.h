@@ -28,7 +28,7 @@ namespace sh::core
 		std::atomic<bool> bPendingKill;
 		bool bMark;
 	public:
-		Observer<false, SObject*> onDestroy;
+		mutable Observer<false, const SObject*> onDestroy;
 	private:
 		SH_CORE_API static void RegisterToManager(SObject* ptr);
 	protected:
