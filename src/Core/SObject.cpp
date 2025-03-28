@@ -11,7 +11,7 @@ namespace sh::core
 {
 	SH_CORE_API SObject::SObject() :
 		bPendingKill(false), bMark(false),
-		uuid(UUID::Generate())
+		uuid(UUID::Generate()), name("Unknown")
 	{
 		
 	}
@@ -73,9 +73,9 @@ namespace sh::core
 
 	SH_CORE_API void SObject::SetName(std::string_view name)
 	{
-		this->name = name;
+		this->name = Name{ name };
 	}
-	SH_CORE_API auto SObject::GetName() const -> const std::string&
+	SH_CORE_API auto SObject::GetName() const -> const Name&
 	{
 		return name;
 	}
@@ -98,7 +98,7 @@ namespace sh::core
 		mainJson["version"] = 1;
 		mainJson["type"] = stypeInfo->name;
 		mainJson["uuid"] = uuid.ToString();
-		mainJson["name"] = name;
+		mainJson["name"] = name.ToString();
 		while (stypeInfo)
 		{
 			core::Json json{};

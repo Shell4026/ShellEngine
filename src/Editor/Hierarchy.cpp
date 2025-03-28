@@ -27,7 +27,7 @@ namespace sh::editor
 	void Hierarchy::DrawInvisibleSpace(game::GameObject* obj)
 	{
 		ImGui::SetCursorPosY(ImGui::GetCursorPosY() - ImGui::GetStyle().ItemSpacing.y);
-		ImGui::InvisibleButton(("ReorderDrop" + obj->GetName()).c_str(), ImVec2(-1, 1));
+		ImGui::InvisibleButton(("ReorderDrop" + obj->GetName().ToString()).c_str(), ImVec2(-1, 1));
 
 		if (ImGui::BeginDragDropTarget())
 		{
@@ -88,14 +88,14 @@ namespace sh::editor
 		{
 			nodeOpen = ImGui::TreeNodeEx((void*)obj,
 				ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_OpenOnArrow | (isSelected ? ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_Selected : 0),
-				"%s", obj->GetName().c_str());
+				"%s", obj->GetName().ToString().c_str());
 		}
 		else {
 			nodeOpen = ImGui::TreeNodeEx((void*)obj,
 				ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_Leaf |
 				ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_NoTreePushOnOpen |
 				(isSelected ? ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_Selected : 0),
-				"%s", obj->GetName().c_str());
+				"%s", obj->GetName().ToString().c_str());
 		}
 		// 객체 우클릭
 		if (ImGui::BeginPopupContextItem((obj->GetUUID().ToString() + "RightClickPopup").c_str()))
@@ -121,7 +121,7 @@ namespace sh::editor
 		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_::ImGuiDragDropFlags_None))
 		{
 			ImGui::SetDragDropPayload("GameObject", &obj, sizeof(game::GameObject*));
-			ImGui::Text("%s", obj->GetName().c_str());
+			ImGui::Text("%s", obj->GetName().ToString().c_str());
 			ImGui::EndDragDropSource();
 		}
 		// 드래그 받는 대상의 시점

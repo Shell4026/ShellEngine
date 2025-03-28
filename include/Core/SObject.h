@@ -1,11 +1,11 @@
 ﻿#pragma once
-
 #include "Export.h"
 #include "Reflection.hpp"
 #include "ISerializable.h"
 #include "SObjectManager.h"
 #include "Observer.hpp"
 #include "UUID.h"
+#include "Name.h"
 
 #include <string>
 #include <utility>
@@ -24,7 +24,7 @@ namespace sh::core
 		friend GarbageCollection;
 	private:
 		UUID uuid;
-		std::string name{};
+		Name name;
 		std::atomic<bool> bPendingKill;
 		bool bMark;
 	public:
@@ -52,7 +52,7 @@ namespace sh::core
 		SH_CORE_API virtual void OnPropertyChanged(const reflection::Property& prop);
 
 		SH_CORE_API void SetName(std::string_view name);
-		SH_CORE_API auto GetName() const -> const std::string&;
+		SH_CORE_API auto GetName() const -> const Name&;
 
 		SH_CORE_API void SetUUID(const UUID& uuid);
 		SH_CORE_API auto GetUUID() const -> const UUID&;

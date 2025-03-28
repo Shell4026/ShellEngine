@@ -62,7 +62,7 @@ namespace sh::editor
 					const render::Texture* tex = mat->GetProperty<const render::Texture*>(name).value();
 					std::string texName = "Empty";
 					if (core::IsValid(tex))
-						texName = tex->GetName();
+						texName = tex->GetName().ToString();
 					if (ImGui::Button(texName.c_str(), ImVec2{buttonWidth, iconSize}))
 					{
 

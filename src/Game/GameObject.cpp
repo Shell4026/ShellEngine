@@ -1,5 +1,4 @@
-﻿#include "PCH.h"
-#include "GameObject.h"
+﻿#include "GameObject.h"
 
 #include "Component/Component.h"
 
@@ -27,7 +26,7 @@ namespace sh::game
 
 	SH_GAME_API GameObject::~GameObject()
 	{
-		SH_INFO_FORMAT("~GameObject: {}", GetName());
+		SH_INFO_FORMAT("~GameObject: {}", GetName().ToString());
 	}
 
 	SH_GAME_API void GameObject::Awake()

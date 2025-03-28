@@ -282,10 +282,10 @@ namespace sh::editor
 		const char* objName = "None";
 		if (*parameter)
 		{
-			if ((*parameter)->GetName().empty())
+			if ((*parameter)->GetName().ToString().empty())
 				objName = "Unknown";
 			else
-				objName = (*parameter)->GetName().c_str();
+				objName = (*parameter)->GetName().ToString().c_str();
 		}
 		if (ImGui::Button(objName, ImVec2{ buttonWidth, iconSize }))
 		{
@@ -447,7 +447,7 @@ namespace sh::editor
 		if (auto obj = world.GetSelectedObject(); core::IsValid(obj))
 		{
 			static std::string name;
-			name = obj->GetName();
+			name = obj->GetName().ToString();
 
 			ImGui::SetNextItemWidth(100);
 			if (ImGui::InputText("Name", &name))
