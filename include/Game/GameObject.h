@@ -1,5 +1,4 @@
 ﻿#pragma once
-
 #include "Export.h"
 
 #include "IObject.h"
@@ -7,12 +6,11 @@
 #include "Component/Transform.h"
 #include "World.h"
 
-#include "Core/GarbageCollection.h"
 #include "Core/Reflection.hpp"
 #include "Core/Util.h"
+#include "Core/Observer.hpp"
 
 #include <vector>
-#include <memory>
 
 namespace sh::game
 {
@@ -20,17 +18,20 @@ namespace sh::game
 	{
 		SCLASS(GameObject)
 	private:
-		PROPERTY(components)
 		std::vector<Component*> components;
 
+		PROPERTY(components)
+		PROPERTY(transform)
 		bool bEnable;
 		bool bInit;
 	public:
 		World& world;
-		PROPERTY(transform)
+		
 		Transform* transform;
 
 		const bool& activeSelf;
+
+		mutable core::Observer<false, Component*> onComponentAdd;
 #if SH_EDITOR
 		PROPERTY(hideInspector, core::PropertyOption::invisible)
 		bool hideInspector = false;
@@ -68,10 +69,14 @@ namespace sh::game
 		auto AddComponent() -> std::enable_if_t<IsComponent<T>::value, T*>
 		{
 			components.push_back(core::SObject::Create<T>(*this));
-			components.back()->SetActive(true);
-			components.back()->SetName(components.back()->GetType().name);
 
-			return static_cast<T*>(components.back());
+			auto ptr = components.back();
+			ptr->SetActive(true);
+			ptr->SetName(components.back()->GetType().name);
+
+			onComponentAdd.Notify(ptr);
+
+			return static_cast<T*>(ptr);
 		}
 		template<typename T>
 		auto GetComponent() const -> T*

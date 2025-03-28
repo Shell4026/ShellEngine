@@ -122,6 +122,8 @@ namespace sh::game
 
 		components.push_back(std::move(component));
 		components.back()->SetActive(true);
+
+		onComponentAdd.Notify(components.back());
 	}
 
 	SH_GAME_API auto GameObject::Serialize() const -> core::Json
