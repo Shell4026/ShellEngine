@@ -1,6 +1,9 @@
 ﻿#include "EditorWorld.h"
 #include "EditorResource.h"
 #include "EditorUI.h"
+#include "EditorPickingPass.h"
+
+#include "Core/Name.h"
 
 #include "Render/VulkanImpl/VulkanContext.h"
 #include "Render/VulkanImpl/VulkanShaderPass.h"
@@ -26,6 +29,20 @@ namespace sh::editor
 	SH_EDITOR_API EditorWorld::EditorWorld(render::Renderer& renderer, const game::ComponentModule& module, game::ImGUImpl& guiContext) :
 		World(renderer, module), guiContext(guiContext)
 	{
+		pickingPass = renderer.AddRenderPipeline<EditorPickingPass>();
+
+		onComponentAddListener.SetCallback([&](game::Component* component)
+			{
+				game::GameObject* obj = &component->gameObject;
+				onComponentAdd.Notify(obj, component);
+				if (component->GetType() == game::MeshRenderer::GetStaticType())
+				{
+					auto pickingRenderer = obj->AddComponent<game::PickingRenderer>();
+					pickingRenderer->hideInspector = true;
+					pickingRenderer->SetCamera(*pickingCamera);
+				}
+			}
+		);
 	}
 
 	SH_EDITOR_API EditorWorld::~EditorWorld()
@@ -55,9 +72,10 @@ namespace sh::editor
 		auto lineShader = shaders.AddResource("Line", loader.LoadShader("shaders/line.shader"));
 		auto errorShader = shaders.AddResource("ErrorShader", loader.LoadShader("shaders/error.shader"));
 		auto gridShader = shaders.AddResource("GridShader", loader.LoadShader("shaders/grid.shader"));
-		auto pickingShader = shaders.AddResource("PickingShader", loader.LoadShader("shaders/picking.shader"));
+		auto pickingShader = shaders.AddResource("EditorPickingShader", loader.LoadShader("shaders/EditorPicking.shader"));
 		auto outlineShader = shaders.AddResource("OutlineShader", loader.LoadShader("shaders/outline.shader"));
 		auto triangleShader = shaders.AddResource("TriangleShader", loader.LoadShader("shaders/triangle.shader"));
+		auto outlinePPShader = shaders.AddResource("OutlinePPShader", loader.LoadShader("shaders/outlinePP.shader"));
 
 		auto errorMat = materials.AddResource("ErrorMaterial", render::Material{ errorShader });
 		auto lineMat = materials.AddResource("LineMaterial", render::Material{ lineShader });
@@ -99,7 +117,7 @@ namespace sh::editor
 
 		game::GameObject* camObj = AddGameObject("EditorCamera");
 		camObj->transform->SetPosition({ 2.f, 2.f, 2.f });
-		//camObj->hideInspector = true;
+		camObj->hideInspector = true;
 		editorCamera = camObj->AddComponent<game::EditorCamera>();
 		editorCamera->SetUUID(core::UUID{ "61b7bc9f9fd2ca27dcbad8106745f62a" });
 		editorCamera->SetRenderTexture(viewportTexture);
@@ -112,9 +130,12 @@ namespace sh::editor
 		auto PickingCamObj = AddGameObject("PickingCamera");
 		PickingCamObj->transform->SetParent(camObj->transform);
 		PickingCamObj->transform->SetPosition({ 0.f, 0.f, 0.f });
-		auto pickingCam = PickingCamObj->AddComponent<game::PickingCamera>();
-		pickingCam->SetUUID(core::UUID{ "af9cac824334bcaccd86aad8a18e3cba" });
-		pickingCam->SetFollowCamera(editorCamera);
+		pickingCamera = PickingCamObj->AddComponent<game::PickingCamera>();
+		pickingCamera->SetUUID(core::UUID{ "af9cac824334bcaccd86aad8a18e3cba" });
+		pickingCamera->SetFollowCamera(editorCamera);
+		pickingPass->SetCamera(pickingCamera->GetNative());
+
+		renderer.GetRenderPipeline(core::Name{ "Forward" })->IgnoreCamera(pickingCamera->GetNative());
 
 		// 렌더 테스트용 객체
 		//auto prop = core::SObject::Create<render::MaterialPropertyBlock>();
@@ -155,17 +176,25 @@ namespace sh::editor
 		return selected;
 	}
 
+	SH_EDITOR_API auto EditorWorld::AddGameObject(std::string_view name) -> game::GameObject*
+	{
+		auto obj = Super::AddGameObject(name);
+		obj->onComponentAdd.Register(onComponentAddListener);
+		
+		return obj;
+	}
+
 	SH_EDITOR_API void EditorWorld::Start()
 	{
 		editorUI = std::make_unique<editor::EditorUI>(*this, guiContext);
 
-		auto grid = this->AddGameObject("Grid");
+		auto grid = AddGameObject("Grid"); // Grid와 Axis는 피킹 렌더러가 추가 되면 안 된다.
 		grid->hideInspector = true;
 		auto meshRenderer = grid->AddComponent<game::MeshRenderer>();
 		meshRenderer->SetMesh(this->meshes.GetResource("GridMesh"));
 		meshRenderer->SetMaterial(this->materials.GetResource("GridMaterial"));
 
-		auto axis = AddGameObject("Axis");
+		auto axis = Super::AddGameObject("Axis");
 		axis->transform->SetPosition(0.f, 0.01f, 0.f);
 		axis->transform->SetParent(grid->transform);
 		auto line = axis->AddComponent<game::LineRenderer>();
@@ -197,6 +226,7 @@ namespace sh::editor
 		editorUI->Render();
 
 		guiContext.End();
+
 		Super::Update(deltaTime);
 	}
 

@@ -104,6 +104,7 @@ namespace sh::render::vk
 				case StencilState::StencilOp::DecrementWrap:
 					return VkStencilOp::VK_STENCIL_OP_DECREMENT_AND_WRAP;
 				}
+				return VkStencilOp::VK_STENCIL_OP_ZERO;
 			};
 		state.passOp = fn(stencilState.passOp);
 		state.failOp = fn(stencilState.failOp);

@@ -24,7 +24,6 @@ namespace sh::game
 		}
 
 		SetMaterialPropertyBlock(SObject::Create<render::MaterialPropertyBlock>());
-		SetRenderTagId(1 << 31);
 	}
 	SH_GAME_API PickingRenderer::~PickingRenderer()
 	{
@@ -54,21 +53,12 @@ namespace sh::game
 
 			auto propertyBlock = GetMaterialPropertyBlock();
 			propertyBlock->SetProperty("id", glm::vec4{ r, g, b, a });
-
-			
 		}
 	}
 
 	SH_GAME_API void PickingRenderer::SetCamera(PickingCamera& camera)
 	{
 		this->camera = &camera;
-	}
-
-	SH_GAME_API void PickingRenderer::OnPropertyChanged(const core::reflection::Property& prop)
-	{
-		Super::OnPropertyChanged(prop);
-		if (prop.GetName() == "camera")
-			SetCamera(*camera);
 	}
 
 	SH_GAME_API auto PickingIdManager::AssignId(PickingRenderer* renderer) -> uint32_t

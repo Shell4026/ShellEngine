@@ -1,6 +1,6 @@
 #version 430 core
 
-Shader "Picking Shader"
+Shader "Editor Picking Shader"
 {
 	Property
 	{
@@ -8,7 +8,7 @@ Shader "Picking Shader"
 	}
 	Pass
 	{
-		LightingPass "Forward"
+		LightingPass "EditorPicking"
 	
 		Stage Vertex
 		{

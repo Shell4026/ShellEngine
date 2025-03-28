@@ -193,7 +193,7 @@ namespace sh::render::vk
 	}
 	SH_RENDER_API auto VulkanShaderPass::GetSetCount() const -> uint32_t
 	{
-		return descriptorSetLayout.size();
+		return static_cast<uint32_t>(descriptorSetLayout.size());
 	}
 	SH_RENDER_API auto VulkanShaderPass::GetPipelineLayout() const -> VkPipelineLayout
 	{

@@ -46,6 +46,9 @@ namespace sh::render
 			case Texture::TextureFormat::SRGB24:
 				format = VkFormat::VK_FORMAT_R8G8B8_SRGB;
 				break;
+			case Texture::TextureFormat::R8:
+				format = VkFormat::VK_FORMAT_R8_UNORM;
+				break;
 			case Texture::TextureFormat::RGB24:
 				format = VkFormat::VK_FORMAT_R8G8B8_UNORM;
 				break;
@@ -85,7 +88,7 @@ namespace sh::render
 		}
 		return pixels;
 	}
-	inline void RenderTexture::Resize(uint32_t width, uint32_t height)
+	void RenderTexture::Resize(uint32_t width, uint32_t height)
 	{
 		if (context == nullptr)
 			return;
@@ -98,6 +101,9 @@ namespace sh::render
 			{
 			case Texture::TextureFormat::SRGB24:
 				format = VkFormat::VK_FORMAT_R8G8B8_SRGB;
+				break;
+			case Texture::TextureFormat::R8:
+				format = VkFormat::VK_FORMAT_R8_UNORM;
 				break;
 			case Texture::TextureFormat::RGB24:
 				format = VkFormat::VK_FORMAT_R8G8B8_UNORM;

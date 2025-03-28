@@ -93,7 +93,7 @@ namespace sh::game
 
 		/// @brief 게임 오브젝트를 추가한다.
 		/// @param name 오브젝트 이름
-		SH_GAME_API auto AddGameObject(std::string_view name) -> GameObject*;
+		SH_GAME_API virtual auto AddGameObject(std::string_view name) -> GameObject*;
 		SH_GAME_API void DestroyGameObject(std::string_view name);
 		SH_GAME_API void DestroyGameObject(GameObject& obj);
 		/// @brief 가장 먼저 발견 된 해당 이름을 가진 게임 오브젝트를 반환하는 함수 O(N)

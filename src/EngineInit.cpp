@@ -6,8 +6,8 @@
 
 #include "Window/Window.h"
 
+#include "Render/RenderPipeline.h"
 #include "Render/VulkanImpl/VulkanRenderer.h"
-#include "Render/VulkanImpl/VulkanBasePass.h"
 
 #include "Game/ImGUImpl.h"
 #include "Game/RenderThread.h"
@@ -125,7 +125,6 @@ namespace sh
 		renderer = std::make_unique<sh::render::vk::VulkanRenderer>();
 		renderer->Init(*window);
 		renderer->GetContext()->SetViewport({ 150.f, 0.f }, { window->width - 150.f, window->height - 180 });
-		renderer->AddRenderPass<sh::render::vk::VulkanBasePass>();
 
 		gui = std::make_unique<game::ImGUImpl>(*window, static_cast<render::vk::VulkanRenderer&>(*renderer));
 		gui->Init();
@@ -135,6 +134,8 @@ namespace sh
 		world = core::SObject::Create<game::World>(*renderer.get(), *componentModule);
 #endif
 		gc->SetRootSet(world);
+
+		renderer->AddRenderPipeline<sh::render::RenderPipeline>();
 
 		InitResource();
 

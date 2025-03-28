@@ -3,6 +3,7 @@
 #include "ShaderPass.h"
 
 #include "Core/SObject.h"
+#include "Core/Name.h"
 #include "Core/Reflection.hpp"
 
 #include <vector>
@@ -28,7 +29,7 @@ namespace sh::render
 		};
 		struct LightingPassData
 		{
-			std::string name;
+			core::Name name;
 			std::vector<std::unique_ptr<ShaderPass>> passes;
 		};
 	private:
@@ -39,12 +40,12 @@ namespace sh::render
 		void AddShaderPass(std::unique_ptr<ShaderPass>&& pass);
 		template<typename T>
 		void AddProperty(const std::string& name);
-		auto GetLightingPass(const std::string& name) -> LightingPassData*;
-		auto GetLightingPass(const std::string& name) const -> const LightingPassData*;
+		auto GetLightingPass(const core::Name& name) -> LightingPassData*;
+		auto GetLightingPass(const core::Name& name) const -> const LightingPassData*;
 	public:
 		SH_RENDER_API Shader(ShaderCreateInfo&& shaderCreateInfo);
 		SH_RENDER_API ~Shader() = default;
-		SH_RENDER_API auto GetShaderPasses(const std::string& lightingPassName) const -> const std::vector<std::unique_ptr<ShaderPass>>*;
+		SH_RENDER_API auto GetShaderPasses(const core::Name& lightingPassName) const -> const std::vector<std::unique_ptr<ShaderPass>>*;
 		SH_RENDER_API auto GetAllShaderPass() const -> const core::SVector<LightingPassData>&;
 
 		SH_RENDER_API auto GetProperties() const -> const std::unordered_map<std::string, PropertyInfo>&;

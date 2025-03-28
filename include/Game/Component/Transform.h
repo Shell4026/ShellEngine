@@ -42,7 +42,7 @@ namespace sh::game
 		const Vec3& rotation;
 		const glm::mat4& localToWorldMatrix;
 
-		core::Observer<false, const glm::mat4&> onMatrixUpdate;
+		mutable core::Observer<false, const glm::mat4&> onMatrixUpdate;
 	public:
 		SH_GAME_API Transform(GameObject& owner);
 		SH_GAME_API ~Transform();

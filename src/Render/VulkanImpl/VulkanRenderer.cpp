@@ -127,7 +127,6 @@ namespace sh::render::vk
 
 		VulkanCommandBuffer* cmd = context->GetCommandBuffer(core::ThreadType::Render);
 		cmd->Reset();
-
 		cmd->SetWaitSemaphore({ imageAvailableSemaphore });
 		cmd->SetSignalSemaphore({ renderFinishedSemaphore });
 		cmd->SetWaitStage(
@@ -177,18 +176,23 @@ namespace sh::render::vk
 		VulkanCommandBuffer* cmd = context->GetCommandBuffer(core::ThreadType::Render);
 		cmd->Reset();
 
+		std::vector<const Camera*> cams{};
+		cams.reserve(cameras.size());
 		for (auto camera : cameras)
+		{
 			camManager->UploadDataToGPU(*camera);
+			cams.push_back(camera);
+		}
 
 		cmd->Build([&]
 		{
-			for (auto& lightPass : lightingPasses)
+			uint32_t drawcall = 0;
+			for (auto& renderPipeline : renderPipelines)
 			{
-				for (auto camera : cameras)
-				{
-					lightPass->RecordCommand(*camera, imgIdx);
-				}
+				renderPipeline->RecordCommand(cams, imgIdx);
+				drawcall += renderPipeline->GetDrawCallCount();
 			}
+			SetDrawCall(drawcall);
 
 			const VulkanFramebuffer* mainFramebuffer = static_cast<const VulkanFramebuffer*>(context->GetMainFramebuffer(imgIdx));
 

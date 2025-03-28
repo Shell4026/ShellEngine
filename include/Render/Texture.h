@@ -28,6 +28,7 @@ namespace sh::render
 		{
 			SRGB24,
 			SRGBA32,
+			R8,
 			RGB24,
 			RGBA32
 		};

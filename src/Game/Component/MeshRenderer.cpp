@@ -38,20 +38,6 @@ namespace sh::game
 		{
 			worldAABB = mesh->GetBoundingBox().GetWorldAABB(gameObject.transform->localToWorldMatrix);
 
-#if SH_EDITOR
-			if (GetType() == MeshRenderer::GetStaticType())
-			{
-				if (auto picking = gameObject.GetComponent<PickingRenderer>(); picking == nullptr)
-				{
-					picking = gameObject.AddComponent<PickingRenderer>();
-					picking->hideInspector = true;
-					picking->SetMesh(mesh);
-					picking->SetCamera(*world.GetGameObject("PickingCamera")->GetComponent<PickingCamera>());
-				}
-				else
-					picking->SetMesh(mesh);
-			}
-#endif
 			if (drawable == nullptr)
 				CreateDrawable();
 			else

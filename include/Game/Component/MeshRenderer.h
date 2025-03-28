@@ -26,25 +26,26 @@ namespace sh::game
 	{
 		COMPONENT(MeshRenderer)
 	private:
-		core::Observer<false, const glm::mat4&>::Listener onMatrixUpdateListener;
+		PROPERTY(propertyBlock, core::PropertyOption::invisible)
+		PROPERTY(renderTag)
+		PROPERTY(mesh)
+		PROPERTY(mat)
+		PROPERTY(drawable, core::PropertyOption::invisible)
 
 		render::AABB worldAABB;
-
-		PROPERTY(propertyBlock, core::PropertyOption::invisible)
+		
 		render::MaterialPropertyBlock* propertyBlock = nullptr;
 
 		core::SVector<std::pair<const render::ShaderPass*, const render::UniformStructLayout*>> localUniformLocations;
 
-		PROPERTY(renderTag)
+		core::Observer<false, const glm::mat4&>::Listener onMatrixUpdateListener;
+
 		uint32_t renderTag = 1;
 
 		bool bShaderHasLight = false;
 	protected:
-		PROPERTY(mesh);
 		render::Mesh* mesh;
-		PROPERTY(mat);
 		render::Material* mat;
-		PROPERTY(drawable, core::PropertyOption::invisible);
 		render::Drawable* drawable;
 	private:
 		void UpdateMaterialData();

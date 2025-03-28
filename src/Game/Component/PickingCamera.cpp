@@ -32,8 +32,6 @@ namespace sh::game
 		SetRenderTexture(renderTex);
 
 		buffer = render::BufferFactory::Create(*world.renderer.GetContext(), sizeof(uint8_t) * 4, true);
-
-		camera.SetRenderTagMask(1 << 31);
 	}
 
 	SH_GAME_API void PickingCamera::Awake()
@@ -52,8 +50,6 @@ namespace sh::game
 		Super::BeginUpdate();
 		if (!pickingCallback.Empty())
 		{
-
-
 			if (!addTask)
 			{
 				RenderThread::GetInstance()->AddEndTaskFromOtherThread([&]

@@ -2,7 +2,7 @@
 
 #include "Export.h"
 #include "Camera.h"
-#include "ILightingPass.h"
+#include "RenderPipeline.h"
 
 #include "Core/ISyncable.h"
 #include "Core/SContainer.hpp"
@@ -54,18 +54,22 @@ namespace sh::render
 		};
 
 		std::queue<CameraProcess> cameraQueue;
+
+		core::SyncArray<uint32_t> drawcall;
+
+		bool bDirty;
 	protected:
 		std::queue<Drawable*> drawableQueue;
 		std::set<const Camera*, CameraCompare> cameras;
 		std::vector<std::function<void()>> drawCalls;
-		std::vector<std::unique_ptr<ILightingPass>> lightingPasses;
+		std::vector<std::unique_ptr<RenderPipeline>> renderPipelines;
 
 		std::atomic_bool bPause;
-	private:
-		bool bDirty;
 	protected:
 		virtual void OnCameraAdded(const Camera* camera) {};
 		virtual void OnCameraRemoved(const Camera* camera) {};
+
+		void SetDrawCall(uint32_t drawcall);
 	public:
 		SH_RENDER_API Renderer();
 		SH_RENDER_API virtual ~Renderer() = default;
@@ -101,10 +105,11 @@ namespace sh::render
 
 		SH_RENDER_API virtual auto GetContext() const -> IRenderContext* = 0;
 
-		SH_RENDER_API void AddRenderPass(std::unique_ptr<ILightingPass>&& renderPass);
-		              template<typename T, typename Check = std::enable_if_t<std::is_base_of_v<ILightingPass, T>>>
-		              void AddRenderPass();
-		SH_RENDER_API void ClearRenderPass();
+		SH_RENDER_API auto AddRenderPipeline(std::unique_ptr<RenderPipeline>&& renderPipeline) -> RenderPipeline*;
+		              template<typename T, typename Check = std::enable_if_t<std::is_base_of_v<RenderPipeline, T>>>
+		              auto AddRenderPipeline() -> T*;
+		SH_RENDER_API void ClearRenderPipeline();
+		SH_RENDER_API auto GetRenderPipeline(const core::Name& name) const -> RenderPipeline*;
 
 		/// @brief 카메라를 추가한다. 동기화 타이밍 때 추가 된다.
 		/// @param camera 카메라 참조
@@ -112,13 +117,20 @@ namespace sh::render
 		/// @brief 카메라를 제거한다. 동기화 타이밍 때 제거 된다.
 		/// @param camera 카메라 참조
 		SH_RENDER_API void RemoveCamera(const Camera& camera);
+
+		SH_RENDER_API auto GetDrawCall(core::ThreadType thread) const -> uint32_t;
 	};
 
 	template<typename T, typename Check>
-	inline void Renderer::AddRenderPass()
+	inline auto Renderer::AddRenderPipeline() -> T*
 	{
-		std::unique_ptr<ILightingPass> pass = std::make_unique<T>();
-		pass->Init(*GetContext());
-		lightingPasses.push_back(std::move(pass));
+		std::unique_ptr<RenderPipeline> pass{ new T{} };
+		pass->Create(*GetContext());
+
+		auto ptr = pass.get();
+
+		renderPipelines.push_back(std::move(pass));
+
+		return static_cast<T*>(ptr);
 	}
 }

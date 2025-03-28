@@ -7,9 +7,16 @@
 #include <cassert>
 namespace sh::render
 {
+	void Renderer::SetDrawCall(uint32_t drawcall)
+	{
+		this->drawcall[static_cast<uint32_t>(core::ThreadType::Render)] = drawcall;
+		SetDirty();
+	}
+
 	Renderer::Renderer() :
 		window(nullptr),
-		bPause(false), bDirty(false)
+		bPause(false), bDirty(false),
+		drawcall({ 0, 0 })
 	{
 	}
 
@@ -64,17 +71,17 @@ namespace sh::render
 	}
 	SH_RENDER_API void Renderer::Sync()
 	{
-		for (auto& lightingPass : lightingPasses)
+		for (auto& lightingPass : renderPipelines)
 			lightingPass->ClearDrawable();
 
 		while (!drawableQueue.empty())
 		{
 			Drawable* drawable = drawableQueue.front();
 			drawableQueue.pop();
-			if (!core::IsValid(drawable))
+			if (!core::IsValid(drawable) || !drawable->CheckAssetValid())
 				continue;
 
-			for (auto& lightingPass : lightingPasses)
+			for (auto& lightingPass : renderPipelines)
 				lightingPass->PushDrawable(drawable);
 		}
 		while (!cameraQueue.empty())
@@ -92,17 +99,32 @@ namespace sh::render
 				OnCameraRemoved(process.cameraPtr);
 			}
 		}
+		std::swap(drawcall[core::ThreadType::Game], drawcall[core::ThreadType::Render]);
 
 		bDirty = false;
 	}
 
-	SH_RENDER_API void Renderer::AddRenderPass(std::unique_ptr<ILightingPass>&& renderPass)
+	SH_RENDER_API auto Renderer::AddRenderPipeline(std::unique_ptr<RenderPipeline>&& renderPipeline) -> RenderPipeline*
 	{
-		return lightingPasses.push_back(std::move(renderPass));
+		auto ptr = renderPipeline.get();
+		renderPipelines.push_back(std::move(renderPipeline));
+
+		return ptr;
 	}
-	SH_RENDER_API void Renderer::ClearRenderPass()
+	SH_RENDER_API void Renderer::ClearRenderPipeline()
 	{
-		lightingPasses.clear();
+		renderPipelines.clear();
+	}
+	SH_RENDER_API auto Renderer::GetRenderPipeline(const core::Name& name) const -> RenderPipeline*
+	{
+		auto it = std::find_if(renderPipelines.begin(), renderPipelines.end(), [&](const std::unique_ptr<RenderPipeline>& pipeline)
+			{
+				return pipeline->GetPassName() == name;
+			}
+		);
+		if (it == renderPipelines.end())
+			return nullptr;
+		return it->get();
 	}
 
 	SH_RENDER_API void Renderer::AddCamera(const Camera& camera)
@@ -114,5 +136,10 @@ namespace sh::render
 	{
 		cameraQueue.push({ &camera, CameraProcess::Mode::Destroy });
 		SetDirty();
+	}
+
+	SH_RENDER_API auto Renderer::GetDrawCall(core::ThreadType thread) const -> uint32_t
+	{
+		return drawcall[static_cast<uint32_t>(thread)];
 	}
 }

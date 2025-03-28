@@ -127,7 +127,7 @@ namespace sh::render::vk
 		vertexInputInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
 		vertexInputInfo.vertexBindingDescriptionCount = bindingDescriptions.size();
 		vertexInputInfo.pVertexBindingDescriptions = bindingDescriptions.data(); // 버텍스 버퍼 바인딩
-		vertexInputInfo.vertexAttributeDescriptionCount = attributeDescriptions.size();
+		vertexInputInfo.vertexAttributeDescriptionCount = static_cast<uint32_t>(attributeDescriptions.size());
 		vertexInputInfo.pVertexAttributeDescriptions = attributeDescriptions.data(); // 버텍스 어트리뷰트
 
 		VkPipelineInputAssemblyStateCreateInfo inputAssembly{};

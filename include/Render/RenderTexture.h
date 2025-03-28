@@ -24,7 +24,7 @@ namespace sh::render
 		bool bChangeSize = false;
 		bool bReadUsage = false;
 	private:
-		inline void Resize(uint32_t width, uint32_t height);
+		void Resize(uint32_t width, uint32_t height);
 	public:
 		SH_RENDER_API RenderTexture(Texture::TextureFormat format = Texture::TextureFormat::SRGBA32);
 		SH_RENDER_API RenderTexture(RenderTexture&& other) noexcept;

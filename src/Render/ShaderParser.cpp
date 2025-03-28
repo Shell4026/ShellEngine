@@ -848,6 +848,7 @@ namespace sh::render
 		varNode.name = PreviousToken().text;
 
 		ConsumeToken({ ShaderLexer::TokenType::Semicolon, ShaderLexer::TokenType::LSquareBracket });
+		// 배열
 		if (PreviousToken().type == ShaderLexer::TokenType::LSquareBracket)
 		{
 			ConsumeToken(ShaderLexer::TokenType::Number);
@@ -874,7 +875,12 @@ namespace sh::render
 
 		if (varNode.type != ShaderAST::VariableType::Sampler)
 		{
-			if (stageNode.uniforms.empty())
+			auto it = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(), [&](const ShaderAST::UBONode& uboNode)
+				{
+					return uboNode.name == "UBO";
+				}
+			);
+			if (it == stageNode.uniforms.end())
 			{
 				ShaderAST::UBONode uboNode{};
 				uboNode.set = set;
@@ -886,7 +892,7 @@ namespace sh::render
 			}
 			else
 			{
-				ShaderAST::UBONode& uboNode = stageNode.uniforms[0];
+				ShaderAST::UBONode& uboNode = *it;
 				uboNode.vars.push_back(std::move(varNode));
 			}
 		}

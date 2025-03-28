@@ -8,7 +8,6 @@
 
 #include <string_view>
 #include <functional>
-#include <map>
 #include <set>
 #include <memory>
 #include <stdint.h>
@@ -84,7 +83,7 @@ namespace sh::core
 			}
 		};
 
-		core::SSet<Listener*, 4, ListenerComparator> events;
+		std::set<Listener*, ListenerComparator> events;
 	public:
 		Observer();
 		~Observer();

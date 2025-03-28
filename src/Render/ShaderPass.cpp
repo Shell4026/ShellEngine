@@ -1,4 +1,5 @@
-﻿#include "ShaderPass.h"
+﻿
+#include "ShaderPass.h"
 
 namespace sh::render
 {
@@ -68,10 +69,9 @@ namespace sh::render
 	}
 
 	ShaderPass::ShaderPass(const ShaderAST::PassNode& pass, ShaderType type) :
-		type(type) 
+		type(type), lightingPassName(pass.lightingPass)
 	{
 		SetStencilState(pass.stencil);
-		SetLightingPassName(pass.lightingPass);
 		cull = pass.cullMode;
 		bZWrite = pass.zwrite;
 		colorMask = pass.colorMask;
@@ -79,14 +79,16 @@ namespace sh::render
 	}
 
 	ShaderPass::ShaderPass(ShaderPass&& other) noexcept :
-		type(other.type),
+		type(other.type), lightingPassName(other.lightingPassName),
 		attrs(std::move(other.attrs)), attridx(std::move(other.attridx)),
 		vertexUniforms(std::move(other.vertexUniforms)),
 		fragmentUniforms(std::move(other.fragmentUniforms)),
 		samplerUniforms(std::move(other.samplerUniforms))
 	{
 	}
-
+	ShaderPass::~ShaderPass()
+	{
+	}
 	auto ShaderPass::GetShaderType() const -> ShaderType
 	{
 		return type;
@@ -94,6 +96,8 @@ namespace sh::render
 
 	void ShaderPass::operator=(ShaderPass&& other) noexcept
 	{
+		type = other.type;
+		lightingPassName = other.lightingPassName;
 		attrs = std::move(other.attrs);
 		attridx = std::move(other.attridx);
 		vertexUniforms = std::move(other.vertexUniforms);
@@ -172,12 +176,7 @@ namespace sh::render
 	{
 		return colorMask;
 	}
-
-	void ShaderPass::SetLightingPassName(const std::string& name)
-	{
-		lightingPassName = name;
-	}
-	SH_RENDER_API auto ShaderPass::GetLightingPassName() const -> const std::string&
+	SH_RENDER_API auto ShaderPass::GetLightingPassName() const -> const core::Name&
 	{
 		return lightingPassName;
 	}

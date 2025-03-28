@@ -20,12 +20,15 @@ namespace sh::render
 		{
 			std::vector<std::unique_ptr<ShaderPass>> v{};
 			v.push_back(std::move(pass));
-			passes.push_back(LightingPassData{ lightingPassName, std::move(v) });
+
+			LightingPassData passData{ lightingPassName };
+			passData.passes = std::move(v);
+			passes.push_back(std::move(passData));
 		}
 		else
 			lightingPassData->passes.push_back(std::move(pass));
 	}
-	auto Shader::GetLightingPass(const std::string& name) -> LightingPassData*
+	auto Shader::GetLightingPass(const core::Name& name) -> LightingPassData*
 	{
 		auto it = std::find_if(passes.begin(), passes.end(), [&](const LightingPassData& lightingPassData)
 		{
@@ -35,7 +38,7 @@ namespace sh::render
 			return nullptr;
 		return &(*it);
 	}
-	auto Shader::GetLightingPass(const std::string& name) const -> const LightingPassData*
+	auto Shader::GetLightingPass(const core::Name& name) const -> const LightingPassData*
 	{
 		auto it = std::find_if(passes.begin(), passes.end(), [&](const LightingPassData& lightingPassData)
 		{
@@ -69,7 +72,7 @@ namespace sh::render
 			}
 		}
 	}
-	SH_RENDER_API auto Shader::GetShaderPasses(const std::string& lightingPassName) const -> const std::vector<std::unique_ptr<ShaderPass>>*
+	SH_RENDER_API auto Shader::GetShaderPasses(const core::Name& lightingPassName) const -> const std::vector<std::unique_ptr<ShaderPass>>*
 	{
 		const LightingPassData* lightingPassData = GetLightingPass(lightingPassName);
 		if (lightingPassData == nullptr)

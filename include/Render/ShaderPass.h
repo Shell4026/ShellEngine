@@ -6,6 +6,7 @@
 #include "ShaderEnum.h"
 #include "ShaderAST.hpp"
 
+#include "Core/Name.h"
 #include "Core/NonCopyable.h"
 #include "Core/SContainer.hpp"
 #include "Core/Util.h"
@@ -24,7 +25,7 @@ namespace sh::render
 	private:
 		StencilState stencilState{};
 		CullMode cull = CullMode::Back;
-		std::string lightingPassName = "Forward";
+		core::Name lightingPassName;
 		uint8_t colorMask = 7; //0b111
 		bool bZWrite = true;
 		bool bHasConstant = false;
@@ -49,7 +50,6 @@ namespace sh::render
 		void AddUniformLayout(ShaderStage stage, const UniformStructLayout& layout);
 		void AddUniformLayout(ShaderStage stage, UniformStructLayout&& layout);
 		void SetStencilState(StencilState stencilState);
-		void SetLightingPassName(const std::string& name);
 		void FillAttributes(const render::ShaderAST::PassNode& passNode);
 
 		template<typename T>
@@ -61,7 +61,7 @@ namespace sh::render
 		ShaderPass(const ShaderPass& other);
 		ShaderPass(ShaderPass&& other) noexcept;
 	public:
-		SH_RENDER_API virtual ~ShaderPass() = default;
+		SH_RENDER_API virtual ~ShaderPass();
 		SH_RENDER_API void operator=(ShaderPass&& other) noexcept;
 
 		SH_RENDER_API virtual void Clear() = 0;
@@ -75,7 +75,7 @@ namespace sh::render
 		/// @brief RGBA전부 쓰기면 0b1111, R만 쓰기면 0b0001, G만 쓴다면 0b0010, B만 쓴다면 0b0100, A만 쓴다면 0b1000
 		/// @return 컬러 마스크 값
 		SH_RENDER_API auto GetColorMask() const -> uint8_t;
-		SH_RENDER_API auto GetLightingPassName() const -> const std::string&;
+		SH_RENDER_API auto GetLightingPassName() const -> const core::Name&;
 		SH_RENDER_API auto GetId() const -> int;
 		SH_RENDER_API auto GetShaderType() const->ShaderType;
 		SH_RENDER_API auto GetAttributes() const -> const std::vector<AttributeData>&;
