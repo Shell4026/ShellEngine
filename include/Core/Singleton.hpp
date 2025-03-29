@@ -14,17 +14,23 @@ namespace sh::core
 	class ISingleton
 	{
 	private:
-		static std::mutex mu;
-		static std::vector<std::pair<uint64_t, void*>> instance;
+		struct InstanceInfo
+		{
+			uint64_t hash;
+			std::size_t size;
+			void* ptr;
+		};
+		SH_CORE_API static std::mutex mu;
+		SH_CORE_API static std::vector<InstanceInfo> instance;
 	protected:
 		struct Result
 		{
 			void* ptr;
-			bool needInit;
+			bool bNeedInit;
 		};
 
 		SH_CORE_API static auto CreateInstance(uint64_t hash, std::size_t size) -> Result;
-		SH_CORE_API static void DeleteInstance(uint64_t hash);
+		SH_CORE_API static void DeleteInstance(uint64_t hash, std::size_t size);
 	};
 
 	/// @brief 스레드에 안전한 싱글톤 클래스.
@@ -76,19 +82,23 @@ namespace sh::core
 	template<typename ...Args>
 	auto Singleton<T, shareDLL>::GetInstance(Args&&... args) -> T*
 	{
+		// instance 변수는 DLL마다 고유의 주소를 가지고 있다는 점을 기억
 		T* instancePtr = instance.load(std::memory_order::memory_order_acquire);
 		if (instancePtr == nullptr)
 		{
+			// 여기까진 여러 스레드가 동시에 접근 할 가능성이 존재
 			std::lock_guard<std::mutex> lockGuard{ mu };
+			// 여기부턴 한 스레드만 접근 가능
 			instancePtr = instance.load(std::memory_order::memory_order_relaxed);
 			if (instancePtr == nullptr)
 			{
 				if constexpr (shareDLL)
 				{
+					// DLL간 공유 하기 원한다면 ISingleton 클래스에서 이전에 만들어진 객체가 있었는지를 찾는다.
 					uint64_t hash = typeid(T).hash_code();
 					Result result = CreateInstance(hash, sizeof(T));
 					void* resultPtr = result.ptr;
-					if (result.needInit)
+					if (result.bNeedInit)
 						new (resultPtr) T(std::forward<Args>(args)...);
 					instancePtr = reinterpret_cast<T*>(resultPtr);
 				}
@@ -115,7 +125,7 @@ namespace sh::core
 				if constexpr (shareDLL)
 				{
 					instancePtr->~T();
-					DeleteInstance(typeid(T).hash_code());
+					DeleteInstance(typeid(T).hash_code(), sizeof(T));
 				}
 				else
 					delete instancePtr;

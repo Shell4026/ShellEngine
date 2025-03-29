@@ -1,43 +1,45 @@
-﻿#include "PCH.h"
-#include "Singleton.hpp"
+﻿#include "Singleton.hpp"
 
 #include <cstring>
+#include <algorithm>
 namespace sh::core
 {
 	std::mutex ISingleton::mu{};
-	std::vector<std::pair<uint64_t, void*>> ISingleton::instance{};
+	std::vector<ISingleton::InstanceInfo> ISingleton::instance{};
 
 	auto ISingleton::CreateInstance(uint64_t hash, std::size_t size) -> Result
 	{
 		std::lock_guard<std::mutex> lock{ mu };
 
-		for (auto& [instanceHash, instancePtr] : instance)
-		{
-			if(instanceHash == hash)
-				return Result{ instancePtr, false };
-		}
+		auto it = std::find_if(instance.begin(), instance.end(), [&](const InstanceInfo& info)
+			{
+				return info.hash == hash && info.size == size;
+			}
+		);
+		if (it != instance.end())
+			return Result{ it->ptr, false };
+
 		void* ptr = ::operator new(size);
 		std::memset(ptr, 0, size);
-		instance.push_back({ hash, ptr });
+		instance.push_back(InstanceInfo{ hash, size, ptr });
 
 		return Result{ ptr, true };
 	}
 
-	void ISingleton::DeleteInstance(uint64_t hash)
+	void ISingleton::DeleteInstance(uint64_t hash, std::size_t size)
 	{
 		std::lock_guard<std::mutex> lock{ mu };
 
-		for (int i = 0; i < instance.size(); ++i)
-		{
-			uint64_t instanceHash = instance[i].first;
-			void* instancePtr = instance[i].second;
-			if (instanceHash == hash)
+		auto it = std::find_if(instance.begin(), instance.end(), [&](const InstanceInfo& info)
 			{
-				::operator delete(instancePtr);
-				instance.erase(instance.begin() + i);
-				return;
+				return info.hash == hash && info.size == size;
 			}
-		}
-		return;
+		);
+		if (it == instance.end())
+			return;
+
+		void* instancePtr = it->ptr;
+		::operator delete(instancePtr);
+		instance.erase(it);
 	}
 }//namespace
