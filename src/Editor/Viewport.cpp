@@ -2,6 +2,7 @@
 #include "EditorWorld.h"
 
 #include "Core/Logger.h"
+#include "Core/ThreadSyncManager.h"
 
 #include "Game/ImGUImpl.h"
 #include "Game/Input.h"
@@ -11,9 +12,6 @@
 
 #include "Render/RenderTexture.h"
 #include "Render/VulkanImpl/VulkanTextureBuffer.h"
-
-#include "Core/ThreadSyncManager.h"
-
 namespace sh::editor
 {
 	Viewport::Viewport(game::ImGUImpl& imgui, EditorWorld& world) :
@@ -114,6 +112,30 @@ namespace sh::editor
 		SetDirty();
 	}
 
+	void Viewport::RenderOverlay()
+	{
+		ImGuiChildFlags childFlags =
+			ImGuiChildFlags_::ImGuiChildFlags_AutoResizeX |
+			ImGuiChildFlags_::ImGuiChildFlags_AutoResizeY |
+			ImGuiChildFlags_::ImGuiChildFlags_AlwaysAutoResize |
+			ImGuiChildFlags_::ImGuiChildFlags_Border;
+		ImGuiWindowFlags windowFlags =
+			ImGuiWindowFlags_::ImGuiWindowFlags_NoDecoration |
+			ImGuiWindowFlags_::ImGuiWindowFlags_NoDocking |
+			ImGuiWindowFlags_::ImGuiWindowFlags_NoSavedSettings |
+			ImGuiWindowFlags_::ImGuiWindowFlags_NoFocusOnAppearing |
+			ImGuiWindowFlags_::ImGuiWindowFlags_NoNav |
+			ImGuiWindowFlags_::ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_::ImGuiWindowFlags_NoInputs;
+		ImGui::SetNextWindowPos({ x, y });
+		ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
+		if (ImGui::BeginChild("Viewport Overlay", { 0, 0 }, childFlags, windowFlags))
+		{
+			ImGui::Text(fmt::format("Render Call: {}", world.renderer.GetDrawCall(core::ThreadType::Game)).c_str());
+		}
+		ImGui::EndChild();
+	}
+
 	void Viewport::Render()
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
@@ -133,6 +155,13 @@ namespace sh::editor
 				viewportWidthLast = 0;
 			if (viewportHeightLast < 0)
 				viewportHeightLast = 0;
+			
+			if (viewportWidthLast == 0 || viewportHeightLast == 0)
+			{
+				ImGui::End();
+				ImGui::PopStyleVar();
+				return;
+			}
 			ChangeViewportSize();
 		}
 		if (bDirty)
@@ -147,8 +176,11 @@ namespace sh::editor
 			if (viewportDescSet[core::ThreadType::Render])
 				ImGui::Image((ImTextureID)viewportDescSet[core::ThreadType::Render], { width, height });
 		}
-		ImGui::End();
 		ImGui::PopStyleVar();
+		RenderOverlay();
+
+		ImGui::End();
+		
 
 		imgui.SetDirty();
 	}

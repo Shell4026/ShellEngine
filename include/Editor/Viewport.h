@@ -49,6 +49,7 @@ namespace sh::editor
 		bool bDirty;
 		bool bMouseDown;
 		bool bFocus;
+		bool bOverlay = true;
 	protected:
 		EditorWorld& world;
 	public:
@@ -56,6 +57,7 @@ namespace sh::editor
 	private:
 		/// @brief 뷰포트 사이즈가 변했을 시 렌더 텍스쳐의 사이즈를 바꾸는 함수.
 		void ChangeViewportSize();
+		void RenderOverlay();
 	public:
 		SH_EDITOR_API Viewport(game::ImGUImpl& imgui, EditorWorld& world);
 		SH_EDITOR_API ~Viewport() noexcept;

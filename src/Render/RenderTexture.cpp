@@ -130,6 +130,7 @@ namespace sh::render
 	}
 	SH_RENDER_API void RenderTexture::SetSize(uint32_t width, uint32_t height)
 	{
+		assert(width != 0 && height != 0);
 		this->width = width;
 		this->height = height;
 
