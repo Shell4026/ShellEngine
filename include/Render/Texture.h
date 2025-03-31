@@ -1,10 +1,10 @@
 ﻿#pragma once
-
 #include "Export.h"
 
 #include "Core/ISyncable.h"
 #include "Core/NonCopyable.h"
 #include "Core/SObject.h"
+#include "Core/Observer.hpp"
 
 #include <cstdint>
 #include <memory>

@@ -15,14 +15,17 @@ namespace sh::render
 		SCLASS(RenderTexture);
 	private:
 		PROPERTY(width);
-		uint32_t width;
 		PROPERTY(height);
+
+		uint32_t width;
 		uint32_t height;
 
 		core::SyncArray<std::unique_ptr<Framebuffer>> framebuffer;
 
 		bool bChangeSize = false;
 		bool bReadUsage = false;
+	public:
+		mutable core::Observer<false, const RenderTexture*> onResize;
 	private:
 		void Resize(uint32_t width, uint32_t height);
 	public:

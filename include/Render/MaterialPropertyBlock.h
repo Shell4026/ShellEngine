@@ -34,6 +34,7 @@ namespace sh::render
 		SH_RENDER_API auto GetVectorProperty(const std::string& name) const -> const glm::vec4*;
 		SH_RENDER_API auto GetMatrixProperty(const std::string& name) const -> const glm::mat4*;
 		SH_RENDER_API auto GetTextureProperty(const std::string& name) const -> const Texture*;
+		SH_RENDER_API auto GetTextureProperties() const -> const std::unordered_map<std::string, const Texture*>&;
 
 		SH_RENDER_API auto Serialize() const -> core::Json override;
 		SH_RENDER_API void Deserialize(const core::Json& json) override;

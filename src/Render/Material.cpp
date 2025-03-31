@@ -1,5 +1,6 @@
 ﻿#include "Material.h"
 #include "IRenderContext.h"
+#include "RenderTexture.h"
 
 #include "Core/Util.h"
 #include "Core/SObjectManager.h"
@@ -12,6 +13,18 @@ namespace sh::render
 		materialData = std::make_unique<MaterialData>();
 
 		propertyBlock = core::SObject::Create<MaterialPropertyBlock>();
+
+		onResizeListener.SetCallback([&](const RenderTexture* resized)
+			{
+				for (auto& [name, tex] : propertyBlock->GetTextureProperties())
+				{
+					if (tex != resized)
+						continue;
+
+					SetProperty(name, static_cast<const RenderTexture*>(tex));
+				}
+			}
+		);
 	}
 	SH_RENDER_API Material::Material(Shader* shader) :
 		shader(shader)
@@ -19,6 +32,17 @@ namespace sh::render
 		materialData = std::make_unique<MaterialData>();
 		propertyBlock = core::SObject::Create<MaterialPropertyBlock>();
 
+		onResizeListener.SetCallback([&](const RenderTexture* resized)
+			{
+				for (auto& [name, tex] : propertyBlock->GetTextureProperties())
+				{
+					if (tex != resized)
+						continue;
+
+					SetProperty(name, static_cast<const RenderTexture*>(tex));
+				}
+			}
+		);
 		SetDefaultProperties();
 	}
 
@@ -26,15 +50,28 @@ namespace sh::render
 		context(other.context),
 		shader(other.shader),
 		bPropertyDirty(other.bPropertyDirty),
-		dirtyPropSet(std::move(other.dirtyPropSet)),
+		dirtyProps(std::move(other.dirtyProps)),
 		materialData(std::move(other.materialData)),
-		propertyBlock(other.propertyBlock)
+		propertyBlock(other.propertyBlock),
+		onResizeListener(std::move(other.onResizeListener))
 	{
 		other.context = nullptr;
 		other.shader = nullptr;
 		other.propertyBlock = nullptr;
 
 		other.bPropertyDirty = false;
+
+		onResizeListener.SetCallback([&](const RenderTexture* resized)
+			{
+				for (auto& [name, tex] : propertyBlock->GetTextureProperties())
+				{
+					if (tex != resized)
+						continue;
+
+					SetProperty(name, static_cast<const RenderTexture*>(tex));
+				}
+			}
+		);
 	}
 
 	void Material::Clear()
@@ -93,7 +130,7 @@ namespace sh::render
 		if (!bPropertyDirty || !core::IsValid(shader))
 			return;
 
-		for (auto& [pass, uniformLayout] : dirtyPropSet)
+		for (auto& [pass, uniformLayout] : dirtyProps)
 		{
 			std::vector<uint8_t> data(uniformLayout->GetSize(), 0);
 			bool isSampler = false;
@@ -191,9 +228,33 @@ namespace sh::render
 		propertyBlock->SetProperty(name, data);
 
 		for (auto& location : propInfo->locations)
-			dirtyPropSet.insert({ location.passPtr, location.layoutPtr });
+		{
+			auto it = std::find(dirtyProps.begin(), dirtyProps.end(), std::pair{ location.passPtr, location.layoutPtr });
+			if (it == dirtyProps.end())
+				dirtyProps.push_back({ location.passPtr, location.layoutPtr });
+		}
 
 		bPropertyDirty = true;
+	}
+	SH_RENDER_API void Material::SetProperty(const std::string& name, Texture* data)
+	{
+		SetProperty(name, static_cast<const Texture*>(data));
+	}
+	SH_RENDER_API void Material::SetProperty(const std::string& name, const RenderTexture* data)
+	{
+		auto var = GetProperty<const Texture*>(name);
+		if (var != data)
+		{
+			if (var != nullptr)
+				static_cast<const RenderTexture*>(var.value())->onResize.UnRegister(onResizeListener);
+			data->onResize.Register(onResizeListener);
+		}
+
+		SetProperty(name, static_cast<const Texture*>(data));
+	}
+	SH_RENDER_API void Material::SetProperty(const std::string& name, RenderTexture* data)
+	{
+		SetProperty(name, static_cast<const RenderTexture*>(data));
 	}
 
 	SH_RENDER_API auto Material::GetMaterialData() const -> const MaterialData&

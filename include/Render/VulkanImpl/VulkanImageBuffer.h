@@ -41,8 +41,6 @@ namespace sh::render::vk
 			VkPhysicalDeviceProperties* gpuProp = nullptr) -> VkResult;
 		SH_RENDER_API void Clean();
 
-		SH_RENDER_API void TransitionImageLayout(VulkanCommandBuffer* cmd, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
-
 		SH_RENDER_API auto GetImage() const ->VkImage;
 		SH_RENDER_API auto GetImageView() const -> VkImageView;
 		SH_RENDER_API auto GetSampler() const -> VkSampler;

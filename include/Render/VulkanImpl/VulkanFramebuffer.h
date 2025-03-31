@@ -39,6 +39,7 @@ namespace sh::render::vk
 		bool bTransferSrc = false;
 		bool bUseDepth = true;
 		bool bUseStencil = false;
+		bool bOffScreen = false;
 	private:
 		void CreateDepthBuffer();
 	public:

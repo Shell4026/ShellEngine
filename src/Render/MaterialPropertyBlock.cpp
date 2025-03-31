@@ -42,6 +42,10 @@ namespace sh::render
 			return nullptr;
 		return it->second;
 	}
+	SH_RENDER_API auto MaterialPropertyBlock::GetTextureProperties() const -> const std::unordered_map<std::string, const Texture*>&
+	{
+		return textureProperties;
+	}
 	SH_RENDER_API auto sh::render::MaterialPropertyBlock::Serialize() const -> core::Json
 	{
 		core::Json propertiesJson{};

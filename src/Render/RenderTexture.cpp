@@ -21,7 +21,8 @@ namespace sh::render
 		Texture(std::move(other)),
 
 		width(other.width), height(other.height),
-		framebuffer(std::move(other.framebuffer))
+		framebuffer(std::move(other.framebuffer)),
+		onResize(std::move(other.onResize))
 	{
 
 	}
@@ -135,6 +136,7 @@ namespace sh::render
 		this->height = height;
 
 		Resize(width, height);
+		onResize.Notify(this);
 
 		bChangeSize = true;
 		SetDirty();

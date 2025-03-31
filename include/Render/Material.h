@@ -26,6 +26,8 @@
 
 namespace sh::render
 {
+	class RenderTexture;
+
 	class Material : 
 		public core::SObject, 
 		public IRenderResource
@@ -35,14 +37,17 @@ namespace sh::render
 		const IRenderContext* context = nullptr;
 
 		PROPERTY(shader)
+		PROPERTY(propertyBlock)
+
 		Shader* shader;
 
-		PROPERTY(propertyBlock)
 		MaterialPropertyBlock* propertyBlock = nullptr;
 
-		std::set<std::pair<const ShaderPass*, const UniformStructLayout*>> dirtyPropSet;
-
 		std::unique_ptr<MaterialData> materialData;
+
+		std::vector<std::pair<const ShaderPass*, const UniformStructLayout*>> dirtyProps;
+		
+		core::Observer<false, const RenderTexture*>::Listener onResizeListener;
 
 		bool bPropertyDirty = false;
 	private:
@@ -76,6 +81,9 @@ namespace sh::render
 		              template<typename T>
 		              void SetProperty(const std::string& name, const T& data);
 		SH_RENDER_API void SetProperty(const std::string& name, const Texture* data);
+		SH_RENDER_API void SetProperty(const std::string& name, Texture* data);
+		SH_RENDER_API void SetProperty(const std::string& name, const RenderTexture* data);
+		SH_RENDER_API void SetProperty(const std::string& name, RenderTexture* data);
 		              template<typename T>
 					  auto GetProperty(const std::string& name) const -> std::optional<T>;
 
@@ -105,7 +113,11 @@ namespace sh::render
 		propertyBlock->SetProperty(name, data);
 
 		for (auto& location : propInfo->locations)
-			dirtyPropSet.insert({ location.passPtr, location.layoutPtr });
+		{
+			auto it = std::find(dirtyProps.begin(), dirtyProps.end(), std::pair{ location.passPtr, location.layoutPtr });
+			if (it == dirtyProps.end())
+				dirtyProps.push_back({ location.passPtr, location.layoutPtr });
+		}
 
 		bPropertyDirty = true;
 	}

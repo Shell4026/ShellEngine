@@ -41,8 +41,10 @@ namespace sh::core
 			Listener(const std::function<void(Args...)>& func, int priority = 0) :
 				func(func), priority(priority)
 			{}
-			Listener(Listener&& other) noexcept :
-				observers(std::move(other.observers)), func(std::move(other.func)), priority(other.priority)
+			/// @brief 주의! 콜백 함수는 이동 안 됨
+			/// @param other 다른 Listener 객체
+			Listener(Listener&& other) :
+				observers(std::move(other.observers)), priority(other.priority)
 			{
 				for (auto observer : observers)
 				{
@@ -54,6 +56,7 @@ namespace sh::core
 			{
 				if (observers.empty())
 					return;
+				// UnRegister하는 순간 observers의 반복자가 깨지기 때문에 이런식으로 처리
 				std::vector<Observer*> tmp;
 				tmp.reserve(observers.size());
 				for (auto observer : observers)
@@ -74,7 +77,8 @@ namespace sh::core
 
 			void Execute(Args... args)
 			{
-				func(args...);
+				if (func)
+					func(args...);
 			}
 		};
 	private:

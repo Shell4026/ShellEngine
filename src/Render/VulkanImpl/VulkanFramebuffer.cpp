@@ -24,12 +24,13 @@ namespace sh::render::vk
 		framebuffer(other.framebuffer), img(other.img), renderPass(other.renderPass),
 		colorImg(std::move(other.colorImg)), depthImg(std::move(other.depthImg)),
 		width(other.width), height(other.height), format(other.format),
-		bTransferSrc(other.bTransferSrc)
+		bTransferSrc(other.bTransferSrc), bOffScreen(other.bOffScreen)
 	{
 		other.renderPass = nullptr;
 		other.framebuffer = nullptr;
 		other.img = nullptr;
 		other.bTransferSrc = false;
+		other.bOffScreen = false;
 	}
 
 	SH_RENDER_API VulkanFramebuffer::~VulkanFramebuffer()
@@ -79,7 +80,7 @@ namespace sh::render::vk
 		};
 
 		VkFramebufferCreateInfo framebufferInfo{};
-		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		framebufferInfo.pNext = nullptr;
 		framebufferInfo.renderPass = renderPass.GetVkRenderPass();
 		framebufferInfo.attachmentCount = bUseDepth ? static_cast<uint32_t>(views.size()) : 1;
@@ -100,9 +101,11 @@ namespace sh::render::vk
 		this->bTransferSrc = bTransferSrc;
 		this->format = format;
 		this->renderPass = &renderPass;
+		bOffScreen = true;
 
-		VkImageUsageFlags usage = VkImageUsageFlagBits::VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-		usage |= VkImageUsageFlagBits::VK_IMAGE_USAGE_SAMPLED_BIT;
+		VkImageUsageFlags usage = 
+			VkImageUsageFlagBits::VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | 
+			VkImageUsageFlagBits::VK_IMAGE_USAGE_SAMPLED_BIT;
 		if (bTransferSrc) 
 			usage |= VkImageUsageFlagBits::VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
@@ -119,7 +122,7 @@ namespace sh::render::vk
 		};
 
 		VkFramebufferCreateInfo framebufferInfo{};
-		framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+		framebufferInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		framebufferInfo.pNext = nullptr;
 		framebufferInfo.renderPass = renderPass.GetVkRenderPass();
 		framebufferInfo.attachmentCount = bUseDepth ? static_cast<uint32_t>(views.size()) : 1;
@@ -143,8 +146,8 @@ namespace sh::render::vk
 		auto result = depthImg->Create(width, height, depthFormat,
 			VkImageUsageFlagBits::VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
 			VkImageAspectFlagBits::VK_IMAGE_ASPECT_DEPTH_BIT);
-		assert(result == VkResult::VK_SUCCESS);
 
+		assert(result == VkResult::VK_SUCCESS);
 	}
 
 	SH_RENDER_API void VulkanFramebuffer::Clean()
@@ -164,7 +167,10 @@ namespace sh::render::vk
 		barrier.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 		barrier.srcAccessMask = VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 		barrier.dstAccessMask = VkAccessFlagBits::VK_ACCESS_TRANSFER_READ_BIT;
-		barrier.oldLayout = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		if (!bOffScreen)
+			barrier.oldLayout = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		else
+			barrier.oldLayout = VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		barrier.newLayout = VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
@@ -176,15 +182,18 @@ namespace sh::render::vk
 		barrier.subresourceRange.layerCount = 1;
 
 		VkImageMemoryBarrier toColorAttachmentBarrier = {};
-		toColorAttachmentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		toColorAttachmentBarrier.srcAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-		toColorAttachmentBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
-		toColorAttachmentBarrier.oldLayout = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-		toColorAttachmentBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		toColorAttachmentBarrier.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		toColorAttachmentBarrier.srcAccessMask = VkAccessFlagBits::VK_ACCESS_TRANSFER_READ_BIT;
+		toColorAttachmentBarrier.dstAccessMask = VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+		toColorAttachmentBarrier.oldLayout = VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
+		if (!bOffScreen)
+			toColorAttachmentBarrier.newLayout = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		else
+			toColorAttachmentBarrier.newLayout = VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 		toColorAttachmentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		toColorAttachmentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
 		toColorAttachmentBarrier.image = colorImg->GetImage();
-		toColorAttachmentBarrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		toColorAttachmentBarrier.subresourceRange.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
 		toColorAttachmentBarrier.subresourceRange.baseMipLevel = 0;
 		toColorAttachmentBarrier.subresourceRange.levelCount = 1;
 		toColorAttachmentBarrier.subresourceRange.baseArrayLayer = 0;
@@ -206,7 +215,7 @@ namespace sh::render::vk
 			region.bufferOffset = 0;
 			region.bufferRowLength = 0;
 			region.bufferImageHeight = 0;
-			region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			region.imageSubresource.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
 			region.imageSubresource.mipLevel = 0;
 			region.imageSubresource.baseArrayLayer = 0;
 			region.imageSubresource.layerCount = 1;
