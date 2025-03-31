@@ -85,8 +85,8 @@ namespace sh::game
 			{
 				if (!core::IsValid(component))
 					continue;
-				if (T* casting = sh::core::reflection::Cast<T>(component); casting != nullptr)
-					return casting;
+				if (component->GetType().IsA(T::GetStaticType()))
+					return static_cast<T*>(component);
 			}
 			return nullptr;
 		}
