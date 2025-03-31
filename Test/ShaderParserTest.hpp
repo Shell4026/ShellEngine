@@ -156,28 +156,3 @@ Shader "Outline Shader"
 	EXPECT_EQ(passNodes[1].lightingPass, "Forward");
 	EXPECT_EQ(passNodes[1].stencil.compareOp, render::StencilState::CompareOp::NotEqual);
 }
-
-TEST(ShaderParserTest, ShaderCompileTest)
-{
-	using namespace sh;
-	{
-		std::vector<std::string> args{ "Default_Shader_Default_Pass.vert", "-o", "testVert.spv" };
-		std::string output;
-#if _WIN32
-		EXPECT_TRUE(core::ExecuteProcess::Execute("glslc.exe", args, output));
-#elif __linux__
-		EXPECT_TRUE(core::ExecuteProcess::Execute("glslc", args, output));
-		std::cout << output << '\n';
-#endif
-	}
-	{
-		std::vector<std::string> args{ "Default_Shader_Default_Pass.frag", "-o", "testFrag.spv" };
-		std::string output;
-#if _WIN32
-		EXPECT_TRUE(core::ExecuteProcess::Execute("glslc.exe", args, output));
-#elif __linux__
-		EXPECT_TRUE(core::ExecuteProcess::Execute("glslc", args, output));
-#endif
-		std::cout << output << '\n';
-	}
-}

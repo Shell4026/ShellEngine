@@ -16,6 +16,7 @@ namespace sh::render::vk
 
 	SH_RENDER_API auto VulkanRenderPassManager::GetOrCreateRenderPass(const VulkanRenderPass::Config& config) -> VulkanRenderPass&
 	{
+		std::lock_guard<std::mutex> lock{ mu };
 		auto it = renderPasses.find(config);
 		if (it == renderPasses.end())
 			return renderPasses.insert_or_assign(config, CreateRenderPass(config)).first->second;

@@ -61,6 +61,11 @@ namespace sh::game
 		SH_GAME_API void SetUpVector(const Vec3& up);
 		SH_GAME_API auto GetUpVector() const -> Vec3;
 
+		SH_GAME_API void SetWidth(float width);
+		SH_GAME_API auto GetWidth() const -> float;
+		SH_GAME_API void SetHeight(float height);
+		SH_GAME_API auto GetHeight() const -> float;
+
 #ifdef SH_EDITOR
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 #endif

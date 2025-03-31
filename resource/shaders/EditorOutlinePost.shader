@@ -1,40 +1,17 @@
 #version 430 core
 
-Shader "PostProcess Outline Shader"
+Shader "Editor Outline PostProcess Shader"
 {
 	Property
 	{
 		float outlineWidth;
 		vec4 outlineColor;
 		sampler2D tex;
-		vec2 texSize;
 	}
-	
 	Pass
 	{
-		LightingPass "GBuffer"
+		LightingPass "EditorPostOutline"
 		Cull Off;
-		
-		Stage Vertex
-		{
-			void main()
-			{
-				gl_Position = MATRIX_PROJ * MATRIX_VIEW * MATRIX_MODEL * vec4(VERTEX, 1.0f);
-			}
-		}
-		Stage Fragment
-		{
-			layout(location = 0) out vec4 outColor;
-			void main()
-			{
-				outColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);
-			}
-		}
-	}
-	Pass
-	{
-		LightingPass "PostProcess"
-		Cull Back;
 		
 		Stage Vertex
 		{
@@ -50,7 +27,6 @@ Shader "PostProcess Outline Shader"
 			layout(location = 0) out vec4 outColor;
 			layout(location = 0) in vec2 uvs;
 			uniform sampler2D tex;
-			uniform vec2 texSize;
 			uniform vec4 outlineColor;
 			uniform float outlineWidth;
 
@@ -73,7 +49,11 @@ Shader "PostProcess Outline Shader"
 			
 			void main() 
 			{
-				outColor = outlineColor * SobelFilter(outlineWidth / texSize.x, outlineWidth / texSize.y, uvs);
+				float intensity = SobelFilter(outlineWidth / 512, outlineWidth / 512, uvs);
+				outColor = outlineColor;
+				if (intensity < 0.1)
+					discard;
+				outColor.a = intensity;
 			}
 		}
 	}

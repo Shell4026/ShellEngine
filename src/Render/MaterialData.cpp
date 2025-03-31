@@ -178,8 +178,6 @@ namespace sh::render
 		if (!core::IsValid(tex))
 			return;
 
-		uint32_t set = static_cast<uint32_t>(type);
-
 		auto it = std::find_if(perPassData[core::ThreadType::Game].begin(), perPassData[core::ThreadType::Game].end(),
 			[&](const MaterialData::PassData& passData)
 			{
@@ -189,6 +187,7 @@ namespace sh::render
 		if (it == perPassData[core::ThreadType::Game].end())
 			return;
 
+		uint32_t set = static_cast<uint32_t>(type);
 		if (std::find_if(shaderPass.GetSamplerUniforms().begin(), shaderPass.GetSamplerUniforms().end(), 
 			[&](const UniformStructLayout& layout)
 			{

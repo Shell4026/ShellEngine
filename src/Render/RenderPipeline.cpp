@@ -23,6 +23,7 @@ namespace sh::render
 		if (context.GetRenderAPIType() == render::RenderAPI::Vulkan)
 		{
 			impl = std::make_unique<vk::VulkanRenderPipelineImpl>(static_cast<vk::VulkanContext&>(context));
+			impl->SetClear(bClear);
 		}
 	}
 
@@ -87,6 +88,12 @@ namespace sh::render
 			mat->onDestroy.Register(materialDestroyListener);
 			replacementMat = mat;
 		}
+	}
+	SH_RENDER_API void RenderPipeline::SetClear(bool bClear)
+	{
+		this->bClear = bClear;
+		if (impl)
+			impl->SetClear(bClear);
 	}
 	SH_RENDER_API void RenderPipeline::IgnoreCamera(const Camera& camera)
 	{

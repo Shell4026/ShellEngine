@@ -74,6 +74,7 @@ namespace sh::game
 		SH_GAME_API void SetMaterial(sh::render::Material* mat);
 		SH_GAME_API auto GetMaterial() const -> sh::render::Material*;
 
+		SH_GAME_API void Destroy() override;
 		SH_GAME_API void Awake() override;
 		SH_GAME_API void Start() override;
 		SH_GAME_API void Update() override;

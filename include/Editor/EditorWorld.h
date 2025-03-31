@@ -15,6 +15,8 @@ namespace sh::editor
 {
 	class EditorUI;
 	class EditorPickingPass;
+	class EditorOutlinePass;
+	class EditorPostOutlinePass;
 	/// @brief 에디터용 월드 클래스
 	class EditorWorld : public game::World
 	{
@@ -27,12 +29,16 @@ namespace sh::editor
 		
 		game::EditorCamera* editorCamera = nullptr;
 		game::PickingCamera* pickingCamera = nullptr;
+		game::GameObject* grid = nullptr;
+		game::GameObject* axis = nullptr;
 
 		game::ImGUImpl& guiContext;
 
 		std::unique_ptr<EditorUI> editorUI;
 
 		EditorPickingPass* pickingPass = nullptr;
+		EditorOutlinePass* outlinePass = nullptr;
+		EditorPostOutlinePass* postOutlinePass = nullptr;
 
 		core::Observer<false, game::Component*>::Listener onComponentAddListener;
 	public:

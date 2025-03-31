@@ -9,21 +9,16 @@ namespace sh::render::vk
 	class VulkanContext;
 	class VulkanRenderPass : public core::INonCopyable
 	{
-	private:
-		const VulkanContext& context;
-		VkRenderPass renderPass = VK_NULL_HANDLE;
-
-		bool bOffscreen = false;
-		bool bUseStencil = false;
-		bool bTransferSrc = false;
 	public:
 		struct Config
 		{
 			VkFormat format;
 			VkFormat depthFormat;
 			bool bOffScreen = false;
+			bool bUseDepth = true;
 			bool bUseStencil = false;
 			bool bTransferSrc = false;
+			bool bClear = true;
 
 			SH_RENDER_API auto operator==(const Config& other) const -> bool;
 		};
@@ -31,6 +26,10 @@ namespace sh::render::vk
 		{
 			SH_RENDER_API auto operator()(const Config& config) const->std::size_t;
 		};
+	private:
+		const VulkanContext& context;
+		VkRenderPass renderPass = VK_NULL_HANDLE;
+		Config config;
 	public:
 		SH_RENDER_API VulkanRenderPass(const VulkanContext& context);
 		SH_RENDER_API VulkanRenderPass(VulkanRenderPass&& other) noexcept;
@@ -39,5 +38,6 @@ namespace sh::render::vk
 		SH_RENDER_API void Create(const Config& config);
 		SH_RENDER_API void Clear();
 		SH_RENDER_API auto GetVkRenderPass() const -> VkRenderPass;
+		SH_RENDER_API auto GetConfig() const -> const Config&;
 	};
 }//namespace

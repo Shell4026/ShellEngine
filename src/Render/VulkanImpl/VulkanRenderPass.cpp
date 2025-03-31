@@ -12,8 +12,10 @@ namespace sh::render::vk
 		return (format == other.format) &&
 			(depthFormat == other.depthFormat) &&
 			(bOffScreen == other.bOffScreen) &&
+			(bUseDepth == other.bUseDepth) &&
 			(bUseStencil == other.bUseStencil) &&
-			(bTransferSrc == other.bTransferSrc);
+			(bTransferSrc == other.bTransferSrc) &&
+			(bClear == other.bClear);
 	}
 	SH_RENDER_API auto VulkanRenderPass::ConfigHasher::operator()(const Config& config) const -> std::size_t
 	{
@@ -23,8 +25,10 @@ namespace sh::render::vk
 		std::size_t hash = 0;
 		hash = core::Util::CombineHash(intHash(config.format), intHash(config.depthFormat));
 		hash = core::Util::CombineHash(hash, boolHash(config.bOffScreen));
+		hash = core::Util::CombineHash(hash, boolHash(config.bUseDepth));
 		hash = core::Util::CombineHash(hash, boolHash(config.bUseStencil));
 		hash = core::Util::CombineHash(hash, boolHash(config.bTransferSrc));
+		hash = core::Util::CombineHash(hash, boolHash(config.bClear));
 		return hash;
 	}
 	VulkanRenderPass::VulkanRenderPass(const VulkanContext& context) :
@@ -34,7 +38,7 @@ namespace sh::render::vk
 	VulkanRenderPass::VulkanRenderPass(VulkanRenderPass&& other) noexcept :
 		context(other.context),
 		renderPass(other.renderPass),
-		bOffscreen(other.bOffscreen), bUseStencil(other.bUseStencil), bTransferSrc(other.bTransferSrc)
+		config(other.config)
 	{
 		other.renderPass = VK_NULL_HANDLE;
 	}
@@ -45,42 +49,39 @@ namespace sh::render::vk
 	auto VulkanRenderPass::operator=(VulkanRenderPass&& other) noexcept -> VulkanRenderPass&
 	{
 		renderPass = other.renderPass;
-		bOffscreen = other.bOffscreen;
-		bUseStencil = other.bUseStencil;
-		bTransferSrc = other.bTransferSrc;
+		config = other.config;
 
 		other.renderPass = VK_NULL_HANDLE;
 
 		return *this;
 	}
-	void VulkanRenderPass::Create(const Config& config)
+	void VulkanRenderPass::Create(const Config& _config)
 	{
-		this->bOffscreen = config.bOffScreen;
-		this->bUseStencil = config.bUseStencil;
-		this->bTransferSrc = config.bTransferSrc;
+		config = _config;
+		if (_config.bUseStencil)
+			config.bUseDepth = true;
 
 		VkAttachmentDescription colorAttachment{};
 		colorAttachment.format = config.format;
 		colorAttachment.samples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
-		colorAttachment.loadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR;
+		colorAttachment.loadOp = config.bClear ? VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR : VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_LOAD;
 		colorAttachment.storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE;
 		colorAttachment.stencilLoadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		colorAttachment.stencilStoreOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		colorAttachment.initialLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
-		if (bTransferSrc)
-			colorAttachment.finalLayout = VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-		else
-			colorAttachment.finalLayout = bOffscreen ? 
-				VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		colorAttachment.initialLayout = 
+			config.bClear ? VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED : 
+			config.bOffScreen ? VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		colorAttachment.finalLayout = config.bTransferSrc ? VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL :
+			config.bOffScreen ? VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 
 		VkAttachmentDescription depthAttachment{};
 		depthAttachment.format = config.depthFormat;
 		depthAttachment.samples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
-		depthAttachment.loadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR;
+		depthAttachment.loadOp = config.bClear ? VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR : VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_LOAD;
 		depthAttachment.storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE;
-		depthAttachment.stencilLoadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR;
+		depthAttachment.stencilLoadOp = config.bClear ? VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR : VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_LOAD;
 		depthAttachment.stencilStoreOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		depthAttachment.initialLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
+		depthAttachment.initialLayout = config.bClear ? VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED : VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 		depthAttachment.finalLayout = VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
 		//렌더패스 중 ColorAttachment는 색상 첨부 전용 최적화 레이아웃이 된다. (픽셀 셰이더 출력)
@@ -96,10 +97,10 @@ namespace sh::render::vk
 		subpass.pipelineBindPoint = VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS;
 		subpass.colorAttachmentCount = 1;
 		subpass.pColorAttachments = &colorAttachmentRef;
-		subpass.pDepthStencilAttachment = &depthAttachmentRef;
+		subpass.pDepthStencilAttachment = config.bUseDepth ? &depthAttachmentRef : nullptr;
 
 		std::array<VkSubpassDependency, 2> dependencies;
-		if (bOffscreen)
+		if (config.bOffScreen)
 		{
 			dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL; // 외부 작업
 			dependencies[0].dstSubpass = 0;
@@ -168,7 +169,7 @@ namespace sh::render::vk
 		std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
 		VkRenderPassCreateInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+		renderPassInfo.attachmentCount = config.bUseDepth ? static_cast<uint32_t>(attachments.size()) : 1;
 		renderPassInfo.pAttachments = attachments.data();
 		renderPassInfo.subpassCount = 1;
 		renderPassInfo.pSubpasses = &subpass;
@@ -191,5 +192,9 @@ namespace sh::render::vk
 	SH_RENDER_API auto sh::render::vk::VulkanRenderPass::GetVkRenderPass() const -> VkRenderPass
 	{
 		return renderPass;
+	}
+	SH_RENDER_API auto VulkanRenderPass::GetConfig() const -> const Config&
+	{
+		return config;
 	}
 }//namespace

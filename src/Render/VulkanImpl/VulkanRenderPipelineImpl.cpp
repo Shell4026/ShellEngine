@@ -8,6 +8,7 @@
 #include "VulkanRenderPass.h"
 #include "VulkanUniformBuffer.h"
 #include "VulkanCameraBuffers.h"
+#include "VulkanRenderPassManager.h"
 #include "RenderTexture.h"
 #include "Camera.h"
 #include "Mesh.h"
@@ -128,8 +129,8 @@ namespace sh::render::vk
 		VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		renderPassInfo.renderArea.offset = { 0, 0 };
-		renderPassInfo.clearValueCount = static_cast<uint32_t>(clear.size());
-		renderPassInfo.pClearValues = clear.data();
+		renderPassInfo.clearValueCount = bClearFramebuffer ? static_cast<uint32_t>(clear.size()) : 0;
+		renderPassInfo.pClearValues = bClearFramebuffer ? clear.data() : nullptr;
 
 		VkViewport viewport{};
 		viewport.minDepth = 0.0f;
@@ -166,8 +167,16 @@ namespace sh::render::vk
 			else
 			{
 				auto vkFramebuffer = static_cast<VulkanFramebuffer*>(renderTexture->GetFramebuffer(core::ThreadType::Render));
-				renderPass = vkFramebuffer->GetRenderPass()->GetVkRenderPass();
-				renderPassInfo.renderPass = vkFramebuffer->GetRenderPass()->GetVkRenderPass();
+				auto config = vkFramebuffer->GetRenderPass()->GetConfig();
+				if (config.bClear != bClearFramebuffer)
+				{
+					config.bClear = bClearFramebuffer;
+					renderPass = context.GetRenderPassManager().GetOrCreateRenderPass(config).GetVkRenderPass();
+				}
+				else
+					renderPass = vkFramebuffer->GetRenderPass()->GetVkRenderPass();
+
+				renderPassInfo.renderPass = renderPass;
 				renderPassInfo.framebuffer = vkFramebuffer->GetVkFramebuffer();
 				renderPassInfo.renderArea.extent = { vkFramebuffer->GetWidth(), vkFramebuffer->GetHeight() };
 
@@ -189,6 +198,11 @@ namespace sh::render::vk
 
 			vkCmdEndRenderPass(commandBuffer);
 		}
+	}
+
+	SH_RENDER_API void VulkanRenderPipelineImpl::SetClear(bool bClear)
+	{
+		bClearFramebuffer = bClear;
 	}
 
 	SH_RENDER_API auto VulkanRenderPipelineImpl::GetDrawCallCount() const -> uint32_t

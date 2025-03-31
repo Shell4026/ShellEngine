@@ -46,7 +46,7 @@ namespace sh::render
 		std::unique_ptr<MaterialData> materialData;
 
 		std::vector<std::pair<const ShaderPass*, const UniformStructLayout*>> dirtyProps;
-		
+
 		core::Observer<false, const RenderTexture*>::Listener onResizeListener;
 
 		bool bPropertyDirty = false;

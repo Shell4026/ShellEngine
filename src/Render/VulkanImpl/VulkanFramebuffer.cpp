@@ -14,7 +14,7 @@ namespace sh::render::vk
 		device(context.GetDevice()), gpu(context.GetGPU()), alloc(context.GetAllocator()),
 		framebuffer(nullptr), img(nullptr),
 		colorImg(nullptr), depthImg(nullptr),
-		width(0), height(0), format(VkFormat::VK_FORMAT_R8G8B8A8_SRGB)
+		width(0), height(0)
 	{
 	}
 
@@ -23,14 +23,11 @@ namespace sh::render::vk
 		device(other.device), gpu(other.gpu), alloc(other.alloc),
 		framebuffer(other.framebuffer), img(other.img), renderPass(other.renderPass),
 		colorImg(std::move(other.colorImg)), depthImg(std::move(other.depthImg)),
-		width(other.width), height(other.height), format(other.format),
-		bTransferSrc(other.bTransferSrc), bOffScreen(other.bOffScreen)
+		width(other.width), height(other.height)
 	{
 		other.renderPass = nullptr;
 		other.framebuffer = nullptr;
 		other.img = nullptr;
-		other.bTransferSrc = false;
-		other.bOffScreen = false;
 	}
 
 	SH_RENDER_API VulkanFramebuffer::~VulkanFramebuffer()
@@ -57,15 +54,12 @@ namespace sh::render::vk
 		width = other.width;
 		height = other.height;
 		img = other.img;
-		format = other.format;
-		bTransferSrc = other.bTransferSrc;
 
 		return *this;
 	}
 
-	SH_RENDER_API auto VulkanFramebuffer::Create(const VulkanRenderPass& renderPass, uint32_t width, uint32_t height, VkImageView img, VkFormat format) -> VkResult
+	SH_RENDER_API auto VulkanFramebuffer::Create(const VulkanRenderPass& renderPass, uint32_t width, uint32_t height, VkImageView img) -> VkResult
 	{
-		this->format = format;
 		this->img = img;
 		this->width = width;
 		this->height = height;
@@ -83,7 +77,7 @@ namespace sh::render::vk
 		framebufferInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		framebufferInfo.pNext = nullptr;
 		framebufferInfo.renderPass = renderPass.GetVkRenderPass();
-		framebufferInfo.attachmentCount = bUseDepth ? static_cast<uint32_t>(views.size()) : 1;
+		framebufferInfo.attachmentCount = renderPass.GetConfig().bUseDepth ? static_cast<uint32_t>(views.size()) : 1;
 		framebufferInfo.pAttachments = views.data();
 		framebufferInfo.width = width;
 		framebufferInfo.height = height;
@@ -94,27 +88,26 @@ namespace sh::render::vk
 		return result;
 	}
 
-	SH_RENDER_API auto VulkanFramebuffer::CreateOffScreen(const VulkanRenderPass& renderPass, uint32_t width, uint32_t height, VkFormat format, bool bTransferSrc) -> VkResult
+	SH_RENDER_API auto VulkanFramebuffer::CreateOffScreen(const VulkanRenderPass& renderPass, uint32_t width, uint32_t height) -> VkResult
 	{
 		this->width = width;
 		this->height = height;
-		this->bTransferSrc = bTransferSrc;
-		this->format = format;
 		this->renderPass = &renderPass;
-		bOffScreen = true;
+
+		auto& config = renderPass.GetConfig();
 
 		VkImageUsageFlags usage = 
 			VkImageUsageFlagBits::VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT | 
 			VkImageUsageFlagBits::VK_IMAGE_USAGE_SAMPLED_BIT;
-		if (bTransferSrc) 
+		if (config.bTransferSrc)
 			usage |= VkImageUsageFlagBits::VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
 
 		colorImg = std::make_unique<VulkanImageBuffer>(context);
-		auto result = colorImg->Create(width, height, format, usage,
+		auto result = colorImg->Create(width, height, config.format, usage,
 			VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT);
 		assert(result == VkResult::VK_SUCCESS);
 
-		if (bUseDepth)
+		if (config.bUseDepth)
 			CreateDepthBuffer();
 
 		std::array<VkImageView, 2> views = {
@@ -125,7 +118,7 @@ namespace sh::render::vk
 		framebufferInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		framebufferInfo.pNext = nullptr;
 		framebufferInfo.renderPass = renderPass.GetVkRenderPass();
-		framebufferInfo.attachmentCount = bUseDepth ? static_cast<uint32_t>(views.size()) : 1;
+		framebufferInfo.attachmentCount = config.bUseDepth ? static_cast<uint32_t>(views.size()) : 1;
 		framebufferInfo.pAttachments = views.data();
 		framebufferInfo.width = width;
 		framebufferInfo.height = height;
@@ -138,7 +131,7 @@ namespace sh::render::vk
 
 	void VulkanFramebuffer::CreateDepthBuffer()
 	{
-		VkFormat depthFormat = context.FindSupportedDepthFormat(bUseStencil);
+		VkFormat depthFormat = context.FindSupportedDepthFormat(renderPass->GetConfig().bUseStencil);
 		depthImg = std::make_unique<VulkanImageBuffer>(context);
 		if(width == 0 || height == 0)
 			return;
@@ -163,11 +156,13 @@ namespace sh::render::vk
 	}
 	SH_RENDER_API void VulkanFramebuffer::TransferImageToBuffer(VulkanCommandBuffer* cmd, VkBuffer buffer, int x, int y)
 	{
+		auto& config = renderPass->GetConfig();
+
 		VkImageMemoryBarrier barrier = {};
 		barrier.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
 		barrier.srcAccessMask = VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
 		barrier.dstAccessMask = VkAccessFlagBits::VK_ACCESS_TRANSFER_READ_BIT;
-		if (!bOffScreen)
+		if (!config.bOffScreen)
 			barrier.oldLayout = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		else
 			barrier.oldLayout = VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -186,7 +181,7 @@ namespace sh::render::vk
 		toColorAttachmentBarrier.srcAccessMask = VkAccessFlagBits::VK_ACCESS_TRANSFER_READ_BIT;
 		toColorAttachmentBarrier.dstAccessMask = VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
 		toColorAttachmentBarrier.oldLayout = VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
-		if (!bOffScreen)
+		if (!config.bOffScreen)
 			toColorAttachmentBarrier.newLayout = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		else
 			toColorAttachmentBarrier.newLayout = VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
@@ -201,7 +196,7 @@ namespace sh::render::vk
 
 		cmd->Build([&]
 		{
-			if (!bTransferSrc)
+			if (!config.bTransferSrc)
 			{
 				vkCmdPipelineBarrier(
 					cmd->GetCommandBuffer(),
@@ -237,17 +232,6 @@ namespace sh::render::vk
 		});
 
 		context.GetQueueManager().SubmitCommand(*cmd);
-	}
-
-	SH_RENDER_API auto VulkanFramebuffer::UseDepthBuffer(bool bUse) -> VulkanFramebuffer&
-	{
-		bUseDepth = bUse;
-		return *this;
-	}
-	SH_RENDER_API auto VulkanFramebuffer::UseStencilBuffer(bool bUse) -> VulkanFramebuffer&
-	{
-		bUseStencil = bUse;
-		return *this;
 	}
 
 	SH_RENDER_API auto VulkanFramebuffer::GetRenderPass() const -> const VulkanRenderPass*

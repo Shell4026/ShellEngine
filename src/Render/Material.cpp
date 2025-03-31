@@ -123,6 +123,8 @@ namespace sh::render
 			return;
 		
 		materialData->Create(context, *shader);
+
+		UpdateUniformBuffers();
 	}
 
 	SH_RENDER_API void Material::UpdateUniformBuffers()
@@ -309,7 +311,6 @@ namespace sh::render
 			for (const auto& [name, value] : texJson.items())
 			{
 				std::string uuid = value.get<std::string>();
-				auto ptr = core::SObjectManager::GetInstance()->GetSObject(uuid);
 				auto ptr = core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuid });
 				if (!core::IsValid(ptr))
 					continue;

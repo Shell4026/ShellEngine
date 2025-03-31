@@ -52,6 +52,7 @@ namespace sh::render
 		SH_RENDER_API void SetPriority(int priority);
 		SH_RENDER_API auto GetPriority() const -> int;
 
+		SH_RENDER_API void SetFovRadian(float rad);
 		SH_RENDER_API void SetFov(float degree);
 		SH_RENDER_API auto GetFovRadian() const -> float;
 

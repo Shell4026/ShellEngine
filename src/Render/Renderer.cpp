@@ -19,9 +19,13 @@ namespace sh::render
 		drawcall({ 0, 0 })
 	{
 	}
+	Renderer::~Renderer()
+	{
+	}
 
 	SH_RENDER_API void Renderer::Clear()
 	{
+		renderPipelines.clear();
 		drawCalls.clear();
 	}
 

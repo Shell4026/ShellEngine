@@ -35,7 +35,7 @@ namespace sh::render
 		bool bDirty = false;
 	public:
 		SH_RENDER_API Drawable(const Material& material, const Mesh& mesh);
-		SH_RENDER_API virtual ~Drawable() = default;
+		SH_RENDER_API virtual ~Drawable();
 
 		SH_RENDER_API void Build(const IRenderContext& context) override;
 

@@ -23,8 +23,8 @@ namespace sh::editor
 		viewportWidthLast(100.f), viewportHeightLast(100.f),
 		bDirty(false), bMouseDown(false), bFocus(false)
 	{
-		renderTex = world.GetGameObject("EditorCamera")->GetComponent<game::Camera>()->GetRenderTexture();
-
+		renderTex = world.GetGameObject("EditorCamera")->GetComponent<game::EditorCamera>()->GetRenderTexture();
+		outlineTex = static_cast<render::RenderTexture*>(world.textures.GetResource("OutlineTexture"));
 		for (int thr = 0; thr < 2; ++thr)
 		{
 			auto vkTexBuffer = static_cast<render::vk::VulkanTextureBuffer*>(renderTex->GetBuffer(static_cast<core::ThreadType>(thr)));
@@ -100,14 +100,18 @@ namespace sh::editor
 			viewportDescSet[core::ThreadType::Game] = nullptr;
 		}
 		if (viewportWidthLast != 0.f && viewportHeightLast != 0.f)
+		{
 			renderTex->SetSize(viewportWidthLast, viewportHeightLast); // renderTex dirty등록
+		}
 
 		auto vkTexBuffer = static_cast<render::vk::VulkanTextureBuffer*>(renderTex->GetBuffer(core::ThreadType::Game));
 		auto imgBuffer = vkTexBuffer->GetImageBuffer();
 		viewportDescSet[core::ThreadType::Game] = ImGui_ImplVulkan_AddTexture(imgBuffer->GetSampler(), imgBuffer->GetImageView(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 		if (pickingCamera)
+		{
 			pickingCamera->SetTextureSize({ viewportWidthLast, viewportHeightLast });
+		}
 
 		SetDirty();
 	}

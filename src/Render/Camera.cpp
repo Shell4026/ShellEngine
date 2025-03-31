@@ -34,6 +34,10 @@ namespace sh::render
 	{
 		return priority;
 	}
+	SH_RENDER_API void sh::render::Camera::SetFovRadian(float rad)
+	{
+		fovRadians = rad;
+	}
 	SH_RENDER_API void Camera::SetFov(float degree)
 	{
 		fovRadians = glm::radians(degree);

@@ -187,6 +187,13 @@ namespace sh::game
 		drawable->Build(*world.renderer.GetContext());
 	}
 
+	SH_GAME_API void MeshRenderer::Destroy()
+	{
+		if (drawable)
+			drawable->Destroy();
+		Super::Destroy();
+	}
+
 	void MeshRenderer::Awake()
 	{
 		Super::Awake();

@@ -10,6 +10,10 @@ namespace sh::render
 		mat(&material), mesh(&mesh)
 	{
 	}
+	Drawable::~Drawable()
+	{
+		SH_INFO_FORMAT("~Drawable: {}", (void*)this);
+	}
 
 	SH_RENDER_API void Drawable::Build(const IRenderContext& context)
 	{

@@ -140,6 +140,22 @@ namespace sh::game
 	{
 		return camera.GetUpVector();
 	}
+	SH_GAME_API void Camera::SetWidth(float width)
+	{
+		camera.SetWidth(width);
+	}
+	SH_GAME_API auto Camera::GetWidth() const -> float
+	{
+		return camera.GetWidth();
+	}
+	SH_GAME_API void Camera::SetHeight(float height)
+	{
+		camera.SetHeight(height);
+	}
+	SH_GAME_API auto Camera::GetHeight() const -> float
+	{
+		return camera.GetHeight();
+	}
 
 #ifdef SH_EDITOR
 	void Camera::OnPropertyChanged(const core::reflection::Property& prop)

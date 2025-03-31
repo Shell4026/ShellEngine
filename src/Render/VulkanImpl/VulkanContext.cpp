@@ -260,6 +260,7 @@ namespace sh::render::vk
 		config.depthFormat = FindSupportedDepthFormat(true);
 		config.bOffScreen = false;
 		config.bTransferSrc = false;
+		config.bUseDepth = true;
 		config.bUseStencil = true;
 
 		mainRenderPass = &renderPassManager->GetOrCreateRenderPass(config);
@@ -274,7 +275,7 @@ namespace sh::render::vk
 		{
 			framebuffers.push_back(VulkanFramebuffer{ *this });
 
-			VkResult result = framebuffers[i].Create(*mainRenderPass, swapChain->GetSwapChainSize().width, swapChain->GetSwapChainSize().height, imgViews[i], swapChain->GetSwapChainImageFormat());
+			VkResult result = framebuffers[i].Create(*mainRenderPass, swapChain->GetSwapChainSize().width, swapChain->GetSwapChainSize().height, imgViews[i]);
 			assert(result == VkResult::VK_SUCCESS);
 			if (result != VkResult::VK_SUCCESS)
 				throw std::runtime_error(std::string{ "Can't create framebuffer: " } + string_VkResult(result));

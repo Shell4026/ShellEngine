@@ -39,6 +39,7 @@ namespace sh::editor
 		glm::vec2 mousePos;
 
 		render::RenderTexture* renderTex;
+		render::RenderTexture* outlineTex = nullptr;
 		core::SyncArray<VkDescriptorSet> viewportDescSet;
 		
 		game::EditorCamera* editorCamera = nullptr;

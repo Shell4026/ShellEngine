@@ -72,7 +72,7 @@ namespace sh::render
 		void SetDrawCall(uint32_t drawcall);
 	public:
 		SH_RENDER_API Renderer();
-		SH_RENDER_API virtual ~Renderer() = default;
+		SH_RENDER_API virtual ~Renderer();
 
 		SH_RENDER_API virtual bool Init(const sh::window::Window& win);
 		SH_RENDER_API virtual bool Resizing() = 0;
