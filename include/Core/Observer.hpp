@@ -44,6 +44,11 @@ namespace sh::core
 			Listener(Listener&& other) noexcept :
 				observers(std::move(other.observers)), func(std::move(other.func)), priority(other.priority)
 			{
+				for (auto observer : observers)
+				{
+					observer->UnRegister(other);
+					observer->Register(*this);
+				}
 			}
 			~Listener()
 			{
@@ -83,9 +88,10 @@ namespace sh::core
 			}
 		};
 
-		std::set<Listener*, ListenerComparator> events;
+		std::set<Listener*, ListenerComparator> listeners;
 	public:
 		Observer();
+		Observer(Observer&& other) noexcept;
 		~Observer();
 
 		/// @brief 리스너를 등록하는 함수.
@@ -112,13 +118,26 @@ namespace sh::core
 
 	template<bool OneTimeListener, typename ...Args>
 	inline Observer<OneTimeListener, Args...>::Observer() :
-		events()
+		listeners()
 	{
+	}
+	template<bool OneTimeListener, typename ...Args>
+	inline Observer<OneTimeListener, Args...>::Observer(Observer&& other) noexcept :
+		listeners(std::move(other.listeners))
+	{
+		for (Listener* listener : listeners)
+		{
+			if (listener)
+			{
+				listener->observers.erase(&other);
+				listener->observers.insert(this);
+			}
+		}
 	}
 	template<bool OneTimeListener, typename ...Args>
 	Observer<OneTimeListener, Args...>::~Observer()
 	{
-		for (Listener* listener : events)
+		for (Listener* listener : listeners)
 		{
 			if (listener)
 				listener->observers.erase(this);
@@ -128,24 +147,24 @@ namespace sh::core
 	void Observer<OneTimeListener, Args...>::Register(Listener& event)
 	{
 		event.observers.insert(this);
-		events.insert(&event);
+		listeners.insert(&event);
 	}
 	template<bool OneTimeListener, typename ...Args>
 	bool Observer<OneTimeListener, Args...>::UnRegister(Listener& event)
 	{
-		auto it = events.find(&event);
-		if (it == events.end())
+		auto it = listeners.find(&event);
+		if (it == listeners.end())
 			return false;
 
 		event.observers.erase(this);
-		events.erase(it);
+		listeners.erase(it);
 
 		return true;
 	}
 	template<bool OneTimeListener, typename ...Args>
 	void Observer<OneTimeListener, Args...>::Notify(const Args&... args)
 	{
-		for (auto& event : events)
+		for (auto& event : listeners)
 		{
 			event->Execute(args...);
 		}
@@ -156,16 +175,16 @@ namespace sh::core
 	template<bool OneTimeListener, typename ...Args>
 	inline void Observer<OneTimeListener, Args...>::Clear()
 	{
-		for (Listener* listener : events)
+		for (Listener* listener : listeners)
 		{
 			listener->observers.erase(this);
 		}
-		events.clear();
+		listeners.clear();
 	}
 
 	template<bool OneTimeListener, typename ...Args>
 	inline bool Observer<OneTimeListener, Args...>::Empty()
 	{
-		return events.empty();
+		return listeners.empty();
 	}
 }//namespace

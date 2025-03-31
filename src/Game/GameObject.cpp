@@ -19,7 +19,9 @@ namespace sh::game
 		world(other.world), transform(other.transform),
 		
 		bInit(other.bInit), bEnable(other.bEnable), activeSelf(bEnable),
-		components(std::move(other.components))
+		components(std::move(other.components)),
+
+		onComponentAdd(std::move(other.onComponentAdd))
 	{
 		other.transform = nullptr;
 	}

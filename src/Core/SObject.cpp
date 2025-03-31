@@ -24,7 +24,8 @@ namespace sh::core
 	SH_CORE_API SObject::SObject(SObject&& other) noexcept :
 		bPendingKill(other.bPendingKill.load(std::memory_order::memory_order_relaxed)),
 		bMark(other.bMark),
-		uuid(other.uuid), name(std::move(other.name))
+		uuid(other.uuid), name(std::move(other.name)),
+		onDestroy(std::move(other.onDestroy))
 	{
 		other.bPendingKill.store(true, std::memory_order_release);
 		other.bMark = false;

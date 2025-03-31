@@ -44,7 +44,9 @@ namespace sh::game
 		vPosition(std::move(other.vPosition)), vScale(std::move(other.vScale)), vRotation(std::move(other.vRotation)),
 		matModel(std::move(other.matModel)), quat(std::move(other.quat)),
 		parent(other.parent), childs(std::move(other.childs)),
-		bUpdateMatrix(other.bUpdateMatrix)
+		bUpdateMatrix(other.bUpdateMatrix),
+
+		onMatrixUpdate(std::move(other.onMatrixUpdate))
 	{
 		other.parent = nullptr;
 	}

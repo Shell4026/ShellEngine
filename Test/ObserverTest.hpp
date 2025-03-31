@@ -154,3 +154,30 @@ TEST(observerTest, MultipleObserverToOneListener)
 	target1.ChangeValue(6);
 	EXPECT_NE(value, 12);
 }
+
+TEST(observerTest, MoveConstructor)
+{
+	Target target0{};
+
+	int value = 0;
+	auto listener0 = new sh::core::Observer<false, int>::Listener{};
+	listener0->SetCallback([&](int num)
+		{
+			value = num;
+		}
+	);
+
+	target0.observer.Register(*listener0);
+
+	sh::core::Observer<false, int>::Listener listener1{ std::move(*listener0) };
+	delete listener0;
+
+	target0.ChangeValue(1);
+
+	EXPECT_EQ(value, 1);
+
+	Target target1{ std::move(target0) };
+	target1.ChangeValue(2);
+
+	EXPECT_EQ(value, 2);
+}
