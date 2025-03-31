@@ -149,7 +149,7 @@ namespace sh::core
 
 	SH_CORE_API void GarbageCollection::ForceDelete(SObject* obj)
 	{
-		auto it = objs.find(obj->GetUUID().ToString());
+		auto it = objs.find(obj->GetUUID());
 		if (it != objs.end())
 		{
 			RemoveRootSet(obj);

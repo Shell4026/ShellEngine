@@ -149,7 +149,7 @@ namespace sh::editor
 			auto uuidStr = AssetDatabase::GetAssetUUID(path);
 			if (uuidStr)
 			{
-				auto objPtr = core::SObjectManager::GetInstance()->GetSObject(uuidStr.value().ToString());
+				auto objPtr = core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuidStr.value() });
 				if (core::IsValid(objPtr))
 					world.SetSelectedObject(objPtr);
 			}

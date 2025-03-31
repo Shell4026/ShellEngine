@@ -288,7 +288,7 @@ namespace sh::game
 		// 역 직렬화
 		for (auto& objJson : json["objs"])
 		{
-			GameObject* obj = static_cast<GameObject*>(objManager->GetSObject(objJson["uuid"].get<std::string>()));
+			GameObject* obj = static_cast<GameObject*>(objManager->GetSObject(core::UUID{ objJson["uuid"].get<std::string>() }));
 			obj->Deserialize(objJson);
 		}
 	}

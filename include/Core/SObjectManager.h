@@ -2,6 +2,7 @@
 #include "Export.h"
 #include "Singleton.hpp"
 #include "SContainer.hpp"
+#include "UUID.h"
 
 namespace sh::core
 {
@@ -12,7 +13,7 @@ namespace sh::core
 		friend Singleton<SObjectManager>;
 		friend class GarbageCollection;
 	private:
-		core::SHashMap<std::string, SObject*> objs;
+		core::SHashMap<UUID, SObject*> objs;
 
 		SH_CORE_API SObjectManager();
 	public:
@@ -20,6 +21,6 @@ namespace sh::core
 
 		SH_CORE_API void RegisterSObject(SObject* obj);
 		SH_CORE_API void UnRegisterSObject(SObject* obj);
-		SH_CORE_API auto GetSObject(const std::string& uuid) -> SObject*;
+		SH_CORE_API auto GetSObject(const UUID& uuid) -> SObject*;
 	};
 }//namespace

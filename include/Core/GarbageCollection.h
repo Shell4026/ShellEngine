@@ -1,7 +1,7 @@
 ﻿#pragma once
 
 #include "Export.h"
-
+#include "UUID.h"
 #include "SContainer.hpp"
 #include "Singleton.hpp"
 
@@ -20,7 +20,7 @@ namespace sh::core
 	{
 		friend Singleton<GarbageCollection>;
 	private:
-		SHashMap<std::string, SObject*>& objs;
+		SHashMap<UUID, SObject*>& objs;
 		SHashSet<SObject*, 128> rootSets;
 
 		uint32_t elapseTime = 0;

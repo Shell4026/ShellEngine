@@ -85,7 +85,7 @@ namespace sh::core
 		{
 			std::string uuid = json[key].get<std::string>();
 			auto objectManager = SObjectManager::GetInstance();
-			SObject* ptr = objectManager->GetSObject(uuid);
+			SObject* ptr = objectManager->GetSObject(UUID{ uuid });
 			if (ptr == nullptr)
 				return;
 

@@ -1,5 +1,4 @@
-﻿#include "PCH.h"
-#include "SObjectManager.h"
+﻿#include "SObjectManager.h"
 #include "SObject.h"
 
 namespace sh::core
@@ -13,13 +12,13 @@ namespace sh::core
 
 	SH_CORE_API void SObjectManager::RegisterSObject(SObject* obj)
 	{
-		objs.insert({ obj->GetUUID().ToString(), obj });
+		objs.insert({ obj->GetUUID(), obj });
 	}
 	SH_CORE_API void SObjectManager::UnRegisterSObject(SObject* obj)
 	{
-		objs.erase(obj->GetUUID().ToString());
+		objs.erase(obj->GetUUID());
 	}
-	SH_CORE_API auto SObjectManager::GetSObject(const std::string& uuid) -> SObject*
+	SH_CORE_API auto SObjectManager::GetSObject(const UUID& uuid) -> SObject*
 	{
 		auto it = objs.find(uuid);
 		if (it == objs.end())

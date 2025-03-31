@@ -106,7 +106,7 @@ namespace sh::render
 			for (const auto& [name, value] : texJson.items())
 			{
 				std::string uuid = value.get<std::string>();
-				auto ptr = core::SObjectManager::GetInstance()->GetSObject(uuid);
+				auto ptr = core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuid });
 				if (!core::IsValid(ptr))
 					continue;
 				if (ptr->GetType() == Texture::GetStaticType())

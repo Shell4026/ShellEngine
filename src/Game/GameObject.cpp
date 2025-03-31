@@ -148,7 +148,7 @@ namespace sh::game
 		for (auto& compJson : json["Components"])
 		{
 			std::string uuid = compJson["uuid"].get<std::string>();
-			Component* comp = static_cast<Component*>(objManager->GetSObject(uuid));
+			Component* comp = static_cast<Component*>(objManager->GetSObject(core::UUID{ uuid }));
 			comp->Deserialize(compJson);
 		}
 	}

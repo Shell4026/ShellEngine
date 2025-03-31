@@ -311,7 +311,7 @@ namespace sh::game
 		if (transformJson.contains("parent"))
 		{
 			std::string uuid = transformJson["parent"].get<std::string>();
-			SetParent(static_cast<Transform*>(core::SObjectManager::GetInstance()->GetSObject(uuid)));
+			SetParent(static_cast<Transform*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuid })));
 		}
 
 		bUpdateMatrix = true;
