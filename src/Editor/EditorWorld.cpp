@@ -83,7 +83,6 @@ namespace sh::editor
 		auto pickingShader = shaders.AddResource("EditorPickingShader", loader.LoadShader("shaders/EditorPicking.shader"));
 		auto outlineShader = shaders.AddResource("OutlineShader", loader.LoadShader("shaders/outline.shader"));
 		auto triangleShader = shaders.AddResource("TriangleShader", loader.LoadShader("shaders/triangle.shader"));
-		auto quadShader = shaders.AddResource("QuadShader", loader.LoadShader("shaders/Quad.shader"));
 
 		auto outlinePreShader = shaders.AddResource("OutlinePreShader", loader.LoadShader("shaders/EditorOutlinePre.shader"));
 		auto outlinePostShader = shaders.AddResource("OutlinePostShader", loader.LoadShader("shaders/EditorOutlinePost.shader"));

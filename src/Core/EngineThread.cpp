@@ -24,13 +24,24 @@ namespace sh::core
 		{
 			std::unique_lock<std::mutex> lock{ mu };
 
-			std::function<void()> otherTask;
-			while (beginTasks.Dequeue(otherTask))
-				otherTask();
+			taskMutex.lock();
+			while (!beginTasks.empty())
+			{
+				beginTasks.front()();
+				beginTasks.pop();
+			}
+			taskMutex.unlock();
+
 			for (auto& task : tasks)
 				task();
-			while (endTasks.Dequeue(otherTask))
-				otherTask();
+
+			taskMutex.lock();
+			while (!endTasks.empty())
+			{
+				endTasks.front()();
+				endTasks.pop();
+			}
+			taskMutex.unlock();
 
 			if (cv != nullptr)
 			{
@@ -47,11 +58,15 @@ namespace sh::core
 
 	SH_CORE_API void EngineThread::AddBeginTaskFromOtherThread(const std::function<void()>& task)
 	{
-		beginTasks.Enqueue(task);
+		taskMutex.lock();
+		beginTasks.push(task);
+		taskMutex.unlock();
 	}
 	SH_CORE_API void EngineThread::AddEndTaskFromOtherThread(const std::function<void()>& task)
 	{
-		endTasks.Enqueue(task);
+		taskMutex.lock();
+		endTasks.push(task);
+		taskMutex.unlock();
 	}
 
 	SH_CORE_API void EngineThread::Stop()
@@ -93,5 +108,10 @@ namespace sh::core
 			if (cv)
 				cv.reset();
 		}	
+	}
+
+	SH_CORE_API auto EngineThread::GetThreadID() const -> std::thread::id
+	{
+		return thr.get_id();
 	}
 }//namespace

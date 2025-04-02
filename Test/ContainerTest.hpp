@@ -79,30 +79,6 @@ TEST(ContainerTest, SSetTest)
 	EXPECT_EQ(container3.size(), 5000);
 }
 
-TEST(ContainerTest, LockFreeQueue)
-{
-	sh::core::LockFreeQueue<int> lockFreeQueue;
-	std::queue<int> queue;
-
-	auto start = std::chrono::high_resolution_clock::now();
-	for (int i = 0; i < 10000; ++i)
-	{
-		queue.push(i);
-	}
-	auto end = std::chrono::high_resolution_clock::now();
-	auto timeQueue = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-
-	start = std::chrono::high_resolution_clock::now();
-	for (int i = 0; i < 10000; ++i)
-	{
-		lockFreeQueue.Enqueue(i);
-	}
-	end = std::chrono::high_resolution_clock::now();
-	auto timeQueue2 = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
-
-	EXPECT_LE(timeQueue, timeQueue2);
-}
-
 TEST(ContainerTest, SHashMapVectorTest)
 {
 	using namespace sh;

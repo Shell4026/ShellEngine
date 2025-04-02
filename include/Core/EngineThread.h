@@ -1,5 +1,4 @@
 ﻿#pragma once
-
 #include "Export.h"
 #include "SContainer.hpp"
 
@@ -9,6 +8,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <memory>
+#include <queue>
 
 namespace sh::core
 {
@@ -17,15 +17,18 @@ namespace sh::core
 	{
 	private:
 		std::thread thr;
+
 		std::mutex mu;
+		std::mutex taskMutex;
 
 		SVector<std::function<void()>> tasks;
-		core::LockFreeQueue<std::function<void()>> beginTasks;
-		core::LockFreeQueue<std::function<void()>> endTasks;
+		std::queue<std::function<void()>> beginTasks;
+		std::queue<std::function<void()>> endTasks;
 
 		std::unique_ptr<std::condition_variable> cv;
 
 		std::atomic<bool> bStop;
+		
 		bool bSleep;
 	public:
 		std::mutex& mutex;
@@ -43,10 +46,10 @@ namespace sh::core
 		/// @brief 스레드를 반환 하는 함수.
 		/// @return std::thread 객체
 		SH_CORE_API auto GetThread() -> std::thread&;
-		/// @brief [원자적] 작업 큐에 작업을 추가하는 함수. 매 업데이트 전 실행된다.
+		/// @brief 작업 큐에 작업을 추가하는 함수. 매 업데이트 전 실행된다.
 		/// @param func 수행 할 함수
 		SH_CORE_API void AddBeginTaskFromOtherThread(const std::function<void()>& task);
-		/// @brief [원자적] 작업 큐에 작업을 추가하는 함수. 매 업데이트 후 실행된다.
+		/// @brief 작업 큐에 작업을 추가하는 함수. 매 업데이트 후 실행된다.
 		/// @param func 수행 할 함수
 		SH_CORE_API void AddEndTaskFromOtherThread(const std::function<void()>& task);
 		/// @brief [원자적] 루프를 중단 시키고 스레드를 끝내는 함수.
@@ -57,5 +60,8 @@ namespace sh::core
 		/// @brief 매 루프마다 Sleep 상태로 만들 것인지 정하는 함수.
 		/// @param wait true 또는 false
 		SH_CORE_API void SetWaitableThread(bool wait);
+		/// @brief 스레드의 아이디를 반환 하는 함수.
+		/// @return std::thread::id 객체
+		SH_CORE_API auto GetThreadID() const -> std::thread::id;
 	};
 }//namespace
