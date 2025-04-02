@@ -465,7 +465,7 @@ namespace sh::game
 		if (bDirty)
 			return;
 
-		core::ThreadSyncManager::GetInstance()->PushSyncable(*this);
+		core::ThreadSyncManager::PushSyncable(*this);
 
 		bDirty = true;
 	}

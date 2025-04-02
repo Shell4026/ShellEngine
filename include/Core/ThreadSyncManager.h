@@ -1,27 +1,31 @@
 ﻿#pragma once
-
 #include "ISyncable.h"
 #include "EngineThread.h"
 #include "SContainer.hpp"
-#include "Singleton.hpp"
 
-#include "queue"
+#include <queue>
 namespace sh::core
 {
-	class ThreadSyncManager : public Singleton<ThreadSyncManager>
+	/// @brief 스레드간 동기화를 관리하는 전역 객체.
+	class ThreadSyncManager
 	{
-		friend Singleton<ThreadSyncManager>;
 	private:
-		std::queue<ISyncable*> syncables;
-		SVector<EngineThread*> threads;
-	protected:
-		SH_CORE_API ThreadSyncManager() = default;
+		struct ThreadData
+		{
+			EngineThread* threadPtr;
+			std::queue<ISyncable*> syncableQueue;
+		};
+		SH_CORE_API static SVector<ThreadData> threads;
+		thread_local static int currentThreadIdx;
+	private:
+		SH_CORE_API static auto GetThreadIndex() -> int;
 	public:
-		SH_CORE_API ~ThreadSyncManager() = default;
-
-		SH_CORE_API void PushSyncable(ISyncable& syncable);
-		SH_CORE_API void AddThread(EngineThread& thread);
-		SH_CORE_API void Sync();
-		SH_CORE_API void AwakeThread();
+		/// @brief 초기화 함수. 반드시 메인 스레드에서 호출 할 것.
+		SH_CORE_API static void Init();
+		SH_CORE_API static void PushSyncable(ISyncable& syncable);
+		SH_CORE_API static void AddThread(EngineThread& thread);
+		/// @brief 동기화 객체들을 동기화 하는 함수. 모든 스레드가 작업을 마치고 수면중일 때 호출 해야한다.
+		SH_CORE_API static void Sync();
+		SH_CORE_API static void AwakeThread();
 	};
 }//namespace

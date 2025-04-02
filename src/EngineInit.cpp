@@ -114,7 +114,6 @@ namespace sh
 		SH_INFO_FORMAT("System thread count: {}", std::thread::hardware_concurrency());
 
 		gc = core::GarbageCollection::GetInstance(); // GC 초기화
-		threadSyncManager = core::ThreadSyncManager::GetInstance(); // 스레드 동기화 매니저 초기화
 
 		SH_INFO("Window initialization");
 		window = std::make_unique<window::Window>();
@@ -137,16 +136,19 @@ namespace sh
 
 		renderer->AddRenderPipeline<sh::render::RenderPipeline>();
 
+		SH_INFO("Thread creation");
+		core::ThreadSyncManager::Init();
+		renderThread = game::RenderThread::GetInstance();
+		renderThread->SetWaitableThread(true);
+		renderThread->Init(*renderer);
+		core::ThreadSyncManager::AddThread(*renderThread);
+
 		InitResource();
 
 		SH_INFO("Start world");
 		world->Start();
 
-		SH_INFO("Thread creation");
-		renderThread = game::RenderThread::GetInstance();
-		renderThread->SetWaitableThread(true);
-		renderThread->Init(*renderer);
-		threadSyncManager->AddThread(*renderThread);
+		renderThread->Run();
 
 		SH_INFO("Start loop");
 		Loop();
@@ -172,9 +174,9 @@ namespace sh
 
 			this->world->Update(window->GetDeltaTime());
 
-			threadSyncManager->Sync();
+			core::ThreadSyncManager::Sync();
 			gc->Update();
-			threadSyncManager->AwakeThread();
+			core::ThreadSyncManager::AwakeThread();
 		}
 	}
 }

@@ -70,7 +70,7 @@ namespace sh::render
 		if (bDirty)
 			return;
 
-		core::ThreadSyncManager::GetInstance()->PushSyncable(*this);
+		core::ThreadSyncManager::PushSyncable(*this);
 		bDirty = true;
 	}
 	SH_RENDER_API void Renderer::Sync()

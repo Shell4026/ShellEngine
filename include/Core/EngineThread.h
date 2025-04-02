@@ -43,6 +43,8 @@ namespace sh::core
 		SH_CORE_API EngineThread(bool bSleepThread = false);
 		SH_CORE_API virtual ~EngineThread() = default;
 		
+		/// @brief 스레드를 실행하는 함수.
+		SH_CORE_API void Run();
 		/// @brief 스레드를 반환 하는 함수.
 		/// @return std::thread 객체
 		SH_CORE_API auto GetThread() -> std::thread&;

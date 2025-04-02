@@ -127,7 +127,7 @@ namespace sh::render
 			return;
 		bDirty = true;
 
-		core::ThreadSyncManager::GetInstance()->PushSyncable(*this);
+		core::ThreadSyncManager::PushSyncable(*this);
 	}
 	SH_RENDER_API void MaterialData::Sync()
 	{

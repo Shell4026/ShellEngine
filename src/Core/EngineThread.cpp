@@ -10,9 +10,12 @@ namespace sh::core
 		bSleep(bSleepThread),
 		beginTasks(), endTasks()
 	{
-		thr = std::thread{ [&] { Update(); } };
 	}
 
+	SH_CORE_API void EngineThread::Run()
+	{
+		thr = std::thread{ [&] { Update(); } };
+	}
 	SH_CORE_API auto EngineThread::GetThread() -> std::thread&
 	{
 		return thr;

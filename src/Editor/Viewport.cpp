@@ -213,7 +213,7 @@ namespace sh::editor
 		if (bDirty)
 			return;
 
-		core::ThreadSyncManager::GetInstance()->PushSyncable(*this);
+		core::ThreadSyncManager::PushSyncable(*this);
 
 		bDirty = true;
 	}

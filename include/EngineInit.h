@@ -9,7 +9,6 @@ namespace sh
 	namespace core
 	{
 		class GarbageCollection;
-		class ThreadSyncManager;
 	}
 	namespace window
 	{
@@ -34,7 +33,6 @@ namespace sh
 		core::ModuleLoader moduleLoader;
 
 		core::GarbageCollection* gc = nullptr;
-		core::ThreadSyncManager* threadSyncManager = nullptr;
 		game::GameThread* gameThread = nullptr;
 		game::RenderThread* renderThread = nullptr;
 		game::ComponentModule* componentModule = nullptr;
