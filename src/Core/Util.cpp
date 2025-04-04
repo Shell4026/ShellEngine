@@ -63,14 +63,6 @@ namespace sh::core {
 		return !obj->IsPendingKill();
 	}
 
-	auto Util::GetElapsedTime(const std::function<void()>& func) -> std::chrono::milliseconds
-	{
-		auto start = std::chrono::high_resolution_clock::now();
-		func();
-		auto end = std::chrono::high_resolution_clock::now();
-		return std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
-	}
-
 	auto Util::AlignTo(uint32_t value, uint32_t alignment) -> uint32_t
 	{
 		// ex) value = 20, alignment = 16

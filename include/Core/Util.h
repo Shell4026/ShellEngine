@@ -29,8 +29,16 @@ namespace sh::core
 	public:
 		/// @brief 해당 함수가 실행 되고 마치기까지 얼마나 걸리는지 반환한다.
 		/// @param func 함수
-		/// @return 걸린 시간(ms)
-		SH_CORE_API static auto GetElapsedTime(const std::function<void()>& func) -> std::chrono::milliseconds;
+		/// @tparam std::chrono 시간 단위
+		/// @return 걸린 시간
+		template<typename T>
+		static auto GetElapsedTime(const std::function<void()>& func) -> T
+		{
+			auto start = std::chrono::high_resolution_clock::now();
+			func();
+			auto end = std::chrono::high_resolution_clock::now();
+			return std::chrono::duration_cast<T>(end - start);
+		}
 
 		/// @brief 유니코드 형식의 string을 wstring으로 변환하는 함수.
 		/// @param u8str utf-8 string
