@@ -6,6 +6,7 @@
 #include "AllocatorTest.hpp"
 #include "OctreeTest.hpp"
 #include "ShaderParserTest.hpp"
+#include "SpinLockTest.hpp"
 #ifdef Bool
 #undef Bool
 #endif
