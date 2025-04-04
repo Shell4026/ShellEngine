@@ -1,9 +1,9 @@
 ﻿#pragma once
 #include "Export.h"
-#include "SpinLock.h"
 
 #include <string_view>
 #include <unordered_map>
+#include <shared_mutex>
 namespace sh::core
 {
 	/// @brief 비교가 빠른 문자열 클래스. 비교에 해시값을 사용한다. 
@@ -14,7 +14,7 @@ namespace sh::core
 		friend struct std::hash<sh::core::Name>;
 
 		SH_CORE_API static std::unordered_map<std::size_t, std::string> map;
-		SH_CORE_API static SpinLock lock;
+		SH_CORE_API static std::shared_mutex mu;
 
 		std::size_t hash;
 	public:

@@ -1,19 +1,25 @@
 ﻿#include "Name.h"
 #include "Util.h"
-
 namespace sh::core
 {
 	std::unordered_map<std::size_t, std::string> Name::map{};
-	SpinLock Name::lock{};
+	std::shared_mutex Name::mu{};
 
 	Name::Name(std::string_view str) :
 		hash(Util::ConstexprHash(str))
 	{
-		lock.Lock();
-		auto it = map.find(hash);
-		if (it == map.end())
-			map.insert({ hash, std::string{str} });
-		lock.UnLock();
+		{
+			std::shared_lock lock{ mu };
+			auto it = map.find(hash);
+			if (it != map.end())
+				return;
+		}
+		// 새로운 문자열을 쓰는 작업은 정말 드물게 일어날 것으로 예상된다.
+		{
+			std::unique_lock uniqueLock{ mu };
+			if (map.find(hash) == map.end());
+				map.insert({ hash, std::string{str} });
+		}
 	}
 	Name::Name(const Name& other) noexcept :
 		hash(other.hash)
@@ -61,9 +67,8 @@ namespace sh::core
 
 	SH_CORE_API auto Name::ToString() const -> const std::string&
 	{
-		lock.Lock();
+		std::shared_lock lock{ mu };
 		const std::string& result = map[hash];
-		lock.UnLock();
 		return result;
 	}
 }//namespace
