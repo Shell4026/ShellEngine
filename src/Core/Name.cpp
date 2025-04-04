@@ -17,7 +17,7 @@ namespace sh::core
 		// 새로운 문자열을 쓰는 작업은 정말 드물게 일어날 것으로 예상된다.
 		{
 			std::unique_lock uniqueLock{ mu };
-			if (map.find(hash) == map.end());
+			if (map.find(hash) == map.end())
 				map.insert({ hash, std::string{str} });
 		}
 	}

@@ -38,7 +38,7 @@ namespace sh::render::vk
 		auto GetSurfaceQueueFamily(VkSurfaceKHR surface) -> std::optional<int>;
 	public:
 		SH_RENDER_API VulkanQueueManager(VkPhysicalDevice gpu);
-		SH_RENDER_API VulkanQueueManager(VulkanQueueManager&& other) noexcept;
+		SH_RENDER_API VulkanQueueManager(VulkanQueueManager&& other);
 		SH_RENDER_API ~VulkanQueueManager();
 
 		SH_RENDER_API void SetDevice(VkDevice device);

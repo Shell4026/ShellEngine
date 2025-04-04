@@ -56,7 +56,7 @@ namespace sh::render::vk
 
 		GetQueueFamilyProperties();
 	}
-	VulkanQueueManager::VulkanQueueManager(VulkanQueueManager&& other) noexcept :
+	VulkanQueueManager::VulkanQueueManager(VulkanQueueManager&& other) :
 		device(other.device), gpu(other.gpu),
 		graphicsQueue(other.graphicsQueue),
 		surfaceQueue(other.surfaceQueue),

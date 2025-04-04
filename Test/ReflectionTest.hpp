@@ -52,8 +52,8 @@ TEST(ReflectionTest, TypeInfoTest)
     EXPECT_TRUE(derived.GetType().IsChildOf(Base::GetStaticType()));
     EXPECT_TRUE(*derived.GetType().GetSuper() == Base::GetStaticType());
 
-    EXPECT_EQ(base.GetType().size, 72);
-    EXPECT_EQ(derived.GetType().size, 208);
+    EXPECT_EQ(base.GetType().size, sizeof(Base));
+    EXPECT_EQ(derived.GetType().size, sizeof(Derived));
 
     auto& intType = reflection::GetType<const int>();
     EXPECT_EQ(reflection::GetType<int>(), reflection::GetType<const int>());
