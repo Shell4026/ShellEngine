@@ -45,14 +45,20 @@ namespace sh::core
 	{
 		return hash != other.hash;
 	}
-	SH_CORE_API auto Name::operator==(const std::string& str) const -> bool
+	SH_CORE_API auto Name::operator==(const std::string_view str) const -> bool
 	{
 		return hash == core::Util::ConstexprHash(str);
 	}
-	SH_CORE_API auto Name::operator!=(const std::string& str) const -> bool
+	SH_CORE_API auto Name::operator!=(const std::string_view str) const -> bool
 	{
 		return hash != core::Util::ConstexprHash(str);
 	}
+
+	SH_CORE_API Name::operator const std::string& () const
+	{
+		return ToString();
+	}
+
 	SH_CORE_API auto Name::ToString() const -> const std::string&
 	{
 		lock.Lock();

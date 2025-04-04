@@ -1,5 +1,4 @@
-﻿#include "PCH.h"
-#include "GarbageCollection.h"
+﻿#include "GarbageCollection.h"
 #include "SObjectManager.h"
 
 #include "SObject.h"
@@ -123,12 +122,12 @@ namespace sh::core
 
 				Mark(*ptr, obj, ptrProp, nullptr);
 			}
-			auto& containerPtrProps = type->GetSObjectContainerProperties();
+			auto& containerPtrProps = type->GetSObjectPtrContainerProperties();
 			for (auto ptrProp : containerPtrProps)
 			{
 				for (auto it = ptrProp->Begin(obj); it != ptrProp->End(obj);)
 				{
-					ContainerMark(obj, 1, ptrProp->containerNestedLevel, it);
+					ContainerMark(obj, 1, ptrProp->GetContainerNestedLevel(), it);
 					if (!bContainerIteratorErased)
 					{
 						++it;

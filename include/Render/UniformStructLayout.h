@@ -32,7 +32,7 @@ namespace sh::render
 		struct UniformMember
 		{
 			std::string name;
-			core::reflection::TypeInfo& type;
+			const core::reflection::TypeInfo& type;
 			uint32_t offset;
 			uint32_t layoutSize;
 			uint32_t count;

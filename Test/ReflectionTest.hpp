@@ -19,6 +19,9 @@ class Base : public sh::core::SObject
 class Derived : public Base 
 {
     SCLASS(Derived)
+private:
+    PROPERTY(privateNumber)
+    int privateNumber = 88;
 public:
     PROPERTY(number, sh::core::PropertyOption::constant)
     int number;
@@ -38,14 +41,30 @@ public:
 
 TEST(ReflectionTest, TypeInfoTest) 
 {
+    using namespace sh::core;
     Base base;
     Derived derived;
 
     EXPECT_EQ(Base::GetStaticType().name, "Base");
     EXPECT_EQ(Derived::GetStaticType().name, "Derived");
 
-    EXPECT_TRUE(derived.GetType().IsA(Derived::GetStaticType()));
+    EXPECT_TRUE(derived.GetType() == Derived::GetStaticType());
     EXPECT_TRUE(derived.GetType().IsChildOf(Base::GetStaticType()));
+    EXPECT_TRUE(*derived.GetType().GetSuper() == Base::GetStaticType());
+
+    EXPECT_EQ(base.GetType().size, 72);
+    EXPECT_EQ(derived.GetType().size, 208);
+
+    auto& intType = reflection::GetType<const int>();
+    EXPECT_EQ(reflection::GetType<int>(), reflection::GetType<const int>());
+    EXPECT_TRUE(intType.isConst);
+}
+
+TEST(ReflectionTest, ContainerTest)
+{
+    using namespace sh::core;
+    EXPECT_EQ(reflection::GetType<int>().containerNestedLevel, 0);
+    EXPECT_EQ(reflection::GetType<std::vector<int>>().containerNestedLevel, 1);
 }
 
 TEST(ReflectionTest, PropertyTest) 

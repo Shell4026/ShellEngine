@@ -41,10 +41,10 @@ namespace sh::core
 			Listener(const std::function<void(Args...)>& func, int priority = 0) :
 				func(func), priority(priority)
 			{}
-			/// @brief 주의! 콜백 함수는 이동 안 됨
+			/// @brief 주의) 콜백 함수 재설정 권장
 			/// @param other 다른 Listener 객체
-			Listener(Listener&& other) :
-				observers(std::move(other.observers)), priority(other.priority)
+			Listener(Listener&& other) noexcept:
+				observers(std::move(other.observers)), func(std::move(other.func)), priority(other.priority)
 			{
 				for (auto observer : observers)
 				{

@@ -52,6 +52,7 @@ namespace sh::core
 		SH_CORE_API virtual void OnPropertyChanged(const reflection::Property& prop);
 
 		SH_CORE_API void SetName(std::string_view name);
+		SH_CORE_API void SetName(const core::Name& name);
 		SH_CORE_API auto GetName() const -> const Name&;
 
 		SH_CORE_API void SetUUID(const UUID& uuid);

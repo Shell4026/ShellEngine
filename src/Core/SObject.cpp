@@ -1,11 +1,7 @@
 ﻿#include "SObject.h"
-
 #include "GarbageCollection.h"
 #include "Observer.hpp"
 #include "Util.h"
-
-#include <cstring>
-#include <stack>
 
 namespace sh::core
 {
@@ -76,6 +72,10 @@ namespace sh::core
 	{
 		this->name = Name{ name };
 	}
+	SH_CORE_API void SObject::SetName(const core::Name& name)
+	{
+		this->name = name;
+	}
 	SH_CORE_API auto SObject::GetName() const -> const Name&
 	{
 		return name;
@@ -97,28 +97,30 @@ namespace sh::core
 		const reflection::STypeInfo* stypeInfo = &GetType();
 		core::Json mainJson;
 		mainJson["version"] = 1;
-		mainJson["type"] = stypeInfo->name;
+		mainJson["type"] = stypeInfo->name.ToString();
 		mainJson["uuid"] = uuid.ToString();
 		mainJson["name"] = name.ToString();
 		while (stypeInfo)
 		{
 			core::Json json{};
-			for (auto& [name, prop] :stypeInfo->GetProperties())
+			for (auto& prop :stypeInfo->GetProperties())
 			{
-				const reflection::TypeInfo& propType = prop.type;
+				const reflection::TypeInfo& propType = prop->type;
+				const core::Name& name = prop->GetName();
+
 				if (propType == core::reflection::GetType<int>())
-					core::SerializeProperty(json, name, *prop.Get<int>(this));
+					core::SerializeProperty(json, name, *prop->Get<int>(this));
 				else if (propType == core::reflection::GetType<float>())
-					core::SerializeProperty(json, name, *prop.Get<float>(this));
+					core::SerializeProperty(json, name, *prop->Get<float>(this));
 				else if (propType == core::reflection::GetType<std::string>())
-					core::SerializeProperty(json, name, *prop.Get<std::string>(this));
+					core::SerializeProperty(json, name, *prop->Get<std::string>(this));
 				else if (propType == core::reflection::GetType<bool>())
-					core::SerializeProperty(json, name, *prop.Get<bool>(this));
-				else if (prop.isSObjectPointer)
+					core::SerializeProperty(json, name, *prop->Get<bool>(this));
+				else if (prop->isSObjectPointer)
 				{
-					SObject* ptr = *prop.Get<SObject*>(this);
-					if (core::IsValid(ptr))
-						core::SerializeProperty(json, name, ptr);
+					auto ptr = prop->Get<SObject*>(this);
+					if (core::IsValid(*ptr))
+						core::SerializeProperty(json, name, *ptr);
 				}
 			}
 			if (!json.empty())
@@ -130,7 +132,7 @@ namespace sh::core
 	SH_CORE_API void SObject::Deserialize(const nlohmann::json& json)
 	{
 		const reflection::STypeInfo* stypeInfo = &GetType();
-		if (json["type"].get<std::string>() != stypeInfo->name)
+		if (stypeInfo->name != json["type"].get<std::string>())
 			return;
 
 		if (json.contains("uuid"))
@@ -148,20 +150,22 @@ namespace sh::core
 				continue;
 			}
 			core::Json subJson = json[stypeInfo->name];
-			for (auto& [name, prop] : stypeInfo->GetProperties())
+			for (auto& prop : stypeInfo->GetProperties())
 			{
-				const reflection::TypeInfo& propType = prop.type;
+				const reflection::TypeInfo& propType = prop->type;
+				const core::Name& name = prop->GetName();
+
 				if (propType == core::reflection::GetType<int>())
-					core::DeserializeProperty(subJson, name, *prop.Get<int>(this));
+					core::DeserializeProperty(subJson, name, *prop->Get<int>(this));
 				else if (propType == core::reflection::GetType<float>())
-					core::DeserializeProperty(subJson, name, *prop.Get<float>(this));
+					core::DeserializeProperty(subJson, name, *prop->Get<float>(this));
 				else if (propType == core::reflection::GetType<std::string>())
-					core::DeserializeProperty(subJson, name, *prop.Get<std::string>(this));
+					core::DeserializeProperty(subJson, name, *prop->Get<std::string>(this));
 				else if (propType == core::reflection::GetType<bool>())
-					core::DeserializeProperty(subJson, name, *prop.Get<bool>(this));
-				else if (prop.isSObjectPointer)
-					core::DeserializeProperty(subJson, name, *prop.Get<SObject*>(this));
-				OnPropertyChanged(prop);
+					core::DeserializeProperty(subJson, name, *prop->Get<bool>(this));
+				else if (prop->isSObjectPointer)
+					core::DeserializeProperty(subJson, name, *prop->Get<SObject*>(this));
+				OnPropertyChanged(*prop.get());
 			}
 			stypeInfo = stypeInfo->GetSuper();
 		}

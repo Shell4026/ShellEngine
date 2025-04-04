@@ -13,8 +13,8 @@ namespace sh::core
 	private:
 		friend struct std::hash<sh::core::Name>;
 
-		static std::unordered_map<std::size_t, std::string> map;
-		static SpinLock lock;
+		SH_CORE_API static std::unordered_map<std::size_t, std::string> map;
+		SH_CORE_API static SpinLock lock;
 
 		std::size_t hash;
 	public:
@@ -27,9 +27,10 @@ namespace sh::core
 		SH_CORE_API auto operator=(Name&& other) noexcept -> Name&;
 		SH_CORE_API auto operator==(const Name& other) const -> bool;
 		SH_CORE_API auto operator!=(const Name& other) const -> bool;
-		SH_CORE_API auto operator==(const std::string& str) const -> bool;
-		SH_CORE_API auto operator!=(const std::string& str) const -> bool;
+		SH_CORE_API auto operator==(const std::string_view str) const -> bool;
+		SH_CORE_API auto operator!=(const std::string_view str) const -> bool;
 
+		SH_CORE_API operator const std::string& () const;
 		SH_CORE_API auto ToString() const -> const std::string&;
 	};
 }//namespace
@@ -44,4 +45,13 @@ namespace std
 			return name.hash;
 		}
 	};
+
+	static auto operator==(std::string_view str, const sh::core::Name& name) -> bool
+	{
+		return name == str;
+	}
+	static auto operator!=(std::string_view str, const sh::core::Name& name) -> bool
+	{
+		return name != str;
+	}
 }

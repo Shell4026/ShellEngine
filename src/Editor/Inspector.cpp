@@ -106,28 +106,30 @@ namespace sh::editor
 		do
 		{
 			auto& props = currentType->GetProperties();
-			for (auto& [name, prop] : props)
+			for (auto& prop : props)
 			{
-				if (prop.bVisibleProperty == false)
+				if (prop->bVisibleProperty == false)
 					continue;
-				core::reflection::TypeInfo type{ prop.type };
-				bool constant = prop.bConstProperty || prop.isConst;
+				const core::reflection::TypeInfo& type = prop->type;
+				bool constant = prop->bConstProperty || prop->isConst;
+				std::string name = prop->GetName().ToString();
+
 				auto inputFlag = constant ? ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly : ImGuiInputTextFlags_::ImGuiInputTextFlags_None;
 
 				// SObject 포인터 형식, 드래그 앤 드랍 기능
-				if (prop.isSObjectPointer)
+				if (prop->isSObjectPointer)
 				{
-					RenderSObjectPtrProperty(prop, obj, name);
+					RenderSObjectPtrProperty(*prop, obj, name);
 				}
-				if (prop.isContainer)
+				if (prop->isContainer)
 				{
-					RenderContainerProperty(prop, obj, name);
+					RenderContainerProperty(*prop, obj, name);
 				}
 				else
 				{
 					if (type == core::reflection::GetType<game::Vec4>())
 					{
-						game::Vec4* parameter = prop.Get<game::Vec4>(obj);
+						game::Vec4* parameter = prop->Get<game::Vec4>(obj);
 						float v[4] = { parameter->x, parameter->y, parameter->z };
 						ImGui::LabelText(("##" + name).c_str(), name.c_str());
 						if (constant)
@@ -142,7 +144,7 @@ namespace sh::editor
 								parameter->y = v[1];
 								parameter->z = v[2];
 								parameter->w = v[3];
-								obj->OnPropertyChanged(prop);
+								obj->OnPropertyChanged(*prop);
 								AssetDatabase::SetDirty(obj);
 								AssetDatabase::SaveAllAssets();
 							}
@@ -150,7 +152,7 @@ namespace sh::editor
 					}
 					else if (type == core::reflection::GetType<game::Vec3>())
 					{
-						game::Vec3* parameter = prop.Get<game::Vec3>(obj);
+						game::Vec3* parameter = prop->Get<game::Vec3>(obj);
 						float v[3] = { parameter->x, parameter->y, parameter->z };
 						ImGui::LabelText(("##" + name).c_str(), name.c_str());
 						if (constant)
@@ -164,7 +166,7 @@ namespace sh::editor
 								parameter->x = v[0];
 								parameter->y = v[1];
 								parameter->z = v[2];
-								obj->OnPropertyChanged(prop);
+								obj->OnPropertyChanged(*prop);
 								AssetDatabase::SetDirty(obj);
 								AssetDatabase::SaveAllAssets();
 							}
@@ -172,7 +174,7 @@ namespace sh::editor
 					}
 					else if (type == core::reflection::GetType<game::Vec2>())
 					{
-						game::Vec2* parameter = prop.Get<game::Vec2>(obj);
+						game::Vec2* parameter = prop->Get<game::Vec2>(obj);
 						float v[2] = { parameter->x, parameter->y };
 						ImGui::LabelText(("##" + name).c_str(), name.c_str());
 						if (constant)
@@ -183,7 +185,7 @@ namespace sh::editor
 							{
 								parameter->x = v[0];
 								parameter->y = v[1];
-								obj->OnPropertyChanged(prop);
+								obj->OnPropertyChanged(*prop);
 								AssetDatabase::SetDirty(obj);
 								AssetDatabase::SaveAllAssets();
 							}
@@ -191,65 +193,65 @@ namespace sh::editor
 					}
 					else if (type == core::reflection::GetType<float>())
 					{
-						float* parameter = prop.Get<float>(obj);
+						float* parameter = prop->Get<float>(obj);
 						if (constant)
 							ImGui::InputFloat(("##input_" + name + std::to_string(idx)).c_str(), parameter, 0.f, 0.f, "%.3f", inputFlag);
 						else
 							if (ImGui::InputFloat(("##input_" + name + std::to_string(idx)).c_str(), parameter))
 							{
-								obj->OnPropertyChanged(prop);
+								obj->OnPropertyChanged(*prop);
 								AssetDatabase::SetDirty(obj);
 								AssetDatabase::SaveAllAssets();
 							}
 					}
 					else if (type == core::reflection::GetType<int>())
 					{
-						int* parameter = prop.Get<int>(obj);
+						int* parameter = prop->Get<int>(obj);
 						ImGui::LabelText(("##" + name).c_str(), name.c_str());
 						if (constant)
 							ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), parameter, 0, 0, inputFlag);
 						else
 							if (ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), parameter))
 							{
-								obj->OnPropertyChanged(prop);
+								obj->OnPropertyChanged(*prop);
 								AssetDatabase::SetDirty(obj);
 								AssetDatabase::SaveAllAssets();
 							}
 					}
 					else if (type == core::reflection::GetType<uint32_t>())
 					{
-						uint32_t* parameter = prop.Get<uint32_t>(obj);
+						uint32_t* parameter = prop->Get<uint32_t>(obj);
 						ImGui::LabelText(("##" + name).c_str(), name.c_str());
 						if (constant)
 							ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), reinterpret_cast<int*>(parameter), 0, 0, inputFlag);
 						else
 							if (ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), reinterpret_cast<int*>(parameter)))
 							{
-								obj->OnPropertyChanged(prop);
+								obj->OnPropertyChanged(*prop);
 								AssetDatabase::SetDirty(obj);
 								AssetDatabase::SaveAllAssets();
 							}
 					}
 					else if (type == core::reflection::GetType<std::string>())
 					{
-						std::string* parameter = prop.Get<std::string>(obj);
+						std::string* parameter = prop->Get<std::string>(obj);
 						ImGui::LabelText(("##" + name).c_str(), name.c_str());
 						if (constant)
 							ImGui::InputText(("##Input_" + name + std::to_string(idx)).c_str(), parameter, inputFlag);
 						else
 							if (ImGui::InputText(("##Input_" + name + std::to_string(idx)).c_str(), parameter, inputFlag))
 							{
-								obj->OnPropertyChanged(prop);
+								obj->OnPropertyChanged(*prop);
 								AssetDatabase::SetDirty(obj);
 								AssetDatabase::SaveAllAssets();
 							}
 					}
 					else if (type == core::reflection::GetType<bool>())
 					{
-						bool* parameter = prop.Get<bool>(obj);
+						bool* parameter = prop->Get<bool>(obj);
 						if (!constant)
-							ImGui::Checkbox(prop.GetName().data(), parameter);
-						obj->OnPropertyChanged(prop);
+							ImGui::Checkbox(name.c_str(), parameter);
+						obj->OnPropertyChanged(*prop);
 						AssetDatabase::SetDirty(obj);
 						AssetDatabase::SaveAllAssets();
 					}
@@ -262,8 +264,8 @@ namespace sh::editor
 		core::SObject** objPtr, const core::reflection::TypeInfo* type)
 	{
 		std::string typeName{ type == nullptr ? prop.type.name : type->name };
-		std::string typeNameSubPtr{ type == nullptr ? prop.type.name : type->name };
-		typeNameSubPtr.pop_back();
+		if (type == nullptr)
+			type = &prop.type;
 
 		if (objPtr == nullptr)
 			ImGui::LabelText(("##" + name).c_str(), name.c_str());
@@ -324,10 +326,10 @@ namespace sh::editor
 						const core::reflection::STypeInfo* componentType = &payloadComponent->GetType();
 						while (componentType)
 						{
-							if (componentType->typeName == typeNameSubPtr)
+							if (componentType->type == *type)
 							{
 								// 요구하는 컴포넌트가 맞다면 페이로드 재설정
-								ImGui::SetDragDropPayload((std::string{ componentType->typeName } + '*').c_str(), &payloadComponent, sizeof(game::Component*));
+								ImGui::SetDragDropPayload((std::string{ componentType->name } + '*').c_str(), &payloadComponent, sizeof(game::Component*));
 								break;
 							}
 							componentType = componentType->GetSuper();
@@ -468,7 +470,7 @@ namespace sh::editor
 						continue;
 					if (component->hideInspector)
 						continue;
-					if (ImGui::CollapsingHeader((component->GetType().name.data() + ("##" + std::to_string(idx))).data()))
+					if (ImGui::CollapsingHeader((component->GetType().name.ToString().c_str() + ("##" + std::to_string(idx))).data()))
 					{
 						RenderProperties(&component->GetType(), component, idx);
 					}

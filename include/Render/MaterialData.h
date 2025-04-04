@@ -5,6 +5,7 @@
 #include "ShaderEnum.h"
 
 #include "Core/ISyncable.h"
+#include "Core/SContainer.hpp"
 
 #include <map>
 #include <unordered_map>
