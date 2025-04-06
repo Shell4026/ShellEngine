@@ -470,7 +470,19 @@ namespace sh::editor
 						continue;
 					if (component->hideInspector)
 						continue;
-					if (ImGui::CollapsingHeader((component->GetType().name.ToString().c_str() + ("##" + std::to_string(idx))).data()))
+					bool bOpenComponent = ImGui::CollapsingHeader((component->GetType().name.ToString().c_str() + ("##" + std::to_string(idx))).data());
+					if (ImGui::BeginPopupContextItem((component->GetUUID().ToString() + "RightClickPopup").c_str()))
+					{
+						if (component->GetType() != game::Transform::GetStaticType())
+						{
+							if (ImGui::Selectable("Delete"))
+							{
+								component->Destroy();
+							}
+						}
+						ImGui::EndPopup();
+					}
+					if (bOpenComponent && core::IsValid(component))
 					{
 						RenderProperties(&component->GetType(), component, idx);
 					}
