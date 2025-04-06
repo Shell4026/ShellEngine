@@ -6,6 +6,8 @@ namespace sh::core::reflection
 
 	SH_CORE_API auto STypeInfo::AddProperty(const Property& prop) -> Property*
 	{
+		if (GetProperty(prop.GetName()) != nullptr)
+			return nullptr;
 		properties.push_back(std::make_unique<Property>(prop));
 		auto propPtr = properties.back().get();
 		if (prop.isSObjectPointer)

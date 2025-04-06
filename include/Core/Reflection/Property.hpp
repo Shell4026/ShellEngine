@@ -465,7 +465,7 @@ namespace sh::core::reflection
 			isSObjectPointer(std::is_convertible_v<T, const SObject*>),
 			isSObjectPointerContainer(reflection::IsContainer<T>::value && std::is_convertible_v<reflection::GetContainerLastType<T>::type, const SObject*>)
 		{
-			// 메모) Property 클래스당 하나만 있는 전역 변수이지만, 템플릿 인자로 인해 클래스 맴버 변수 별로 메모리 상에 하나만 존재하게 된다.
+			// 메모) 템플릿 인자로 인해 클래스 맴버 변수 별로 메모리 상에 하나만 존재하게 된다.
 			static PropertyData<ThisType, T, VariablePointer, ptr> data{};
 			this->data = &data;
 		}
