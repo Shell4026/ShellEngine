@@ -80,6 +80,19 @@ namespace sh::render
 			}
 		}
 	}
+	auto sh::render::MaterialData::GetMaterialPassData(core::ThreadType thread, const ShaderPass& shaderPass) const -> const MaterialData::PassData*
+	{
+		const MaterialData::PassData* uniformData = nullptr;
+		for (auto& passData : perPassData[thread])
+		{
+			if (passData.pass == &shaderPass)
+			{
+				uniformData = &passData;
+				break;
+			}
+		}
+		return uniformData;
+	}
 
 	MaterialData::MaterialData(MaterialData&& other) noexcept :
 		context(other.context),
@@ -150,22 +163,16 @@ namespace sh::render
 	}
 	SH_RENDER_API void MaterialData::SetUniformData(const ShaderPass& shaderPass, UniformStructLayout::Type type, uint32_t binding, const void* data, core::ThreadType thread)
 	{
-		auto it = std::find_if(perPassData[thread].begin(), perPassData[thread].end(),
-			[&](const MaterialData::PassData& passData)
-			{
-				return passData.pass == &shaderPass;
-			}
-		);
-		if (it == perPassData[thread].end())
+		const MaterialData::PassData* uniformData = GetMaterialPassData(thread, shaderPass);
+		if (uniformData == nullptr)
 			return;
 
-		const MaterialData::PassData& uniformData = *it;
 		uint32_t set = static_cast<uint32_t>(type);
 
-		assert(!uniformData.uniformData.empty());
-		assert(!uniformData.uniformData[set].empty());
-		assert(uniformData.uniformData[set][binding] != nullptr);
-		auto& dataPtr = uniformData.uniformData[set][binding];
+		assert(!uniformData->uniformData.empty());
+		assert(!uniformData->uniformData[set].empty());
+		assert(uniformData->uniformData[set][binding] != nullptr);
+		auto& dataPtr = uniformData->uniformData[set][binding];
 		if (dataPtr == nullptr)
 			return;
 
@@ -178,13 +185,8 @@ namespace sh::render
 		if (!core::IsValid(tex))
 			return;
 
-		auto it = std::find_if(perPassData[core::ThreadType::Game].begin(), perPassData[core::ThreadType::Game].end(),
-			[&](const MaterialData::PassData& passData)
-			{
-				return passData.pass == &shaderPass;
-			}
-		);
-		if (it == perPassData[core::ThreadType::Game].end())
+		const MaterialData::PassData* uniformData = GetMaterialPassData(core::ThreadType::Game, shaderPass);
+		if (uniformData == nullptr)
 			return;
 
 		uint32_t set = static_cast<uint32_t>(type);
@@ -198,26 +200,21 @@ namespace sh::render
 			return;
 		}
 
-		it->uniformBuffer[set]->Link(binding, *tex);
+		uniformData->uniformBuffer[set]->Link(binding, *tex);
 
 		SetDirty();
 	}
 	SH_RENDER_API auto MaterialData::GetShaderBuffer(const ShaderPass& shaderPass, UniformStructLayout::Type type, uint32_t binding, core::ThreadType thr) const -> IBuffer*
 	{
-		auto it = std::find_if(perPassData[thr].begin(), perPassData[thr].end(), 
-			[&](const MaterialData::PassData& passData)
-			{
-				return passData.pass == &shaderPass;
-			}
-		);
-		if (it == perPassData[thr].end())
+		const MaterialData::PassData* uniformData = GetMaterialPassData(thr, shaderPass);
+		if (uniformData == nullptr)
 			return nullptr;
 
 		uint32_t set = static_cast<uint32_t>(type);
-		if (it->uniformData.size() <= set)
+		if (uniformData->uniformData.size() <= set)
 			return nullptr;
 
-		auto& dataPtr = it->uniformData[set][binding];
+		auto& dataPtr = uniformData->uniformData[set][binding];
 		if (dataPtr == nullptr)
 			return nullptr;
 		else
@@ -227,17 +224,13 @@ namespace sh::render
 	}
 	SH_RENDER_API auto MaterialData::GetUniformBuffer(const ShaderPass& shaderPass, UniformStructLayout::Type type, core::ThreadType thr) const -> IUniformBuffer*
 	{
-		auto it = std::find_if(perPassData[thr].begin(), perPassData[thr].end(), 
-			[&](const MaterialData::PassData& passData)
-			{
-				return passData.pass == &shaderPass;
-			}
-		);
-		if (it == perPassData[thr].end())
-			return nullptr;
-		if (it->uniformBuffer.size() <= static_cast<uint32_t>(type))
+		const MaterialData::PassData* uniformData = GetMaterialPassData(thr, shaderPass);
+		if (uniformData == nullptr)
 			return nullptr;
 
-		return it->uniformBuffer[static_cast<uint32_t>(type)].get();
+		if (uniformData->uniformBuffer.size() <= static_cast<uint32_t>(type))
+			return nullptr;
+
+		return uniformData->uniformBuffer[static_cast<uint32_t>(type)].get();
 	}
 }//namespace

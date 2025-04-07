@@ -8,6 +8,7 @@ namespace sh::core
 {
 	SH_CORE_API UUID::UUID(std::string_view str)
 	{
+		// 32글자
 		if (str.size() == uuid.size() * 8)
 		{
 			try
@@ -23,6 +24,7 @@ namespace sh::core
 			{
 				this->operator=(Generate());
 			}
+			uuidStr = str;
 		}
 		else
 		{
@@ -33,12 +35,27 @@ namespace sh::core
 	{
 		for (int i = 0; i < uuid.size(); ++i)
 			uuid[i] = other.uuid[i];
+		uuidStr = other.uuidStr;
+	}
+	SH_CORE_API UUID::UUID(UUID&& other) noexcept
+	{
+		for (int i = 0; i < uuid.size(); ++i)
+			uuid[i] = other.uuid[i];
+		uuidStr = std::move(other.uuidStr);
 	}
 
 	SH_CORE_API auto UUID::operator=(const UUID& other) noexcept -> UUID&
 	{
 		for (int i = 0; i < uuid.size(); ++i)
 			uuid[i] = other.uuid[i];
+		uuidStr = other.uuidStr;
+		return *this;
+	}
+	SH_CORE_API auto UUID::operator=(UUID&& other) noexcept -> UUID&
+	{
+		for (int i = 0; i < uuid.size(); ++i)
+			uuid[i] = other.uuid[i];
+		uuidStr = std::move(other.uuidStr);
 		return *this;
 	}
 
@@ -70,7 +87,13 @@ namespace sh::core
 			{
 				UUID uuid{};
 				for (int i = 0; i < 4; ++i)
+				{
 					uuid.uuid[i] = Util::RandomRange(static_cast<uint32_t>(0), std::numeric_limits<uint32_t>::max());
+
+					std::array<char, 9> buffer{ '0','0','0','0','0','0','0','0','\0' };
+					std::to_chars(buffer.data(), buffer.data() + 8, uuid.uuid[i], 16);
+					uuid.uuidStr += std::string{ buffer.data(), 8 };
+				}
 				uuids.push(std::move(uuid));
 			}
 		}
@@ -79,16 +102,8 @@ namespace sh::core
 		return uuid;
 	}
 
-	SH_CORE_API auto UUID::ToString() const -> std::string
+	SH_CORE_API auto UUID::ToString() const -> const std::string&
 	{
-		std::string result{};
-		result.reserve(32);
-		for (int i = 0; i < 4; ++i)
-		{
-			std::array<char, 9> buffer{ '0','0','0','0','0','0','0','0','\0' };
-			std::to_chars(buffer.data(), buffer.data() + 8, uuid[i], 16);
-			result += std::string{ buffer.data(), 8 };
-		}
-		return result;
+		return uuidStr;
 	}
 }//namespace

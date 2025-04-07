@@ -77,7 +77,8 @@ namespace sh::core
 	template<>
 	inline void SerializeProperty(core::Json& json, const std::string& key, SObject* const& value)
 	{
-		json[key] = value->GetUUID().ToString();
+		if (value != nullptr)
+			json[key] = value->GetUUID().ToString();
 	}
 	template<>
 	inline void DeserializeProperty(const core::Json& json, const std::string& key, SObject*& value)

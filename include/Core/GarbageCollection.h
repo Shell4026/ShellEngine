@@ -27,17 +27,12 @@ namespace sh::core
 		bool bContainerIteratorErased = false;
 	private:
 		/// @brief 중첩 컨테이너를 재귀로 순회하면서 SObject에 마킹 하는 함수
+		/// @param bfs BFS용 큐
 		/// @param parent 마킹이 시작된 오브젝트
 		/// @param depth 현재 깊이
 		/// @param maxDepth 최대 깊이
 		/// @param it 넘길 반복자
-		void ContainerMark(SObject* parent, int depth, int maxDepth, sh::core::reflection::PropertyIterator& it);
-		/// @brief 마킹 함수
-		/// @param obj 마킹 할 객체
-		/// @param parent 마킹 할 객체의 부모
-		/// @param parentProperty 부모의 해당 객체를 가르키는 프로퍼티
-		/// @param parentIterator 부모 컨테이너의 해당 객체를 가르키는 반복자 프로퍼티
-		void Mark(SObject* obj, SObject* parent, core::reflection::Property* parentProperty, core::reflection::PropertyIterator* parentIterator);
+		void ContainerMark(std::queue<SObject*>& bfs, SObject* parent, int depth, int maxDepth, sh::core::reflection::PropertyIterator& it);
 	protected:
 		SH_CORE_API GarbageCollection();
 	public:

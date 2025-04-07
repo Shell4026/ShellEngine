@@ -20,6 +20,7 @@ namespace sh::game
 		mainCamera(nullptr),
 		lightOctree(render::AABB{-1000, -1000, -1000, 1000, 1000, 1000})
 	{
+		SetName("World");
 		gc = core::GarbageCollection::GetInstance();
 
 		gc->SetRootSet(this);

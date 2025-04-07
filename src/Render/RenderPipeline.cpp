@@ -39,12 +39,16 @@ namespace sh::render
 			mat = replacementMat;
 		Mesh::Topology topology = drawable->GetMesh()->GetTopology();
 
-		auto it = std::find_if(renderGroups.begin(), renderGroups.end(), [&](const RenderGroup& renderGroup)
+		RenderGroup* renderGroup = nullptr;
+		for (auto& group : renderGroups)
+		{
+			if (group.material == mat && group.topology == topology)
 			{
-				return renderGroup.material == mat && renderGroup.topology == topology;
+				renderGroup = &group;
+				break;
 			}
-		);
-		if (it == renderGroups.end())
+		}
+		if (renderGroup == nullptr)
 		{
 			RenderGroup group{};
 			group.material = mat;
@@ -54,7 +58,7 @@ namespace sh::render
 		}
 		else
 		{
-			it->drawables.push_back(drawable);
+			renderGroup->drawables.push_back(drawable);
 		}
 	}
 	SH_RENDER_API void RenderPipeline::ClearDrawable()

@@ -46,7 +46,7 @@ namespace sh::render
 		std::vector<RenderGroup> renderGroups;
 		std::vector<const Camera*> ignoreCameras;
 
-		core::Name passName = "Forward";
+		core::Name passName = core::Name{ "Forward" };
 
 		std::unique_ptr<IRenderPipelineImpl> impl;
 	public:

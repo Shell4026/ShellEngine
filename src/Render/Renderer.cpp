@@ -121,14 +121,16 @@ namespace sh::render
 	}
 	SH_RENDER_API auto Renderer::GetRenderPipeline(const core::Name& name) const -> RenderPipeline*
 	{
-		auto it = std::find_if(renderPipelines.begin(), renderPipelines.end(), [&](const std::unique_ptr<RenderPipeline>& pipeline)
+		RenderPipeline* renderPipeline = nullptr;
+		for (auto& _renderPipeline : renderPipelines)
+		{
+			if (_renderPipeline->GetPassName() == name)
 			{
-				return pipeline->GetPassName() == name;
+				renderPipeline = _renderPipeline.get();
+				break;
 			}
-		);
-		if (it == renderPipelines.end())
-			return nullptr;
-		return it->get();
+		}
+		return renderPipeline;
 	}
 
 	SH_RENDER_API void Renderer::AddCamera(const Camera& camera)

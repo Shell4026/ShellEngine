@@ -30,23 +30,29 @@ namespace sh::render
 	}
 	auto Shader::GetLightingPass(const core::Name& name) -> LightingPassData*
 	{
-		auto it = std::find_if(passes.begin(), passes.end(), [&](const LightingPassData& lightingPassData)
+		LightingPassData* passData = nullptr;
+		for (auto& _passData : passes)
 		{
-			return lightingPassData.name == name;
-		});
-		if (it == passes.end())
-			return nullptr;
-		return &(*it);
+			if (_passData.name == name)
+			{
+				passData = &_passData;
+				break;
+			}
+		}
+		return passData;
 	}
 	auto Shader::GetLightingPass(const core::Name& name) const -> const LightingPassData*
 	{
-		auto it = std::find_if(passes.begin(), passes.end(), [&](const LightingPassData& lightingPassData)
+		const LightingPassData* passData = nullptr;
+		for (auto& _passData : passes)
 		{
-			return lightingPassData.name == name;
-		});
-		if (it == passes.end())
-			return nullptr;
-		return &(*it);
+			if (_passData.name == name)
+			{
+				passData = &_passData;
+				break;
+			}
+		}
+		return passData;
 	}
 
 	Shader::Shader(ShaderCreateInfo&& shaderCreateInfo)

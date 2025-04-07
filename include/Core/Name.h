@@ -38,7 +38,7 @@ namespace sh::core
 namespace std
 {
 	template<>
-	struct std::hash<sh::core::Name>
+	struct hash<sh::core::Name>
 	{
 		auto operator()(const sh::core::Name& name) const -> std::size_t
 		{

@@ -42,6 +42,7 @@ namespace sh::render
 		bool bRecreate = false;
 	private:
 		void CreateBuffers(core::ThreadType thread, const IRenderContext& context, const Shader& shader, bool bPerObject);
+		auto GetMaterialPassData(core::ThreadType thread, const ShaderPass& shaderPass) const -> const MaterialData::PassData*;
 	protected:
 		SH_RENDER_API void SetDirty() override;
 		SH_RENDER_API void Sync() override;
