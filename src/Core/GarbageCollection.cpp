@@ -55,6 +55,12 @@ namespace sh::core
 		rootSets.insert(obj);
 	}
 
+	SH_CORE_API void GarbageCollection::SetUpdateTick(uint32_t tick)
+	{
+		updatePeriodTick = tick;
+		this->tick = 0;
+	}
+
 	SH_CORE_API void GarbageCollection::RemoveRootSet(SObject* obj)
 	{
 		rootSets.erase(obj);
@@ -62,8 +68,16 @@ namespace sh::core
 
 	SH_CORE_API void GarbageCollection::Update()
 	{
+		if (++tick < updatePeriodTick)
+			return;
+		tick = 0;
+
+		Collect();
+	}
+	SH_CORE_API void sh::core::GarbageCollection::Collect()
+	{
 		auto start = std::chrono::high_resolution_clock::now();
-		for (auto &[id, obj] : objs)
+		for (auto& [id, obj] : objs)
 		{
 			obj->bMark = false;
 		}
@@ -95,7 +109,7 @@ namespace sh::core
 					SObject* ptr = *propertyPtr;
 					if (ptr == nullptr)
 						continue;
-					
+
 					// Destory함수로 인해 제거 될 객체면 가르키고 있던 포인터를 nullptr로 바꾸고, 마킹하지 않는다.
 					if (ptr->bPendingKill.load(std::memory_order::memory_order_acquire))
 						*propertyPtr = nullptr;
@@ -110,7 +124,7 @@ namespace sh::core
 					{
 						if (nested == 1)
 						{
-							SObject*const* propertyPtr = nullptr;
+							SObject* const* propertyPtr = nullptr;
 							if (it.IsPair())
 								propertyPtr = it.GetPairSecond<SObject*>();
 							else
@@ -164,6 +178,7 @@ namespace sh::core
 		auto end = std::chrono::high_resolution_clock::now();
 		elapseTime = static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
 	}
+
 	SH_CORE_API auto GarbageCollection::GetObjectCount() const -> std::size_t
 	{
 		return objs.size();
