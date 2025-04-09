@@ -31,6 +31,7 @@ namespace sh::core
 	{
 		static constexpr const char* invisible = "invisible";
 		static constexpr const char* constant = "const";
+		static constexpr const char* noSave = "noSave";
 	};
 }//namespace
 
@@ -389,6 +390,7 @@ namespace sh::core::reflection
 		{
 			bool bConst = false;
 			bool bVisible = true;
+			bool bNoSave = false;
 		} option;
 
 		const std::string_view name;
@@ -402,6 +404,8 @@ namespace sh::core::reflection
 					retOption.bConst = true;
 				else if (option == "invisible")
 					retOption.bVisible = false;
+				else if (option == "noSave")
+					retOption.bNoSave = true;
 			}
 			return retOption;
 		}
@@ -424,6 +428,7 @@ namespace sh::core::reflection
 		const TypeInfo& type;
 		const bool bConstProperty;
 		const bool bVisibleProperty;
+		const bool bNoSaveProperty;
 		const bool isConst;
 		const bool isPointer;
 		const bool isContainer;
@@ -438,6 +443,7 @@ namespace sh::core::reflection
 			containerNestedLevel(GetContainerNestedCount<T>::value),
 			bConstProperty(createInfo.option.bConst),
 			bVisibleProperty(createInfo.option.bVisible),
+			bNoSaveProperty(createInfo.option.bNoSave),
 			isConst(std::is_const_v<T>),
 			isPointer(std::is_pointer_v<T>),
 			isContainer(IsContainer<T>::value),

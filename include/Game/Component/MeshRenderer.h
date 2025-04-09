@@ -44,7 +44,7 @@ namespace sh::game
 		const render::Mesh* mesh;
 		PROPERTY(mat)
 		render::Material* mat;
-		PROPERTY(drawable, core::PropertyOption::invisible)
+		PROPERTY(drawable, core::PropertyOption::invisible, core::PropertyOption::noSave)
 		render::Drawable* drawable;
 	private:
 		void UpdateMaterialData();

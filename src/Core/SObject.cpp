@@ -105,6 +105,9 @@ namespace sh::core
 			core::Json json{};
 			for (auto& prop :stypeInfo->GetProperties())
 			{
+				if (prop->bNoSaveProperty)
+					continue;
+
 				const reflection::TypeInfo& propType = prop->type;
 				const core::Name& name = prop->GetName();
 
@@ -152,6 +155,8 @@ namespace sh::core
 			core::Json subJson = json[stypeInfo->name];
 			for (auto& prop : stypeInfo->GetProperties())
 			{
+				if (prop->bNoSaveProperty)
+					continue;
 				const reflection::TypeInfo& propType = prop->type;
 				const core::Name& name = prop->GetName();
 

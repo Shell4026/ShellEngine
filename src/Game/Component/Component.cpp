@@ -84,6 +84,8 @@ namespace sh::game
 			core::Json json{};
 			for (auto& prop :type->GetProperties())
 			{
+				if (prop->bNoSaveProperty)
+					continue;
 				const core::reflection::TypeInfo& propType = prop->type;
 				const core::Name& name = prop->GetName();
 				if (propType == core::reflection::GetType<int>())
@@ -123,6 +125,8 @@ namespace sh::game
 			core::Json compJson{ json.at(type->name) };
 			for (auto& prop : type->GetProperties())
 			{
+				if (prop->bNoSaveProperty)
+					continue;
 				const core::reflection::TypeInfo& propType = prop->type;
 				const core::Name& name = prop->GetName();
 

@@ -80,6 +80,7 @@ namespace sh::core::reflection
 		containerNestedLevel(other.containerNestedLevel),
 		bConstProperty(other.bConstProperty),
 		bVisibleProperty(other.bVisibleProperty),
+		bNoSaveProperty(other.bNoSaveProperty),
 		isConst(other.isConst),
 		isPointer(other.isPointer),
 		isContainer(other.isContainer),

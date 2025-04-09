@@ -37,10 +37,9 @@ namespace sh::render
 		const IRenderContext* context = nullptr;
 
 		PROPERTY(shader)
-		PROPERTY(propertyBlock)
-
 		Shader* shader;
 
+		PROPERTY(propertyBlock, core::PropertyOption::noSave)
 		MaterialPropertyBlock* propertyBlock = nullptr;
 
 		std::unique_ptr<MaterialData> materialData;
