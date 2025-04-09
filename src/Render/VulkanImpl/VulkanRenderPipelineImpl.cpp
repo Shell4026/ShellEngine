@@ -97,12 +97,17 @@ namespace sh::render::vk
 					{
 						auto objectUniformBuffer = static_cast<VulkanUniformBuffer*>(drawable->GetMaterialData().GetUniformBuffer(*pass.get(),
 							UniformStructLayout::Type::Object, core::ThreadType::Render));
+						
+						if (pass->IsUsingLight())
+							drawable->GetMaterialData().SetUniformData(*pass, UniformStructLayout::Type::Object, 0, &drawable->GetLightData(), core::ThreadType::Render);
 
 						VkDescriptorSet objectDescriptorSet = VK_NULL_HANDLE;
 						if (objectUniformBuffer)
 							objectDescriptorSet = objectUniformBuffer->GetVkDescriptorSet();
 						else
 							objectDescriptorSet = context.GetEmptyDescriptorSet();
+
+						
 
 						vkCmdBindDescriptorSets(cmd->GetCommandBuffer(),
 							VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, layout, static_cast<uint32_t>(UniformStructLayout::Type::Object), 1,

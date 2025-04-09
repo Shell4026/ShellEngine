@@ -68,6 +68,24 @@ namespace sh::game
 
 		if (propertyBlock != nullptr) 
 			SetMaterialPropertyBlock(propertyBlock); // 로컬 프로퍼티 처리를 위해 다시 호출
+
+		auto shader = this->mat->GetShader();
+		for (auto& lightingPass : shader->GetAllShaderPass())
+		{
+			bool exit = false;
+			for (auto& pass : lightingPass.passes)
+			{
+				if (pass->IsUsingLight())
+				{
+					bShaderHasLight = true;
+					exit = true;
+					break;
+				}
+			}
+			if (exit)
+				break;
+		}
+
 	}
 
 	auto MeshRenderer::GetMaterial() const -> sh::render::Material*
@@ -167,6 +185,29 @@ namespace sh::game
 		}
 	}
 
+	void MeshRenderer::FillLightStruct(render::Drawable& drawable) const
+	{
+		render::Drawable::Light lightStruct{};
+		auto lights = world.GetLightOctree().Query(worldAABB);
+		if (lights.size() < 10)
+		{
+			int idx = 0;
+			for (int i = 0; i < lights.size(); ++i)
+			{
+				ILight* light = static_cast<ILight*>(lights[i]);
+				const Vec3& pos = light->gameObject.transform->GetWorldPosition();
+				if (light->GetType() == PointLight::GetStaticType())
+				{
+					lightStruct.lightPos[idx] = { pos.x, pos.y, pos.z, 0.f };
+					lightStruct.lightRange[idx].x = static_cast<PointLight*>(light)->GetRadius();
+				}
+				++idx;
+			}
+			lightStruct.lightCount = idx;
+		}
+		drawable.SetLightData(lightStruct);
+	}
+
 	void MeshRenderer::CreateDrawable()
 	{
 		if (!core::IsValid(mesh))
@@ -210,7 +251,7 @@ namespace sh::game
 
 	void MeshRenderer::Update()
 	{
-		if (!sh::core::IsValid(mesh) || !sh::core::IsValid(mat) || !sh::core::IsValid(mat->GetShader()))
+		if (!sh::core::IsValid(mesh) || !sh::core::IsValid(mat) || !sh::core::IsValid(mat->GetShader()) || drawable == nullptr)
 			return;
 
 		sh::render::Renderer* renderer = &gameObject.world.renderer;
@@ -220,31 +261,12 @@ namespace sh::game
 		mat->UpdateUniformBuffers();
 		UpdateMaterialData();
 
+		if (bShaderHasLight)
+		{
+			FillLightStruct(*drawable);
+		}
 		drawable->SetModelMatrix(gameObject.transform->localToWorldMatrix);
 		gameObject.world.renderer.PushDrawAble(drawable);
-		// 광원 구조체 채우기
-		//struct
-		//{
-		//	alignas(16) glm::vec4 lightPosRange[10];
-		//	alignas(16) int lightCount = 0;
-		//} lightStruct;
-		//if (bShaderHasLight)
-		//{
-		//	std::fill(lightStruct.lightPosRange, lightStruct.lightPosRange + 10, glm::vec4{ 0.f });
-		//	auto lights = world.GetLightOctree().Query(worldAABB);
-		//	if (lights.size() < 10)
-		//	{
-		//		int idx = 0;
-		//		for (int i = 0; i < lights.size(); ++i)
-		//		{
-		//			ILight* light = static_cast<ILight*>(lights[i]);
-		//			const Vec3& pos = light->gameObject.transform->GetWorldPosition();
-		//			if (light->GetType() == PointLight::GetStaticType())
-		//				lightStruct.lightPosRange[idx++] = { pos.x, pos.y, pos.z, static_cast<PointLight*>(light)->GetRadius() };
-		//		}
-		//		lightStruct.lightCount = idx;
-		//	}
-		//}
 	}
 
 	SH_GAME_API void MeshRenderer::SetMaterialPropertyBlock(render::MaterialPropertyBlock* block)

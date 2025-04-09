@@ -60,6 +60,8 @@ namespace sh::game
 		{
 			std::memcpy(uniformData.data() + offset, &data, sizeof(T));
 		}
+
+		void FillLightStruct(render::Drawable& drawable) const;
 	protected:
 		/// @brief Drawable을 생성하거나 이미 존재 시 갱신하는 함수.
 		void CreateDrawable();

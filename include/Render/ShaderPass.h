@@ -29,6 +29,7 @@ namespace sh::render
 		uint8_t colorMask = 7; //0b111
 		bool bZWrite = true;
 		bool bHasConstant = false;
+		bool bUseLighting = false;
 	public:
 		struct AttributeData
 		{
@@ -83,6 +84,7 @@ namespace sh::render
 		SH_RENDER_API auto GetFragmentUniforms() const -> const std::vector<UniformStructLayout>&;
 		SH_RENDER_API auto GetSamplerUniforms() const -> const std::vector<UniformStructLayout>&;
 		SH_RENDER_API auto HasConstantUniform() const -> bool;
+		SH_RENDER_API auto IsUsingLight() const -> bool;
 
 		SH_RENDER_API bool HasAttribute(const std::string& name) const;
 		SH_RENDER_API auto GetAttribute(const std::string& name) const -> std::optional<AttributeData>;

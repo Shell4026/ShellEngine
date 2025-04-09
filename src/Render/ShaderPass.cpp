@@ -76,6 +76,14 @@ namespace sh::render
 		bZWrite = pass.zwrite;
 		colorMask = pass.colorMask;
 		FillAttributes(pass);
+		for (auto& stage : pass.stages)
+		{
+			if (stage.bUseLighting)
+			{
+				bUseLighting = true;
+				break;
+			}
+		}
 	}
 
 	ShaderPass::ShaderPass(ShaderPass&& other) noexcept :
@@ -83,7 +91,11 @@ namespace sh::render
 		attrs(std::move(other.attrs)), attridx(std::move(other.attridx)),
 		vertexUniforms(std::move(other.vertexUniforms)),
 		fragmentUniforms(std::move(other.fragmentUniforms)),
-		samplerUniforms(std::move(other.samplerUniforms))
+		samplerUniforms(std::move(other.samplerUniforms)),
+		cull(other.cull), colorMask(other.colorMask),
+		bZWrite(other.bZWrite),
+		bHasConstant(other.bHasConstant),
+		bUseLighting(other.bUseLighting)
 	{
 	}
 	ShaderPass::~ShaderPass()
@@ -216,5 +228,9 @@ namespace sh::render
 	SH_RENDER_API auto ShaderPass::HasConstantUniform() const -> bool
 	{
 		return bHasConstant;
+	}
+	SH_RENDER_API auto ShaderPass::IsUsingLight() const -> bool
+	{
+		return bUseLighting;
 	}
 }

@@ -64,6 +64,7 @@ namespace sh::render
 			std::vector<std::string> declaration;
 			std::vector<std::string> functions;
 			std::string code;
+			bool bUseLighting = false;
 		};
 
 		struct PassNode

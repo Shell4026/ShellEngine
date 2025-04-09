@@ -719,6 +719,7 @@ namespace sh::render
 						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Float, 10, "range" });
 						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec3, 10, "pos" });
 						stageNode.uniforms.push_back(std::move(uboNode));
+						stageNode.bUseLighting = true;
 						usingLIGHT = true;
 						uboit = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(), [&](const ShaderAST::UBONode& ubo)
 						{

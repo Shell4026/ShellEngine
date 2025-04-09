@@ -7,8 +7,17 @@
 namespace sh::render
 {
 	Drawable::Drawable(const Material& material, const Mesh& mesh) :
-		mat(&material), mesh(&mesh)
+		mat(&material), mesh(&mesh), modelMatrix(1.0f)
 	{
+	}
+	Drawable::Drawable(Drawable&& other) noexcept :
+		mat(other.mat), mesh(other.mesh), modelMatrix(other.modelMatrix),
+		materialData(std::move(other.materialData)), 
+		light(other.light),
+		renderTag(other.renderTag), 
+		bDirty(other.bDirty)
+	{
+		other.bDirty = false;
 	}
 	Drawable::~Drawable()
 	{
@@ -61,6 +70,15 @@ namespace sh::render
 	SH_RENDER_API auto Drawable::GetModelMatrix() const -> const glm::mat4&
 	{
 		return modelMatrix;
+	}
+
+	SH_RENDER_API void Drawable::SetLightData(const Light& lightData)
+	{
+		light = lightData;
+	}
+	SH_RENDER_API auto Drawable::GetLightData() const -> const Light&
+	{
+		return light;
 	}
 
 	SH_RENDER_API auto Drawable::CheckAssetValid() const -> bool
