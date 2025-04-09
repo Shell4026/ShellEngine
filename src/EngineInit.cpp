@@ -33,7 +33,7 @@ namespace sh
 	{
 		SH_INFO("Engine shutdown");
 		world->Clean();
-		gc->Update();
+		gc->Collect();
 		gc->ForceDelete(world);
 
 		gui.reset();

@@ -240,7 +240,7 @@ namespace sh::game
 		core::Json objsJson = core::Json::array();
 		for (auto obj : objs)
 		{
-			if (obj->GetName() == "_Helper" || obj->GetName() == "Grid" || obj->GetName() == "EditorCamera" || obj->GetName() == "PickingCamera" || obj->GetName() == "_Axis")
+			if (!core::IsValid(obj) || obj->GetName() == "_Helper" || obj->GetName() == "Grid" || obj->GetName() == "EditorCamera" || obj->GetName() == "PickingCamera" || obj->GetName() == "Axis")
 				continue;
 			core::Json objJson{ obj->Serialize() };
 			objsJson.push_back(objJson);

@@ -33,29 +33,29 @@ namespace sh::game
 
 	SH_GAME_API void GameObject::Awake()
 	{
-		for (auto& Component : components)
+		for (auto& component : components)
 		{
-			if (Component->active)
-				Component->Awake();
+			if (core::IsValid(component) && component->active)
+				component->Awake();
 		}
 		bInit = true;
 	}
 
 	SH_GAME_API void GameObject::Start()
 	{
-		for (auto& Component : components)
+		for (auto& component : components)
 		{
-			if (Component->active)
-				Component->Start();
+			if (core::IsValid(component) && component->active)
+				component->Start();
 		}
 	}
 
 	SH_GAME_API void GameObject::OnEnable()
 	{
-		for (auto& Component : components)
+		for (auto& component : components)
 		{
-			if(Component->active)
-				Component->OnEnable();
+			if(core::IsValid(component) && component->active)
+				component->OnEnable();
 		}
 	}
 	SH_GAME_API void GameObject::Destroy()
@@ -70,34 +70,34 @@ namespace sh::game
 
 	SH_GAME_API void GameObject::BeginUpdate()
 	{
-		for (auto& Component : components)
+		for (auto& component : components)
 		{
-			if (Component->active)
-				Component->BeginUpdate();
+			if (core::IsValid(component) && component->active)
+				component->BeginUpdate();
 		}
 	}
 	SH_GAME_API void GameObject::FixedUpdate()
 	{
-		for (auto& Component : components)
+		for (auto& component : components)
 		{
-			if (Component->active)
-				Component->FixedUpdate();
+			if (core::IsValid(component) && component->active)
+				component->FixedUpdate();
 		}
 	}
 	SH_GAME_API void GameObject::Update()
 	{
-		for (auto& Component : components)
+		for (auto& component : components)
 		{
-			if (Component->active)
-				Component->Update();
+			if (core::IsValid(component) && component->active)
+				component->Update();
 		}
 	}
 	SH_GAME_API void GameObject::LateUpdate()
 	{
-		for (auto& Component : components)
+		for (auto& component : components)
 		{
-			if (Component->active)
-				Component->LateUpdate();
+			if (core::IsValid(component) && component->active)
+				component->LateUpdate();
 		}
 	}
 
