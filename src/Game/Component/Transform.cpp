@@ -299,19 +299,21 @@ namespace sh::game
 	}
 	SH_GAME_API void Transform::Deserialize(const core::Json& json)
 	{
-		Super::Deserialize(json);
 		const core::Json& transformJson = json["Transform"];
+		if (transformJson.contains("parent"))
+		{
+			std::string uuid = transformJson["parent"].get<std::string>();
+			SetParent(static_cast<Transform*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuid })));
+		}
+
+		Super::Deserialize(json);
+		
 		if (transformJson.contains("quat") && transformJson["quat"].is_array() && transformJson["quat"].size() == 4)
 		{
 			quat.x = json["Transform"]["quat"][0].get<float>();
 			quat.y = json["Transform"]["quat"][1].get<float>();
 			quat.z = json["Transform"]["quat"][2].get<float>();
 			quat.w = json["Transform"]["quat"][3].get<float>();
-		}
-		if (transformJson.contains("parent"))
-		{
-			std::string uuid = transformJson["parent"].get<std::string>();
-			SetParent(static_cast<Transform*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuid })));
 		}
 
 		bUpdateMatrix = true;
