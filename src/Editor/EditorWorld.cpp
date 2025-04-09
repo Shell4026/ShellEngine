@@ -46,6 +46,7 @@ namespace sh::editor
 					auto pickingRenderer = obj->AddComponent<game::PickingRenderer>();
 					pickingRenderer->hideInspector = true;
 					pickingRenderer->SetCamera(*pickingCamera);
+					pickingRenderer->SetMeshRenderer(static_cast<game::MeshRenderer&>(*component));
 				}
 			}
 		);

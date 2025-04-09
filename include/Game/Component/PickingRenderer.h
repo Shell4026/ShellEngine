@@ -27,13 +27,12 @@ namespace sh::game
 		COMPONENT(PickingRenderer)
 	private:
 		PROPERTY(renderer)
-		PROPERTY(camera)
-		PROPERTY(id)
-
-		MeshRenderer* renderer = nullptr;
+		const MeshRenderer* renderer = nullptr;
 		
+		PROPERTY(camera)
 		PickingCamera* camera = nullptr;
 
+		PROPERTY(id)
 		uint32_t id = 0;
 	public:
 		SH_GAME_API PickingRenderer(GameObject& owner);
@@ -43,5 +42,8 @@ namespace sh::game
 		SH_GAME_API void BeginUpdate() override;
 
 		SH_GAME_API void SetCamera(PickingCamera& camera);
+		SH_GAME_API void SetMeshRenderer(const MeshRenderer& meshRenderer);
+
+		SH_GAME_API auto Serialize() const -> core::Json override;
 	};
 }//namespace

@@ -26,26 +26,25 @@ namespace sh::game
 	{
 		COMPONENT(MeshRenderer)
 	private:
-		PROPERTY(propertyBlock, core::PropertyOption::invisible)
-		PROPERTY(renderTag)
-		PROPERTY(mesh)
-		PROPERTY(mat)
-		PROPERTY(drawable, core::PropertyOption::invisible)
-
 		render::AABB worldAABB;
 		
+		PROPERTY(propertyBlock, core::PropertyOption::invisible)
 		render::MaterialPropertyBlock* propertyBlock = nullptr;
 
 		core::SVector<std::pair<const render::ShaderPass*, const render::UniformStructLayout*>> localUniformLocations;
 
 		core::Observer<false, const glm::mat4&>::Listener onMatrixUpdateListener;
 
+		PROPERTY(renderTag)
 		uint32_t renderTag = 1;
 
 		bool bShaderHasLight = false;
 	protected:
-		render::Mesh* mesh;
+		PROPERTY(mesh)
+		const render::Mesh* mesh;
+		PROPERTY(mat)
 		render::Material* mat;
+		PROPERTY(drawable, core::PropertyOption::invisible)
 		render::Drawable* drawable;
 	private:
 		void UpdateMaterialData();
@@ -69,12 +68,11 @@ namespace sh::game
 		SH_GAME_API MeshRenderer(GameObject& owner);
 		SH_GAME_API ~MeshRenderer();
 
-		SH_GAME_API void SetMesh(sh::render::Mesh* mesh);
-		SH_GAME_API auto GetMesh() const -> const sh::render::Mesh*;
-		SH_GAME_API auto GetMesh() -> sh::render::Mesh*;
+		SH_GAME_API void SetMesh(const render::Mesh* mesh);
+		SH_GAME_API auto GetMesh() const -> const render::Mesh*;
 
-		SH_GAME_API void SetMaterial(sh::render::Material* mat);
-		SH_GAME_API auto GetMaterial() const -> sh::render::Material*;
+		SH_GAME_API void SetMaterial(render::Material* mat);
+		SH_GAME_API auto GetMaterial() const -> render::Material*;
 
 		SH_GAME_API void Destroy() override;
 		SH_GAME_API void Awake() override;

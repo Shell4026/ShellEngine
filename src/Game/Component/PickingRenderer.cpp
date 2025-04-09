@@ -15,13 +15,6 @@ namespace sh::game
 		//SH_INFO_FORMAT("ID: {}", id);
 
 		this->mat = world.materials.GetResource("PickingMaterial");
-		renderer = owner.GetComponent<MeshRenderer>();
-		if (core::IsValid(renderer))
-		{
-			auto mesh = renderer->GetMesh();
-			if (core::IsValid(mesh))
-				this->mesh = mesh;
-		}
 
 		SetMaterialPropertyBlock(SObject::Create<render::MaterialPropertyBlock>());
 	}
@@ -59,6 +52,23 @@ namespace sh::game
 	SH_GAME_API void PickingRenderer::SetCamera(PickingCamera& camera)
 	{
 		this->camera = &camera;
+	}
+
+	SH_GAME_API void PickingRenderer::SetMeshRenderer(const MeshRenderer& meshRenderer)
+	{
+		if (!core::IsValid(&meshRenderer))
+			return;
+
+		renderer = &meshRenderer;
+		auto mesh = renderer->GetMesh();
+		if (core::IsValid(mesh))
+			this->mesh = mesh;
+	}
+
+	SH_GAME_API auto PickingRenderer::Serialize() const -> core::Json
+	{
+		// 직렬화 할 필요가 없다.
+		return core::Json{};
 	}
 
 	SH_GAME_API auto PickingIdManager::AssignId(PickingRenderer* renderer) -> uint32_t

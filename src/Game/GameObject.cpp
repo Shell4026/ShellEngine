@@ -136,7 +136,9 @@ namespace sh::game
 		{
 			if (!core::IsValid(component))
 				continue;
-			componentJsons.push_back(component->Serialize());
+			core::Json componentJson = component->Serialize();
+			if (!componentJson.empty())
+				componentJsons.push_back(std::move(componentJson));
 		}
 		mainJson["Components"] = componentJsons;
 		return mainJson;

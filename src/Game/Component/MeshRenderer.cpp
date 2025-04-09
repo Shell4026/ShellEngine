@@ -31,7 +31,7 @@ namespace sh::game
 	{
 	}
 
-	void MeshRenderer::SetMesh(sh::render::Mesh* mesh)
+	void MeshRenderer::SetMesh(const render::Mesh* mesh)
 	{
 		this->mesh = mesh;
 		if (core::IsValid(mesh))
@@ -46,10 +46,6 @@ namespace sh::game
 	}
 
 	SH_GAME_API auto MeshRenderer::GetMesh() const -> const sh::render::Mesh*
-	{
-		return mesh;
-	}
-	SH_GAME_API auto MeshRenderer::GetMesh() -> sh::render::Mesh*
 	{
 		return mesh;
 	}
