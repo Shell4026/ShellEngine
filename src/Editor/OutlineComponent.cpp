@@ -20,4 +20,8 @@ namespace sh::editor
 		if (mesh != renderer->GetMesh())
 			SetMesh(renderer->GetMesh());
 	}
+	SH_EDITOR_API auto OutlineComponent::Serialize() const -> core::Json
+	{
+		return core::Json{};
+	}
 }//namespace

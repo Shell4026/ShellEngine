@@ -15,5 +15,7 @@ namespace sh::editor
 		SH_EDITOR_API OutlineComponent(game::GameObject& owner);
 
 		SH_EDITOR_API void BeginUpdate() override;
+
+		SH_EDITOR_API auto Serialize() const -> core::Json override;
 	};
 }//namespace
