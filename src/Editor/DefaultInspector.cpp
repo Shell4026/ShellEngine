@@ -1,4 +1,5 @@
-﻿#include "DefaultInspector.h"
+﻿
+#include "DefaultInspector.h"
 #include "AssetDatabase.h"
 
 #include "imgui.h"
@@ -59,7 +60,8 @@ namespace sh::editor
 					float iconSize = 20;
 					float buttonWidth = ImGui::GetContentRegionAvail().x - iconSize;
 
-					const render::Texture* tex = mat->GetProperty<const render::Texture*>(name).value();
+					auto texProp = mat->GetProperty<const render::Texture*>(name);
+					const render::Texture* tex = texProp.value();
 					std::string texName = "Empty";
 					if (core::IsValid(tex))
 						texName = tex->GetName().ToString();
@@ -76,6 +78,8 @@ namespace sh::editor
 						{
 							const render::Texture* texture = *reinterpret_cast<render::Texture**>(payload->Data);
 							mat->SetProperty(name, texture);
+							AssetDatabase::SetDirty(mat);
+							AssetDatabase::SaveAllAssets();
 						}
 
 						ImGui::EndDragDropTarget();
