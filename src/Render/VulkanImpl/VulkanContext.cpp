@@ -262,6 +262,7 @@ namespace sh::render::vk
 		config.bTransferSrc = false;
 		config.bUseDepth = true;
 		config.bUseStencil = true;
+		config.sampleCount = sample;
 
 		mainRenderPass = &renderPassManager->GetOrCreateRenderPass(config);
 	}
@@ -341,7 +342,8 @@ namespace sh::render::vk
 		emptyDescSet = descPool->AllocateDescriptorSet(emptyDescLayout, 1);
 	}
 	VulkanContext::VulkanContext(const sh::window::Window& window) :
-		window(window)
+		window(window),
+		sample(VkSampleCountFlagBits::VK_SAMPLE_COUNT_4_BIT)
 	{
 		bEnableValidationLayers = core::Util::IsDebug();
 
@@ -357,6 +359,10 @@ namespace sh::render::vk
 
 	SH_RENDER_API void VulkanContext::Init()
 	{
+		if (bInit)
+			return;
+		bInit = true;
+
 		layers = std::make_unique<VulkanLayer>();
 		layers->Query();
 
@@ -370,8 +376,7 @@ namespace sh::render::vk
 		if (bEnableValidationLayers)
 			InitDebugMessenger();
 
-		swapChain = std::make_unique<VulkanSwapChain>();
-		swapChain->SetContext(instance, nullptr, nullptr);
+		swapChain = std::make_unique<VulkanSwapChain>(*this);
 		swapChain->CreateSurface(window);
 
 		GetPhysicalDevices();
@@ -393,7 +398,6 @@ namespace sh::render::vk
 
 		CreateAllocator();
 
-		swapChain->SetContext(instance, device, gpu);
 		swapChain->CreateSwapChain(queueManager->GetGraphicsQueueFamilyIdx(), queueManager->GetSurfaceQueueFamilyIdx(), false);
 
 		CreateRenderPass();
@@ -409,6 +413,8 @@ namespace sh::render::vk
 	}
 	SH_RENDER_API void VulkanContext::Clean()
 	{
+		bInit = false;
+
 		vkDeviceWaitIdle(device);
 
 		pipelineManager.reset();
@@ -497,6 +503,18 @@ namespace sh::render::vk
 
 		throw std::runtime_error("Failed to find supported Depth format!");
 	}
+	SH_RENDER_API void VulkanContext::SetSampleCount(VkSampleCountFlagBits sample)
+	{
+		VkSampleCountFlagBits maxSample = GetMaxSampleCount();
+		if (sample > maxSample)
+			sample = maxSample;
+
+		this->sample = sample;
+	}
+	SH_RENDER_API auto VulkanContext::GetSampleCount() const -> VkSampleCountFlagBits
+	{
+		return sample;
+	}
 	SH_RENDER_API auto sh::render::vk::VulkanContext::GetGPUName() const -> std::string_view
 	{
 		return gpuProp.deviceName;
@@ -504,6 +522,20 @@ namespace sh::render::vk
 	SH_RENDER_API auto VulkanContext::GetGPUProperty() const -> const VkPhysicalDeviceProperties&
 	{
 		return gpuProp;
+	}
+	SH_RENDER_API auto VulkanContext::GetMaxSampleCount() const -> VkSampleCountFlagBits
+	{
+		VkSampleCountFlags supportedSampleCount = 
+			std::min(gpuProp.limits.framebufferColorSampleCounts, gpuProp.limits.framebufferDepthSampleCounts);
+
+		if (supportedSampleCount & VkSampleCountFlagBits::VK_SAMPLE_COUNT_64_BIT) return VkSampleCountFlagBits::VK_SAMPLE_COUNT_64_BIT;
+		if (supportedSampleCount & VkSampleCountFlagBits::VK_SAMPLE_COUNT_32_BIT) return VkSampleCountFlagBits::VK_SAMPLE_COUNT_32_BIT;
+		if (supportedSampleCount & VkSampleCountFlagBits::VK_SAMPLE_COUNT_16_BIT) return VkSampleCountFlagBits::VK_SAMPLE_COUNT_16_BIT;
+		if (supportedSampleCount & VkSampleCountFlagBits::VK_SAMPLE_COUNT_8_BIT) return VkSampleCountFlagBits::VK_SAMPLE_COUNT_8_BIT;
+		if (supportedSampleCount & VkSampleCountFlagBits::VK_SAMPLE_COUNT_4_BIT) return VkSampleCountFlagBits::VK_SAMPLE_COUNT_4_BIT;
+		if (supportedSampleCount & VkSampleCountFlagBits::VK_SAMPLE_COUNT_2_BIT) return VkSampleCountFlagBits::VK_SAMPLE_COUNT_2_BIT;
+		
+		return VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
 	}
 	SH_RENDER_API auto sh::render::vk::VulkanContext::GetInstance() const -> VkInstance
 	{

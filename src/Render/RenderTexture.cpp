@@ -64,6 +64,7 @@ namespace sh::render
 			config.bOffScreen = true;
 			config.bTransferSrc = bReadUsage;
 			config.bUseStencil = true;
+			config.sampleCount = vkContext.GetSampleCount();
 
 			auto& renderPass = vkContext.GetRenderPassManager().GetOrCreateRenderPass(config);
 			
@@ -120,6 +121,7 @@ namespace sh::render
 			config.bOffScreen = true;
 			config.bTransferSrc = bReadUsage;
 			config.bUseStencil = true;
+			config.sampleCount = vkContext.GetSampleCount();
 
 			auto& renderPass = vkContext.GetRenderPassManager().GetOrCreateRenderPass(config);
 

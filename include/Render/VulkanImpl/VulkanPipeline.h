@@ -45,6 +45,8 @@ namespace sh::render::vk
 
 		float lineWidth = 1.f;
 
+		VkSampleCountFlagBits sampleCount = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
+
 		bool bUseStencil = true;
 		bool bZWrite = true;
 	public:
@@ -82,5 +84,8 @@ namespace sh::render::vk
 
 		SH_RENDER_API auto SetZWrite(bool zwrite) -> VulkanPipeline&;
 		SH_RENDER_API auto GetZWrite() const -> bool;
+
+		SH_RENDER_API auto SetSampleCount(VkSampleCountFlagBits sampleCount) -> VulkanPipeline&;
+		SH_RENDER_API auto GetSampleCount() const -> VkSampleCountFlagBits;
 	};
 }

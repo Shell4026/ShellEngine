@@ -22,7 +22,7 @@ namespace sh::render::vk
 		context(other.context),
 		device(other.device), gpu(other.gpu), alloc(other.alloc),
 		framebuffer(other.framebuffer), img(other.img), renderPass(other.renderPass),
-		colorImg(std::move(other.colorImg)), depthImg(std::move(other.depthImg)),
+		colorImg(std::move(other.colorImg)), colorImgMSAA(std::move(other.colorImgMSAA)), depthImg(std::move(other.depthImg)),
 		width(other.width), height(other.height)
 	{
 		other.renderPass = nullptr;
@@ -49,6 +49,7 @@ namespace sh::render::vk
 		other.renderPass = nullptr;
 
 		colorImg = std::move(other.colorImg);
+		colorImgMSAA = std::move(other.colorImgMSAA);
 		depthImg = std::move(other.depthImg);
 
 		width = other.width;
@@ -60,36 +61,58 @@ namespace sh::render::vk
 
 	SH_RENDER_API auto VulkanFramebuffer::Create(const VulkanRenderPass& renderPass, uint32_t width, uint32_t height, VkImageView img) -> VkResult
 	{
+		assert(width != 0 && height != 0);
+
 		this->img = img;
 		this->width = width;
 		this->height = height;
 		this->renderPass = &renderPass;
 
-		CreateDepthBuffer();
+		VkSampleCountFlagBits sampleCount = renderPass.GetConfig().sampleCount;
+		bool bMSAA = sampleCount != VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
 
-		VkResult result;
+		if (bMSAA)
+		{
+			colorImgMSAA = std::make_unique<VulkanImageBuffer>(context);
+			
+			VkImageUsageFlags usage =
+				VkImageUsageFlagBits::VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT | // 렌더 패스 내에서만 일시적으로 사용되는 이미지
+				VkImageUsageFlagBits::VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+			auto result = colorImgMSAA->Create(width, height, renderPass.GetConfig().format, usage, VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT, sampleCount);
+			assert(result == VkResult::VK_SUCCESS);
+		}
+		CreateDepthBuffer();
 
 		std::array<VkImageView, 2> views = {
 			img, depthImg->GetImageView()
 		};
+		std::array<VkImageView, 3> viewsMSAA = {
+			VK_NULL_HANDLE, img, depthImg->GetImageView()
+		};
+		if (bMSAA)
+			viewsMSAA[0] = colorImgMSAA->GetImageView();
 
 		VkFramebufferCreateInfo framebufferInfo{};
 		framebufferInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		framebufferInfo.pNext = nullptr;
 		framebufferInfo.renderPass = renderPass.GetVkRenderPass();
-		framebufferInfo.attachmentCount = renderPass.GetConfig().bUseDepth ? static_cast<uint32_t>(views.size()) : 1;
-		framebufferInfo.pAttachments = views.data();
+		framebufferInfo.attachmentCount = bMSAA ? static_cast<uint32_t>(viewsMSAA.size()) : static_cast<uint32_t>(views.size());
+		if (!renderPass.GetConfig().bUseDepth)
+			framebufferInfo.attachmentCount -= 1;
+		framebufferInfo.pAttachments = bMSAA ? viewsMSAA.data() : views.data();
 		framebufferInfo.width = width;
 		framebufferInfo.height = height;
 		framebufferInfo.layers = 1;
 
-		result = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffer);
+		VkResult result = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffer);
 		assert(result == VkResult::VK_SUCCESS);
 		return result;
 	}
 
 	SH_RENDER_API auto VulkanFramebuffer::CreateOffScreen(const VulkanRenderPass& renderPass, uint32_t width, uint32_t height) -> VkResult
 	{
+		assert(width != 0 && height != 0);
+
 		this->width = width;
 		this->height = height;
 		this->renderPass = &renderPass;
@@ -107,19 +130,43 @@ namespace sh::render::vk
 			VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT);
 		assert(result == VkResult::VK_SUCCESS);
 
-		if (config.bUseDepth)
-			CreateDepthBuffer();
-
 		std::array<VkImageView, 2> views = {
-			colorImg->GetImageView(), depthImg->GetImageView()
+			colorImg->GetImageView(), VK_NULL_HANDLE
 		};
+		std::array<VkImageView, 3> viewsMSAA = {
+			VK_NULL_HANDLE, colorImg->GetImageView(), VK_NULL_HANDLE
+		};
+
+		if (config.bUseDepth)
+		{
+			CreateDepthBuffer();
+			views[1] = depthImg->GetImageView();
+			viewsMSAA[2] = depthImg->GetImageView();
+		}
+
+		VkSampleCountFlagBits sampleCount = renderPass.GetConfig().sampleCount;
+		bool bMSAA = sampleCount != VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
+
+		if (bMSAA)
+		{
+			usage = 
+				VkImageUsageFlagBits::VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
+				VkImageUsageFlagBits::VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+			colorImgMSAA = std::make_unique<VulkanImageBuffer>(context);
+			auto result = colorImgMSAA->Create(width, height, config.format, usage,
+				VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT, sampleCount);
+			assert(result == VkResult::VK_SUCCESS);
+			viewsMSAA[0] = colorImgMSAA->GetImageView();
+		}
 
 		VkFramebufferCreateInfo framebufferInfo{};
 		framebufferInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
 		framebufferInfo.pNext = nullptr;
 		framebufferInfo.renderPass = renderPass.GetVkRenderPass();
-		framebufferInfo.attachmentCount = config.bUseDepth ? static_cast<uint32_t>(views.size()) : 1;
-		framebufferInfo.pAttachments = views.data();
+		framebufferInfo.attachmentCount = bMSAA ? static_cast<uint32_t>(viewsMSAA.size()) : static_cast<uint32_t>(views.size());
+		if (!config.bUseDepth)
+			framebufferInfo.attachmentCount -= 1;
+		framebufferInfo.pAttachments = bMSAA ? viewsMSAA.data() : views.data();
 		framebufferInfo.width = width;
 		framebufferInfo.height = height;
 		framebufferInfo.layers = 1;
@@ -136,9 +183,15 @@ namespace sh::render::vk
 		if(width == 0 || height == 0)
 			return;
 
+		VkImageAspectFlags aspect = VkImageAspectFlagBits::VK_IMAGE_ASPECT_DEPTH_BIT;
+		if (renderPass->GetConfig().bUseStencil)
+			aspect |= VkImageAspectFlagBits::VK_IMAGE_ASPECT_STENCIL_BIT;
+
+		VkSampleCountFlagBits sampleCount = renderPass->GetConfig().sampleCount;
+
 		auto result = depthImg->Create(width, height, depthFormat,
 			VkImageUsageFlagBits::VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-			VkImageAspectFlagBits::VK_IMAGE_ASPECT_DEPTH_BIT);
+			aspect, sampleCount);
 
 		assert(result == VkResult::VK_SUCCESS);
 	}
@@ -146,6 +199,7 @@ namespace sh::render::vk
 	SH_RENDER_API void VulkanFramebuffer::Clean()
 	{
 		depthImg.reset();
+		colorImgMSAA.reset();
 		colorImg.reset();
 
 		if (framebuffer)

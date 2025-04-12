@@ -40,7 +40,8 @@ namespace sh::render::vk
 			SetCullMode(shader.GetCullMode()).
 			SetTopology(topol).
 			SetShader(&shader).
-			SetZWrite(shader.GetZWrite());
+			SetZWrite(shader.GetZWrite()).
+			SetSampleCount(context.GetSampleCount());
 		pipeline->
 			AddShaderStage(VulkanPipeline::ShaderStage::Vertex).
 			AddShaderStage(VulkanPipeline::ShaderStage::Fragment);

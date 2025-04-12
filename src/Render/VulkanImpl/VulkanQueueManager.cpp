@@ -124,8 +124,6 @@ namespace sh::render::vk
 	}
 	SH_RENDER_API void VulkanQueueManager::SubmitCommand(const VulkanCommandBuffer& cmd, VkFence fence)
 	{
-		spinLock.Lock();
-
 		const VkPipelineStageFlags waitStage = cmd.GetWaitStage();
 		const VkCommandBuffer commandBuffer = cmd.GetCommandBuffer();
 		auto& waitSemaphores = cmd.GetWaitSemaphore();
@@ -150,10 +148,11 @@ namespace sh::render::vk
 			queue = transferQueue;
 		assert(queue != nullptr);
 
+		spinLock.Lock();
 		auto result = vkQueueSubmit(queue, 1, &sinfo, fence);
-		spinLock.UnLock();
 		assert(result == VkResult::VK_SUCCESS);
 
 		vkQueueWaitIdle(queue);
+		spinLock.UnLock();
 	}
 }//namespace

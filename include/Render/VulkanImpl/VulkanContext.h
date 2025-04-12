@@ -72,6 +72,9 @@ namespace sh::render::vk
 		glm::vec2 viewportStart;
 		glm::vec2 viewportEnd;
 
+		VkSampleCountFlagBits sample;
+
+		bool bInit = false;
 		bool bFindValidationLayer = false;
 		bool bEnableValidationLayers = false;
 	private:
@@ -110,10 +113,16 @@ namespace sh::render::vk
 
 		SH_RENDER_API auto FindSupportedDepthFormat(bool bUseStencil) const -> VkFormat;
 
+		/// @brief 멀티 샘플링의 샘플을 지정한다. 기기에서 지원하지 않는다면 최대 지원하는 샘플 수로 지정된다.
+		/// @param sample 샘플 수
+		SH_RENDER_API void SetSampleCount(VkSampleCountFlagBits sample);
+		SH_RENDER_API auto GetSampleCount() const -> VkSampleCountFlagBits;
+
 		SH_RENDER_API auto GetInstance() const -> VkInstance;
 		SH_RENDER_API auto GetGPU() const -> VkPhysicalDevice;
 		SH_RENDER_API auto GetGPUName() const->std::string_view;
 		SH_RENDER_API auto GetGPUProperty() const -> const VkPhysicalDeviceProperties&;
+		SH_RENDER_API auto GetMaxSampleCount() const ->VkSampleCountFlagBits;
 		SH_RENDER_API auto GetDevice() const -> VkDevice;
 		SH_RENDER_API auto GetSwapChain() const -> VulkanSwapChain&;
 		SH_RENDER_API auto GetCommandPool(core::ThreadType thr) const -> VkCommandPool;

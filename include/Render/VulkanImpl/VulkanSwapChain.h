@@ -1,11 +1,10 @@
 ﻿#pragma once
-
 #include "Export.h"
+#include "VulkanConfig.h"
+
 #include "Core/NonCopyable.h"
 
-#include "VulkanConfig.h"
 #include <vector>
-#include <iostream>
 
 namespace sh::window
 {
@@ -14,6 +13,7 @@ namespace sh::window
 
 namespace sh::render::vk 
 {
+	class VulkanContext;
 	class VulkanSwapChain : public core::INonCopyable
 	{
 	public:
@@ -27,9 +27,7 @@ namespace sh::render::vk
 			SH_RENDER_API ~SwapChainSupportDetails();
 		};
 	private:
-		VkInstance instance;
-		VkDevice device;
-		VkPhysicalDevice gpu;
+		const VulkanContext& context;
 
 		VkSurfaceKHR surface;
 		VkSwapchainKHR swapChain;
@@ -46,11 +44,9 @@ namespace sh::render::vk
 		auto SelectSurfaceFormat()->VkSurfaceFormatKHR;
 		auto SelectPresentMode(bool bVsync)->VkPresentModeKHR;
 	public:
-		SH_RENDER_API VulkanSwapChain();
+		SH_RENDER_API VulkanSwapChain(const VulkanContext& context);
 		SH_RENDER_API VulkanSwapChain(VulkanSwapChain&& other) noexcept;
 		SH_RENDER_API ~VulkanSwapChain();
-
-		SH_RENDER_API void SetContext(VkInstance instance, VkDevice device, VkPhysicalDevice gpu);
 
 		SH_RENDER_API void CreateSurface(const sh::window::Window& window);
 		SH_RENDER_API void DestroySurface();
@@ -60,7 +56,6 @@ namespace sh::render::vk
 
 		SH_RENDER_API bool IsSwapChainSupport(VkPhysicalDevice gpu);
 
-		SH_RENDER_API auto GetDevice() const -> const VkDevice;
 		SH_RENDER_API auto GetSurface() const -> const VkSurfaceKHR;
 		SH_RENDER_API auto GetSwapChain() const -> const VkSwapchainKHR;
 		SH_RENDER_API auto GetSwapChainDetail() const -> const SwapChainSupportDetails&;

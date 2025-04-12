@@ -30,6 +30,7 @@ namespace sh::render::vk
 		const VulkanRenderPass* renderPass = nullptr;
 
 		std::unique_ptr<VulkanImageBuffer> colorImg; //Only Offscreen
+		std::unique_ptr<VulkanImageBuffer> colorImgMSAA; // Offscreen, MSAA
 		std::unique_ptr<VulkanImageBuffer> depthImg;
 
 		uint32_t width, height;

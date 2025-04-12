@@ -157,8 +157,7 @@ namespace sh::game
 		return camera.GetHeight();
 	}
 
-#ifdef SH_EDITOR
-	void Camera::OnPropertyChanged(const core::reflection::Property& prop)
+	SH_GAME_API void Camera::OnPropertyChanged(const core::reflection::Property& prop)
 	{
 		if (prop.GetName() == "depth")
 		{
@@ -169,5 +168,4 @@ namespace sh::game
 			SetFov(fov);
 		}
 	}
-#endif
 }

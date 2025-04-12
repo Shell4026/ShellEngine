@@ -8,6 +8,7 @@
 
 #include "Render/RenderPipeline.h"
 #include "Render/VulkanImpl/VulkanRenderer.h"
+#include "Render/VulkanImpl/VulkanContext.h"
 
 #include "Game/ImGUImpl.h"
 #include "Game/RenderThread.h"

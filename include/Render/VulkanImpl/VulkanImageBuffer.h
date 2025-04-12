@@ -26,6 +26,8 @@ namespace sh::render::vk
 		VkImageView imgView;
 		VkSampler sampler;
 
+		uint32_t mipCount = 1;
+
 		bool bUseAnisotropy;
 	public:
 		SH_RENDER_API VulkanImageBuffer(const VulkanContext& context);
@@ -37,8 +39,8 @@ namespace sh::render::vk
 		SH_RENDER_API void UseAnisotropy(bool bUse);
 
 		SH_RENDER_API auto Create(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, 
-			VkImageAspectFlags aspectFlag = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT,
-			VkPhysicalDeviceProperties* gpuProp = nullptr) -> VkResult;
+			VkImageAspectFlags aspectFlag = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT, 
+			VkSampleCountFlagBits sampleCount = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT) -> VkResult;
 		SH_RENDER_API void Clean();
 
 		SH_RENDER_API auto GetImage() const ->VkImage;

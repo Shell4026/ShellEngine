@@ -18,6 +18,7 @@ namespace sh::render::vk
 		context(other.context),
 		device(other.device), gpu(other.gpu), allocator(other.allocator),
 		img(other.img), imgMem(other.imgMem), imgView(other.imgView), sampler(other.sampler),
+		mipCount(other.mipCount),
 		bUseAnisotropy(other.bUseAnisotropy)
 	{
 		other.img = nullptr;
@@ -41,6 +42,7 @@ namespace sh::render::vk
 		other.imgView = nullptr;
 		other.sampler = nullptr;
 
+		mipCount = other.mipCount;
 		bUseAnisotropy = other.bUseAnisotropy;
 
 		return *this;
@@ -75,7 +77,7 @@ namespace sh::render::vk
 		bUseAnisotropy = bUse;
 	}
 
-	SH_RENDER_API auto VulkanImageBuffer::Create(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspectFlag, VkPhysicalDeviceProperties* gpuProp) -> VkResult
+	SH_RENDER_API auto VulkanImageBuffer::Create(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspectFlag, VkSampleCountFlagBits sampleCount) -> VkResult
 	{
 		VkImageCreateInfo info{};
 		info.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -83,14 +85,14 @@ namespace sh::render::vk
 		info.extent.width = width;
 		info.extent.height = height;
 		info.extent.depth = 1;
-		info.mipLevels = 1;
+		info.mipLevels = (sampleCount == VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT) ? mipCount : 1;
 		info.arrayLayers = 1;
 		info.format = format;
 		info.tiling = VkImageTiling::VK_IMAGE_TILING_OPTIMAL;
 		info.initialLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
 		info.usage = usage;
 		info.sharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE;
-		info.samples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
+		info.samples = sampleCount;
 		info.flags = 0;
 
 		VmaAllocationCreateInfo allocCreateInfo{};
@@ -125,18 +127,7 @@ namespace sh::render::vk
 		samplerInfo.addressModeV = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		samplerInfo.addressModeW = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		samplerInfo.anisotropyEnable = bUseAnisotropy;
-		samplerInfo.maxAnisotropy = 0;
-		if (bUseAnisotropy)
-		{
-			if(gpuProp)
-				samplerInfo.maxAnisotropy = gpuProp->limits.maxSamplerAnisotropy;
-			else
-			{
-				VkPhysicalDeviceProperties properties{};
-				vkGetPhysicalDeviceProperties(gpu, &properties);
-				samplerInfo.maxAnisotropy = properties.limits.maxSamplerAnisotropy;
-			}
-		}
+		samplerInfo.maxAnisotropy = bUseAnisotropy ? context.GetGPUProperty().limits.maxSamplerAnisotropy : 0;
 		samplerInfo.borderColor = VkBorderColor::VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 		samplerInfo.unnormalizedCoordinates = false;
 		samplerInfo.compareEnable = false;

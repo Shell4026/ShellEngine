@@ -108,7 +108,7 @@ namespace sh::editor
 		textures.AddResource("Viewport", viewportTexture);
 
 		render::RenderTexture* outlineTexture = core::SObject::Create<render::RenderTexture>(render::Texture::TextureFormat::R8);
-		outlineTexture->SetSize(512, 512);
+		outlineTexture->SetSize(1024, 1024);
 		outlineTexture->Build(*renderer.GetContext());
 		textures.AddResource("OutlineTexture", outlineTexture);
 

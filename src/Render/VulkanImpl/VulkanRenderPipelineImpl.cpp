@@ -1,4 +1,5 @@
 ﻿#include "VulkanRenderPipelineImpl.h"
+#include "VulkanRenderPipelineImpl.h"
 #include "VulkanContext.h"
 #include "VulkanFramebuffer.h"
 #include "VulkanSwapChain.h"
@@ -27,7 +28,6 @@ namespace sh::render::vk
 
 		cameraManager = VulkanCameraBuffers::GetInstance();
 	}
-
 	SH_RENDER_API void VulkanRenderPipelineImpl::RenderDrawable(const core::Name& lightingPassName, const Camera& camera, const std::vector<RenderGroup>& renderGroups, VkRenderPass renderPass)
 	{
 		assert(cmd);
@@ -131,12 +131,27 @@ namespace sh::render::vk
 		clear[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
 		clear[1].depthStencil = { 1.0f, 0 };
 
+		std::array<VkClearValue, 3> clearMSAA;
+		clearMSAA[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+		clearMSAA[1].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+		clearMSAA[2].depthStencil = { 1.0f, 0 };
+
+		bool bMSAA = context.GetSampleCount() != VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
+
 		VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		renderPassInfo.renderArea.offset = { 0, 0 };
-		renderPassInfo.clearValueCount = bClearFramebuffer ? static_cast<uint32_t>(clear.size()) : 0;
-		renderPassInfo.pClearValues = bClearFramebuffer ? clear.data() : nullptr;
-
+		if (bClearFramebuffer)
+		{
+			renderPassInfo.clearValueCount = bMSAA ? static_cast<uint32_t>(clearMSAA.size()) : static_cast<uint32_t>(clear.size());
+			renderPassInfo.pClearValues = bMSAA ? clearMSAA.data() : clear.data();
+		}
+		else
+		{
+			renderPassInfo.clearValueCount = 0;
+			renderPassInfo.pClearValues = nullptr;
+		}
+		
 		VkViewport viewport{};
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;

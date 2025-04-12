@@ -29,7 +29,9 @@ namespace sh::render::vk
 		topology(other.topology),
 		stencilState(other.stencilState),
 		lineWidth(other.lineWidth),
-		bUseStencil(other.bUseStencil)
+		sampleCount(other.sampleCount),
+		bUseStencil(other.bUseStencil),
+		bZWrite(other.bZWrite)
 	{
 		other.pipeline = nullptr;
 		other.device = nullptr;
@@ -188,8 +190,8 @@ namespace sh::render::vk
 
 		VkPipelineMultisampleStateCreateInfo multisampling{};
 		multisampling.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
+		multisampling.rasterizationSamples = sampleCount;
 		multisampling.sampleShadingEnable = VK_FALSE;
-		multisampling.rasterizationSamples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
 		multisampling.minSampleShading = 1.0f; // Optional
 		multisampling.pSampleMask = nullptr; // Optional
 		multisampling.alphaToCoverageEnable = VK_FALSE; // Optional
@@ -314,5 +316,14 @@ namespace sh::render::vk
 	SH_RENDER_API auto VulkanPipeline::GetZWrite() const -> bool
 	{
 		return bZWrite;
+	}
+	SH_RENDER_API auto VulkanPipeline::SetSampleCount(VkSampleCountFlagBits sampleCount) -> VulkanPipeline&
+	{
+		this->sampleCount = sampleCount;
+		return *this;
+	}
+	SH_RENDER_API auto VulkanPipeline::GetSampleCount() const -> VkSampleCountFlagBits
+	{
+		return sampleCount;
 	}
 }

@@ -82,7 +82,7 @@ namespace sh::game
 			initInfo.RenderPass = static_cast<const render::vk::VulkanFramebuffer*>(vkContext.GetMainFramebuffer())->GetRenderPass()->GetVkRenderPass();
 			initInfo.MinImageCount = 2;
 			initInfo.ImageCount = 2;
-			initInfo.MSAASamples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
+			initInfo.MSAASamples = vkContext.GetSampleCount();
 			initInfo.Subpass = 0;
 			initInfo.PipelineCache = nullptr;
 			initInfo.CheckVkResultFn = check_vk_result;

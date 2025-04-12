@@ -190,15 +190,18 @@ namespace sh::render
 			return;
 
 		uint32_t set = static_cast<uint32_t>(type);
-		if (std::find_if(shaderPass.GetSamplerUniforms().begin(), shaderPass.GetSamplerUniforms().end(), 
-			[&](const UniformStructLayout& layout)
-			{
-				return layout.type == type && layout.binding == binding;
-			}
-		) == shaderPass.GetSamplerUniforms().end())
+
+		bool bFind = false;
+		for (auto& layout : shaderPass.GetSamplerUniforms())
 		{
-			return;
+			if (layout.type == type && layout.binding == binding)
+			{
+				bFind = true;
+				break;
+			}
 		}
+		if (!bFind)
+			return;
 
 		uniformData->uniformBuffer[set]->Link(binding, *tex);
 

@@ -201,13 +201,20 @@ namespace sh::render::vk
 			clear[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
 			clear[1].depthStencil = { 1.0f, 0 };
 
+			std::array<VkClearValue, 3> clearMSAA;
+			clearMSAA[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+			clearMSAA[1].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+			clearMSAA[2].depthStencil = { 1.0f, 0 };
+
+			bool bMSAA = context->GetSampleCount() != VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
+
 			renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 			renderPassInfo.renderPass = mainFramebuffer->GetRenderPass()->GetVkRenderPass();
 			renderPassInfo.framebuffer = mainFramebuffer->GetVkFramebuffer();
 			renderPassInfo.renderArea.offset = { 0, 0 };
 			renderPassInfo.renderArea.extent = context->GetSwapChain().GetSwapChainSize();
-			renderPassInfo.clearValueCount = static_cast<uint32_t>(clear.size());
-			renderPassInfo.pClearValues = clear.data();
+			renderPassInfo.clearValueCount = bMSAA ? static_cast<uint32_t>(clearMSAA.size()) : static_cast<uint32_t>(clear.size());
+			renderPassInfo.pClearValues = bMSAA ? clearMSAA.data() : clear.data();
 			vkCmdBeginRenderPass(cmd->GetCommandBuffer(), &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
 
 			VkViewport viewport{};

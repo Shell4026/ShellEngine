@@ -14,6 +14,9 @@ namespace sh::render::vk
 		{
 			VkFormat format;
 			VkFormat depthFormat;
+
+			VkSampleCountFlagBits sampleCount = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
+
 			bool bOffScreen = false;
 			bool bUseDepth = true;
 			bool bUseStencil = false;
@@ -30,6 +33,9 @@ namespace sh::render::vk
 		const VulkanContext& context;
 		VkRenderPass renderPass = VK_NULL_HANDLE;
 		Config config;
+
+		auto GetOffScreenSubPassDependency() const -> std::array<VkSubpassDependency, 2>;
+		auto GetOnScreenSubPassDependency() const->std::array<VkSubpassDependency, 2>;
 	public:
 		SH_RENDER_API VulkanRenderPass(const VulkanContext& context);
 		SH_RENDER_API VulkanRenderPass(VulkanRenderPass&& other) noexcept;
