@@ -13,7 +13,6 @@ namespace sh::editor
 
 	EditorOutlinePass::~EditorOutlinePass()
 	{
-		core::GarbageCollection::GetInstance()->ForceDelete(output);
 	}
 	SH_EDITOR_API void EditorOutlinePass::RecordCommand(const std::vector<const render::Camera*>& cameras, uint32_t imgIdx)
 	{
