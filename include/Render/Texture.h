@@ -68,6 +68,8 @@ namespace sh::render
 		SH_RENDER_API auto GetTextureBuffer(core::ThreadType thr = core::ThreadType::Game) const -> ITextureBuffer*;
 		SH_RENDER_API auto GetTextureFormat() const -> TextureFormat;
 
+		SH_RENDER_API void ChangeTextureFormat(TextureFormat target);
+
 		SH_RENDER_API auto IsSRGB() const -> bool;
 
 		SH_RENDER_API void SetDirty() override;

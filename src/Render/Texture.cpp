@@ -76,8 +76,20 @@ namespace sh::render
 		return format;
 	}
 
+	SH_RENDER_API void Texture::ChangeTextureFormat(TextureFormat target)
+	{
+		if (format == target)
+			return;
+		assert(core::ThreadSyncManager::IsMainThread());
 
-	void Texture::SetDirty()
+		format = target;
+		bSRGB = CheckSRGB();
+
+		CreateTextureBuffer(core::ThreadType::Game);
+
+		bFormatDirty = true;
+		SetDirty();
+	}
 	SH_RENDER_API auto Texture::IsSRGB() const -> bool
 	{
 		return bSRGB;
