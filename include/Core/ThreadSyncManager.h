@@ -4,6 +4,7 @@
 #include "SContainer.hpp"
 
 #include <queue>
+#include <thread>
 namespace sh::core
 {
 	/// @brief 스레드간 동기화를 관리하는 전역 객체.
@@ -13,6 +14,7 @@ namespace sh::core
 		struct ThreadData
 		{
 			EngineThread* threadPtr;
+			std::thread::id threadID;
 			std::queue<ISyncable*> syncableQueue;
 		};
 		SH_CORE_API static SVector<ThreadData> threads;
@@ -27,5 +29,8 @@ namespace sh::core
 		/// @brief 동기화 객체들을 동기화 하는 함수. 모든 스레드가 작업을 마치고 수면중일 때 호출 해야한다.
 		SH_CORE_API static void Sync();
 		SH_CORE_API static void AwakeThread();
+		/// @brief 이 함수를 실행 하는 스레드가 메인 스레드인지
+		/// @return 맞으면 true, 아니면 false
+		SH_CORE_API static auto IsMainThread() -> bool;
 	};
 }//namespace

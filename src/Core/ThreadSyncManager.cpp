@@ -17,7 +17,7 @@ namespace sh::core
 	SH_CORE_API void ThreadSyncManager::Init()
 	{
 		currentThreadIdx = 0;
-		threads.push_back(ThreadData{ nullptr });
+		threads.push_back(ThreadData{ nullptr, std::this_thread::get_id() });
 	}
 	SH_CORE_API void ThreadSyncManager::PushSyncable(ISyncable& syncable)
 	{
@@ -32,7 +32,7 @@ namespace sh::core
 		if (it != threads.end()) // 중복 확인
 			return;
 
-		threads.push_back(ThreadData{ &thread });
+		threads.push_back(ThreadData{ &thread, thread.GetThreadID()});
 		if (thread.GetThreadID() == std::this_thread::get_id())
 			currentThreadIdx = threads.size() - 1;
 	}
@@ -79,5 +79,10 @@ namespace sh::core
 				continue;
 			thr.threadPtr->Awake();
 		}
+	}
+
+	SH_CORE_API auto ThreadSyncManager::IsMainThread() -> bool
+	{
+		return threads[0].threadID == std::this_thread::get_id();
 	}
 }//namespace
