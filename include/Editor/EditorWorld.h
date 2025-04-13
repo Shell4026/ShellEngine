@@ -23,10 +23,11 @@ namespace sh::editor
 		SCLASS(EditorWorld)
 	private:
 		PROPERTY(selected)
-		PROPERTY(editorCamera)
-
 		core::SObject* selected = nullptr;
-		
+		PROPERTY(selectedObjs)
+		std::set<core::SObject*> selectedObjs;
+
+		PROPERTY(editorCamera)
 		game::EditorCamera* editorCamera = nullptr;
 		game::PickingCamera* pickingCamera = nullptr;
 		game::GameObject* grid = nullptr;
@@ -53,6 +54,8 @@ namespace sh::editor
 
 		SH_EDITOR_API void SetSelectedObject(core::SObject* obj);
 		SH_EDITOR_API auto GetSelectedObject() const -> core::SObject*;
+
+		SH_EDITOR_API void AddSelectedObject(core::SObject* obj);
 
 		SH_EDITOR_API  auto AddGameObject(std::string_view name) -> game::GameObject* override;
 

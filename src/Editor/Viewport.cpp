@@ -36,14 +36,19 @@ namespace sh::editor
 		pickingListener.SetCallback([&world](game::PickingCamera::PixelData pixel)
 			{
 				//SH_INFO_FORMAT("Pick R:{}, G:{}, B:{}, A:{}", pixel.r, pixel.g, pixel.b, pixel.a);
+				bool bMultiSelect = game::Input::GetKeyDown(game::Input::KeyCode::Shift);
 				uint32_t id = pixel;
 				if (id == 0)
 				{
-					world.SetSelectedObject(nullptr);
+					if (!bMultiSelect)
+						world.SetSelectedObject(nullptr);
 				}
 				else if (auto pickingRenderer = game::PickingIdManager::Get(id); pickingRenderer != nullptr)
 				{
-					world.SetSelectedObject(&pickingRenderer->gameObject);
+					if (!bMultiSelect)
+						world.SetSelectedObject(&pickingRenderer->gameObject);
+					else
+						world.AddSelectedObject(&pickingRenderer->gameObject);
 				}
 			}
 		);
