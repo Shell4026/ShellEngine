@@ -5,7 +5,7 @@
 #include "imgui.h"
 namespace sh::editor
 {
-	void MaterialInspector::RenderUI(void* obj)
+	SH_EDITOR_API void MaterialInspector::RenderUI(void* obj)
 	{
 		ImGui::Separator();
 		render::Material* mat = reinterpret_cast<render::Material*>(obj);
@@ -88,5 +88,33 @@ namespace sh::editor
 			}
 		}
 		ImGui::Separator();
+	}
+	SH_EDITOR_API void TextureInspector::RenderUI(void* obj)
+	{
+		using namespace render;
+		Texture* texture = reinterpret_cast<Texture*>(obj);
+		ImGui::Text("SRGB");
+		bool bSRGB = texture->IsSRGB();
+		if (ImGui::Checkbox("##SRGB", &bSRGB))
+		{
+			Texture::TextureFormat format = texture->GetTextureFormat();
+			if (bSRGB)
+			{
+				if (format == Texture::TextureFormat::RGB24)
+					texture->ChangeTextureFormat(Texture::TextureFormat::SRGB24);
+				else if(format == Texture::TextureFormat::RGBA32)
+					texture->ChangeTextureFormat(Texture::TextureFormat::SRGBA32);
+			}
+			else
+			{
+				if (format == Texture::TextureFormat::SRGB24)
+					texture->ChangeTextureFormat(Texture::TextureFormat::RGB24);
+				else if (format == Texture::TextureFormat::SRGBA32)
+					texture->ChangeTextureFormat(Texture::TextureFormat::RGBA32);
+			}
+
+			AssetDatabase::SetDirty(texture);
+			AssetDatabase::SaveAllAssets();
+		}
 	}
 }//namespace
