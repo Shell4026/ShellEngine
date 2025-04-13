@@ -21,8 +21,7 @@ namespace sh::render
 		Texture(std::move(other)),
 
 		width(other.width), height(other.height),
-		framebuffer(std::move(other.framebuffer)),
-		onResize(std::move(other.onResize))
+		framebuffer(std::move(other.framebuffer))
 	{
 
 	}
@@ -42,7 +41,7 @@ namespace sh::render
 			framebuffer[core::ThreadType::Render] = std::make_unique<vk::VulkanFramebuffer>(vkContext);
 
 			VkFormat format = VkFormat::VK_FORMAT_R8G8B8A8_SRGB;
-			switch (this->format)
+			switch (GetTextureFormat())
 			{
 			case Texture::TextureFormat::SRGB24:
 				format = VkFormat::VK_FORMAT_R8G8B8_SRGB;
@@ -71,10 +70,10 @@ namespace sh::render
 			static_cast<vk::VulkanFramebuffer*>(framebuffer[core::ThreadType::Game].get())->CreateOffScreen(renderPass, width, height);
 			static_cast<vk::VulkanFramebuffer*>(framebuffer[core::ThreadType::Render].get())->CreateOffScreen(renderPass, width, height);
 		}
-		buffer[core::ThreadType::Game] = std::make_unique<vk::VulkanTextureBuffer>();
-		buffer[core::ThreadType::Game]->Create(*framebuffer[core::ThreadType::Game].get());
-		buffer[core::ThreadType::Render] = std::make_unique<vk::VulkanTextureBuffer>();
-		buffer[core::ThreadType::Render]->Create(*framebuffer[core::ThreadType::Render].get());
+		textureBuffer[core::ThreadType::Game] = std::make_unique<vk::VulkanTextureBuffer>();
+		textureBuffer[core::ThreadType::Game]->Create(*framebuffer[core::ThreadType::Game].get());
+		textureBuffer[core::ThreadType::Render] = std::make_unique<vk::VulkanTextureBuffer>();
+		textureBuffer[core::ThreadType::Render]->Create(*framebuffer[core::ThreadType::Render].get());
 	}
 
 	SH_RENDER_API auto RenderTexture::GetFramebuffer(core::ThreadType thr) const -> Framebuffer*
@@ -99,7 +98,7 @@ namespace sh::render
 		{
 			auto& vkContext = static_cast<const vk::VulkanContext&>(*context);
 			VkFormat format = VkFormat::VK_FORMAT_R8G8B8A8_SRGB;
-			switch (this->format)
+			switch (GetTextureFormat())
 			{
 			case Texture::TextureFormat::SRGB24:
 				format = VkFormat::VK_FORMAT_R8G8B8_SRGB;
@@ -128,8 +127,8 @@ namespace sh::render
 			static_cast<vk::VulkanFramebuffer*>(framebuffer[core::ThreadType::Game].get())->Clean();
 			static_cast<vk::VulkanFramebuffer*>(framebuffer[core::ThreadType::Game].get())->CreateOffScreen(renderPass, width, height);
 		}
-		buffer[core::ThreadType::Game]->Clean();
-		buffer[core::ThreadType::Game]->Create(*framebuffer[core::ThreadType::Game].get());
+		textureBuffer[core::ThreadType::Game]->Clean();
+		textureBuffer[core::ThreadType::Game]->Create(*framebuffer[core::ThreadType::Game].get());
 	}
 	SH_RENDER_API void RenderTexture::SetSize(uint32_t width, uint32_t height)
 	{
@@ -138,7 +137,6 @@ namespace sh::render
 		this->height = height;
 
 		Resize(width, height);
-		onResize.Notify(this);
 
 		bChangeSize = true;
 		SetDirty();

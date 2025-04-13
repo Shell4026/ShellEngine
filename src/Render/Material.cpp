@@ -14,17 +14,7 @@ namespace sh::render
 
 		propertyBlock = core::SObject::Create<MaterialPropertyBlock>();
 
-		onResizeListener.SetCallback([&](const RenderTexture* resized)
-			{
-				for (auto& [name, tex] : propertyBlock->GetTextureProperties())
-				{
-					if (tex != resized)
-						continue;
-
-					SetProperty(name, static_cast<const RenderTexture*>(tex));
-				}
-			}
-		);
+		UpdateListener();
 	}
 	SH_RENDER_API Material::Material(Shader* shader) :
 		shader(shader)
@@ -32,17 +22,7 @@ namespace sh::render
 		materialData = std::make_unique<MaterialData>();
 		propertyBlock = core::SObject::Create<MaterialPropertyBlock>();
 
-		onResizeListener.SetCallback([&](const RenderTexture* resized)
-			{
-				for (auto& [name, tex] : propertyBlock->GetTextureProperties())
-				{
-					if (tex != resized)
-						continue;
-
-					SetProperty(name, static_cast<const RenderTexture*>(tex));
-				}
-			}
-		);
+		UpdateListener();
 		SetDefaultProperties();
 	}
 
@@ -53,7 +33,7 @@ namespace sh::render
 		dirtyProps(std::move(other.dirtyProps)),
 		materialData(std::move(other.materialData)),
 		propertyBlock(other.propertyBlock),
-		onResizeListener(std::move(other.onResizeListener))
+		onBufferUpdateListener(std::move(other.onBufferUpdateListener))
 	{
 		other.context = nullptr;
 		other.shader = nullptr;
@@ -61,17 +41,7 @@ namespace sh::render
 
 		other.bPropertyDirty = false;
 
-		onResizeListener.SetCallback([&](const RenderTexture* resized)
-			{
-				for (auto& [name, tex] : propertyBlock->GetTextureProperties())
-				{
-					if (tex != resized)
-						continue;
-
-					SetProperty(name, static_cast<const RenderTexture*>(tex));
-				}
-			}
-		);
+		UpdateListener();
 	}
 
 	void Material::Clear()
@@ -93,6 +63,20 @@ namespace sh::render
 			else if (*propInfo.type == core::reflection::GetType<glm::mat2>() || *propInfo.type == core::reflection::GetType<glm::mat3>() || *propInfo.type == core::reflection::GetType<glm::mat4>())
 				propertyBlock->SetProperty(name, glm::mat4{ 1.f });
 		}
+	}
+	void Material::UpdateListener()
+	{
+		onBufferUpdateListener.SetCallback([&](const Texture* updated)
+			{
+				for (auto& [name, tex] : propertyBlock->GetTextureProperties())
+				{
+					if (tex != updated)
+						continue;
+
+					SetProperty(name, updated);
+				}
+			}
+		);
 	}
 
 	SH_RENDER_API void Material::SetShader(Shader* shader)
@@ -227,6 +211,13 @@ namespace sh::render
 		if (propInfo == nullptr)
 			return;
 
+		if (auto last = GetProperty<const Texture*>(name); last.has_value())
+		{
+			if (last.value() != data && last.value() != nullptr)
+				last.value()->onBufferUpdate.UnRegister(onBufferUpdateListener);
+		}
+		data->onBufferUpdate.Register(onBufferUpdateListener);
+
 		propertyBlock->SetProperty(name, data);
 
 		for (auto& location : propInfo->locations)
@@ -244,19 +235,11 @@ namespace sh::render
 	}
 	SH_RENDER_API void Material::SetProperty(const std::string& name, const RenderTexture* data)
 	{
-		auto var = GetProperty<const Texture*>(name);
-		if (var != data)
-		{
-			if (var != nullptr)
-				static_cast<const RenderTexture*>(var.value())->onResize.UnRegister(onResizeListener);
-			data->onResize.Register(onResizeListener);
-		}
-
 		SetProperty(name, static_cast<const Texture*>(data));
 	}
 	SH_RENDER_API void Material::SetProperty(const std::string& name, RenderTexture* data)
 	{
-		SetProperty(name, static_cast<const RenderTexture*>(data));
+		SetProperty(name, static_cast<const Texture*>(data));
 	}
 
 	SH_RENDER_API auto Material::GetMaterialData() const -> const MaterialData&

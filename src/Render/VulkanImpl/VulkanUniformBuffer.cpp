@@ -79,8 +79,8 @@ namespace sh::render::vk
 
 		VkDescriptorImageInfo imgInfo{};
 		imgInfo.imageLayout = VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imgInfo.imageView = static_cast<VulkanTextureBuffer*>(texture.GetBuffer())->GetImageBuffer()->GetImageView();
-		imgInfo.sampler = static_cast<VulkanTextureBuffer*>(texture.GetBuffer())->GetImageBuffer()->GetSampler();
+		imgInfo.imageView = static_cast<VulkanTextureBuffer*>(texture.GetTextureBuffer())->GetImageBuffer()->GetImageView();
+		imgInfo.sampler = static_cast<VulkanTextureBuffer*>(texture.GetTextureBuffer())->GetImageBuffer()->GetSampler();
 
 		VkWriteDescriptorSet descriptorWrite{};
 		descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

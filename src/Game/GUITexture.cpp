@@ -22,7 +22,7 @@ namespace sh::game
 		this->context = &context;
 		if (context.GetRenderAPIType() == render::RenderAPI::Vulkan)
 		{
-			auto buffer = static_cast<render::vk::VulkanTextureBuffer*>(texture.GetBuffer())->GetImageBuffer();
+			auto buffer = static_cast<render::vk::VulkanTextureBuffer*>(texture.GetTextureBuffer())->GetImageBuffer();
 			tex = ImGui_ImplVulkan_AddTexture(buffer->GetSampler(), buffer->GetImageView(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		}
 	}

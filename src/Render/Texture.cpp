@@ -1,5 +1,4 @@
-﻿#include "pch.h"
-#include "Texture.h"
+﻿#include "Texture.h"
 #include "VulkanContext.h"
 #include "VulkanTextureBuffer.h"
 
@@ -9,59 +8,81 @@
 
 namespace sh::render
 {
+	void Texture::CreateTextureBuffer(core::ThreadType thread)
+	{
+		if (thread == core::ThreadType::Game)
+			onBufferUpdate.Notify(this);
+
+		if (context->GetRenderAPIType() == RenderAPI::Vulkan)
+		{
+			textureBuffer[thread] = std::make_unique<vk::VulkanTextureBuffer>();
+			textureBuffer[thread]->Create(*context, width, height, format);
+			textureBuffer[thread]->SetData(pixels.data());
+		}
+	}
+	auto Texture::CheckSRGB() const -> bool
+	{
+		if (format == TextureFormat::SRGB24 || format == TextureFormat::SRGBA32)
+			return true;
+		return false;
+	}
+
 	Texture::Texture(TextureFormat format, uint32_t width, uint32_t height) :
 		context(nullptr),
 		format(format), width(width), height(height),
 		bDirty(false)
 	{
+		bSRGB = CheckSRGB();
 		pixels.resize(width * height * 4);
 	}
 	Texture::Texture(Texture&& other) noexcept :
 		context(other.context),
 		format(other.format), width(other.width), height(other.height),
-		pixels(std::move(other.pixels)), buffer(std::move(other.buffer)),
-		bDirty(other.bDirty)
+		pixels(std::move(other.pixels)), textureBuffer(std::move(other.textureBuffer)),
+		onBufferUpdate(std::move(other.onBufferUpdate)),
+		bSRGB(other.bSRGB),
+		bDirty(other.bDirty), bFormatDirty(other.bFormatDirty)
 	{
 	}
 	Texture::~Texture()
 	{
 	}
 
-	void Texture::SetPixelData(void* data)
+	SH_RENDER_API void Texture::SetPixelData(void* data)
 	{
 		std::memcpy(pixels.data(), data, pixels.size());
 		if (context != nullptr)
 			Build(*context);
 	}
 
-	auto Texture::GetPixelData() const -> const std::vector<Byte>&
+	SH_RENDER_API auto Texture::GetPixelData() const -> const std::vector<Byte>&
 	{
 		return pixels;
 	}
 
-	void Texture::Build(const IRenderContext& context)
+	SH_RENDER_API void Texture::Build(const IRenderContext& context)
 	{
 		this->context = &context;
-		if (context.GetRenderAPIType()  == RenderAPI::Vulkan)
-		{
-			buffer[core::ThreadType::Game] = std::make_unique<vk::VulkanTextureBuffer>();
-			buffer[core::ThreadType::Game]->Create(context, width, height, format);
-			buffer[core::ThreadType::Game]->SetData(pixels.data());
-			
-			buffer[core::ThreadType::Render] = std::make_unique<vk::VulkanTextureBuffer>();
-			buffer[core::ThreadType::Render]->Create(context, width, height, format);
-			buffer[core::ThreadType::Render]->SetData(pixels.data());
-		}
-
-		SetDirty();
+		CreateTextureBuffer(core::ThreadType::Game);
+		CreateTextureBuffer(core::ThreadType::Render);
 	}
 
-	auto Texture::GetBuffer(core::ThreadType thr) const -> ITextureBuffer*
+	SH_RENDER_API auto Texture::GetTextureBuffer(core::ThreadType thr) const -> ITextureBuffer*
 	{
-		return buffer[thr].get();
+		return textureBuffer[thr].get();
 	}
+	SH_RENDER_API auto Texture::GetTextureFormat() const -> TextureFormat
+	{
+		return format;
+	}
+
 
 	void Texture::SetDirty()
+	SH_RENDER_API auto Texture::IsSRGB() const -> bool
+	{
+		return bSRGB;
+	}
+	SH_RENDER_API void Texture::SetDirty()
 	{
 		if (bDirty)
 			return;
@@ -70,9 +91,14 @@ namespace sh::render
 
 		bDirty = true;
 	}
-	void Texture::Sync()
+	SH_RENDER_API void Texture::Sync()
 	{
-		std::swap(buffer[core::ThreadType::Render], buffer[core::ThreadType::Game]);
+		std::swap(textureBuffer[core::ThreadType::Render], textureBuffer[core::ThreadType::Game]);
+		if (bFormatDirty)
+		{
+			CreateTextureBuffer(core::ThreadType::Game);
+			bFormatDirty = false;
+		}
 
 		bDirty = false;
 	}

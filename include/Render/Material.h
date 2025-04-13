@@ -46,7 +46,7 @@ namespace sh::render
 
 		std::vector<std::pair<const ShaderPass*, const UniformStructLayout*>> dirtyProps;
 
-		core::Observer<false, const RenderTexture*>::Listener onResizeListener;
+		core::Observer<false, const Texture*>::Listener onBufferUpdateListener;
 
 		bool bPropertyDirty = false;
 	private:
@@ -62,6 +62,7 @@ namespace sh::render
 		{
 			std::memcpy(uniformData.data() + offset, &data, sizeof(T));
 		}
+		void UpdateListener();
 	public:
 		SH_RENDER_API Material();
 		SH_RENDER_API Material(Shader* shader);

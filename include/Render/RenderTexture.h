@@ -24,8 +24,6 @@ namespace sh::render
 
 		bool bChangeSize = false;
 		bool bReadUsage = false;
-	public:
-		mutable core::Observer<false, const RenderTexture*> onResize;
 	private:
 		void Resize(uint32_t width, uint32_t height);
 	public:

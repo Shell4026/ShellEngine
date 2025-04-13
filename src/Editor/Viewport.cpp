@@ -27,7 +27,7 @@ namespace sh::editor
 		outlineTex = static_cast<render::RenderTexture*>(world.textures.GetResource("OutlineTexture"));
 		for (int thr = 0; thr < 2; ++thr)
 		{
-			auto vkTexBuffer = static_cast<render::vk::VulkanTextureBuffer*>(renderTex->GetBuffer(static_cast<core::ThreadType>(thr)));
+			auto vkTexBuffer = static_cast<render::vk::VulkanTextureBuffer*>(renderTex->GetTextureBuffer(static_cast<core::ThreadType>(thr)));
 			auto imgBuffer = vkTexBuffer->GetImageBuffer();
 
 			viewportDescSet[thr] = nullptr;
@@ -104,7 +104,7 @@ namespace sh::editor
 			renderTex->SetSize(viewportWidthLast, viewportHeightLast); // renderTex dirty등록
 		}
 
-		auto vkTexBuffer = static_cast<render::vk::VulkanTextureBuffer*>(renderTex->GetBuffer(core::ThreadType::Game));
+		auto vkTexBuffer = static_cast<render::vk::VulkanTextureBuffer*>(renderTex->GetTextureBuffer(core::ThreadType::Game));
 		auto imgBuffer = vkTexBuffer->GetImageBuffer();
 		viewportDescSet[core::ThreadType::Game] = ImGui_ImplVulkan_AddTexture(imgBuffer->GetSampler(), imgBuffer->GetImageView(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
