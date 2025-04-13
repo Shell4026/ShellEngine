@@ -1,4 +1,4 @@
-﻿#include "ModelLoader.h"
+﻿#include "MeshLoader.h"
 
 #include "Core/SObject.h"
 #include "Core/Logger.h"
@@ -8,17 +8,34 @@
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "External/tinyobjloader/tiny_obj_loader.h"
 
-#include <string>
 #include <fmt/core.h>
 
+#include <string>
+#include <cstdint>
 namespace sh::editor
 {
-	ModelLoader::ModelLoader(const render::IRenderContext& context) :
+	SH_EDITOR_API auto MeshLoader::CalculateTangent(
+		const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2,
+		const glm::vec2& uv0, const glm::vec2& uv1, const glm::vec2& uv2) const -> glm::vec3
+	{
+		glm::vec3 e0 = v1 - v0;
+		glm::vec3 e1 = v2 - v0;
+		glm::vec2 deltaUV0 = uv1 - uv0;
+		glm::vec2 deltaUV1 = uv2 - uv0;
+
+		float f = 1.0f / (deltaUV0.x * deltaUV1.y - deltaUV1.x * deltaUV0.y);
+
+		float x = f * (deltaUV1.y * e0.x - deltaUV0.y * e1.x);
+		float y = f * (deltaUV1.y * e0.y - deltaUV0.y * e1.y);
+		float z = f * (deltaUV1.y * e0.z - deltaUV0.y * e1.z);
+		return glm::vec3{ x, y, z };
+	}
+	MeshLoader::MeshLoader(const render::IRenderContext& context) :
 		context(context)
 	{
 	}
 
-	SH_EDITOR_API auto ModelLoader::Load(std::string_view filename) -> render::Mesh*
+	SH_EDITOR_API auto MeshLoader::Load(std::string_view filename) -> render::Mesh*
 	{
 		tinyobj::attrib_t attrib;
 		std::vector<tinyobj::shape_t> shapes;
@@ -82,6 +99,29 @@ namespace sh::editor
 					indices.push_back(it->second);
 			}
 		}
+
+		for (int i = 0; i < indices.size(); i += 3)
+		{
+			const glm::vec3& v0 = verts[indices[i + 0]].vertex;
+			const glm::vec3& v1 = verts[indices[i + 1]].vertex;
+			const glm::vec3& v2 = verts[indices[i + 2]].vertex;
+
+			const glm::vec2& uv0 = verts[indices[i + 0]].uv;
+			const glm::vec2& uv1 = verts[indices[i + 1]].uv;
+			const glm::vec2& uv2 = verts[indices[i + 2]].uv;
+
+			glm::vec3 faceTangent = CalculateTangent(v0, v1, v2, uv0, uv1, uv2);
+			verts[indices[i + 0]].tangent += faceTangent;
+			verts[indices[i + 1]].tangent += faceTangent;
+			verts[indices[i + 2]].tangent += faceTangent;
+		}
+		for (auto& v : verts) 
+		{
+			v.tangent = glm::normalize(v.tangent);
+			// Gram-Schmidt 직교화
+			v.tangent = glm::normalize(v.tangent - v.normal * glm::dot(v.normal, v.tangent));
+		}
+
 		mesh->GetBoundingBox().Set(min, max);
 
 		mesh->SetVertex(std::move(verts));
@@ -92,4 +132,15 @@ namespace sh::editor
 		return mesh;
 	}
 
+	SH_EDITOR_API auto MeshImporter::GetName() const -> const char*
+	{
+		return name;
+	}
+	SH_EDITOR_API auto MeshImporter::Serialize() const -> core::Json
+	{
+		return core::Json{};
+	}
+	SH_EDITOR_API void MeshImporter::Deserialize(const core::Json& json)
+	{
+	}
 }

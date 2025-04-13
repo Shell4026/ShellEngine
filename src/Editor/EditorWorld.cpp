@@ -23,7 +23,7 @@
 #include "Game/Component/EditorControl.h"
 #include "Game/Component/LineRenderer.h"
 
-#include "ModelLoader.h"
+#include "MeshLoader.h"
 #include "TextureLoader.h"
 #include "ShaderLoader.h"
 
@@ -75,7 +75,7 @@ namespace sh::editor
 
 		ShaderLoader loader{ &shaderBuilder };
 		TextureLoader texLoader{ *renderer.GetContext() };
-		ModelLoader modelLoader{ *renderer.GetContext() };
+		MeshLoader modelLoader{ *renderer.GetContext() };
 
 		auto defaultShader = shaders.AddResource("DefaultShader", loader.LoadShader("shaders/default.shader"));
 		auto lineShader = shaders.AddResource("Line", loader.LoadShader("shaders/line.shader"));

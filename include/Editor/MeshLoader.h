@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Export.h"
+#include "IImporter.h"
 
 #include "Core/Util.h"
 
@@ -18,7 +19,16 @@ namespace sh::render
 }
 namespace sh::editor
 {
-	class ModelLoader
+	class MeshImporter : public IImporter
+	{
+	private:
+		const char* name = "MeshImporter";
+	public:
+		SH_EDITOR_API auto GetName() const -> const char* override;
+		SH_EDITOR_API auto Serialize() const -> core::Json override;
+		SH_EDITOR_API void Deserialize(const core::Json& json) override;
+	};
+	class MeshLoader
 	{
 	private:
 		struct Indices
@@ -34,12 +44,16 @@ namespace sh::editor
 					&& uv == other.uv;
 			}
 		};
-		friend std::hash<sh::editor::ModelLoader::Indices>;
+		friend std::hash<sh::editor::MeshLoader::Indices>;
 	public:
 		const render::IRenderContext& context;
+	protected:
+		SH_EDITOR_API auto CalculateTangent(
+			const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2, 
+			const glm::vec2& uv0, const glm::vec2& uv1, const glm::vec2& uv2) const -> glm::vec3;
 	public:
-		SH_EDITOR_API ModelLoader(const render::IRenderContext& context);
-		SH_EDITOR_API virtual ~ModelLoader() = default;
+		SH_EDITOR_API MeshLoader(const render::IRenderContext& context);
+		SH_EDITOR_API virtual ~MeshLoader() = default;
 		SH_EDITOR_API virtual auto Load(std::string_view filename) -> render::Mesh*;
 	};
 }//namespace
@@ -47,10 +61,10 @@ namespace sh::editor
 namespace std
 {
 	template <>
-	class hash<sh::editor::ModelLoader::Indices>
+	class hash<sh::editor::MeshLoader::Indices>
 	{
 	public:
-		auto operator()(const sh::editor::ModelLoader::Indices& indices) const -> std::uint64_t
+		auto operator()(const sh::editor::MeshLoader::Indices& indices) const -> std::uint64_t
 		{
 			std::hash<uint32_t> hasher{};
 			std::size_t hash1 = sh::core::Util::CombineHash(hasher(indices.vert), hasher(indices.normal));

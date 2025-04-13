@@ -1,7 +1,8 @@
 ﻿#include "AssetDatabase.h"
 #include "TextureLoader.h"
-#include "ModelLoader.h"
+#include "MeshLoader.h"
 #include "MaterialLoader.h"
+#include "Meta.h"
 
 #include "Render/Renderer.h"
 
@@ -25,49 +26,31 @@ namespace sh::editor
 				AssetDatabase::dirtyObjs.erase(it);
 		}
 	};
-
-	void AssetDatabase::CreateMeta(core::SObject* ptr, const std::filesystem::path& metaDir)
+	auto AssetDatabase::CreateMetaDirectory(const std::filesystem::path& assetPath) -> std::filesystem::path
 	{
-		core::Json metaJson = ptr->Serialize();
-		std::ofstream os{ metaDir.string() };
-		if (os.is_open())
-		{
-			os << std::setw(4) << metaJson;
-			os.close();
-		}
-		else
-		{
-			SH_ERROR_FORMAT("Can't create meta: {}", metaDir.string());
-		}
+		std::filesystem::path metaPath{ assetPath.parent_path() / assetPath.filename() };
+		metaPath += ".meta";
+		return metaPath;
 	}
-	void AssetDatabase::CreateOrLoadMeta(core::SObject* ptr, const std::filesystem::path& metaDir)
+	auto AssetDatabase::HasMetaFile(const std::filesystem::path& dir) -> std::optional<std::filesystem::path>
 	{
-		if (std::filesystem::exists(metaDir))
-		{
-			auto file = core::FileSystem::LoadText(metaDir);
-			if (!file)
-			{
-				SH_ERROR_FORMAT("Can't load file: {}", metaDir.string());
-				return;
-			}
-			if (file.value().empty())
-			{
-				CreateMeta(ptr, metaDir);
-				return;
-			}
-			core::Json metaJson{ core::Json::parse(file.value()) };
-			ptr->Deserialize(metaJson);
-			assert(ptr->GetUUID().ToString() == metaJson["uuid"].get<std::string>());
-		}
-		else
-		{
-			CreateMeta(ptr, metaDir);
-		}
+		if (!std::filesystem::exists(dir))
+			return std::nullopt;
+		std::filesystem::path metaFileDir = CreateMetaDirectory(dir);
+		if (!std::filesystem::exists(metaFileDir))
+			return std::nullopt;
+		return metaFileDir;
 	}
-
-	auto AssetDatabase::LoadMesh(game::World& world, const std::filesystem::path& dir, const std::filesystem::path& metaDir) -> render::Mesh*
+	auto AssetDatabase::LoadMesh(game::World& world, const std::filesystem::path& dir) -> render::Mesh*
 	{
-		static ModelLoader loader{ *world.renderer.GetContext()};
+		std::filesystem::path metaDir{ CreateMetaDirectory(dir) };
+
+		MeshImporter importer{};
+		Meta meta{};
+		if (meta.Load(metaDir))
+			meta.LoadImporter(importer);
+
+		static MeshLoader loader{ *world.renderer.GetContext()};
 		auto ptr = loader.Load(dir.string());
 		if (ptr == nullptr)
 			return nullptr;
@@ -75,23 +58,39 @@ namespace sh::editor
 		world.meshes.AddResource(dir.string(), ptr);
 		ptr->SetName(dir.stem().string());
 
-		CreateOrLoadMeta(ptr, metaDir);
+		if (meta.IsLoad())
+			meta.LoadSObject(*ptr);
+		else
+			meta.Save(*ptr, importer, metaDir);
+
 		uuids.insert_or_assign(dir, ptr->GetUUID());
 		paths.insert_or_assign(ptr->GetUUID().ToString(), dir);
 
 		return ptr;
 	}
-	auto AssetDatabase::LoadTexture(game::World& world, const std::filesystem::path& dir, const std::filesystem::path& metaDir) -> render::Texture*
+	auto AssetDatabase::LoadTexture(game::World& world, const std::filesystem::path& dir) -> render::Texture*
 	{
+		std::filesystem::path metaDir{ CreateMetaDirectory(dir) };
+
+		TextureImporter importer{};
+
+		Meta meta{};
+		if (meta.Load(metaDir))
+			meta.LoadImporter(importer);
+
 		static TextureLoader loader{ *world.renderer.GetContext() };
-		auto ptr = loader.Load(dir.string());
+		auto ptr = loader.Load(dir.string(), importer);
 		if (ptr == nullptr)
 			return nullptr;
 
-		world.textures.AddResource(dir.string(), ptr);
+		world.textures.AddResource(dir.u8string(), ptr);
 		ptr->SetName(dir.stem().u8string());
 
-		CreateOrLoadMeta(ptr, metaDir);
+		if (meta.IsLoad())
+			meta.LoadSObject(*ptr);
+		else
+			meta.Save(*ptr, importer, metaDir);
+
 		uuids.insert_or_assign(dir, ptr->GetUUID());
 		paths.insert_or_assign(ptr->GetUUID().ToString(), dir);
 
@@ -131,17 +130,12 @@ namespace sh::editor
 		if (std::filesystem::is_directory(dir))
 			return nullptr;
 		
-		std::string filename = dir.filename().string() + ".meta";
 		std::string extension = dir.extension().string();
-		auto parentDir = dir.parent_path();
-
-		auto metaDir = parentDir / filename;
-		bool hasMetaFile = std::filesystem::exists(metaDir);
 
 		if (extension == ".jpg" || extension == ".png")
-			return LoadTexture(world, dir, metaDir);
+			return LoadTexture(world, dir);
 		if (extension == ".obj")
-			return LoadMesh(world, dir, metaDir);
+			return LoadMesh(world, dir);
 		if (extension == ".mat")
 			return LoadMaterial(world, dir);
 		return nullptr;
@@ -154,9 +148,19 @@ namespace sh::editor
 			auto it = paths.find(obj->GetUUID().ToString());
 			if (it == paths.end())
 				continue;
+			const auto& assetPath = it->second;
+
 			if (obj->GetType() == render::Material::GetStaticType())
 			{
-				SaveMaterial(static_cast<render::Material*>(obj), it->second);
+				SaveMaterial(static_cast<render::Material*>(obj), assetPath);
+			}
+			else if (obj->GetType() == render::Texture::GetStaticType())
+			{
+				render::Texture* texture = reinterpret_cast<render::Texture*>(obj);
+				TextureImporter importer{};
+				importer.bSRGB = texture->IsSRGB();
+				Meta meta{};
+				meta.Save(*texture, importer, CreateMetaDirectory(assetPath));
 			}
 		}
 		dirtyObjs.clear();

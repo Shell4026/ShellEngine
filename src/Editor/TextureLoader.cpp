@@ -12,7 +12,12 @@ namespace sh::editor
 	{
 	}
 
-	SH_EDITOR_API auto TextureLoader::Load(std::string_view filename, bool bGenerateMipmap) -> render::Texture*
+	SH_EDITOR_API auto TextureLoader::Load(std::string_view filename) -> render::Texture*
+	{
+		return Load(filename, TextureImporter{});
+	}
+
+	SH_EDITOR_API auto TextureLoader::Load(std::string_view filename, const TextureImporter& option) -> render::Texture*
 	{
 		int width, height, channel;
 		int info = stbi_info(filename.data(), &width, &height, &channel);
@@ -23,7 +28,10 @@ namespace sh::editor
 
 		render::Texture::TextureFormat format;
 		if (channel == 3)
-			format = render::Texture::TextureFormat::SRGB24;
+		{
+			format = option.bSRGB ? 
+				render::Texture::TextureFormat::SRGB24 : render::Texture::TextureFormat::RGB24;
+		}
 
 		//int mip = glm::log2
 
@@ -34,5 +42,24 @@ namespace sh::editor
 		texture->Build(context);
 
 		return texture;
+	}
+	SH_EDITOR_API auto TextureImporter::GetName() const -> const char*
+	{
+		return name;
+	}
+	SH_EDITOR_API auto TextureImporter::Serialize() const -> core::Json
+	{
+		core::Json mainJson{};
+		mainJson["version"] = 1;
+		mainJson["bSRGB"] = bSRGB;
+		mainJson["bGenerateMipmap"] = bGenerateMipmap;
+		return mainJson;
+	}
+	SH_EDITOR_API void TextureImporter::Deserialize(const core::Json& json)
+	{
+		if (json.contains("bSRGB"))
+			bSRGB = json["bSRGB"];
+		if (json.contains("bGenerateMipmap"))
+			bGenerateMipmap = json["bGenerateMipmap"];
 	}
 }

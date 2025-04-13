@@ -9,7 +9,7 @@
 #include <filesystem>
 #include <optional>
 #include <queue>
-
+#include <optional>
 namespace sh::core
 {
 	class SObject;
@@ -68,10 +68,13 @@ namespace sh::editor
 		SH_EDITOR_API inline static std::priority_queue<AssetLoadData> loadingAssetsQueue{};
 		SH_EDITOR_API static core::Observer<false, const core::SObject*>::Listener onDestroyListener;
 	private:
-		static void CreateMeta(core::SObject* ptr, const std::filesystem::path& metaDir);
-		static void CreateOrLoadMeta(core::SObject* ptr, const std::filesystem::path& metaDir);
-		static auto LoadMesh(game::World& world, const std::filesystem::path& dir, const std::filesystem::path& metaDir) -> render::Mesh*;
-		static auto LoadTexture(game::World& world, const std::filesystem::path& dir, const std::filesystem::path& metaDir) -> render::Texture*;
+		static auto CreateMetaDirectory(const std::filesystem::path& assetPath) -> std::filesystem::path;
+		/// @brief 파일의 메타 파일이 존재 하는지?
+		/// @param dir 파일 경로
+		/// @return 있다면 메타 파일의 경로를 반환, 없다면 nullopt 반환
+		static auto HasMetaFile(const std::filesystem::path& dir) -> std::optional<std::filesystem::path>;
+		static auto LoadMesh(game::World& world, const std::filesystem::path& dir) -> render::Mesh*;
+		static auto LoadTexture(game::World& world, const std::filesystem::path& dir) -> render::Texture*;
 		static auto LoadMaterial(game::World& world, const std::filesystem::path& dir) -> render::Material*;
 		static void SaveMaterial(render::Material* mat, const std::filesystem::path& dir);
 		static void LoadAllAssetsHelper(const std::filesystem::path& dir, bool recursive);

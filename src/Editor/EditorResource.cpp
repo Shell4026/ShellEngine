@@ -1,7 +1,7 @@
 ﻿#include "EditorResource.h"
 #include "EditorWorld.h"
 #include "TextureLoader.h"
-#include "ModelLoader.h"
+#include "MeshLoader.h"
 
 namespace sh::editor
 {

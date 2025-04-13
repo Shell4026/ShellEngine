@@ -1,7 +1,6 @@
 ﻿#include "Project.h"
 #include "EditorWorld.h"
 #include "EditorResource.h"
-#include "ModelLoader.h"
 #include "AssetDatabase.h"
 
 #include "Render/Renderer.h"
@@ -81,8 +80,8 @@ namespace sh::editor
 	inline void Project::SetDragItem(const std::filesystem::path& path)
 	{
 		void* item = nullptr;
-		std::string pathStr = path.string();
-		std::string extension = path.extension().string();
+		std::string pathStr = path.u8string();
+		std::string extension = path.extension().u8string();
 		std::string payloadName = "asset";
 
 		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_::ImGuiDragDropFlags_None))
@@ -92,24 +91,21 @@ namespace sh::editor
 				payloadName = core::reflection::GetTypeName<render::Mesh*>();
 				item = world.meshes.GetResource(pathStr);
 				if (item == nullptr)
-				{
-					ModelLoader loader{ *world.renderer.GetContext()};
-					item = world.meshes.AddResource(pathStr, loader.Load(pathStr));
-				}
+					item = AssetDatabase::ImportAsset(world, pathStr);
 			}
 			else if (extension == ".mat")
 			{
 				payloadName = core::reflection::GetTypeName<render::Material*>();
 				item = world.materials.GetResource(pathStr);
 				if (item == nullptr)
-					AssetDatabase::ImportAsset(world, path);
+					item = AssetDatabase::ImportAsset(world, path);
 			}
 			else if (extension == ".png" || extension == ".jpg")
 			{
 				payloadName = core::reflection::GetTypeName<render::Texture*>();
 				item = world.textures.GetResource(pathStr);
 				if (item == nullptr)
-					AssetDatabase::ImportAsset(world, path);
+					item = AssetDatabase::ImportAsset(world, path);
 			}
 			ImGui::SetDragDropPayload(payloadName.c_str(), &item, sizeof(render::Mesh*));
 			ImGui::Text("%s", path.filename().c_str());
