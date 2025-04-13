@@ -16,7 +16,7 @@ namespace sh::render
 			Vertex, Fragment,
 			Layout, Uniform, In, Out, Sampler2D,
 			Const,
-			VERTEX, UV, NORMAL, MVP, LIGHT,
+			VERTEX, UV, NORMAL, TANGENT, MVP, LIGHT,
 			MATRIX_MODEL, MATRIX_VIEW, MATRIX_PROJ,
 			LBracket, // (
 			RBracket, // )

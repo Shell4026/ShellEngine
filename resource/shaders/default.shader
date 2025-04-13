@@ -6,6 +6,7 @@ Shader "Default Shader"
 	{
 		float ambient;
 		sampler2D tex;
+		sampler2D normalTex;
 	}
 	
 	Pass
@@ -16,14 +17,20 @@ Shader "Default Shader"
 		{
 			layout(location = 0) out vec2 fragUvs;
 			layout(location = 1) out vec3 fragPos;
-			layout(location = 2) out vec3 fragNormals;
-
+			layout(location = 2) out mat3 TBN;
 			void main()
 			{
 				gl_Position = MATRIX_PROJ * MATRIX_VIEW * MATRIX_MODEL * vec4(VERTEX, 1.0f);
 				fragUvs = UV;
 				fragPos = (MATRIX_MODEL * vec4(VERTEX, 1.0f)).xyz;
-				fragNormals = normalize((MATRIX_MODEL * vec4(NORMAL, 0.0f)).xyz);
+				
+				mat3 normalMatrix = transpose(inverse(mat3(MATRIX_MODEL)));
+				
+				vec3 t = normalize(normalMatrix * TANGENT);
+				vec3 n = normalize(normalMatrix * NORMAL);
+				vec3 b = cross(n, t);
+
+				TBN = mat3(t, b, n);
 			}
 		}
 		Stage Fragment
@@ -32,13 +39,17 @@ Shader "Default Shader"
 
 			layout(location = 0) in vec2 uvs;
 			layout(location = 1) in vec3 fragPos;
-			layout(location = 2) in vec3 fragNormals;
-
+			layout(location = 2) in mat3 TBN;
 			uniform float ambient;
 			uniform sampler2D tex;
+			uniform sampler2D normalTex;
 
 			void main() 
 			{
+				vec3 normal = texture(normalTex, uvs).xyz;
+				normal = normal * 2.0 - 1.0;
+				normal = normalize(TBN * normal);
+			
 				float diffuse = 0.f;
 				for (int i = 0; i < LIGHT.count; ++i)
 				{
@@ -47,7 +58,7 @@ Shader "Default Shader"
 					float lightDis = length(toLightVec);
 					float attenuation = clamp(1.0 - (lightDis / LIGHT.range[i]), 0.0, 1.0);
 					
-					diffuse += max(dot(fragNormals, toLightDir), 0.0) * attenuation;
+					diffuse += max(dot(normal, toLightDir), 0.0) * attenuation;
 				}
 				outColor = texture(tex, uvs);
 				outColor.xyz *= diffuse + ambient;

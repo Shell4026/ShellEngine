@@ -29,6 +29,7 @@ namespace sh::render
 			glm::vec3 vertex;
 			glm::vec2 uv;
 			glm::vec3 normal;
+			glm::vec3 tangent;
 		};
 		struct Face
 		{
@@ -41,6 +42,11 @@ namespace sh::render
 			Line,
 			Face
 		};
+
+		static constexpr uint8_t VERTEX_ID = 0;
+		static constexpr uint8_t UV_ID = 1;
+		static constexpr uint8_t NORMAL_ID = 2;
+		static constexpr uint8_t TANGENT_ID = 3;
 	private:
 		std::vector<Vertex> verts;
 		std::vector<uint32_t> indices;
@@ -52,10 +58,6 @@ namespace sh::render
 
 		AABB bounding;
 	public:
-		static constexpr uint8_t VERTEX_ID = 0;
-		static constexpr uint8_t UV_ID = 1;
-		static constexpr uint8_t NORMAL_ID = 2;
-
 		float lineWidth = 1.f;
 	public:
 		SH_RENDER_API Mesh();

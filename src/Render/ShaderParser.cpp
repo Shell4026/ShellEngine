@@ -1,6 +1,7 @@
 ﻿#include "ShaderParser.h"
 #include "StencilState.h"
 #include "UniformStructLayout.h"
+#include "Mesh.h"
 
 #include <fmt/core.h>
 
@@ -569,6 +570,7 @@ namespace sh::render
 		bool usingVertex = false;
 		bool usingNormal = false;
 		bool usingUV = false;
+		bool usingTangent = false;
 		bool usingMatrixModel = false;
 		bool usingCamera = false;
 		bool usingLIGHT = false;
@@ -599,13 +601,15 @@ namespace sh::render
 					if (it == stageNode.in.end())
 					{
 						ShaderAST::LayoutNode layoutNode{};
-						layoutNode.binding = 0;
+						layoutNode.binding = Mesh::VERTEX_ID;
 						layoutNode.var.name = "VERTEX";
 						layoutNode.var.type = ShaderAST::VariableType::Vec3;
 						layoutNode.var.size = 1;
 						stageNode.in.push_back(std::move(layoutNode));
 						usingVertex = true;
 					}
+					else
+						usingVertex = true;
 				}
 			}
 			else if (CheckToken(ShaderLexer::TokenType::UV))
@@ -613,19 +617,21 @@ namespace sh::render
 				if (!usingUV)
 				{
 					auto it = std::find_if(stageNode.in.begin(), stageNode.in.end(), [&](const ShaderAST::LayoutNode& layoutNode)
-						{
-							return layoutNode.var.name == "UV";
-						});
+							{
+								return layoutNode.var.name == "UV";
+							});
 					if (it == stageNode.in.end())
 					{
 						ShaderAST::LayoutNode layoutNode{};
-						layoutNode.binding = 1;
+						layoutNode.binding = Mesh::UV_ID;
 						layoutNode.var.name = "UV";
 						layoutNode.var.type = ShaderAST::VariableType::Vec2;
 						layoutNode.var.size = 1;
 						stageNode.in.push_back(std::move(layoutNode));
 						usingUV = true;
 					}
+					else
+						usingUV = true;
 				}
 			}
 			else if (CheckToken(ShaderLexer::TokenType::NORMAL))
@@ -639,13 +645,37 @@ namespace sh::render
 					if (it == stageNode.in.end())
 					{
 						ShaderAST::LayoutNode layoutNode{};
-						layoutNode.binding = 2;
+						layoutNode.binding = Mesh::NORMAL_ID;
 						layoutNode.var.name = "NORMAL";
 						layoutNode.var.type = ShaderAST::VariableType::Vec3;
 						layoutNode.var.size = 1;
 						stageNode.in.push_back(std::move(layoutNode));
 						usingNormal = true;
 					}
+					else
+						usingNormal = true;
+				}
+			}
+			else if (CheckToken(ShaderLexer::TokenType::TANGENT))
+			{
+				if (!usingTangent)
+				{
+					auto it = std::find_if(stageNode.in.begin(), stageNode.in.end(), [&](const ShaderAST::LayoutNode& layoutNode)
+					{
+						return layoutNode.var.name == "TANGENT";
+					});
+					if (it == stageNode.in.end())
+					{
+						ShaderAST::LayoutNode layoutNode{};
+						layoutNode.binding = Mesh::TANGENT_ID;
+						layoutNode.var.name = "TANGENT";
+						layoutNode.var.type = ShaderAST::VariableType::Vec3;
+						layoutNode.var.size = 1;
+						stageNode.in.push_back(std::move(layoutNode));
+						usingTangent = true;
+					}
+					else
+						usingTangent = true;
 				}
 			}
 			else if (CheckToken(ShaderLexer::TokenType::MATRIX_VIEW) || CheckToken(ShaderLexer::TokenType::MATRIX_PROJ))

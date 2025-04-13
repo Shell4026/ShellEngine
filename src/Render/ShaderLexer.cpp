@@ -305,6 +305,7 @@ namespace sh::render
 					{"VERTEX", TokenType::VERTEX},
 					{"UV", TokenType::UV},
 					{"NORMAL", TokenType::NORMAL},
+					{"TANGENT", TokenType::TANGENT},
 					{"const", TokenType::Const},
 					{"MATRIX_MODEL", TokenType::MATRIX_MODEL},
 					{"MATRIX_VIEW", TokenType::MATRIX_VIEW},

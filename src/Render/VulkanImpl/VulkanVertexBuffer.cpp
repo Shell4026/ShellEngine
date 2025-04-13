@@ -67,26 +67,26 @@ namespace sh::render::vk
 		VulkanBuffer stagingBuffer1{ context };
 		stagingBuffer1.Create(vertexBufferSize, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		stagingBuffer1.SetData(mesh.GetVertex().data());
 
 		vertexBuffer.Create(vertexBufferSize,
-			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
+			VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_DST_BIT | VkBufferUsageFlagBits::VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 		// 인덱스 버퍼
 		size_t indicesSize = sizeof(uint32_t) * mesh.GetIndices().size();
 		VulkanBuffer stagingBuffer2{ context };
 		stagingBuffer2.Create(indicesSize, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
-			VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
+			VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		stagingBuffer2.SetData(mesh.GetIndices().data());
 
 		indexBuffer.Create(indicesSize,
-			VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
+			VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_DST_BIT | VkBufferUsageFlagBits::VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
 			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
-			VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+			VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
 		// 스테이징 버퍼에서 실제 버퍼로 복사
 		VkCommandBufferBeginInfo info{};
@@ -161,6 +161,10 @@ namespace sh::render::vk
 			attrDesc.location = Mesh::NORMAL_ID;
 			attrDesc.format = VkFormat::VK_FORMAT_R32G32B32_SFLOAT;
 			attrDesc.offset = offsetof(Mesh::Vertex, normal);
+			attribDescriptions.push_back(attrDesc);
+			attrDesc.location = Mesh::TANGENT_ID;
+			attrDesc.format = VkFormat::VK_FORMAT_R32G32B32_SFLOAT;
+			attrDesc.offset = offsetof(Mesh::Vertex, tangent);
 			attribDescriptions.push_back(attrDesc);
 		}
 		return attribDescriptions;
