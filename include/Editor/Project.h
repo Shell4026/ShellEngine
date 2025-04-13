@@ -23,6 +23,7 @@ namespace sh::editor
 		std::filesystem::path rootPath;
 		std::filesystem::path assetPath;
 		std::filesystem::path currentPath;
+		std::filesystem::path selected;
 
 		core::SVector<std::filesystem::path> foldersPath;
 		core::SVector<std::filesystem::path> filesPath;
@@ -47,6 +48,7 @@ namespace sh::editor
 		inline auto GetIcon(const std::filesystem::path& path) const -> const game::GUITexture*;
 		inline bool RenderFile(const std::filesystem::path& path, float& cursorX, float spacing, float width);
 		inline void ShowRightClickPopup();
+		inline void RenderNameBar();
 	public:
 		SH_EDITOR_API Project(game::ImGUImpl& imgui, EditorWorld& world);
 

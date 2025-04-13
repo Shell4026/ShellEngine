@@ -142,6 +142,7 @@ namespace sh::editor
 		ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Button, iconBackgroundColor);
 		if (ImGui::ImageButton(path.string().c_str(), *icon, ImVec2{ iconSize, iconSize }))
 		{
+			selected = path;
 			auto uuidStr = AssetDatabase::GetAssetUUID(path);
 			if (uuidStr)
 			{
@@ -208,15 +209,30 @@ namespace sh::editor
 		}
 	}
 
+	inline void Project::RenderNameBar()
+	{
+		ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_ChildBg, ImVec4{ 0.2, 0.2, 0.2, 1 });
+
+		ImGui::BeginChild("Namebar", ImVec2{0, 0});
+		ImGui::SetCursorPosX(5.0f);
+		ImGui::Text(selected.u8string().c_str());
+		ImGui::EndChild();
+
+		ImGui::PopStyleColor();
+	}
+
 	SH_EDITOR_API void Project::Update()
 	{
 	}
 	SH_EDITOR_API void Project::Render()
 	{
 		static ImGuiWindowFlags style =
-			ImGuiWindowFlags_::ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_NoBringToFrontOnFocus;
+			ImGuiWindowFlags_::ImGuiWindowFlags_NoBringToFrontOnFocus;
 
+		ImGui::PushStyleVar(ImGuiStyleVar_::ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
 		ImGui::Begin("Project", nullptr, style);
+		float h = ImGui::GetWindowContentRegionMax().y - 50;
+		ImGui::BeginChild("Explorer", ImVec2{ 0.f, h }, ImGuiChildFlags_::ImGuiChildFlags_None, ImGuiWindowFlags_::ImGuiWindowFlags_AlwaysVerticalScrollbar);
 
 		float availableWidth = ImGui::GetContentRegionAvail().x;
 		float cursorX = ImGui::GetCursorPosX();
@@ -241,7 +257,10 @@ namespace sh::editor
 		}
 
 		ShowRightClickPopup();
-		
+
+		ImGui::EndChild();
+		ImGui::PopStyleVar();
+		RenderNameBar();
 		ImGui::End();
 	}
 
