@@ -1,10 +1,13 @@
 ﻿#include "AssetDatabase.h"
+#include "AssetExtensions.h"
+#include "EditorWorld.h"
 #include "TextureLoader.h"
-#include "MeshLoader.h"
+#include "ModelLoader.h"
 #include "MaterialLoader.h"
 #include "Meta.h"
 
 #include "Render/Renderer.h"
+#include "Render/Model.h"
 
 #include "Game/World.h"
 
@@ -41,7 +44,7 @@ namespace sh::editor
 			return std::nullopt;
 		return metaFileDir;
 	}
-	auto AssetDatabase::LoadMesh(game::World& world, const std::filesystem::path& dir) -> render::Mesh*
+	auto AssetDatabase::LoadModel(EditorWorld& world, const std::filesystem::path& dir) -> render::Model*
 	{
 		std::filesystem::path metaDir{ CreateMetaDirectory(dir) };
 
@@ -50,25 +53,31 @@ namespace sh::editor
 		if (meta.Load(metaDir))
 			meta.LoadImporter(importer);
 
-		static MeshLoader loader{ *world.renderer.GetContext()};
-		auto ptr = loader.Load(dir.string());
-		if (ptr == nullptr)
+		static ModelLoader loader{ *world.renderer.GetContext()};
+		render::Model* modelPtr = nullptr;
+		if (dir.extension() == ".obj")
+			modelPtr = loader.Load(dir);
+		else
+			modelPtr = loader.LoadGLTF(dir);
+
+		if (modelPtr == nullptr)
 			return nullptr;
 
-		world.meshes.AddResource(dir.string(), ptr);
-		ptr->SetName(dir.stem().string());
+		world.models.AddResource(dir.u8string(), modelPtr);
+		for (auto mesh : modelPtr->GetMeshes())
+			world.meshes.AddResource(mesh->GetUUID().ToString(), mesh);
 
 		if (meta.IsLoad())
-			meta.LoadSObject(*ptr);
+			meta.LoadSObject(*modelPtr);
 		else
-			meta.Save(*ptr, importer, metaDir);
+			meta.Save(*modelPtr, importer, metaDir);
 
-		uuids.insert_or_assign(dir, ptr->GetUUID());
-		paths.insert_or_assign(ptr->GetUUID().ToString(), dir);
+		uuids.insert_or_assign(dir, modelPtr->GetUUID());
+		paths.insert_or_assign(modelPtr->GetUUID(), dir);
 
-		return ptr;
+		return modelPtr;
 	}
-	auto AssetDatabase::LoadTexture(game::World& world, const std::filesystem::path& dir) -> render::Texture*
+	auto AssetDatabase::LoadTexture(EditorWorld& world, const std::filesystem::path& dir) -> render::Texture*
 	{
 		std::filesystem::path metaDir{ CreateMetaDirectory(dir) };
 
@@ -92,11 +101,11 @@ namespace sh::editor
 			meta.Save(*ptr, importer, metaDir);
 
 		uuids.insert_or_assign(dir, ptr->GetUUID());
-		paths.insert_or_assign(ptr->GetUUID().ToString(), dir);
+		paths.insert_or_assign(ptr->GetUUID(), dir);
 
 		return ptr;
 	}
-	auto AssetDatabase::LoadMaterial(game::World& world, const std::filesystem::path& dir) -> render::Material*
+	auto AssetDatabase::LoadMaterial(EditorWorld& world, const std::filesystem::path& dir) -> render::Material*
 	{
 		static MaterialLoader loader{ *world.renderer.GetContext() };
 		
@@ -104,11 +113,11 @@ namespace sh::editor
 		if (ptr == nullptr)
 			return nullptr;
 
-		world.materials.AddResource(dir.string(), ptr);
+		world.materials.AddResource(dir.u8string(), ptr);
 		ptr->SetName(dir.stem().string());
 
 		uuids.insert_or_assign(dir, ptr->GetUUID());
-		paths.insert_or_assign(ptr->GetUUID().ToString(), dir);
+		paths.insert_or_assign(ptr->GetUUID(), dir);
 		return ptr;
 	}
 	void AssetDatabase::SaveMaterial(render::Material* mat, const std::filesystem::path& dir)
@@ -123,7 +132,7 @@ namespace sh::editor
 		os.close();
 	}
 
-	SH_EDITOR_API auto AssetDatabase::ImportAsset(game::World& world, const std::filesystem::path& dir) -> core::SObject*
+	SH_EDITOR_API auto AssetDatabase::ImportAsset(EditorWorld& world, const std::filesystem::path& dir) -> core::SObject*
 	{
 		if (!std::filesystem::exists(dir))
 			return nullptr;
@@ -132,11 +141,12 @@ namespace sh::editor
 		
 		std::string extension = dir.extension().string();
 
-		if (extension == ".jpg" || extension == ".png")
+		auto type = AssetExtensions::CheckType(extension);
+		if (type == AssetExtensions::Type::Texture)
 			return LoadTexture(world, dir);
-		if (extension == ".obj")
-			return LoadMesh(world, dir);
-		if (extension == ".mat")
+		if (type == AssetExtensions::Type::Model)
+			return LoadModel(world, dir);
+		if (type == AssetExtensions::Type::Material)
 			return LoadMaterial(world, dir);
 		return nullptr;
 	}
@@ -145,7 +155,7 @@ namespace sh::editor
 	{
 		for (auto obj : dirtyObjs)
 		{
-			auto it = paths.find(obj->GetUUID().ToString());
+			auto it = paths.find(obj->GetUUID());
 			if (it == paths.end())
 				continue;
 			const auto& assetPath = it->second;
@@ -187,7 +197,7 @@ namespace sh::editor
 			}
 		}
 	}
-	SH_EDITOR_API void AssetDatabase::LoadAllAssets(game::World& world, const std::filesystem::path& dir, bool recursive)
+	SH_EDITOR_API void AssetDatabase::LoadAllAssets(EditorWorld& world, const std::filesystem::path& dir, bool recursive)
 	{
 		LoadAllAssetsHelper(dir, recursive);
 		while (!loadingAssetsQueue.empty())
@@ -198,7 +208,7 @@ namespace sh::editor
 		}
 	}
 
-	SH_EDITOR_API bool AssetDatabase::CreateAsset(game::World& world, const std::filesystem::path& dir, const core::ISerializable& serializable)
+	SH_EDITOR_API bool AssetDatabase::CreateAsset(EditorWorld& world, const std::filesystem::path& dir, const core::ISerializable& serializable)
 	{
 		if (std::filesystem::exists(dir))
 			return false;

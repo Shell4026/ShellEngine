@@ -13,6 +13,7 @@
 #include "Render/VulkanImpl/VulkanShaderPassBuilder.h"
 #include "Render/Mesh/Plane.h"
 #include "Render/Mesh/Grid.h"
+#include "Render/Model.h"
 #include "Render/MaterialPropertyBlock.h"
 
 #include "Game/GameObject.h"
@@ -23,12 +24,39 @@
 #include "Game/Component/EditorControl.h"
 #include "Game/Component/LineRenderer.h"
 
-#include "MeshLoader.h"
+#include "ModelLoader.h"
 #include "TextureLoader.h"
 #include "ShaderLoader.h"
 
 namespace sh::editor
 {
+	void EditorWorld::AddOrDestroyOutlineComponent(game::GameObject& obj, bool bAdd)
+	{
+		for (auto child : obj.transform->GetChildren())
+			AddOrDestroyOutlineComponent(child->gameObject, bAdd);
+
+		auto meshRenderer = obj.GetComponent<game::MeshRenderer>();
+		if (!core::IsValid(meshRenderer))
+			return;
+
+		auto outline = obj.GetComponent<editor::OutlineComponent>();
+		if (!core::IsValid(outline))
+		{
+			if (bAdd)
+			{
+				auto outlineComponent = obj.AddComponent<editor::OutlineComponent>();
+				outlineComponent->hideInspector = true;
+			}
+		}
+		else
+		{
+			if (!bAdd)
+			{
+				outline->Destroy();
+			}
+		}
+	}
+
 	SH_EDITOR_API EditorWorld::EditorWorld(render::Renderer& renderer, const game::ComponentModule& module, game::ImGUImpl& guiContext) :
 		World(renderer, module), guiContext(guiContext)
 	{
@@ -75,7 +103,7 @@ namespace sh::editor
 
 		ShaderLoader loader{ &shaderBuilder };
 		TextureLoader texLoader{ *renderer.GetContext() };
-		MeshLoader modelLoader{ *renderer.GetContext() };
+		ModelLoader modelLoader{ *renderer.GetContext() };
 
 		auto defaultShader = shaders.AddResource("DefaultShader", loader.LoadShader("shaders/default.shader"));
 		auto lineShader = shaders.AddResource("Line", loader.LoadShader("shaders/line.shader"));
@@ -98,7 +126,10 @@ namespace sh::editor
 
 		auto plane = meshes.AddResource("PlaneMesh", render::Plane{});
 		auto grid = meshes.AddResource("GridMesh", render::Grid{});
-		auto box = meshes.AddResource("BoxMesh", modelLoader.Load("model/cube.obj"));
+
+		auto boxModel = modelLoader.Load("model/cube.obj");
+		for (auto mesh : boxModel->GetMeshes())
+			meshes.AddResource("BoxMesh", mesh);
 
 		errorShader->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f0f" });
 		defaultShader->SetUUID(core::UUID{ "ad9217609f6c7e0f1163785746cc153e" });
@@ -178,12 +209,11 @@ namespace sh::editor
 				{
 					if (core::IsValid(selected))
 					{
-						auto control = static_cast<game::GameObject*>(selected)->GetComponent<game::EditorControl>();
+						game::GameObject* selectedObj = static_cast<game::GameObject*>(selected);
+						auto control = selectedObj->GetComponent<game::EditorControl>();
 						if (core::IsValid(control))
 							control->Destroy();
-						auto outline = static_cast<game::GameObject*>(selected)->GetComponent<editor::OutlineComponent>();
-						if (core::IsValid(outline))
-							outline->Destroy();
+						AddOrDestroyOutlineComponent(*selectedObj, false);
 					}
 				}
 			}
@@ -195,32 +225,24 @@ namespace sh::editor
 
 		if (core::IsValid(selected) && selected->GetType() == game::GameObject::GetStaticType())
 		{
-			if (core::IsValid(selected))
-			{
-				auto control = static_cast<game::GameObject*>(selected)->GetComponent<game::EditorControl>();
-				if (core::IsValid(control))
-					control->Destroy();
-				auto outline = static_cast<game::GameObject*>(selected)->GetComponent<editor::OutlineComponent>();
-				if (core::IsValid(outline))
-					outline->Destroy();
-			}
+			game::GameObject* selectedObj = static_cast<game::GameObject*>(selected);
+			auto control = selectedObj->GetComponent<game::EditorControl>();
+			if (core::IsValid(control))
+				control->Destroy();
+			AddOrDestroyOutlineComponent(*selectedObj, false);
 		}
 		selected = obj;
 		if (core::IsValid(selected) && selected->GetType() == game::GameObject::GetStaticType())
 		{
 			game::GameObject* selectedObj = static_cast<game::GameObject*>(selected);
-			if (selectedObj->GetComponent<game::EditorControl>() == nullptr)
+			auto control = selectedObj->GetComponent<game::EditorControl>();
+			if (!core::IsValid(control))
 			{
 				auto control = selectedObj->AddComponent<game::EditorControl>();
 				control->SetCamera(editorCamera);
 				control->hideInspector = true;
-
-				if (selectedObj->GetComponent<game::MeshRenderer>() != nullptr)
-				{
-					auto outline = selectedObj->AddComponent<editor::OutlineComponent>();
-					outline->hideInspector = true;
-				}
 			}
+			AddOrDestroyOutlineComponent(*selectedObj, true);
 		}
 	}
 	SH_EDITOR_API auto EditorWorld::GetSelectedObject() const -> core::SObject*
@@ -234,18 +256,14 @@ namespace sh::editor
 		if (core::IsValid(obj) && obj->GetType() == game::GameObject::GetStaticType())
 		{
 			game::GameObject* selectedObj = static_cast<game::GameObject*>(obj);
-			if (selectedObj->GetComponent<game::EditorControl>() == nullptr)
+			auto control = selectedObj->GetComponent<game::EditorControl>();
+			if (!core::IsValid(control))
 			{
-				auto control = selectedObj->AddComponent<game::EditorControl>();
+				control = selectedObj->AddComponent<game::EditorControl>();
 				control->SetCamera(editorCamera);
 				control->hideInspector = true;
-
-				if (selectedObj->GetComponent<game::MeshRenderer>() != nullptr)
-				{
-					auto outline = selectedObj->AddComponent<editor::OutlineComponent>();
-					outline->hideInspector = true;
-				}
 			}
+			AddOrDestroyOutlineComponent(*selectedObj, true);
 		}
 	}
 
@@ -255,6 +273,11 @@ namespace sh::editor
 		obj->onComponentAdd.Register(onComponentAddListener);
 		
 		return obj;
+	}
+
+	SH_EDITOR_API auto EditorWorld::GetEditorUI() const -> EditorUI*
+	{
+		return editorUI.get();
 	}
 
 	SH_EDITOR_API void EditorWorld::Start()

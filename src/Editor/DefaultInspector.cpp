@@ -73,7 +73,7 @@ namespace sh::editor
 					{
 						auto p = ImGui::GetCurrentContext()->DragDropPayload;
 						auto str = std::string{ core::reflection::GetTypeName<render::Texture*>() };
-						const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(std::string{ core::reflection::GetTypeName<render::Texture*>() }.c_str());
+						const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(std::string{ core::reflection::GetTypeName<render::Texture>() }.c_str());
 						if (payload)
 						{
 							const render::Texture* texture = *reinterpret_cast<render::Texture**>(payload->Data);

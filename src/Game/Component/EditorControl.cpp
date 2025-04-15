@@ -243,4 +243,8 @@ namespace sh::game
 	{
 		this->camera = camera;
 	}
+	SH_GAME_API auto EditorControl::Serialize() const -> core::Json
+	{
+		return core::Json{};
+	}
 }//namespace

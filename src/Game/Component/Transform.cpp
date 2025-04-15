@@ -1,7 +1,9 @@
 ﻿#include "Component/Transform.h"
 #include "GameObject.h"
 
+#define GLM_ENABLE_EXPERIMENTAL
 #include "glm/mat4x4.hpp"
+#include "glm/gtx/orthonormalize.hpp"
 #include <algorithm>
 
 namespace sh::game
@@ -198,6 +200,28 @@ namespace sh::game
 #endif
 		quat = rot;
 		bUpdateMatrix = true;
+	}
+
+	SH_GAME_API void Transform::SetModelMatrix(const glm::mat4& matrix)
+	{
+		glm::vec3 t = glm::vec3{ matrix[3] };
+
+		glm::mat3 m3 = glm::mat3(matrix);
+		float sx = glm::length(m3[0]);
+		float sy = glm::length(m3[1]);
+		float sz = glm::length(m3[2]);
+		glm::vec3 s(sx, sy, sz);
+
+		glm::mat3 rmat;
+		rmat[0] = m3[0] / sx;
+		rmat[1] = m3[1] / sy;
+		rmat[2] = m3[2] / sz;
+		rmat = glm::orthonormalize(rmat);
+		glm::quat q{ rmat };
+
+		SetPosition(t);
+		SetRotation(q);
+		SetScale(s);
 	}
 
 	SH_GAME_API void Transform::SetParent(Transform* parent)

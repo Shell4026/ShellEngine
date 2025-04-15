@@ -18,6 +18,7 @@ namespace sh::render
 {
 	class Texture;
 	class Mesh;
+	class Model;
 	class Material;
 }
 namespace sh::game
@@ -27,6 +28,7 @@ namespace sh::game
 
 namespace sh::editor
 {
+	class EditorWorld;
 	class AssetDatabase
 	{
 	private:
@@ -63,7 +65,7 @@ namespace sh::editor
 			}
 		};
 		SH_EDITOR_API inline static core::SHashMap<std::filesystem::path, core::UUID> uuids{};
-		SH_EDITOR_API inline static core::SHashMap<std::string, std::filesystem::path> paths{};
+		SH_EDITOR_API inline static core::SHashMap<core::UUID, std::filesystem::path> paths{};
 		SH_EDITOR_API inline static core::SVector<core::SObject*> dirtyObjs{};
 		SH_EDITOR_API inline static std::priority_queue<AssetLoadData> loadingAssetsQueue{};
 		SH_EDITOR_API static core::Observer<false, const core::SObject*>::Listener onDestroyListener;
@@ -73,9 +75,9 @@ namespace sh::editor
 		/// @param dir 파일 경로
 		/// @return 있다면 메타 파일의 경로를 반환, 없다면 nullopt 반환
 		static auto HasMetaFile(const std::filesystem::path& dir) -> std::optional<std::filesystem::path>;
-		static auto LoadMesh(game::World& world, const std::filesystem::path& dir) -> render::Mesh*;
-		static auto LoadTexture(game::World& world, const std::filesystem::path& dir) -> render::Texture*;
-		static auto LoadMaterial(game::World& world, const std::filesystem::path& dir) -> render::Material*;
+		static auto LoadModel(EditorWorld& world, const std::filesystem::path& dir) -> render::Model*;
+		static auto LoadTexture(EditorWorld& world, const std::filesystem::path& dir) -> render::Texture*;
+		static auto LoadMaterial(EditorWorld& world, const std::filesystem::path& dir) -> render::Material*;
 		static void SaveMaterial(render::Material* mat, const std::filesystem::path& dir);
 		static void LoadAllAssetsHelper(const std::filesystem::path& dir, bool recursive);
 	public:
@@ -85,9 +87,9 @@ namespace sh::editor
 		/// @brief 해당 경로에 있는 에셋을 모두 불러오는 함수
 		/// @param dir 경로
 		/// @param recursive 하위 경로도 포함 할 것인지
-		SH_EDITOR_API static void LoadAllAssets(game::World& world, const std::filesystem::path& dir, bool recursive);
-		SH_EDITOR_API static auto ImportAsset(game::World& world, const std::filesystem::path& dir) -> core::SObject*;
-		SH_EDITOR_API static bool CreateAsset(game::World& world, const std::filesystem::path& dir, const core::ISerializable& serializable);
+		SH_EDITOR_API static void LoadAllAssets(EditorWorld& world, const std::filesystem::path& dir, bool recursive);
+		SH_EDITOR_API static auto ImportAsset(EditorWorld& world, const std::filesystem::path& dir) -> core::SObject*;
+		SH_EDITOR_API static bool CreateAsset(EditorWorld& world, const std::filesystem::path& dir, const core::ISerializable& serializable);
 		SH_EDITOR_API static auto GetAssetUUID(const std::filesystem::path& dir) -> std::optional<core::UUID>;
 		/// @brief 에셋에 변경 사항이 존재한다고 알리는 함수
 		/// @param obj 포인터

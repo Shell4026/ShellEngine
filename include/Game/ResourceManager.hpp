@@ -58,6 +58,10 @@ namespace sh::game
 			resources.clear();
 		}
 
+		/// @brief 에셋을 추가한다.
+		/// @param _name 구분용 이름 (에셋 이름과 다를 수 있음)
+		/// @param resource 에셋 포인터
+		/// @return 에셋 포인터
 		auto AddResource(std::string_view _name, T* resource) -> T*
 		{
 			assert(resource);
@@ -70,11 +74,14 @@ namespace sh::game
 				name += std::to_string(idx);
 				it = resources.find(name);
 			}
-			resource->SetName(name);
 
 			gc.SetRootSet(resource);
 			return resources.insert({ std::move(name), resource }).first->second;
 		}
+		/// @brief 에셋을 이동시켜 추가한다.
+		/// @param _name 구분용 이름 (에셋 이름과 다를 수 있음)
+		/// @param resource 임시 에셋 객체
+		/// @return 에셋 포인터
 		auto AddResource(std::string_view _name, T&& resource) -> T*
 		{
 			std::string name{ _name };
@@ -93,6 +100,10 @@ namespace sh::game
 			gc.SetRootSet(resourcePtr);
 			return resources.insert({ std::move(name), resourcePtr }).first->second;
 		}
+		/// @brief 에셋을 복사하여 추가한다.
+		/// @param _name 구분용 이름 (에셋 이름과 다를 수 있음)
+		/// @param resource 에셋 참조
+		/// @return 에셋 포인터
 		auto AddResource(std::string_view _name, const T& resource) -> T*
 		{
 			std::string name{ _name };

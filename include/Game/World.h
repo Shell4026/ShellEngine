@@ -13,7 +13,7 @@
 
 #include "Render/Shader.h"
 #include "Render/Material.h"
-#include "Render/Mesh.h"
+#include "Render/Model.h"
 #include "Render/Texture.h"
 
 #include "Physics/PhysWorld.h"
@@ -70,6 +70,7 @@ namespace sh::game
 
 		ResourceManager<sh::render::Shader> shaders;
 		ResourceManager<sh::render::Material> materials;
+		ResourceManager<render::Model> models;
 		ResourceManager<sh::render::Mesh> meshes;
 		ResourceManager<sh::render::Texture> textures;
 	public:

@@ -44,6 +44,8 @@ namespace sh::editor
 		core::Observer<false, game::Component*>::Listener onComponentAddListener;
 	public:
 		mutable core::Observer<false, game::GameObject*, game::Component*> onComponentAdd;
+	private:
+		void AddOrDestroyOutlineComponent(game::GameObject& obj, bool bAdd);
 	public:
 		SH_EDITOR_API EditorWorld(render::Renderer&, const game::ComponentModule& module, game::ImGUImpl& guiContext);
 		SH_EDITOR_API ~EditorWorld();
@@ -57,7 +59,9 @@ namespace sh::editor
 
 		SH_EDITOR_API void AddSelectedObject(core::SObject* obj);
 
-		SH_EDITOR_API  auto AddGameObject(std::string_view name) -> game::GameObject* override;
+		SH_EDITOR_API auto AddGameObject(std::string_view name) -> game::GameObject* override;
+
+		SH_EDITOR_API auto GetEditorUI() const -> EditorUI*;
 
 		SH_EDITOR_API void Start() override;
 		SH_EDITOR_API void Update(float deltaTime) override;

@@ -54,9 +54,9 @@ namespace sh::render
 
 		std::unique_ptr<IVertexBuffer> buffer;
 
-		Topology topology;
-
 		AABB bounding;
+
+		Topology topology;
 	public:
 		float lineWidth = 1.f;
 	public:

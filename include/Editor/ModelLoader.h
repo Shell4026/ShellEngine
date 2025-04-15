@@ -4,6 +4,8 @@
 
 #include "Core/Util.h"
 
+#include "Render/Mesh.h"
+
 #include "glm/vec3.hpp"
 #include "glm/vec2.hpp"
 
@@ -11,11 +13,11 @@
 #include <glm/gtx/hash.hpp>
 
 #include <string_view>
-
+#include <filesystem>
 namespace sh::render
 {
 	class IRenderContext;
-	class Mesh;
+	class Model;
 }
 namespace sh::editor
 {
@@ -28,7 +30,8 @@ namespace sh::editor
 		SH_EDITOR_API auto Serialize() const -> core::Json override;
 		SH_EDITOR_API void Deserialize(const core::Json& json) override;
 	};
-	class MeshLoader
+
+	class ModelLoader
 	{
 	private:
 		struct Indices
@@ -44,27 +47,29 @@ namespace sh::editor
 					&& uv == other.uv;
 			}
 		};
-		friend std::hash<sh::editor::MeshLoader::Indices>;
+		friend std::hash<sh::editor::ModelLoader::Indices>;
 	public:
 		const render::IRenderContext& context;
-	protected:
-		SH_EDITOR_API auto CalculateTangent(
-			const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2, 
-			const glm::vec2& uv0, const glm::vec2& uv1, const glm::vec2& uv2) const -> glm::vec3;
+	private:
+		auto CalculateTangent(
+			const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2,
+			const glm::vec2& uv0, const glm::vec2& uv1, const glm::vec2& uv2) const->glm::vec3;
+		void CreateTangents(std::vector<render::Mesh::Vertex>& verts, const std::vector<uint32_t>& indices);
 	public:
-		SH_EDITOR_API MeshLoader(const render::IRenderContext& context);
-		SH_EDITOR_API virtual ~MeshLoader() = default;
-		SH_EDITOR_API virtual auto Load(std::string_view filename) -> render::Mesh*;
+		SH_EDITOR_API ModelLoader(const render::IRenderContext& context);
+		SH_EDITOR_API virtual ~ModelLoader() = default;
+		SH_EDITOR_API virtual auto Load(const std::filesystem::path& filename) -> render::Model*;
+		SH_EDITOR_API auto LoadGLTF(const std::filesystem::path& dir) -> render::Model*;
 	};
 }//namespace
 
 namespace std
 {
 	template <>
-	class hash<sh::editor::MeshLoader::Indices>
+	class hash<sh::editor::ModelLoader::Indices>
 	{
 	public:
-		auto operator()(const sh::editor::MeshLoader::Indices& indices) const -> std::uint64_t
+		auto operator()(const sh::editor::ModelLoader::Indices& indices) const -> std::uint64_t
 		{
 			std::hash<uint32_t> hasher{};
 			std::size_t hash1 = sh::core::Util::CombineHash(hasher(indices.vert), hasher(indices.normal));

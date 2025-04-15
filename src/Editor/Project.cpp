@@ -2,8 +2,10 @@
 #include "EditorWorld.h"
 #include "EditorResource.h"
 #include "AssetDatabase.h"
+#include "AssetExtensions.h"
 
 #include "Render/Renderer.h"
+#include "Render/Model.h"
 
 #include "Core/FileSystem.h"
 
@@ -86,29 +88,32 @@ namespace sh::editor
 
 		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_::ImGuiDragDropFlags_None))
 		{
-			if (extension == ".obj")
+			AssetExtensions::Type extType = AssetExtensions::CheckType(extension);
+			if (extType == AssetExtensions::Type::Model)
 			{
-				payloadName = core::reflection::GetTypeName<render::Mesh*>();
-				item = world.meshes.GetResource(pathStr);
+				payloadName = core::reflection::GetType<render::Model>().name;
+				item = world.models.GetResource(pathStr);
 				if (item == nullptr)
-					item = AssetDatabase::ImportAsset(world, pathStr);
+					item = AssetDatabase::ImportAsset(world, path);
+				ImGui::SetDragDropPayload(payloadName.c_str(), &item, sizeof(render::Model*));
 			}
-			else if (extension == ".mat")
+			else if (extType == AssetExtensions::Type::Material)
 			{
 				payloadName = core::reflection::GetTypeName<render::Material*>();
 				item = world.materials.GetResource(pathStr);
 				if (item == nullptr)
 					item = AssetDatabase::ImportAsset(world, path);
+				ImGui::SetDragDropPayload(payloadName.c_str(), &item, sizeof(render::Material*));
 			}
-			else if (extension == ".png" || extension == ".jpg")
+			else if (extType == AssetExtensions::Type::Texture)
 			{
-				payloadName = core::reflection::GetTypeName<render::Texture*>();
+				payloadName = core::reflection::GetTypeName<render::Texture>();
 				item = world.textures.GetResource(pathStr);
 				if (item == nullptr)
 					item = AssetDatabase::ImportAsset(world, path);
+				ImGui::SetDragDropPayload(payloadName.c_str(), &item, sizeof(render::Texture*));
 			}
-			ImGui::SetDragDropPayload(payloadName.c_str(), &item, sizeof(render::Mesh*));
-			ImGui::Text("%s", path.filename().c_str());
+			ImGui::Text("%s", path.filename().u8string().c_str());
 			ImGui::EndDragDropSource();
 		}
 
@@ -121,9 +126,10 @@ namespace sh::editor
 		if (std::filesystem::is_regular_file(path))
 		{
 			icon = fileIcon;
-			if (extension == ".obj")
+			AssetExtensions::Type extType = AssetExtensions::CheckType(extension);
+			if (extType == AssetExtensions::Type::Model)
 				icon = meshIcon;
-			else if (extension == ".mat")
+			else if (extType == AssetExtensions::Type::Material)
 				icon = EditorResource::GetInstance()->GetIcon(EditorResource::Icon::Material);
 		}
 		return icon;
@@ -140,7 +146,7 @@ namespace sh::editor
 		ImGui::BeginGroup();
 		const game::GUITexture* icon = GetIcon(path);
 		ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Button, iconBackgroundColor);
-		if (ImGui::ImageButton(path.string().c_str(), *icon, ImVec2{ iconSize, iconSize }))
+		if (ImGui::ImageButton(path.u8string().c_str(), *icon, ImVec2{ iconSize, iconSize }))
 		{
 			selected = path;
 			auto uuidStr = AssetDatabase::GetAssetUUID(path);

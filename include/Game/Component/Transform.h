@@ -65,6 +65,7 @@ namespace sh::game
 		SH_GAME_API void SetScale(float scale);
 		SH_GAME_API void SetRotation(const Vec3& rot);
 		SH_GAME_API void SetRotation(const glm::quat& rot);
+		SH_GAME_API void SetModelMatrix(const glm::mat4& matrix);
 
 		SH_GAME_API auto GetQuat() const -> const glm::quat&;
 		SH_GAME_API auto GetWorldQuat() const -> const glm::quat&;

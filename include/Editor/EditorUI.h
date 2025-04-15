@@ -44,6 +44,7 @@ namespace sh::editor
 		SH_EDITOR_API void Render();
 		
 		SH_EDITOR_API auto GetViewport() -> Viewport&;
+		SH_EDITOR_API auto GetHierarchy() -> Hierarchy&;
 
 		SH_EDITOR_API void Clean();
 	};

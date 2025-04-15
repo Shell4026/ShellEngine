@@ -142,6 +142,11 @@ namespace sh::editor
 		return viewport;
 	}
 
+	SH_EDITOR_API auto EditorUI::GetHierarchy() -> Hierarchy&
+	{
+		return hierarchy;
+	}
+
 	SH_EDITOR_API void EditorUI::Clean()
 	{
 		viewport.Clean();

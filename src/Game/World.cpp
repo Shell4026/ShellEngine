@@ -1,5 +1,4 @@
-﻿#include "PCH.h"
-#include "World.h"
+﻿#include "World.h"
 
 #include "GameObject.h"
 #include "Component/Camera.h"
@@ -16,7 +15,7 @@ namespace sh::game
 	SH_GAME_API World::World(sh::render::Renderer& renderer, const ComponentModule& componentModule) :
 		renderer(renderer), componentModule(componentModule),
 		
-		shaders(renderer), materials(renderer), meshes(renderer), textures(renderer),
+		shaders(renderer), materials(renderer), meshes(renderer), textures(renderer), models(renderer),
 		mainCamera(nullptr),
 		lightOctree(render::AABB{-1000, -1000, -1000, 1000, 1000, 1000})
 	{
@@ -30,7 +29,7 @@ namespace sh::game
 		
 		_deltaTime(other._deltaTime), _fixedDeltaTime(other._fixedDeltaTime),
 		objs(std::move(other.objs)), addedObjs(std::move(other.addedObjs)),
-		shaders(std::move(other.shaders)), materials(std::move(other.materials)), meshes(std::move(other.meshes)), textures(std::move(other.textures)),
+		shaders(std::move(other.shaders)), materials(std::move(other.materials)), meshes(std::move(other.meshes)), textures(std::move(other.textures)), models(std::move(other.models)),
 		mainCamera(nullptr),
 		lightOctree(std::move(other.lightOctree))
 	{
