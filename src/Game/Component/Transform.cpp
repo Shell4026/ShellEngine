@@ -1,5 +1,4 @@
-﻿#include "PCH.h"
-#include "Component/Transform.h"
+﻿#include "Component/Transform.h"
 #include "GameObject.h"
 
 #include "glm/mat4x4.hpp"
@@ -51,13 +50,13 @@ namespace sh::game
 		other.parent = nullptr;
 	}
 
-	SH_GAME_API void Transform::OnDestroy()
+	SH_GAME_API void Transform::Destroy()
 	{
 		if (core::IsValid(parent))
 			parent->RemoveChild(*this);
 		for (Transform* child : childs)
 		{
-			if(core::IsValid(child))
+			if (core::IsValid(child))
 				child->gameObject.Destroy();
 		}
 	}
