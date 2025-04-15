@@ -22,7 +22,7 @@ namespace sh::editor
 
 	SH_EDITOR_API auto Inspector::GetIcon(std::string_view typeName) -> const game::GUITexture*
 	{
-		if (typeName == core::reflection::GetTypeName<render::Mesh*>())
+		if (typeName == core::reflection::GetTypeName<render::Mesh>())
 		{
 			return EditorResource::GetInstance()->GetIcon(EditorResource::Icon::Mesh);
 		}
@@ -263,7 +263,7 @@ namespace sh::editor
 	inline void Inspector::RenderSObjectPtrProperty(const core::reflection::Property& prop, core::SObject* propertyOwner, const std::string& name, 
 		core::SObject** objPtr, const core::reflection::TypeInfo* type)
 	{
-		std::string typeName{ type == nullptr ? prop.type.name : type->name };
+		std::string typeName{ type == nullptr ? prop.pureTypeName : type->name };
 		if (type == nullptr)
 			type = &prop.type;
 
@@ -296,14 +296,7 @@ namespace sh::editor
 		if (ImGui::BeginDragDropTarget())
 		{
 			// 드래그로 받는 객체의 타입 이름 == 드래그 중인 객체의 타입 이름이면 받음
-			const ImGuiPayload* payload = nullptr;
-			if (typeName.substr(0, 5) == "const")
-			{
-				std::string sub{ typeName.substr(6) };
-				payload = ImGui::AcceptDragDropPayload(sub.c_str());
-			}
-			else
-				payload = ImGui::AcceptDragDropPayload(typeName.c_str());
+			 const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(typeName.c_str());
 			//SH_INFO_FORMAT("payload: {}", ImGui::GetDragDropPayload()->DataType);
 			if (payload)
 			{
@@ -326,10 +319,10 @@ namespace sh::editor
 						const core::reflection::STypeInfo* componentType = &payloadComponent->GetType();
 						while (componentType)
 						{
-							if (componentType->type == *type)
+							if (componentType->type.name == typeName)
 							{
 								// 요구하는 컴포넌트가 맞다면 페이로드 재설정
-								ImGui::SetDragDropPayload((std::string{ componentType->name } + '*').c_str(), &payloadComponent, sizeof(game::Component*));
+								ImGui::SetDragDropPayload(std::string{ componentType->type.name }.c_str(), &payloadComponent, sizeof(game::Component*));
 								break;
 							}
 							componentType = componentType->GetSuper();
