@@ -1,6 +1,7 @@
 ﻿#include "Game/PCH.h"
 #include "Hierarchy.h"
 #include "EditorWorld.h"
+#include "CustomHierarchy.h"
 
 #include "Game/GameObject.h"
 
@@ -22,6 +23,19 @@ namespace sh::editor
 		{
 			objList.push_back(obj);
 		}
+
+		RegisterDragItemFunction("GameObject", [&](const ImGuiPayload& payload)
+			{
+				IM_ASSERT(payload.DataSize == sizeof(game::GameObject*));
+				game::GameObject* draggedObj = *(game::GameObject**)payload.Data;
+
+				if (draggedObj->transform->GetParent() != nullptr)
+					draggedObj->transform->SetParent(nullptr);
+
+				objList.erase(std::find(objList.begin(), objList.end(), draggedObj));
+				objList.push_back(draggedObj);
+			}
+		);
 	}
 
 	void Hierarchy::DrawInvisibleSpace(game::GameObject* obj)
@@ -201,17 +215,17 @@ namespace sh::editor
 		ImGui::InvisibleButton("HierarchyEmptySpace", ImGui::GetContentRegionAvail());
 		if (ImGui::BeginDragDropTarget())
 		{
-			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("GameObject")) 
+			for (auto& [stype, customHierarchy] : CustomHierarchyManager::GetInstance()->map)
 			{
-				IM_ASSERT(payload->DataSize == sizeof(game::GameObject*));
-				game::GameObject* draggedObj = *(game::GameObject**)payload->Data;
-
-				if (draggedObj->transform->GetParent() != nullptr)
-					draggedObj->transform->SetParent(nullptr);
-
-				objList.erase(std::find(objList.begin(), objList.end(), draggedObj));
-				objList.push_back(draggedObj);
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(std::string{ stype->type.name }.c_str()))
+					customHierarchy->OnHierarchyDraged(world, *payload);
 			}
+			for (auto& [name, func] : dragFunc)
+			{
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("GameObject"))
+					func(*payload);
+			}
+
 			ImGui::EndDragDropTarget();
 		}
 		ImGui::PopStyleVar();
@@ -231,6 +245,19 @@ namespace sh::editor
 		}
 
 		ImGui::End();
+	}
+
+	SH_EDITOR_API void Hierarchy::RegisterDragItemFunction(const std::string& dragItem, const std::function<void(const ImGuiPayload& payload)>& func)
+	{
+		for (auto& [name, _func] : dragFunc)
+		{
+			if (name == dragItem)
+			{
+				_func = func;
+				return;
+			}
+		}
+		dragFunc.push_back({ dragItem, func });
 	}
 
 	SH_EDITOR_API bool Hierarchy::IsDocking() const
