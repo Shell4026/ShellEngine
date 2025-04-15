@@ -75,6 +75,7 @@ namespace sh::core::reflection
 
 	Property::Property(const Property& other) noexcept :
 		data(other.data),
+		pureTypeName(other.pureTypeName),
 		type(other.type),
 		name(other.name),
 		containerNestedLevel(other.containerNestedLevel),
