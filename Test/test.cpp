@@ -7,6 +7,7 @@
 #include "OctreeTest.hpp"
 #include "ShaderParserTest.hpp"
 #include "SpinLockTest.hpp"
+#include "ThreadPoolTest.hpp"
 #ifdef Bool
 #undef Bool
 #endif
