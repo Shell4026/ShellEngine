@@ -46,6 +46,7 @@ TEST(GCTest, ValidTest)
 {
 	using namespace sh::core;
 	GarbageCollection& gc = *GarbageCollection::GetInstance();
+	gc.SetUpdateTick(1);
 
 	Object* root = SObject::Create<Object>(1);
 	gc.SetRootSet(root);
