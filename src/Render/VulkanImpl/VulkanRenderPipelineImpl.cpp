@@ -53,7 +53,7 @@ namespace sh::render::vk
 				if (setSize > 0)
 				{
 					auto cameraUniformBuffer = static_cast<VulkanUniformBuffer*>(mat->GetMaterialData().GetUniformBuffer(*pass.get(),
-						UniformStructLayout::Type::Camera, core::ThreadType::Render));
+						UniformStructLayout::Type::Camera));
 
 					VkDescriptorSet cameraDescriptorSet = VK_NULL_HANDLE;
 					uint32_t dynamicCount = 0;
@@ -72,7 +72,7 @@ namespace sh::render::vk
 				if (setSize > 2)
 				{
 					auto materialUniformBuffer = static_cast<VulkanUniformBuffer*>(mat->GetMaterialData().GetUniformBuffer(*pass.get(),
-						UniformStructLayout::Type::Material, core::ThreadType::Render));
+						UniformStructLayout::Type::Material));
 
 					VkDescriptorSet materialDescriptorSet = VK_NULL_HANDLE;
 					if (materialUniformBuffer)
@@ -96,10 +96,10 @@ namespace sh::render::vk
 					if (setSize > 1)
 					{
 						auto objectUniformBuffer = static_cast<VulkanUniformBuffer*>(drawable->GetMaterialData().GetUniformBuffer(*pass.get(),
-							UniformStructLayout::Type::Object, core::ThreadType::Render));
+							UniformStructLayout::Type::Object));
 						
 						if (pass->IsUsingLight())
-							drawable->GetMaterialData().SetUniformData(*pass, UniformStructLayout::Type::Object, 0, &drawable->GetLightData(), core::ThreadType::Render);
+							drawable->GetMaterialData().SetUniformData(*pass, UniformStructLayout::Type::Object, 0, &drawable->GetLightData());
 
 						VkDescriptorSet objectDescriptorSet = VK_NULL_HANDLE;
 						if (objectUniformBuffer)
@@ -207,7 +207,7 @@ namespace sh::render::vk
 
 				scissor.extent = { vkFramebuffer->GetWidth(), vkFramebuffer->GetHeight() };
 
-				renderTexture->SetDirty();
+				renderTexture->SyncDirty();
 			}
 			
 			vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);

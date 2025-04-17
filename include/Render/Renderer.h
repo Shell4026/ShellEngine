@@ -100,7 +100,7 @@ namespace sh::render
 		/// @return 일시정지 시 true 그 외 false
 		SH_RENDER_API auto IsPause() const -> bool;
 
-		SH_RENDER_API void SetDirty() override;
+		SH_RENDER_API void SyncDirty() override;
 		SH_RENDER_API void Sync() override;
 
 		SH_RENDER_API virtual auto GetContext() const -> IRenderContext* = 0;

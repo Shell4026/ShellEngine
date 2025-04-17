@@ -460,7 +460,7 @@ namespace sh::game
 		return ImGui::GetCurrentContext();
 	}
 
-	void ImGUImpl::SetDirty()
+	void ImGUImpl::SyncDirty()
 	{
 		if (bDirty)
 			return;

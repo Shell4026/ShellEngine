@@ -72,7 +72,7 @@ namespace sh::editor
 
 		SH_EDITOR_API void Clean();
 
-		SH_EDITOR_API void SetDirty() override;
+		SH_EDITOR_API void SyncDirty() override;
 		SH_EDITOR_API void Sync() override;
 	};
 }//namespace

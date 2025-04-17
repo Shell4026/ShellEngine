@@ -118,7 +118,7 @@ namespace sh::editor
 			pickingCamera->SetTextureSize({ viewportWidthLast, viewportHeightLast });
 		}
 
-		SetDirty();
+		SyncDirty();
 	}
 
 	void Viewport::RenderOverlay()
@@ -191,7 +191,7 @@ namespace sh::editor
 		ImGui::End();
 		
 
-		imgui.SetDirty();
+		imgui.SyncDirty();
 	}
 
 	auto Viewport::GetRenderTexture() -> render::RenderTexture&
@@ -213,7 +213,7 @@ namespace sh::editor
 		}
 	}
 
-	void Viewport::SetDirty()
+	void Viewport::SyncDirty()
 	{
 		if (bDirty)
 			return;

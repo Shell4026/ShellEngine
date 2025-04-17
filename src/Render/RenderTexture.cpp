@@ -139,7 +139,7 @@ namespace sh::render
 		Resize(width, height);
 
 		bChangeSize = true;
-		SetDirty();
+		SyncDirty();
 	}
 	SH_RENDER_API auto RenderTexture::GetSize() const -> glm::vec2
 	{

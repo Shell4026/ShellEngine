@@ -134,7 +134,7 @@ namespace sh::editor
 		DrawMenu();
 		explorer.Render();
 
-		imgui.SetDirty();
+		imgui.SyncDirty();
 	}
 
 	SH_EDITOR_API auto EditorUI::GetViewport() -> Viewport&

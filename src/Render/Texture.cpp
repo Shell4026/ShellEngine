@@ -88,13 +88,13 @@ namespace sh::render
 		CreateTextureBuffer(core::ThreadType::Game);
 
 		bFormatDirty = true;
-		SetDirty();
+		SyncDirty();
 	}
 	SH_RENDER_API auto Texture::IsSRGB() const -> bool
 	{
 		return bSRGB;
 	}
-	SH_RENDER_API void Texture::SetDirty()
+	SH_RENDER_API void Texture::SyncDirty()
 	{
 		if (bDirty)
 			return;

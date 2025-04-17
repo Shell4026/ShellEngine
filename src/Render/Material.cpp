@@ -196,7 +196,7 @@ namespace sh::render
 				}
 			}
 			if (!isSampler)
-				materialData->SetUniformData(*pass, uniformLayout->type, uniformLayout->binding, data.data(), core::ThreadType::Game);
+				materialData->SetUniformData(*pass, uniformLayout->type, uniformLayout->binding, data.data());
 		}
 		bPropertyDirty = false;
 	}

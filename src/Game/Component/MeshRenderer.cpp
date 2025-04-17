@@ -177,7 +177,7 @@ namespace sh::game
 				}
 			}
 			if (!isSampler)
-				drawable->GetMaterialData().SetUniformData(*passPtr, layoutPtr->type, layoutPtr->binding, data.data(), core::ThreadType::Game);
+				drawable->GetMaterialData().SetUniformData(*passPtr, layoutPtr->type, layoutPtr->binding, data.data());
 		}
 	}
 

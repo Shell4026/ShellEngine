@@ -21,7 +21,7 @@ namespace sh::editor
 					if (ImGui::InputFloat(("##input_" + name).c_str(), &parameter))
 					{
 						mat->SetProperty(name, parameter);
-						AssetDatabase::SetDirty(mat);
+						AssetDatabase::SyncDirty(mat);
 						AssetDatabase::SaveAllAssets();
 					}
 				}
@@ -31,7 +31,7 @@ namespace sh::editor
 					if (ImGui::InputFloat2(("##input_" + name).c_str(), &v[0]))
 					{
 						mat->SetProperty(name, v);
-						AssetDatabase::SetDirty(mat);
+						AssetDatabase::SyncDirty(mat);
 						AssetDatabase::SaveAllAssets();
 					}
 				}
@@ -41,7 +41,7 @@ namespace sh::editor
 					if (ImGui::InputFloat3(("##input_" + name).c_str(), &v[0]))
 					{
 						mat->SetProperty(name, v);
-						AssetDatabase::SetDirty(mat);
+						AssetDatabase::SyncDirty(mat);
 						AssetDatabase::SaveAllAssets();
 					}
 				}
@@ -51,7 +51,7 @@ namespace sh::editor
 					if (ImGui::InputFloat4(("##input_" + name).c_str(), &v[0]))
 					{
 						mat->SetProperty(name, v);
-						AssetDatabase::SetDirty(mat);
+						AssetDatabase::SyncDirty(mat);
 						AssetDatabase::SaveAllAssets();
 					}
 				}
@@ -78,7 +78,7 @@ namespace sh::editor
 						{
 							const render::Texture* texture = *reinterpret_cast<render::Texture**>(payload->Data);
 							mat->SetProperty(name, texture);
-							AssetDatabase::SetDirty(mat);
+							AssetDatabase::SyncDirty(mat);
 							AssetDatabase::SaveAllAssets();
 						}
 
@@ -113,7 +113,7 @@ namespace sh::editor
 					texture->ChangeTextureFormat(Texture::TextureFormat::RGBA32);
 			}
 
-			AssetDatabase::SetDirty(texture);
+			AssetDatabase::SyncDirty(texture);
 			AssetDatabase::SaveAllAssets();
 		}
 	}

@@ -232,7 +232,7 @@ namespace sh::editor
 		return it->second;
 	}
 
-	SH_EDITOR_API void AssetDatabase::SetDirty(core::SObject* obj)
+	SH_EDITOR_API void AssetDatabase::SyncDirty(core::SObject* obj)
 	{
 		obj->onDestroy.Register(onDestroyListener);
 		if(core::IsValid(obj))

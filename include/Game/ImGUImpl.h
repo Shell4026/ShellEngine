@@ -52,7 +52,7 @@ namespace sh::game
 
 		SH_GAME_API auto GetContext() const -> ImGuiContext*;
 
-		SH_GAME_API void SetDirty() override;
+		SH_GAME_API void SyncDirty() override;
 		SH_GAME_API void Sync() override;
 	};
 }

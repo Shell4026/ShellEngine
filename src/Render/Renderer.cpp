@@ -10,7 +10,7 @@ namespace sh::render
 	void Renderer::SetDrawCall(uint32_t drawcall)
 	{
 		this->drawcall[static_cast<uint32_t>(core::ThreadType::Render)] = drawcall;
-		SetDirty();
+		SyncDirty();
 	}
 
 	Renderer::Renderer() :
@@ -42,7 +42,7 @@ namespace sh::render
 			return;
 
 		drawableQueue.push(drawable);
-		SetDirty();
+		SyncDirty();
 	}
 
 	SH_RENDER_API void Renderer::AddDrawCall(const std::function<void()>& func)
@@ -65,7 +65,7 @@ namespace sh::render
 		return bPause.load(std::memory_order::memory_order_acquire);
 	}
 
-	SH_RENDER_API void Renderer::SetDirty()
+	SH_RENDER_API void Renderer::SyncDirty()
 	{
 		if (bDirty)
 			return;
@@ -136,12 +136,12 @@ namespace sh::render
 	SH_RENDER_API void Renderer::AddCamera(const Camera& camera)
 	{
 		cameraQueue.push({ &camera, CameraProcess::Mode::Create });
-		SetDirty();
+		SyncDirty();
 	}
 	SH_RENDER_API void Renderer::RemoveCamera(const Camera& camera)
 	{
 		cameraQueue.push({ &camera, CameraProcess::Mode::Destroy });
-		SetDirty();
+		SyncDirty();
 	}
 
 	SH_RENDER_API auto Renderer::GetDrawCall(core::ThreadType thread) const -> uint32_t

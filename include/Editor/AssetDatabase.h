@@ -93,6 +93,6 @@ namespace sh::editor
 		SH_EDITOR_API static auto GetAssetUUID(const std::filesystem::path& dir) -> std::optional<core::UUID>;
 		/// @brief 에셋에 변경 사항이 존재한다고 알리는 함수
 		/// @param obj 포인터
-		SH_EDITOR_API static void SetDirty(core::SObject* obj);
+		SH_EDITOR_API static void SyncDirty(core::SObject* obj);
 	};
 }//namespace

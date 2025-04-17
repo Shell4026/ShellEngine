@@ -25,7 +25,7 @@ namespace sh::core
 		virtual ~ISyncable() = default;
 	protected:
 		/// @brief 데이터가 변했음을 알리는 함수.
-		virtual void SetDirty() = 0;
+		virtual void SyncDirty() = 0;
 		/// @brief 게임 스레드와 렌더 스레드의 데이터를 동기화 하는 함수. 두 스레드가 동기화 되는 타이밍에 호출해야 한다.
 		virtual void Sync() = 0;
 	};

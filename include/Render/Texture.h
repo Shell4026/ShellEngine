@@ -72,7 +72,7 @@ namespace sh::render
 
 		SH_RENDER_API auto IsSRGB() const -> bool;
 
-		SH_RENDER_API void SetDirty() override;
+		SH_RENDER_API void SyncDirty() override;
 		SH_RENDER_API void Sync() override;
 	};
 }
