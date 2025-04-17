@@ -3,6 +3,7 @@
 #include "Core/Logger.h"
 #include "Core/GarbageCollection.h"
 #include "Core/ThreadSyncManager.h"
+#include "Core/ThreadPool.h"
 
 #include "Window/Window.h"
 
@@ -140,15 +141,15 @@ namespace sh
 		SH_INFO("Thread creation");
 		core::ThreadSyncManager::Init();
 		renderThread = game::RenderThread::GetInstance();
-		renderThread->SetWaitableThread(true);
 		renderThread->Init(*renderer);
 		core::ThreadSyncManager::AddThread(*renderThread);
+
+		core::ThreadPool::GetInstance()->Init(std::max(2u, std::thread::hardware_concurrency() / 2));
 
 		InitResource();
 
 		SH_INFO("Start world");
 		world->Start();
-
 		renderThread->Run();
 
 		SH_INFO("Start loop");

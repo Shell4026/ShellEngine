@@ -1,20 +1,24 @@
-﻿#include "PCH.h"
-#include "EngineThread.h"
+﻿#include "EngineThread.h"
 
 namespace sh::core
 {
-	SH_CORE_API EngineThread::EngineThread(bool bSleepThread) :
-		mutex(mu),
-		mu(), cv(nullptr),
+	SH_CORE_API EngineThread::EngineThread() :
+		mutex(),
+		beginTasks(), endTasks(),
 		bStop(false),
-		bSleep(bSleepThread),
-		beginTasks(), endTasks()
+		bSleep(false),
+		bRun(false)
 	{
+		thr = std::thread{ [&] { Update(); } };
 	}
 
 	SH_CORE_API void EngineThread::Run()
 	{
-		thr = std::thread{ [&] { Update(); } };
+		if (!bRun)
+		{
+			bRun = true;
+			cv.notify_one();
+		}
 	}
 	SH_CORE_API auto EngineThread::GetThread() -> std::thread&
 	{
@@ -23,9 +27,15 @@ namespace sh::core
 
 	void EngineThread::Update()
 	{
+		// Run전에는 Sleep
+		{
+			std::unique_lock<std::mutex> lock{ mutex };
+			while(!bRun)
+				cv.wait(lock);
+		}
 		while (!bStop.load(std::memory_order::memory_order_relaxed)) // 원자적이기만 하면 되므로 relaxed
 		{
-			std::unique_lock<std::mutex> lock{ mu };
+			std::unique_lock<std::mutex> lock{ mutex };
 
 			taskMutex.lock();
 			while (!beginTasks.empty())
@@ -46,11 +56,9 @@ namespace sh::core
 			}
 			taskMutex.unlock();
 
-			if (cv != nullptr)
-			{
-				bSleep = true;
-				cv->wait(lock, [&] { return !bSleep; }); // wait이 되는 순간 lock은 풀린다. <~ 동기화에 활용
-			}
+			bSleep = true;
+			while (bSleep)
+				cv.wait(lock); // wait이 되는 순간 lock은 풀린다. <~ 동기화에 활용
 		}
 	}
 
@@ -75,42 +83,23 @@ namespace sh::core
 	SH_CORE_API void EngineThread::Stop()
 	{
 		bStop.store(true, std::memory_order::memory_order_relaxed); // 원자적이기만 하면 되므로 relaxed
-		if (cv)
-		{
-			mu.lock();
-			bSleep = false;
-			mu.unlock();
+		mutex.lock();
+		bSleep = false;
+		mutex.unlock();
 
-			cv->notify_one();
-		}
+		cv.notify_one();
 	}
 
 	SH_CORE_API bool EngineThread::Awake()
 	{
-		if (!this->cv)
-			return false;
-		if (mu.try_lock()) // 잠금을 획득 할 수 있다 = 스레드가 자고 있다.
+		if (mutex.try_lock()) // 잠금을 획득 할 수 있다 = 스레드가 자고 있다.
 		{
 			bSleep = false;
-			mu.unlock();
-			cv->notify_one();
+			mutex.unlock();
+			cv.notify_one();
 			return true;
 		}
 		return false;
-	}
-
-	SH_CORE_API void EngineThread::SetWaitableThread(bool wait)
-	{
-		if (wait)
-		{
-			if (cv == nullptr)
-				cv = std::make_unique<std::condition_variable>();
-		}
-		else
-		{
-			if (cv)
-				cv.reset();
-		}	
 	}
 
 	SH_CORE_API auto EngineThread::GetThreadID() const -> std::thread::id
