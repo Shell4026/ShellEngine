@@ -143,12 +143,10 @@ namespace sh::render::vk
 			views[1] = depthImg->GetImageView();
 			viewsMSAA[2] = depthImg->GetImageView();
 		}
-
-		VkSampleCountFlagBits sampleCount = renderPass.GetConfig().sampleCount;
-		bool bMSAA = sampleCount != VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
-
+		const bool bMSAA = config.sampleCount != VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
 		if (bMSAA)
 		{
+			VkSampleCountFlagBits sampleCount = config.sampleCount;
 			usage = 
 				VkImageUsageFlagBits::VK_IMAGE_USAGE_TRANSIENT_ATTACHMENT_BIT |
 				VkImageUsageFlagBits::VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;

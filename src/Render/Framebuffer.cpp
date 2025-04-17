@@ -1,5 +1,4 @@
-﻿#include "pch.h"
-#include "Framebuffer.h"
+﻿#include "Framebuffer.h"
 
 namespace sh::render
 {

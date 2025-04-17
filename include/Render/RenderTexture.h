@@ -24,10 +24,11 @@ namespace sh::render
 
 		bool bChangeSize = false;
 		bool bReadUsage = false;
+		bool bMSAA = false;
 	private:
 		void Resize(uint32_t width, uint32_t height);
 	public:
-		SH_RENDER_API RenderTexture(Texture::TextureFormat format = Texture::TextureFormat::SRGBA32);
+		SH_RENDER_API RenderTexture(Texture::TextureFormat format = Texture::TextureFormat::SRGBA32, bool bMSAA = true);
 		SH_RENDER_API RenderTexture(RenderTexture&& other) noexcept;
 		SH_RENDER_API ~RenderTexture();
 		
@@ -43,6 +44,8 @@ namespace sh::render
 		SH_RENDER_API auto GetPixelData() const -> const std::vector<Byte>& override;
 		SH_RENDER_API void SetSize(uint32_t width, uint32_t height);
 		SH_RENDER_API auto GetSize() const -> glm::vec2;
+
+		SH_RENDER_API auto IsMSAA() const -> bool;
 
 		SH_RENDER_API void Sync() override;
 #if SH_EDITOR

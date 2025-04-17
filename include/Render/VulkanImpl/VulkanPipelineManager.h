@@ -19,6 +19,7 @@ namespace sh::render
 namespace sh::render::vk
 {
 	class VulkanContext;
+	class VulkanRenderPass;
 
 	/// @brief Vulkan 파이프라인을 관리하는 클래스.
 	class VulkanPipelineManager : public core::INonCopyable
@@ -58,7 +59,7 @@ namespace sh::render::vk
 		std::unordered_map<VkRenderPass, core::SVector<std::size_t>> renderpassIdxs;
 		std::unordered_map<const VulkanShaderPass*, core::SVector<std::size_t>> shaderIdxs;
 	private:
-		auto BuildPipeline(VkRenderPass renderPass, VulkanShaderPass& shader, Mesh::Topology topology) -> std::unique_ptr<VulkanPipeline>;
+		auto BuildPipeline(const VulkanRenderPass& renderPass, const VulkanShaderPass& shader, Mesh::Topology topology) -> std::unique_ptr<VulkanPipeline>;
 		auto ConvertStencilState(const StencilState& stencilState) const -> VkStencilOpState;
 	public:
 		SH_RENDER_API VulkanPipelineManager(const VulkanContext& context);
@@ -68,7 +69,7 @@ namespace sh::render::vk
 		/// @param shader 셰이더
 		/// @param topology 메쉬 토폴로지
 		/// @return 파이프라인 핸들
-		SH_RENDER_API auto GetOrCreatePipelineHandle(VkRenderPass renderPass, VulkanShaderPass& shader, Mesh::Topology topology) -> uint64_t;
+		SH_RENDER_API auto GetOrCreatePipelineHandle(const VulkanRenderPass& renderPass, const VulkanShaderPass& shader, Mesh::Topology topology) -> uint64_t;
 
 		SH_RENDER_API bool BindPipeline(VkCommandBuffer cmd, uint64_t handle);
 	};

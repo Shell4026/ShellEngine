@@ -1,8 +1,8 @@
 ﻿#include "VulkanPipelineManager.h"
-#include "VulkanPipelineManager.h"
 #include "VulkanShaderPass.h"
 #include "VulkanVertexBuffer.h"
 #include "VulkanContext.h"
+#include "VulkanRenderPass.h"
 
 namespace sh::render::vk
 {
@@ -18,9 +18,9 @@ namespace sh::render::vk
 	{
 	}
 
-	auto VulkanPipelineManager::BuildPipeline(VkRenderPass renderPass, VulkanShaderPass& shader, Mesh::Topology topology) -> std::unique_ptr<VulkanPipeline>
+	auto VulkanPipelineManager::BuildPipeline(const VulkanRenderPass& renderPass, const VulkanShaderPass& shader, Mesh::Topology topology) -> std::unique_ptr<VulkanPipeline>
 	{
-		auto pipeline = std::make_unique<VulkanPipeline>(device, renderPass);
+		auto pipeline = std::make_unique<VulkanPipeline>(device, renderPass.GetVkRenderPass());
 
 		VulkanPipeline::Topology topol = VulkanPipeline::Topology::Triangle;
 		switch (topology)
@@ -41,7 +41,7 @@ namespace sh::render::vk
 			SetTopology(topol).
 			SetShader(&shader).
 			SetZWrite(shader.GetZWrite()).
-			SetSampleCount(context.GetSampleCount());
+			SetSampleCount(renderPass.GetConfig().sampleCount);
 		pipeline->
 			AddShaderStage(VulkanPipeline::ShaderStage::Vertex).
 			AddShaderStage(VulkanPipeline::ShaderStage::Fragment);
@@ -113,9 +113,9 @@ namespace sh::render::vk
 		return state;
 	}
 
-	SH_RENDER_API auto VulkanPipelineManager::GetOrCreatePipelineHandle(VkRenderPass renderPass, VulkanShaderPass& shader, Mesh::Topology topology) -> uint64_t
+	SH_RENDER_API auto VulkanPipelineManager::GetOrCreatePipelineHandle(const VulkanRenderPass& renderPass, const VulkanShaderPass& shader, Mesh::Topology topology) -> uint64_t
 	{
-		PipelineInfo info{ renderPass, &shader, topology };
+		PipelineInfo info{ renderPass.GetVkRenderPass(), &shader, topology};
 		auto it = infoIdx.find(info);
 		if (it == infoIdx.end())
 		{
@@ -125,8 +125,8 @@ namespace sh::render::vk
 			std::size_t idx = pipelines.size() - 1;
 			infoIdx.insert({ info, idx });
 
-			if (auto it = renderpassIdxs.find(renderPass); it == renderpassIdxs.end())
-				renderpassIdxs.insert({ renderPass, std::vector<std::size_t>{idx} });
+			if (auto it = renderpassIdxs.find(renderPass.GetVkRenderPass()); it == renderpassIdxs.end())
+				renderpassIdxs.insert({ renderPass.GetVkRenderPass(), std::vector<std::size_t>{idx}});
 			else
 				it->second.push_back(idx);
 

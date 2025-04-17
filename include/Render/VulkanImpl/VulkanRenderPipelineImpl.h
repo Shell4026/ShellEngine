@@ -13,6 +13,7 @@ namespace sh::render::vk
 	class VulkanCommandBuffer;
 	class VulkanCameraBuffers;
 	class VulkanShaderPass;
+	class VulkanRenderPass;
 
 	class VulkanRenderPipelineImpl : public IRenderPipelineImpl
 	{
@@ -25,8 +26,10 @@ namespace sh::render::vk
 		uint32_t drawCall = 0;
 
 		bool bClearFramebuffer = true;
+	private:
+		void SetClearSetting(VkRenderPassBeginInfo& beginInfo, bool bMSAA);
 	protected:
-		SH_RENDER_API virtual void RenderDrawable(const core::Name& lightingPassName, const Camera& camera, const std::vector<RenderGroup>& renderGroups, VkRenderPass renderPass);
+		SH_RENDER_API virtual void RenderDrawable(const core::Name& lightingPassName, const Camera& camera, const std::vector<RenderGroup>& renderGroups, const VulkanRenderPass& renderPass);
 	public:
 		SH_RENDER_API VulkanRenderPipelineImpl(VulkanContext& context);
 

@@ -1,5 +1,4 @@
 ﻿#include "VulkanRenderPipelineImpl.h"
-#include "VulkanRenderPipelineImpl.h"
 #include "VulkanContext.h"
 #include "VulkanFramebuffer.h"
 #include "VulkanSwapChain.h"
@@ -28,7 +27,29 @@ namespace sh::render::vk
 
 		cameraManager = VulkanCameraBuffers::GetInstance();
 	}
-	SH_RENDER_API void VulkanRenderPipelineImpl::RenderDrawable(const core::Name& lightingPassName, const Camera& camera, const std::vector<RenderGroup>& renderGroups, VkRenderPass renderPass)
+	void VulkanRenderPipelineImpl::SetClearSetting(VkRenderPassBeginInfo& beginInfo, bool bMSAA)
+	{
+		static std::array<VkClearValue, 2> clear;
+		clear[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+		clear[1].depthStencil = { 1.0f, 0 };
+
+		static std::array<VkClearValue, 3> clearMSAA;
+		clearMSAA[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+		clearMSAA[1].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+		clearMSAA[2].depthStencil = { 1.0f, 0 };
+
+		if (bClearFramebuffer)
+		{
+			beginInfo.clearValueCount = bMSAA ? static_cast<uint32_t>(clearMSAA.size()) : static_cast<uint32_t>(clear.size());
+			beginInfo.pClearValues = bMSAA ? clearMSAA.data() : clear.data();
+		}
+		else
+		{
+			beginInfo.clearValueCount = 0;
+			beginInfo.pClearValues = nullptr;
+		}
+	}
+	SH_RENDER_API void VulkanRenderPipelineImpl::RenderDrawable(const core::Name& lightingPassName, const Camera& camera, const std::vector<RenderGroup>& renderGroups, const VulkanRenderPass& renderPass)
 	{
 		assert(cmd);
 
@@ -127,31 +148,11 @@ namespace sh::render::vk
 		drawCall = 0;
 
 		assert(cmd != nullptr);
-		std::array<VkClearValue, 2> clear;
-		clear[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-		clear[1].depthStencil = { 1.0f, 0 };
-
-		std::array<VkClearValue, 3> clearMSAA;
-		clearMSAA[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-		clearMSAA[1].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-		clearMSAA[2].depthStencil = { 1.0f, 0 };
-
-		bool bMSAA = context.GetSampleCount() != VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
 
 		VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		renderPassInfo.renderArea.offset = { 0, 0 };
-		if (bClearFramebuffer)
-		{
-			renderPassInfo.clearValueCount = bMSAA ? static_cast<uint32_t>(clearMSAA.size()) : static_cast<uint32_t>(clear.size());
-			renderPassInfo.pClearValues = bMSAA ? clearMSAA.data() : clear.data();
-		}
-		else
-		{
-			renderPassInfo.clearValueCount = 0;
-			renderPassInfo.pClearValues = nullptr;
-		}
-		
+
 		VkViewport viewport{};
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
@@ -164,12 +165,13 @@ namespace sh::render::vk
 		{
 			RenderTexture* renderTexture = camera->GetRenderTexture();
 
-			VkRenderPass renderPass = VK_NULL_HANDLE;
+			const VulkanRenderPass* renderPass = nullptr;
 			if (renderTexture == nullptr)
 			{
+				SetClearSetting(renderPassInfo, context.GetSampleCount() != VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT);
 				const VulkanFramebuffer* mainFramebuffer = static_cast<const VulkanFramebuffer*>(context.GetMainFramebuffer(imgIdx));
-				renderPass = mainFramebuffer->GetRenderPass()->GetVkRenderPass();
-				renderPassInfo.renderPass = renderPass;
+				renderPass = mainFramebuffer->GetRenderPass();
+				renderPassInfo.renderPass = renderPass->GetVkRenderPass();
 				renderPassInfo.framebuffer = mainFramebuffer->GetVkFramebuffer();
 				renderPassInfo.renderArea.extent = context.GetSwapChain().GetSwapChainSize();
 
@@ -187,16 +189,17 @@ namespace sh::render::vk
 			else
 			{
 				auto vkFramebuffer = static_cast<VulkanFramebuffer*>(renderTexture->GetFramebuffer(core::ThreadType::Render));
-				auto config = vkFramebuffer->GetRenderPass()->GetConfig();
+				VulkanRenderPass::Config config{ vkFramebuffer->GetRenderPass()->GetConfig() };
 				if (config.bClear != bClearFramebuffer)
 				{
 					config.bClear = bClearFramebuffer;
-					renderPass = context.GetRenderPassManager().GetOrCreateRenderPass(config).GetVkRenderPass();
+					renderPass = &context.GetRenderPassManager().GetOrCreateRenderPass(config);
 				}
 				else
-					renderPass = vkFramebuffer->GetRenderPass()->GetVkRenderPass();
+					renderPass = vkFramebuffer->GetRenderPass();
+				SetClearSetting(renderPassInfo, config.sampleCount != VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT);
 
-				renderPassInfo.renderPass = renderPass;
+				renderPassInfo.renderPass = renderPass->GetVkRenderPass();
 				renderPassInfo.framebuffer = vkFramebuffer->GetVkFramebuffer();
 				renderPassInfo.renderArea.extent = { vkFramebuffer->GetWidth(), vkFramebuffer->GetHeight() };
 
@@ -214,7 +217,7 @@ namespace sh::render::vk
 			vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 			vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-			RenderDrawable(lightingPassName, *camera, renderData, renderPass);
+			RenderDrawable(lightingPassName, *camera, renderData, *renderPass);
 
 			vkCmdEndRenderPass(commandBuffer);
 		}

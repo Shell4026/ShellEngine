@@ -134,7 +134,7 @@ namespace sh::editor
 		errorShader->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f0f" });
 		defaultShader->SetUUID(core::UUID{ "ad9217609f6c7e0f1163785746cc153e" });
 
-		render::RenderTexture* viewportTexture = core::SObject::Create<render::RenderTexture>();
+		render::RenderTexture* viewportTexture = core::SObject::Create<render::RenderTexture>(render::Texture::TextureFormat::SRGBA32);
 		viewportTexture->Build(*renderer.GetContext());
 		textures.AddResource("Viewport", viewportTexture);
 

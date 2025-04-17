@@ -21,7 +21,7 @@ namespace sh::game
 	PickingCamera::PickingCamera(GameObject& owner) :
 		Camera(owner)
 	{
-		renderTex = core::SObject::Create<render::RenderTexture>(render::Texture::TextureFormat::RGBA32);
+		renderTex = core::SObject::Create<render::RenderTexture>(render::Texture::TextureFormat::RGBA32, false);
 		renderTex->SetReadUsage(true);
 		renderTex->SetSize(1024, 768);
 		renderTex->Build(*world.renderer.GetContext());
@@ -76,7 +76,7 @@ namespace sh::game
 						vkFramebuffer->TransferImageToBuffer(vkContext.GetCommandBuffer(core::ThreadType::Game), vkBuffer->GetBuffer(), x, y);
 						pixels = reinterpret_cast<uint8_t*>(buffer->GetData());
 					}
-
+					SH_INFO_FORMAT("{}, {}, {}, {}", pixels[0], pixels[1], pixels[2], pixels[3]);
 					pickingCallback.Notify({ pixels[0], pixels[1], pixels[2], pixels[3] });
 					addTask = false;
 				}

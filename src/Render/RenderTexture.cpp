@@ -7,10 +7,11 @@
 
 namespace sh::render
 {
-	RenderTexture::RenderTexture(Texture::TextureFormat format) :
+	RenderTexture::RenderTexture(Texture::TextureFormat format, bool bMSAA) :
 		Texture(format, 1024, 1024),
 
-		width(1024), height(1024)
+		width(1024), height(1024), 
+		bMSAA(bMSAA)
 	{
 	}
 	RenderTexture::~RenderTexture()
@@ -21,7 +22,8 @@ namespace sh::render
 		Texture(std::move(other)),
 
 		width(other.width), height(other.height),
-		framebuffer(std::move(other.framebuffer))
+		framebuffer(std::move(other.framebuffer)),
+		bMSAA(other.bMSAA)
 	{
 
 	}
@@ -63,7 +65,7 @@ namespace sh::render
 			config.bOffScreen = true;
 			config.bTransferSrc = bReadUsage;
 			config.bUseStencil = true;
-			config.sampleCount = vkContext.GetSampleCount();
+			config.sampleCount = bMSAA ? vkContext.GetSampleCount() : VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
 
 			auto& renderPass = vkContext.GetRenderPassManager().GetOrCreateRenderPass(config);
 			
@@ -120,7 +122,7 @@ namespace sh::render
 			config.bOffScreen = true;
 			config.bTransferSrc = bReadUsage;
 			config.bUseStencil = true;
-			config.sampleCount = vkContext.GetSampleCount();
+			config.sampleCount = bMSAA ? vkContext.GetSampleCount() : VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
 
 			auto& renderPass = vkContext.GetRenderPassManager().GetOrCreateRenderPass(config);
 
@@ -144,6 +146,10 @@ namespace sh::render
 	SH_RENDER_API auto RenderTexture::GetSize() const -> glm::vec2
 	{
 		return { width, height };
+	}
+	SH_RENDER_API auto RenderTexture::IsMSAA() const -> bool
+	{
+		return bMSAA;
 	}
 
 	SH_RENDER_API void RenderTexture::Sync()
