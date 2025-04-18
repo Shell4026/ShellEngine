@@ -29,8 +29,7 @@ namespace sh::render
 
 	Texture::Texture(TextureFormat format, uint32_t width, uint32_t height) :
 		context(nullptr),
-		format(format), width(width), height(height),
-		bDirty(false)
+		format(format), width(width), height(height)
 	{
 		bSRGB = CheckSRGB();
 		pixels.resize(width * height * 4);
@@ -41,8 +40,10 @@ namespace sh::render
 		pixels(std::move(other.pixels)), textureBuffer(std::move(other.textureBuffer)),
 		onBufferUpdate(std::move(other.onBufferUpdate)),
 		bSRGB(other.bSRGB),
-		bDirty(other.bDirty.load(std::memory_order::memory_order_relaxed)), bFormatDirty(other.bFormatDirty)
+		bFormatDirty(other.bFormatDirty)
 	{
+		if (other.bDirty.test_and_set(std::memory_order::memory_order_acquire))
+			bDirty.test_and_set(std::memory_order::memory_order_relaxed);
 	}
 	Texture::~Texture()
 	{
@@ -96,12 +97,8 @@ namespace sh::render
 	}
 	SH_RENDER_API void Texture::SyncDirty()
 	{
-		if (bDirty.load(std::memory_order::memory_order_acquire))
-			return;
-
-		core::ThreadSyncManager::PushSyncable(*this);
-
-		bDirty.store(true, std::memory_order::memory_order_release);
+		if (!bDirty.test_and_set(std::memory_order::memory_order_acquire))
+			core::ThreadSyncManager::PushSyncable(*this);
 	}
 	SH_RENDER_API void Texture::Sync()
 	{
@@ -112,6 +109,6 @@ namespace sh::render
 			bFormatDirty = false;
 		}
 
-		bDirty.store(false, std::memory_order::memory_order_relaxed);
+		bDirty.clear(std::memory_order::memory_order_relaxed);
 	}
 }

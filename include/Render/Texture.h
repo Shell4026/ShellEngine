@@ -36,7 +36,7 @@ namespace sh::render
 		TextureFormat format;
 
 		bool bSRGB = false;
-		std::atomic<bool> bDirty;
+		std::atomic_flag bDirty;
 		bool bFormatDirty = false;
 	protected:
 		const IRenderContext* context;
