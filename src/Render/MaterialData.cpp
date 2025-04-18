@@ -156,8 +156,7 @@ namespace sh::render
 		bufferSyncData.data.resize(dataPtr->GetSize());
 		std::memcpy(bufferSyncData.data.data(), data, dataPtr->GetSize());
 
-		SyncData syncData{};
-		syncData.data = std::move(bufferSyncData);
+		SyncData syncData{ std::move(bufferSyncData) };
 
 		syncDatas.push_back(std::move(syncData));
 
@@ -182,8 +181,7 @@ namespace sh::render
 		bufferSyncData.data = std::move(data);
 		bufferSyncData.bufferPtr = dataPtr.get();
 
-		SyncData syncData{};
-		syncData.data = std::move(bufferSyncData);
+		SyncData syncData{ std::move(bufferSyncData) };
 
 		syncDatas.push_back(std::move(syncData));
 
@@ -217,8 +215,7 @@ namespace sh::render
 		uniformSyncData.binding = binding;
 		uniformSyncData.tex = tex;
 
-		SyncData syncData{};
-		syncData.data = std::move(uniformSyncData);
+		SyncData syncData{ std::move(uniformSyncData) };
 
 		syncDatas.push_back(std::move(syncData));
 

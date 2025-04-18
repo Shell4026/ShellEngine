@@ -272,7 +272,7 @@ namespace sh::render::vk
 			recordedCommands[idx] = std::move(VulkanCommandBuffer);
 		}
 		for (auto& cmd : recordedCommands)
-			context->GetQueueManager().SubmitCommand(*cmd, false);
+			context->GetQueueManager().SubmitCommand(*cmd, nullptr, true);
 		context->GetQueueManager().SubmitCommand(*cmd, inFlightFence);
 
 		uint32_t drawCallCount = 0;

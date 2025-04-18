@@ -62,7 +62,7 @@ namespace sh::render::vk
 		createInfo.window = window.GetNativeHandle().second;
 		createInfo.pNext = nullptr;
 
-		auto result = vkCreateXlibSurfaceKHR(instance, &createInfo, nullptr, &surface);
+		auto result = vkCreateXlibSurfaceKHR(context.GetInstance(), &createInfo, nullptr, &surface);
 #else
 		static_assert(false, "Not Supported OS");
 #endif
