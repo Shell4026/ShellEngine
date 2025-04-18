@@ -310,18 +310,25 @@ namespace sh::render::vk
 			vkDestroyCommandPool(device, cmdPool, nullptr);
 			cmdPool = nullptr;
 		}
+		for (auto& [id, cmdPool] : otherCmdPools)
+		{
+			if (cmdPool == nullptr)
+				continue;
+			vkDestroyCommandPool(device, cmdPool, nullptr);
+			cmdPool = nullptr;
+		}
 	}
 	void VulkanContext::CreateCommandBuffers()
 	{
 		VkResult result;
-		cmdBuffer[core::ThreadType::Game] = std::make_unique<VulkanCommandBuffer>(device, cmdPools[core::ThreadType::Game]);
-		result = cmdBuffer[core::ThreadType::Game]->Create();
+		cmdBuffer[core::ThreadType::Game] = std::make_unique<VulkanCommandBuffer>(*this);
+		result = cmdBuffer[core::ThreadType::Game]->Create(cmdPools[core::ThreadType::Game]);
 		assert(result == VkResult::VK_SUCCESS);
 		if (result != VkResult::VK_SUCCESS)
 			throw std::runtime_error(std::string{ "Can't create VkCommandBuffer: " } + string_VkResult(result));
 
-		cmdBuffer[core::ThreadType::Render] = std::make_unique<VulkanCommandBuffer>(device, cmdPools[core::ThreadType::Render]);
-		result = cmdBuffer[core::ThreadType::Render]->Create();
+		cmdBuffer[core::ThreadType::Render] = std::make_unique<VulkanCommandBuffer>(*this);
+		result = cmdBuffer[core::ThreadType::Render]->Create(cmdPools[core::ThreadType::Render]);
 		assert(result == VkResult::VK_SUCCESS);
 		if (result != VkResult::VK_SUCCESS)
 			throw std::runtime_error(std::string{ "Can't create VkCommandBuffer: " } + string_VkResult(result));
@@ -330,6 +337,8 @@ namespace sh::render::vk
 	{
 		cmdBuffer[core::ThreadType::Game]->Clear();
 		cmdBuffer[core::ThreadType::Render]->Clear();
+		for (auto& cmdBuffer : otherCmdBuffers)
+			cmdBuffer.second->Clear();
 	}
 	void VulkanContext::CreateEmptyDescriptor()
 	{
@@ -503,6 +512,40 @@ namespace sh::render::vk
 
 		throw std::runtime_error("Failed to find supported Depth format!");
 	}
+	auto VulkanContext::CreateThreadCommandPool(uint32_t queueFamilyIdx, std::thread::id thr) -> VkCommandPool
+	{
+		assert(device != nullptr);
+
+		VkCommandPoolCreateInfo poolInfo = {};
+		poolInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		poolInfo.pNext = nullptr;
+		poolInfo.queueFamilyIndex = queueFamilyIdx;
+		poolInfo.flags = VkCommandPoolCreateFlagBits::VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; //명령 버퍼가 개별적으로 기록되도록 허용
+
+		VkCommandPool cmdPool = VK_NULL_HANDLE;
+		std::lock_guard<std::mutex> lock{ deviceMutex };
+		VkResult result = vkCreateCommandPool(device, &poolInfo, nullptr, &cmdPool);
+		if (result != VkResult::VK_SUCCESS)
+			throw std::runtime_error{ std::string{ "Can't create VkCommandPool: " } + string_VkResult(result) };
+
+		otherCmdPools.push_back({ thr, cmdPool });
+		return cmdPool;
+	}
+	SH_RENDER_API auto VulkanContext::CreateThreadCommandBuffer(std::thread::id thr) -> VulkanCommandBuffer*
+	{
+		VkCommandPool pool = GetCommandPool(thr);
+		if (pool == VK_NULL_HANDLE)
+			pool = CreateThreadCommandPool(queueManager->GetGraphicsQueueFamilyIdx(), thr);
+
+		auto cmd = std::make_unique<VulkanCommandBuffer>(*this);
+		VkResult result = cmd->Create(pool);
+		if (result != VkResult::VK_SUCCESS)
+			throw std::runtime_error{ std::string{ "Can't create VkCommandBuffer: " } + string_VkResult(result) };
+
+		VulkanCommandBuffer* returnPtr = cmd.get();
+		otherCmdBuffers.push_back({ thr, std::move(cmd) });
+		return returnPtr;
+	}
 	SH_RENDER_API void VulkanContext::SetSampleCount(VkSampleCountFlagBits sample)
 	{
 		VkSampleCountFlagBits maxSample = GetMaxSampleCount();
@@ -537,15 +580,15 @@ namespace sh::render::vk
 		
 		return VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
 	}
-	SH_RENDER_API auto sh::render::vk::VulkanContext::GetInstance() const -> VkInstance
+	SH_RENDER_API auto VulkanContext::GetInstance() const -> VkInstance
 	{
 		return instance;
 	}
-	SH_RENDER_API auto sh::render::vk::VulkanContext::GetGPU() const -> VkPhysicalDevice
+	SH_RENDER_API auto VulkanContext::GetGPU() const -> VkPhysicalDevice
 	{
 		return gpu;
 	}
-	SH_RENDER_API auto sh::render::vk::VulkanContext::GetDevice() const -> VkDevice
+	SH_RENDER_API auto VulkanContext::GetDevice() const -> VkDevice
 	{
 		return device;
 	}
@@ -553,15 +596,33 @@ namespace sh::render::vk
 	{
 		return *swapChain.get();
 	}
-	SH_RENDER_API auto sh::render::vk::VulkanContext::GetCommandPool(core::ThreadType thr) const -> VkCommandPool
+	SH_RENDER_API auto VulkanContext::GetCommandPool(core::ThreadType thr) const -> VkCommandPool
 	{
 		return cmdPools[thr];
 	}
-	SH_RENDER_API auto sh::render::vk::VulkanContext::GetCommandBuffer(core::ThreadType thr) const -> VulkanCommandBuffer*
+	SH_RENDER_API auto VulkanContext::GetCommandPool(std::thread::id thr) const -> VkCommandPool
+	{
+		for (auto& [tid, commandPool] : otherCmdPools)
+		{
+			if (tid == thr)
+				return commandPool;
+		}
+		return VK_NULL_HANDLE;
+	}
+	SH_RENDER_API auto VulkanContext::GetCommandBuffer(core::ThreadType thr) const -> VulkanCommandBuffer*
 	{
 		return cmdBuffer[thr].get();
 	}
-	SH_RENDER_API auto sh::render::vk::VulkanContext::GetQueueManager() const -> VulkanQueueManager&
+	SH_RENDER_API auto VulkanContext::GetCommandBuffer(std::thread::id thr) const -> VulkanCommandBuffer*
+	{
+		for (auto& [tid, cmd] : otherCmdBuffers)
+		{
+			if (tid == thr)
+				return cmd.get();
+		}
+		return nullptr;
+	}
+	SH_RENDER_API auto VulkanContext::GetQueueManager() const -> VulkanQueueManager&
 	{
 		return *queueManager.get();
 	}
@@ -569,21 +630,21 @@ namespace sh::render::vk
 	{
 		return mainRenderPass->GetVkRenderPass();
 	}
-	SH_RENDER_API auto sh::render::vk::VulkanContext::GetMainFramebuffer(uint32_t idx) const -> const VulkanFramebuffer*
+	SH_RENDER_API auto VulkanContext::GetMainFramebuffer(uint32_t idx) const -> const VulkanFramebuffer*
 	{
 		if (idx >= framebuffers.size())
 			return nullptr;
 		return &framebuffers[idx];
 	}
-	SH_RENDER_API auto sh::render::vk::VulkanContext::GetDescriptorPool() const -> VulkanDescriptorPool&
+	SH_RENDER_API auto VulkanContext::GetDescriptorPool() const -> VulkanDescriptorPool&
 	{
 		return *descPool.get();
 	}
-	SH_RENDER_API auto sh::render::vk::VulkanContext::GetAllocator() const -> VmaAllocator
+	SH_RENDER_API auto VulkanContext::GetAllocator() const -> VmaAllocator
 	{
 		return allocator;
 	}
-	SH_RENDER_API auto sh::render::vk::VulkanContext::GetPipelineManager() const -> VulkanPipelineManager&
+	SH_RENDER_API auto VulkanContext::GetPipelineManager() const -> VulkanPipelineManager&
 	{
 		return *pipelineManager.get();
 	}
@@ -612,5 +673,9 @@ namespace sh::render::vk
 	SH_RENDER_API auto VulkanContext::GetViewportEnd() const -> const glm::vec2&
 	{
 		return viewportEnd;
+	}
+	SH_RENDER_API auto VulkanContext::GetDeviceMutex() const -> std::mutex&
+	{
+		return deviceMutex;
 	}
 }//namespace

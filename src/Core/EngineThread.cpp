@@ -1,5 +1,8 @@
 ﻿#include "EngineThread.h"
 
+#include "Logger.h"
+
+#include <deque>
 namespace sh::core
 {
 	SH_CORE_API EngineThread::EngineThread() :
@@ -35,6 +38,9 @@ namespace sh::core
 		}
 		while (!bStop.load(std::memory_order::memory_order_relaxed)) // 원자적이기만 하면 되므로 relaxed
 		{
+			static double mean = 0;
+			static std::deque<uint64_t> us;
+			auto start = std::chrono::high_resolution_clock::now();
 			std::unique_lock<std::mutex> lock{ mutex };
 
 			taskMutex.lock();
@@ -56,6 +62,18 @@ namespace sh::core
 			}
 			taskMutex.unlock();
 
+			auto end = std::chrono::high_resolution_clock::now();
+			if (us.size() < 100)
+				us.push_back(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
+			else
+				us.pop_front();
+
+			uint64_t sum = 0;
+			for (auto t : us)
+				sum += t;
+			mean = sum / 100.0;
+
+			SH_INFO_FORMAT("mean {}us", mean);
 			bSleep = true;
 			while (bSleep)
 				cv.wait(lock); // wait이 되는 순간 lock은 풀린다. <~ 동기화에 활용

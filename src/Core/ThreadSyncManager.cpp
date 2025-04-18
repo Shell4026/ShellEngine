@@ -1,4 +1,5 @@
 ﻿#include "ThreadSyncManager.h"
+#include "ThreadPool.h"
 
 #include <algorithm>
 namespace sh::core
@@ -8,7 +9,7 @@ namespace sh::core
 
 	SH_CORE_API auto ThreadSyncManager::GetThreadIndex() -> int
 	{
-		auto it = std::find_if(threads.begin(), threads.end(), [&](const ThreadData& data) {return data.threadPtr && data.threadPtr->GetThreadID() == std::this_thread::get_id(); });
+		auto it = std::find_if(threads.begin(), threads.end(), [&](const ThreadData& data) {return data.threadID == std::this_thread::get_id(); });
 		assert(it != threads.end()); // 현재 코드를 실행중인 스레드는 EngineThread 객체가 존재하지 않는다.
 		if (it == threads.end())
 			return -1;
@@ -18,6 +19,11 @@ namespace sh::core
 	{
 		currentThreadIdx = 0;
 		threads.push_back(ThreadData{ nullptr, std::this_thread::get_id() });
+
+		for (auto& thread : ThreadPool::GetInstance()->GetThreads())
+		{
+			threads.push_back(ThreadData{ nullptr, thread.get_id() });
+		}
 	}
 	SH_CORE_API void ThreadSyncManager::PushSyncable(ISyncable& syncable)
 	{

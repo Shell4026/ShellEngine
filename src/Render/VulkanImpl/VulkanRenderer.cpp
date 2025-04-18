@@ -6,8 +6,10 @@
 #include "VulkanFramebuffer.h"
 #include "VulkanRenderPass.h"
 #include "VulkanCameraBuffers.h"
+#include "VulkanRenderPipelineImpl.h"
 
 #include "Core/Util.h"
+#include "Core/ThreadPool.h"
 
 #include <cassert>
 #include <cstdint>
@@ -184,16 +186,38 @@ namespace sh::render::vk
 			cams.push_back(camera);
 		}
 
+		std::vector<std::future<std::pair<int, std::unique_ptr<VulkanCommandBuffer>>>> futureCommands;
+		futureCommands.reserve(renderPipelines.size());
+		int num = 0;
+		for (auto& renderPipeline : renderPipelines)
+		{
+			futureCommands.push_back(core::ThreadPool::GetInstance()->AddTask(
+				[&, num, pipeline = renderPipeline.get()]() -> std::pair<int, std::unique_ptr<VulkanCommandBuffer>>
+				{
+					std::thread::id tid{ std::this_thread::get_id() };
+					std::hash<std::thread::id> hasher{};
+
+					auto cmdPool = context->GetCommandPool(tid);
+					if (cmdPool == VK_NULL_HANDLE)
+						cmdPool = context->CreateThreadCommandPool(context->GetQueueManager().GetGraphicsQueueFamilyIdx(), tid);
+					auto cmd = std::make_unique<VulkanCommandBuffer>(*context);
+					cmd->Create(cmdPool);
+
+					static_cast<VulkanRenderPipelineImpl*>(pipeline->GetImpl())->SetCommandBuffer(*cmd);
+					cmd->Build(
+						[&]
+						{
+							pipeline->RecordCommand(cams, imgIdx);
+						}
+					);
+					
+					return { num, std::move(cmd) };
+				}
+			));
+			++num;
+		}
 		cmd->Build([&]
 		{
-			uint32_t drawcall = 0;
-			for (auto& renderPipeline : renderPipelines)
-			{
-				renderPipeline->RecordCommand(cams, imgIdx);
-				drawcall += renderPipeline->GetDrawCallCount();
-			}
-			SetDrawCall(drawcall);
-
 			const VulkanFramebuffer* mainFramebuffer = static_cast<const VulkanFramebuffer*>(context->GetMainFramebuffer(imgIdx));
 
 			VkRenderPassBeginInfo renderPassInfo{};
@@ -240,8 +264,21 @@ namespace sh::render::vk
 
 			vkCmdEndRenderPass(cmd->GetCommandBuffer());
 		});
-
+		std::vector<std::unique_ptr<VulkanCommandBuffer>> recordedCommands;
+		recordedCommands.resize(futureCommands.size());
+		for (auto& futureCommand : futureCommands)
+		{
+			auto [idx, VulkanCommandBuffer] = futureCommand.get();
+			recordedCommands[idx] = std::move(VulkanCommandBuffer);
+		}
+		for (auto& cmd : recordedCommands)
+			context->GetQueueManager().SubmitCommand(*cmd);
 		context->GetQueueManager().SubmitCommand(*cmd, inFlightFence);
+
+		uint32_t drawCallCount = 0;
+		for (auto& renderPipeline : renderPipelines)
+			drawCallCount += renderPipeline->GetDrawCallCount();
+		SetDrawCallCount(drawCallCount);
 
 		VkPresentInfoKHR presentInfo{};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;

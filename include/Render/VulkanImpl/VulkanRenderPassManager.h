@@ -5,7 +5,7 @@
 
 #include "Core/SContainer.hpp"
 
-#include <mutex>
+#include <shared_mutex>
 namespace sh::render::vk
 {
 	class VulkanContext;
@@ -16,7 +16,7 @@ namespace sh::render::vk
 
 		core::SHashMap<VulkanRenderPass::Config, VulkanRenderPass, 16, VulkanRenderPass::ConfigHasher> renderPasses;
 
-		std::mutex mu;
+		std::shared_mutex mu;
 	private:
 		auto CreateRenderPass(const VulkanRenderPass::Config& config) -> VulkanRenderPass;
 	public:

@@ -36,11 +36,12 @@ namespace sh::render::vk
 		SH_RENDER_API void Create(const Mesh& mesh) override;
 		SH_RENDER_API void Clean() override;
 
-		SH_RENDER_API void Bind() override;
-
 		SH_RENDER_API auto Clone() const -> std::unique_ptr<IVertexBuffer> override;
 
 		SH_RENDER_API static auto GetBindingDescription() -> VkVertexInputBindingDescription;
 		SH_RENDER_API static auto GetAttributeDescriptions() -> std::vector<VkVertexInputAttributeDescription>;
+
+		SH_RENDER_API auto GetVertexBuffer() const -> const VulkanBuffer&;
+		SH_RENDER_API auto GetIndexBuffer() const -> const VulkanBuffer&;
 	};
 }

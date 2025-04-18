@@ -139,12 +139,11 @@ namespace sh
 		renderer->AddRenderPipeline<sh::render::RenderPipeline>();
 
 		SH_INFO("Thread creation");
+		core::ThreadPool::GetInstance()->Init(std::max(2u, std::thread::hardware_concurrency() / 2));
 		core::ThreadSyncManager::Init();
 		renderThread = game::RenderThread::GetInstance();
 		renderThread->Init(*renderer);
 		core::ThreadSyncManager::AddThread(*renderThread);
-
-		core::ThreadPool::GetInstance()->Init(std::max(2u, std::thread::hardware_concurrency() / 2));
 
 		InitResource();
 

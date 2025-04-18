@@ -114,4 +114,8 @@ namespace sh::render
 	{
 		return passName;
 	}
+	SH_RENDER_API auto RenderPipeline::GetImpl() const -> IRenderPipelineImpl*
+	{
+		return impl.get();
+	}
 }//namespace

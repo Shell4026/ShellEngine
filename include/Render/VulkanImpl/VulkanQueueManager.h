@@ -55,6 +55,6 @@ namespace sh::render::vk
 		SH_RENDER_API auto GetTransferQueue() const -> VkQueue;
 		SH_RENDER_API auto GetSurfaceQueue() const -> VkQueue;
 
-		SH_RENDER_API void SubmitCommand(const VulkanCommandBuffer& cmd, VkFence fence = nullptr);
+		SH_RENDER_API void SubmitCommand(const VulkanCommandBuffer& cmd, VkFence fence = nullptr, bool bBlocking = true);
 	};
 }//namespace

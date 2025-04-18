@@ -19,7 +19,7 @@ namespace sh::render::vk
 	{
 	private:
 		VulkanContext& context;
-		VulkanCommandBuffer* cmd = nullptr;
+		const VulkanCommandBuffer* cmd = nullptr;
 
 		VulkanCameraBuffers* cameraManager = nullptr;
 
@@ -33,6 +33,7 @@ namespace sh::render::vk
 	public:
 		SH_RENDER_API VulkanRenderPipelineImpl(VulkanContext& context);
 
+		SH_RENDER_API void SetCommandBuffer(const VulkanCommandBuffer& cmd);
 		SH_RENDER_API void RecordCommand(const core::Name& lightingPassName, const std::vector<const Camera*>& cameras, const std::vector<RenderGroup>& renderData, uint32_t imgIdx) override;
 
 		/// @brief 렌더링 시 이전에 그려진 프레임 버퍼를 지울지 설정

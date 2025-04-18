@@ -41,4 +41,12 @@ namespace sh::core
 			);
 		}
 	}
+	SH_CORE_API auto ThreadPool::GetThreads() const -> const std::vector<std::thread>&
+	{
+		return threads;
+	}
+	SH_CORE_API auto ThreadPool::GetThreadNum() const -> uint32_t
+	{
+		return threads.size();
+	}
 }//namepsace
