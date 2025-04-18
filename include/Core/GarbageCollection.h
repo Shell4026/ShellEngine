@@ -5,6 +5,7 @@
 #include "SContainer.hpp"
 #include "Singleton.hpp"
 
+#include <cstdint>
 namespace sh::core::reflection
 {
 	class Property;
@@ -21,7 +22,8 @@ namespace sh::core
 		friend Singleton<GarbageCollection>;
 	private:
 		SHashMap<UUID, SObject*>& objs;
-		SHashSet<SObject*, 128> rootSets;
+		SHashMap<SObject*, std::size_t> rootSetIdx;
+		std::vector<SObject*> rootSets;
 
 		uint32_t elapseTime = 0;
 		uint32_t tick = 0;
@@ -35,6 +37,8 @@ namespace sh::core
 		/// @param maxDepth 최대 깊이
 		/// @param it 넘길 반복자
 		void ContainerMark(std::queue<SObject*>& bfs, SObject* parent, int depth, int maxDepth, sh::core::reflection::PropertyIterator& it);
+		void Mark(std::size_t start, std::size_t end);
+		void MarkMultiThread();
 	protected:
 		SH_CORE_API GarbageCollection();
 	public:
@@ -43,6 +47,7 @@ namespace sh::core
 		/// @brief 루트셋으로 지정하는 함수. 루트셋 객체는 참조하고 있는 객체가 없어도 메모리에서 유지된다.
 		/// @param obj 루트셋으로 지정할 SObject 포인터
 		SH_CORE_API void SetRootSet(SObject* obj);
+		SH_CORE_API auto GetRootSet() const -> const std::vector<SObject*>&;
 		/// @brief 해당 프레임마다 가비지 컬렉터를 수행한다.
 		/// @param tick 목표 프레임
 		SH_CORE_API void SetUpdateTick(uint32_t tick);

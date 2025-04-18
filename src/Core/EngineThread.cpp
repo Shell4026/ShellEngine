@@ -40,7 +40,7 @@ namespace sh::core
 		{
 			static double mean = 0;
 			static std::deque<uint64_t> us;
-			auto start = std::chrono::high_resolution_clock::now();
+			//auto start = std::chrono::high_resolution_clock::now();
 			std::unique_lock<std::mutex> lock{ mutex };
 
 			taskMutex.lock();
@@ -62,18 +62,18 @@ namespace sh::core
 			}
 			taskMutex.unlock();
 
-			auto end = std::chrono::high_resolution_clock::now();
-			if (us.size() < 100)
-				us.push_back(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
-			else
-				us.pop_front();
+			//auto end = std::chrono::high_resolution_clock::now();
+			//if (us.size() < 100)
+			//	us.push_back(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
+			//else
+			//	us.pop_front();
 
-			uint64_t sum = 0;
-			for (auto t : us)
-				sum += t;
-			mean = sum / 100.0;
+			//uint64_t sum = 0;
+			//for (auto t : us)
+			//	sum += t;
+			//mean = sum / 100.0;
 
-			SH_INFO_FORMAT("mean {}us", mean);
+			//SH_INFO_FORMAT("mean {}us", mean);
 			bSleep = true;
 			while (bSleep)
 				cv.wait(lock); // wait이 되는 순간 lock은 풀린다. <~ 동기화에 활용

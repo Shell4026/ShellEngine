@@ -1,5 +1,6 @@
 ﻿#include "GarbageCollection.h"
 #include "SObjectManager.h"
+#include "ThreadPool.h"
 
 #include "SObject.h"
 
@@ -39,6 +40,105 @@ namespace sh::core
 		}
 		++it;
 	}
+	void GarbageCollection::Mark(std::size_t start, std::size_t end)
+	{
+		std::queue<SObject*> bfs{};
+		for (std::size_t i = start; i < end; ++i)
+		{
+			if (rootSets[i] != nullptr)
+				bfs.push(rootSets[i]);
+
+			while (!bfs.empty())
+			{
+				SObject* obj = bfs.front();
+				bfs.pop();
+
+				if (obj == nullptr)
+					continue;
+				if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
+					continue;
+
+				const reflection::STypeInfo* type = &obj->GetType();
+				while (type != nullptr)
+				{
+					auto& ptrProps = type->GetSObjectPtrProperties();
+					for (auto ptrProp : ptrProps)
+					{
+						SObject** propertyPtr = ptrProp->Get<SObject*>(obj);
+						SObject* ptr = *propertyPtr;
+						if (ptr == nullptr)
+							continue;
+
+						// Destory함수로 인해 제거 될 객체면 가르키고 있던 포인터를 nullptr로 바꾸고, 마킹하지 않는다.
+						if (ptr->bPendingKill.load(std::memory_order::memory_order_acquire))
+							*propertyPtr = nullptr;
+						else
+							bfs.push(ptr);
+					}
+					auto& ptrContainerProps = type->GetSObjectPtrContainerProperties();
+					for (auto ptrProp : ptrContainerProps)
+					{
+						int nested = ptrProp->GetContainerNestedLevel();
+						for (auto it = ptrProp->Begin(obj); it != ptrProp->End(obj);)
+						{
+							if (nested == 1)
+							{
+								SObject* const* propertyPtr = nullptr;
+								if (it.IsPair())
+									propertyPtr = it.GetPairSecond<SObject*>();
+								else
+									propertyPtr = it.Get<SObject*>();
+
+								SObject* ptr = *propertyPtr;
+								if (ptr == nullptr)
+								{
+									++it;
+									continue;
+								}
+
+								if (ptr->bPendingKill.load(std::memory_order::memory_order_acquire))
+									it.Erase(); // iterator 자동 갱신
+								else
+								{
+									bfs.push(ptr);
+									++it;
+								}
+							}
+							else
+							{
+								ContainerMark(bfs, obj, 1, nested, it);
+							}
+						}
+					}
+					type = type->GetSuper(); // 부모 클래스의 프로퍼티들도 검사
+				}
+			}
+		}
+	}
+	void GarbageCollection::MarkMultiThread()
+	{
+		const auto threadPool = core::ThreadPool::GetInstance();
+		const int threadNum = threadPool->GetThreadNum();
+		const std::size_t perThreadTaskCount = rootSets.size() / threadNum + (rootSets.size() % threadNum > 0 ? 1 : 0);
+
+		std::array<std::future<void>, 16> taskFutures;
+		std::size_t p = 0;
+		int futureIdx = 0;
+		while (p < rootSets.size())
+		{
+			const size_t start = p;
+			const size_t end = std::min(p + perThreadTaskCount, rootSets.size());
+			taskFutures[futureIdx++] = (threadPool->AddTask(
+				[&, start, end]
+				{
+					Mark(start, end);
+				}
+			));
+			p = end;
+		}
+		for (int i = 0; i < futureIdx; ++i)
+			taskFutures[i].wait();
+	}
 
 	GarbageCollection::GarbageCollection() :
 		objs(SObjectManager::GetInstance()->objs)
@@ -52,9 +152,18 @@ namespace sh::core
 
 	SH_CORE_API void GarbageCollection::SetRootSet(SObject* obj)
 	{
-		rootSets.insert(obj);
+		auto it = rootSetIdx.find(obj);
+		if (it == rootSetIdx.end())
+		{
+			std::size_t idx = rootSets.size();
+			rootSets.push_back(obj);
+			rootSetIdx.insert_or_assign(obj, idx);
+		}
 	}
-
+	SH_CORE_API auto GarbageCollection::GetRootSet() const -> const std::vector<SObject*>&
+	{
+		return rootSets;
+	}
 	SH_CORE_API void GarbageCollection::SetUpdateTick(uint32_t tick)
 	{
 		updatePeriodTick = tick;
@@ -63,7 +172,13 @@ namespace sh::core
 
 	SH_CORE_API void GarbageCollection::RemoveRootSet(SObject* obj)
 	{
-		rootSets.erase(obj);
+		auto it = rootSetIdx.find(obj);
+		if (it != rootSetIdx.end())
+		{
+			std::size_t idx = it->second;
+			rootSets[idx] = nullptr;
+			rootSetIdx.erase(it);
+		}
 	}
 
 	SH_CORE_API void GarbageCollection::Update()
@@ -78,93 +193,22 @@ namespace sh::core
 	{
 		auto start = std::chrono::high_resolution_clock::now();
 		for (auto& [id, obj] : objs)
-		{
-			obj->bMark = false;
-		}
+			obj->bMark.clear(std::memory_order::memory_order_relaxed);
 
-		// TODO 병렬 처리?
-		std::queue<SObject*> bfs{};
-		for (SObject* root : rootSets)
-		{
-			bfs.push(root);
-		}
-
-		while (!bfs.empty())
-		{
-			SObject* obj = bfs.front();
-			bfs.pop();
-
-			if (obj == nullptr || obj->bMark)
-				continue;
-
-			obj->bMark = true;
-
-			const reflection::STypeInfo* type = &obj->GetType();
-			while (type != nullptr)
-			{
-				auto& ptrProps = type->GetSObjectPtrProperties();
-				for (auto ptrProp : ptrProps)
-				{
-					SObject** propertyPtr = ptrProp->Get<SObject*>(obj);
-					SObject* ptr = *propertyPtr;
-					if (ptr == nullptr)
-						continue;
-
-					// Destory함수로 인해 제거 될 객체면 가르키고 있던 포인터를 nullptr로 바꾸고, 마킹하지 않는다.
-					if (ptr->bPendingKill.load(std::memory_order::memory_order_acquire))
-						*propertyPtr = nullptr;
-					else
-						bfs.push(ptr);
-				}
-				auto& ptrContainerProps = type->GetSObjectPtrContainerProperties();
-				for (auto ptrProp : ptrContainerProps)
-				{
-					int nested = ptrProp->GetContainerNestedLevel();
-					for (auto it = ptrProp->Begin(obj); it != ptrProp->End(obj);)
-					{
-						if (nested == 1)
-						{
-							SObject* const* propertyPtr = nullptr;
-							if (it.IsPair())
-								propertyPtr = it.GetPairSecond<SObject*>();
-							else
-								propertyPtr = it.Get<SObject*>();
-
-							SObject* ptr = *propertyPtr;
-							if (ptr == nullptr)
-							{
-								++it;
-								continue;
-							}
-
-							if (ptr->bPendingKill.load(std::memory_order::memory_order_acquire))
-								it.Erase(); // iterator 자동 갱신
-							else
-							{
-								bfs.push(ptr);
-								++it;
-							}
-						}
-						else
-						{
-							ContainerMark(bfs, obj, 1, nested, it);
-						}
-					}
-				}
-				type = type->GetSuper(); // 부모 클래스의 프로퍼티들도 검사
-			}
-		}
+		if (rootSets.size() > 100)
+			MarkMultiThread();
+		else
+			Mark(0, rootSets.size());
 
 		// 모든 SObject를 순회하며 마킹이 안 됐으면 제거
 		std::queue<SObject*> deleted;
-		for (auto it = objs.begin(); it != objs.end(); ++it)
+		for (auto& [uuid, objPtr] : objs)
 		{
-			SObject* ptr = it->second;
-			if (!ptr->IsMark())
+			if (!objPtr->bMark.test_and_set(std::memory_order::memory_order_relaxed))
 			{
-				ptr->bPendingKill.store(true, std::memory_order::memory_order_release);
-				ptr->OnDestroy();
-				deleted.push(ptr);
+				objPtr->OnDestroy();
+				deleted.push(objPtr);
+				objPtr->bPendingKill.store(true, std::memory_order::memory_order_release);
 			}
 		}
 
@@ -176,6 +220,20 @@ namespace sh::core
 			delete ptr;
 		}
 		auto end = std::chrono::high_resolution_clock::now();
+
+		//static std::deque<uint64_t> times;
+		//if (times.size() < 100)
+		//	times.push_back(std::chrono::duration_cast<std::chrono::microseconds>(end - start).count());
+		//else
+		//	times.pop_front();
+
+		//static double mean = 0.0f;
+		//for (auto t : times)
+		//	mean += t;
+		//mean /= 100;
+
+		//SH_INFO_FORMAT("GC Mean: {}", mean);
+
 		elapseTime = static_cast<uint32_t>(std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count());
 	}
 

@@ -116,7 +116,6 @@ namespace sh
 		SH_INFO_FORMAT("System thread count: {}", std::thread::hardware_concurrency());
 
 		gc = core::GarbageCollection::GetInstance(); // GC 초기화
-
 		SH_INFO("Window initialization");
 		window = std::make_unique<window::Window>();
 		window->Create(u8"ShellEngine", 1024, 768, sh::window::Window::Style::Resize);

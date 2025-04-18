@@ -46,7 +46,6 @@ namespace sh::game
 	private:
 		static constexpr float FIXED_TIME = 0.02f;
 
-		PROPERTY(objs)
 		core::SHashSet<GameObject*> objs;
 		core::SSet<Camera*> cameras;
 

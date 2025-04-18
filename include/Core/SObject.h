@@ -26,7 +26,7 @@ namespace sh::core
 		UUID uuid;
 		Name name;
 		std::atomic<bool> bPendingKill;
-		bool bMark;
+		std::atomic_flag bMark;
 	public:
 		mutable Observer<false, const SObject*> onDestroy;
 	private:
@@ -41,9 +41,6 @@ namespace sh::core
 		SH_CORE_API SObject(SObject&& other) noexcept;
 		SH_CORE_API virtual ~SObject();
 		SH_CORE_API auto IsPendingKill() const -> bool;
-		/// @brief GC에서 마킹 됐는지 확인하는 함수
-		/// @return 마킹 여부
-		SH_CORE_API auto IsMark() const -> bool;
 
 		/// @brief GC에게 제거를 맡긴다.
 		SH_CORE_API virtual void Destroy();
