@@ -7,7 +7,7 @@
 #include <cassert>
 namespace sh::render
 {
-	void Renderer::SetDrawCall(uint32_t drawcall)
+	void Renderer::SetDrawCallCount(uint32_t drawcall)
 	{
 		this->drawcall[static_cast<uint32_t>(core::ThreadType::Render)] = drawcall;
 		SyncDirty();

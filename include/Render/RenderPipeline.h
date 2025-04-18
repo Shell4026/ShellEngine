@@ -71,5 +71,7 @@ namespace sh::render
 
 		SH_RENDER_API auto GetDrawCallCount() const -> uint32_t;
 		SH_RENDER_API auto GetPassName() const -> const core::Name&;
+
+		SH_RENDER_API auto GetImpl() const -> IRenderPipelineImpl*;
 	};
 }//namespace

@@ -69,7 +69,7 @@ namespace sh::render
 		virtual void OnCameraAdded(const Camera* camera) {};
 		virtual void OnCameraRemoved(const Camera* camera) {};
 
-		void SetDrawCall(uint32_t drawcall);
+		void SetDrawCallCount(uint32_t drawcall);
 	public:
 		SH_RENDER_API Renderer();
 		SH_RENDER_API virtual ~Renderer();

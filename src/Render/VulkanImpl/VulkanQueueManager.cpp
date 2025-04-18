@@ -122,7 +122,7 @@ namespace sh::render::vk
 	{
 		return surfaceQueue;
 	}
-	SH_RENDER_API void VulkanQueueManager::SubmitCommand(const VulkanCommandBuffer& cmd, VkFence fence)
+	SH_RENDER_API void VulkanQueueManager::SubmitCommand(const VulkanCommandBuffer& cmd, VkFence fence, bool bBlocking)
 	{
 		const VkPipelineStageFlags waitStage = cmd.GetWaitStage();
 		const VkCommandBuffer commandBuffer = cmd.GetCommandBuffer();
@@ -152,7 +152,8 @@ namespace sh::render::vk
 		auto result = vkQueueSubmit(queue, 1, &sinfo, fence);
 		assert(result == VkResult::VK_SUCCESS);
 
-		vkQueueWaitIdle(queue);
+		if (bBlocking)
+			vkQueueWaitIdle(queue);
 		spinLock.UnLock();
 	}
 }//namespace

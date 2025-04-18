@@ -49,5 +49,8 @@ namespace sh::core
 
 			return result;
 		}
+
+		SH_CORE_API auto GetThreads() const -> const std::vector<std::thread>&;
+		SH_CORE_API auto GetThreadNum() const -> uint32_t;
 	};
 }//namespace

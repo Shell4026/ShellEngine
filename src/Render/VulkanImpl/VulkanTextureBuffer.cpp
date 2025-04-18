@@ -143,15 +143,15 @@ namespace sh::render::vk
 
 	SH_RENDER_API void VulkanTextureBuffer::SetData(const void* data)
 	{
-		VulkanBuffer stagingBuffer{ *this->context };
+		VulkanBuffer stagingBuffer{ *context };
 		stagingBuffer.Create(size,
 			VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 			VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		stagingBuffer.SetData(data);
 
-		cmd = std::make_unique<VulkanCommandBuffer>(this->context->GetDevice(), this->context->GetCommandPool(core::ThreadType::Game), VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
-		cmd->Create();
+		cmd = std::make_unique<VulkanCommandBuffer>(*context, VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
+		cmd->Create(context->GetCommandPool(core::ThreadType::Game));
 
 		cmd->Build([&]
 			{

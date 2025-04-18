@@ -9,7 +9,7 @@
 #include <cstdint>
 #include <memory>
 #include <vector>
-
+#include <atomic>
 namespace sh::render
 {
 	class ITextureBuffer;
@@ -36,7 +36,7 @@ namespace sh::render
 		TextureFormat format;
 
 		bool bSRGB = false;
-		bool bDirty;
+		std::atomic<bool> bDirty;
 		bool bFormatDirty = false;
 	protected:
 		const IRenderContext* context;

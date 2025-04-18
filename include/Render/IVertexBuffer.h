@@ -18,7 +18,5 @@ namespace sh::render
 
 		SH_RENDER_API virtual void Create(const Mesh& mesh) = 0;
 		SH_RENDER_API virtual void Clean() = 0;
-
-		SH_RENDER_API virtual void Bind() = 0;
 	};
 }

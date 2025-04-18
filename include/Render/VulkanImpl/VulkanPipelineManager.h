@@ -11,7 +11,7 @@
 
 #include <memory>
 #include <stack>
-
+#include <shared_mutex>
 namespace sh::render
 {
 	class Shader;
@@ -58,19 +58,24 @@ namespace sh::render::vk
 		std::unordered_map<PipelineInfo, std::size_t, PipelineInfoHasher> infoIdx;
 		std::unordered_map<VkRenderPass, core::SVector<std::size_t>> renderpassIdxs;
 		std::unordered_map<const VulkanShaderPass*, core::SVector<std::size_t>> shaderIdxs;
+
+		std::shared_mutex mu;
 	private:
 		auto BuildPipeline(const VulkanRenderPass& renderPass, const VulkanShaderPass& shader, Mesh::Topology topology) -> std::unique_ptr<VulkanPipeline>;
 		auto ConvertStencilState(const StencilState& stencilState) const -> VkStencilOpState;
 	public:
 		SH_RENDER_API VulkanPipelineManager(const VulkanContext& context);
 		SH_RENDER_API VulkanPipelineManager(VulkanPipelineManager&& other) noexcept;
-		/// @brief 파이프라인을 생성하거나 가져온다.
+		/// @brief 파이프라인을 생성하거나 가져온다. 스레드 안전하다.
 		/// @param pass 렌더 패스
 		/// @param shader 셰이더
 		/// @param topology 메쉬 토폴로지
 		/// @return 파이프라인 핸들
 		SH_RENDER_API auto GetOrCreatePipelineHandle(const VulkanRenderPass& renderPass, const VulkanShaderPass& shader, Mesh::Topology topology) -> uint64_t;
 
+		/// @brief vkCmdBindPipeline()의 래퍼 함수. 스레드 안전하다.
+		/// @param cmd 커맨드 버퍼
+		/// @param handle 파이프라인 핸들
 		SH_RENDER_API bool BindPipeline(VkCommandBuffer cmd, uint64_t handle);
 	};
 }//namespace

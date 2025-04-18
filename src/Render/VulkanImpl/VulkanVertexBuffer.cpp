@@ -14,14 +14,14 @@ namespace sh::render::vk
 		context(context),
 		vertexBuffer(context),
 		indexBuffer(context),
-		cmd(context.GetDevice(), context.GetCommandPool(core::ThreadType::Game), VkQueueFlagBits::VK_QUEUE_TRANSFER_BIT)
+		cmd(context, VkQueueFlagBits::VK_QUEUE_TRANSFER_BIT)
 	{
 	}
 	VulkanVertexBuffer::VulkanVertexBuffer(const VulkanVertexBuffer& other) :
 		context(other.context),
 		vertexBuffer(other.vertexBuffer),
 		indexBuffer(other.indexBuffer),
-		cmd(context.GetDevice(), context.GetCommandPool(core::ThreadType::Game), VkQueueFlagBits::VK_QUEUE_TRANSFER_BIT)
+		cmd(context, VkQueueFlagBits::VK_QUEUE_TRANSFER_BIT)
 	{
 	}
 	VulkanVertexBuffer::VulkanVertexBuffer(VulkanVertexBuffer&& other) noexcept :
@@ -114,28 +114,14 @@ namespace sh::render::vk
 	{
 		Clean();
 
-		cmd.Create();
+		cmd.Create(context.GetCommandPool(core::ThreadType::Game));
 		CreateVertexBuffer(mesh);
 	}
-
-	void VulkanVertexBuffer::Bind()
-	{
-		std::array<VkBuffer, 1> buffers = { vertexBuffer.GetBuffer() };
-
-		assert(vertexBuffer.GetBuffer() != VK_NULL_HANDLE);
-		assert(indexBuffer.GetBuffer() != VK_NULL_HANDLE);
-		assert(context.GetCommandBuffer(core::ThreadType::Render)->GetCommandBuffer() != VK_NULL_HANDLE);
-		
-		VkDeviceSize offsets[1] = { 0 };
-		vkCmdBindVertexBuffers(context.GetCommandBuffer(core::ThreadType::Render)->GetCommandBuffer(), 0, 1, buffers.data(), offsets);
-		vkCmdBindIndexBuffer(context.GetCommandBuffer(core::ThreadType::Render)->GetCommandBuffer(), indexBuffer.GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
-	}
-
 	auto VulkanVertexBuffer::Clone() const -> std::unique_ptr<IVertexBuffer>
 	{
 		return std::make_unique<VulkanVertexBuffer>(*this);
 	}
-	SH_RENDER_API auto sh::render::vk::VulkanVertexBuffer::GetBindingDescription() -> VkVertexInputBindingDescription
+	SH_RENDER_API auto VulkanVertexBuffer::GetBindingDescription() -> VkVertexInputBindingDescription
 	{
 		static VkVertexInputBindingDescription bindingDescription;
 		bindingDescription.binding = 0;
@@ -144,7 +130,7 @@ namespace sh::render::vk
 
 		return bindingDescription;
 	}
-	SH_RENDER_API auto sh::render::vk::VulkanVertexBuffer::GetAttributeDescriptions() -> std::vector<VkVertexInputAttributeDescription>
+	SH_RENDER_API auto VulkanVertexBuffer::GetAttributeDescriptions() -> std::vector<VkVertexInputAttributeDescription>
 	{
 		if (attribDescriptions.empty())
 		{
@@ -168,5 +154,14 @@ namespace sh::render::vk
 			attribDescriptions.push_back(attrDesc);
 		}
 		return attribDescriptions;
+	}
+
+	SH_RENDER_API auto VulkanVertexBuffer::GetVertexBuffer() const -> const VulkanBuffer&
+	{
+		return vertexBuffer;
+	}
+	SH_RENDER_API auto VulkanVertexBuffer::GetIndexBuffer() const -> const VulkanBuffer&
+	{
+		return indexBuffer;
 	}
 }

@@ -23,8 +23,6 @@ namespace sh::render::vk
 	VulkanRenderPipelineImpl::VulkanRenderPipelineImpl(VulkanContext& context) :
 		context(context)
 	{
-		cmd = context.GetCommandBuffer(core::ThreadType::Render);
-
 		cameraManager = VulkanCameraBuffers::GetInstance();
 	}
 	void VulkanRenderPipelineImpl::SetClearSetting(VkRenderPassBeginInfo& beginInfo, bool bMSAA)
@@ -112,7 +110,13 @@ namespace sh::render::vk
 						continue;
 
 					const Mesh* mesh = drawable->GetMesh();
-					mesh->GetVertexBuffer()->Bind();
+					const VulkanVertexBuffer* vkVertexBuffer = static_cast<VulkanVertexBuffer*>(mesh->GetVertexBuffer());
+
+					std::array<VkBuffer, 1> buffers = { vkVertexBuffer->GetVertexBuffer().GetBuffer() };
+
+					VkDeviceSize offsets[1] = { 0 };
+					vkCmdBindVertexBuffers(cmd->GetCommandBuffer(), 0, 1, buffers.data(), offsets);
+					vkCmdBindIndexBuffer(cmd->GetCommandBuffer(), vkVertexBuffer->GetIndexBuffer().GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
 
 					if (setSize > 1)
 					{
@@ -142,6 +146,10 @@ namespace sh::render::vk
 				}
 			}
 		}
+	}
+	SH_RENDER_API void VulkanRenderPipelineImpl::SetCommandBuffer(const VulkanCommandBuffer& cmd)
+	{
+		this->cmd = &cmd;
 	}
 	SH_RENDER_API void VulkanRenderPipelineImpl::RecordCommand(const core::Name& lightingPassName, const std::vector<const Camera*>& cameras, const std::vector<RenderGroup>& renderData, uint32_t imgIdx)
 	{

@@ -115,10 +115,29 @@ namespace sh::render::vk
 
 	SH_RENDER_API auto VulkanPipelineManager::GetOrCreatePipelineHandle(const VulkanRenderPass& renderPass, const VulkanShaderPass& shader, Mesh::Topology topology) -> uint64_t
 	{
-		PipelineInfo info{ renderPass.GetVkRenderPass(), &shader, topology};
-		auto it = infoIdx.find(info);
-		if (it == infoIdx.end())
+		PipelineInfo info{ renderPass.GetVkRenderPass(), &shader, topology };
 		{
+			std::shared_lock<std::shared_mutex> readLock{ mu };
+			auto it = infoIdx.find(info);
+			if (it != infoIdx.end())
+			{
+				VulkanPipeline* pipeline = pipelines[it->second].get();
+				if (pipeline == nullptr)
+				{
+					readLock.unlock();
+					std::unique_lock<std::shared_mutex> writeLock{ mu };
+					if (pipelines[it->second].get() == nullptr)
+						pipelines[it->second] = BuildPipeline(renderPass, shader, topology);
+				}
+				return it->second;
+			}
+		}
+		{
+			std::unique_lock<std::shared_mutex> writeLock{ mu };
+			auto it = infoIdx.find(info);
+			if (it != infoIdx.end())
+				return it->second;
+
 			pipelines.push_back(BuildPipeline(renderPass, shader, topology));
 			pipelinesInfo.push_back(info);
 
@@ -126,7 +145,7 @@ namespace sh::render::vk
 			infoIdx.insert({ info, idx });
 
 			if (auto it = renderpassIdxs.find(renderPass.GetVkRenderPass()); it == renderpassIdxs.end())
-				renderpassIdxs.insert({ renderPass.GetVkRenderPass(), std::vector<std::size_t>{idx}});
+				renderpassIdxs.insert({ renderPass.GetVkRenderPass(), std::vector<std::size_t>{idx} });
 			else
 				it->second.push_back(idx);
 
@@ -137,17 +156,10 @@ namespace sh::render::vk
 
 			return idx;
 		}
-		else
-		{
-			VulkanPipeline* pipeline = pipelines[it->second].get();
-			if (pipeline == nullptr)
-				pipelines[it->second] = BuildPipeline(renderPass, shader, topology);
-
-			return it->second;
-		}
 	}
 	SH_RENDER_API bool VulkanPipelineManager::BindPipeline(VkCommandBuffer cmd, uint64_t handle)
 	{
+		std::shared_lock<std::shared_mutex> readLock{ mu };
 		VulkanPipeline* pipeline = pipelines[handle].get();
 		if (pipeline == nullptr)
 			return false;

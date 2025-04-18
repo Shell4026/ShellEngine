@@ -1,19 +1,21 @@
 ﻿#include "VulkanCommandBuffer.h"
+#include "VulkanContext.h"
 
 #include <cassert>
 
 namespace sh::render::vk 
 {
-	VulkanCommandBuffer::VulkanCommandBuffer(VkDevice device, VkCommandPool pool, VkQueueFlagBits queueType) :
-		buffer(nullptr), device(device), cmdPool(pool), waitStage(0),
+	VulkanCommandBuffer::VulkanCommandBuffer(const VulkanContext& context, VkQueueFlagBits queueType) :
+		context(context),
+		buffer(nullptr), waitStage(0),
 		queueType(queueType)
 	{
-
 	}
 
 	VulkanCommandBuffer::VulkanCommandBuffer(VulkanCommandBuffer&& other) noexcept :
-		buffer(other.buffer), device(other.device), cmdPool(other.cmdPool), waitStage(other.waitStage),
-		waitSemaphores(std::move(other.waitSemaphores)), signalSemaphores(std::move(other.signalSemaphores)),
+		context(other.context), 
+		buffer(other.buffer), cmdPool(other.cmdPool),
+		waitStage(other.waitStage), waitSemaphores(std::move(other.waitSemaphores)), signalSemaphores(std::move(other.signalSemaphores)),
 		queueType(other.queueType)
 	{
 		other.buffer = nullptr;
@@ -24,13 +26,16 @@ namespace sh::render::vk
 		Clear();
 	}
 
-	SH_RENDER_API auto VulkanCommandBuffer::Create(const VkCommandBufferAllocateInfo* info)->VkResult
+	SH_RENDER_API auto VulkanCommandBuffer::Create(VkCommandPool cmdPool, const VkCommandBufferAllocateInfo* info)->VkResult
 	{
 		Clear();
+		this->cmdPool = cmdPool;
+
 		VkResult result;
 		if (info)
 		{
-			result = vkAllocateCommandBuffers(device, info, &buffer);
+			std::lock_guard<std::mutex> lock{ context.GetDeviceMutex() };
+			result = vkAllocateCommandBuffers(context.GetDevice(), info, &buffer);
 			assert(result == VkResult::VK_SUCCESS);
 			return result;
 		}
@@ -42,7 +47,8 @@ namespace sh::render::vk
 		cmdInfo.commandPool = cmdPool;
 		cmdInfo.commandBufferCount = 1;
 
-		result = vkAllocateCommandBuffers(device, &cmdInfo, &buffer);
+		std::lock_guard<std::mutex> lock{ context.GetDeviceMutex() };
+		result = vkAllocateCommandBuffers(context.GetDevice(), &cmdInfo, &buffer);
 		assert(result == VkResult::VK_SUCCESS);
 
 		return result;
@@ -160,7 +166,8 @@ namespace sh::render::vk
 		signalSemaphores.clear();
 		if (buffer)
 		{
-			vkFreeCommandBuffers(device, cmdPool, 1, &buffer);
+			std::lock_guard<std::mutex> lock{ context.GetDeviceMutex() };
+			vkFreeCommandBuffers(context.GetDevice(), cmdPool, 1, &buffer);
 			buffer = nullptr;
 		}
 	}

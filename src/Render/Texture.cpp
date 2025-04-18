@@ -41,7 +41,7 @@ namespace sh::render
 		pixels(std::move(other.pixels)), textureBuffer(std::move(other.textureBuffer)),
 		onBufferUpdate(std::move(other.onBufferUpdate)),
 		bSRGB(other.bSRGB),
-		bDirty(other.bDirty), bFormatDirty(other.bFormatDirty)
+		bDirty(other.bDirty.load(std::memory_order::memory_order_relaxed)), bFormatDirty(other.bFormatDirty)
 	{
 	}
 	Texture::~Texture()
@@ -96,12 +96,12 @@ namespace sh::render
 	}
 	SH_RENDER_API void Texture::SyncDirty()
 	{
-		if (bDirty)
+		if (bDirty.load(std::memory_order::memory_order_acquire))
 			return;
 
 		core::ThreadSyncManager::PushSyncable(*this);
 
-		bDirty = true;
+		bDirty.store(true, std::memory_order::memory_order_release);
 	}
 	SH_RENDER_API void Texture::Sync()
 	{
@@ -112,6 +112,6 @@ namespace sh::render
 			bFormatDirty = false;
 		}
 
-		bDirty = false;
+		bDirty.store(false, std::memory_order::memory_order_relaxed);
 	}
 }

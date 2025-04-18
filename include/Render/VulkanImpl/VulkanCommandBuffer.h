@@ -10,12 +10,12 @@
 
 namespace sh::render::vk 
 {
+	class VulkanContext;
 	class VulkanCommandBuffer : public core::INonCopyable
 	{
 	private:
+		const VulkanContext& context;
 		VkCommandBuffer buffer;
-
-		VkDevice device;
 		VkCommandPool cmdPool;
 
 		VkPipelineStageFlags waitStage;
@@ -27,7 +27,7 @@ namespace sh::render::vk
 		auto Begin(VkCommandBufferBeginInfo* info = nullptr) -> VkResult;
 		auto End() -> VkResult;
 	public:
-		SH_RENDER_API VulkanCommandBuffer(VkDevice device, VkCommandPool pool, VkQueueFlagBits queueType = VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
+		SH_RENDER_API VulkanCommandBuffer(const VulkanContext& context, VkQueueFlagBits queueType = VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
 		SH_RENDER_API VulkanCommandBuffer(VulkanCommandBuffer&& other) noexcept;
 		SH_RENDER_API ~VulkanCommandBuffer();
 
@@ -42,7 +42,7 @@ namespace sh::render::vk
 
 		SH_RENDER_API auto Build(const std::function<void()>& commands, VkCommandBufferBeginInfo* beginInfo = nullptr) -> VkResult;
 
-		SH_RENDER_API auto Create(const VkCommandBufferAllocateInfo* info = nullptr) -> VkResult;
+		SH_RENDER_API auto Create(VkCommandPool cmdPool, const VkCommandBufferAllocateInfo* info = nullptr) -> VkResult;
 		SH_RENDER_API auto Reset() -> VkResult;
 		SH_RENDER_API void Clear();
 
