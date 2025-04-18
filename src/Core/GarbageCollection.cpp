@@ -121,7 +121,7 @@ namespace sh::core
 		const int threadNum = threadPool->GetThreadNum();
 		const std::size_t perThreadTaskCount = rootSets.size() / threadNum + (rootSets.size() % threadNum > 0 ? 1 : 0);
 
-		std::array<std::future<void>, 16> taskFutures;
+		std::array<std::future<void>, ThreadPool::MAX_THREAD> taskFutures;
 		std::size_t p = 0;
 		int futureIdx = 0;
 		while (p < rootSets.size())

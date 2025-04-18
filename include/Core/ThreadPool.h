@@ -20,6 +20,8 @@ namespace sh::core
 		std::queue<std::function<void()>> tasks;
 
 		bool stop = false;
+	public:
+		constexpr static uint32_t MAX_THREAD = 16;
 	protected:
 		SH_CORE_API ThreadPool();
 	public:
