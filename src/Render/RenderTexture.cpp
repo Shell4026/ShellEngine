@@ -34,53 +34,16 @@ namespace sh::render
 	}
 	SH_RENDER_API void RenderTexture::Build(const IRenderContext& context)
 	{
+		if (framebuffer != nullptr)
+			return;
+
 		this->context = &context;
-
-		if (context.GetRenderAPIType() == RenderAPI::Vulkan)
-		{
-			auto& vkContext= static_cast<const vk::VulkanContext&>(context);
-			framebuffer[core::ThreadType::Game] = std::make_unique<vk::VulkanFramebuffer>(vkContext);
-			framebuffer[core::ThreadType::Render] = std::make_unique<vk::VulkanFramebuffer>(vkContext);
-
-			VkFormat format = VkFormat::VK_FORMAT_R8G8B8A8_SRGB;
-			switch (GetTextureFormat())
-			{
-			case Texture::TextureFormat::SRGB24:
-				format = VkFormat::VK_FORMAT_R8G8B8_SRGB;
-				break;
-			case Texture::TextureFormat::R8:
-				format = VkFormat::VK_FORMAT_R8_UNORM;
-				break;
-			case Texture::TextureFormat::RGB24:
-				format = VkFormat::VK_FORMAT_R8G8B8_UNORM;
-				break;
-			case Texture::TextureFormat::RGBA32:
-				format = VkFormat::VK_FORMAT_R8G8B8A8_UNORM;
-				break;
-			}
-
-			vk::VulkanRenderPass::Config config;
-			config.format = format;
-			config.depthFormat = vkContext.FindSupportedDepthFormat(true);
-			config.bOffScreen = true;
-			config.bTransferSrc = bReadUsage;
-			config.bUseStencil = true;
-			config.sampleCount = bMSAA ? vkContext.GetSampleCount() : VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
-
-			auto& renderPass = vkContext.GetRenderPassManager().GetOrCreateRenderPass(config);
-			
-			static_cast<vk::VulkanFramebuffer*>(framebuffer[core::ThreadType::Game].get())->CreateOffScreen(renderPass, width, height);
-			static_cast<vk::VulkanFramebuffer*>(framebuffer[core::ThreadType::Render].get())->CreateOffScreen(renderPass, width, height);
-		}
-		textureBuffer[core::ThreadType::Game] = std::make_unique<vk::VulkanTextureBuffer>();
-		textureBuffer[core::ThreadType::Game]->Create(*framebuffer[core::ThreadType::Game].get());
-		textureBuffer[core::ThreadType::Render] = std::make_unique<vk::VulkanTextureBuffer>();
-		textureBuffer[core::ThreadType::Render]->Create(*framebuffer[core::ThreadType::Render].get());
+		CreateBuffers();
 	}
 
-	SH_RENDER_API auto RenderTexture::GetFramebuffer(core::ThreadType thr) const -> Framebuffer*
+	SH_RENDER_API auto RenderTexture::GetFramebuffer() const -> Framebuffer*
 	{
-		return framebuffer[thr].get();
+		return framebuffer.get();
 	}
 	SH_RENDER_API auto RenderTexture::GetPixelData() const -> const std::vector<Byte>&
 	{
@@ -91,14 +54,12 @@ namespace sh::render
 		}
 		return pixels;
 	}
-	void RenderTexture::Resize(uint32_t width, uint32_t height)
+	void RenderTexture::CreateBuffers()
 	{
-		if (context == nullptr)
-			return;
-
 		if (context->GetRenderAPIType() == RenderAPI::Vulkan)
 		{
 			auto& vkContext = static_cast<const vk::VulkanContext&>(*context);
+
 			VkFormat format = VkFormat::VK_FORMAT_R8G8B8A8_SRGB;
 			switch (GetTextureFormat())
 			{
@@ -126,19 +87,19 @@ namespace sh::render
 
 			auto& renderPass = vkContext.GetRenderPassManager().GetOrCreateRenderPass(config);
 
-			static_cast<vk::VulkanFramebuffer*>(framebuffer[core::ThreadType::Game].get())->Clean();
-			static_cast<vk::VulkanFramebuffer*>(framebuffer[core::ThreadType::Game].get())->CreateOffScreen(renderPass, width, height);
+			if (framebuffer == nullptr)
+				framebuffer = std::make_unique<vk::VulkanFramebuffer>(vkContext);
+			static_cast<vk::VulkanFramebuffer*>(framebuffer.get())->CreateOffScreen(renderPass, width, height);
 		}
-		textureBuffer[core::ThreadType::Game]->Clean();
-		textureBuffer[core::ThreadType::Game]->Create(*framebuffer[core::ThreadType::Game].get());
+		if (textureBuffer == nullptr)
+			textureBuffer = std::make_unique<vk::VulkanTextureBuffer>();
+		textureBuffer->Create(*framebuffer.get());
 	}
 	SH_RENDER_API void RenderTexture::SetSize(uint32_t width, uint32_t height)
 	{
 		assert(width != 0 && height != 0);
 		this->width = width;
 		this->height = height;
-
-		Resize(width, height);
 
 		bChangeSize = true;
 		SyncDirty();
@@ -155,10 +116,9 @@ namespace sh::render
 	SH_RENDER_API void RenderTexture::Sync()
 	{
 		Super::Sync();
-		std::swap(framebuffer[core::ThreadType::Render], framebuffer[core::ThreadType::Game]);
 		if (bChangeSize)
 		{
-			Resize(width, height);
+			CreateBuffers();
 			bChangeSize = false;
 		}
 	}

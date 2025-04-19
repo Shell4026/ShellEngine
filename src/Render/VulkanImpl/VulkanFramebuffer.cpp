@@ -62,6 +62,7 @@ namespace sh::render::vk
 	SH_RENDER_API auto VulkanFramebuffer::Create(const VulkanRenderPass& renderPass, uint32_t width, uint32_t height, VkImageView img) -> VkResult
 	{
 		assert(width != 0 && height != 0);
+		Clean();
 
 		this->img = img;
 		this->width = width;
@@ -112,6 +113,8 @@ namespace sh::render::vk
 	SH_RENDER_API auto VulkanFramebuffer::CreateOffScreen(const VulkanRenderPass& renderPass, uint32_t width, uint32_t height) -> VkResult
 	{
 		assert(width != 0 && height != 0);
+
+		Clean();
 
 		this->width = width;
 		this->height = height;

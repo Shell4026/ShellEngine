@@ -23,7 +23,7 @@ namespace sh::render::vk
 		const Framebuffer* framebuffer;
 		
 		uint32_t width = 32, height = 32;
-		std::size_t size;
+		std::size_t size = 0;
 		
 		VkFormat format = VkFormat::VK_FORMAT_R8G8B8A8_UNORM;
 

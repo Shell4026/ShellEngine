@@ -1,5 +1,4 @@
-﻿#include "PCH.h"
-#include "GUITexture.h"
+﻿#include "GUITexture.h"
 
 #include "Render/IRenderContext.h"
 #include "Render/Texture.h"
@@ -10,7 +9,23 @@ namespace sh::game
 	SH_GAME_API GUITexture::GUITexture() :
 		tex(nullptr)
 	{
-		
+		onDestroyListener.SetCallback(
+			[&](const core::SObject* obj)
+			{
+				Clean();
+			}
+		);
+		onBufferUpdateListener.SetCallback(
+			[&](const render::Texture* texture)
+			{
+				if (context->GetRenderAPIType() == render::RenderAPI::Vulkan)
+				{
+					ImGui_ImplVulkan_RemoveTexture(reinterpret_cast<VkDescriptorSet>(tex));
+					auto buffer = static_cast<render::vk::VulkanTextureBuffer*>(texture->GetTextureBuffer())->GetImageBuffer();
+					tex = ImGui_ImplVulkan_AddTexture(buffer->GetSampler(), buffer->GetImageView(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				}
+			}
+		);
 	}
 	GUITexture::~GUITexture()
 	{
@@ -19,7 +34,13 @@ namespace sh::game
 
 	SH_GAME_API void GUITexture::Create(const render::IRenderContext& context, const render::Texture& texture)
 	{
+		if (tex != nullptr)
+			return;
+
 		this->context = &context;
+
+		texture.onDestroy.Register(onDestroyListener);
+		texture.onBufferUpdate.Register(onBufferUpdateListener);
 		if (context.GetRenderAPIType() == render::RenderAPI::Vulkan)
 		{
 			auto buffer = static_cast<render::vk::VulkanTextureBuffer*>(texture.GetTextureBuffer())->GetImageBuffer();

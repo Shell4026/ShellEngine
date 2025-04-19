@@ -15,18 +15,17 @@ namespace sh::render
 		SCLASS(RenderTexture);
 	private:
 		PROPERTY(width);
-		PROPERTY(height);
-
 		uint32_t width;
+		PROPERTY(height);
 		uint32_t height;
 
-		core::SyncArray<std::unique_ptr<Framebuffer>> framebuffer;
+		std::unique_ptr<Framebuffer> framebuffer;
 
 		bool bChangeSize = false;
 		bool bReadUsage = false;
 		bool bMSAA = false;
 	private:
-		void Resize(uint32_t width, uint32_t height);
+		void CreateBuffers();
 	public:
 		SH_RENDER_API RenderTexture(Texture::TextureFormat format = Texture::TextureFormat::SRGBA32, bool bMSAA = true);
 		SH_RENDER_API RenderTexture(RenderTexture&& other) noexcept;
@@ -40,7 +39,7 @@ namespace sh::render
 		/// @brief 프레임 버퍼를 가져오는 함수
 		/// @param thr 호출 하는 스레드
 		/// @return 프레임버퍼 포인터
-		SH_RENDER_API auto GetFramebuffer(core::ThreadType thr) const -> Framebuffer*;
+		SH_RENDER_API auto GetFramebuffer() const -> Framebuffer*;
 		SH_RENDER_API auto GetPixelData() const -> const std::vector<Byte>& override;
 		SH_RENDER_API void SetSize(uint32_t width, uint32_t height);
 		SH_RENDER_API auto GetSize() const -> glm::vec2;

@@ -25,11 +25,11 @@ namespace sh::core
 			threads.push_back(ThreadData{ nullptr, thread.get_id() });
 		}
 	}
-	SH_CORE_API void ThreadSyncManager::PushSyncable(ISyncable& syncable)
+	SH_CORE_API void ThreadSyncManager::PushSyncable(ISyncable& syncable, uint32_t priority)
 	{
 		if (currentThreadIdx == -1)
 			currentThreadIdx = GetThreadIndex();
-		threads[currentThreadIdx].syncableQueue.push(&syncable);
+		threads[currentThreadIdx].syncableQueue.push({ &syncable, priority });
 	}
 
 	SH_CORE_API void ThreadSyncManager::AddThread(EngineThread& thread)
@@ -53,7 +53,7 @@ namespace sh::core
 			threads[i].threadPtr->mutex.lock(); // 자고 있는 상태면 잠금을 획득 할 수 있다. 아니면 대기
 		}
 
-		std::vector<ISyncable*> syncables;
+		std::vector<ThreadData::SyncData> syncables;
 		for (auto& threadData : threads)
 		{
 			while (!threadData.syncableQueue.empty())
@@ -62,8 +62,14 @@ namespace sh::core
 				threadData.syncableQueue.pop();
 			}
 		}
+		std::sort(syncables.begin(), syncables.end(),
+			[&](const ThreadData::SyncData& left, const ThreadData::SyncData& right)
+			{
+				return left.priority < right.priority;
+			}
+		);
 
-		for (ISyncable* syncable : syncables)
+		for (auto& [syncable, priority] : syncables)
 		{
 			if (syncable)
 				syncable->Sync();

@@ -69,7 +69,7 @@ namespace sh::game
 					assert(world.renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan);
 					if (world.renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan)
 					{
-						auto vkFramebuffer = static_cast<render::vk::VulkanFramebuffer*>(renderTex->GetFramebuffer(core::ThreadType::Render));
+						auto vkFramebuffer = static_cast<render::vk::VulkanFramebuffer*>(renderTex->GetFramebuffer());
 						auto& vkContext = static_cast<render::vk::VulkanContext&>(*world.renderer.GetContext());
 						auto vkBuffer = static_cast<render::vk::VulkanBuffer*>(buffer.get());
 

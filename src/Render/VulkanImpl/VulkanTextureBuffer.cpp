@@ -14,7 +14,7 @@ namespace sh::render::vk
 		context(other.context), queueManager(other.queueManager),
 		imgBuffer(std::move(other.imgBuffer)), cmd(std::move(other.cmd)),
 		isRenderTexture(other.isRenderTexture), framebuffer(other.framebuffer),
-		width(other.width), height(other.height)
+		width(other.width), height(other.height), size(other.size)
 	{
 		other.context = nullptr;
 		other.queueManager = nullptr;
@@ -129,7 +129,8 @@ namespace sh::render::vk
 			this->format = VkFormat::VK_FORMAT_R8G8B8A8_UNORM;
 			break;
 		}
-		imgBuffer = std::make_unique<VulkanImageBuffer>(*this->context);
+		if (imgBuffer == nullptr)
+			imgBuffer = std::make_unique<VulkanImageBuffer>(*this->context);
 		imgBuffer->Create(width, height, this->format,
 			VkImageUsageFlagBits::VK_IMAGE_USAGE_TRANSFER_DST_BIT | VkImageUsageFlagBits::VK_IMAGE_USAGE_SAMPLED_BIT);
 
@@ -149,8 +150,9 @@ namespace sh::render::vk
 			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 			VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		stagingBuffer.SetData(data);
-
-		cmd = std::make_unique<VulkanCommandBuffer>(*context, VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
+		
+		if (cmd == nullptr)
+			cmd = std::make_unique<VulkanCommandBuffer>(*context, VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
 		cmd->Create(context->GetCommandPool(core::ThreadType::Game));
 
 		cmd->Build([&]

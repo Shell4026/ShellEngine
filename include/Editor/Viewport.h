@@ -40,12 +40,15 @@ namespace sh::editor
 
 		render::RenderTexture* renderTex;
 		render::RenderTexture* outlineTex = nullptr;
-		core::SyncArray<VkDescriptorSet> viewportDescSet;
+
+		VkDescriptorSet viewportDescSet = nullptr;
 		
 		game::EditorCamera* editorCamera = nullptr;
 		game::PickingCamera* pickingCamera = nullptr;
 
 		core::Observer<true,game::PickingCamera::PixelData>::Listener pickingListener{};
+
+		ImDrawList* imguiDrawList = nullptr;
 
 		bool bDirty;
 		bool bMouseDown;

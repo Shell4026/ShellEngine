@@ -33,6 +33,8 @@ namespace sh::game
 
 		bool bInit;
 		bool bDirty;
+	public:
+		constexpr static uint32_t SYNC_PRIORITY = 9999;
 	private:
 		void WindowInit();
 	public:

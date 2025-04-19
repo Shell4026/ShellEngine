@@ -196,7 +196,7 @@ namespace sh::render::vk
 			}
 			else
 			{
-				auto vkFramebuffer = static_cast<VulkanFramebuffer*>(renderTexture->GetFramebuffer(core::ThreadType::Render));
+				auto vkFramebuffer = static_cast<VulkanFramebuffer*>(renderTexture->GetFramebuffer());
 				VulkanRenderPass::Config config{ vkFramebuffer->GetRenderPass()->GetConfig() };
 				if (config.bClear != bClearFramebuffer)
 				{
@@ -217,8 +217,6 @@ namespace sh::render::vk
 				viewport.height = -static_cast<float>(vkFramebuffer->GetHeight());
 
 				scissor.extent = { vkFramebuffer->GetWidth(), vkFramebuffer->GetHeight() };
-
-				renderTexture->SyncDirty();
 			}
 			
 			vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);

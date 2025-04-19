@@ -8,17 +8,16 @@
 
 namespace sh::render
 {
-	void Texture::CreateTextureBuffer(core::ThreadType thread)
+	void Texture::CreateTextureBuffer()
 	{
-		if (thread == core::ThreadType::Game)
-			onBufferUpdate.Notify(this);
-
 		if (context->GetRenderAPIType() == RenderAPI::Vulkan)
 		{
-			textureBuffer[thread] = std::make_unique<vk::VulkanTextureBuffer>();
-			textureBuffer[thread]->Create(*context, width, height, format);
-			textureBuffer[thread]->SetData(pixels.data());
+			if (textureBuffer == nullptr)
+				textureBuffer = std::make_unique<vk::VulkanTextureBuffer>();
+			textureBuffer->Create(*context, width, height, format);
+			textureBuffer->SetData(pixels.data());
 		}
+		onBufferUpdate.Notify(this);
 	}
 	auto Texture::CheckSRGB() const -> bool
 	{
@@ -39,8 +38,7 @@ namespace sh::render
 		format(other.format), width(other.width), height(other.height),
 		pixels(std::move(other.pixels)), textureBuffer(std::move(other.textureBuffer)),
 		onBufferUpdate(std::move(other.onBufferUpdate)),
-		bSRGB(other.bSRGB),
-		bFormatDirty(other.bFormatDirty)
+		bSRGB(other.bSRGB), bSetDataDirty(other.bSetDataDirty)
 	{
 		if (other.bDirty.test_and_set(std::memory_order::memory_order_acquire))
 			bDirty.test_and_set(std::memory_order::memory_order_relaxed);
@@ -52,8 +50,8 @@ namespace sh::render
 	SH_RENDER_API void Texture::SetPixelData(void* data)
 	{
 		std::memcpy(pixels.data(), data, pixels.size());
-		if (context != nullptr)
-			Build(*context);
+		bSetDataDirty = true;
+		SyncDirty();
 	}
 
 	SH_RENDER_API auto Texture::GetPixelData() const -> const std::vector<Byte>&
@@ -63,14 +61,16 @@ namespace sh::render
 
 	SH_RENDER_API void Texture::Build(const IRenderContext& context)
 	{
-		this->context = &context;
-		CreateTextureBuffer(core::ThreadType::Game);
-		CreateTextureBuffer(core::ThreadType::Render);
+		if (textureBuffer == nullptr)
+		{
+			this->context = &context;
+			CreateTextureBuffer();
+		}
 	}
 
-	SH_RENDER_API auto Texture::GetTextureBuffer(core::ThreadType thr) const -> ITextureBuffer*
+	SH_RENDER_API auto Texture::GetTextureBuffer() const -> ITextureBuffer*
 	{
-		return textureBuffer[thr].get();
+		return textureBuffer.get();
 	}
 	SH_RENDER_API auto Texture::GetTextureFormat() const -> TextureFormat
 	{
@@ -81,14 +81,11 @@ namespace sh::render
 	{
 		if (format == target)
 			return;
-		assert(core::ThreadSyncManager::IsMainThread());
 
 		format = target;
 		bSRGB = CheckSRGB();
+		bSetDataDirty = true;
 
-		CreateTextureBuffer(core::ThreadType::Game);
-
-		bFormatDirty = true;
 		SyncDirty();
 	}
 	SH_RENDER_API auto Texture::IsSRGB() const -> bool
@@ -102,11 +99,10 @@ namespace sh::render
 	}
 	SH_RENDER_API void Texture::Sync()
 	{
-		std::swap(textureBuffer[core::ThreadType::Render], textureBuffer[core::ThreadType::Game]);
-		if (bFormatDirty)
+		if (bSetDataDirty)
 		{
-			CreateTextureBuffer(core::ThreadType::Game);
-			bFormatDirty = false;
+			CreateTextureBuffer();
+			bSetDataDirty = false;
 		}
 
 		bDirty.clear(std::memory_order::memory_order_relaxed);

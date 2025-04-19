@@ -1,5 +1,4 @@
-﻿#include "PCH.h"
-#include "ImGUImpl.h"
+﻿#include "ImGUImpl.h"
 
 #include "Render/VulkanImpl/VulkanRenderer.h"
 #include "Render/VulkanImpl/VulkanContext.h"
@@ -465,7 +464,7 @@ namespace sh::game
 		if (bDirty)
 			return;
 
-		core::ThreadSyncManager::PushSyncable(*this);
+		core::ThreadSyncManager::PushSyncable(*this, SYNC_PRIORITY);
 
 		bDirty = true;
 	}

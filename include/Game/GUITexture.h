@@ -1,10 +1,14 @@
 ﻿#pragma once
-
 #include "Export.h"
 #include "ImGUImpl.h"
 
 #include "Core/NonCopyable.h"
+#include "Core/Observer.hpp"
 
+namespace sh::core
+{
+	class SObject;
+}
 namespace sh::render
 {
 	class IRenderContext;
@@ -18,7 +22,10 @@ namespace sh::game
 	private:
 		const render::IRenderContext* context;
 
-		ImTextureID tex;
+		core::Observer<false, const render::Texture*>::Listener onBufferUpdateListener;
+		core::Observer<false, const core::SObject*>::Listener onDestroyListener;
+
+		ImTextureID tex = nullptr;
 	public:
 		SH_GAME_API GUITexture();
 		SH_GAME_API ~GUITexture();

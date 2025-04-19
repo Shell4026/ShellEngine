@@ -79,6 +79,8 @@ namespace sh::render::vk
 
 	SH_RENDER_API auto VulkanImageBuffer::Create(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspectFlag, VkSampleCountFlagBits sampleCount) -> VkResult
 	{
+		Clean();
+
 		VkImageCreateInfo info{};
 		info.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
 		info.imageType = VkImageType::VK_IMAGE_TYPE_2D;
