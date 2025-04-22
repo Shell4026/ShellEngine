@@ -6,6 +6,8 @@ namespace sh::editor
 {
 	SH_EDITOR_API void EditorResource::LoadAllAssets(EditorWorld& world)
 	{
+		this->world = &world;
+
 		auto& ctx = *world.renderer.GetContext();
 		TextureLoader texLoader{ ctx };
 

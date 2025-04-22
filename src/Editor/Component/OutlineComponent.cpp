@@ -1,4 +1,4 @@
-﻿#include "OutlineComponent.h"
+﻿#include "Component/OutlineComponent.h"
 
 #include "Game/GameObject.h"
 

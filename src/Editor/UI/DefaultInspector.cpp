@@ -1,5 +1,4 @@
-﻿
-#include "DefaultInspector.h"
+﻿#include "UI/DefaultInspector.h"
 #include "AssetDatabase.h"
 
 #include "imgui.h"

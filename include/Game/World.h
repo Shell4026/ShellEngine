@@ -39,12 +39,16 @@ namespace sh::game
 {
 	class GameObject;
 	class Camera;
+	class ImGUImpl;
 
 	class World : public sh::core::SObject, public sh::core::INonCopyable
 	{
 		SCLASS(World)
 	private:
 		static constexpr float FIXED_TIME = 0.02f;
+
+		core::GarbageCollection* gc;
+		ImGUImpl* imgui = nullptr;
 
 		core::SHashSet<GameObject*> objs;
 		core::SSet<Camera*> cameras;
@@ -55,7 +59,6 @@ namespace sh::game
 		float _fixedDeltaTime = 0.f;
 
 		Camera* mainCamera;
-		core::GarbageCollection* gc;
 
 		phys::PhysWorld physWorld;
 
@@ -82,7 +85,7 @@ namespace sh::game
 	protected:
 		SH_GAME_API void CleanObjs();
 	public:
-		SH_GAME_API World(render::Renderer& renderer, const ComponentModule& componentModule);
+		SH_GAME_API World(render::Renderer& renderer, const ComponentModule& componentModule, ImGUImpl& guiContext);
 		SH_GAME_API World(World&& other) noexcept;
 		SH_GAME_API virtual ~World();
 
@@ -116,5 +119,7 @@ namespace sh::game
 
 		SH_GAME_API auto Serialize() const->core::Json override;
 		SH_GAME_API void Deserialize(const core::Json& json) override;
+
+		SH_GAME_API auto GetUiContext() const -> ImGUImpl&;
 	};
 }

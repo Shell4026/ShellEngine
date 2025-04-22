@@ -1,9 +1,10 @@
-﻿#include "Game/PCH.h"
-#include "Inspector.h"
+﻿#include "UI/Inspector.h"
+#include "UI/CustomInspector.h"
+#include "UI/AssetExplorer.h"
+
 #include "EditorWorld.h"
 #include "EditorResource.h"
 #include "AssetDatabase.h"
-#include "CustomInspector.h"
 
 #include "Core/Logger.h"
 #include "Core/SObject.h"
@@ -13,8 +14,7 @@
 
 namespace sh::editor
 {
-	SH_EDITOR_API Inspector::Inspector(game::ImGUImpl& imgui, EditorWorld& world) :
-		UI(imgui),
+	SH_EDITOR_API Inspector::Inspector(EditorWorld& world) :
 		world(world)
 	{
 		customInspectorManager = CustomInspectorManager::GetInstance();
@@ -291,7 +291,10 @@ namespace sh::editor
 		}
 		if (ImGui::Button(objName, ImVec2{ buttonWidth, iconSize }))
 		{
-			
+			if (prop.type == core::reflection::GetType<const render::Mesh*>())
+			{
+				//world.GetEditorUI()->OpenUI<AssetExplorer>(world, imgui);
+			}
 		}
 		if (ImGui::BeginDragDropTarget())
 		{

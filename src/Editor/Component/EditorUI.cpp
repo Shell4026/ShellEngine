@@ -1,5 +1,5 @@
-﻿#include "EditorUI.h"
-#include "Project.h"
+﻿#include "Component/EditorUI.h"
+#include "UI/Project.h"
 #include "EditorWorld.h"
 
 #include "game/GameObject.h"
@@ -14,19 +14,25 @@ namespace sh::editor
 {
 	using namespace sh::game;
 
-	EditorUI::EditorUI(EditorWorld& world, game::ImGUImpl& imgui) :
-		UI(imgui),
-		world(world),
-		viewport(imgui, world),
-		hierarchy(imgui, world),
-		project(imgui, world),
-		inspector(imgui, world),
+	EditorUI::EditorUI(GameObject& owner) :
+		UI(owner),
 
 		hierarchyWidth(0), hierarchyHeight(0),
-		explorer(imgui),
+		explorer(),
 
 		bDirty(false)
 	{
+		ImGui::SetCurrentContext(world.GetUiContext().GetContext());
+	}
+
+	SH_EDITOR_API void EditorUI::Awake()
+	{
+		Super::Awake();
+		explorer = std::make_unique<ExplorerUI>(static_cast<EditorWorld&>(gameObject.world));
+		viewport = std::make_unique<Viewport>(static_cast<EditorWorld&>(gameObject.world));
+		hierarchy = std::make_unique<Hierarchy>(static_cast<EditorWorld&>(gameObject.world));
+		project = std::make_unique<Project>(static_cast<EditorWorld&>(gameObject.world));
+		inspector = std::make_unique<Inspector>(static_cast<EditorWorld&>(gameObject.world));
 	}
 
 	void EditorUI::SetDockNode()
@@ -68,7 +74,7 @@ namespace sh::editor
 			ImGui::DockBuilderDockWindow(Hierarchy::name, dockLeft);
 			ImGui::DockBuilderDockWindow(Inspector::name, dockRight);
 			ImGui::DockBuilderDockWindow(Project::name, dockDown);
-			ImGui::DockBuilderDockWindow(this->viewport.name, dockspaceId);
+			ImGui::DockBuilderDockWindow(this->viewport->name, dockspaceId);
 			ImGui::DockBuilderFinish(dockspaceId);
 		}
 		ImGui::End();
@@ -82,29 +88,36 @@ namespace sh::editor
 			{
 				if (ImGui::MenuItem("New project"))
 				{
-					explorer.AddCallback([&](std::filesystem::path dir)
+					explorer->AddCallback([&](std::filesystem::path dir)
 						{
-							project.CreateNewProject(dir);
+							project->CreateNewProject(dir);
 						}
 					);
-					explorer.Open(ExplorerUI::OpenMode::Create);
+					explorer->Open(ExplorerUI::OpenMode::Create);
 				}
 				if (ImGui::MenuItem("Open project"))
 				{
-					explorer.AddCallback([&](std::filesystem::path dir)
+					explorer->AddCallback([&](std::filesystem::path dir)
 						{
-							project.OpenProject(dir);
+							project->OpenProject(dir);
 						}
 					);
-					explorer.Open();
+					explorer->Open();
 				}
-				if (ImGui::MenuItem("Save world", "Ctrl+S"))
+				if (project->IsProjectOpen())
 				{
-					project.SaveWorld();
-				}
-				if (ImGui::MenuItem("Load world", "Ctrl+O"))
-				{
-					project.LoadWorld();
+					if (ImGui::MenuItem("Save world", "Ctrl+S"))
+					{
+						project->SaveWorld();
+					}
+					if (ImGui::MenuItem("Load world", "Ctrl+O"))
+					{
+						project->LoadWorld();
+					}
+					if (ImGui::MenuItem("Build"))
+					{
+						project->Build();
+					}
 				}
 				ImGui::EndMenu();
 			}
@@ -112,43 +125,40 @@ namespace sh::editor
 		}
 	}
 
-	SH_EDITOR_API void EditorUI::Update()
+	SH_EDITOR_API void EditorUI::BeginUpdate()
 	{
-		viewport.Update();
-		hierarchy.Update();
-		inspector.Update();
-		project.Update();
+		Super::BeginUpdate();
+		viewport->Update();
+		hierarchy->Update();
+		inspector->Update();
+		project->Update();
+		SetDockNode();
 	}
 
-	SH_EDITOR_API void EditorUI::Render()
+	SH_EDITOR_API void EditorUI::Update()
 	{
-		if (!imgui.IsInit())
-			return;
+		Super::Update();
+		hierarchy->Render();
+		inspector->Render();
+		project->Render();
+		viewport->Render();
 
-		SetDockNode();
-		hierarchy.Render();
-		inspector.Render();
-		project.Render();
-		viewport.Render();
-	
 		DrawMenu();
-		explorer.Render();
-
-		imgui.SyncDirty();
+		explorer->Render();
 	}
 
 	SH_EDITOR_API auto EditorUI::GetViewport() -> Viewport&
 	{
-		return viewport;
+		return *viewport;
 	}
 
 	SH_EDITOR_API auto EditorUI::GetHierarchy() -> Hierarchy&
 	{
-		return hierarchy;
+		return *hierarchy;
 	}
 
 	SH_EDITOR_API void EditorUI::Clean()
 	{
-		viewport.Clean();
+		viewport->Clean();
 	}
 }

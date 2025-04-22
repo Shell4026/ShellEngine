@@ -1,12 +1,8 @@
 ﻿#pragma once
-
 #include "Export.h"
-#include "UI.h"
 
 #include "Core/SContainer.hpp"
 #include "Core/Observer.hpp"
-
-#include "Game/ImGUImpl.h"
 
 #include <list>
 #include <unordered_map>
@@ -18,7 +14,7 @@ namespace sh::editor
 {
 	class EditorWorld;
 
-	class Hierarchy : public UI
+	class Hierarchy
 	{
 	private:
 		EditorWorld& world;
@@ -37,10 +33,10 @@ namespace sh::editor
 		void DrawInvisibleSpace(game::GameObject* obj);
 		void DrawGameObjectHierarchy(game::GameObject* obj, core::SHashSet<game::GameObject*>& drawSet);
 	public:
-		SH_EDITOR_API Hierarchy(game::ImGUImpl& imgui, EditorWorld& world);
+		SH_EDITOR_API Hierarchy(EditorWorld& world);
 
-		SH_EDITOR_API void Update() override;
-		SH_EDITOR_API void Render() override;
+		SH_EDITOR_API void Update();
+		SH_EDITOR_API void Render();
 
 		/// @brief 빈 공간에 드래그 된 객체의 작동 방식을 설정한다.
 		/// @brief 뒤늦게 추가 된 기능으로 덮어 씌워진다.

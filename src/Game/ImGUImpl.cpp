@@ -21,6 +21,35 @@ namespace sh::game
 			abort();
 	}
 
+	void ImGUImpl::Sync()
+	{
+		ImDrawData* src = ImGui::GetDrawData();
+		if (src == nullptr || !src->Valid)
+			return;
+
+		// DrawData.Clear()는 drawData*를 해제 하지 않기에 수동 소멸시켜야 함.
+		for (int i = 0; i < drawData.CmdListsCount; ++i)
+			IM_DELETE(drawData.CmdLists[i]);
+		drawData.Clear();
+		drawData.CmdLists.clear();
+
+		// CmdLists 제외 복사
+		ImVector<ImDrawList*> temp;
+		temp.swap(src->CmdLists);
+		drawData = *src;
+		temp.swap(src->CmdLists);
+
+		// CmdLists 요소 복사
+		drawData.CmdLists.resize(src->CmdLists.Size);
+		for (int i = 0; i < drawData.CmdListsCount; ++i)
+		{
+			ImDrawList* copy = src->CmdLists[i]->CloneOutput();
+			drawData.CmdLists[i] = copy;
+		}
+
+		bDirty = false;
+	}
+
 	ImGUImpl::ImGUImpl(window::Window& window, render::Renderer& renderer) :
 		window(window), renderer(renderer),
 		drawData(),
@@ -32,7 +61,7 @@ namespace sh::game
 	{
 		Clean();
 	}
-	void ImGUImpl::Clean()
+	SH_GAME_API void ImGUImpl::Clean()
 	{
 		if (!bInit)
 			return;
@@ -51,8 +80,11 @@ namespace sh::game
 		io.ConfigFlags |= ImGuiConfigFlags_::ImGuiConfigFlags_DockingEnable;
 	}
 
-	void ImGUImpl::Init()
+	SH_GAME_API void ImGUImpl::Init()
 	{
+		if (bInit)
+			return;
+
 		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
 		//ImGui_ImplWin32_Init(window.GetNativeHandle());
@@ -100,13 +132,13 @@ namespace sh::game
 		bInit = true;
 	}
 
-	void ImGUImpl::Resize()
+	SH_GAME_API void ImGUImpl::Resize()
 	{
 		ImGuiIO& io = ImGui::GetIO();
 		io.DisplaySize = ImVec2{ static_cast<float>(window.width), static_cast<float>(window.height) };
 	}
 
-	void ImGUImpl::ProcessEvent(window::Event event)
+	SH_GAME_API void ImGUImpl::ProcessEvent(window::Event event)
 	{
 		ImGuiIO& io = ImGui::GetIO();
 
@@ -431,7 +463,7 @@ namespace sh::game
 		}
 	}
 
-	void ImGUImpl::Begin()
+	SH_GAME_API void ImGUImpl::Begin()
 	{
 		if (!bInit)
 			return;
@@ -443,23 +475,23 @@ namespace sh::game
 		ImGui::NewFrame();
 		ImGui::ShowDemoWindow();
 	}
-	void ImGUImpl::End()
+	SH_GAME_API void ImGUImpl::End()
 	{
 		if (!bInit)
 			return;
 
 		ImGui::Render();
 	}
-	bool ImGUImpl::IsInit() const
+	SH_GAME_API bool ImGUImpl::IsInit() const
 	{
 		return bInit;
 	}
-	auto ImGUImpl::GetContext() const -> ImGuiContext*
+	SH_GAME_API auto ImGUImpl::GetContext() const -> ImGuiContext*
 	{
 		return ImGui::GetCurrentContext();
 	}
 
-	void ImGUImpl::SyncDirty()
+	SH_GAME_API void ImGUImpl::SyncDirty()
 	{
 		if (bDirty)
 			return;
@@ -467,34 +499,5 @@ namespace sh::game
 		core::ThreadSyncManager::PushSyncable(*this, SYNC_PRIORITY);
 
 		bDirty = true;
-	}
-
-	void ImGUImpl::Sync()
-	{
-		ImDrawData* src = ImGui::GetDrawData();
-		if (src == nullptr || !src->Valid)
-			return;
-
-		// DrawData.Clear()는 drawData*를 해제 하지 않기에 수동 소멸시켜야 함.
-		for (int i = 0; i < drawData.CmdListsCount; ++i)
-			IM_DELETE(drawData.CmdLists[i]);
-		drawData.Clear();
-		drawData.CmdLists.clear();
-
-		// CmdLists 제외 복사
-		ImVector<ImDrawList*> temp;
-		temp.swap(src->CmdLists);
-		drawData = *src;
-		temp.swap(src->CmdLists);
-
-		// CmdLists 요소 복사
-		drawData.CmdLists.resize(src->CmdLists.Size);
-		for (int i = 0; i < drawData.CmdListsCount; ++i)
-		{
-			ImDrawList* copy = src->CmdLists[i]->CloneOutput();
-			drawData.CmdLists[i] = copy;
-		}
-
-		bDirty = false;
 	}
 }//namespace

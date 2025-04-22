@@ -1,10 +1,11 @@
 ﻿#include "EditorWorld.h"
 #include "EditorResource.h"
-#include "EditorUI.h"
 #include "EditorPickingPass.h"
 #include "EditorOutlinePass.h"
 #include "EditorPostOutlinePass.h"
-#include "OutlineComponent.h"
+
+#include "Component/EditorUI.h"
+#include "Component/OutlineComponent.h"
 
 #include "Core/Name.h"
 
@@ -58,7 +59,7 @@ namespace sh::editor
 	}
 
 	SH_EDITOR_API EditorWorld::EditorWorld(render::Renderer& renderer, const game::ComponentModule& module, game::ImGUImpl& guiContext) :
-		World(renderer, module), guiContext(guiContext)
+		World(renderer, module, guiContext)
 	{
 		pickingPass = renderer.AddRenderPipeline<EditorPickingPass>();
 		outlinePass = renderer.AddRenderPipeline<EditorOutlinePass>();
@@ -78,6 +79,7 @@ namespace sh::editor
 				}
 			}
 		);
+		ImGui::SetCurrentContext(guiContext.GetContext());
 	}
 
 	SH_EDITOR_API EditorWorld::~EditorWorld()
@@ -87,7 +89,7 @@ namespace sh::editor
 	SH_EDITOR_API void EditorWorld::Clean()
 	{
 		Super::Clean();
-		editorUI.reset();
+		editorUI = nullptr;
 		selected = nullptr;
 	}
 
@@ -197,6 +199,10 @@ namespace sh::editor
 		//m->SetMaterial(triMat);
 		//m->SetMesh(plane);
 		//m->SetMaterialPropertyBlock(prop);
+
+		game::GameObject* uiObj = AddGameObject("EditorUI");
+		uiObj->hideInspector = true;
+		editorUI = uiObj->AddComponent<EditorUI>();
 	}
 
 	SH_EDITOR_API void EditorWorld::SetSelectedObject(core::SObject* obj)
@@ -275,15 +281,13 @@ namespace sh::editor
 		return obj;
 	}
 
-	SH_EDITOR_API auto EditorWorld::GetEditorUI() const -> EditorUI*
+	SH_EDITOR_API auto EditorWorld::GetEditorUI() const -> EditorUI&
 	{
-		return editorUI.get();
+		return *editorUI;
 	}
 
 	SH_EDITOR_API void EditorWorld::Start()
 	{
-		editorUI = std::make_unique<editor::EditorUI>(*this, guiContext);
-
 		grid = AddGameObject("Grid"); // Grid와 Axis는 피킹 렌더러가 추가 되면 안 된다.
 		grid->hideInspector = true;
 		auto meshRenderer = grid->AddComponent<game::MeshRenderer>();
@@ -312,18 +316,6 @@ namespace sh::editor
 		//meshRenderer->SetMaterialPropertyBlock(propBlock);
 
 		Super::Start();
-	}
-
-	SH_EDITOR_API void EditorWorld::Update(float deltaTime)
-	{
-		guiContext.Begin();
-
-		editorUI->Update();
-		editorUI->Render();
-
-		guiContext.End();
-
-		Super::Update(deltaTime);
 	}
 
 	SH_EDITOR_API auto EditorWorld::Serialize() const -> core::Json

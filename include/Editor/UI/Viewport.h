@@ -1,7 +1,5 @@
 ﻿#pragma once
-
 #include "Export.h"
-#include "UI.h"
 
 #include "Core/ISyncable.h"
 #include "Core/Observer.hpp"
@@ -10,6 +8,8 @@
 #include "Render/RenderTexture.h"
 
 #include "Game/Component/PickingCamera.h"
+
+#include "imgui.h"
 
 #include <mutex>
 #include <array>
@@ -25,14 +25,9 @@ namespace sh::editor
 {
 	class EditorWorld;
 
-	class Viewport : 
-		public UI, 
-		public core::ISyncable
+	class Viewport : public core::ISyncable
 	{
 	private:
-		static constexpr int GAME_THREAD = 0;
-		static constexpr int RENDER_THREAD = 1;
-
 		float x, y;
 		float viewportWidthLast;
 		float viewportHeightLast;
@@ -41,7 +36,7 @@ namespace sh::editor
 		render::RenderTexture* renderTex;
 		render::RenderTexture* outlineTex = nullptr;
 
-		VkDescriptorSet viewportDescSet = nullptr;
+		ImTextureID viewportTexture = nullptr;
 		
 		game::EditorCamera* editorCamera = nullptr;
 		game::PickingCamera* pickingCamera = nullptr;
@@ -62,12 +57,14 @@ namespace sh::editor
 		/// @brief 뷰포트 사이즈가 변했을 시 렌더 텍스쳐의 사이즈를 바꾸는 함수.
 		void ChangeViewportSize();
 		void RenderOverlay();
+	protected:
+		SH_EDITOR_API void Sync() override;
 	public:
-		SH_EDITOR_API Viewport(game::ImGUImpl& imgui, EditorWorld& world);
+		SH_EDITOR_API Viewport(EditorWorld& world);
 		SH_EDITOR_API ~Viewport() noexcept;
 
-		SH_EDITOR_API void Update() override;
-		SH_EDITOR_API void Render() override;
+		SH_EDITOR_API void Update();
+		SH_EDITOR_API void Render();
 
 		/// @brief 렌더텍스쳐를 가져오는 함수.
 		/// @return 렌더 텍스쳐
@@ -76,6 +73,5 @@ namespace sh::editor
 		SH_EDITOR_API void Clean();
 
 		SH_EDITOR_API void SyncDirty() override;
-		SH_EDITOR_API void Sync() override;
 	};
 }//namespace

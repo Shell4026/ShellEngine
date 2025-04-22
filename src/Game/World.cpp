@@ -1,6 +1,6 @@
 ﻿#include "World.h"
-
 #include "GameObject.h"
+#include "ImGUImpl.h"
 #include "Component/Camera.h"
 
 #include "Core/GarbageCollection.h"
@@ -12,8 +12,8 @@
 
 namespace sh::game
 {
-	SH_GAME_API World::World(sh::render::Renderer& renderer, const ComponentModule& componentModule) :
-		renderer(renderer), componentModule(componentModule),
+	SH_GAME_API World::World(sh::render::Renderer& renderer, const ComponentModule& componentModule, ImGUImpl& guiContext) :
+		renderer(renderer), componentModule(componentModule), imgui(&guiContext),
 		
 		shaders(renderer), materials(renderer), meshes(renderer), textures(renderer), models(renderer),
 		mainCamera(nullptr),
@@ -25,7 +25,7 @@ namespace sh::game
 		gc->SetRootSet(this);
 	}
 	SH_GAME_API World::World(World&& other) noexcept :
-		renderer(other.renderer), gc(other.gc), componentModule(other.componentModule),
+		renderer(other.renderer), gc(other.gc), componentModule(other.componentModule), imgui(other.imgui),
 		
 		_deltaTime(other._deltaTime), _fixedDeltaTime(other._fixedDeltaTime),
 		objs(std::move(other.objs)), addedObjs(std::move(other.addedObjs)),
@@ -145,6 +145,7 @@ namespace sh::game
 
 		addedObjs.clear();
 
+		imgui->Begin();
 		for (auto& obj : objs)
 		{
 			if (!sh::core::IsValid(obj))
@@ -183,6 +184,7 @@ namespace sh::game
 				continue;
 			obj->LateUpdate();
 		}
+		imgui->End();
 	}
 
 	SH_GAME_API void World::RegisterCamera(Camera* cam)
@@ -291,5 +293,9 @@ namespace sh::game
 			GameObject* obj = static_cast<GameObject*>(objManager->GetSObject(core::UUID{ objJson["uuid"].get<std::string>() }));
 			obj->Deserialize(objJson);
 		}
+	}
+	SH_GAME_API auto World::GetUiContext() const -> ImGUImpl&
+	{
+		return *imgui;
 	}
 }

@@ -33,9 +33,7 @@ namespace sh::editor
 		game::GameObject* grid = nullptr;
 		game::GameObject* axis = nullptr;
 
-		game::ImGUImpl& guiContext;
-
-		std::unique_ptr<EditorUI> editorUI;
+		EditorUI* editorUI = nullptr;
 
 		EditorPickingPass* pickingPass = nullptr;
 		EditorOutlinePass* outlinePass = nullptr;
@@ -61,10 +59,9 @@ namespace sh::editor
 
 		SH_EDITOR_API auto AddGameObject(std::string_view name) -> game::GameObject* override;
 
-		SH_EDITOR_API auto GetEditorUI() const -> EditorUI*;
+		SH_EDITOR_API auto GetEditorUI() const -> EditorUI&;
 
 		SH_EDITOR_API void Start() override;
-		SH_EDITOR_API void Update(float deltaTime) override;
 
 		SH_EDITOR_API auto Serialize() const -> core::Json override;
 		SH_EDITOR_API void Deserialize(const core::Json& json) override;

@@ -33,9 +33,11 @@ namespace sh::game
 
 	SH_GAME_API void GameObject::Awake()
 	{
+		if (bInit)
+			return;
 		for (auto& component : components)
 		{
-			if (core::IsValid(component) && component->active)
+			if (core::IsValid(component) && component->IsActive() && !component->IsInit())
 				component->Awake();
 		}
 		bInit = true;
@@ -45,7 +47,7 @@ namespace sh::game
 	{
 		for (auto& component : components)
 		{
-			if (core::IsValid(component) && component->active)
+			if (core::IsValid(component) && component->IsActive())
 				component->Start();
 		}
 	}
@@ -54,7 +56,7 @@ namespace sh::game
 	{
 		for (auto& component : components)
 		{
-			if(core::IsValid(component) && component->active)
+			if(core::IsValid(component) && component->IsActive())
 				component->OnEnable();
 		}
 	}
@@ -72,7 +74,7 @@ namespace sh::game
 	{
 		for (auto& component : components)
 		{
-			if (core::IsValid(component) && component->active)
+			if (core::IsValid(component) && component->IsActive())
 				component->BeginUpdate();
 		}
 	}
@@ -80,7 +82,7 @@ namespace sh::game
 	{
 		for (auto& component : components)
 		{
-			if (core::IsValid(component) && component->active)
+			if (core::IsValid(component) && component->IsActive())
 				component->FixedUpdate();
 		}
 	}
@@ -88,7 +90,7 @@ namespace sh::game
 	{
 		for (auto& component : components)
 		{
-			if (core::IsValid(component) && component->active)
+			if (core::IsValid(component) && component->IsActive())
 				component->Update();
 		}
 	}
@@ -96,7 +98,7 @@ namespace sh::game
 	{
 		for (auto& component : components)
 		{
-			if (core::IsValid(component) && component->active)
+			if (core::IsValid(component) && component->IsActive())
 				component->LateUpdate();
 		}
 	}

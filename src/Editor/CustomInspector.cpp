@@ -1,4 +1,4 @@
-﻿#include "CustomInspector.h"
+﻿#include "UI/CustomInspector.h"
 
 namespace sh::editor
 {

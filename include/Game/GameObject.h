@@ -18,24 +18,21 @@ namespace sh::game
 	{
 		SCLASS(GameObject)
 	private:
-		std::vector<Component*> components;
-
 		PROPERTY(components)
-		PROPERTY(transform)
+		std::vector<Component*> components;
 		bool bEnable;
 		bool bInit;
 	public:
 		World& world;
 		
+		PROPERTY(transform)
 		Transform* transform;
 
 		const bool& activeSelf;
 
 		mutable core::Observer<false, Component*> onComponentAdd;
-#if SH_EDITOR
 		PROPERTY(hideInspector, core::PropertyOption::invisible)
 		bool hideInspector = false;
-#endif
 	public:
 		SH_GAME_API GameObject(World& world, const std::string& name);
 		SH_GAME_API GameObject(GameObject&& other) noexcept;

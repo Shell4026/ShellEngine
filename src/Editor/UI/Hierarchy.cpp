@@ -1,14 +1,13 @@
-﻿#include "Game/PCH.h"
-#include "Hierarchy.h"
+﻿#include "UI/Hierarchy.h"
+#include "UI/CustomHierarchy.h"
 #include "EditorWorld.h"
-#include "CustomHierarchy.h"
 
+#include "Game/ImGUImpl.h"
 #include "Game/GameObject.h"
 
 namespace sh::editor
 {
-	SH_EDITOR_API Hierarchy::Hierarchy(game::ImGUImpl& imgui, EditorWorld& world) :
-		UI(imgui),
+	Hierarchy::Hierarchy(EditorWorld& world) :
 		world(world),
 		isDocking(false)
 	{

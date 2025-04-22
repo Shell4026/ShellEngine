@@ -37,6 +37,8 @@ namespace sh::game
 		constexpr static uint32_t SYNC_PRIORITY = 9999;
 	private:
 		void WindowInit();
+	protected:
+		SH_GAME_API void Sync() override;
 	public:
 		//TODO: 다른 렌더러 구현
 		SH_GAME_API ImGUImpl(window::Window& window, render::Renderer& renderer);
@@ -55,6 +57,5 @@ namespace sh::game
 		SH_GAME_API auto GetContext() const -> ImGuiContext*;
 
 		SH_GAME_API void SyncDirty() override;
-		SH_GAME_API void Sync() override;
 	};
 }

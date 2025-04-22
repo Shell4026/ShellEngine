@@ -1,16 +1,16 @@
 ﻿#pragma once
-
-#include "UI.h"
+#include "Export.h"
 
 #include <string>
 #include <vector>
 #include <queue>
 #include <functional>
 #include <filesystem>
-
 namespace sh::editor
 {
-	class ExplorerUI : public UI
+	class EditorWorld;
+
+	class ExplorerUI
 	{
 	public:
 		enum class OpenMode
@@ -35,10 +35,10 @@ namespace sh::editor
 		inline void RenderLeftSide();
 		inline void RenderRightSide();
 	public:
-		SH_EDITOR_API ExplorerUI(game::ImGUImpl& imgui);
+		SH_EDITOR_API ExplorerUI(EditorWorld& world);
 
-		SH_EDITOR_API void Update() override;
-		SH_EDITOR_API void Render() override;
+		SH_EDITOR_API void Update();
+		SH_EDITOR_API void Render();
 
 		SH_EDITOR_API void Open(OpenMode mode = OpenMode::Select);
 

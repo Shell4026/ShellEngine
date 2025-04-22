@@ -1,5 +1,6 @@
-﻿#include "ExplorerUI.h"
+﻿#include "UI/ExplorerUI.h"
 #include "EditorResource.h"
+#include "EditorWorld.h"
 
 #include "Core/FileSystem.h"
 
@@ -7,11 +8,9 @@
 #include <algorithm>
 namespace sh::editor
 {
-    SH_EDITOR_API ExplorerUI::ExplorerUI(game::ImGUImpl& imgui) :
-        UI(imgui),
+    SH_EDITOR_API ExplorerUI::ExplorerUI(EditorWorld& world) :
 		currentPath(std::filesystem::current_path())
 	{
-
 	}
 
 	void ExplorerUI::UpdateDirectoryEntries()

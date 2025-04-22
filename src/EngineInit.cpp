@@ -19,6 +19,8 @@
 
 #if SH_EDITOR
 #include "Editor/EditorWorld.h"
+#else
+#include "Game/World.h"
 #endif
 
 namespace sh
@@ -131,7 +133,7 @@ namespace sh
 #if SH_EDITOR
 		world = core::SObject::Create<editor::EditorWorld>(*renderer, *componentModule, *gui);
 #else
-		world = core::SObject::Create<game::World>(*renderer.get(), *componentModule);
+		world = core::SObject::Create<game::World>(*renderer.get(), *componentModule, *gui);
 #endif
 		gc->SetRootSet(world);
 

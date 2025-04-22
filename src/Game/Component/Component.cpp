@@ -1,5 +1,4 @@
-﻿#include "PCH.h"
-#include "Component/Component.h"
+﻿#include "Component/Component.h"
 
 #include "GameObject.h"
 
@@ -8,7 +7,6 @@ namespace sh::game
 	SH_GAME_API Component::Component(GameObject& object) :
 		gameObject(object), world(object.world),
 		
-		active(bEnable),
 		bInit(false), bEnable(true)
 	{
 	}
@@ -17,7 +15,6 @@ namespace sh::game
 		SObject(other),
 		gameObject(other.gameObject), world(other.world),
 
-		active(bEnable),
 		bInit(false), bEnable(other.bEnable)
 	{
 	}
@@ -26,11 +23,15 @@ namespace sh::game
 		SObject(std::move(other)),
 		gameObject(other.gameObject), world(other.world),
 
-		active(bEnable),
 		bInit(other.bInit), bEnable(other.bEnable)
 	{
 		other.bEnable = false;
 		other.bInit = false;
+	}
+
+	SH_GAME_API auto Component::IsActive() const -> bool
+	{
+		return bEnable;
 	}
 
 	SH_GAME_API void Component::SetActive(bool b)
@@ -47,8 +48,14 @@ namespace sh::game
 		}
 	}
 
+	SH_GAME_API auto Component::IsInit() const -> bool
+	{
+		return bInit;
+	}
+
 	SH_GAME_API void Component::Awake()
 	{
+		bInit = true;
 	}
 	SH_GAME_API void Component::Start()
 	{

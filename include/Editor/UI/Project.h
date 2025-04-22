@@ -1,7 +1,5 @@
 ﻿#pragma once
-
 #include "Export.h"
-#include "UI.h"
 
 #include "Core/SContainer.hpp"
 
@@ -9,17 +7,14 @@
 
 #include <string>
 #include <filesystem>
-
 namespace sh::editor
 {
 	class EditorWorld;
-	class Project : public UI
+	class Project
 	{
 	private:
-		EditorWorld& world;
 		static constexpr const ImVec4 iconBackgroundColor{ 0, 0, 0, 0 };
-		
-		std::string dir;
+
 		std::filesystem::path rootPath;
 		std::filesystem::path assetPath;
 		std::filesystem::path currentPath;
@@ -33,8 +28,10 @@ namespace sh::editor
 		float iconSize = 50.0f;
 
 		static bool bInitResource;
+		bool isOpen = false;
 	public:
 		static constexpr const char* name = "Project";
+		EditorWorld& world;
 	private:
 		void InitResources();
 		void GetAllFiles(const std::filesystem::path& path);
@@ -50,10 +47,10 @@ namespace sh::editor
 		inline void ShowRightClickPopup();
 		inline void RenderNameBar();
 	public:
-		SH_EDITOR_API Project(game::ImGUImpl& imgui, EditorWorld& world);
+		SH_EDITOR_API Project(EditorWorld& world);
 
-		SH_EDITOR_API void Update() override;
-		SH_EDITOR_API void Render() override;
+		SH_EDITOR_API void Update();
+		SH_EDITOR_API void Render();
 
 		/// @brief 새 프로젝트를 만드는 함수
 		/// @param dir 경로
@@ -62,5 +59,9 @@ namespace sh::editor
 
 		SH_EDITOR_API void SaveWorld();
 		SH_EDITOR_API void LoadWorld();
+
+		SH_EDITOR_API auto IsProjectOpen() const -> bool;
+
+		SH_EDITOR_API void Build();
 	};
 }

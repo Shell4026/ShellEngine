@@ -42,18 +42,18 @@ namespace sh::game
 	public:
 		GameObject& gameObject;
 		World& world;
-		const bool& active;
-#if SH_EDITOR
 		PROPERTY(hideInspector, core::PropertyOption::invisible)
 		bool hideInspector = false;
-#endif
 	public:
 		SH_GAME_API Component(GameObject& object);
 		SH_GAME_API virtual ~Component() = default;
 		SH_GAME_API Component(const Component& other);
 		SH_GAME_API Component(Component&& other) noexcept;
 
+		SH_GAME_API auto IsActive() const -> bool;
 		SH_GAME_API void SetActive(bool b);
+
+		SH_GAME_API auto IsInit() const -> bool;
 
 		SH_GAME_API void Awake() override;
 		SH_GAME_API void Start() override;

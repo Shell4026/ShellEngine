@@ -1,8 +1,14 @@
 ﻿set(SH_EDITOR TRUE CACHE BOOL "Is Editor?")
 
-add_executable(ShellEngine main.cpp EngineInit.cpp)
+if (SH_EDITOR)
+set(EXE_NAME ShellEngine)
+else()
+set(EXE_NAME ShellGame)
+endif()
 
-target_include_directories(ShellEngine PUBLIC ${CMAKE_SOURCE_DIR}/include)
+add_executable(${EXE_NAME} main.cpp EngineInit.cpp)
+
+target_include_directories(${EXE_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/include)
 #target_precompile_headers(ShellEngine PUBLIC ${CMAKE_SOURCE_DIR}/include/Engine.h)
 
 message(STATUS "[ShellEngine] Compiler: ${CMAKE_CXX_COMPILER_ID}")
@@ -21,24 +27,24 @@ FetchContent_MakeAvailable(Fmt)
 
 
 add_subdirectory(Core)
-target_link_libraries(ShellEngine PUBLIC ShellEngine::Core)
+target_link_libraries(${EXE_NAME} PUBLIC ShellEngine::Core)
 
 add_subdirectory(Window)
-target_link_libraries(ShellEngine PUBLIC ShellEngine::Window)
+target_link_libraries(${EXE_NAME} PUBLIC ShellEngine::Window)
 
 add_subdirectory(Render)
-target_link_libraries(ShellEngine PUBLIC ShellEngine::Render)
+target_link_libraries(${EXE_NAME} PUBLIC ShellEngine::Render)
 
 add_subdirectory(Physics)
-target_link_libraries(ShellEngine PUBLIC ShellEngine::Physics)
+target_link_libraries(${EXE_NAME} PUBLIC ShellEngine::Physics)
 
 add_subdirectory(Game)
-target_link_libraries(ShellEngine PUBLIC ShellEngine::Game)
+target_link_libraries(${EXE_NAME} PUBLIC ShellEngine::Game)
 
 if(SH_EDITOR)
 target_compile_definitions(ShellEngineCore PUBLIC SH_EDITOR)
 add_subdirectory(Editor)
-target_link_libraries(ShellEngine PUBLIC ShellEngine::Editor)
+target_link_libraries(${EXE_NAME} PUBLIC ShellEngine::Editor)
 endif()
 
 file(GLOB_RECURSE spvFiles "${CMAKE_SOURCE_DIR}/resource/shaders/*.shader")

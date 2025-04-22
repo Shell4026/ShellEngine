@@ -1,8 +1,9 @@
-﻿#include "Project.h"
+﻿#include "UI/Project.h"
 #include "EditorWorld.h"
 #include "EditorResource.h"
 #include "AssetDatabase.h"
 #include "AssetExtensions.h"
+#include "BuildSystem.h"
 
 #include "Render/Renderer.h"
 #include "Render/Model.h"
@@ -13,8 +14,8 @@ namespace sh::editor
 {
 	bool Project::bInitResource = false;
 
-	Project::Project(game::ImGUImpl& imgui, EditorWorld& world) :
-		UI(imgui), world(world),
+	Project::Project(EditorWorld& world) :
+		world(world),
 		rootPath(std::filesystem::current_path()),
 		currentPath(rootPath)
 	{
@@ -284,6 +285,8 @@ namespace sh::editor
 
 	SH_EDITOR_API void Project::OpenProject(const std::filesystem::path& dir)
 	{
+		isOpen = true;
+
 		rootPath = dir;
 		assetPath = rootPath / "Assets";
 		currentPath = dir;
@@ -305,5 +308,14 @@ namespace sh::editor
 		{
 			world.Deserialize(core::Json::parse(file.value()));
 		}
+	}
+	SH_EDITOR_API auto Project::IsProjectOpen() const -> bool
+	{
+		return isOpen;
+	}
+	SH_EDITOR_API void Project::Build()
+	{
+		BuildSystem buildSystem{};
+		buildSystem.Build(*this);
 	}
 }

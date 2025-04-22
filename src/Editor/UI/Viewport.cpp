@@ -1,4 +1,4 @@
-﻿#include "Viewport.h"
+﻿#include "UI/Viewport.h"
 #include "EditorWorld.h"
 
 #include "Core/Logger.h"
@@ -14,11 +14,10 @@
 #include "Render/VulkanImpl/VulkanTextureBuffer.h"
 namespace sh::editor
 {
-	Viewport::Viewport(game::ImGUImpl& imgui, EditorWorld& world) :
-		UI(imgui),
+	Viewport::Viewport(EditorWorld& world) :
 		world(world),
 
-		viewportDescSet(), renderTex(),
+		renderTex(),
 		x(0.f), y(0.f),
 		viewportWidthLast(100.f), viewportHeightLast(100.f),
 		bDirty(false), bMouseDown(false), bFocus(false)
@@ -28,7 +27,8 @@ namespace sh::editor
 
 		auto vkTexBuffer = static_cast<render::vk::VulkanTextureBuffer*>(renderTex->GetTextureBuffer());
 		auto imgBuffer = vkTexBuffer->GetImageBuffer();
-		viewportDescSet = ImGui_ImplVulkan_AddTexture(imgBuffer->GetSampler(), imgBuffer->GetImageView(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+		viewportTexture = ImGui_ImplVulkan_AddTexture(imgBuffer->GetSampler(), imgBuffer->GetImageView(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 		pickingListener.SetCallback([&world](game::PickingCamera::PixelData pixel)
 			{
@@ -153,13 +153,11 @@ namespace sh::editor
 			}
 			ChangeViewportSize();
 		}
-		ImGui::Image((ImTextureID)viewportDescSet, { width, height });
+		ImGui::Image(viewportTexture, { width, height });
 		ImGui::PopStyleVar();
 		RenderOverlay();
 
 		ImGui::End();
-
-		imgui.SyncDirty();
 	}
 
 	auto Viewport::GetRenderTexture() -> render::RenderTexture&
@@ -169,10 +167,10 @@ namespace sh::editor
 
 	void Viewport::Clean()
 	{
-		if (viewportDescSet)
+		if (viewportTexture)
 		{
-			ImGui_ImplVulkan_RemoveTexture(viewportDescSet);
-			viewportDescSet = nullptr;
+			ImGui_ImplVulkan_RemoveTexture(static_cast<VkDescriptorSet>(viewportTexture));
+			viewportTexture = nullptr;
 		}
 	}
 
@@ -187,19 +185,19 @@ namespace sh::editor
 	}
 	void Viewport::Sync()
 	{
-		ImGui_ImplVulkan_RemoveTexture(viewportDescSet);
-		VkDescriptorSet viewportDescSetLast = viewportDescSet;
+		ImGui_ImplVulkan_RemoveTexture(static_cast<VkDescriptorSet>(viewportTexture));
+		VkDescriptorSet viewportDescSetLast = static_cast<VkDescriptorSet>(viewportTexture);
 
 		auto vkTexBuffer = static_cast<render::vk::VulkanTextureBuffer*>(renderTex->GetTextureBuffer());
 		auto imgBuffer = vkTexBuffer->GetImageBuffer();
-		viewportDescSet = ImGui_ImplVulkan_AddTexture(imgBuffer->GetSampler(), imgBuffer->GetImageView(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		viewportTexture = ImGui_ImplVulkan_AddTexture(imgBuffer->GetSampler(), imgBuffer->GetImageView(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 		if (viewportDescSetLast != nullptr)
 		{
 			for (auto& cmdBuffer : imguiDrawList->CmdBuffer)
 			{
 				if (cmdBuffer.TextureId == (ImTextureID)viewportDescSetLast)
-					cmdBuffer.TextureId = (ImTextureID)viewportDescSet;
+					cmdBuffer.TextureId = viewportTexture;
 			}
 			viewportDescSetLast = nullptr;
 		}
