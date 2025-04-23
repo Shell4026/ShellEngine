@@ -67,7 +67,7 @@ namespace sh::editor
 		}
 		return result;
 	}
-	inline void Project::RenderParentFolder()
+	void Project::RenderParentFolder()
 	{
 		ImGui::BeginGroup();
 		ImGui::ImageButton("../", *folderIcon, ImVec2{ iconSize, iconSize }, ImVec2{ 0, 0 }, ImVec2{ 1, 1 }, iconBackgroundColor);
@@ -84,7 +84,7 @@ namespace sh::editor
 		ImGui::EndGroup();
 	}
 
-	inline void Project::SetDragItem(const std::filesystem::path& path)
+	void Project::SetDragItem(const std::filesystem::path& path)
 	{
 		void* item = nullptr;
 		std::string pathStr = path.u8string();
@@ -124,7 +124,7 @@ namespace sh::editor
 
 	}
 
-	inline auto Project::GetIcon(const std::filesystem::path& path) const -> const game::GUITexture*
+	auto Project::GetIcon(const std::filesystem::path& path) const -> const game::GUITexture*
 	{
 		std::string extension = path.extension().string();
 		const game::GUITexture* icon = folderIcon;
@@ -140,7 +140,7 @@ namespace sh::editor
 		return icon;
 	}
 
-	inline bool Project::RenderFile(const std::filesystem::path& path, float& cursorX, float spacing, float width)
+	bool Project::RenderFile(const std::filesystem::path& path, float& cursorX, float spacing, float width)
 	{
 		cursorX = ImGui::GetCursorPosX();
 		if (cursorX + iconSize > width)
@@ -190,7 +190,7 @@ namespace sh::editor
 		return true;
 	}
 
-	inline void Project::ShowRightClickPopup()
+	void Project::ShowRightClickPopup()
 	{
 		if (ImGui::BeginPopupContextWindow("ProjectRightClickPopup"))
 		{
@@ -220,7 +220,7 @@ namespace sh::editor
 		}
 	}
 
-	inline void Project::RenderNameBar()
+	void Project::RenderNameBar()
 	{
 		ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_ChildBg, ImVec4{ 0.2, 0.2, 0.2, 1 });
 
