@@ -140,6 +140,26 @@ namespace sh::core
 			taskFutures[i].wait();
 	}
 
+	void GarbageCollection::CheckVectors()
+	{
+		for (auto v : trackingVectors)
+		{
+			std::vector<SObject*>& vector = *reinterpret_cast<std::vector<SObject*>*>(v);
+			for (int i = 0; i < vector.size(); ++i)
+			{
+				SObject* obj = vector[i];
+				if (obj == nullptr)
+					continue;
+				if (obj->bPendingKill.load(std::memory_order::memory_order_acquire))
+				{
+					vector[i] = nullptr;
+					continue;
+				}
+				SetRootSet(obj);
+			}
+		}
+	}
+
 	GarbageCollection::GarbageCollection() :
 		objs(SObjectManager::GetInstance()->objs)
 	{
@@ -170,9 +190,9 @@ namespace sh::core
 		this->tick = 0;
 	}
 
-	SH_CORE_API void GarbageCollection::RemoveRootSet(SObject* obj)
+	SH_CORE_API void GarbageCollection::RemoveRootSet(const SObject* obj)
 	{
-		auto it = rootSetIdx.find(obj);
+		auto it = rootSetIdx.find(const_cast<SObject*>(obj));
 		if (it != rootSetIdx.end())
 		{
 			std::size_t idx = it->second;
@@ -195,10 +215,23 @@ namespace sh::core
 		for (auto& [id, obj] : objs)
 			obj->bMark.clear(std::memory_order::memory_order_relaxed);
 
-		if (rootSets.size() > 100)
+		CheckVectors();
+
+		if (rootSets.size() > 50)
 			MarkMultiThread();
 		else
 			Mark(0, rootSets.size());
+
+		for (auto v : trackingVectors)
+		{
+			std::vector<SObject*>& vector = *reinterpret_cast<std::vector<SObject*>*>(v);
+			for (SObject* obj : vector)
+			{
+				if (obj == nullptr)
+					continue;
+				RemoveRootSet(obj);
+			}
+		}
 
 		// 모든 SObject를 순회하며 마킹이 안 됐으면 제거
 		std::queue<SObject*> deleted;

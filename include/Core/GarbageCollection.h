@@ -1,11 +1,11 @@
 ﻿#pragma once
-
 #include "Export.h"
 #include "UUID.h"
 #include "SContainer.hpp"
 #include "Singleton.hpp"
 
 #include <cstdint>
+#include <algorithm>
 namespace sh::core::reflection
 {
 	class Property;
@@ -24,6 +24,7 @@ namespace sh::core
 		SHashMap<UUID, SObject*>& objs;
 		SHashMap<SObject*, std::size_t> rootSetIdx;
 		std::vector<SObject*> rootSets;
+		std::vector<void*> trackingVectors;
 
 		uint32_t elapseTime = 0;
 		uint32_t tick = 0;
@@ -39,6 +40,7 @@ namespace sh::core
 		void ContainerMark(std::queue<SObject*>& bfs, SObject* parent, int depth, int maxDepth, sh::core::reflection::PropertyIterator& it);
 		void Mark(std::size_t start, std::size_t end);
 		void MarkMultiThread();
+		void CheckVectors();
 	protected:
 		SH_CORE_API GarbageCollection();
 	public:
@@ -54,7 +56,7 @@ namespace sh::core
 
 		/// @brief 루트셋에서 해당 객체를 제외하는 함수.
 		/// @param obj SObject 포인터
-		SH_CORE_API void RemoveRootSet(SObject* obj);
+		SH_CORE_API void RemoveRootSet(const SObject* obj);
 
 		/// @brief GC를 갱신하며 지정된 시간이 흐르면 Collect()가 호출 된다.
 		SH_CORE_API void Update();
@@ -71,5 +73,23 @@ namespace sh::core
 
 		/// @brief 이전에 GC를 수행하는데 걸린 시간(ms)을 반환 하는 함수
 		SH_CORE_API auto GetElapsedTime() -> uint32_t;
+
+		template<typename T, typename = std::enable_if_t<std::is_base_of_v<SObject, T>>>
+		void AddVectorTracking(std::vector<T*>& vector)
+		{
+			trackingVectors.push_back(reinterpret_cast<void*>(&vector));
+		}
+		template<typename T, typename = std::enable_if_t<std::is_base_of_v<SObject, T>>>
+		void RemoveVectorTracking(const std::vector<T*>& vector)
+		{
+			for (int i = 0; i < trackingVectors.size(); ++i)
+			{
+				if (trackingVectors[i] == &vector)
+				{
+					std::swap(trackingVectors[i], trackingVectors[trackingVectors.size() - 1]);
+				}
+			}
+			trackingVectors.pop_back();
+		}
 	};
 }
