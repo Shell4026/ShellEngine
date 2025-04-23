@@ -187,6 +187,15 @@ namespace sh::game
 		imgui->End();
 	}
 
+	SH_GAME_API void World::AfterSync()
+	{
+		while (!afterSyncTasks.empty())
+		{
+			afterSyncTasks.front()();
+			afterSyncTasks.pop();
+		}
+	}
+
 	SH_GAME_API void World::RegisterCamera(Camera* cam)
 	{
 		if (!core::IsValid(cam))
@@ -234,6 +243,11 @@ namespace sh::game
 		return lightOctree;
 	}
 
+	SH_GAME_API void World::AddAfterSyncTask(const std::function<void()>& func)
+	{
+		afterSyncTasks.push(func);
+	}
+
 	SH_GAME_API auto World::Serialize() const -> core::Json
 	{
 		core::Json mainJson{ Super::Serialize() };
@@ -241,7 +255,7 @@ namespace sh::game
 		core::Json objsJson = core::Json::array();
 		for (auto obj : objs)
 		{
-			if (!core::IsValid(obj) || obj->GetName() == "_Helper" || obj->GetName() == "Grid" || obj->GetName() == "EditorCamera" || obj->GetName() == "PickingCamera" || obj->GetName() == "Axis")
+			if (obj->bNotSave)
 				continue;
 			core::Json objJson{ obj->Serialize() };
 			objsJson.push_back(objJson);
@@ -261,30 +275,64 @@ namespace sh::game
 		for (auto& objJson : json["objs"])
 		{
 			std::string name = objJson["name"].get<std::string>();
-			if (name == "_Helper" || name == "Grid" || name == "EditorCamera" || name == "PickingCamera" || name == "_Axis")
-				continue;
-			auto obj = this->AddGameObject(name);
-			obj->SetUUID(core::UUID{ objJson["uuid"].get<std::string>() });
+			core::UUID objuuid{ objJson["uuid"].get<std::string>() };
 
-			for (auto& compJson : objJson["Components"])
+			auto sobj = objManager->GetSObject(objuuid);
+			if (sobj)
 			{
-				std::string name = compJson["name"].get<std::string>();
-				std::string type = compJson["type"].get<std::string>();
-				std::string uuid = compJson["uuid"].get<std::string>();
-				if (type == "Transform") // 트랜스폼은 게임오브젝트 생성 시 이미 만들어져있다.
+				GameObject* obj = static_cast<GameObject*>(sobj);
+				for (auto component : obj->GetComponents())
 				{
-					obj->transform->SetUUID(core::UUID{ uuid });
-					continue;
+					if (component->GetType() == Transform::GetStaticType())
+						continue;
+					component->SetUUID(core::UUID::Generate());
+					component->Destroy();
 				}
-				auto compType = ComponentModule::GetInstance()->GetComponent(name);
-				if (compType == nullptr)
+
+				for (auto& compJson : objJson["Components"])
 				{
-					SH_ERROR_FORMAT("Not found component - {}", type);
-					continue;
+					std::string name{ compJson["name"].get<std::string>() };
+					std::string type{ compJson["type"].get<std::string>() };
+					core::UUID uuid{ compJson["uuid"].get<std::string>() };
+					if (type == "Transform") // 트랜스폼은 게임오브젝트 생성 시 이미 만들어져있다.
+						continue;
+
+					auto compType = ComponentModule::GetInstance()->GetComponent(name);
+					if (compType == nullptr)
+					{
+						SH_ERROR_FORMAT("Not found component - {}", type);
+						continue;
+					}
+					Component* component = compType->Create(*obj);
+					component->SetUUID(core::UUID{ uuid });
+					obj->AddComponent(component);
 				}
-				Component* component = compType->Create(*obj);
-				component->SetUUID(core::UUID{ uuid });
-				obj->AddComponent(component);
+			}
+			else
+			{
+				auto obj = this->AddGameObject(name);
+				obj->SetUUID(objuuid);
+
+				for (auto& compJson : objJson["Components"])
+				{
+					std::string name = compJson["name"].get<std::string>();
+					std::string type = compJson["type"].get<std::string>();
+					std::string uuid = compJson["uuid"].get<std::string>();
+					if (type == "Transform") // 트랜스폼은 게임오브젝트 생성 시 이미 만들어져있다.
+					{
+						obj->transform->SetUUID(core::UUID{ uuid });
+						continue;
+					}
+					auto compType = ComponentModule::GetInstance()->GetComponent(name);
+					if (compType == nullptr)
+					{
+						SH_ERROR_FORMAT("Not found component - {}", type);
+						continue;
+					}
+					Component* component = compType->Create(*obj);
+					component->SetUUID(core::UUID{ uuid });
+					obj->AddComponent(component);
+				}
 			}
 		}
 		// 역 직렬화

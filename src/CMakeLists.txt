@@ -8,6 +8,8 @@ endif()
 
 add_executable(${EXE_NAME} main.cpp EngineInit.cpp)
 
+set_target_properties(${EXE_NAME} PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+
 target_include_directories(${EXE_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/include)
 #target_precompile_headers(ShellEngine PUBLIC ${CMAKE_SOURCE_DIR}/include/Engine.h)
 
@@ -45,6 +47,14 @@ if(SH_EDITOR)
 target_compile_definitions(ShellEngineCore PUBLIC SH_EDITOR)
 add_subdirectory(Editor)
 target_link_libraries(${EXE_NAME} PUBLIC ShellEngine::Editor)
+
+add_custom_target(EngineTarget ALL
+    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different 
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_BINARY_DIR}/bin/include
+)
+
+file(COPY ${CMAKE_SOURCE_DIR}/resource/ProjectTemplate DESTINATION ${CMAKE_BINARY_DIR}/bin)
 endif()
 
 file(GLOB_RECURSE spvFiles "${CMAKE_SOURCE_DIR}/resource/shaders/*.shader")

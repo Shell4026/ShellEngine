@@ -20,8 +20,16 @@ add_library(ShellEngine::Window ALIAS ShellEngineWindow)
 
 if(WIN32)
 	target_link_libraries(ShellEngineWindow PRIVATE Winmm)
+
+	set_target_properties(ShellEngineWindow PROPERTIES 
+	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/lib"
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 elseif(UNIX)
 	target_link_libraries(ShellEngineWindow PRIVATE ${X11_LIBRARIES})
+
+	set_target_properties(ShellEngineWindow PROPERTIES 
+	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/lib"
+	LIBRARY_OUTPUT_DIRECTORY  "${CMAKE_BINARY_DIR}/bin")
 endif()
 
 target_include_directories(ShellEngineWindow PRIVATE ${CMAKE_SOURCE_DIR}/include)

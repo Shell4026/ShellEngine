@@ -6,6 +6,16 @@ file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/include/*.h)
 add_library(ShellEnginePhysics SHARED ${SRC} ${HEADERS})
 add_library(ShellEngine::Physics ALIAS ShellEnginePhysics)
 
+if(WIN32)
+set_target_properties(ShellEnginePhysics PROPERTIES 
+	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/lib"
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+elseif(UNIX)
+set_target_properties(ShellEnginePhysics PROPERTIES 
+	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/lib"
+	LIBRARY_OUTPUT_DIRECTORY  "${CMAKE_BINARY_DIR}/bin")
+endif()
+
 target_link_libraries(ShellEnginePhysics PUBLIC ShellEngine::Core)
 
 FetchContent_Declare(

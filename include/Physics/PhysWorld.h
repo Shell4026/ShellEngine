@@ -1,6 +1,7 @@
 ﻿#pragma once
-
 #include "Export.h"
+
+#include "reactphysics3d/reactphysics3d.h"
 
 namespace sh::phys
 {

@@ -168,12 +168,14 @@ namespace sh::editor
 		game::GameObject* camObj = AddGameObject("EditorCamera");
 		camObj->transform->SetPosition({ 2.f, 2.f, 2.f });
 		camObj->hideInspector = true;
+		camObj->bNotSave = true;
 		editorCamera = camObj->AddComponent<game::EditorCamera>();
 		editorCamera->SetUUID(core::UUID{ "61b7bc9f9fd2ca27dcbad8106745f62a" });
 		editorCamera->SetRenderTexture(viewportTexture);
 		this->SetMainCamera(editorCamera);
 
 		auto PickingCamObj = AddGameObject("PickingCamera");
+		PickingCamObj->bNotSave = true;
 		PickingCamObj->transform->SetParent(camObj->transform);
 		PickingCamObj->transform->SetPosition({ 0.f, 0.f, 0.f });
 		pickingCamera = PickingCamObj->AddComponent<game::PickingCamera>();
@@ -202,6 +204,7 @@ namespace sh::editor
 
 		game::GameObject* uiObj = AddGameObject("EditorUI");
 		uiObj->hideInspector = true;
+		uiObj->bNotSave = true;
 		editorUI = uiObj->AddComponent<EditorUI>();
 	}
 
@@ -290,11 +293,14 @@ namespace sh::editor
 	{
 		grid = AddGameObject("Grid"); // Grid와 Axis는 피킹 렌더러가 추가 되면 안 된다.
 		grid->hideInspector = true;
+		grid->bNotSave = true;
 		auto meshRenderer = grid->AddComponent<game::MeshRenderer>();
 		meshRenderer->SetMesh(this->meshes.GetResource("GridMesh"));
 		meshRenderer->SetMaterial(this->materials.GetResource("GridMaterial"));
 
-		axis = Super::AddGameObject("Axis");
+		axis = AddGameObject("Axis");
+		axis->hideInspector = true;
+		axis->bNotSave = true;
 		axis->transform->SetPosition(0.f, 0.01f, 0.f);
 		axis->transform->SetParent(grid->transform);
 		auto line = axis->AddComponent<game::LineRenderer>();

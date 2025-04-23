@@ -8,6 +8,16 @@ file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/include/Editor/*
 add_library(ShellEngineEditor SHARED ${SRC} ${COMPONENT_SOURCE} ${UI_SOURCE} ${HEADERS})
 add_library(ShellEngine::Editor ALIAS ShellEngineEditor)
 
+if(WIN32)
+set_target_properties(ShellEngineEditor PROPERTIES 
+	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/lib"
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+elseif(UNIX)
+set_target_properties(ShellEngineEditor PROPERTIES 
+	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/lib"
+	LIBRARY_OUTPUT_DIRECTORY  "${CMAKE_BINARY_DIR}/bin")
+endif()
+
 target_link_libraries(ShellEngineEditor PUBLIC ShellEngine::Core)
 target_link_libraries(ShellEngineEditor PUBLIC ShellEngine::Window)
 target_link_libraries(ShellEngineEditor PUBLIC ShellEngine::Render)

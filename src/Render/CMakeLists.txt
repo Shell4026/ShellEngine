@@ -7,6 +7,16 @@ file(GLOB VULKAN_HEADERS CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/include/Render/Vu
 add_library(ShellEngineRender SHARED ${SRC} ${HEADERS} ${VULKAN_SRC} ${VULKAN_HEADERS})
 add_library(ShellEngine::Render ALIAS ShellEngineRender)
 
+if(WIN32)
+set_target_properties(ShellEngineRender PROPERTIES 
+	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/lib"
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+elseif(UNIX)
+set_target_properties(ShellEngineRender PROPERTIES 
+	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/lib"
+	LIBRARY_OUTPUT_DIRECTORY  "${CMAKE_BINARY_DIR}/bin")
+endif()
+
 target_link_libraries(ShellEngineRender PUBLIC ShellEngine::Core)
 target_link_libraries(ShellEngineRender PUBLIC ShellEngine::Window)
 

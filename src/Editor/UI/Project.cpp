@@ -3,12 +3,16 @@
 #include "EditorResource.h"
 #include "AssetDatabase.h"
 #include "AssetExtensions.h"
-#include "BuildSystem.h"
+
+#include "Core/ModuleLoader.h"
+#include "Core/FileSystem.h"
+#include "Core/GarbageCollection.h"
 
 #include "Render/Renderer.h"
 #include "Render/Model.h"
 
-#include "Core/FileSystem.h"
+#include "Game/ComponentModule.h"
+#include "Game/GameObject.h"
 
 namespace sh::editor
 {
@@ -228,6 +232,66 @@ namespace sh::editor
 		ImGui::PopStyleColor();
 	}
 
+	void Project::LoadUserModule()
+	{
+		game::ComponentModule* componentModule = game::ComponentModule::GetInstance();
+
+		for (const auto& componentInfo : userComponents)
+		{
+			componentModule->DestroyComponent(componentInfo.first);
+		}
+		userComponents.clear();
+#if _WIN32
+		auto dllPath = binaryPath / "ShellEngineUser.dll";
+		if (!std::filesystem::exists(dllPath))
+		{
+			SH_INFO("ShellEngineUser.dll not found");
+			return;
+		}
+		auto pluginPath = binaryPath / "temp.dll";
+		std::filesystem::copy_file(dllPath, pluginPath, std::filesystem::copy_options::overwrite_existing);
+#elif __linux__
+		auto dllPath = binaryPath / "ShellEngineUser.so";
+		if (!std::filesystem::exists(dllPath))
+		{
+			SH_INFO("ShellEngineUser.so not found");
+			return;
+		}
+		auto pluginPath = binaryPath / "temp.so";
+		std::filesystem::copy_file(dllPath, pluginPath, std::filesystem::copy_options::overwrite_existing);
+#endif
+		core::ModuleLoader loader{};
+		auto plugin = loader.Load(pluginPath);
+		assert(plugin.has_value());
+		if (!plugin.has_value())
+			SH_ERROR_FORMAT("Can't load module: {}", pluginPath.u8string());
+		else
+		{
+			userPlugin = std::move(plugin.value());
+
+			for (const auto& componentInfo : componentModule->GetWaitingComponents())
+				userComponents.push_back({ componentInfo.name, &componentInfo.type });
+
+			componentModule->RegisterWaitingComponents();
+		}
+	}
+
+	void Project::CopyProjectTemplate(const std::filesystem::path& targetDir)
+	{
+		std::filesystem::path projectTemplate{ std::filesystem::current_path() / "ProjectTemplate" };
+		core::FileSystem::CopyAllFiles(projectTemplate, targetDir);
+
+		auto cmake = core::FileSystem::LoadText(targetDir / "CMakeLists.txt");
+		if (cmake.has_value())
+		{
+			std::string cmakeStr = std::move(cmake.value());
+			std::string directoryStr = "\"Here is directory\"";
+			auto it = cmakeStr.find(directoryStr);
+			cmakeStr = cmakeStr.replace(it, directoryStr.length(), std::filesystem::current_path().u8string());
+			core::FileSystem::SaveText(cmakeStr, targetDir / "CMakeLists.txt");
+		}
+	}
+
 	SH_EDITOR_API void Project::Update()
 	{
 	}
@@ -276,8 +340,10 @@ namespace sh::editor
 		if (!std::filesystem::create_directory(dir))
 		{
 			SH_INFO_FORMAT("Can't create directory: {}", dir.u8string());
-			return;
 		}
+		
+		CopyProjectTemplate(dir);
+
 		rootPath = dir;
 		currentPath = dir;
 		GetAllFiles(currentPath);
@@ -288,11 +354,14 @@ namespace sh::editor
 		isOpen = true;
 
 		rootPath = dir;
-		assetPath = rootPath / "Assets";
+		assetPath = rootPath / "assets";
+		binaryPath = rootPath / "bin";
 		currentPath = dir;
 		GetAllFiles(currentPath);
 
-		AssetDatabase::LoadAllAssets(world, dir, true);
+		LoadUserModule();
+
+		AssetDatabase::LoadAllAssets(world, assetPath, true);
 	}
 
 	SH_EDITOR_API void Project::SaveWorld()
@@ -303,19 +372,60 @@ namespace sh::editor
 	}
 	SH_EDITOR_API void Project::LoadWorld()
 	{
-		auto file = core::FileSystem::LoadText(assetPath / "test.world");
-		if (file)
-		{
-			world.Deserialize(core::Json::parse(file.value()));
-		}
+		world.AddAfterSyncTask(
+			[&]()
+			{
+				auto file = core::FileSystem::LoadText(assetPath / "test.world");
+				if (file)
+				{
+					world.Deserialize(core::Json::parse(file.value()));
+				}
+			}
+		);
 	}
 	SH_EDITOR_API auto Project::IsProjectOpen() const -> bool
 	{
 		return isOpen;
 	}
-	SH_EDITOR_API void Project::Build()
+	SH_EDITOR_API void Project::ReloadModule()
 	{
-		BuildSystem buildSystem{};
-		buildSystem.Build(*this);
+		world.AddAfterSyncTask(
+			[&]()
+			{
+				bool bSave = false;
+				if (userPlugin.handle != nullptr)
+				{
+					SaveWorld();
+
+					for (auto obj : world.gameObjects)
+					{
+						for (auto component : obj->GetComponents())
+						{
+							for (auto& userComponent : userComponents)
+							{
+								if (component->GetType() == *userComponent.second)
+								{
+									component->Destroy();
+								}
+							}
+						}
+					}
+					core::GarbageCollection::GetInstance()->Collect();
+
+					core::ModuleLoader loader{};
+					loader.Clean(userPlugin);
+
+					bSave = true;
+				}
+
+				LoadUserModule();
+
+				if (bSave)
+				{
+					LoadWorld();
+					core::GarbageCollection::GetInstance()->Collect();
+				}
+			}
+		);
 	}
 }

@@ -1,6 +1,5 @@
 ﻿#include "UI/Inspector.h"
 #include "UI/CustomInspector.h"
-#include "UI/AssetExplorer.h"
 
 #include "EditorWorld.h"
 #include "EditorResource.h"
@@ -466,7 +465,8 @@ namespace sh::editor
 						continue;
 					if (component->hideInspector)
 						continue;
-					bool bOpenComponent = ImGui::CollapsingHeader((component->GetType().name.ToString().c_str() + ("##" + std::to_string(idx))).data());
+					std::string componentName = component->GetType().name.ToString();
+					bool bOpenComponent = ImGui::CollapsingHeader((componentName.c_str() + ("##" + std::to_string(idx))).data());
 					if (ImGui::BeginPopupContextItem((component->GetUUID().ToString() + "RightClickPopup").c_str()))
 					{
 						if (component->GetType() != game::Transform::GetStaticType())

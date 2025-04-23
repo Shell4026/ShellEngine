@@ -1,8 +1,15 @@
 ﻿#include "Reflection/STypeInfo.hpp"
+#include "Logger.h"
 
 namespace sh::core::reflection
 {
 	std::unordered_map<std::size_t, STypeInfo*> STypes::types{};
+
+	STypeInfo::~STypeInfo()
+	{
+		// DLL 핫스왑용
+		STypes::types.erase(hash);
+	}
 
 	SH_CORE_API auto STypeInfo::AddProperty(const Property& prop) -> Property*
 	{

@@ -55,8 +55,8 @@ namespace sh::core
 
 	SH_CORE_API void SObject::Destroy()
 	{
-		bPendingKill.store(true, std::memory_order::memory_order_release);
 		GarbageCollection::GetInstance()->RemoveRootSet(this);
+		bPendingKill.store(true, std::memory_order::memory_order_release);
 	}
 
 	SH_CORE_API void SObject::OnDestroy()

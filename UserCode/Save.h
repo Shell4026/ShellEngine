@@ -4,7 +4,7 @@
 
 class Save : public sh::game::Component
 {
-	COMPONENT(Save)
+	COMPONENT(Save, "user")
 public:
 	SH_USER_API Save(sh::game::GameObject& owner);
 	SH_USER_API void Update() override;

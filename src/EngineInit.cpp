@@ -47,20 +47,6 @@ namespace sh
 		window.reset();
 	}
 
-	inline void EngineInit::LoadModule()
-	{
-		SH_INFO("Module loading");
-		void* modulePtr = moduleLoader.Load("ShellEngineUser");
-		componentModule = reinterpret_cast<sh::game::ComponentModule*>(modulePtr);
-		if (componentModule == nullptr)
-			throw std::runtime_error{ "Can't load user module!" };
-
-		for (auto& components : componentModule->GetComponents())
-		{
-			SH_INFO(fmt::format("Load Component: {}\n", components.first));
-		}
-	}
-
 	inline void EngineInit::InitResource()
 	{
 		SH_INFO("Resource initialization");
@@ -113,7 +99,8 @@ namespace sh
 	void EngineInit::Start()
 	{
 		SH_INFO("Engine start");
-		LoadModule();
+		game::ComponentModule* componentModule = game::ComponentModule::GetInstance();
+		componentModule->RegisterWaitingComponents();
 
 		SH_INFO_FORMAT("System thread count: {}", std::thread::hardware_concurrency());
 
@@ -174,10 +161,12 @@ namespace sh
 			if (bStop)
 				return;
 
-			this->world->Update(window->GetDeltaTime());
+			world->Update(window->GetDeltaTime());
 
 			core::ThreadSyncManager::Sync();
 			gc->Update();
+			world->AfterSync();
+
 			core::ThreadSyncManager::AwakeThread();
 		}
 	}

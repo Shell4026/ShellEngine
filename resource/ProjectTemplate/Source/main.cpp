@@ -9,12 +9,12 @@ extern "C"
 {
 	SH_USER_API void Init()
 	{
-		SH_INFO("Init User module.\n");
+		SH_INFO_FORMAT("Init User module: {}\n", SH_PROJECT_NAME);
 	}
 	SH_USER_API auto GetPluginInfo() -> sh::core::Plugin
 	{
 		sh::core::Plugin plugin{};
-		plugin.name = "User Module";
+		plugin.name = SH_PROJECT_NAME;
 		return plugin;
 	}
 }

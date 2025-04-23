@@ -104,8 +104,10 @@ namespace sh::render::vk
 						&materialDescriptorSet, 0, nullptr);
 				}
 
-				for (auto& drawable : renderGroup.drawables)
+				for (auto drawable : renderGroup.drawables)
 				{
+					if (drawable == nullptr)
+						continue;
 					if (!camera.CheckRenderTag(drawable->GetRenderTagId()))
 						continue;
 

@@ -1,7 +1,9 @@
 ﻿#pragma once
 #include "Export.h"
 
+#include "Core/Reflection.hpp"
 #include "Core/SContainer.hpp"
+#include "Core/Plugin.h"
 
 #include "Game/GUITexture.h"
 
@@ -17,6 +19,7 @@ namespace sh::editor
 
 		std::filesystem::path rootPath;
 		std::filesystem::path assetPath;
+		std::filesystem::path binaryPath;
 		std::filesystem::path currentPath;
 		std::filesystem::path selected;
 
@@ -26,6 +29,9 @@ namespace sh::editor
 
 		const game::GUITexture *folderIcon, *fileIcon, *meshIcon;
 		float iconSize = 50.0f;
+
+		core::Plugin userPlugin;
+		std::vector<std::pair<std::string, const core::reflection::STypeInfo*>> userComponents;
 
 		static bool bInitResource;
 		bool isOpen = false;
@@ -40,12 +46,16 @@ namespace sh::editor
 		/// @param maxSize 최대 길이
 		/// @return 새로 만들어진 이름
 		auto GetElideFileName(const std::filesystem::path& path, float maxSize) const -> std::string;
-		inline void RenderParentFolder();
-		inline void SetDragItem(const std::filesystem::path& path);
-		inline auto GetIcon(const std::filesystem::path& path) const -> const game::GUITexture*;
-		inline bool RenderFile(const std::filesystem::path& path, float& cursorX, float spacing, float width);
-		inline void ShowRightClickPopup();
-		inline void RenderNameBar();
+		void RenderParentFolder();
+		void SetDragItem(const std::filesystem::path& path);
+		auto GetIcon(const std::filesystem::path& path) const -> const game::GUITexture*;
+		bool RenderFile(const std::filesystem::path& path, float& cursorX, float spacing, float width);
+		void ShowRightClickPopup();
+		void RenderNameBar();
+
+		void LoadUserModule();
+
+		void CopyProjectTemplate(const std::filesystem::path& targetDir);
 	public:
 		SH_EDITOR_API Project(EditorWorld& world);
 
@@ -62,6 +72,6 @@ namespace sh::editor
 
 		SH_EDITOR_API auto IsProjectOpen() const -> bool;
 
-		SH_EDITOR_API void Build();
+		SH_EDITOR_API void ReloadModule();
 	};
 }
