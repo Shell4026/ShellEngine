@@ -13,5 +13,4 @@ project (
 # 하위 프로젝트를 포함합니다.
 add_subdirectory (src)
 add_subdirectory (include/External/imgui)
-add_subdirectory (UserCode)
 add_subdirectory (Test)
