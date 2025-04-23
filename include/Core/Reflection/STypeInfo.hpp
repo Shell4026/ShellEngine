@@ -102,6 +102,7 @@ namespace sh::core::reflection
 		{
 		}
 		STypeInfo(const STypeInfo& other) = delete;
+		SH_CORE_API ~STypeInfo();
 
 		SH_CORE_API auto AddProperty(const Property& prop) -> Property*;
 

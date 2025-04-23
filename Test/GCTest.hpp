@@ -213,3 +213,34 @@ TEST(GCTest, ContainerTest)
 	}
 	EXPECT_EQ(gc.GetObjectCount(), 0);
 }
+
+TEST(GCTest, VectorTrackingTest)
+{
+	using namespace sh::core;
+
+	auto gc = GarbageCollection::GetInstance();
+
+	std::vector<Object*> objs;
+	for (int i = 0; i < 10; ++i)
+		objs.push_back(SObject::Create<Object>(i));
+
+	gc->AddVectorTracking(objs);
+	
+	objs[0]->child = SObject::Create<Object>(10);
+
+	objs[4]->Destroy();
+	objs[7]->Destroy();
+	gc->Collect();
+
+	EXPECT_EQ(objs[0]->child->num, 10);
+	EXPECT_EQ(objs[4], nullptr);
+	EXPECT_EQ(objs[7], nullptr);
+
+	Object* temp = objs[0];
+	objs[0] = nullptr;
+	gc->Collect();
+
+	EXPECT_NE(temp->num, 0);
+
+	gc->RemoveVectorTracking(objs);
+}

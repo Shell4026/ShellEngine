@@ -65,7 +65,24 @@ namespace sh::core
 		}
 		return newFileName + extension;
 	}
+	SH_CORE_API void FileSystem::CopyAllFiles(const std::filesystem::path& source, const std::filesystem::path& target)
+	{
+		for (const auto& entry : std::filesystem::directory_iterator(source)) 
+		{
+			const auto& path = entry.path();
+			auto dstPath = target / path.filename();
 
+			if (std::filesystem::is_directory(path)) 
+			{
+				std::filesystem::create_directories(dstPath);
+				CopyAllFiles(path, dstPath);
+			}
+			else if (std::filesystem::is_regular_file(path)) 
+			{
+				std::filesystem::copy_file(path, dstPath, std::filesystem::copy_options::overwrite_existing);
+			}
+		}
+	}
 	SH_CORE_API auto FileSystem::LoadBinary(const std::filesystem::path& path) -> std::optional<std::vector<unsigned char>>
 	{
 		std::vector<unsigned char> data;
@@ -119,12 +136,14 @@ namespace sh::core
 		if (file == nullptr)
 			return {};
 
-		std::array<char, 100> buffer{};
+		auto fileSize = std::filesystem::file_size(path);
+		strData.reserve(fileSize);
+
+		std::array<char, 4048> buffer{};
 		size_t size = 0;
-		while ((size = fread(buffer.data(), sizeof(unsigned char), 100, file)) > 0)
+		while ((size = fread(buffer.data(), sizeof(unsigned char), buffer.size(), file)) > 0)
 		{
-			for (int i = 0; i < size; ++i)
-				strData.push_back(buffer[i]);
+			strData.append(buffer.data(), size);
 		}
 		fclose(file);
 
@@ -134,9 +153,9 @@ namespace sh::core
 	{
 		FILE* file;
 #if WIN32
-		file = _wfopen(path.c_str(), L"w");
+		file = _wfopen(path.c_str(), L"wb");
 #else
-		file = fopen(path.c_str(), "w");
+		file = fopen(path.c_str(), "wb");
 #endif
 		if (file == nullptr)
 			return false;

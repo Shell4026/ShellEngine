@@ -1,5 +1,4 @@
 ﻿#pragma once
-
 #include "Game/Export.h"
 #include "Game/IObject.h"
 #include "Game/ComponentModule.h"
@@ -18,7 +17,8 @@
 	{\
 		_ComponentBuilder_##className()\
 		{\
-			sh::game::ComponentModule::GetInstance()->RegisterComponent<className>(#className, std::string{__VA_ARGS__});\
+			auto componentModule = sh::game::ComponentModule::GetInstance();\
+			componentModule->RegisterComponent<className>(#className, std::string{__VA_ARGS__});\
 		}\
 		static auto GetStatic() -> _ComponentBuilder_##className*\
 		{\

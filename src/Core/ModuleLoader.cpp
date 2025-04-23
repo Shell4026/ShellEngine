@@ -1,5 +1,5 @@
-﻿#include "PCH.h"
-#include "ModuleLoader.h"
+﻿#include "ModuleLoader.h"
+#include "Logger.h"
 
 #include <iostream>
 #include <functional>
@@ -10,37 +10,46 @@
 #endif
 namespace sh::core
 {
-	auto ModuleLoader::Load(std::string_view moduleName) -> void*
+	auto ModuleLoader::Load(const std::filesystem::path& moduleDir) -> std::optional<Plugin>
 	{
-		std::string name{ moduleName };
 #if _WIN32
-		name += ".dll";
-		HMODULE handle = LoadLibraryA(TEXT(name.c_str()));
+		HMODULE handle = LoadLibraryA(TEXT(moduleDir.string().c_str()));
 		if (handle == nullptr)
 		{
-			std::cout << "Error load module: " << name << '\n';
-			return nullptr;
+			SH_ERROR_FORMAT("Error load module: {}", moduleDir.u8string());
+			return {};
 		}
 
 		std::function<void()> fnInit{ GetProcAddress(handle, "Init") };
 		fnInit();
 
-		void* (*fnGetModule)() = (void* (*)())GetProcAddress(handle, "GetModule");
-		void* ptr = fnGetModule();
+		std::function<Plugin()> fnGetPluginInfo = ( Plugin(*)())GetProcAddress(handle, "GetPluginInfo");
+		Plugin plugin = fnGetPluginInfo();
 #elif __linux__
-		name = "./lib" + name + ".so";
-		void* handle = dlopen(name.c_str(), RTLD_LAZY);
+		void* handle = dlopen(moduleDir.c_str(), RTLD_LAZY);
 		if (!handle) {
-			std::cout << "Error load module: " << name << '\n';
-			return nullptr;
+			SH_ERROR_FORMAT("Error load module: {}", moduleDir.u8string());
+			return {};
 		}
 
 		std::function<void()> fnInit{ reinterpret_cast<void*(*)()>(dlsym(handle, "Init")) };
 		fnInit();
 
-		void* (*fnGetModule)() = (void* (*)())dlsym(handle, "GetModule");
-		void* ptr = fnGetModule();
+		Plugin(*fnGetPluginInfo)() = (Plugin(*)())dlsym(handle, "GetPluginInfo");
+		Plugin plugin = fnGetPluginInfo();
 #endif
-		return ptr;
+		plugin.handle = handle;
+		plugin.path = moduleDir;
+		return plugin;
+	}
+	SH_CORE_API void ModuleLoader::Clean(const Plugin& plugin)
+	{
+#if _WIN32
+		auto result = FreeLibrary(reinterpret_cast<HMODULE>(plugin.handle));
+		assert(result);
+#elif __linux__
+		auto result = dlclose(plugin.handle);
+		assert(result);
+#endif
 	}
 }

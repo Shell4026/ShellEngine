@@ -21,6 +21,7 @@ namespace sh::game
 		{
 			obj = world.AddGameObject("_Helper");
 			obj->hideInspector = true;
+			obj->bNotSave = true;
 			helper = obj->AddComponent<LineRenderer>();
 			helper->SetColor(Vec4{ 1.f, 0.f, 0.f, 1.f });
 			helper->SetStart(Vec3{ -100.f, 0.f, 0.f });

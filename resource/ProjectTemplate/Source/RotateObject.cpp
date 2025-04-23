@@ -22,5 +22,5 @@ SH_USER_API void RotateObject::OnEnable()
 SH_USER_API void RotateObject::Update()
 {
 	Vec3 rot = gameObject.transform->rotation;
-	gameObject.transform->SetRotation(rot + Vec3{ 0.0f, speed * world.deltaTime, 0.0f });
+	gameObject.transform->SetRotation(rot + Vec3{ xspeed * world.deltaTime, speed * world.deltaTime, zspeed * world.deltaTime });
 }

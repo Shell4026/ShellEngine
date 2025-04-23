@@ -33,6 +33,7 @@ namespace sh::game
 		mutable core::Observer<false, Component*> onComponentAdd;
 		PROPERTY(hideInspector, core::PropertyOption::invisible)
 		bool hideInspector = false;
+		bool bNotSave = false;
 	public:
 		SH_GAME_API GameObject(World& world, const std::string& name);
 		SH_GAME_API GameObject(GameObject&& other) noexcept;

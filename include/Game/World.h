@@ -64,6 +64,8 @@ namespace sh::game
 
 		Octree lightOctree;
 
+		std::queue<std::function<void()>> afterSyncTasks;
+
 		bool startLoop = false;
 	public:
 		render::Renderer& renderer;
@@ -116,6 +118,11 @@ namespace sh::game
 
 		SH_GAME_API virtual void Start();
 		SH_GAME_API virtual void Update(float deltaTime);
+		SH_GAME_API virtual void AfterSync();
+
+		/// @brief 동기화 후에 실행될 작업을 지정한다. 작업은 1회만 실행된다.
+		/// @param func 함수
+		SH_GAME_API void AddAfterSyncTask(const std::function<void()>& func);
 
 		SH_GAME_API auto Serialize() const->core::Json override;
 		SH_GAME_API void Deserialize(const core::Json& json) override;

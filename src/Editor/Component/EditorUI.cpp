@@ -2,6 +2,8 @@
 #include "UI/Project.h"
 #include "EditorWorld.h"
 
+#include "Core/ModuleLoader.h"
+
 #include "game/GameObject.h"
 #include "game/World.h"
 
@@ -84,28 +86,35 @@ namespace sh::editor
 	{
 		if (ImGui::BeginMainMenuBar())
 		{
-			if (ImGui::BeginMenu("File"))
+			if (ImGui::BeginMenu("Project"))
 			{
-				if (ImGui::MenuItem("New project"))
+				if (!project->IsProjectOpen())
 				{
-					explorer->AddCallback([&](std::filesystem::path dir)
-						{
-							project->CreateNewProject(dir);
-						}
-					);
-					explorer->Open(ExplorerUI::OpenMode::Create);
+					if (ImGui::MenuItem("New project"))
+					{
+						explorer->AddCallback([&](std::filesystem::path dir)
+							{
+								project->CreateNewProject(dir);
+							}
+						);
+						explorer->Open(ExplorerUI::OpenMode::Create);
+					}
+					if (ImGui::MenuItem("Open project"))
+					{
+						explorer->AddCallback([&](std::filesystem::path dir)
+							{
+								project->OpenProject(dir);
+							}
+						);
+						explorer->Open();
+					}
 				}
-				if (ImGui::MenuItem("Open project"))
+				else
 				{
-					explorer->AddCallback([&](std::filesystem::path dir)
-						{
-							project->OpenProject(dir);
-						}
-					);
-					explorer->Open();
-				}
-				if (project->IsProjectOpen())
-				{
+					if (ImGui::MenuItem("Reload module"))
+					{
+						project->ReloadModule();
+					}
 					if (ImGui::MenuItem("Save world", "Ctrl+S"))
 					{
 						project->SaveWorld();
@@ -116,7 +125,7 @@ namespace sh::editor
 					}
 					if (ImGui::MenuItem("Build"))
 					{
-						project->Build();
+						//project->Build();
 					}
 				}
 				ImGui::EndMenu();
@@ -128,21 +137,26 @@ namespace sh::editor
 	SH_EDITOR_API void EditorUI::BeginUpdate()
 	{
 		Super::BeginUpdate();
-		viewport->Update();
-		hierarchy->Update();
-		inspector->Update();
-		project->Update();
+		if (project->IsProjectOpen())
+		{
+			project->Update();
+			viewport->Update();
+			hierarchy->Update();
+			inspector->Update();
+		}
 		SetDockNode();
 	}
 
 	SH_EDITOR_API void EditorUI::Update()
 	{
 		Super::Update();
-		hierarchy->Render();
-		inspector->Render();
-		project->Render();
-		viewport->Render();
-
+		if (project->IsProjectOpen())
+		{
+			hierarchy->Render();
+			inspector->Render();
+			project->Render();
+			viewport->Render();
+		}
 		DrawMenu();
 		explorer->Render();
 	}

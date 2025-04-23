@@ -9,6 +9,16 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
 	target_compile_definitions(ShellEngineCore PUBLIC SH_DEBUG)
 endif()
 
+if(WIN32)
+set_target_properties(ShellEngineCore PROPERTIES 
+	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/lib"
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+elseif(UNIX)
+set_target_properties(ShellEngineCore PROPERTIES 
+	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/lib"
+	LIBRARY_OUTPUT_DIRECTORY  "${CMAKE_BINARY_DIR}/bin")
+endif()
+
 FetchContent_Declare(
   GLM
   GIT_REPOSITORY "https://github.com/g-truc/glm"

@@ -21,6 +21,7 @@ namespace sh::core
 		/// @param fileName 파일 이름
 		/// @return 새 파일 이름
 		SH_CORE_API static auto CreateUniqueFileName(const std::filesystem::path& path, const std::filesystem::path& fileName) -> std::string;
+		SH_CORE_API static void CopyAllFiles(const std::filesystem::path& source, const std::filesystem::path& target);
 
 		SH_CORE_API static auto LoadBinary(const std::filesystem::path& path) -> std::optional<std::vector<unsigned char>>;
 		SH_CORE_API static auto SaveBinary(const std::vector<uint8_t>& binary, const std::filesystem::path& path) -> bool;
