@@ -90,7 +90,7 @@ namespace sh::editor
 		}
 	}
 
-	void Hierarchy::DrawGameObjectHierarchy(game::GameObject* obj, core::SHashSet<game::GameObject*>& drawSet)
+	void Hierarchy::DrawGameObjectHierarchy(game::GameObject* obj, std::unordered_set<game::GameObject*>& drawSet)
 	{
 		bool isSelected = world.GetSelectedObject() == obj;
 		bool nodeOpen = false;
@@ -189,7 +189,7 @@ namespace sh::editor
 		ImGui::Begin("Hierarchy", nullptr, style);
 		isDocking = ImGui::IsWindowDocked();
 
-		core::SHashSet<game::GameObject*> drawSet{};
+		std::unordered_set<game::GameObject*> drawSet{};
 
 		for (auto it = objList.begin(); it != objList.end();)
 		{

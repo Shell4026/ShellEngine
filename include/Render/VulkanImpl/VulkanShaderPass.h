@@ -22,8 +22,8 @@ namespace sh::render::vk
 		VkShaderModule vertShader;
 		VkShaderModule fragShader;
 
-		core::SVector<core::SVector<VkDescriptorSetLayoutBinding>> descriptorBindings; // set, binding
-		core::SVector<VkDescriptorSetLayout> descriptorSetLayout;
+		std::vector<std::vector<VkDescriptorSetLayoutBinding>> descriptorBindings; // set, binding
+		std::vector<VkDescriptorSetLayout> descriptorSetLayout;
 
 		VkPipelineLayout pipelineLayout;
 

@@ -1,10 +1,10 @@
 ﻿#pragma once
 #include "ISyncable.h"
 #include "EngineThread.h"
-#include "SContainer.hpp"
 
 #include <queue>
 #include <thread>
+#include <vector>
 namespace sh::core
 {
 	/// @brief 스레드간 동기화를 관리하는 전역 객체.
@@ -22,7 +22,7 @@ namespace sh::core
 			};
 			std::queue<SyncData> syncableQueue;
 		};
-		SH_CORE_API static SVector<ThreadData> threads;
+		SH_CORE_API static std::vector<ThreadData> threads;
 		thread_local static int currentThreadIdx;
 	private:
 		SH_CORE_API static auto GetThreadIndex() -> int;

@@ -57,8 +57,6 @@ namespace sh::render
 			group.topology = topology;
 			group.drawables.push_back(drawable);
 			renderGroups.push_back(std::move(group));
-			
-			core::GarbageCollection::GetInstance()->AddVectorTracking(renderGroups.back().drawables);
 		}
 		else
 		{
@@ -67,9 +65,6 @@ namespace sh::render
 	}
 	SH_RENDER_API void RenderPipeline::ClearDrawable()
 	{
-		for (auto& renderGroup : renderGroups)
-			core::GarbageCollection::GetInstance()->RemoveVectorTracking(renderGroups.back().drawables);
-
 		renderGroups.clear();
 	}
 

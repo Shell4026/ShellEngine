@@ -32,10 +32,10 @@ namespace sh::render
 		{
 			// uint32_t = binding
 			const ShaderPass* pass;
-			core::SVector<core::SVector<std::unique_ptr<IBuffer>>> uniformData; // set, binding
-			core::SVector<std::unique_ptr<IUniformBuffer>> uniformBuffer; // set
+			std::vector<std::vector<std::unique_ptr<IBuffer>>> uniformData; // set, binding
+			std::vector<std::unique_ptr<IUniformBuffer>> uniformBuffer; // set
 		};
-		core::SVector<PassData> perPassData;
+		std::vector<PassData> perPassData;
 
 		struct SyncData
 		{

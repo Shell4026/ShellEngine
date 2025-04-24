@@ -64,7 +64,8 @@ namespace sh::game
 	{
 		for (auto component : components)
 		{
-			component->Destroy();
+			if (core::IsValid(component))
+				component->Destroy();
 		}
 		components.clear();
 		Super::Destroy();

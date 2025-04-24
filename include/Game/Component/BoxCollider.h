@@ -15,7 +15,6 @@ namespace sh::game
 		friend RigidBody;
 	private:
 		reactphysics3d::BoxShape* shape = nullptr;
-		PROPERTY(rigidbodies)
 		core::SSet<RigidBody*> rigidbodies;
 
 		PROPERTY(size)

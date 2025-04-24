@@ -40,11 +40,11 @@ namespace sh::render
 		};
 	protected:
 		std::vector<AttributeData> attrs;
-		core::SHashMap<std::string, uint32_t> attridx;
+		std::unordered_map<std::string, uint32_t> attridx;
 
-		core::SVector<UniformStructLayout> vertexUniforms;
-		core::SVector<UniformStructLayout> fragmentUniforms;
-		core::SVector<UniformStructLayout> samplerUniforms;
+		std::vector<UniformStructLayout> vertexUniforms;
+		std::vector<UniformStructLayout> fragmentUniforms;
+		std::vector<UniformStructLayout> samplerUniforms;
 
 		ShaderType type;
 	private:

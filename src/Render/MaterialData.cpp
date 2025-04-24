@@ -22,7 +22,7 @@ namespace sh::render
 			{
 				PassData passData{};
 				uint32_t maxSet = 0;
-				core::SVector<uint32_t> sets;
+				std::vector<uint32_t> sets;
 				// 유니폼 데이터 버퍼
 				auto layouts = { &shaderPass->GetVertexUniforms(), &shaderPass->GetFragmentUniforms() };
 				for (auto layout : layouts)

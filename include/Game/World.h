@@ -51,7 +51,7 @@ namespace sh::game
 		ImGUImpl* imgui = nullptr;
 
 		core::SHashSet<GameObject*> objs;
-		core::SSet<Camera*> cameras;
+		std::unordered_set<Camera*> cameras;
 
 		std::vector<GameObject*> addedObjs; // 루프 도중 추가 된 객체
 
@@ -108,7 +108,7 @@ namespace sh::game
 
 		SH_GAME_API void RegisterCamera(Camera* cam);
 		SH_GAME_API void UnRegisterCamera(Camera* cam);
-		SH_GAME_API auto GetCameras() const -> const core::SSet<Camera*>&;
+		SH_GAME_API auto GetCameras() const -> const std::unordered_set<Camera*>&;
 		SH_GAME_API void SetMainCamera(Camera* cam);
 		SH_GAME_API	auto GetMainCamera() const -> Camera*;
 

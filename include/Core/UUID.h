@@ -6,7 +6,7 @@
 
 namespace sh::core
 {
-	/// @brief 객체 식별을 위한 UUID 클래스
+	/// @brief 객체 식별을 위한 UUID 클래스.
 	/// @brief CHACHE_SIZE 만큼 객체를 미리 만들어두고 할당 한다.
 	class UUID
 	{
@@ -15,7 +15,7 @@ namespace sh::core
 		std::array<uint32_t, 4> uuid{};
 		std::string uuidStr;
 	public:
-		static constexpr std::size_t CHACHE_SIZE = 32;
+		static constexpr std::size_t CHACHE_SIZE = 128;
 	private:
 		UUID() = default;
 	public:
@@ -35,6 +35,7 @@ namespace sh::core
 		/// @return 16진수로 표기된 길이가 32인 문자열
 		SH_CORE_API auto ToString() const -> const std::string&;
 
+		/// @brief 새로운 UUID를 생성한다. 스레드 안전하다.
 		SH_CORE_API static auto Generate() -> UUID;
 	};
 }//namespace

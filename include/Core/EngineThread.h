@@ -21,7 +21,7 @@ namespace sh::core
 
 		std::mutex taskMutex;
 
-		SVector<std::function<void()>> tasks;
+		std::vector<std::function<void()>> tasks;
 		std::queue<std::function<void()>> beginTasks;
 		std::queue<std::function<void()>> endTasks;
 

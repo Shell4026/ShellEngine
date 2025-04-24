@@ -29,8 +29,7 @@ namespace sh::game
 		glm::quat worldQuat;
 
 		Transform* parent;
-		PROPERTY(childs, core::PropertyOption::invisible)
-		core::SVector<Transform*> childs;
+		std::vector<Transform*> childs;
 
 		bool bUpdateMatrix;
 	private:
@@ -54,7 +53,7 @@ namespace sh::game
 		SH_GAME_API void Update() override;
 
 		SH_GAME_API auto GetParent() const -> Transform*;
-		SH_GAME_API auto GetChildren() const -> const core::SVector<Transform*>&;
+		SH_GAME_API auto GetChildren() const -> const std::vector<Transform*>&;
 		/// @brief 자식 객체를 배열상에서 한칸 왼쪽으로 미는 함수
 		/// @brief 제일 왼쪽이면 아무 일도 일어나지 않는다.
 		SH_GAME_API void ReorderChildAbove(Transform* child);

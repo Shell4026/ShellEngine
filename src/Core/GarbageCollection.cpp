@@ -140,26 +140,146 @@ namespace sh::core
 			taskFutures[i].wait();
 	}
 
-	void GarbageCollection::CheckVectors()
+	void GarbageCollection::CheckContainers()
 	{
-		for (auto v : trackingVectors)
+		for (auto& [ptr, info] : trackingContainers)
 		{
-			std::vector<SObject*>& vector = *reinterpret_cast<std::vector<SObject*>*>(v);
-			for (int i = 0; i < vector.size(); ++i)
+			switch (info.type)
 			{
-				SObject* obj = vector[i];
-				if (obj == nullptr)
-					continue;
-				if (obj->bPendingKill.load(std::memory_order::memory_order_acquire))
+			case TrackingContainerInfo::Type::Array:
+			{
+				SObject** arrPtr = reinterpret_cast<SObject**>(ptr);
+				for (std::size_t i = 0; i < std::get<0>(info.data); ++i)
 				{
-					vector[i] = nullptr;
-					continue;
+					SObject** obj = (arrPtr + i);
+					if (*obj == nullptr)
+						continue;
+					if ((*obj)->bPendingKill.load(std::memory_order::memory_order_acquire))
+					{
+						*obj = nullptr;
+						continue;
+					}
+					SetRootSet(*obj);
 				}
-				SetRootSet(obj);
+				break;
+			}
+			case TrackingContainerInfo::Type::Vector:
+			{
+				std::vector<SObject*>& vector = *reinterpret_cast<std::vector<SObject*>*>(ptr);
+				for (int i = 0; i < vector.size(); ++i)
+				{
+					SObject* obj = vector[i];
+					if (obj == nullptr)
+						continue;
+					if (obj->bPendingKill.load(std::memory_order::memory_order_acquire))
+					{
+						vector[i] = nullptr;
+						continue;
+					}
+					SetRootSet(obj);
+				}
+				break;
+			}
+			case TrackingContainerInfo::Type::Set:
+			{
+				std::set<SObject*>& set = *reinterpret_cast<std::set<SObject*>*>(ptr);
+				for (auto it = set.begin(); it != set.end();)
+				{
+					SObject* obj = *it;
+					if (obj->bPendingKill.load(std::memory_order::memory_order_acquire))
+					{
+						it = set.erase(it);
+						continue;
+					}
+					SetRootSet(obj);
+					++it;
+				}
+				break;
+			}
+			case TrackingContainerInfo::Type::HashSet:
+			{
+				std::unordered_set<SObject*>& set = *reinterpret_cast<std::unordered_set<SObject*>*>(ptr);
+				for (auto it = set.begin(); it != set.end();)
+				{
+					SObject* obj = *it;
+					if (obj->bPendingKill.load(std::memory_order::memory_order_acquire))
+					{
+						it = set.erase(it);
+						continue;
+					}
+					SetRootSet(obj);
+					++it;
+				}
+				break;
+			}
+			case TrackingContainerInfo::Type::MapKey: [[fallthrough]];
+			case TrackingContainerInfo::Type::MapValue: [[fallthrough]];
+			case TrackingContainerInfo::Type::HashMapKey: [[fallthrough]];
+			case TrackingContainerInfo::Type::HashMapValue:
+			{
+				IMap* wrapper = reinterpret_cast<IMap*>(&std::get<1>(info.data));
+				wrapper->Checking(*this);
+				sizeof(std::variant<std::map<int, int>*, std::unordered_map<float, float>*>);
+				break;
+			}
 			}
 		}
 	}
-
+	void GarbageCollection::UncheckContainers()
+	{
+		for (auto& [ptr, info] : trackingContainers)
+		{
+			switch (info.type)
+			{
+			case TrackingContainerInfo::Type::Array:
+			{
+				SObject** arrPtr = reinterpret_cast<SObject**>(ptr);
+				for (std::size_t i = 0; i < std::get<0>(info.data); ++i)
+				{
+					SObject** obj = (arrPtr + i);
+					if (*obj == nullptr)
+						continue;
+					RemoveRootSet(*obj);
+				}
+				break;
+			}
+			case TrackingContainerInfo::Type::Vector:
+			{
+				std::vector<SObject*>& vector = *reinterpret_cast<std::vector<SObject*>*>(ptr);
+				for (SObject* obj : vector)
+				{
+					if (obj == nullptr)
+						continue;
+					RemoveRootSet(obj);
+				}
+				break;
+			}
+			case TrackingContainerInfo::Type::Set:
+			{
+				std::set<const SObject*>& set = *reinterpret_cast<std::set<const SObject*>*>(ptr);
+				for (const SObject* obj : set)
+					RemoveRootSet(obj);
+				break;
+			}
+			case TrackingContainerInfo::Type::HashSet:
+			{
+				std::unordered_set<const SObject*>& set = *reinterpret_cast<std::unordered_set<const SObject*>*>(ptr);
+				for (const SObject* obj : set)
+					RemoveRootSet(obj);
+				break;
+			}
+			case TrackingContainerInfo::Type::MapKey: [[fallthrough]];
+			case TrackingContainerInfo::Type::MapValue: [[fallthrough]];
+			case TrackingContainerInfo::Type::HashMapKey: [[fallthrough]];
+			case TrackingContainerInfo::Type::HashMapValue:
+			{
+				IMap* wrapper = reinterpret_cast<IMap*>(&std::get<1>(info.data));
+				wrapper->Unchecking(*this);
+				break;
+			}
+			}
+		}
+	}
 	GarbageCollection::GarbageCollection() :
 		objs(SObjectManager::GetInstance()->objs)
 	{
@@ -172,6 +292,8 @@ namespace sh::core
 
 	SH_CORE_API void GarbageCollection::SetRootSet(SObject* obj)
 	{
+		std::lock_guard<std::mutex> lock{ mu };
+
 		auto it = rootSetIdx.find(obj);
 		if (it == rootSetIdx.end())
 		{
@@ -192,22 +314,64 @@ namespace sh::core
 
 	SH_CORE_API void GarbageCollection::RemoveRootSet(const SObject* obj)
 	{
+		std::lock_guard<std::mutex> lock{ mu };
+
 		auto it = rootSetIdx.find(const_cast<SObject*>(obj));
 		if (it != rootSetIdx.end())
 		{
 			std::size_t idx = it->second;
 			rootSets[idx] = nullptr;
 			rootSetIdx.erase(it);
+			++emptyRootSetCount;
 		}
+	}
+
+	SH_CORE_API void GarbageCollection::DefragmentRootSet()
+	{
+		std::lock_guard<std::mutex> lock{ mu };
+
+		std::unordered_map<SObject*, std::size_t> tmpIdx;
+		std::vector<SObject*> tmp;
+		tmp.reserve(rootSets.size() - emptyRootSetCount);
+		for (auto rootset : rootSets)
+		{
+			if (rootset == nullptr)
+				continue;
+
+			std::size_t idx = tmp.size();
+			tmp.push_back(rootset);
+			tmpIdx.insert_or_assign(rootset, idx);
+		}
+		emptyRootSetCount = 0;
+
+		rootSetIdx = std::move(tmpIdx);
+		rootSets = std::move(tmp);
 	}
 
 	SH_CORE_API void GarbageCollection::Update()
 	{
-		if (++tick < updatePeriodTick)
-			return;
-		tick = 0;
-
-		Collect();
+		++tick;
+		if (updatePeriodTick > 1)
+		{
+			if (tick == updatePeriodTick - 1)
+			{
+				if (emptyRootSetCount >= DEFRAGMENT_ROOTSET_CAP)
+					DefragmentRootSet();
+				return;
+			}
+			if (tick == updatePeriodTick)
+			{
+				tick = 0;
+				Collect();
+				return;
+			}
+		}
+		else
+		{
+			if (emptyRootSetCount >= DEFRAGMENT_ROOTSET_CAP)
+				DefragmentRootSet();
+			Collect();
+		}
 	}
 	SH_CORE_API void sh::core::GarbageCollection::Collect()
 	{
@@ -215,23 +379,14 @@ namespace sh::core
 		for (auto& [id, obj] : objs)
 			obj->bMark.clear(std::memory_order::memory_order_relaxed);
 
-		CheckVectors();
+		CheckContainers();
 
-		if (rootSets.size() > 50)
+		if (rootSets.size() > 128)
 			MarkMultiThread();
 		else
 			Mark(0, rootSets.size());
 
-		for (auto v : trackingVectors)
-		{
-			std::vector<SObject*>& vector = *reinterpret_cast<std::vector<SObject*>*>(v);
-			for (SObject* obj : vector)
-			{
-				if (obj == nullptr)
-					continue;
-				RemoveRootSet(obj);
-			}
-		}
+		UncheckContainers();
 
 		// 모든 SObject를 순회하며 마킹이 안 됐으면 제거
 		std::queue<SObject*> deleted;

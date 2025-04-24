@@ -1,9 +1,8 @@
-﻿#include "PCH.h"
-#include "UUID.h"
+﻿#include "UUID.h"
 #include "Util.h"
 
 #include <charconv>
-
+#include <mutex>
 namespace sh::core
 {
 	SH_CORE_API UUID::UUID(std::string_view str)
@@ -81,6 +80,9 @@ namespace sh::core
 	SH_CORE_API auto UUID::Generate() -> UUID
 	{
 		static std::stack<UUID> uuids;
+		static std::mutex mu{};
+
+		std::lock_guard<std::mutex> lock{ mu };
 		if (uuids.empty())
 		{
 			for (int i = 0; i < CHACHE_SIZE; ++i)
