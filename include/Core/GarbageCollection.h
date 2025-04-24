@@ -1,11 +1,19 @@
 ﻿#pragma once
 #include "Export.h"
 #include "UUID.h"
-#include "SContainer.hpp"
 #include "Singleton.hpp"
 
 #include <cstdint>
 #include <algorithm>
+#include <set>
+#include <map>
+#include <unordered_set>
+#include <unordered_map>
+#include <array>
+#include <vector>
+#include <queue>
+#include <mutex>
+#include <variant>
 namespace sh::core::reflection
 {
 	class Property;
@@ -21,15 +29,137 @@ namespace sh::core
 	{
 		friend Singleton<GarbageCollection>;
 	private:
-		SHashMap<UUID, SObject*>& objs;
-		SHashMap<SObject*, std::size_t> rootSetIdx;
+		std::unordered_map<UUID, SObject*>& objs;
+		std::unordered_map<SObject*, std::size_t> rootSetIdx;
 		std::vector<SObject*> rootSets;
-		std::vector<void*> trackingVectors;
+		int emptyRootSetCount = 0;
+
+		struct IMap
+		{
+			virtual void Checking(GarbageCollection& gc) = 0;
+			virtual void Unchecking(GarbageCollection& gc) = 0;
+		};
+		template<typename T, typename U>
+		struct MapWrapper : IMap
+		{
+			std::variant<std::map<T, U>*, std::unordered_map<T, U>*> mapPtr;
+
+			void Checking(GarbageCollection& gc) override
+			{
+				if (mapPtr.index() == 0)
+				{
+					std::map<T, U>* map = std::get<0>(mapPtr);
+					for (auto it = map->begin(); it != map->end();)
+					{
+						if constexpr (std::is_convertible_v<T, const SObject*>)
+						{
+							const SObject* key = it->first;
+							if (key->bPendingKill.load(std::memory_order::memory_order_acquire))
+							{
+								it = map->erase(it);
+								continue;
+							}
+							gc.SetRootSet(const_cast<SObject*>(key));
+						}
+						if constexpr (std::is_convertible_v<U, const SObject*>)
+						{
+							const SObject* value = it->second;
+							if (value->bPendingKill.load(std::memory_order::memory_order_acquire))
+							{
+								it = map->erase(it);
+								continue;
+							}
+							gc.SetRootSet(const_cast<SObject*>(value));
+						}
+						++it;
+					}
+				}
+				else
+				{
+					std::unordered_map<T, U>* map = std::get<1>(mapPtr);
+					for (auto it = map->begin(); it != map->end();)
+					{
+						if constexpr (std::is_convertible_v<T, const SObject*>)
+						{
+							const SObject* key = it->first;
+							if (key->bPendingKill.load(std::memory_order::memory_order_acquire))
+							{
+								it = map->erase(it);
+								continue;
+							}
+							gc.SetRootSet(const_cast<SObject*>(key));
+						}
+						if constexpr (std::is_convertible_v<U, const SObject*>)
+						{
+							const SObject* value = it->second;
+							if (value->bPendingKill.load(std::memory_order::memory_order_acquire))
+							{
+								it = map->erase(it);
+								continue;
+							}
+							gc.SetRootSet(const_cast<SObject*>(value));
+						}
+						++it;
+					}
+				}
+			}
+			void Unchecking(GarbageCollection& gc) override
+			{
+				if (mapPtr.index() == 0)
+				{
+					std::map<T, U>* map = std::get<0>(mapPtr);
+					for (auto& [key, value] : *map)
+					{
+						if constexpr (std::is_convertible_v<T, const SObject*>)
+							gc.RemoveRootSet(key);
+						if constexpr (std::is_convertible_v<U, const SObject*>)
+							gc.RemoveRootSet(value);
+					}
+				}
+				else
+				{
+					std::unordered_map<T, U>* map = std::get<1>(mapPtr);
+					for (auto& [key, value] : *map)
+					{
+						if constexpr (std::is_convertible_v<T, const SObject*>)
+							gc.RemoveRootSet(key);
+						if constexpr (std::is_convertible_v<U, const SObject*>)
+							gc.RemoveRootSet(value);
+					}
+				}
+			}
+		};
+		struct MapWrapperDummy
+		{
+			void* vtable;
+			void* ptr;
+			void* dummy;
+		};
+		struct TrackingContainerInfo
+		{
+			enum class Type
+			{
+				Array,
+				Vector,
+				Set,
+				HashSet,
+				MapKey,
+				MapValue,
+				HashMapKey,
+				HashMapValue
+			} type;
+			std::variant<std::size_t, MapWrapperDummy> data;
+		};
+		std::unordered_map<void*, TrackingContainerInfo> trackingContainers;
+
+		std::mutex mu;
 
 		uint32_t elapseTime = 0;
 		uint32_t tick = 0;
 		uint32_t updatePeriodTick = 1000;
 		bool bContainerIteratorErased = false;
+	public:
+		static constexpr int DEFRAGMENT_ROOTSET_CAP = 32;
 	private:
 		/// @brief 중첩 컨테이너를 재귀로 순회하면서 SObject에 마킹 하는 함수
 		/// @param bfs BFS용 큐
@@ -40,7 +170,8 @@ namespace sh::core
 		void ContainerMark(std::queue<SObject*>& bfs, SObject* parent, int depth, int maxDepth, sh::core::reflection::PropertyIterator& it);
 		void Mark(std::size_t start, std::size_t end);
 		void MarkMultiThread();
-		void CheckVectors();
+		void CheckContainers();
+		void UncheckContainers();
 	protected:
 		SH_CORE_API GarbageCollection();
 	public:
@@ -57,6 +188,10 @@ namespace sh::core
 		/// @brief 루트셋에서 해당 객체를 제외하는 함수.
 		/// @param obj SObject 포인터
 		SH_CORE_API void RemoveRootSet(const SObject* obj);
+
+		/// @brief 루트셋 배열의 빈공간을 조각 모음 하는 함수.
+		/// @brief 쓰레기 수집이 시작되기 전 1프레임 전에 DEFRAGMENT_ROOTSET_CAP보다 빈 공간이 많아지면 실행 된다.
+		SH_CORE_API void DefragmentRootSet();
 
 		/// @brief GC를 갱신하며 지정된 시간이 흐르면 Collect()가 호출 된다.
 		SH_CORE_API void Update();
@@ -75,21 +210,92 @@ namespace sh::core
 		SH_CORE_API auto GetElapsedTime() -> uint32_t;
 
 		template<typename T, typename = std::enable_if_t<std::is_base_of_v<SObject, T>>>
-		void AddVectorTracking(std::vector<T*>& vector)
+		void AddContainerTracking(std::vector<T*>& container)
 		{
-			trackingVectors.push_back(reinterpret_cast<void*>(&vector));
+			std::lock_guard<std::mutex> lock{ mu };
+			trackingContainers.insert_or_assign(reinterpret_cast<void*>(&container), TrackingContainerInfo{ TrackingContainerInfo::Type::Vector, 0 });
+		}
+		template<typename T, std::size_t size, typename = std::enable_if_t<std::is_base_of_v<SObject, T>>>
+		void AddContainerTracking(std::array<T*, size>& container)
+		{
+			std::lock_guard<std::mutex> lock{ mu };
+			trackingContainers.insert_or_assign(reinterpret_cast<void*>(&container), TrackingContainerInfo{ TrackingContainerInfo::Type::Array, size });
 		}
 		template<typename T, typename = std::enable_if_t<std::is_base_of_v<SObject, T>>>
-		void RemoveVectorTracking(const std::vector<T*>& vector)
+		void AddContainerTracking(std::set<T*>& container)
 		{
-			for (int i = 0; i < trackingVectors.size(); ++i)
-			{
-				if (trackingVectors[i] == &vector)
-				{
-					std::swap(trackingVectors[i], trackingVectors[trackingVectors.size() - 1]);
-				}
-			}
-			trackingVectors.pop_back();
+			std::lock_guard<std::mutex> lock{ mu };
+			trackingContainers.insert_or_assign(reinterpret_cast<void*>(&container), TrackingContainerInfo{ TrackingContainerInfo::Type::Set, 0 });
+		}
+		template<typename T, typename = std::enable_if_t<std::is_base_of_v<SObject, T>>>
+		void AddContainerTracking(std::unordered_set<T*>& container)
+		{
+			std::lock_guard<std::mutex> lock{ mu };
+			trackingContainers.insert_or_assign(reinterpret_cast<void*>(&container), TrackingContainerInfo{ TrackingContainerInfo::Type::HashSet, 0 });
+		}
+		template<typename T, typename U, typename = std::enable_if_t<std::is_base_of_v<SObject, T>>>
+		void AddContainerTracking(std::map<T*, U>& container)
+		{
+			std::lock_guard<std::mutex> lock{ mu };
+			MapWrapper<T*, U> wrapper{};
+			wrapper.mapPtr = &container;
+
+			TrackingContainerInfo info{};
+			info.type = TrackingContainerInfo::Type::MapKey;
+			info.data = MapWrapperDummy{};
+
+			std::memcpy(&info.data, &wrapper, sizeof(MapWrapper<T*, U>));
+			trackingContainers.insert_or_assign(reinterpret_cast<void*>(&container), info);
+		}
+		template<typename T, typename U, typename = std::enable_if_t<std::is_base_of_v<SObject, U>>>
+		void AddContainerTracking(std::map<T, U*>& container)
+		{
+			std::lock_guard<std::mutex> lock{ mu };
+			MapWrapper<T, U*> wrapper{};
+			wrapper.mapPtr = &container;
+
+			TrackingContainerInfo info{};
+			info.type = TrackingContainerInfo::Type::MapValue;
+			info.data = MapWrapperDummy{};
+
+			std::memcpy(&info.data, &wrapper, sizeof(MapWrapper<T, U*>));
+			trackingContainers.insert_or_assign(reinterpret_cast<void*>(&container), info);
+		}
+		template<typename T, typename U, typename = std::enable_if_t<std::is_base_of_v<SObject, T>>>
+		void AddContainerTracking(std::unordered_map<T*, U>& container)
+		{
+			std::lock_guard<std::mutex> lock{ mu };
+			MapWrapper<T*, U> wrapper{};
+			wrapper.mapPtr = &container;
+
+			TrackingContainerInfo info{};
+			info.type = TrackingContainerInfo::Type::HashMapKey;
+			info.data = MapWrapperDummy{};
+
+			std::memcpy(&info.data, &wrapper, sizeof(MapWrapper<T*, U>));
+			trackingContainers.insert_or_assign(reinterpret_cast<void*>(&container), info);
+		}
+		template<typename T, typename U, typename = std::enable_if_t<std::is_base_of_v<SObject, U>>>
+		void AddContainerTracking(std::unordered_map<T, U*>& container)
+		{
+			std::lock_guard<std::mutex> lock{ mu };
+			MapWrapper<T, U*> wrapper{};
+			wrapper.mapPtr = &container;
+
+			TrackingContainerInfo info{};
+			info.type = TrackingContainerInfo::Type::HashMapValue;
+			info.data = MapWrapperDummy{};
+
+			std::memcpy(&info.data, &wrapper, sizeof(MapWrapper<T, U*>));
+			trackingContainers.insert_or_assign(reinterpret_cast<void*>(&container), info);
+		}
+
+		void RemoveContainerTracking(const void* containerPtr)
+		{
+			std::lock_guard<std::mutex> lock{ mu };
+			auto it = trackingContainers.find(const_cast<void*>(containerPtr));
+			if (it != trackingContainers.end())
+				trackingContainers.erase(it);
 		}
 	};
 }

@@ -7,13 +7,12 @@
 #include "Render/MaterialPropertyBlock.h"
 
 #include "Core/Util.h"
-#include "Core/SContainer.hpp"
 #include "Core/Observer.hpp"
 
 #include "glm/mat4x4.hpp"
 #include <unordered_map>
 #include <memory>
-
+#include <vector>
 namespace sh::render
 {
 	class Drawable;
@@ -31,7 +30,7 @@ namespace sh::game
 		PROPERTY(propertyBlock, core::PropertyOption::invisible)
 		render::MaterialPropertyBlock* propertyBlock = nullptr;
 
-		core::SVector<std::pair<const render::ShaderPass*, const render::UniformStructLayout*>> localUniformLocations;
+		std::vector<std::pair<const render::ShaderPass*, const render::UniformStructLayout*>> localUniformLocations;
 
 		core::Observer<false, const glm::mat4&>::Listener onMatrixUpdateListener;
 

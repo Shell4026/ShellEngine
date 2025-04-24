@@ -2,8 +2,9 @@
 #include "Export.h"
 
 #include "Core/Reflection.hpp"
-#include "Core/SContainer.hpp"
 
+#include <unordered_map>
+#include <vector>
 namespace sh::game
 {
 	class GUITexture;
@@ -21,7 +22,7 @@ namespace sh::editor
 	private:
 		CustomInspectorManager* customInspectorManager;
 
-		core::SMap<std::string, core::SVector<std::string>> componentItems;
+		std::unordered_map<std::string, std::vector<std::string>> componentItems;
 
 		bool bAddComponent = false;
 	public:

@@ -1,6 +1,4 @@
-﻿#include "PCH.h"
-#include "Octree.h"
-
+﻿#include "Octree.h"
 #include "IOctreeElement.h"
 
 #undef min
@@ -61,7 +59,7 @@ namespace sh::game
 		return check;
 	}
 
-	void Octree::Query(const IOctreeElement& obj, core::SVector<Octree*>& vec)
+	void Octree::Query(const IOctreeElement& obj, std::vector<Octree*>& vec)
 	{
 		if (IsLeaf())
 		{
@@ -78,7 +76,7 @@ namespace sh::game
 			}
 		}
 	}
-	void Octree::Query(const render::AABB& aabb, core::SVector<IOctreeElement*>& vec)
+	void Octree::Query(const render::AABB& aabb, std::vector<IOctreeElement*>& vec)
 	{
 		if (IsLeaf())
 		{
@@ -120,15 +118,15 @@ namespace sh::game
 		}
 		return nullptr;
 	}
-	SH_GAME_API auto Octree::Query(IOctreeElement& obj) -> core::SVector<Octree*>
+	SH_GAME_API auto Octree::Query(IOctreeElement& obj) -> std::vector<Octree*>
 	{
-		core::SVector<Octree*> resultVec{};
+		std::vector<Octree*> resultVec{};
 		Query(obj, resultVec);
 		return resultVec;
 	}
-	SH_GAME_API auto Octree::Query(const render::AABB& aabb) -> core::SVector<IOctreeElement*>
+	SH_GAME_API auto Octree::Query(const render::AABB& aabb) -> std::vector<IOctreeElement*>
 	{
-		core::SVector<IOctreeElement*> resultVec{};
+		std::vector<IOctreeElement*> resultVec{};
 		Query(aabb, resultVec);
 		return resultVec;
 	}
@@ -166,7 +164,7 @@ namespace sh::game
 	}
 	SH_GAME_API bool Octree::Erase(IOctreeElement& obj)
 	{
-		core::SVector<Octree*> nodes{ Query(obj) };
+		std::vector<Octree*> nodes{ Query(obj) };
 		if (nodes.empty())
 			return false;
 		for(auto& node : nodes)
@@ -184,11 +182,11 @@ namespace sh::game
 	{
 		return *root;
 	}
-	SH_GAME_API auto Octree::GetElements() const -> const core::SSet<IOctreeElement*>&
+	SH_GAME_API auto Octree::GetElements() const -> const std::unordered_set<IOctreeElement*>&
 	{
 		return objs;
 	}
-	SH_GAME_API auto Octree::GetElements() -> core::SSet<IOctreeElement*>&
+	SH_GAME_API auto Octree::GetElements() -> std::unordered_set<IOctreeElement*>&
 	{
 		return objs;
 	}

@@ -3,8 +3,7 @@
 #include "VulkanConfig.h"
 #include "VulkanRenderPass.h"
 
-#include "Core/SContainer.hpp"
-
+#include <unordered_map>
 #include <shared_mutex>
 namespace sh::render::vk
 {
@@ -14,7 +13,7 @@ namespace sh::render::vk
 	private:
 		const VulkanContext& context;
 
-		core::SHashMap<VulkanRenderPass::Config, VulkanRenderPass, 16, VulkanRenderPass::ConfigHasher> renderPasses;
+		std::unordered_map<VulkanRenderPass::Config, VulkanRenderPass, VulkanRenderPass::ConfigHasher> renderPasses;
 
 		std::shared_mutex mu;
 	private:

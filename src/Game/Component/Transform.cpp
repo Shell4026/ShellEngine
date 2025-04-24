@@ -133,7 +133,7 @@ namespace sh::game
 	{
 		return parent;
 	}
-	SH_GAME_API auto Transform::GetChildren() const -> const core::SVector<Transform*>&
+	SH_GAME_API auto Transform::GetChildren() const -> const std::vector<Transform*>&
 	{
 		return childs;
 	}

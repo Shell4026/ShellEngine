@@ -6,8 +6,8 @@ namespace sh::render
 {
 	SH_RENDER_API Grid::Grid()
 	{
-		core::SVector<Vertex> verts{};
-		core::SVector<uint32_t> indices{};
+		std::vector<Vertex> verts{};
+		std::vector<uint32_t> indices{};
 		for (int w = -10; w < 11; ++w)
 		{
 			verts.push_back(Vertex{ glm::vec3{ static_cast<float>(w), 0.f, -10.f } });

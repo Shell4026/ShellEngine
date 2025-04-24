@@ -214,7 +214,7 @@ namespace sh::game
 
 		onCameraRemove.Notify(cam);
 	}
-	SH_GAME_API auto World::GetCameras() const -> const core::SSet<Camera*>&
+	SH_GAME_API auto World::GetCameras() const -> const std::unordered_set<Camera*>&
 	{
 		return cameras;
 	}

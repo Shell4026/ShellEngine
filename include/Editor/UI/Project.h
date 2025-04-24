@@ -23,9 +23,9 @@ namespace sh::editor
 		std::filesystem::path currentPath;
 		std::filesystem::path selected;
 
-		core::SVector<std::filesystem::path> foldersPath;
-		core::SVector<std::filesystem::path> filesPath;
-		core::SVector<std::string> invisibleExtensions;
+		std::vector<std::filesystem::path> foldersPath;
+		std::vector<std::filesystem::path> filesPath;
+		std::vector<std::string> invisibleExtensions;
 
 		const game::GUITexture *folderIcon, *fileIcon, *meshIcon;
 		float iconSize = 50.0f;

@@ -34,7 +34,7 @@ namespace sh::render
 		};
 	private:
 		std::unordered_map<std::string, PropertyInfo> properties;
-		core::SVector<LightingPassData> passes;
+		std::vector<LightingPassData> passes;
 	private:
 		void Clear();
 		void AddShaderPass(std::unique_ptr<ShaderPass>&& pass);
@@ -46,7 +46,7 @@ namespace sh::render
 		SH_RENDER_API Shader(ShaderCreateInfo&& shaderCreateInfo);
 		SH_RENDER_API ~Shader() = default;
 		SH_RENDER_API auto GetShaderPasses(const core::Name& lightingPassName) const -> const std::vector<std::unique_ptr<ShaderPass>>*;
-		SH_RENDER_API auto GetAllShaderPass() const -> const core::SVector<LightingPassData>&;
+		SH_RENDER_API auto GetAllShaderPass() const -> const std::vector<LightingPassData>&;
 
 		SH_RENDER_API auto GetProperties() const -> const std::unordered_map<std::string, PropertyInfo>&;
 		SH_RENDER_API auto GetProperty(const std::string& name) const -> const PropertyInfo*;

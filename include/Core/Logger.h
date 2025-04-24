@@ -32,7 +32,7 @@ namespace sh::core
 			Error
 		};
 
-		SVector<std::ostream*> streams;
+		std::vector<std::ostream*> streams;
 		std::mutex mu;
 	protected:
 		SH_CORE_API Logger();

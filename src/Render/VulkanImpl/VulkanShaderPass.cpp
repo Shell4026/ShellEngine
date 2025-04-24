@@ -92,7 +92,7 @@ namespace sh::render::vk
 		layoutBinding.stageFlags = stage;
 
 		if (descriptorBindings.size() <= set)
-			descriptorBindings.resize(set + 1, core::SVector<VkDescriptorSetLayoutBinding>());
+			descriptorBindings.resize(set + 1, std::vector<VkDescriptorSetLayoutBinding>());
 
 		descriptorBindings[set].push_back(layoutBinding);
 	}
