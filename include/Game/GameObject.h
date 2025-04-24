@@ -18,8 +18,7 @@ namespace sh::game
 	{
 		SCLASS(GameObject)
 	private:
-		PROPERTY(components)
-		std::vector<Component*> components;
+		core::SVector<Component*> components;
 		bool bEnable;
 		bool bInit;
 	public:

@@ -1,13 +1,12 @@
 ﻿#pragma once
-
 #include "Render/Export.h"
 #include "VulkanConfig.h"
 
 #include "Core/NonCopyable.h"
-#include "Core/SContainer.hpp"
 
 #include <stack>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace sh::render::vk
 {
@@ -41,10 +40,10 @@ namespace sh::render::vk
 		size_t initialSize;
 		size_t size;
 
-		core::SHashSet<Pool, 32, PoolHasher> fullPool;
+		std::unordered_set<Pool, PoolHasher> fullPool;
 		std::stack<Pool> readyPool;
 
-		core::SHashMap<VkDescriptorSet, Pool> allocated;
+		std::unordered_map<VkDescriptorSet, Pool> allocated;
 	private:
 		auto GetPool() -> Pool&;
 	public:

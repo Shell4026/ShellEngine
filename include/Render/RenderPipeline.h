@@ -2,8 +2,9 @@
 #include "Export.h"
 #include "Drawable.h"
 
-#include "core/Name.h"
+#include "Core/Name.h"
 #include "Core/Observer.hpp"
+#include "Core/SContainer.hpp"
 
 #include <string>
 #include <string_view>
@@ -18,7 +19,7 @@ namespace sh::render
 	{
 		const Material* material;
 		Mesh::Topology topology;
-		std::vector<Drawable*> drawables;
+		core::SVector<Drawable*> drawables;
 	};
 
 	class IRenderPipelineImpl

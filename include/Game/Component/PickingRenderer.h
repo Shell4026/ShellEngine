@@ -14,7 +14,7 @@ namespace sh::game
 	{
 	private:
 		SH_GAME_API static inline uint32_t nextId = 1;
-		SH_GAME_API static inline core::SHashMap<uint32_t, PickingRenderer*> ids{};	
+		SH_GAME_API static inline std::unordered_map<uint32_t, PickingRenderer*> ids{};	
 		SH_GAME_API static inline std::queue<uint32_t> emptyId{};
 	public:
 		SH_GAME_API static auto AssignId(PickingRenderer* renderer) -> uint32_t;

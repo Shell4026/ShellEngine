@@ -53,11 +53,11 @@ namespace sh::render::vk
 		const VulkanContext& context;
 		VkDevice device = nullptr;
 		
-		core::SVector<std::unique_ptr<VulkanPipeline>> pipelines;
-		core::SVector<PipelineInfo> pipelinesInfo;
+		std::vector<std::unique_ptr<VulkanPipeline>> pipelines;
+		std::vector<PipelineInfo> pipelinesInfo;
 		std::unordered_map<PipelineInfo, std::size_t, PipelineInfoHasher> infoIdx;
-		std::unordered_map<VkRenderPass, core::SVector<std::size_t>> renderpassIdxs;
-		std::unordered_map<const VulkanShaderPass*, core::SVector<std::size_t>> shaderIdxs;
+		std::unordered_map<VkRenderPass, std::vector<std::size_t>> renderpassIdxs;
+		std::unordered_map<const VulkanShaderPass*, std::vector<std::size_t>> shaderIdxs;
 
 		std::shared_mutex mu;
 	private:

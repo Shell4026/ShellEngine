@@ -85,7 +85,7 @@ namespace sh::render
 			return nullptr;
 		return &lightingPassData->passes;
 	}
-	SH_RENDER_API auto Shader::GetAllShaderPass() const -> const core::SVector<LightingPassData>&
+	SH_RENDER_API auto Shader::GetAllShaderPass() const -> const std::vector<LightingPassData>&
 	{
 		return passes;
 	}

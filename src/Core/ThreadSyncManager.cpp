@@ -4,7 +4,7 @@
 #include <algorithm>
 namespace sh::core
 {
-	SVector<ThreadSyncManager::ThreadData> ThreadSyncManager::threads{};
+	std::vector<ThreadSyncManager::ThreadData> ThreadSyncManager::threads{};
 	thread_local int ThreadSyncManager::currentThreadIdx = -1;
 
 	SH_CORE_API auto ThreadSyncManager::GetThreadIndex() -> int

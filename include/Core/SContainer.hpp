@@ -1,7 +1,8 @@
 ﻿#pragma once
-
 #include "Memory/SAllocator.hpp"
+#include "GarbageCollection.h"
 
+#include <array>
 #include <vector>
 #include <set>
 #include <unordered_set>
@@ -14,515 +15,237 @@
 
 namespace sh::core
 {
+	/// @brief 쓰레기 수집을 지원하는 std::vector와 동일한 역할을 하는 컨테이너.
+	/// @brief SObject타입의 포인터면 쓰레기 수집 목록에 포함 되며 객체가 제거 되면 nullptr로 바뀐다.
+	/// @brief [주의] 절대 std::vector의 다형성 용도로 사용하면 안 된다.
+	/// @tparam T 타입
 	template<typename T>
-	using SVector = std::vector<T>;
-
-	template<typename T, std::size_t defaultSize = 8, typename _Pr = std::less<T>>
-	using SSet = std::set<T, _Pr, memory::SAllocator<T, defaultSize>>;
-
-	template<typename T, std::size_t defaultSize = 8, typename _hasher = std::hash<T>, typename _Keyeq = std::equal_to<T>>
-	using SHashSet = std::unordered_set<T, _hasher, _Keyeq, memory::SAllocator<T, defaultSize>>;
-
-	template<typename KeyT, typename T, std::size_t defaultSize = 8, typename _Pr = std::less<KeyT>>
-	using SMap = std::map<KeyT, T, _Pr, memory::SAllocator<std::pair<const KeyT, T>, defaultSize>>;
-
-	template<typename KeyT, typename T, std::size_t defaultSize = 8, typename _hasher = std::hash<KeyT>, typename _Keyeq = std::equal_to<KeyT>>
-	using SHashMap = std::unordered_map<KeyT, T, _hasher, _Keyeq, memory::SAllocator<std::pair<const KeyT, T>, defaultSize>>;
-
-    /// @brief 연속된 메모리를 가지는 해쉬맵 + 벡터 컨테이너.
-    /// @brief 검색: O(log N) 삽입: O(log N) 삭제: O(log N).
-    /// @brief 삭제 시에는 벡터의 메모리를 해제 하지 않고 {}값으로 남으며 삽입시 그 메모리를 재활용한다.
-    /// @tparam KeyT 키 타입
-    /// @tparam ValueT 값 타입
-    /// @tparam Hasher 해쉬 구조체
-    /// @tparam KeyEQ 동등 비교 구조체
-    /// @tparam CleanSize 삭제시 이 만큼의 빈 공간이 있으면 메모리 재배치
-    template<typename KeyT, typename ValueT, typename Hasher = std::hash<KeyT>, typename KeyEq = std::equal_to<KeyT>, std::size_t CleanSize = 32>
-    class SHashMapVector
+    class SVector : public std::vector<T>
     {
-    private:
-        using VectorElementType = std::optional<std::pair<const KeyT*, ValueT>>;
-        using VectorType = core::SVector<VectorElementType>;
-        using MapType = core::SHashMap<KeyT, std::size_t, CleanSize, Hasher>;
-        using VecIterator = typename VectorType::iterator;
-        using ConstVecIterator = typename VectorType::const_iterator;
-
-        MapType hashMap;
-        VectorType vec;
-        std::stack<std::size_t> emptyIdx;
     public:
-        class Iterator
+        SVector() :
+            std::vector<T>()
         {
-        private:
-            VecIterator itVec;
-            VecIterator itVecEnd;
-        public:
-            using iterator_category = std::bidirectional_iterator_tag;
-            using value_type = std::pair<const KeyT*, ValueT>;
-            using difference_type = std::ptrdiff_t;
-            using pointer = value_type*;
-            using reference = value_type&;
-
-            Iterator(VecIterator it, VecIterator endIt) :
-                itVec(it), itVecEnd(endIt)
-            {
-                while (itVec != itVecEnd && !itVec->has_value())
-                    ++itVec;
-            }
-
-            auto operator*() const -> reference
-            {
-                return itVec->value();
-            }
-            auto operator->() const -> pointer
-            {
-                return &(itVec->value());
-            }
-
-            auto operator++() -> Iterator&
-            {
-                ++itVec;
-                while (itVec != itVecEnd && !itVec->has_value())
-                    ++itVec;
-                return *this;
-            }
-            auto operator++(int) -> Iterator
-            {
-                Iterator tmp = *this;
-                ++(*this);
-                return tmp;
-            }
-            auto operator--() -> Iterator&
-            {
-                do 
-                {
-                    if (itVec == vec.begin())
-                        break;
-                    --itVec;
-                } while (!itVec->has_value());
-
-                return *this;
-            }
-            auto operator--(int) -> Iterator
-            {
-                Iterator tmp = *this;
-                --(*this);
-                return tmp;
-            }
-
-            bool operator==(const Iterator& other) const { return itVec == other.itVec; }
-            bool operator!=(const Iterator& other) const { return itVec != other.itVec; }
-        };
-        class ConstIterator
-        {
-        private:
-            ConstVecIterator itVec;
-            ConstVecIterator itVecEnd;
-        public:
-            using iterator_category = std::bidirectional_iterator_tag;
-            using value_type = const std::pair<const KeyT*, ValueT>;
-            using difference_type = std::ptrdiff_t;
-            using pointer = const value_type*;
-            using reference = const value_type&;
-
-            ConstIterator(ConstVecIterator it, ConstVecIterator endIt) :
-                itVec(it), itVecEnd(endIt)
-            {
-                while (itVec != itVecEnd && !itVec->has_value())
-                    ++itVec;
-            }
-
-            auto operator*() const -> reference
-            {
-                return itVec->value();
-            }
-            auto operator->() const -> pointer
-            {
-                return &(itVec->value());
-            }
-
-            auto operator++() -> Iterator&
-            {
-                ++itVec;
-                while (itVec != itVecEnd && !itVec->has_value())
-                    ++itVec;
-                return *this;
-            }
-            auto operator++(int) -> Iterator
-            {
-                Iterator tmp = *this;
-                ++(*this);
-                return tmp;
-            }
-            auto operator--() -> Iterator&
-            {
-                do
-                {
-                    if (itVec == vec.begin())
-                        break;
-                    --itVec;
-                } while (!itVec->has_value());
-
-                return *this;
-            }
-            auto operator--(int) -> Iterator
-            {
-                Iterator tmp = *this;
-                --(*this);
-                return tmp;
-            }
-
-            bool operator==(const Iterator& other) const { return itVec == other.itVec; }
-            bool operator!=(const Iterator& other) const { return itVec != other.itVec; }
-        };
-    private:
-        void CleanMemory()
-        {
-            auto it = std::remove(vec.begin(), vec.end(), std::nullopt);
-            vec.erase(it, vec.end());
-            for (std::size_t i = 0; i < vec.size(); ++i)
-                hashMap[*vec[i]->first] = i;
-            while (!emptyIdx.empty())
-                emptyIdx.pop();
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
         }
-    public:
-        bool Insert(const KeyT& key, const ValueT& value)
+        template<class... Args>
+        SVector(Args&&... args) :
+            std::vector<T>(std::forward<Args>(args)...)
         {
-            if (hashMap.find(key) != hashMap.end())
-                return false;
-
-            std::size_t idx;
-            if (emptyIdx.empty())
-            {
-                idx = vec.size();
-                auto result = hashMap.insert({ key, idx });
-                vec.push_back(std::make_pair(&result.first->first, value));
-            }
-            else
-            {
-                idx = emptyIdx.top();
-                auto result = hashMap.insert({ key, idx });
-                vec[idx] = { &result.first->first, value };
-                emptyIdx.pop();
-            }
-            return true;
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
         }
-        bool Erase(const KeyT& key)
+        SVector(const SVector& other) :
+            std::vector<T>(other)
         {
-            if (hashMap.empty())
-                return false;
-
-            auto it = hashMap.find(key);
-            if (it == hashMap.end())
-                return false;
-
-            vec[it->second].reset();
-            emptyIdx.push(it->second);
-            hashMap.erase(it);
-            if (emptyIdx.size() >= CleanSize)
-                CleanMemory();
-
-            return true;
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
         }
-        bool Erase(const Iterator& it)
+        SVector(SVector&& other) noexcept :
+            std::vector<T>(std::move(other))
         {
-            return Erase(*it->first);
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->RemoveContainerTracking(&other);
         }
-        auto Find(const KeyT& key) -> Iterator
+        ~SVector()
         {
-            auto it = hashMap.find(key);
-            if (it == hashMap.end())
-                return end();
-            return Iterator{ vec.begin() + it->second, vec.end() };
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->RemoveContainerTracking(this);
         }
-        void Clear()
+        auto operator=(const SVector& other) -> SVector&
         {
-            hashMap.clear();
-            vec.clear();
-            while (!emptyIdx.empty())
-                emptyIdx.pop();
+            std::vector<T>::operator=(other);
+            return *this;
         }
-
-        auto begin() -> Iterator
+        auto operator=(SVector&& other) noexcept -> SVector&
         {
-            return Iterator{ vec.begin(), vec.end() };
-        }
-        auto begin() const -> ConstIterator
-        {
-            return ConstIterator{ vec.begin(), vec.end() };
-        }
-
-        auto end() -> Iterator
-        {
-            return Iterator{ vec.end(), vec.end() };
-        }
-        auto end() const -> ConstIterator
-        {
-            return ConstIterator{ vec.end(), vec.end() };
-        }
-
-        auto operator[](std::size_t idx) -> std::optional<std::pair<KeyT*, ValueT>>&
-        {
-            if (idx >= vec.size())
-                throw std::out_of_range{};
-            assert(idx < vec.size());
-            return vec[idx];
-        }
-
-        auto Size() const -> std::size_t
-        {
-            return hashMap.size();
-        }
-        auto AllocatedSize() const -> std::size_t
-        {
-            return vec.size();
+            std::vector<T>::operator=(std::move(other));
+            return *this;
         }
     };
-
-    /// @brief 연속된 메모리를 가지는 해쉬셋 + 벡터 컨테이너.
-    /// @brief 검색: O(log N) 삽입: O(log N) 삭제: O(log N).
-    /// @brief 삭제 시에는 벡터의 메모리를 해제 하지 않고 {}값으로 남으며 삽입시 그 메모리를 재활용한다.
+    /// @brief 쓰레기 수집을 지원하는 std::array와 동일한 역할을 하는 컨테이너.
+    /// @brief SObject타입의 포인터면 쓰레기 수집 목록에 포함 되며 객체가 제거 되면 nullptr로 바뀐다.
+    /// @brief [주의] 절대 std::array의 다형성 용도로 사용하면 안 된다.
     /// @tparam T 타입
-    /// @tparam Hasher 해쉬 구조체
-    /// @tparam KeyEQ 동등 비교 구조체
-    /// @tparam CleanSize 삭제시 이 만큼의 빈 공간이 있으면 메모리 재배치
-    template<typename T, typename Hasher = std::hash<T>, typename KeyEq = std::equal_to<T>, std::size_t CleanSize = 32>
-    class SHashSetVector
+    /// @tparam size 배열 사이즈
+    template<typename T, std::size_t size>
+    class SArray : public std::array<T, size>
     {
-    private:
-        using VecIterator = typename core::SVector<std::optional<T>>::iterator;
-        using ConstVecIterator = typename core::SVector<std::optional<T>>::const_iterator;
-        using VectorType = core::SVector<std::optional<T>>;
-        using MapType = core::SHashMap<T, std::size_t, CleanSize, Hasher>;
-
-        MapType hashMapC;
-        VectorType vec;
-        std::stack<std::size_t> emptyIdx;
     public:
-        class Iterator 
+        SArray()
         {
-        private:
-            VecIterator itVec;
-            VecIterator itVecEnd;
-        public:
-            using iterator_category = std::bidirectional_iterator_tag;
-            using value_type = T;
-            using difference_type = std::ptrdiff_t;
-            using pointer = T*;
-            using reference = T&;
-
-            Iterator(const VecIterator& it, const VecIterator& endIt) :
-                itVec(it), itVecEnd(endIt)
-            {
-                while (itVec != itVecEnd && !itVec->has_value())
-                    ++itVec;
-            }
-
-            auto operator*() const -> reference
-            { 
-                return itVec->value(); 
-            }
-            auto operator->() const -> pointer
-            { 
-                return &(itVec->value());
-            }
-
-            auto operator++() -> Iterator&
-            {
-                ++itVec;
-                while (itVec != itVecEnd && !itVec->has_value())
-                    ++itVec;
-                return *this;
-            }
-            auto operator++(int) -> Iterator
-            {
-                Iterator tmp = *this;
-                ++(*this);
-                return tmp;
-            }
-            auto operator--() -> Iterator&
-            {
-                do
-                {
-                    if (itVec == vec.begin())
-                        break;
-                    --itVec;
-                } while (!itVec->has_value());
-
-                return *this;
-            }
-            auto operator--(int) -> Iterator
-            {
-                Iterator tmp = *this;
-                --(*this);
-                return tmp;
-            }
-
-            bool operator==(const Iterator& other) const { return itVec == other.itVec; }
-            bool operator!=(const Iterator& other) const { return itVec != other.itVec; }
-        };
-        class ConstIterator
-        {
-        private:
-            ConstVecIterator itVec;
-            ConstVecIterator itVecEnd;
-        public:
-            using iterator_category = std::bidirectional_iterator_tag;
-            using value_type = const T;
-            using difference_type = std::ptrdiff_t;
-            using pointer = const T*;
-            using reference = const T&;
-
-            ConstIterator(ConstVecIterator it, ConstVecIterator endIt) :
-                itVec(it), itVecEnd(endIt)
-            {
-                while (itVec != itVecEnd && !itVec->has_value())
-                    ++itVec;
-            }
-
-            auto operator*() const -> reference
-            {
-                return itVec->value();
-            }
-            auto operator->() const -> pointer
-            {
-                return &(itVec->value());
-            }
-
-            auto operator++() -> Iterator&
-            {
-                ++itVec;
-                while (itVec != itVecEnd && !itVec->has_value())
-                    ++itVec;
-                return *this;
-            }
-            auto operator++(int) -> Iterator
-            {
-                Iterator tmp = *this;
-                ++(*this);
-                return tmp;
-            }
-            auto operator--() -> Iterator&
-            {
-                do
-                {
-                    if (itVec == vec.begin())
-                        break;
-                    --itVec;
-                } while (!itVec->has_value());
-
-                return *this;
-            }
-            auto operator--(int) -> Iterator
-            {
-                Iterator tmp = *this;
-                --(*this);
-                return tmp;
-            }
-
-            bool operator==(const Iterator& other) const { return itVec == other.itVec; }
-            bool operator!=(const Iterator& other) const { return itVec != other.itVec; }
-        };
-    private:
-        void CleanMemory()
-        {
-            auto it = std::remove(vec.begin(), vec.end(), std::nullopt);
-            vec.erase(it, vec.end());
-            for (std::size_t i = 0; i < vec.size(); ++i)
-                hashMapC[vec[i].value()] = i;
-            while (!emptyIdx.empty())
-                emptyIdx.pop();
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
         }
+        template<class... Args>
+        SArray(Args&&... args) :
+            std::SArray<T>(std::forward<Args>(args)...)
+        {
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
+        }
+        ~SArray()
+        {
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->RemoveContainerTracking(this);
+        }
+        auto operator=(const SArray& other) -> SArray&
+        {
+            std::array<T, size>::operator=(other);
+            return *this;
+        }
+        auto operator=(SArray&& other) noexcept -> SArray&
+        {
+            std::array<T, size>::operator=(std::move(other));
+            return *this;
+        }
+    };
+    /// @brief 쓰레기 수집을 지원하는 std::set과 동일한 역할을 하는 컨테이너.
+    /// @brief SObject타입의 포인터면 쓰레기 수집 목록에 포함 되며 객체가 제거 되면 요소가 제거된다.
+    /// @brief [주의] 절대 std::set의 다형성 용도로 사용하면 안 된다.
+    /// @tparam T 타입
+    template<typename T>
+    class SSet : public std::set<T>
+    {
     public:
-        bool Insert(const T& value)
+        SSet()
         {
-            if (hashMapC.find(value) != hashMapC.end())
-                return false;
-
-            std::size_t idx;
-            if (emptyIdx.empty())
-            {
-                idx = vec.size();
-                vec.push_back(value);
-            }
-            else
-            {
-                idx = emptyIdx.top();
-                vec[idx] = value;
-                emptyIdx.pop();
-            }
-            auto result = hashMapC.insert({ value, idx });
-            return result.second;
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
         }
-        bool Erase(const T& value)
+        template<class... Args>
+        SSet(Args&&... args) :
+            std::set<T>(std::forward<Args>(args)...)
         {
-            if (hashMapC.empty())
-                return false;
-
-            auto it = hashMapC.find(value);
-            if (it == hashMapC.end())
-                return false;
-
-            vec[it->second].reset();
-            emptyIdx.push(it->second);
-            hashMapC.erase(it);
-            if (emptyIdx.size() >= CleanSize)
-                CleanMemory();
-
-            return true;
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
         }
-        bool Erase(const Iterator& it)
+        ~SSet()
         {
-            return Erase(*it);
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->RemoveContainerTracking(this);
         }
-        auto Find(const T& value) -> Iterator
+        auto operator=(const SSet& other) -> SSet&
         {
-            auto it = hashMapC.find(value);
-            if (it == hashMapC.end())
-                return end();
-            return Iterator{ vec.begin() + it->second, vec.end() };
+            std::set<T>::operator=(other);
+            return *this;
         }
-        void Clear()
+        auto operator=(SSet&& other) noexcept -> SSet&
         {
-            hashMapC.clear();
-            vec.clear();
-            while (!emptyIdx.empty())
-                emptyIdx.pop();
+            std::set<T>::operator=(std::move(other));
+            return *this;
         }
-
-        auto begin() -> Iterator
+    };
+    /// @brief 쓰레기 수집을 지원하는 std::unordered_set과 동일한 역할을 하는 컨테이너.
+    /// @brief SObject타입의 포인터면 쓰레기 수집 목록에 포함 되며 객체가 제거 되면 요소가 제거된다.
+    /// @brief [주의] 절대 std::unordered_set의 다형성 용도로 사용하면 안 된다.
+    /// @tparam T 키 타입
+    /// @tparam U 값 타입
+    template<typename T>
+    class SHashSet : public std::unordered_set<T>
+    {
+    public:
+        SHashSet()
         {
-            return Iterator(vec.begin(), vec.end());
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
         }
-        auto begin() const -> ConstIterator
+        template<class... Args>
+        SHashSet(Args&&... args) :
+            std::unordered_set<T>(std::forward<Args>(args)...)
         {
-            return ConstIterator(vec.begin(), vec.end());
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
         }
-
-        auto end() -> Iterator
+        ~SHashSet()
         {
-            return Iterator{ vec.end(), vec.end() };
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->RemoveContainerTracking(this);
         }
-        auto end() const -> ConstIterator
+        auto operator=(const SHashSet& other) -> SHashSet&
         {
-            return ConstIterator{ vec.end(), vec.end() };
+            std::unordered_set<T>::operator=(other);
+            return *this;
         }
-
-        auto operator[](std::size_t idx) -> std::optional<T>&
+        auto operator=(SHashSet&& other) noexcept -> SHashSet&
         {
-            if (idx >= vec.size())
-                throw std::out_of_range{};
-            assert(idx < vec.size());
-            return vec[idx];
+            std::unordered_set<T>::operator=(std::move(other));
+            return *this;
         }
-
-        auto Size() const -> std::size_t
+    };
+    /// @brief 쓰레기 수집을 지원하는 std::map과 동일한 역할을 하는 컨테이너.
+    /// @brief SObject타입의 포인터면 쓰레기 수집 목록에 포함 되며 객체가 제거 되면 요소가 제거된다.
+    /// @brief [주의] 절대 std::map의 다형성 용도로 사용하면 안 된다.
+    /// @tparam T 키 타입
+    /// @tparam U 값 타입
+    template<typename T, typename U>
+    class SMap : public std::map<T, U>
+    {
+    public:
+        SMap()
         {
-            return hashMapC.size();
+            if constexpr (std::is_convertible_v<T, const SObject*> || std::is_convertible_v<U, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
         }
-        auto AllocatedSize() const -> std::size_t
+        template<class... Args>
+        SMap(Args&&... args) :
+            std::map<T, U>(std::forward<Args>(args)...)
         {
-            return vec.size();
+            if constexpr (std::is_convertible_v<T, const SObject*> || std::is_convertible_v<U, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
+        }
+        ~SMap()
+        {
+            if constexpr (std::is_convertible_v<T, const SObject*> || std::is_convertible_v<U, const SObject*>)
+                core::GarbageCollection::GetInstance()->RemoveContainerTracking(this);
+        }
+        auto operator=(const SMap& other) -> SMap&
+        {
+            std::map<T, U>::operator=(other);
+            return *this;
+        }
+        auto operator=(SMap&& other) noexcept -> SMap&
+        {
+            std::map<T, U>::operator=(std::move(other));
+            return *this;
+        }
+    };
+    /// @brief 쓰레기 수집을 지원하는 std::unordered_map과 동일한 역할을 하는 컨테이너.
+    /// @brief SObject타입의 포인터면 쓰레기 수집 목록에 포함 되며 객체가 제거 되면 요소가 제거된다.
+    /// @brief [주의] 절대 std::unordered_map의 다형성 용도로 사용하면 안 된다.
+    /// @tparam T 키 타입
+    /// @tparam U 값 타입
+    template<typename T, typename U>
+    class SHashMap : public std::unordered_map<T, U>
+    {
+    public:
+        SHashMap()
+        {
+            if constexpr (std::is_convertible_v<T, const SObject*> || std::is_convertible_v<U, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
+        }
+        template<class... Args>
+        SHashMap(Args&&... args) :
+            std::unordered_map<T, U>(std::forward<Args>(args)...)
+        {
+            if constexpr (std::is_convertible_v<T, const SObject*> || std::is_convertible_v<U, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
+        }
+        ~SHashMap()
+        {
+            if constexpr (std::is_convertible_v<T, const SObject*> || std::is_convertible_v<U, const SObject*>)
+                core::GarbageCollection::GetInstance()->RemoveContainerTracking(this);
+        }
+        auto operator=(const SHashMap& other) -> SHashMap&
+        {
+            std::unordered_map<T, U>::operator=(other);
+            return *this;
+        }
+        auto operator=(SHashMap&& other) noexcept -> SHashMap&
+        {
+            std::unordered_map<T, U>::operator=(std::move(other));
+            return *this;
         }
     };
 }//namespace
