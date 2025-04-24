@@ -193,6 +193,7 @@ namespace sh::editor
 					else if (type == core::reflection::GetType<float>())
 					{
 						float* parameter = prop->Get<float>(obj);
+						ImGui::Text(name.c_str());
 						if (constant)
 							ImGui::InputFloat(("##input_" + name + std::to_string(idx)).c_str(), parameter, 0.f, 0.f, "%.3f", inputFlag);
 						else
