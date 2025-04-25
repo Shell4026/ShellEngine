@@ -76,11 +76,16 @@ namespace sh::core
 		return name;
 	}
 
-	SH_CORE_API void SObject::SetUUID(const UUID& uuid)
+	SH_CORE_API auto SObject::SetUUID(const UUID& uuid) -> bool
 	{
-		SObjectManager::GetInstance()->UnRegisterSObject(this);
+		SObjectManager& objManager = *SObjectManager::GetInstance();
+		if (objManager.GetSObject(uuid) != nullptr)
+			return false;
+
+		objManager.UnRegisterSObject(this);
 		this->uuid = uuid;
 		RegisterToManager(this);
+		return true;
 	}
 	SH_CORE_API auto SObject::GetUUID() const -> const UUID&
 	{
@@ -135,7 +140,12 @@ namespace sh::core
 
 		if (json.contains("uuid"))
 		{
-			SetUUID(UUID{ json["uuid"].get<std::string>() });
+			UUID newUUID{ json["uuid"].get<std::string>() };
+			if (uuid != newUUID)
+			{
+				bool success = SetUUID(std::move(newUUID));
+				assert(success);
+			}
 		}
 		if (json.contains("name"))
 			SetName(json["name"].get<std::string>());

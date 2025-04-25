@@ -52,7 +52,10 @@ namespace sh::core
 		SH_CORE_API void SetName(const core::Name& name);
 		SH_CORE_API auto GetName() const -> const Name&;
 
-		SH_CORE_API void SetUUID(const UUID& uuid);
+		/// @brief UUID를 재설정한다. 이미 존재하는 UUID로 설정 시 실패한다.
+		/// @param uuid UUID 객체
+		/// @return 성공 시 true, 실패 시 false
+		SH_CORE_API auto SetUUID(const UUID& uuid) -> bool;
 		SH_CORE_API auto GetUUID() const -> const UUID&;
 
 		SH_CORE_API auto Serialize() const -> Json override;
