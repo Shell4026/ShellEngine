@@ -58,60 +58,7 @@ namespace sh::core
 				if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
 					continue;
 
-				const reflection::STypeInfo* type = &obj->GetType();
-				while (type != nullptr)
-				{
-					auto& ptrProps = type->GetSObjectPtrProperties();
-					for (auto ptrProp : ptrProps)
-					{
-						SObject** propertyPtr = ptrProp->Get<SObject*>(obj);
-						SObject* ptr = *propertyPtr;
-						if (ptr == nullptr)
-							continue;
-
-						// Destory함수로 인해 제거 될 객체면 가르키고 있던 포인터를 nullptr로 바꾸고, 마킹하지 않는다.
-						if (ptr->bPendingKill.load(std::memory_order::memory_order_acquire))
-							*propertyPtr = nullptr;
-						else
-							bfs.push(ptr);
-					}
-					auto& ptrContainerProps = type->GetSObjectPtrContainerProperties();
-					for (auto ptrProp : ptrContainerProps)
-					{
-						int nested = ptrProp->GetContainerNestedLevel();
-						for (auto it = ptrProp->Begin(obj); it != ptrProp->End(obj);)
-						{
-							if (nested == 1)
-							{
-								SObject* const* propertyPtr = nullptr;
-								if (it.IsPair())
-									propertyPtr = it.GetPairSecond<SObject*>();
-								else
-									propertyPtr = it.Get<SObject*>();
-
-								SObject* ptr = *propertyPtr;
-								if (ptr == nullptr)
-								{
-									++it;
-									continue;
-								}
-
-								if (ptr->bPendingKill.load(std::memory_order::memory_order_acquire))
-									it.Erase(); // iterator 자동 갱신
-								else
-								{
-									bfs.push(ptr);
-									++it;
-								}
-							}
-							else
-							{
-								ContainerMark(bfs, obj, 1, nested, it);
-							}
-						}
-					}
-					type = type->GetSuper(); // 부모 클래스의 프로퍼티들도 검사
-				}
+				MarkProperties(obj, bfs);
 			}
 		}
 	}
@@ -119,7 +66,7 @@ namespace sh::core
 	{
 		const auto threadPool = core::ThreadPool::GetInstance();
 		const int threadNum = threadPool->GetThreadNum();
-		const std::size_t perThreadTaskCount = rootSets.size() / threadNum + (rootSets.size() % threadNum > 0 ? 1 : 0);
+		const std::size_t perThreadTaskCount = (rootSets.size() + threadNum - 1) / threadNum;
 
 		std::array<std::future<void>, ThreadPool::MAX_THREAD> taskFutures;
 		std::size_t p = 0;
@@ -139,91 +86,223 @@ namespace sh::core
 		for (int i = 0; i < futureIdx; ++i)
 			taskFutures[i].wait();
 	}
+	void GarbageCollection::MarkProperties(SObject* obj, std::queue<SObject*>& bfs)
+	{
+		const reflection::STypeInfo* type = &obj->GetType();
+		while (type != nullptr)
+		{
+			auto& ptrProps = type->GetSObjectPtrProperties();
+			for (auto ptrProp : ptrProps)
+			{
+				SObject** propertyPtr = ptrProp->Get<SObject*>(obj);
+				SObject* ptr = *propertyPtr;
+				if (ptr == nullptr)
+					continue;
 
+				// Destory함수로 인해 제거 될 객체면 가르키고 있던 포인터를 nullptr로 바꾸고, 마킹하지 않는다.
+				if (ptr->bPendingKill.load(std::memory_order::memory_order_acquire))
+					*propertyPtr = nullptr;
+				else
+					bfs.push(ptr);
+			}
+			auto& ptrContainerProps = type->GetSObjectPtrContainerProperties();
+			for (auto ptrProp : ptrContainerProps)
+			{
+				int nested = ptrProp->GetContainerNestedLevel();
+				for (auto it = ptrProp->Begin(obj); it != ptrProp->End(obj);)
+				{
+					if (nested == 1)
+					{
+						SObject* const* propertyPtr = nullptr;
+						if (it.IsPair())
+							propertyPtr = it.GetPairSecond<SObject*>();
+						else
+							propertyPtr = it.Get<SObject*>();
+
+						SObject* ptr = *propertyPtr;
+						if (ptr == nullptr)
+						{
+							++it;
+							continue;
+						}
+
+						if (ptr->bPendingKill.load(std::memory_order::memory_order_acquire))
+							it.Erase(); // iterator 자동 갱신
+						else
+						{
+							bfs.push(ptr);
+							++it;
+						}
+					}
+					else
+					{
+						ContainerMark(bfs, obj, 1, nested, it);
+					}
+				}
+			}
+			type = type->GetSuper(); // 부모 클래스의 프로퍼티들도 검사
+		}
+	}
 	void GarbageCollection::CheckContainers()
 	{
-		for (auto& [ptr, info] : trackingContainers)
+		const auto threadPool = core::ThreadPool::GetInstance();
+		const int threadNum = threadPool->GetThreadNum();
+		const std::size_t perThreadTaskCount = (trackingContainers.size() + threadNum - 1) / threadNum;
+
+		auto it = trackingContainers.begin();
+
+		std::array<std::future<void>, ThreadPool::MAX_THREAD> taskFutures;
+		int futureIdx = 0;
+		while (it != trackingContainers.end())
 		{
-			switch (info.type)
-			{
-			case TrackingContainerInfo::Type::Array:
-			{
-				SObject** arrPtr = reinterpret_cast<SObject**>(ptr);
-				for (std::size_t i = 0; i < std::get<0>(info.data); ++i)
+			auto startIt = it;
+			for (std::size_t i = 0; i < perThreadTaskCount && it != trackingContainers.end(); ++i)
+				++it;
+			auto endIt = it;
+			taskFutures[futureIdx++] = (threadPool->AddTask(
+				[&, startIt, endIt]
 				{
-					SObject** obj = (arrPtr + i);
-					if (*obj == nullptr)
-						continue;
-					if ((*obj)->bPendingKill.load(std::memory_order::memory_order_acquire))
+					for (auto it = startIt; it != endIt; ++it)
 					{
-						*obj = nullptr;
-						continue;
+						auto& [containerPtr, info] = *it;
+						switch (info.type)
+						{
+						case TrackingContainerInfo::Type::Array:
+						{
+							SObject** arrPtr = reinterpret_cast<SObject**>(containerPtr);
+							for (std::size_t i = 0; i < std::get<0>(info.data); ++i)
+							{
+								SObject** obj = (arrPtr + i);
+								if (*obj == nullptr)
+									continue;
+
+								if ((*obj)->bPendingKill.load(std::memory_order::memory_order_acquire))
+								{
+									*obj = nullptr;
+									continue;
+								}
+								std::queue<SObject*> bfs{};
+								bfs.push(*obj);
+								while (!bfs.empty())
+								{
+									SObject* obj = bfs.front();
+									bfs.pop();
+
+									if (obj == nullptr)
+										continue;
+									if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
+										continue;
+
+									MarkProperties(obj, bfs);
+								}
+							}
+							break;
+						}
+						case TrackingContainerInfo::Type::Vector:
+						{
+							std::vector<SObject*>& vector = *reinterpret_cast<std::vector<SObject*>*>(containerPtr);
+							for (int i = 0; i < vector.size(); ++i)
+							{
+								SObject* obj = vector[i];
+								if (obj == nullptr)
+									continue;
+								if (obj->bPendingKill.load(std::memory_order::memory_order_acquire))
+								{
+									vector[i] = nullptr;
+									continue;
+								}
+								std::queue<SObject*> bfs{};
+								bfs.push(obj);
+								while (!bfs.empty())
+								{
+									SObject* obj = bfs.front();
+									bfs.pop();
+
+									if (obj == nullptr)
+										continue;
+									if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
+										continue;
+									
+									MarkProperties(obj, bfs);
+								}
+							}
+							break;
+						}
+						case TrackingContainerInfo::Type::Set:
+						{
+							std::set<SObject*>& set = *reinterpret_cast<std::set<SObject*>*>(containerPtr);
+							for (auto it = set.begin(); it != set.end();)
+							{
+								SObject* obj = *it;
+								if (obj->bPendingKill.load(std::memory_order::memory_order_acquire))
+								{
+									it = set.erase(it);
+									continue;
+								}
+								std::queue<SObject*> bfs{};
+								bfs.push(obj);
+								while (!bfs.empty())
+								{
+									SObject* obj = bfs.front();
+									bfs.pop();
+
+									if (obj == nullptr)
+										continue;
+									if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
+										continue;
+
+									MarkProperties(obj, bfs);
+								}
+								++it;
+							}
+							break;
+						}
+						case TrackingContainerInfo::Type::HashSet:
+						{
+							std::unordered_set<SObject*>& set = *reinterpret_cast<std::unordered_set<SObject*>*>(containerPtr);
+							for (auto it = set.begin(); it != set.end();)
+							{
+								SObject* obj = *it;
+								if (obj->bPendingKill.load(std::memory_order::memory_order_acquire))
+								{
+									it = set.erase(it);
+									continue;
+								}
+								std::queue<SObject*> bfs{};
+								bfs.push(obj);
+								while (!bfs.empty())
+								{
+									SObject* obj = bfs.front();
+									bfs.pop();
+
+									if (obj == nullptr)
+										continue;
+									if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
+										continue;
+
+									MarkProperties(obj, bfs);
+								}
+								++it;
+							}
+							break;
+						}
+						case TrackingContainerInfo::Type::MapKey: [[fallthrough]];
+						case TrackingContainerInfo::Type::MapValue: [[fallthrough]];
+						case TrackingContainerInfo::Type::HashMapKey: [[fallthrough]];
+						case TrackingContainerInfo::Type::HashMapValue:
+						{
+							IMap* wrapper = reinterpret_cast<IMap*>(&std::get<1>(info.data));
+							wrapper->Checking(*this);
+							sizeof(std::variant<std::map<int, int>*, std::unordered_map<float, float>*>);
+							break;
+						}
+						}
 					}
-					SetRootSet(*obj);
 				}
-				break;
-			}
-			case TrackingContainerInfo::Type::Vector:
-			{
-				std::vector<SObject*>& vector = *reinterpret_cast<std::vector<SObject*>*>(ptr);
-				for (int i = 0; i < vector.size(); ++i)
-				{
-					SObject* obj = vector[i];
-					if (obj == nullptr)
-						continue;
-					if (obj->bPendingKill.load(std::memory_order::memory_order_acquire))
-					{
-						vector[i] = nullptr;
-						continue;
-					}
-					SetRootSet(obj);
-				}
-				break;
-			}
-			case TrackingContainerInfo::Type::Set:
-			{
-				std::set<SObject*>& set = *reinterpret_cast<std::set<SObject*>*>(ptr);
-				for (auto it = set.begin(); it != set.end();)
-				{
-					SObject* obj = *it;
-					if (obj->bPendingKill.load(std::memory_order::memory_order_acquire))
-					{
-						it = set.erase(it);
-						continue;
-					}
-					SetRootSet(obj);
-					++it;
-				}
-				break;
-			}
-			case TrackingContainerInfo::Type::HashSet:
-			{
-				std::unordered_set<SObject*>& set = *reinterpret_cast<std::unordered_set<SObject*>*>(ptr);
-				for (auto it = set.begin(); it != set.end();)
-				{
-					SObject* obj = *it;
-					if (obj->bPendingKill.load(std::memory_order::memory_order_acquire))
-					{
-						it = set.erase(it);
-						continue;
-					}
-					SetRootSet(obj);
-					++it;
-				}
-				break;
-			}
-			case TrackingContainerInfo::Type::MapKey: [[fallthrough]];
-			case TrackingContainerInfo::Type::MapValue: [[fallthrough]];
-			case TrackingContainerInfo::Type::HashMapKey: [[fallthrough]];
-			case TrackingContainerInfo::Type::HashMapValue:
-			{
-				IMap* wrapper = reinterpret_cast<IMap*>(&std::get<1>(info.data));
-				wrapper->Checking(*this);
-				sizeof(std::variant<std::map<int, int>*, std::unordered_map<float, float>*>);
-				break;
-			}
-			}
+			));
 		}
+		for (int i = 0; i < futureIdx; ++i)
+			taskFutures[i].wait();
 	}
 	void GarbageCollection::UncheckContainers()
 	{
@@ -389,24 +468,19 @@ namespace sh::core
 		UncheckContainers();
 
 		// 모든 SObject를 순회하며 마킹이 안 됐으면 제거
-		std::queue<SObject*> deleted;
+		std::vector<SObject*> deleted;
 		for (auto& [uuid, objPtr] : objs)
 		{
 			if (!objPtr->bMark.test_and_set(std::memory_order::memory_order_relaxed))
 			{
 				objPtr->OnDestroy();
-				deleted.push(objPtr);
+				deleted.push_back(objPtr);
 				objPtr->bPendingKill.store(true, std::memory_order::memory_order_release);
 			}
 		}
+		for (SObject* deletedPtr : deleted)
+			delete deletedPtr;
 
-		while (!deleted.empty())
-		{
-			SObject* ptr = deleted.front();
-			deleted.pop();
-
-			delete ptr;
-		}
 		auto end = std::chrono::high_resolution_clock::now();
 
 		//static std::deque<uint64_t> times;

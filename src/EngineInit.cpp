@@ -37,9 +37,9 @@ namespace sh
 	{
 		SH_INFO("Engine shutdown");
 		world->Clean();
+		gc->DefragmentRootSet();
 		gc->Collect();
 		gc->ForceDelete(world);
-
 		gui.reset();
 
 		renderer.reset();

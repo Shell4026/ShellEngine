@@ -59,7 +59,20 @@ namespace sh::core
 								it = map->erase(it);
 								continue;
 							}
-							gc.SetRootSet(const_cast<SObject*>(key));
+							std::queue<SObject*> bfs{};
+							bfs.push(const_cast<SObject*>(key));
+							while (!bfs.empty())
+							{
+								SObject* obj = bfs.front();
+								bfs.pop();
+
+								if (obj == nullptr)
+									continue;
+								if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
+									continue;
+
+								gc.MarkProperties(obj, bfs);
+							}
 						}
 						if constexpr (std::is_convertible_v<U, const SObject*>)
 						{
@@ -69,7 +82,20 @@ namespace sh::core
 								it = map->erase(it);
 								continue;
 							}
-							gc.SetRootSet(const_cast<SObject*>(value));
+							std::queue<SObject*> bfs{};
+							bfs.push(const_cast<SObject*>(value));
+							while (!bfs.empty())
+							{
+								SObject* obj = bfs.front();
+								bfs.pop();
+
+								if (obj == nullptr)
+									continue;
+								if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
+									continue;
+
+								gc.MarkProperties(obj, bfs);
+							}
 						}
 						++it;
 					}
@@ -87,7 +113,20 @@ namespace sh::core
 								it = map->erase(it);
 								continue;
 							}
-							gc.SetRootSet(const_cast<SObject*>(key));
+							std::queue<SObject*> bfs{};
+							bfs.push(const_cast<SObject*>(key));
+							while (!bfs.empty())
+							{
+								SObject* obj = bfs.front();
+								bfs.pop();
+
+								if (obj == nullptr)
+									continue;
+								if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
+									continue;
+
+								gc.MarkProperties(obj, bfs);
+							}
 						}
 						if constexpr (std::is_convertible_v<U, const SObject*>)
 						{
@@ -97,7 +136,20 @@ namespace sh::core
 								it = map->erase(it);
 								continue;
 							}
-							gc.SetRootSet(const_cast<SObject*>(value));
+							std::queue<SObject*> bfs{};
+							bfs.push(const_cast<SObject*>(value));
+							while (!bfs.empty())
+							{
+								SObject* obj = bfs.front();
+								bfs.pop();
+
+								if (obj == nullptr)
+									continue;
+								if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
+									continue;
+
+								gc.MarkProperties(obj, bfs);
+							}
 						}
 						++it;
 					}
@@ -170,6 +222,7 @@ namespace sh::core
 		void ContainerMark(std::queue<SObject*>& bfs, SObject* parent, int depth, int maxDepth, sh::core::reflection::PropertyIterator& it);
 		void Mark(std::size_t start, std::size_t end);
 		void MarkMultiThread();
+		SH_CORE_API void MarkProperties(SObject* obj, std::queue<SObject*>& bfs);
 		void CheckContainers();
 		void UncheckContainers();
 	protected:
