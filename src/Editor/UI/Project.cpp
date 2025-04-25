@@ -104,7 +104,7 @@ namespace sh::editor
 			}
 			else if (extType == AssetExtensions::Type::Material)
 			{
-				payloadName = core::reflection::GetTypeName<render::Material*>();
+				payloadName = core::reflection::GetTypeName<render::Material>();
 				item = world.materials.GetResource(pathStr);
 				if (item == nullptr)
 					item = AssetDatabase::ImportAsset(world, path);
@@ -354,7 +354,7 @@ namespace sh::editor
 		isOpen = true;
 
 		rootPath = dir;
-		assetPath = rootPath / "assets";
+		assetPath = rootPath / "Assets";
 		binaryPath = rootPath / "bin";
 		currentPath = dir;
 		GetAllFiles(currentPath);
