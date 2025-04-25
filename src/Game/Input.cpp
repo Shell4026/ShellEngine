@@ -48,10 +48,10 @@ namespace sh::game
 		mouseDelta.y = mousePos.y - mouseDelta.y;
 	}
 
-	bool Input::GetKeyDown(KeyCode keycode)
+	bool Input::GetKeyDown(KeyCode keycode, bool bIgnoreGui)
 	{
-		//if (ImGui::GetIO().WantCaptureKeyboard)
-		//	return false;
+		if (!bIgnoreGui && ImGui::GetIO().WantTextInput)
+			return false;
 		return  keyPressing[static_cast<uint32_t>(keycode)];
 	}
 	bool Input::GetMouseDown(MouseType mouseType)

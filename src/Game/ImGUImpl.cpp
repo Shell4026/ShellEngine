@@ -73,11 +73,13 @@ namespace sh::game
 	void ImGUImpl::WindowInit()
 	{
 		ImGuiIO& io = ImGui::GetIO();
-		io.BackendFlags |= 
+		io.BackendFlags |=
 			ImGuiBackendFlags_::ImGuiBackendFlags_HasMouseCursors;
 		io.BackendPlatformName = "ShellEngine";
 		io.DisplaySize = ImVec2{ static_cast<float>(window.width), static_cast<float>(window.height) };
-		io.ConfigFlags |= ImGuiConfigFlags_::ImGuiConfigFlags_DockingEnable;
+		io.ConfigFlags |= 
+			ImGuiConfigFlags_::ImGuiConfigFlags_DockingEnable | 
+			ImGuiConfigFlags_::ImGuiConfigFlags_NavEnableKeyboard;
 	}
 
 	SH_GAME_API void ImGUImpl::Init()
@@ -310,6 +312,7 @@ namespace sh::game
 				break;
 			case window::Event::KeyType::Shift:
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_ModShift, keyDown);
+				io.AddKeyEvent(ImGuiKey::ImGuiMod_Shift, keyDown);
 				break;
 			case window::Event::KeyType::Minus:
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_Minus, keyDown);
@@ -428,12 +431,14 @@ namespace sh::game
 				break;
 			case window::Event::KeyType::LCtrl:
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_LeftCtrl, keyDown);
+				io.AddKeyEvent(ImGuiKey::ImGuiMod_Ctrl, keyDown);
 				break;
 			case window::Event::KeyType::RCtrl:
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_RightCtrl, keyDown);
 				break;
 			case window::Event::KeyType::LAlt:
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_LeftAlt, keyDown);
+				io.AddKeyEvent(ImGuiKey::ImGuiMod_Alt, keyDown);
 				break;
 			case window::Event::KeyType::RAlt:
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_RightAlt, keyDown);

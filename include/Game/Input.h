@@ -32,7 +32,7 @@ namespace sh::game
 		/// @brief 현재 키가 눌러져 있는지 확인하는 함수.
 		/// @param keycode 키코드 enum
 		/// @return 눌렀으면 true, 아니면 false.
-		SH_GAME_API static bool GetKeyDown(KeyCode keycode);
+		SH_GAME_API static bool GetKeyDown(KeyCode keycode, bool bIgnoreGui = false);
 		/// @brief 현재 마우스가 눌러져 있는지 확인하는 함수.
 		/// @param mouseType 마우스 타입 enum
 		/// @return 눌렀으면 true, 아니면 false
