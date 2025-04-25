@@ -49,7 +49,7 @@ add_subdirectory(Editor)
 target_link_libraries(${EXE_NAME} PUBLIC ShellEngine::Editor)
 
 add_custom_target(EngineTarget ALL
-    COMMAND ${CMAKE_COMMAND} -E copy_directory_if_different 
+    COMMAND ${CMAKE_COMMAND} -E copy_directory 
         ${CMAKE_SOURCE_DIR}/include
         ${CMAKE_BINARY_DIR}/bin/include
 )

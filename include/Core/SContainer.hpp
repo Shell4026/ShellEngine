@@ -80,7 +80,7 @@ namespace sh::core
         }
         template<class... Args>
         SArray(Args&&... args) :
-            std::SArray<T>(std::forward<Args>(args)...)
+            std::array<T, size>(std::forward<Args>(args)...)
         {
             if constexpr (std::is_convertible_v<T, const SObject*>)
                 core::GarbageCollection::GetInstance()->AddContainerTracking(*this);

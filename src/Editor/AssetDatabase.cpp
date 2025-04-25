@@ -107,7 +107,7 @@ namespace sh::editor
 	{
 		static MaterialLoader loader{ *world.renderer.GetContext() };
 		
-		auto ptr = loader.Load(dir.string());
+		auto ptr = loader.Load(dir);
 		if (ptr == nullptr)
 			return nullptr;
 

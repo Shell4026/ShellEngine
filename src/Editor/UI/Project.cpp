@@ -251,10 +251,10 @@ namespace sh::editor
 		auto pluginPath = binaryPath / "temp.dll";
 		std::filesystem::copy_file(dllPath, pluginPath, std::filesystem::copy_options::overwrite_existing);
 #elif __linux__
-		auto dllPath = binaryPath / "ShellEngineUser.so";
+		auto dllPath = binaryPath / "libShellEngineUser.so";
 		if (!std::filesystem::exists(dllPath))
 		{
-			SH_INFO("ShellEngineUser.so not found");
+			SH_INFO("libShellEngineUser.so not found");
 			return;
 		}
 		auto pluginPath = binaryPath / "temp.so";

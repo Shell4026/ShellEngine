@@ -129,7 +129,7 @@ namespace sh::game
 				type = type->GetSuper();
 				continue;
 			}
-			core::Json compJson{ json.at(type->name) };
+			core::Json compJson = json[type->name.ToString()];
 			for (auto& prop : type->GetProperties())
 			{
 				if (prop->bNoSaveProperty)

@@ -3,6 +3,7 @@
 
 #include "Render/ShaderPass.h"
 
+#include <filesystem>
 namespace sh::render
 {
 	class IRenderContext;
@@ -18,6 +19,6 @@ namespace sh::editor
 	public:
 		SH_EDITOR_API MaterialLoader(const render::IRenderContext& context);
 
-		SH_EDITOR_API virtual auto Load(std::string_view filename) -> render::Material*;
+		SH_EDITOR_API virtual auto Load(const std::filesystem::path& path) -> render::Material*;
 	};
 }//namespace

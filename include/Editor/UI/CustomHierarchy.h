@@ -8,6 +8,20 @@
 
 #include <unordered_map>
 #include <memory>
+
+/// @brief ICustomHierarchy를 상속 후 클래스 선언의 내부에 넣으면 에디터의 하이러키에서 어떻게 동작할지 정의 할 수 있다.
+/// @param Class 클래스
+/// @param Type Hierarchy에 전달할 객체 타입
+#define HIERARCHY(Class, Type)\
+private:\
+	struct HierarchyRegisterFactory\
+	{\
+		HierarchyRegisterFactory()\
+		{\
+			CustomHierarchyManager::GetInstance()->Register<Type, Class>();\
+		}\
+	} static inline hierarchyFactory{};
+
 namespace sh::editor
 {
 	class EditorWorld;
@@ -35,22 +49,5 @@ namespace sh::editor
 		{
 			map.insert_or_assign(&T::GetStaticType(), std::make_unique<U>());
 		}
-	};
-
-	/// @brief 해당 클래스를 상속 하면 에디터 Hierarchy의 행동을 정의 할 수 있다.
-	/// @tparam Hierarchy 해당 클래스를 상속한 자식의 타입
-	/// @tparam T SObject 타입
-	/// @tparam IsSObject 
-	template<typename Hierarchy, typename T, typename IsSObject = std::enable_if_t<core::reflection::IsSObject<T>::value>>
-	class CustomHierarchy : public ICustomHierarchy
-	{
-	private:
-		struct RegisterFactory
-		{
-			RegisterFactory()
-			{
-				CustomHierarchyManager::GetInstance()->Register<T, Hierarchy>();
-			}
-		} static inline factory{};
 	};
 }//namespace

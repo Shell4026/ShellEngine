@@ -7,14 +7,16 @@
 
 namespace sh::editor
 {
-	class MaterialInspector : public CustomInspector<MaterialInspector, render::Material>
+	class MaterialInspector : public ICustomInspector
 	{
+		INSPECTOR(MaterialInspector, render::Material)
 	public:
 		SH_EDITOR_API void RenderUI(void* obj) override;
 	};
 
-	class TextureInspector : public CustomInspector<TextureInspector, render::Texture>
+	class TextureInspector : public ICustomInspector
 	{
+		INSPECTOR(TextureInspector, render::Texture)
 	public:
 		SH_EDITOR_API void RenderUI(void* obj) override;
 	};

@@ -312,7 +312,7 @@ namespace sh::game
 
 	SH_GAME_API auto Transform::Serialize() const -> core::Json
 	{
-		core::Json mainJson{ Super::Serialize() };
+		core::Json mainJson = Super::Serialize();
 		core::Json& transformJson = mainJson["Transform"];
 		transformJson["quat"] = {quat.x, quat.y, quat.z, quat.w};
 		if (parent)

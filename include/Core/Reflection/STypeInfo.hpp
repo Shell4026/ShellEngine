@@ -1,12 +1,12 @@
 ﻿#pragma once
-#include "Export.h"
+#include "../Export.h"
 #include "TypeTraits.hpp"
 #include "Property.hpp"
 #include "../Name.h"
 
 #include <string_view>
 #include <unordered_map>
-
+#include <memory>
 /// SCLASS 매크로
 /// 해당 매크로를 선언하면 해당 클래스는 리플렉션 데이터를 가지게 된다.
 #define SCLASS(class_name)\

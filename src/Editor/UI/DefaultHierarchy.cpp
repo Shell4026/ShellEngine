@@ -7,6 +7,7 @@
 #include "Core/Logger.h"
 
 #include <queue>
+
 namespace sh::editor
 {
 	SH_EDITOR_API void ModelHierarchy::OnHierarchyDraged(EditorWorld& world, const ImGuiPayload& payload)

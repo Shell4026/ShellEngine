@@ -14,6 +14,7 @@
 #include <queue>
 #include <mutex>
 #include <variant>
+#include <cstring> // std::memcpy
 namespace sh::core::reflection
 {
 	class Property;
@@ -267,7 +268,7 @@ namespace sh::core
 		void AddContainerTracking(std::vector<T*>& container)
 		{
 			std::lock_guard<std::mutex> lock{ mu };
-			trackingContainers.insert_or_assign(reinterpret_cast<void*>(&container), TrackingContainerInfo{ TrackingContainerInfo::Type::Vector, 0 });
+			trackingContainers.insert_or_assign(reinterpret_cast<void*>(&container), TrackingContainerInfo{ TrackingContainerInfo::Type::Vector, static_cast<std::size_t>(0) });
 		}
 		template<typename T, std::size_t size, typename = std::enable_if_t<std::is_base_of_v<SObject, T>>>
 		void AddContainerTracking(std::array<T*, size>& container)
@@ -279,13 +280,13 @@ namespace sh::core
 		void AddContainerTracking(std::set<T*>& container)
 		{
 			std::lock_guard<std::mutex> lock{ mu };
-			trackingContainers.insert_or_assign(reinterpret_cast<void*>(&container), TrackingContainerInfo{ TrackingContainerInfo::Type::Set, 0 });
+			trackingContainers.insert_or_assign(reinterpret_cast<void*>(&container), TrackingContainerInfo{ TrackingContainerInfo::Type::Set, static_cast<std::size_t>(0) });
 		}
 		template<typename T, typename = std::enable_if_t<std::is_base_of_v<SObject, T>>>
 		void AddContainerTracking(std::unordered_set<T*>& container)
 		{
 			std::lock_guard<std::mutex> lock{ mu };
-			trackingContainers.insert_or_assign(reinterpret_cast<void*>(&container), TrackingContainerInfo{ TrackingContainerInfo::Type::HashSet, 0 });
+			trackingContainers.insert_or_assign(reinterpret_cast<void*>(&container), TrackingContainerInfo{ TrackingContainerInfo::Type::HashSet, static_cast<std::size_t>(0) });
 		}
 		template<typename T, typename U, typename = std::enable_if_t<std::is_base_of_v<SObject, T>>>
 		void AddContainerTracking(std::map<T*, U>& container)

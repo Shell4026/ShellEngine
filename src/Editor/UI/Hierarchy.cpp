@@ -214,7 +214,8 @@ namespace sh::editor
 		ImGui::InvisibleButton("HierarchyEmptySpace", ImGui::GetContentRegionAvail());
 		if (ImGui::BeginDragDropTarget())
 		{
-			for (auto& [stype, customHierarchy] : CustomHierarchyManager::GetInstance()->map)
+			const auto customHierarchyManager = CustomHierarchyManager::GetInstance();
+			for (const auto& [stype, customHierarchy] : customHierarchyManager->map)
 			{
 				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(std::string{ stype->type.name }.c_str()))
 					customHierarchy->OnHierarchyDraged(world, *payload);

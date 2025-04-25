@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include <set>
 #include <unordered_set>
+#include <string_view>
 namespace sh::core
 {
 	class SObject;

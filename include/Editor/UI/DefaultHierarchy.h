@@ -6,8 +6,9 @@
 
 namespace sh::editor
 {
-	class ModelHierarchy : public CustomHierarchy<ModelHierarchy, render::Model>
+	class ModelHierarchy : public ICustomHierarchy
 	{
+		HIERARCHY(ModelHierarchy, render::Model)
 	public:
 		SH_EDITOR_API void OnHierarchyDraged(EditorWorld& world, const ImGuiPayload& payload) override;
 	};

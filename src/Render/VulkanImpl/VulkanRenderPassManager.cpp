@@ -1,5 +1,6 @@
 ﻿#include "VulkanRenderPassManager.h"
 
+#include <mutex> // std::unique_lock
 namespace sh::render::vk
 {
 	auto VulkanRenderPassManager::CreateRenderPass(const VulkanRenderPass::Config& config) -> VulkanRenderPass

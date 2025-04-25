@@ -256,7 +256,7 @@ namespace sh::game
 
 	SH_GAME_API auto World::Serialize() const -> core::Json
 	{
-		core::Json mainJson{ Super::Serialize() };
+		core::Json mainJson = Super::Serialize();
 
 		core::Json objsJson = core::Json::array();
 		for (auto obj : objs)
