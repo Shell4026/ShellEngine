@@ -19,7 +19,7 @@ namespace sh::core
 		std::vector<std::thread> threads;
 		std::queue<std::function<void()>> tasks;
 
-		bool stop = false;
+		bool bStop = false;
 	public:
 		constexpr static uint32_t MAX_THREAD = 16;
 	protected:
@@ -54,5 +54,6 @@ namespace sh::core
 
 		SH_CORE_API auto GetThreads() const -> const std::vector<std::thread>&;
 		SH_CORE_API auto GetThreadNum() const -> uint32_t;
+		SH_CORE_API auto IsInit() const -> bool;
 	};
 }//namespace

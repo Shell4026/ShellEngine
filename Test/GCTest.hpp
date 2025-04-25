@@ -3,6 +3,7 @@
 #include "../include/Core/GarbageCollection.h"
 #include "../include/Core/Util.h"
 #include "../include/Core/SContainer.hpp"
+#include "../include/Core/ThreadPool.h"
 
 #include <gtest/gtest.h>
 
@@ -45,6 +46,7 @@ public:
 TEST(GCTest, RootSetDefragmentTest)
 {
 	using namespace sh::core;
+	ThreadPool::GetInstance()->Init(4);
 	GarbageCollection& gc = *GarbageCollection::GetInstance();
 
 	std::vector<Object*> objs;

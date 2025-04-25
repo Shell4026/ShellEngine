@@ -203,6 +203,7 @@ namespace sh::core
 			std::variant<std::size_t, MapWrapperDummy> data;
 		};
 		std::unordered_map<void*, TrackingContainerInfo> trackingContainers;
+		using TrackingContainerIt = std::unordered_map<void*, TrackingContainerInfo>::iterator;
 
 		std::mutex mu;
 
@@ -221,10 +222,10 @@ namespace sh::core
 		/// @param it 넘길 반복자
 		void ContainerMark(std::queue<SObject*>& bfs, SObject* parent, int depth, int maxDepth, sh::core::reflection::PropertyIterator& it);
 		void Mark(std::size_t start, std::size_t end);
-		void MarkMultiThread();
+		void MarkWithMultiThread();
 		SH_CORE_API void MarkProperties(SObject* obj, std::queue<SObject*>& bfs);
-		void CheckContainers();
-		void UncheckContainers();
+		void CheckContainers(TrackingContainerIt start, TrackingContainerIt end);
+		void CheckContainersWithMultiThread();
 	protected:
 		SH_CORE_API GarbageCollection();
 	public:

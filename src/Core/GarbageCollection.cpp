@@ -62,7 +62,7 @@ namespace sh::core
 			}
 		}
 	}
-	void GarbageCollection::MarkMultiThread()
+	void GarbageCollection::MarkWithMultiThread()
 	{
 		const auto threadPool = core::ThreadPool::GetInstance();
 		const int threadNum = threadPool->GetThreadNum();
@@ -143,7 +143,146 @@ namespace sh::core
 			type = type->GetSuper(); // 부모 클래스의 프로퍼티들도 검사
 		}
 	}
-	void GarbageCollection::CheckContainers()
+	void GarbageCollection::CheckContainers(TrackingContainerIt start, TrackingContainerIt end)
+	{
+		for (auto it = start; it != end; ++it)
+		{
+			auto& [containerPtr, info] = *it;
+			switch (info.type)
+			{
+			case TrackingContainerInfo::Type::Array:
+			{
+				SObject** arrPtr = reinterpret_cast<SObject**>(containerPtr);
+				for (std::size_t i = 0; i < std::get<0>(info.data); ++i)
+				{
+					SObject** obj = (arrPtr + i);
+					if (*obj == nullptr)
+						continue;
+
+					if ((*obj)->bPendingKill.load(std::memory_order::memory_order_acquire))
+					{
+						*obj = nullptr;
+						continue;
+					}
+					std::queue<SObject*> bfs{};
+					bfs.push(*obj);
+					while (!bfs.empty())
+					{
+						SObject* obj = bfs.front();
+						bfs.pop();
+
+						if (obj == nullptr)
+							continue;
+						if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
+							continue;
+
+						MarkProperties(obj, bfs);
+					}
+				}
+				break;
+			}
+			case TrackingContainerInfo::Type::Vector:
+			{
+				std::vector<SObject*>& vector = *reinterpret_cast<std::vector<SObject*>*>(containerPtr);
+				for (int i = 0; i < vector.size(); ++i)
+				{
+					SObject* obj = vector[i];
+					if (obj == nullptr)
+						continue;
+					if (obj->bPendingKill.load(std::memory_order::memory_order_acquire))
+					{
+						vector[i] = nullptr;
+						continue;
+					}
+					std::queue<SObject*> bfs{};
+					bfs.push(obj);
+					while (!bfs.empty())
+					{
+						SObject* obj = bfs.front();
+						bfs.pop();
+
+						if (obj == nullptr)
+							continue;
+						if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
+							continue;
+
+						MarkProperties(obj, bfs);
+					}
+				}
+				break;
+			}
+			case TrackingContainerInfo::Type::Set:
+			{
+				std::set<SObject*>& set = *reinterpret_cast<std::set<SObject*>*>(containerPtr);
+				for (auto it = set.begin(); it != set.end();)
+				{
+					SObject* obj = *it;
+					if (obj->bPendingKill.load(std::memory_order::memory_order_acquire))
+					{
+						it = set.erase(it);
+						continue;
+					}
+					std::queue<SObject*> bfs{};
+					bfs.push(obj);
+					while (!bfs.empty())
+					{
+						SObject* obj = bfs.front();
+						bfs.pop();
+
+						if (obj == nullptr)
+							continue;
+						if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
+							continue;
+
+						MarkProperties(obj, bfs);
+					}
+					++it;
+				}
+				break;
+			}
+			case TrackingContainerInfo::Type::HashSet:
+			{
+				std::unordered_set<SObject*>& set = *reinterpret_cast<std::unordered_set<SObject*>*>(containerPtr);
+				for (auto it = set.begin(); it != set.end();)
+				{
+					SObject* obj = *it;
+					if (obj->bPendingKill.load(std::memory_order::memory_order_acquire))
+					{
+						it = set.erase(it);
+						continue;
+					}
+					std::queue<SObject*> bfs{};
+					bfs.push(obj);
+					while (!bfs.empty())
+					{
+						SObject* obj = bfs.front();
+						bfs.pop();
+
+						if (obj == nullptr)
+							continue;
+						if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
+							continue;
+
+						MarkProperties(obj, bfs);
+					}
+					++it;
+				}
+				break;
+			}
+			case TrackingContainerInfo::Type::MapKey: [[fallthrough]];
+			case TrackingContainerInfo::Type::MapValue: [[fallthrough]];
+			case TrackingContainerInfo::Type::HashMapKey: [[fallthrough]];
+			case TrackingContainerInfo::Type::HashMapValue:
+			{
+				IMap* wrapper = reinterpret_cast<IMap*>(&std::get<1>(info.data));
+				wrapper->Checking(*this);
+				sizeof(std::variant<std::map<int, int>*, std::unordered_map<float, float>*>);
+				break;
+			}
+			}
+		}
+	}
+	void GarbageCollection::CheckContainersWithMultiThread()
 	{
 		const auto threadPool = core::ThreadPool::GetInstance();
 		const int threadNum = threadPool->GetThreadNum();
@@ -162,202 +301,12 @@ namespace sh::core
 			taskFutures[futureIdx++] = (threadPool->AddTask(
 				[&, startIt, endIt]
 				{
-					for (auto it = startIt; it != endIt; ++it)
-					{
-						auto& [containerPtr, info] = *it;
-						switch (info.type)
-						{
-						case TrackingContainerInfo::Type::Array:
-						{
-							SObject** arrPtr = reinterpret_cast<SObject**>(containerPtr);
-							for (std::size_t i = 0; i < std::get<0>(info.data); ++i)
-							{
-								SObject** obj = (arrPtr + i);
-								if (*obj == nullptr)
-									continue;
-
-								if ((*obj)->bPendingKill.load(std::memory_order::memory_order_acquire))
-								{
-									*obj = nullptr;
-									continue;
-								}
-								std::queue<SObject*> bfs{};
-								bfs.push(*obj);
-								while (!bfs.empty())
-								{
-									SObject* obj = bfs.front();
-									bfs.pop();
-
-									if (obj == nullptr)
-										continue;
-									if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
-										continue;
-
-									MarkProperties(obj, bfs);
-								}
-							}
-							break;
-						}
-						case TrackingContainerInfo::Type::Vector:
-						{
-							std::vector<SObject*>& vector = *reinterpret_cast<std::vector<SObject*>*>(containerPtr);
-							for (int i = 0; i < vector.size(); ++i)
-							{
-								SObject* obj = vector[i];
-								if (obj == nullptr)
-									continue;
-								if (obj->bPendingKill.load(std::memory_order::memory_order_acquire))
-								{
-									vector[i] = nullptr;
-									continue;
-								}
-								std::queue<SObject*> bfs{};
-								bfs.push(obj);
-								while (!bfs.empty())
-								{
-									SObject* obj = bfs.front();
-									bfs.pop();
-
-									if (obj == nullptr)
-										continue;
-									if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
-										continue;
-									
-									MarkProperties(obj, bfs);
-								}
-							}
-							break;
-						}
-						case TrackingContainerInfo::Type::Set:
-						{
-							std::set<SObject*>& set = *reinterpret_cast<std::set<SObject*>*>(containerPtr);
-							for (auto it = set.begin(); it != set.end();)
-							{
-								SObject* obj = *it;
-								if (obj->bPendingKill.load(std::memory_order::memory_order_acquire))
-								{
-									it = set.erase(it);
-									continue;
-								}
-								std::queue<SObject*> bfs{};
-								bfs.push(obj);
-								while (!bfs.empty())
-								{
-									SObject* obj = bfs.front();
-									bfs.pop();
-
-									if (obj == nullptr)
-										continue;
-									if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
-										continue;
-
-									MarkProperties(obj, bfs);
-								}
-								++it;
-							}
-							break;
-						}
-						case TrackingContainerInfo::Type::HashSet:
-						{
-							std::unordered_set<SObject*>& set = *reinterpret_cast<std::unordered_set<SObject*>*>(containerPtr);
-							for (auto it = set.begin(); it != set.end();)
-							{
-								SObject* obj = *it;
-								if (obj->bPendingKill.load(std::memory_order::memory_order_acquire))
-								{
-									it = set.erase(it);
-									continue;
-								}
-								std::queue<SObject*> bfs{};
-								bfs.push(obj);
-								while (!bfs.empty())
-								{
-									SObject* obj = bfs.front();
-									bfs.pop();
-
-									if (obj == nullptr)
-										continue;
-									if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
-										continue;
-
-									MarkProperties(obj, bfs);
-								}
-								++it;
-							}
-							break;
-						}
-						case TrackingContainerInfo::Type::MapKey: [[fallthrough]];
-						case TrackingContainerInfo::Type::MapValue: [[fallthrough]];
-						case TrackingContainerInfo::Type::HashMapKey: [[fallthrough]];
-						case TrackingContainerInfo::Type::HashMapValue:
-						{
-							IMap* wrapper = reinterpret_cast<IMap*>(&std::get<1>(info.data));
-							wrapper->Checking(*this);
-							sizeof(std::variant<std::map<int, int>*, std::unordered_map<float, float>*>);
-							break;
-						}
-						}
-					}
+					CheckContainers(startIt, endIt);
 				}
 			));
 		}
 		for (int i = 0; i < futureIdx; ++i)
 			taskFutures[i].wait();
-	}
-	void GarbageCollection::UncheckContainers()
-	{
-		for (auto& [ptr, info] : trackingContainers)
-		{
-			switch (info.type)
-			{
-			case TrackingContainerInfo::Type::Array:
-			{
-				SObject** arrPtr = reinterpret_cast<SObject**>(ptr);
-				for (std::size_t i = 0; i < std::get<0>(info.data); ++i)
-				{
-					SObject** obj = (arrPtr + i);
-					if (*obj == nullptr)
-						continue;
-					RemoveRootSet(*obj);
-				}
-				break;
-			}
-			case TrackingContainerInfo::Type::Vector:
-			{
-				std::vector<SObject*>& vector = *reinterpret_cast<std::vector<SObject*>*>(ptr);
-				for (SObject* obj : vector)
-				{
-					if (obj == nullptr)
-						continue;
-					RemoveRootSet(obj);
-				}
-				break;
-			}
-			case TrackingContainerInfo::Type::Set:
-			{
-				std::set<const SObject*>& set = *reinterpret_cast<std::set<const SObject*>*>(ptr);
-				for (const SObject* obj : set)
-					RemoveRootSet(obj);
-				break;
-			}
-			case TrackingContainerInfo::Type::HashSet:
-			{
-				std::unordered_set<const SObject*>& set = *reinterpret_cast<std::unordered_set<const SObject*>*>(ptr);
-				for (const SObject* obj : set)
-					RemoveRootSet(obj);
-				break;
-			}
-			case TrackingContainerInfo::Type::MapKey: [[fallthrough]];
-			case TrackingContainerInfo::Type::MapValue: [[fallthrough]];
-			case TrackingContainerInfo::Type::HashMapKey: [[fallthrough]];
-			case TrackingContainerInfo::Type::HashMapValue:
-			{
-				IMap* wrapper = reinterpret_cast<IMap*>(&std::get<1>(info.data));
-				wrapper->Unchecking(*this);
-				break;
-			}
-			}
-		}
 	}
 	GarbageCollection::GarbageCollection() :
 		objs(SObjectManager::GetInstance()->objs)
@@ -458,14 +407,17 @@ namespace sh::core
 		for (auto& [id, obj] : objs)
 			obj->bMark.clear(std::memory_order::memory_order_relaxed);
 
-		CheckContainers();
+		const bool bThreadPoolInit = ThreadPool::GetInstance()->IsInit();
 
-		if (rootSets.size() > 128)
-			MarkMultiThread();
+		if (trackingContainers.size() > 8 && bThreadPoolInit)
+			CheckContainersWithMultiThread();
+		else
+			CheckContainers(trackingContainers.begin(), trackingContainers.end());
+
+		if (rootSets.size() > 128 && bThreadPoolInit)
+			MarkWithMultiThread();
 		else
 			Mark(0, rootSets.size());
-
-		UncheckContainers();
 
 		// 모든 SObject를 순회하며 마킹이 안 됐으면 제거
 		std::vector<SObject*> deleted;
@@ -479,7 +431,12 @@ namespace sh::core
 			}
 		}
 		for (SObject* deletedPtr : deleted)
-			delete deletedPtr;
+		{
+			if (!deletedPtr->bPlacementNew)
+				delete deletedPtr;
+			else
+				std::destroy_at(deletedPtr);
+		}
 
 		auto end = std::chrono::high_resolution_clock::now();
 

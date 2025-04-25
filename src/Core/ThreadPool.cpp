@@ -8,7 +8,7 @@ namespace sh::core
 	ThreadPool::~ThreadPool()
 	{
 		mu.lock();
-		stop = true;
+		bStop = true;
 		mu.unlock();
 
 		cv.notify_all();
@@ -27,9 +27,9 @@ namespace sh::core
 						{
 							std::unique_lock<std::mutex> lock{ mu };
 							
-							while(!stop && tasks.empty())
+							while(!bStop && tasks.empty())
 								cv.wait(lock);
-							if (stop && tasks.empty())
+							if (bStop && tasks.empty())
 								return;
 							task = std::move(tasks.front());
 							tasks.pop();
@@ -48,5 +48,9 @@ namespace sh::core
 	SH_CORE_API auto ThreadPool::GetThreadNum() const -> uint32_t
 	{
 		return threads.size();
+	}
+	SH_CORE_API auto ThreadPool::IsInit() const -> bool
+	{
+		return threads.size() > 1;
 	}
 }//namepsace
