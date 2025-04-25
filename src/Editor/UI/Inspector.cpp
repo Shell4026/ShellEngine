@@ -144,7 +144,7 @@ namespace sh::editor
 								parameter->z = v[2];
 								parameter->w = v[3];
 								obj->OnPropertyChanged(*prop);
-								AssetDatabase::SyncDirty(obj);
+								AssetDatabase::SetDirty(obj);
 								AssetDatabase::SaveAllAssets();
 							}
 						}
@@ -166,7 +166,7 @@ namespace sh::editor
 								parameter->y = v[1];
 								parameter->z = v[2];
 								obj->OnPropertyChanged(*prop);
-								AssetDatabase::SyncDirty(obj);
+								AssetDatabase::SetDirty(obj);
 								AssetDatabase::SaveAllAssets();
 							}
 						}
@@ -185,7 +185,7 @@ namespace sh::editor
 								parameter->x = v[0];
 								parameter->y = v[1];
 								obj->OnPropertyChanged(*prop);
-								AssetDatabase::SyncDirty(obj);
+								AssetDatabase::SetDirty(obj);
 								AssetDatabase::SaveAllAssets();
 							}
 						}
@@ -200,7 +200,7 @@ namespace sh::editor
 							if (ImGui::InputFloat(("##input_" + name + std::to_string(idx)).c_str(), parameter))
 							{
 								obj->OnPropertyChanged(*prop);
-								AssetDatabase::SyncDirty(obj);
+								AssetDatabase::SetDirty(obj);
 								AssetDatabase::SaveAllAssets();
 							}
 					}
@@ -214,7 +214,7 @@ namespace sh::editor
 							if (ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), parameter))
 							{
 								obj->OnPropertyChanged(*prop);
-								AssetDatabase::SyncDirty(obj);
+								AssetDatabase::SetDirty(obj);
 								AssetDatabase::SaveAllAssets();
 							}
 					}
@@ -228,7 +228,7 @@ namespace sh::editor
 							if (ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), reinterpret_cast<int*>(parameter)))
 							{
 								obj->OnPropertyChanged(*prop);
-								AssetDatabase::SyncDirty(obj);
+								AssetDatabase::SetDirty(obj);
 								AssetDatabase::SaveAllAssets();
 							}
 					}
@@ -242,7 +242,7 @@ namespace sh::editor
 							if (ImGui::InputText(("##Input_" + name + std::to_string(idx)).c_str(), parameter, inputFlag))
 							{
 								obj->OnPropertyChanged(*prop);
-								AssetDatabase::SyncDirty(obj);
+								AssetDatabase::SetDirty(obj);
 								AssetDatabase::SaveAllAssets();
 							}
 					}
@@ -252,7 +252,7 @@ namespace sh::editor
 						if (!constant)
 							ImGui::Checkbox(name.c_str(), parameter);
 						obj->OnPropertyChanged(*prop);
-						AssetDatabase::SyncDirty(obj);
+						AssetDatabase::SetDirty(obj);
 						AssetDatabase::SaveAllAssets();
 					}
 				}
@@ -305,7 +305,7 @@ namespace sh::editor
 			{
 				*parameter = *reinterpret_cast<core::SObject**>(payload->Data);
 				propertyOwner->OnPropertyChanged(prop);
-				AssetDatabase::SyncDirty(propertyOwner);
+				AssetDatabase::SetDirty(propertyOwner);
 				AssetDatabase::SaveAllAssets();
 			}
 			else
@@ -369,7 +369,7 @@ namespace sh::editor
 						if (ImGui::InputInt(("##1" + name + std::to_string(idx)).c_str(), it.GetPairSecond<int>(), 0, 0))
 						{
 							obj->OnPropertyChanged(prop);
-							AssetDatabase::SyncDirty(obj);
+							AssetDatabase::SetDirty(obj);
 							AssetDatabase::SaveAllAssets();
 						}
 					}
@@ -378,7 +378,7 @@ namespace sh::editor
 						if (ImGui::InputFloat(("##1" + name + std::to_string(idx)).c_str(), it.GetPairSecond<float>(), 0, 0))
 						{
 							obj->OnPropertyChanged(prop);
-							AssetDatabase::SyncDirty(obj);
+							AssetDatabase::SetDirty(obj);
 							AssetDatabase::SaveAllAssets();
 						}
 					}
@@ -391,7 +391,7 @@ namespace sh::editor
 							v->x = input[0];
 							v->y = input[1];
 							obj->OnPropertyChanged(prop);
-							AssetDatabase::SyncDirty(obj);
+							AssetDatabase::SetDirty(obj);
 							AssetDatabase::SaveAllAssets();
 						}
 					}
@@ -405,7 +405,7 @@ namespace sh::editor
 							v->y = input[1];
 							v->z = input[2];
 							obj->OnPropertyChanged(prop);
-							AssetDatabase::SyncDirty(obj);
+							AssetDatabase::SetDirty(obj);
 							AssetDatabase::SaveAllAssets();
 						}
 					}
@@ -420,7 +420,7 @@ namespace sh::editor
 							v->z = input[2];
 							v->w = input[3];
 							obj->OnPropertyChanged(prop);
-							AssetDatabase::SyncDirty(obj);
+							AssetDatabase::SetDirty(obj);
 							AssetDatabase::SaveAllAssets();
 						}
 					}

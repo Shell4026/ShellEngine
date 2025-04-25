@@ -20,7 +20,7 @@ namespace sh::editor
 					if (ImGui::InputFloat(("##input_" + name).c_str(), &parameter))
 					{
 						mat->SetProperty(name, parameter);
-						AssetDatabase::SyncDirty(mat);
+						AssetDatabase::SetDirty(mat);
 						AssetDatabase::SaveAllAssets();
 					}
 				}
@@ -30,7 +30,7 @@ namespace sh::editor
 					if (ImGui::InputFloat2(("##input_" + name).c_str(), &v[0]))
 					{
 						mat->SetProperty(name, v);
-						AssetDatabase::SyncDirty(mat);
+						AssetDatabase::SetDirty(mat);
 						AssetDatabase::SaveAllAssets();
 					}
 				}
@@ -40,7 +40,7 @@ namespace sh::editor
 					if (ImGui::InputFloat3(("##input_" + name).c_str(), &v[0]))
 					{
 						mat->SetProperty(name, v);
-						AssetDatabase::SyncDirty(mat);
+						AssetDatabase::SetDirty(mat);
 						AssetDatabase::SaveAllAssets();
 					}
 				}
@@ -50,7 +50,7 @@ namespace sh::editor
 					if (ImGui::InputFloat4(("##input_" + name).c_str(), &v[0]))
 					{
 						mat->SetProperty(name, v);
-						AssetDatabase::SyncDirty(mat);
+						AssetDatabase::SetDirty(mat);
 						AssetDatabase::SaveAllAssets();
 					}
 				}
@@ -71,13 +71,12 @@ namespace sh::editor
 					if (ImGui::BeginDragDropTarget())
 					{
 						auto p = ImGui::GetCurrentContext()->DragDropPayload;
-						auto str = std::string{ core::reflection::GetTypeName<render::Texture*>() };
 						const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(std::string{ core::reflection::GetTypeName<render::Texture>() }.c_str());
 						if (payload)
 						{
 							const render::Texture* texture = *reinterpret_cast<render::Texture**>(payload->Data);
 							mat->SetProperty(name, texture);
-							AssetDatabase::SyncDirty(mat);
+							AssetDatabase::SetDirty(mat);
 							AssetDatabase::SaveAllAssets();
 						}
 
@@ -112,7 +111,7 @@ namespace sh::editor
 					texture->ChangeTextureFormat(Texture::TextureFormat::RGBA32);
 			}
 
-			AssetDatabase::SyncDirty(texture);
+			AssetDatabase::SetDirty(texture);
 			AssetDatabase::SaveAllAssets();
 		}
 	}
