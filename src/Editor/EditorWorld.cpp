@@ -3,6 +3,7 @@
 #include "EditorPickingPass.h"
 #include "EditorOutlinePass.h"
 #include "EditorPostOutlinePass.h"
+#include "AssetDatabase.h"
 
 #include "Component/EditorUI.h"
 #include "Component/OutlineComponent.h"
@@ -84,6 +85,7 @@ namespace sh::editor
 
 	SH_EDITOR_API EditorWorld::~EditorWorld()
 	{
+		AssetDatabase::SaveAllAssets();
 	}
 
 	SH_EDITOR_API void EditorWorld::Clean()
@@ -126,13 +128,6 @@ namespace sh::editor
 		auto outlinePreMat = materials.AddResource("OutlinePreMaterial", render::Material{ outlinePreShader });
 		auto outlinePostMat = materials.AddResource("OutlinePostMaterial", render::Material{ outlinePostShader });
 
-		auto plane = meshes.AddResource("PlaneMesh", render::Plane{});
-		auto grid = meshes.AddResource("GridMesh", render::Grid{});
-
-		auto boxModel = modelLoader.Load("model/cube.obj");
-		for (auto mesh : boxModel->GetMeshes())
-			meshes.AddResource("BoxMesh", mesh);
-
 		errorShader->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f0f" });
 		defaultShader->SetUUID(core::UUID{ "ad9217609f6c7e0f1163785746cc153e" });
 
@@ -154,9 +149,6 @@ namespace sh::editor
 		
 		triMat->SetProperty("color", glm::vec3{ 0.f, 1.f, 0.f });
 		triMat->Build(*renderer.GetContext());
-
-		plane->Build(*renderer.GetContext());
-		grid->Build(*renderer.GetContext());
 
 		outlinePreMat->Build(*renderer.GetContext());
 
@@ -295,7 +287,9 @@ namespace sh::editor
 		grid->hideInspector = true;
 		grid->bNotSave = true;
 		auto meshRenderer = grid->AddComponent<game::MeshRenderer>();
-		meshRenderer->SetMesh(this->meshes.GetResource("GridMesh"));
+		auto gridMesh = core::SObject::Create<render::Grid>();
+		gridMesh->Build(*renderer.GetContext());
+		meshRenderer->SetMesh(gridMesh);
 		meshRenderer->SetMaterial(this->materials.GetResource("GridMaterial"));
 
 		axis = AddGameObject("Axis");

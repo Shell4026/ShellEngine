@@ -18,7 +18,7 @@ namespace sh::editor
 		);
 		world.onGameObjectAdded.Register(onGameObjectAddedListener);
 
-		for (auto obj : world.gameObjects)
+		for (auto obj : world.GetGameObjects())
 		{
 			objList.push_back(obj);
 		}

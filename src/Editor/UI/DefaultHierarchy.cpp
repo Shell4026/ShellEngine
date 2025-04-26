@@ -15,7 +15,7 @@ namespace sh::editor
 
 		auto obj = world.AddGameObject(model->GetName().ToString());
 
-		auto rootNode = model->GetNode();
+		auto rootNode = model->GetRootNode();
 		std::queue<std::pair<const render::Model::Node*, game::GameObject*>> nodeQ;
 		for (auto& child : rootNode->children)
 			nodeQ.push({ child.get(), obj });

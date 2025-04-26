@@ -301,10 +301,13 @@ namespace sh::editor
 
 		mesh->Build(context);
 
+		auto rootNode = std::make_unique<render::Model::Node>();
 		auto node = std::make_unique<render::Model::Node>();
 		node->mesh = mesh;
 
-		model->AddMeshes(std::move(node));
+		rootNode->children.push_back(std::move(node));
+
+		model->AddMeshes(std::move(rootNode));
 		return model;
 	}
 

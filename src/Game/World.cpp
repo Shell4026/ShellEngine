@@ -15,7 +15,7 @@ namespace sh::game
 	SH_GAME_API World::World(sh::render::Renderer& renderer, const ComponentModule& componentModule, ImGUImpl& guiContext) :
 		renderer(renderer), componentModule(componentModule), imgui(&guiContext),
 		
-		shaders(renderer), materials(renderer), meshes(renderer), textures(renderer), models(renderer),
+		shaders(renderer), materials(renderer), textures(renderer), models(renderer),
 		mainCamera(nullptr),
 		lightOctree(render::AABB{-1000, -1000, -1000, 1000, 1000, 1000})
 	{
@@ -29,7 +29,7 @@ namespace sh::game
 		
 		_deltaTime(other._deltaTime), _fixedDeltaTime(other._fixedDeltaTime),
 		objs(std::move(other.objs)), addedObjs(std::move(other.addedObjs)),
-		shaders(std::move(other.shaders)), materials(std::move(other.materials)), meshes(std::move(other.meshes)), textures(std::move(other.textures)), models(std::move(other.models)),
+		shaders(std::move(other.shaders)), materials(std::move(other.materials)), textures(std::move(other.textures)), models(std::move(other.models)),
 		mainCamera(nullptr),
 		lightOctree(std::move(other.lightOctree))
 	{
@@ -45,7 +45,7 @@ namespace sh::game
 
 	SH_GAME_API void World::Clean()
 	{
-		meshes.Clean();
+		models.Clean();
 		materials.Clean();
 		shaders.Clean();
 		textures.Clean();
@@ -70,6 +70,7 @@ namespace sh::game
 	{
 		auto obj = Create<GameObject>(*this, std::string{ name });
 		objs.insert(obj);
+
 		gc->SetRootSet(obj);
 		onGameObjectAdded.Notify(obj);
 
@@ -111,6 +112,11 @@ namespace sh::game
 		}
 
 		return nullptr;
+	}
+
+	SH_GAME_API auto World::GetGameObjects() const -> const core::SHashSet<GameObject*>&
+	{
+		return objs;
 	}
 
 	SH_GAME_API void World::Start()

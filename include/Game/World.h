@@ -49,7 +49,7 @@ namespace sh::game
 
 		core::GarbageCollection* gc;
 		ImGUImpl* imgui = nullptr;
-
+        
 		core::SHashSet<GameObject*> objs;
 		std::unordered_set<Camera*> cameras;
 
@@ -72,14 +72,12 @@ namespace sh::game
 		const float& deltaTime = _deltaTime;
 		const float& fixedDeltaTime = _fixedDeltaTime;
 
-		ResourceManager<sh::render::Shader> shaders;
-		ResourceManager<sh::render::Material> materials;
+		ResourceManager<render::Shader> shaders;
+		ResourceManager<render::Material> materials;
 		ResourceManager<render::Model> models;
-		ResourceManager<sh::render::Mesh> meshes;
-		ResourceManager<sh::render::Texture> textures;
+		ResourceManager<render::Texture> textures;
 	public:
 		const ComponentModule& componentModule;
-		const core::SHashSet<GameObject*>& gameObjects = objs;
 		core::Observer<false, Camera*> onCameraAdd;
 		core::Observer<false, Camera*> onCameraRemove;
 		core::Observer<false, GameObject*> onGameObjectAdded;
@@ -105,7 +103,7 @@ namespace sh::game
 		/// @param name 이름
 		/// @return 못 찾을 시 nullptr, 찾을 시 게임 오브젝트 포인터
 		SH_GAME_API auto GetGameObject(std::string_view name) const -> GameObject*;
-
+		SH_GAME_API auto GetGameObjects() const -> const core::SHashSet<GameObject*>&;
 		SH_GAME_API void RegisterCamera(Camera* cam);
 		SH_GAME_API void UnRegisterCamera(Camera* cam);
 		SH_GAME_API auto GetCameras() const -> const std::unordered_set<Camera*>&;

@@ -1,4 +1,5 @@
 ﻿#include "Model.h"
+#include "Core/GarbageCollection.h"
 
 #include <queue>
 namespace sh::render
@@ -9,9 +10,16 @@ namespace sh::render
 	}
 	Model::~Model()
 	{
-
 	}
-
+	SH_RENDER_API void Model::Destroy()
+	{
+		for (auto mesh : meshes)
+		{
+			if (mesh != nullptr)
+				mesh->Destroy();
+		}
+		Super::Destroy();
+	}
 	SH_RENDER_API void Model::AddMeshes(std::unique_ptr<Node>&& node)
 	{
 		rootNode = std::move(node);
@@ -22,16 +30,18 @@ namespace sh::render
 			Node* curNode = q.front();
 			q.pop();
 			if (curNode->mesh != nullptr)
+			{
 				meshes.push_back(curNode->mesh);
+			}
 			for (auto& child : curNode->children)
 				q.push(child.get());
 		}
 	}
-	SH_RENDER_API auto sh::render::Model::GetMeshes() const -> const std::vector<Mesh*>&
+	SH_RENDER_API auto sh::render::Model::GetMeshes() const -> const core::SVector<Mesh*>&
 	{
 		return meshes;
 	}
-	SH_RENDER_API auto Model::GetNode() const -> const Node*
+	SH_RENDER_API auto Model::GetRootNode() const -> const Node*
 	{
 		return rootNode.get();
 	}

@@ -62,9 +62,10 @@ namespace sh::game
 		/// @param _name 구분용 이름 (에셋 이름과 다를 수 있음)
 		/// @param resource 에셋 포인터
 		/// @return 에셋 포인터
-		auto AddResource(std::string_view _name, T* resource) -> T*
+		auto AddResource(const std::string& _name, T* resource) -> T*
 		{
 			assert(resource);
+
 			std::string name{ _name };
 
 			int idx = 0;
@@ -82,7 +83,7 @@ namespace sh::game
 		/// @param _name 구분용 이름 (에셋 이름과 다를 수 있음)
 		/// @param resource 임시 에셋 객체
 		/// @return 에셋 포인터
-		auto AddResource(std::string_view _name, T&& resource) -> T*
+		auto AddResource(const std::string& _name, T&& resource) -> T*
 		{
 			std::string name{ _name };
 
@@ -104,7 +105,7 @@ namespace sh::game
 		/// @param _name 구분용 이름 (에셋 이름과 다를 수 있음)
 		/// @param resource 에셋 참조
 		/// @return 에셋 포인터
-		auto AddResource(std::string_view _name, const T& resource) -> T*
+		auto AddResource(const std::string& _name, const T& resource) -> T*
 		{
 			std::string name{ _name };
 
@@ -121,9 +122,8 @@ namespace sh::game
 			return resources.insert({ std::move(name), resourcePtr }).first->second.get();
 		}
 
-		bool DestroyResource(std::string_view _name)
+		bool DestroyResource(const std::string& name)
 		{
-			std::string name{ _name };
 			auto it = resources.find(name);
 			if (it == resources.end())
 				return false;
@@ -136,9 +136,9 @@ namespace sh::game
 			return true;
 		}
 
-		auto GetResource(std::string_view name) -> T*
+		auto GetResource(const std::string& name) -> T*
 		{
-			auto it = resources.find(std::string{ name });
+			auto it = resources.find(name);
 			if (it == resources.end())
 				return nullptr;
 

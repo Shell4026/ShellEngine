@@ -397,7 +397,7 @@ namespace sh::editor
 				{
 					SaveWorld();
 
-					for (auto obj : world.gameObjects)
+					for (auto obj : world.GetGameObjects())
 					{
 						for (auto component : obj->GetComponents())
 						{
