@@ -27,6 +27,7 @@ add_library(ShellEngine::User ALIAS ShellEngineUser)
 target_compile_definitions(ShellEngineUser PUBLIC SH_PROJECT_NAME="${PROJECT_NAME}")
 
 target_include_directories(ShellEngineUser PRIVATE ${ENGINE_DIR}/include)
+target_link_directories(ShellEngineUser PRIVATE ${ENGINE_DIR})
 target_link_directories(ShellEngineUser PRIVATE ${ENGINE_DIR}/lib)
 
 target_link_libraries(ShellEngineUser PRIVATE ShellEngineCore)
