@@ -68,7 +68,8 @@ namespace sh::game
 
 	SH_GAME_API auto World::AddGameObject(std::string_view name) -> GameObject*
 	{
-		auto obj = Create<GameObject>(*this, std::string{ name });
+		GameObject* ptr = objPool.Allocate();
+		auto obj = CreateAt<GameObject>(ptr, *this, std::string{ name });
 		objs.insert(obj);
 
 		gc->SetRootSet(obj);
@@ -117,6 +118,11 @@ namespace sh::game
 	SH_GAME_API auto World::GetGameObjects() const -> const core::SHashSet<GameObject*>&
 	{
 		return objs;
+	}
+
+	SH_GAME_API auto World::GetGameObjectPool() -> core::memory::MemoryPool<GameObject>&
+	{
+		return objPool;
 	}
 
 	SH_GAME_API void World::Start()

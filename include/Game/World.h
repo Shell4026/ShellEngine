@@ -10,6 +10,7 @@
 #include "Core/Reflection.hpp"
 #include "Core/SContainer.hpp"
 #include "Core/Observer.hpp"
+#include "Core/Memory/MemoryPool.hpp"
 
 #include "Render/Shader.h"
 #include "Render/Material.h"
@@ -50,6 +51,8 @@ namespace sh::game
 		core::GarbageCollection* gc;
 		ImGUImpl* imgui = nullptr;
         
+		core::memory::MemoryPool<GameObject> objPool;
+
 		core::SHashSet<GameObject*> objs;
 		std::unordered_set<Camera*> cameras;
 
@@ -104,6 +107,8 @@ namespace sh::game
 		/// @return 못 찾을 시 nullptr, 찾을 시 게임 오브젝트 포인터
 		SH_GAME_API auto GetGameObject(std::string_view name) const -> GameObject*;
 		SH_GAME_API auto GetGameObjects() const -> const core::SHashSet<GameObject*>&;
+		SH_GAME_API auto GetGameObjectPool() -> core::memory::MemoryPool<GameObject>&;
+
 		SH_GAME_API void RegisterCamera(Camera* cam);
 		SH_GAME_API void UnRegisterCamera(Camera* cam);
 		SH_GAME_API auto GetCameras() const -> const std::unordered_set<Camera*>&;

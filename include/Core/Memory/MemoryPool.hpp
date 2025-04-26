@@ -30,8 +30,11 @@ namespace sh::core::memory
 		{
 		private:
 			using Byte = uint8_t;
-			static constexpr std::size_t blockSize = (sizeof(T) > sizeof(Block)) ? sizeof(T) : sizeof(Block);
-			std::array<Byte, blockSize * count> data;
+			static constexpr std::size_t BLOCK_SIZE = (sizeof(T) > sizeof(Block)) ? sizeof(T) : sizeof(Block);
+			static constexpr std::size_t REQUIRED_ALIGNMENT = (alignof(T) > alignof(Block)) ? alignof(T) : alignof(Block);
+			static constexpr std::size_t ALIGNMENT = (BLOCK_SIZE + REQUIRED_ALIGNMENT - 1) & ~(REQUIRED_ALIGNMENT - 1);
+
+			alignas(REQUIRED_ALIGNMENT) std::array<Byte, ALIGNMENT * count> data;
 		public:
 			Buffer* const next;
 		public:
@@ -45,18 +48,10 @@ namespace sh::core::memory
 				other.next = nullptr;
 			}
 			auto operator=(const Buffer&) -> Buffer& = delete;
-			auto operator=(Buffer&& other) noexcept -> Buffer&
-			{
-				data = std::move(other.data);
-				next = other.next;
-
-				other.next = nullptr;
-				return *this;
-			}
 
 			auto GetBlock(std::size_t index) -> T*
 			{
-				return reinterpret_cast<T*>(&data[blockSize * index]);
+				return reinterpret_cast<T*>(&data[ALIGNMENT * index]);
 			}
 		};
 
@@ -65,18 +60,11 @@ namespace sh::core::memory
 		std::atomic<Buffer*> firstBuffer = nullptr;
 		std::mutex mu;
 	public:
-		MemoryPool() : mu()
+		MemoryPool()
 		{
 			firstBuffer = new Buffer(firstBuffer);
 		}
-		MemoryPool(const MemoryPool& other) :
-			allocatedSize(other.allocatedSize),
-			firstFreeBlock(nullptr),
-			firstBuffer(nullptr),
-			mu()
-		{
-			operator=(other);
-		}
+		MemoryPool(const MemoryPool& other) = delete;
 		MemoryPool(MemoryPool&& other) noexcept :
 			firstBuffer(other.firstBuffer),
 			firstFreeBlock(other.firstFreeBlock),
@@ -97,7 +85,7 @@ namespace sh::core::memory
 			}
 		}
 
-		auto operator=(const MemoryPool& other) -> MemoryPool&;
+		auto operator=(const MemoryPool& other) -> MemoryPool& = delete;
 		auto operator=(MemoryPool&& other) noexcept -> MemoryPool&;
 
 		/// @brief 메모리 풀에서 메모리를 할당 받는다.
@@ -132,7 +120,6 @@ namespace sh::core::memory
 		}
 	};
 
-	//source
 	template<typename T, std::size_t count, bool fixed>
 	inline auto MemoryPool<T, count, fixed>::Allocate() -> T*
 	{
@@ -148,7 +135,7 @@ namespace sh::core::memory
 			// firstFreeBlock이 중간에 바뀌었다. 다시 시도한다.
 			// CAS가 실패 했으므로 block의 값이 현시점의 값으로 바뀐다.
 		}
-
+		// 여기까지 왔을 때 다른 스레드에서 메모리를 해제 했을 수도 있음?
 		// 할당한 메모리가 꽉찬 경우 //
 		std::size_t idx = allocatedSize.fetch_add(1, std::memory_order::memory_order_acq_rel); // allocatedSize++
 		if (idx >= count)
@@ -183,79 +170,6 @@ namespace sh::core::memory
 			oldHead = firstFreeBlock.load(std::memory_order::memory_order_acquire);
 			block->next = oldHead;
 		} while (!firstFreeBlock.compare_exchange_weak(oldHead, block, std::memory_order::memory_order_release, std::memory_order::memory_order_relaxed));
-	}
-
-	template<typename T, std::size_t count, bool fixed>
-	inline auto MemoryPool<T, count, fixed>::operator=(const MemoryPool& other) -> MemoryPool&
-	{
-		allocatedSize = other.allocatedSize;
-
-		if (other.firstBuffer == nullptr)
-			return *this;
-
-		// 버퍼 복사
-		std::unordered_map<Buffer*, Buffer*> bufferMap; // freeBlock을 찾기 위해 필요
-
-		std::stack<Buffer*> otherBuffers{}; // 스택에 넣어야 제일 끝 버퍼부터 복사 가능
-		Buffer* otherBuffer = other.firstBuffer;
-		while (otherBuffer)
-		{
-			otherBuffers.push(otherBuffer);
-			otherBuffer = otherBuffer->next;
-		}
-		otherBuffer = nullptr;
-		while (!otherBuffers.empty())
-		{
-			Buffer* newBuffer = new Buffer(otherBuffer);
-			otherBuffer = otherBuffers.top();
-			otherBuffers.pop();
-
-			newBuffer->data = otherBuffer->data;
-
-			firstBuffer = newBuffer;
-
-			bufferMap[otherBuffer] = newBuffer;
-		}
-		// 빈 블록 목록 복사
-		Block* currentOtherFreeBlock = other.firstFreeBlock;
-		while (currentOtherFreeBlock)
-		{
-			Buffer* originalBuffer = other.firstBuffer;
-			Buffer* newBuffer = nullptr;
-			std::size_t blockIndex = 0;
-			bool found = false;
-
-			while (originalBuffer)
-			{
-				for (std::size_t i = 0; i < count; ++i)
-				{
-					T* blockPtr = originalBuffer->GetBlock(i);
-					if (reinterpret_cast<T*>(currentOtherFreeBlock) == blockPtr)
-					{
-						newBuffer = bufferMap[originalBuffer];
-						blockIndex = i;
-						found = true;
-						break;
-					}
-				}
-				if (found)
-					break;
-				originalBuffer = originalBuffer->next;
-			}
-
-			if (found && newBuffer)
-			{
-				// 복사된 버퍼에서 해당 인덱스의 블록 가져오기
-				T* newBlockPtr = newBuffer->GetBlock(blockIndex);
-				Block* newBlock = reinterpret_cast<Block*>(newBlockPtr);
-
-				newBlock->next = firstFreeBlock;
-				firstFreeBlock = newBlock;
-			}
-
-			currentOtherFreeBlock = currentOtherFreeBlock->next;
-		}
-		return *this;
 	}
 	template<typename T, std::size_t count, bool fixed>
 	inline auto MemoryPool<T, count, fixed>::operator=(MemoryPool&& other) noexcept -> MemoryPool&
