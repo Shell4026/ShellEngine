@@ -746,8 +746,8 @@ namespace sh::render
 						uboNode.binding = lastObjectUniformBinding++;
 						uboNode.bSampler = false;
 						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Int, 1, "count" });
-						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Float, 10, "range" });
-						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec3, 10, "pos" });
+						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec4, 10, "pos" });
+						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec4, 10, "other" });
 						stageNode.uniforms.push_back(std::move(uboNode));
 						stageNode.bUseLighting = true;
 						usingLIGHT = true;

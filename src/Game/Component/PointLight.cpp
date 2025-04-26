@@ -1,12 +1,11 @@
-﻿#include "PCH.h"
-#include "component/PointLight.h"
+﻿#include "component/PointLight.h"
 
 #include "GameObject.h"
 
 namespace sh::game
 {
 	SH_GAME_API PointLight::PointLight(GameObject& owner) :
-		ILight(owner)
+		Component(owner)
 	{
 		world.GetLightOctree().Insert(*this);
 	}
@@ -51,7 +50,8 @@ namespace sh::game
 		}
 
 		// y축
-		if (pos.y < min.y) {
+		if (pos.y < min.y) 
+		{
 			float d = pos.y - min.y;
 			sqDist += d * d;
 		}
@@ -61,7 +61,8 @@ namespace sh::game
 		}
 
 		// z축
-		if (pos.z < min.z) {
+		if (pos.z < min.z) 
+		{
 			float d = pos.z - min.z;
 			sqDist += d * d;
 		}
@@ -93,7 +94,12 @@ namespace sh::game
 	}
 	SH_GAME_API auto PointLight::GetPos() const -> const Vec3&
 	{
-		return gameObject.transform->position;
+		return gameObject.transform->GetWorldPosition();
+	}
+
+	SH_GAME_API auto PointLight::GetLightType() const -> ILight::Type
+	{
+		return ILight::Type::Point;
 	}
 
 	SH_GAME_API void PointLight::OnPropertyChanged(const core::reflection::Property& prop)

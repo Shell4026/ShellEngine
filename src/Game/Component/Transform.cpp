@@ -61,6 +61,8 @@ namespace sh::game
 			if (core::IsValid(child))
 				child->gameObject.Destroy();
 		}
+		childs.clear();
+		Super::Destroy();
 	}
 
 	SH_GAME_API void Transform::Awake()

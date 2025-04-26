@@ -22,8 +22,8 @@ namespace sh::render
 		struct Light
 		{
 			alignas(16) int lightCount = 0;
-			alignas(16) glm::vec4 lightRange[10];
 			alignas(16) glm::vec4 lightPos[10];
+			alignas(16) glm::vec4 other[10];
 		};
 	private:
 		const IRenderContext* context = nullptr;

@@ -121,12 +121,13 @@ namespace sh::render::vk
 
 		result = vkAllocateMemory(device, &allocInfo, nullptr, &bufferMem);*/
 
-		bool bUseMap = (memPropFlagBits & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
+		bool bUseMap = (memPropFlagBits & VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT);
 
 		VmaAllocationCreateInfo allocCreateInfo{};
 		allocCreateInfo.usage = VmaMemoryUsage::VMA_MEMORY_USAGE_AUTO;
+		allocCreateInfo.flags = 0;
 		if (bUseMap)
-			allocCreateInfo.flags = VmaAllocationCreateFlagBits::VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
+			allocCreateInfo.flags |= VmaAllocationCreateFlagBits::VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT;
 		if (persistentMapping)
 			allocCreateInfo.flags |= VmaAllocationCreateFlagBits::VMA_ALLOCATION_CREATE_MAPPED_BIT;
 

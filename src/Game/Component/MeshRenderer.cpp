@@ -2,6 +2,7 @@
 #include "Component/Camera.h"
 #include "Component/PickingRenderer.h"
 #include "Component/PointLight.h"
+#include "Component/DirectionalLight.h"
 
 #include "gameObject.h"
 
@@ -190,12 +191,25 @@ namespace sh::game
 			int idx = 0;
 			for (int i = 0; i < lights.size(); ++i)
 			{
-				ILight* light = static_cast<ILight*>(lights[i]);
-				const Vec3& pos = light->gameObject.transform->GetWorldPosition();
-				if (light->GetType() == PointLight::GetStaticType())
+				const ILight* light = static_cast<ILight*>(lights[i]);
+				if (light->GetLightType() == ILight::Type::Point)
 				{
+					const PointLight* pointLight = static_cast<const PointLight*>(light);
+					if (!core::IsValid(pointLight))
+						continue;
+					const Vec3& pos = pointLight->gameObject.transform->GetWorldPosition();
 					lightStruct.lightPos[idx] = { pos.x, pos.y, pos.z, 0.f };
-					lightStruct.lightRange[idx].x = static_cast<PointLight*>(light)->GetRadius();
+					lightStruct.lightPos[idx].w = pointLight->GetRadius();
+					lightStruct.other[idx].w = 1;
+				}
+				else if (light->GetLightType() == ILight::Type::Directional)
+				{
+					const DirectionalLight* dirLight = static_cast<const DirectionalLight*>(light);
+					if (!core::IsValid(dirLight))
+						continue;
+					const Vec3& dir = dirLight->GetDirection();
+					lightStruct.lightPos[idx] = { dir.x, dir.y, dir.z, dirLight->GetIntensity() };
+					lightStruct.other[idx].w = 0;
 				}
 				++idx;
 			}

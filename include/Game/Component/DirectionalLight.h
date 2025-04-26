@@ -5,35 +5,29 @@
 
 namespace sh::game
 {
-	class PointLight : public Component, public ILight
+	class DirectionalLight : public Component, public ILight
 	{
-		COMPONENT(PointLight)
+		COMPONENT(DirectionalLight)
 	private:
-		PROPERTY(range)
-		float range = 5.f;
+		PROPERTY(direction)
+		Vec3 direction{ -1.f, -1.f, -1.f };
 		PROPERTY(intensity)
 		float intensity = 1.f;
-
-		Vec3 lastPos{ 0.f, 0.f, 0.f };
-		bool bUpdateOctree = false;
 	public:
-		SH_GAME_API PointLight(GameObject& owner);
-		SH_GAME_API ~PointLight();
+		SH_GAME_API DirectionalLight(GameObject& owner);
+		SH_GAME_API ~DirectionalLight();
 
 		SH_GAME_API void OnDestroy() override;
 
-		SH_GAME_API void BeginUpdate() override;
-
 		SH_GAME_API bool Intersect(const render::AABB& aabb) const override;
 
-		SH_GAME_API void SetRadius(float radius);
 		SH_GAME_API void SetIntensity(float intensity);
-
-		SH_GAME_API auto GetRadius() const -> float;
 		SH_GAME_API auto GetIntensity() const -> float;
+
+		SH_GAME_API void SetDirection(const Vec3& dir);
+		SH_GAME_API auto GetDirection() const -> const Vec3&;
+
 		SH_GAME_API auto GetPos() const -> const Vec3& override;
 		SH_GAME_API auto GetLightType() const -> ILight::Type override;
-		
-		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 	};
 }//namespace

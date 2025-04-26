@@ -50,15 +50,24 @@ Shader "Default Shader"
 				normal = normal * 2.0 - 1.0;
 				normal = normalize(TBN * normal);
 			
-				float diffuse = 0.f;
+				float diffuse = 0.0;
 				for (int i = 0; i < LIGHT.count; ++i)
 				{
-					vec3 toLightVec = LIGHT.pos[i].xyz - fragPos;
-					vec3 toLightDir = normalize(toLightVec);
-					float lightDis = length(toLightVec);
-					float attenuation = clamp(1.0 - (lightDis / LIGHT.range[i]), 0.0, 1.0);
-					
-					diffuse += max(dot(normal, toLightDir), 0.0) * attenuation;
+					int type = int(LIGHT.other[i].w);
+					if (type == 0)
+					{
+						vec3 toLightDir = -LIGHT.pos[i].xyz;
+						float intensity = LIGHT.pos[i].w;
+						diffuse += max(dot(normal, toLightDir), 0.0) * intensity;
+					}
+					else if (type == 1)
+					{
+						vec3 toLightVec = LIGHT.pos[i].xyz - fragPos;
+						vec3 toLightDir = normalize(toLightVec);
+						float lightDis = length(toLightVec);
+						float attenuation = clamp(1.0 - (lightDis / LIGHT.pos[i].w), 0.0, 1.0);
+						diffuse += max(dot(normal, toLightDir), 0.0) * attenuation;
+					}
 				}
 				outColor = texture(tex, uvs);
 				outColor.xyz *= diffuse + ambient;

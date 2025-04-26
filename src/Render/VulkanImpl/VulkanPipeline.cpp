@@ -69,21 +69,21 @@ namespace sh::render::vk
 	{
 		assert(shader);
 
-		VkPipelineShaderStageCreateInfo vertShaderStageInfo{};
-		vertShaderStageInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+		VkPipelineShaderStageCreateInfo shaderStageInfo{};
+		shaderStageInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 		if (stage == ShaderStage::Vertex)
 		{
-			vertShaderStageInfo.stage = VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT;
-			vertShaderStageInfo.module = shader->GetVertexShader();
+			shaderStageInfo.stage = VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT;
+			shaderStageInfo.module = shader->GetVertexShader();
 		}
 		else if (stage == ShaderStage::Fragment)
 		{
-			vertShaderStageInfo.stage = VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT;
-			vertShaderStageInfo.module = shader->GetFragmentShader();
+			shaderStageInfo.stage = VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT;
+			shaderStageInfo.module = shader->GetFragmentShader();
 		}
-		vertShaderStageInfo.pName = "main";
+		shaderStageInfo.pName = "main";
 
-		shaderStages.push_back(vertShaderStageInfo);
+		shaderStages.push_back(shaderStageInfo);
 		
 		return *this;
 	}
