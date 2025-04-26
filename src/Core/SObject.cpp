@@ -27,6 +27,8 @@ namespace sh::core
 	}
 	SH_CORE_API SObject::~SObject()
 	{
+		
+		
 		onDestroy.Notify(this);
 		SObjectManager::GetInstance()->UnRegisterSObject(this);
 	}
@@ -38,6 +40,10 @@ namespace sh::core
 	auto SObject::operator new(std::size_t size) -> void*
 	{
 		return ::operator new(size);
+	}
+	auto SObject::operator new(std::size_t size, void* ptr) -> void*
+	{
+		return ::operator new(size, ptr);
 	}
 	void SObject::operator delete(void* ptr)
 	{

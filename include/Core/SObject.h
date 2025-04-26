@@ -25,14 +25,17 @@ namespace sh::core
 	private:
 		UUID uuid;
 		Name name;
-		std::atomic<bool> bPendingKill;
 		std::atomic_flag bMark;
+		std::atomic<bool> bPendingKill;
+	protected:
+		bool bPlacementNew = false;
 	public:
 		mutable Observer<false, const SObject*> onDestroy;
 	private:
 		SH_CORE_API static void RegisterToManager(SObject* ptr);
 	protected:
 		SH_CORE_API auto operator new(std::size_t count) -> void*;
+		SH_CORE_API auto operator new(std::size_t count, void* ptr) -> void*;
 		SH_CORE_API void operator delete(void* ptr);
 
 		SH_CORE_API SObject();
@@ -70,6 +73,20 @@ namespace sh::core
 		{
 			SObject* ptr = new T(std::forward<Args>(args)...);
 			RegisterToManager(ptr);
+			return static_cast<T*>(ptr);
+		}
+		/// @brief SObject 객체를 이미 할당 된 메모리의 주소에 생성한다. 생성시 GC에 등록되며 사용되지 않을 시 소멸된다. 
+		/// 메모리는 해제 되지 않고 소멸자만 호출된다.
+		/// @tparam T SObject를 상속 받는 객체
+		/// @param ptr 생성 할 주소
+		/// @param ...args 생성자에 전달할 인자
+		/// @return 객체 포인터
+		template<typename T, typename... Args>
+		static auto CreateAt(void* posPtr, Args&&... args) -> std::enable_if_t<std::is_base_of_v<SObject, T>, T*>
+		{
+			SObject* ptr = new (posPtr) T(std::forward<Args>(args)...);
+			RegisterToManager(ptr);
+			ptr->bPlacementNew = true;
 			return static_cast<T*>(ptr);
 		}
 	};
