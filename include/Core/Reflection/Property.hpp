@@ -54,7 +54,7 @@ namespace sh::core::reflection
 		template<typename TContainer, typename T = typename TContainer::value_type>
 		PropertyIterator(const PropertyIteratorData<TContainer, T>& data)
 		{
-			static_assert(sizeof(PropertyIteratorData<TContainer, T>) <= 64, "Iterator size exceeds buffer");
+			static_assert(sizeof(PropertyIteratorData<TContainer, T>) <= sizeof(iteratorBuffer), "Iterator size exceeds buffer");
 			iteratorDataPtr = new (iteratorBuffer) PropertyIteratorData<TContainer, T>{data};
 		}
 		SH_CORE_API PropertyIterator(const PropertyIterator& other);
