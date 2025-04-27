@@ -45,6 +45,6 @@ namespace sh::game
 
 	SH_GAME_API auto DirectionalLight::GetLightType() const -> ILight::Type
 	{
-		return ILight::Type::Point;
+		return ILight::Type::Directional;
 	}
 }//namespace
