@@ -14,7 +14,7 @@ namespace sh::game
 
 		worldPosition(), worldRotation(), worldScale(),
 		vPosition{ 0.f, 0.f, 0.f }, vScale{ 1.0f, 1.0f, 1.0f }, vRotation{ 0.f, 0.f, 0.f },
-		matModel(), quat(glm::radians(glm::vec3{ vRotation })),
+		matModel(), quat(glm::radians(glm::vec3{ vRotation })), worldQuat(quat),
 		parent(nullptr), childs(),
 		bUpdateMatrix(false)
 	{
@@ -23,18 +23,6 @@ namespace sh::game
 	SH_GAME_API Transform::~Transform()
 	{
 
-	}
-
-	SH_GAME_API Transform::Transform(const Transform& other) :
-		Component(other),
-		position(vPosition), scale(vScale), rotation(vRotation), localToWorldMatrix(matModel),
-
-		worldPosition(other.worldPosition), worldRotation(other.worldRotation), worldScale(other.worldScale),
-		vPosition(other.vPosition), vScale(other.vScale), vRotation(other.vRotation),
-		matModel(other.matModel), quat(other.quat),
-		parent(other.parent), childs(other.childs),
-		bUpdateMatrix(other.bUpdateMatrix)
-	{
 	}
 
 	SH_GAME_API Transform::Transform(Transform&& other) noexcept:
@@ -52,10 +40,31 @@ namespace sh::game
 		other.parent = nullptr;
 	}
 
+	SH_GAME_API auto Transform::operator=(const Transform& other) -> Transform&
+	{
+		SetParent(other.parent);
+
+		vPosition = other.vPosition;
+		vScale = other.vScale;
+		vRotation = other.vRotation;
+		matModel = other.matModel;
+		quat = other.quat;
+		
+		bUpdateMatrix = true;
+
+		for (auto child : other.childs)
+		{
+			auto& obj = world.DuplicateGameObject(child->gameObject);
+			obj.transform->parent = this;
+
+			childs.push_back(obj.transform);
+		}
+
+		return *this;
+	}
+
 	SH_GAME_API void Transform::Destroy()
 	{
-		if (core::IsValid(parent))
-			parent->RemoveChild(*this);
 		for (Transform* child : childs)
 		{
 			if (core::IsValid(child))
@@ -63,6 +72,12 @@ namespace sh::game
 		}
 		childs.clear();
 		Super::Destroy();
+	}
+
+	SH_GAME_API void Transform::OnDestroy()
+	{
+		if (core::IsValid(parent))
+			parent->RemoveChild(*this);
 	}
 
 	SH_GAME_API void Transform::Awake()
@@ -114,10 +129,12 @@ namespace sh::game
 		{
 			Transform* child = *it;
 			if (core::IsValid(child))
+			{
 				child->UpdateMatrix();
+				++it;
+			}
 			else
 				it = childs.erase(it);
-			++it;
 		}
 		onMatrixUpdate.Notify(matModel);
 		bUpdateMatrix = false;

@@ -1,22 +1,30 @@
 ﻿#include "Component/EditorControl.h"
-#include "Component/Camera.h"
-#include "Component/LineRenderer.h"
+#include "EditorWorld.h"
 
-#include "GameObject.h"
-#include "World.h"
-#include "Input.h"
-#include "SMath.h"
+#include "game/Component/Camera.h"
+#include "game/Component/LineRenderer.h"
+#include "game/GameObject.h"
+#include "game/World.h"
+#include "game/Input.h"
+#include "game/SMath.h"
 
 #include "Render/Renderer.h"
 #include "Render/IRenderContext.h"
 
 #include "Physics/Ray.h"
 
-namespace sh::game
+namespace sh::editor
 {
-	SH_GAME_API EditorControl::EditorControl(GameObject& owner) :
+	std::set<EditorControl*> EditorControl::controls;
+	bool EditorControl::bPivot = true;
+	bool EditorControl::bUpdatedControls = false;
+
+	using namespace game;
+	SH_EDITOR_API EditorControl::EditorControl(GameObject& owner) :
 		Component(owner)
 	{
+		controls.insert(this);
+
 		if (auto obj = world.GetGameObject("_Helper"); obj == nullptr)
 		{
 			obj = world.AddGameObject("_Helper");
@@ -26,11 +34,17 @@ namespace sh::game
 			helper->SetColor(Vec4{ 1.f, 0.f, 0.f, 1.f });
 			helper->SetStart(Vec3{ -100.f, 0.f, 0.f });
 			helper->SetEnd(Vec3{ 100.f, 0.f, 0.f });
-
-			obj->SetActive(false);
+			helper->SetActive(false);
 		}
 		else
+		{
 			helper = obj->GetComponent<LineRenderer>();
+		}
+	}
+
+	EditorControl::~EditorControl()
+	{
+		controls.erase(this);
 	}
 
 	inline void EditorControl::MoveControl()
@@ -126,7 +140,7 @@ namespace sh::game
 		gameObject.transform->SetRotation(glm::angleAxis(angleRad, glm::vec3{ forward }) * quatLast);
 	}
 
-	SH_GAME_API void EditorControl::Update()
+	SH_EDITOR_API void EditorControl::Update()
 	{
 		if (!core::IsValid(camera))
 			return;
@@ -178,7 +192,7 @@ namespace sh::game
 			if (Input::GetKeyDown(Input::KeyCode::X))
 			{
 				axis = Axis::X;
-				helper->gameObject.SetActive(true);
+				helper->SetActive(true);
 				helper->SetColor(Vec4{ 1.f, 0.f, 0.f, 1.f });
 				helper->SetStart(Vec3{ -100.f, 0.f, 0.f } + posLast);
 				helper->SetEnd(Vec3{ 100.f, 0.f, 0.f } + posLast);
@@ -186,7 +200,7 @@ namespace sh::game
 			else if (Input::GetKeyDown(Input::KeyCode::Y))
 			{
 				axis = Axis::Y;
-				helper->gameObject.SetActive(true);
+				helper->SetActive(true);
 				helper->SetColor(Vec4{ 0.f, 1.f, 0.f, 1.f });
 				helper->SetStart(Vec3{ 0.f, -100.f, 0.f } + posLast);
 				helper->SetEnd(Vec3{ 0.f, 100.f, 0.f } + posLast);
@@ -194,7 +208,7 @@ namespace sh::game
 			else if (Input::GetKeyDown(Input::KeyCode::Z))
 			{
 				axis = Axis::Z;
-				helper->gameObject.SetActive(true);
+				helper->SetActive(true);
 				helper->SetColor(Vec4{ 0.f, 0.f, 1.f, 1.f });
 				helper->SetStart(Vec3{ 0.f, 0.f, -100.f } + posLast);
 				helper->SetEnd(Vec3{ 0.f, 0.f, 100.f } + posLast);
@@ -212,7 +226,7 @@ namespace sh::game
 				axis = Axis::None;
 				if (helper)
 				{
-					helper->gameObject.SetActive(false);
+					helper->SetActive(false);
 				}
 			}
 			else if (Input::GetMouseDown(Input::MouseType::Left))
@@ -221,7 +235,7 @@ namespace sh::game
 				axis = Axis::None;
 				if (helper)
 				{
-					helper->gameObject.SetActive(false);
+					helper->SetActive(false);
 				}
 			}
 		}
@@ -240,11 +254,11 @@ namespace sh::game
 		}
 	}
 
-	SH_GAME_API void EditorControl::SetCamera(Camera* camera)
+	SH_EDITOR_API void EditorControl::SetCamera(Camera* camera)
 	{
 		this->camera = camera;
 	}
-	SH_GAME_API auto EditorControl::Serialize() const -> core::Json
+	SH_EDITOR_API auto EditorControl::Serialize() const -> core::Json
 	{
 		return core::Json{};
 	}

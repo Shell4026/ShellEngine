@@ -35,6 +35,7 @@ namespace sh::game
 		bool bNotSave = false;
 	public:
 		SH_GAME_API GameObject(World& world, const std::string& name);
+		SH_GAME_API GameObject(const GameObject& other);
 		SH_GAME_API GameObject(GameObject&& other) noexcept;
 		SH_GAME_API ~GameObject();
 
@@ -57,11 +58,14 @@ namespace sh::game
 		/// @param component 컴포넌트 포인터
 		SH_GAME_API void AddComponent(Component* component);
 
+		SH_GAME_API auto Clone() const -> GameObject&;
+
 		SH_GAME_API auto Serialize() const -> core::Json override;
 		SH_GAME_API void Deserialize(const core::Json& json) override;
 	public:
 		/// @brief 새 컴포넌트를 추가하는 함수
 		/// @tparam T 컴포넌트 타입
+		/// @return 추가된 컴포넌트 포인터
 		template<typename T>
 		auto AddComponent() -> std::enable_if_t<IsComponent<T>::value, T*>
 		{

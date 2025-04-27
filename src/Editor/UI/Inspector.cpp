@@ -442,55 +442,59 @@ namespace sh::editor
 
 		ImGui::Begin("Inspector", nullptr, style);
 
-		if (auto obj = world.GetSelectedObject(); core::IsValid(obj))
+		auto& selectedObjs = world.GetSelectedObjects();
+		if (selectedObjs.size() > 0)
 		{
-			static std::string name;
-			name = obj->GetName().ToString();
-
-			ImGui::SetNextItemWidth(100);
-			if (ImGui::InputText("Name", &name))
-				obj->SetName(name);
-
-			ImGui::Separator();
-
-			if (obj->GetType() == game::GameObject::GetStaticType())
+			if (auto obj = selectedObjs[0]; core::IsValid(obj))
 			{
-				ImGui::LabelText("##ComponentsLabel", "Components");
-				int idx = 0;
-				// 드래그 드랍으로 도중에 컴포넌트가 추가 되는 일이 발생한다.
-				// 그로인해 반복자가 깨지므로 컴포넌트 배열을 복사 해둬야 한다.
-				std::vector<game::Component*> components = static_cast<game::GameObject*>(obj)->GetComponents();
-				for (auto component : components)
-				{
-					if (!core::IsValid(component))
-						continue;
-					if (component->hideInspector)
-						continue;
-					std::string componentName = component->GetType().name.ToString();
-					bool bOpenComponent = ImGui::CollapsingHeader((componentName.c_str() + ("##" + std::to_string(idx))).data());
-					if (ImGui::BeginPopupContextItem((component->GetUUID().ToString() + "RightClickPopup").c_str()))
-					{
-						if (component->GetType() != game::Transform::GetStaticType())
-						{
-							if (ImGui::Selectable("Delete"))
-							{
-								component->Destroy();
-							}
-						}
-						ImGui::EndPopup();
-					}
-					if (bOpenComponent && core::IsValid(component))
-					{
-						RenderProperties(&component->GetType(), component, idx);
-					}
-					++idx;
-				}//for auto& component
+				static std::string name;
+				name = obj->GetName().ToString();
+
+				ImGui::SetNextItemWidth(100);
+				if (ImGui::InputText("Name", &name))
+					obj->SetName(name);
+
 				ImGui::Separator();
 
-				RenderAddComponent(*static_cast<game::GameObject*>(obj));
+				if (obj->GetType() == game::GameObject::GetStaticType())
+				{
+					ImGui::LabelText("##ComponentsLabel", "Components");
+					int idx = 0;
+					// 드래그 드랍으로 도중에 컴포넌트가 추가 되는 일이 발생한다.
+					// 그로인해 반복자가 깨지므로 컴포넌트 배열을 복사 해둬야 한다.
+					std::vector<game::Component*> components = static_cast<game::GameObject*>(obj)->GetComponents();
+					for (auto component : components)
+					{
+						if (!core::IsValid(component))
+							continue;
+						if (component->hideInspector)
+							continue;
+						std::string componentName = component->GetType().name.ToString();
+						bool bOpenComponent = ImGui::CollapsingHeader((componentName.c_str() + ("##" + std::to_string(idx))).data());
+						if (ImGui::BeginPopupContextItem((component->GetUUID().ToString() + "RightClickPopup").c_str()))
+						{
+							if (component->GetType() != game::Transform::GetStaticType())
+							{
+								if (ImGui::Selectable("Delete"))
+								{
+									component->Destroy();
+								}
+							}
+							ImGui::EndPopup();
+						}
+						if (bOpenComponent && core::IsValid(component))
+						{
+							RenderProperties(&component->GetType(), component, idx);
+						}
+						++idx;
+					}//for auto& component
+					ImGui::Separator();
+
+					RenderAddComponent(*static_cast<game::GameObject*>(obj));
+				}
+				else
+					RenderProperties(&obj->GetType(), obj, 0);
 			}
-			else
-				RenderProperties(&obj->GetType(), obj, 0);
 		}
 
 		ImGui::End();

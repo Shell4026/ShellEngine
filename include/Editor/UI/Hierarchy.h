@@ -26,12 +26,14 @@ namespace sh::editor
 		std::vector<std::pair<std::string, std::function<void(const ImGuiPayload& payload)>>> dragFunc;
 
 		bool isDocking;
+		bool isFocus = false;
 	public:
 		static constexpr const char* name = "Hierarchy";
 	private:
 		/// @brief 오브젝트 사이 빈공간
 		void DrawInvisibleSpace(game::GameObject* obj);
 		void DrawGameObjectHierarchy(game::GameObject* obj, std::unordered_set<game::GameObject*>& drawSet);
+		void CopyGameobject();
 	public:
 		SH_EDITOR_API Hierarchy(EditorWorld& world);
 

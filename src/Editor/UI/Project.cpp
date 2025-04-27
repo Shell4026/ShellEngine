@@ -159,7 +159,10 @@ namespace sh::editor
 			{
 				auto objPtr = core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuidStr.value() });
 				if (core::IsValid(objPtr))
-					world.SetSelectedObject(objPtr);
+				{
+					world.ClearSelectedObjects();
+					world.AddSelectedObject(objPtr);
+				}
 			}
 		}
 		SetDragItem(path);

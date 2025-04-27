@@ -18,12 +18,13 @@
 #include "Render/Model.h"
 #include "Render/MaterialPropertyBlock.h"
 
+#include "Editor/Component/EditorControl.h"
+
 #include "Game/GameObject.h"
 #include "Game/Component/MeshRenderer.h"
 #include "Game/Component/EditorCamera.h"
 #include "Game/Component/PickingCamera.h"
 #include "Game/Component/PickingRenderer.h"
-#include "Game/Component/EditorControl.h"
 #include "Game/Component/LineRenderer.h"
 
 #include "ModelLoader.h"
@@ -32,14 +33,36 @@
 
 namespace sh::editor
 {
+	void EditorWorld::AddEditorControlsToSelected(core::SObject& obj)
+	{
+		if (obj.GetType() == game::GameObject::GetStaticType())
+		{
+			game::GameObject* selectedObj = static_cast<game::GameObject*>(&obj);
+			auto control = selectedObj->GetComponent<EditorControl>();
+			if (!core::IsValid(control))
+			{
+				control = selectedObj->AddComponent<EditorControl>();
+				control->SetCamera(editorCamera);
+				control->hideInspector = true;
+			}
+			AddOrDestroyOutlineComponent(*selectedObj, true);
+		}
+	}
+	void EditorWorld::RemoveEditorControls(core::SObject& obj)
+	{
+		if (obj.GetType() == game::GameObject::GetStaticType())
+		{
+			game::GameObject* selectedObj = static_cast<game::GameObject*>(&obj);
+			auto control = selectedObj->GetComponent<EditorControl>();
+			if (core::IsValid(control))
+				control->Destroy();
+			AddOrDestroyOutlineComponent(*selectedObj, false);
+		}
+	}
 	void EditorWorld::AddOrDestroyOutlineComponent(game::GameObject& obj, bool bAdd)
 	{
 		for (auto child : obj.transform->GetChildren())
 			AddOrDestroyOutlineComponent(child->gameObject, bAdd);
-
-		auto meshRenderer = obj.GetComponent<game::MeshRenderer>();
-		if (!core::IsValid(meshRenderer))
-			return;
 
 		auto outline = obj.GetComponent<editor::OutlineComponent>();
 		if (!core::IsValid(outline))
@@ -92,7 +115,7 @@ namespace sh::editor
 	{
 		Super::Clean();
 		editorUI = nullptr;
-		selected = nullptr;
+		selectedObjs.clear();
 	}
 
 	SH_EDITOR_API void EditorWorld::InitResource()
@@ -128,6 +151,8 @@ namespace sh::editor
 		auto outlinePreMat = materials.AddResource("OutlinePreMaterial", render::Material{ outlinePreShader });
 		auto outlinePostMat = materials.AddResource("OutlinePostMaterial", render::Material{ outlinePostShader });
 
+		models.AddResource("SphereModel", modelLoader.Load("model/Sphere.obj"));
+
 		errorShader->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f0f" });
 		defaultShader->SetUUID(core::UUID{ "ad9217609f6c7e0f1163785746cc153e" });
 
@@ -146,7 +171,7 @@ namespace sh::editor
 
 		gridMat->SetProperty("color", glm::vec4{ 0.6f, 0.6f, 0.8f, 0.2f });
 		gridMat->Build(*renderer.GetContext());
-		
+
 		triMat->SetProperty("color", glm::vec3{ 0.f, 1.f, 0.f });
 		triMat->Build(*renderer.GetContext());
 
@@ -200,72 +225,44 @@ namespace sh::editor
 		editorUI = uiObj->AddComponent<EditorUI>();
 	}
 
-	SH_EDITOR_API void EditorWorld::SetSelectedObject(core::SObject* obj)
-	{
-		if (obj == nullptr)
-		{
-			for (auto selected : selectedObjs)
-			{
-				if (core::IsValid(selected) && selected->GetType() == game::GameObject::GetStaticType())
-				{
-					if (core::IsValid(selected))
-					{
-						game::GameObject* selectedObj = static_cast<game::GameObject*>(selected);
-						auto control = selectedObj->GetComponent<game::EditorControl>();
-						if (core::IsValid(control))
-							control->Destroy();
-						AddOrDestroyOutlineComponent(*selectedObj, false);
-					}
-				}
-			}
-			selectedObjs.clear();
-		}
-
-		if (selected == obj)
-			return;
-
-		if (core::IsValid(selected) && selected->GetType() == game::GameObject::GetStaticType())
-		{
-			game::GameObject* selectedObj = static_cast<game::GameObject*>(selected);
-			auto control = selectedObj->GetComponent<game::EditorControl>();
-			if (core::IsValid(control))
-				control->Destroy();
-			AddOrDestroyOutlineComponent(*selectedObj, false);
-		}
-		selected = obj;
-		if (core::IsValid(selected) && selected->GetType() == game::GameObject::GetStaticType())
-		{
-			game::GameObject* selectedObj = static_cast<game::GameObject*>(selected);
-			auto control = selectedObj->GetComponent<game::EditorControl>();
-			if (!core::IsValid(control))
-			{
-				auto control = selectedObj->AddComponent<game::EditorControl>();
-				control->SetCamera(editorCamera);
-				control->hideInspector = true;
-			}
-			AddOrDestroyOutlineComponent(*selectedObj, true);
-		}
-	}
-	SH_EDITOR_API auto EditorWorld::GetSelectedObject() const -> core::SObject*
-	{
-		return selected;
-	}
-
 	SH_EDITOR_API void EditorWorld::AddSelectedObject(core::SObject* obj)
 	{
-		selectedObjs.insert(obj);
-		if (core::IsValid(obj) && obj->GetType() == game::GameObject::GetStaticType())
+		if (IsSelected(obj) || !core::IsValid(obj))
+			return;
+
+		selectedObjs.push_back(obj);
+		
+		AddEditorControlsToSelected(*obj);
+	}
+
+	SH_EDITOR_API auto EditorWorld::GetSelectedObjects() const -> const core::SVector<SObject*>&
+	{
+		return selectedObjs;
+	}
+
+	SH_EDITOR_API void EditorWorld::ClearSelectedObjects()
+	{
+		for (auto obj : selectedObjs)
 		{
-			game::GameObject* selectedObj = static_cast<game::GameObject*>(obj);
-			auto control = selectedObj->GetComponent<game::EditorControl>();
-			if (!core::IsValid(control))
-			{
-				control = selectedObj->AddComponent<game::EditorControl>();
-				control->SetCamera(editorCamera);
-				control->hideInspector = true;
-			}
-			AddOrDestroyOutlineComponent(*selectedObj, true);
+			if (!core::IsValid(obj))
+				continue;
+			
+			RemoveEditorControls(*obj);
 		}
+		selectedObjs.clear();
+	}
+
+	SH_EDITOR_API auto EditorWorld::IsSelected(core::SObject* obj) const -> bool
+	{
+		if (obj == nullptr)
+			return false;
+
+		for (auto selected : selectedObjs)
+		{
+			if (selected == obj)
+				return true;
+		}
+		return false;
 	}
 
 	SH_EDITOR_API auto EditorWorld::AddGameObject(std::string_view name) -> game::GameObject*
@@ -274,6 +271,34 @@ namespace sh::editor
 		obj->onComponentAdd.Register(onComponentAddListener);
 		
 		return obj;
+	}
+
+	SH_EDITOR_API auto EditorWorld::DuplicateGameObject(const game::GameObject& obj) -> game::GameObject&
+	{
+		game::GameObject& dup = Super::DuplicateGameObject(obj);
+		dup.onComponentAdd.Register(onComponentAddListener);
+		
+		std::queue<game::GameObject*> bfs{};
+		bfs.push(&dup);
+		while (!bfs.empty())
+		{
+			auto obj = bfs.front();
+			bfs.pop();
+			if (!core::IsValid(obj))
+				continue;
+			auto meshRenderer = obj->GetComponent<game::MeshRenderer>();
+			if (meshRenderer != nullptr)
+			{
+				auto pickingRenderer = obj->AddComponent<game::PickingRenderer>();
+				pickingRenderer->hideInspector = true;
+				pickingRenderer->SetCamera(*pickingCamera);
+				pickingRenderer->SetMeshRenderer(*meshRenderer);
+			}
+			for (auto child : obj->transform->GetChildren())
+				bfs.push(&child->gameObject);
+		}
+
+		return dup;
 	}
 
 	SH_EDITOR_API auto EditorWorld::GetEditorUI() const -> EditorUI&

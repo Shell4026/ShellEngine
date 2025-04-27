@@ -1,5 +1,5 @@
 ﻿#include "GameObject.h"
-
+#include "ComponentModule.h"
 #include "Component/Component.h"
 
 #include "Core/SObjectManager.h"
@@ -12,6 +12,32 @@ namespace sh::game
 	{
 		transform = AddComponent<Transform>();
 		SetName(name);
+	}
+
+	GameObject::GameObject(const GameObject& other) :
+		SObject(other),
+		world(other.world), activeSelf(bEnable),
+		bInit(other.bInit), bEnable(other.bEnable), hideInspector(other.hideInspector), bNotSave(other.bNotSave)
+	{
+		transform = AddComponent<Transform>();
+		*transform = *other.transform;
+
+		for (int i = 1; i < other.components.size(); ++i)
+		{
+			Component* component = other.components[i];
+			if (!core::IsValid(component))
+				continue;
+
+			IComponentType* componentType = ComponentModule::GetInstance()->GetComponent(component->GetName().ToString());
+			if (componentType == nullptr)
+			{
+				SH_ERROR_FORMAT("Not found component: {}", component->GetName().ToString());
+				continue;
+			}
+			Component* copyComponent = componentType->Clone(*this, *component);
+			if (copyComponent)
+				AddComponent(copyComponent);
+		}
 	}
 
 	SH_GAME_API GameObject::GameObject(GameObject&& other) noexcept :
@@ -131,6 +157,11 @@ namespace sh::game
 		components.back()->SetActive(true);
 
 		onComponentAdd.Notify(components.back());
+	}
+
+	SH_GAME_API auto GameObject::Clone() const -> GameObject&
+	{
+		return world.DuplicateGameObject(*this);
 	}
 
 	SH_GAME_API auto GameObject::Serialize() const -> core::Json

@@ -46,7 +46,8 @@ namespace sh::editor
 		ImDrawList* imguiDrawList = nullptr;
 
 		bool bDirty;
-		bool bMouseDown;
+		bool bMouseLeftDown;
+		bool bMouseRightDown;
 		bool bFocus;
 		bool bOverlay = true;
 	protected:
@@ -57,6 +58,9 @@ namespace sh::editor
 		/// @brief 뷰포트 사이즈가 변했을 시 렌더 텍스쳐의 사이즈를 바꾸는 함수.
 		void ChangeViewportSize();
 		void RenderOverlay();
+		void RenderPopup();
+		void LeftClick();
+		void RightClick();
 	protected:
 		SH_EDITOR_API void Sync() override;
 	public:

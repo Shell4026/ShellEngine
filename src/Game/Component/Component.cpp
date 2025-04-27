@@ -15,10 +15,9 @@ namespace sh::game
 		SObject(other),
 		gameObject(other.gameObject), world(other.world),
 
-		bInit(false), bEnable(other.bEnable)
+		bInit(other.bInit), bEnable(other.bEnable)
 	{
 	}
-
 	SH_GAME_API Component::Component(Component&& other) noexcept :
 		SObject(std::move(other)),
 		gameObject(other.gameObject), world(other.world),
@@ -27,6 +26,14 @@ namespace sh::game
 	{
 		other.bEnable = false;
 		other.bInit = false;
+	}
+
+	SH_GAME_API auto Component::operator=(const Component& other) -> Component&
+	{
+		bInit = other.bInit;
+		bEnable = other.bEnable;
+
+		return *this;
 	}
 
 	SH_GAME_API auto Component::IsActive() const -> bool

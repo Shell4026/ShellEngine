@@ -50,6 +50,8 @@ namespace sh::game
 		SH_GAME_API Component(const Component& other);
 		SH_GAME_API Component(Component&& other) noexcept;
 
+		SH_GAME_API auto operator=(const Component& other) -> Component&;
+
 		SH_GAME_API auto IsActive() const -> bool;
 		SH_GAME_API void SetActive(bool b);
 

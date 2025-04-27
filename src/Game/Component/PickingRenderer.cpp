@@ -62,7 +62,7 @@ namespace sh::game
 		renderer = &meshRenderer;
 		auto mesh = renderer->GetMesh();
 		if (core::IsValid(mesh))
-			this->mesh = mesh;
+			SetMesh(mesh);
 	}
 
 	SH_GAME_API auto PickingRenderer::Serialize() const -> core::Json

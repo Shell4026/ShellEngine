@@ -40,6 +40,8 @@ namespace sh::core
 
 		SH_CORE_API SObject();
 	public:
+		/// @brief 복사 생성자. UUID는 복사하지 않는다.
+		/// @param other 다른 객체
 		SH_CORE_API SObject(const SObject& other);
 		SH_CORE_API SObject(SObject&& other) noexcept;
 		SH_CORE_API virtual ~SObject();

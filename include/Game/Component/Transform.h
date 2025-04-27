@@ -45,8 +45,10 @@ namespace sh::game
 	public:
 		SH_GAME_API Transform(GameObject& owner);
 		SH_GAME_API ~Transform();
-		SH_GAME_API Transform(const Transform& other);
+		SH_GAME_API Transform(const Transform& other) = delete;
 		SH_GAME_API Transform(Transform&& other) noexcept;
+
+		SH_GAME_API auto operator=(const Transform& other) -> Transform&;
 
 		SH_GAME_API void Awake() override;
 		SH_GAME_API void Start() override;
@@ -77,6 +79,7 @@ namespace sh::game
 		SH_GAME_API bool HasChild(const Transform& child) const;
 
 		SH_GAME_API void Destroy() override;
+		SH_GAME_API void OnDestroy() override;
 
 		SH_GAME_API auto Serialize() const -> core::Json override;
 		SH_GAME_API void Deserialize(const core::Json& json) override;

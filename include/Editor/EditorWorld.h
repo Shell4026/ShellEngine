@@ -22,10 +22,7 @@ namespace sh::editor
 	{
 		SCLASS(EditorWorld)
 	private:
-		PROPERTY(selected)
-		core::SObject* selected = nullptr;
-		PROPERTY(selectedObjs)
-		std::set<core::SObject*> selectedObjs;
+		core::SVector<core::SObject*> selectedObjs;
 
 		PROPERTY(editorCamera)
 		game::EditorCamera* editorCamera = nullptr;
@@ -43,6 +40,8 @@ namespace sh::editor
 	public:
 		mutable core::Observer<false, game::GameObject*, game::Component*> onComponentAdd;
 	private:
+		void AddEditorControlsToSelected(core::SObject& obj);
+		void RemoveEditorControls(core::SObject& obj);
 		void AddOrDestroyOutlineComponent(game::GameObject& obj, bool bAdd);
 	public:
 		SH_EDITOR_API EditorWorld(render::Renderer&, const game::ComponentModule& module, game::ImGUImpl& guiContext);
@@ -52,13 +51,14 @@ namespace sh::editor
 
 		SH_EDITOR_API void InitResource() override;
 
-		SH_EDITOR_API void SetSelectedObject(core::SObject* obj);
-		SH_EDITOR_API auto GetSelectedObject() const -> core::SObject*;
-
 		SH_EDITOR_API void AddSelectedObject(core::SObject* obj);
+		SH_EDITOR_API auto GetSelectedObjects() const -> const core::SVector<SObject*>&;
+		SH_EDITOR_API void ClearSelectedObjects();
+
+		SH_EDITOR_API auto IsSelected(core::SObject* obj) const -> bool;
 
 		SH_EDITOR_API auto AddGameObject(std::string_view name) -> game::GameObject* override;
-
+		SH_EDITOR_API auto DuplicateGameObject(const game::GameObject& obj) -> game::GameObject& override;
 		SH_EDITOR_API auto GetEditorUI() const -> EditorUI&;
 
 		SH_EDITOR_API void Start() override;

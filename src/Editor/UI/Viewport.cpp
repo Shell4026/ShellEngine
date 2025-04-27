@@ -20,7 +20,7 @@ namespace sh::editor
 		renderTex(),
 		x(0.f), y(0.f),
 		viewportWidthLast(100.f), viewportHeightLast(100.f),
-		bDirty(false), bMouseDown(false), bFocus(false)
+		bDirty(false), bMouseLeftDown(false), bMouseRightDown(false), bFocus(false)
 	{
 		renderTex = world.GetGameObject("EditorCamera")->GetComponent<game::EditorCamera>()->GetRenderTexture();
 		outlineTex = static_cast<render::RenderTexture*>(world.textures.GetResource("OutlineTexture"));
@@ -34,18 +34,18 @@ namespace sh::editor
 			{
 				//SH_INFO_FORMAT("Pick R:{}, G:{}, B:{}, A:{}", pixel.r, pixel.g, pixel.b, pixel.a);
 				bool bMultiSelect = game::Input::GetKeyDown(game::Input::KeyCode::Shift);
+				if (!bMultiSelect)
+					world.ClearSelectedObjects();
+
 				uint32_t id = pixel;
 				if (id == 0)
 				{
 					if (!bMultiSelect)
-						world.SetSelectedObject(nullptr);
+						world.ClearSelectedObjects();
 				}
 				else if (auto pickingRenderer = game::PickingIdManager::Get(id); pickingRenderer != nullptr)
 				{
-					if (!bMultiSelect)
-						world.SetSelectedObject(&pickingRenderer->gameObject);
-					else
-						world.AddSelectedObject(&pickingRenderer->gameObject);
+					world.AddSelectedObject(&pickingRenderer->gameObject);
 				}
 			}
 		);
@@ -60,7 +60,7 @@ namespace sh::editor
 		Clean();
 	}
 
-	void Viewport::Update()
+	SH_EDITOR_API void Viewport::Update()
 	{
 		editorCamera->SetFocus(false);
 		if (!bFocus)
@@ -70,24 +70,22 @@ namespace sh::editor
 		if (game::Input::GetKeyDown(game::Input::KeyCode::LAlt))
 			return;
 
-		if (!bMouseDown)
+		if (!bMouseLeftDown)
 		{
-			bMouseDown = game::Input::GetMouseDown(game::Input::MouseType::Left);
-			if (bMouseDown)
-			{
-				mousePos.x = ImGui::GetIO().MousePos.x - x;
-				mousePos.y = ImGui::GetIO().MousePos.y - y;
-				if (mousePos.x < 0 || mousePos.y < 0)
-					return;
-				if (mousePos.x > viewportWidthLast || mousePos.y > viewportHeightLast)
-					return;
-
-				pickingCamera->SetPickingPos({ mousePos.x, mousePos.y });
-				pickingCamera->pickingCallback.Register(pickingListener);
-			}
+			bMouseLeftDown = game::Input::GetMouseDown(game::Input::MouseType::Left);
+			if (bMouseLeftDown)
+				LeftClick();
 		}
 		else
-			bMouseDown = game::Input::GetMouseDown(game::Input::MouseType::Left);
+			bMouseLeftDown = game::Input::GetMouseDown(game::Input::MouseType::Left);
+		if (!bMouseRightDown)
+		{
+			bMouseRightDown = game::Input::GetMouseDown(game::Input::MouseType::Right);
+			if (bMouseRightDown)
+				RightClick();
+		}
+		else
+			bMouseRightDown = game::Input::GetMouseDown(game::Input::MouseType::Right);
 	}
 
 	void Viewport::ChangeViewportSize()
@@ -124,6 +122,46 @@ namespace sh::editor
 		ImGui::EndChild();
 	}
 
+	void Viewport::RenderPopup()
+	{
+		if (ImGui::BeginPopupContextItem("ViewportRightClick", ImGuiPopupFlags_::ImGuiPopupFlags_MouseButtonRight))
+		{
+			auto& selectedObjs = world.GetSelectedObjects();
+			if (selectedObjs.size() > 0)
+			{
+				if (ImGui::Selectable("Delete"))
+				{
+					for (auto obj : selectedObjs)
+					{
+						if (obj->GetType() == game::GameObject::GetStaticType())
+						{
+							if (core::IsValid(obj))
+								world.DestroyGameObject(*static_cast<game::GameObject*>(obj));
+						}
+					}
+				}
+			}
+			ImGui::EndPopup();
+		}
+	}
+
+	void Viewport::LeftClick()
+	{
+		mousePos.x = ImGui::GetIO().MousePos.x - x;
+		mousePos.y = ImGui::GetIO().MousePos.y - y;
+		if (mousePos.x < 0 || mousePos.y < 0)
+			return;
+		if (mousePos.x > viewportWidthLast || mousePos.y > viewportHeightLast)
+			return;
+
+		pickingCamera->SetPickingPos({ mousePos.x, mousePos.y });
+		pickingCamera->pickingCallback.Register(pickingListener);
+	}
+
+	void Viewport::RightClick()
+	{
+	}
+
 	void Viewport::Render()
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
@@ -155,17 +193,19 @@ namespace sh::editor
 		}
 		ImGui::Image(viewportTexture, { width, height });
 		ImGui::PopStyleVar();
+
+		RenderPopup();
 		RenderOverlay();
 
 		ImGui::End();
 	}
 
-	auto Viewport::GetRenderTexture() -> render::RenderTexture&
+	SH_EDITOR_API auto Viewport::GetRenderTexture() -> render::RenderTexture&
 	{
 		return *renderTex;
 	}
 
-	void Viewport::Clean()
+	SH_EDITOR_API void Viewport::Clean()
 	{
 		if (viewportTexture)
 		{
@@ -174,7 +214,7 @@ namespace sh::editor
 		}
 	}
 
-	void Viewport::SyncDirty()
+	SH_EDITOR_API void Viewport::SyncDirty()
 	{
 		if (bDirty)
 			return;
@@ -183,7 +223,7 @@ namespace sh::editor
 
 		bDirty = true;
 	}
-	void Viewport::Sync()
+	SH_EDITOR_API void Viewport::Sync()
 	{
 		ImGui_ImplVulkan_RemoveTexture(static_cast<VkDescriptorSet>(viewportTexture));
 		VkDescriptorSet viewportDescSetLast = static_cast<VkDescriptorSet>(viewportTexture);

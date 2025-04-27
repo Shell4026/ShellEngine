@@ -4,6 +4,7 @@
 
 #include "Game/ImGUImpl.h"
 #include "Game/GameObject.h"
+#include "Game/Input.h"
 
 namespace sh::editor
 {
@@ -92,7 +93,7 @@ namespace sh::editor
 
 	void Hierarchy::DrawGameObjectHierarchy(game::GameObject* obj, std::unordered_set<game::GameObject*>& drawSet)
 	{
-		bool isSelected = world.GetSelectedObject() == obj;
+		bool isSelected = world.IsSelected(obj);
 		bool nodeOpen = false;
 		bool hasChildren = !obj->transform->GetChildren().empty();
 
@@ -115,9 +116,17 @@ namespace sh::editor
 		{
 			if (ImGui::Selectable("Delete"))
 			{
-				if (obj == world.GetSelectedObject())
-					world.SetSelectedObject(nullptr);
-				world.DestroyGameObject(*obj);
+				world.DestroyGameObject(*static_cast<game::GameObject*>(obj));
+
+				auto& selectedObjs = world.GetSelectedObjects();
+				for (auto selectedObj : selectedObjs)
+				{
+					if (selectedObj == obj)
+						continue;
+
+					if (core::IsValid(selectedObj) && selectedObj->GetType() == game::GameObject::GetStaticType())
+						world.DestroyGameObject(*static_cast<game::GameObject*>(selectedObj));
+				}
 			}
 			ImGui::EndPopup();
 		}
@@ -126,7 +135,9 @@ namespace sh::editor
 		{
 			if (ImGui::IsMouseReleased(ImGuiMouseButton_::ImGuiMouseButton_Left))
 			{
-				world.SetSelectedObject(obj);
+				if (!game::Input::GetKeyDown(game::Input::KeyCode::Shift))
+					world.ClearSelectedObjects();
+				world.AddSelectedObject(obj);
 			}
 		}
 
@@ -175,9 +186,24 @@ namespace sh::editor
 		}
 	}
 
+	void Hierarchy::CopyGameobject()
+	{
+		auto& selectedObjs = world.GetSelectedObjects();
+		for (auto selectedObj : selectedObjs)
+		{
+			if (!core::IsValid(selectedObj))
+				continue;
+
+			game::GameObject& gameObj = *static_cast<game::GameObject*>(selectedObj);
+
+			gameObj.Clone();
+		}
+	}
+
 	SH_EDITOR_API void Hierarchy::Update()
 	{
-
+		if (game::Input::GetKeyDown(game::Input::KeyCode::LCtrl) && game::Input::GetKeyPressed(game::Input::KeyCode::D))
+			CopyGameobject();
 	}
 	SH_EDITOR_API void Hierarchy::Render()
 	{
@@ -188,6 +214,7 @@ namespace sh::editor
 		ImGui::SetNextWindowSize({ 200, 500 });
 		ImGui::Begin("Hierarchy", nullptr, style);
 		isDocking = ImGui::IsWindowDocked();
+		isFocus = ImGui::IsWindowFocused() && ImGui::IsWindowHovered();
 
 		std::unordered_set<game::GameObject*> drawSet{};
 

@@ -1,4 +1,6 @@
 ﻿#pragma once
+#include "Export.h"
+
 #include "Game/Component/Component.h"
 #include "Game/Vector.h"
 
@@ -8,15 +10,23 @@
 #undef None
 #endif
 
+#include <set>
+
 namespace sh::game
 {
 	class Camera;
 	class LineRenderer;
-
-	class EditorControl : public Component
+}
+namespace sh::editor
+{
+	class EditorControl : public game::Component
 	{
 		COMPONENT(EditorControl)
 	private:
+		static std::set<EditorControl*> controls;
+		static bool bPivot;
+		static bool bUpdatedControls;
+
 		enum class Mode
 		{
 			None, Move, Rotate, Scale
@@ -29,26 +39,27 @@ namespace sh::game
 		Axis axis = Axis::None;
 
 		PROPERTY(camera)
-		Camera* camera = nullptr;
+		game::Camera* camera = nullptr;
 		PROPERTY(helper, core::PropertyOption::invisible)
-		LineRenderer* helper = nullptr;
+		game::LineRenderer* helper = nullptr;
 
-		Vec3 posLast, scaleLast;
+		game::Vec3 posLast, scaleLast;
 		glm::quat quatLast;
-		Vec2 clickPos;
+		game::Vec2 clickPos;
 
-		Vec3 up, right, forward;
+		game::Vec3 up, right, forward;
 	private:
 		inline void MoveControl();
 		inline void ScaleControl();
 		inline void RotateControl();
 	public:
-		SH_GAME_API EditorControl(GameObject& owner);
+		SH_EDITOR_API EditorControl(game::GameObject& owner);
+		SH_EDITOR_API ~EditorControl();
 
-		SH_GAME_API void Update() override;
+		SH_EDITOR_API void Update() override;
 
-		SH_GAME_API void SetCamera(Camera* camera);
+		SH_EDITOR_API void SetCamera(game::Camera* camera);
 
-		SH_GAME_API auto Serialize() const -> core::Json override;
+		SH_EDITOR_API auto Serialize() const -> core::Json override;
 	};
 }//namespace
