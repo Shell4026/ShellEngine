@@ -376,7 +376,7 @@ namespace sh::editor
 	SH_EDITOR_API void Project::LoadWorld(const std::string& name)
 	{
 		world.AddAfterSyncTask(
-			[&]()
+			[&, name]()
 			{
 				auto file = core::FileSystem::LoadText(assetPath / (name + ".world"));
 				if (file)
