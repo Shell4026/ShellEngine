@@ -19,7 +19,7 @@ namespace sh::editor
 	private:
 		EditorWorld& world;
 
-		std::list<game::GameObject*> objList;
+		core::SList<game::GameObject*> objList;
 		core::Observer<false, game::GameObject*>::Listener onGameObjectAddedListener;
 		//core::Observer<game::GameObject*>::Listener onGameObjectRemovedListener;
 

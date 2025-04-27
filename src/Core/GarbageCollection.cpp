@@ -211,6 +211,39 @@ namespace sh::core
 				}
 				break;
 			}
+			case TrackingContainerInfo::Type::List:
+			{
+				std::list<SObject*>& list = *reinterpret_cast<std::list<SObject*>*>(containerPtr);
+				for (auto it = list.begin(); it != list.end();)
+				{
+					SObject* obj = *it;
+					if (obj == nullptr)
+					{
+						++it;
+						continue;
+					}
+					if (obj->bPendingKill.load(std::memory_order::memory_order_acquire))
+					{
+						it = list.erase(it);
+						continue;
+					}
+					std::queue<SObject*> bfs{};
+					bfs.push(obj);
+					while (!bfs.empty())
+					{
+						SObject* obj = bfs.front();
+						bfs.pop();
+
+						if (obj == nullptr)
+							continue;
+						if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
+							continue;
+						MarkProperties(obj, bfs);
+					}
+					++it;
+				}
+				break;
+			}
 			case TrackingContainerInfo::Type::Set:
 			{
 				std::set<SObject*>& set = *reinterpret_cast<std::set<SObject*>*>(containerPtr);

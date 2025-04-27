@@ -194,6 +194,7 @@ namespace sh::core
 			{
 				Array,
 				Vector,
+				List,
 				Set,
 				HashSet,
 				MapKey,
@@ -275,6 +276,12 @@ namespace sh::core
 		{
 			std::lock_guard<std::mutex> lock{ mu };
 			trackingContainers.insert_or_assign(reinterpret_cast<void*>(&container), TrackingContainerInfo{ TrackingContainerInfo::Type::Array, size });
+		}
+		template<typename T, typename = std::enable_if_t<std::is_base_of_v<SObject, T>>>
+		void AddContainerTracking(std::list<T*>& container)
+		{
+			std::lock_guard<std::mutex> lock{ mu };
+			trackingContainers.insert_or_assign(reinterpret_cast<void*>(&container), TrackingContainerInfo{ TrackingContainerInfo::Type::List, static_cast<std::size_t>(0) });
 		}
 		template<typename T, typename = std::enable_if_t<std::is_base_of_v<SObject, T>>>
 		void AddContainerTracking(std::set<T*>& container)

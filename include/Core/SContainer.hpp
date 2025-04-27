@@ -8,6 +8,7 @@
 #include <unordered_set>
 #include <map>
 #include <unordered_map>
+#include <list>
 #include <optional>
 #include <queue>
 #include <assert.h>
@@ -245,6 +246,44 @@ namespace sh::core
         auto operator=(SHashMap&& other) noexcept -> SHashMap&
         {
             std::unordered_map<T, U>::operator=(std::move(other));
+            return *this;
+        }
+    };
+
+    /// @brief 쓰레기 수집을 지원하는 std::list와 동일한 역할을 하는 컨테이너.
+    /// @brief SObject타입의 포인터면 쓰레기 수집 목록에 포함 되며 객체가 제거 되면 요소가 제거된다.
+    /// @brief [주의] 절대 std::list의 다형성 용도로 사용하면 안 된다.
+    /// @tparam T 키 타입
+    /// @tparam U 값 타입
+    template<typename T>
+    class SList : public std::list<T>
+    {
+    public:
+        SList()
+        {
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
+        }
+        template<class... Args>
+        SList(Args&&... args) :
+            std::list<T>(std::forward<Args>(args)...)
+        {
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
+        }
+        ~SList()
+        {
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->RemoveContainerTracking(this);
+        }
+        auto operator=(const SList& other) -> SList&
+        {
+            std::list<T>::operator=(other);
+            return *this;
+        }
+        auto operator=(SList&& other) noexcept -> SList&
+        {
+            std::list<T>::operator=(std::move(other));
             return *this;
         }
     };
