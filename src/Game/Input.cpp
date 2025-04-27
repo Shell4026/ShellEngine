@@ -1,5 +1,4 @@
-﻿#include "PCH.h"
-#include "Input.h"
+﻿#include "Input.h"
 
 #include "Window/Event.h"
 
@@ -10,7 +9,10 @@ namespace sh::game
 {
 	std::bitset<100> Input::keyPressing{};
 	std::bitset<100> Input::keyPressingOneFrame{};
+	std::bitset<100> Input::keyReleasingOneFrame{};
 	std::bitset<3> Input::mousePressing{};
+	std::bitset<3> Input::mousePressingOneFrame;
+	std::bitset<3> Input::mouseReleasingOneFrame;
 	glm::vec2 Input::mousePos{};
 	glm::vec2 Input::mouseDelta{};
 	float Input::wheelDelta{ 0.f };
@@ -26,6 +28,10 @@ namespace sh::game
 		mouseDelta = { 0.f, 0.f };
 
 		keyPressingOneFrame.reset();
+		keyReleasingOneFrame.reset();
+
+		mousePressingOneFrame.reset();
+		mouseReleasingOneFrame.reset();
 	}
 
 	SH_GAME_API void Input::UpdateEvent(window::Event event)
@@ -37,12 +43,21 @@ namespace sh::game
 			keyPressing[static_cast<uint32_t>(event.keyType)] = true;
 		}
 		else if(event.type == window::Event::EventType::KeyUp)
+		{
 			keyPressing[static_cast<uint32_t>(event.keyType)] = false;
+			keyReleasingOneFrame[static_cast<uint32_t>(event.keyType)] = true;
+		}
 
 		if (event.type == sh::window::Event::EventType::MousePressed)
+		{
 			mousePressing[static_cast<uint32_t>(event.mouseType)] = true;
+			mousePressingOneFrame[static_cast<uint32_t>(event.mouseType)] = true;
+		}
 		else if(event.type == sh::window::Event::EventType::MouseReleased)
+		{
 			mousePressing[static_cast<uint32_t>(event.mouseType)] = false;
+			mouseReleasingOneFrame[static_cast<uint32_t>(event.mouseType)] = true;
+		}
 
 		if (event.type == window::Event::EventType::MouseWheelScrolled)
 			wheelDelta = window::Event::MouseWheelScrolled::delta;
@@ -67,8 +82,22 @@ namespace sh::game
 			return false;
 		return  keyPressingOneFrame[static_cast<uint32_t>(keycode)];
 	}
+	SH_GAME_API auto Input::GetKeyReleased(KeyCode keycode, bool bIgnoreGui) -> bool
+	{
+		if (!bIgnoreGui && ImGui::GetIO().WantTextInput)
+			return false;
+		return  keyReleasingOneFrame[static_cast<uint32_t>(keycode)];
+	}
 	SH_GAME_API bool Input::GetMouseDown(MouseType mouseType)
 	{
 		return mousePressing[static_cast<uint32_t>(mouseType)];
+	}
+	SH_GAME_API bool Input::GetMousePressed(MouseType mouseType)
+	{
+		return mousePressingOneFrame[static_cast<uint32_t>(mouseType)];
+	}
+	SH_GAME_API bool Input::GetMouseReleased(MouseType mouseType)
+	{
+		return mouseReleasingOneFrame[static_cast<uint32_t>(mouseType)];
 	}
 }

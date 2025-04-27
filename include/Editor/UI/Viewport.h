@@ -50,6 +50,8 @@ namespace sh::editor
 		bool bMouseRightDown;
 		bool bFocus;
 		bool bOverlay = true;
+		bool bBlockRightClick = false;
+		bool bBlockLeftClick = false;
 	protected:
 		EditorWorld& world;
 	public:
@@ -66,6 +68,9 @@ namespace sh::editor
 	public:
 		SH_EDITOR_API Viewport(EditorWorld& world);
 		SH_EDITOR_API ~Viewport() noexcept;
+
+		SH_EDITOR_API void BlockLeftClick(bool bBlock);
+		SH_EDITOR_API void BlockRightClick(bool bBlock);
 
 		SH_EDITOR_API void Update();
 		SH_EDITOR_API void Render();

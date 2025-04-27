@@ -60,6 +60,16 @@ namespace sh::editor
 		Clean();
 	}
 
+	SH_EDITOR_API void Viewport::BlockLeftClick(bool bBlock)
+	{
+		bBlockLeftClick = bBlock;
+	}
+
+	SH_EDITOR_API void Viewport::BlockRightClick(bool bBlock)
+	{
+		bBlockRightClick = bBlock;
+	}
+
 	SH_EDITOR_API void Viewport::Update()
 	{
 		editorCamera->SetFocus(false);
@@ -73,7 +83,7 @@ namespace sh::editor
 		if (!bMouseLeftDown)
 		{
 			bMouseLeftDown = game::Input::GetMouseDown(game::Input::MouseType::Left);
-			if (bMouseLeftDown)
+			if (bMouseLeftDown && !bBlockLeftClick)
 				LeftClick();
 		}
 		else
@@ -81,7 +91,7 @@ namespace sh::editor
 		if (!bMouseRightDown)
 		{
 			bMouseRightDown = game::Input::GetMouseDown(game::Input::MouseType::Right);
-			if (bMouseRightDown)
+			if (bMouseRightDown && !bBlockRightClick)
 				RightClick();
 		}
 		else
@@ -124,6 +134,8 @@ namespace sh::editor
 
 	void Viewport::RenderPopup()
 	{
+		if (bBlockRightClick)
+			return;
 		if (ImGui::BeginPopupContextItem("ViewportRightClick", ImGuiPopupFlags_::ImGuiPopupFlags_MouseButtonRight))
 		{
 			auto& selectedObjs = world.GetSelectedObjects();

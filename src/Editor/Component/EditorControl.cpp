@@ -1,4 +1,5 @@
 ﻿#include "Component/EditorControl.h"
+#include "Component/EditorUI.h"
 #include "EditorWorld.h"
 
 #include "game/Component/Camera.h"
@@ -40,6 +41,7 @@ namespace sh::editor
 		{
 			helper = obj->GetComponent<LineRenderer>();
 		}
+		ui = &static_cast<EditorWorld&>(world).GetEditorUI();
 	}
 
 	EditorControl::~EditorControl()
@@ -67,7 +69,7 @@ namespace sh::editor
 		{
 			deltaX = glm::dot(delta, glm::vec3{ right });
 			deltaY = glm::dot(delta, glm::vec3{ up });
-			pos = posLast + right * deltaX + up * deltaY;
+			pos = posLast + (right * deltaX + up * deltaY);
 		}
 		else if (axis == Axis::X)
 		{
@@ -88,7 +90,7 @@ namespace sh::editor
 			pos.z = posLast.z + deltaZ;
 		}
 
-		gameObject.transform->SetPosition(pos);
+		gameObject.transform->SetWorldPosition(pos);
 	}
 	inline void EditorControl::ScaleControl()
 	{
@@ -120,8 +122,9 @@ namespace sh::editor
 	}
 	inline void EditorControl::RotateControl()
 	{
-		glm::vec2 start = gameObject.world.renderer.GetContext()->GetViewportStart();
-		glm::vec2 end = gameObject.world.renderer.GetContext()->GetViewportEnd();
+		const glm::vec2 start = gameObject.world.renderer.GetContext()->GetViewportStart();
+		const glm::vec2 end = gameObject.world.renderer.GetContext()->GetViewportEnd();
+
 		glm::vec2 screenPos = glm::project(glm::vec3{ gameObject.transform->GetWorldPosition() }, 
 			camera->GetViewMatrix(), camera->GetProjMatrix(),
 			glm::vec4{ start.x, start.y, end.x, end.y });
@@ -130,6 +133,8 @@ namespace sh::editor
 		
 		glm::vec2 v = glm::normalize(screenPos - glm::vec2{ clickPos });
 		glm::vec2 v2 = glm::normalize(screenPos - Input::mousePosition);
+		if (glm::dot((v - v2), (v - v2)) < 0.0001f)
+			return;
 
 		float angleRad = glm::acos(glm::dot(v, v2));
 
@@ -137,7 +142,29 @@ namespace sh::editor
 		if (crossProduct < 0)
 			angleRad = -angleRad;
 
-		gameObject.transform->SetRotation(glm::angleAxis(angleRad, glm::vec3{ forward }) * quatLast);
+		if (axis == Axis::None)
+			gameObject.transform->SetWorldRotation(glm::angleAxis(angleRad, glm::vec3{ forward }) * quatLast);
+		else
+		{
+			glm::vec3 rotAxis;
+			float dot;
+			if (axis == Axis::X)
+			{
+				rotAxis = glm::vec3{ 1.f, 0.f, 0.f };
+				dot = glm::dot(glm::vec3{ forward }, rotAxis);
+			}
+			else if (axis == Axis::Y)
+			{
+				rotAxis = glm::vec3{ 0.f, 1.f, 0.f };
+				dot = glm::dot(glm::vec3{ forward }, rotAxis);
+			}
+			else if (axis == Axis::Z)
+			{
+				rotAxis = glm::vec3{ 0.f, 0.f, 1.f };
+				dot = glm::dot(glm::vec3{ forward }, rotAxis);
+			}
+			gameObject.transform->SetWorldRotation(glm::angleAxis(dot > 0 ? angleRad : -angleRad, rotAxis) * quatLast);
+		}
 	}
 
 	SH_EDITOR_API void EditorControl::Update()
@@ -145,50 +172,43 @@ namespace sh::editor
 		if (!core::IsValid(camera))
 			return;
 
-		if (mode != Mode::Move)
+		if (mode != Mode::Move && Input::GetKeyDown(Input::KeyCode::G))
 		{
-			if (Input::GetKeyDown(Input::KeyCode::G))
-			{
-				forward = glm::normalize(glm::vec3{ camera->GetLookPos() - camera->gameObject.transform->position });
-				up = camera->GetUpVector();
-				right = glm::normalize(glm::cross(glm::vec3{ forward }, glm::vec3{ up }));
-				up = glm::normalize(glm::cross(glm::vec3{ right }, glm::vec3{ forward }));
+			forward = glm::normalize(glm::vec3{ camera->GetLookPos() - camera->gameObject.transform->position });
+			up = camera->GetUpVector();
+			right = glm::normalize(glm::cross(glm::vec3{ forward }, glm::vec3{ up }));
+			up = glm::normalize(glm::cross(glm::vec3{ right }, glm::vec3{ forward }));
 
-				posLast = gameObject.transform->position;
-				clickPos = Input::mousePosition;
-				mode = Mode::Move;
-			}
+			posLast = gameObject.transform->GetWorldPosition();
+			clickPos = Input::mousePosition;
+			mode = Mode::Move;
 		}
-		if (mode != Mode::Scale)
+		if (mode != Mode::Scale && Input::GetKeyDown(Input::KeyCode::S))
 		{
-			if (Input::GetKeyDown(Input::KeyCode::S))
-			{
-				forward = glm::normalize(glm::vec3{ camera->GetLookPos() - camera->gameObject.transform->position });
-				up = camera->GetUpVector();
-				right = glm::normalize(glm::cross(glm::vec3{ forward }, glm::vec3{ up }));
-				up = glm::normalize(glm::cross(glm::vec3{ right }, glm::vec3{ forward }));
+			forward = glm::normalize(glm::vec3{ camera->GetLookPos() - camera->gameObject.transform->position });
+			up = camera->GetUpVector();
+			right = glm::normalize(glm::cross(glm::vec3{ forward }, glm::vec3{ up }));
+			up = glm::normalize(glm::cross(glm::vec3{ right }, glm::vec3{ forward }));
 
-				scaleLast = gameObject.transform->scale;
-				clickPos = Input::mousePosition;
-				mode = Mode::Scale;
-			}
+			scaleLast = gameObject.transform->scale;
+			clickPos = Input::mousePosition;
+			mode = Mode::Scale;
 		}
-		if (mode != Mode::Rotate)
+		if (mode != Mode::Rotate && Input::GetKeyDown(Input::KeyCode::R))
 		{
-			if (Input::GetKeyDown(Input::KeyCode::R))
-			{
-				forward = glm::normalize(glm::vec3{ camera->GetLookPos() - camera->gameObject.transform->position });
-				up = camera->GetUpVector();
-				right = glm::normalize(glm::cross(glm::vec3{ forward }, glm::vec3{ up }));
-				up = glm::normalize(glm::cross(glm::vec3{ right }, glm::vec3{ forward }));
+			forward = glm::normalize(glm::vec3{ camera->GetLookPos() - camera->gameObject.transform->position });
+			up = camera->GetUpVector();
+			right = glm::normalize(glm::cross(glm::vec3{ forward }, glm::vec3{ up }));
+			up = glm::normalize(glm::cross(glm::vec3{ right }, glm::vec3{ forward }));
 
-				quatLast = gameObject.transform->GetQuat();
-				clickPos = Input::mousePosition;
-				mode = Mode::Rotate;
-			}
+			quatLast = gameObject.transform->GetWorldQuat();
+			clickPos = Input::mousePosition;
+			mode = Mode::Rotate;
 		}
 		if (mode != Mode::None)
 		{
+			ui->GetViewport().BlockLeftClick(true);
+			ui->GetViewport().BlockRightClick(true);
 			if (Input::GetKeyDown(Input::KeyCode::X))
 			{
 				axis = Axis::X;
@@ -217,7 +237,7 @@ namespace sh::editor
 			if (Input::GetMouseDown(Input::MouseType::Right))
 			{
 				if (mode == Mode::Move)
-					gameObject.transform->SetPosition(posLast);
+					gameObject.transform->SetWorldPosition(posLast);
 				if (mode == Mode::Scale)
 					gameObject.transform->SetScale(scaleLast);
 				if (mode == Mode::Rotate)
@@ -253,7 +273,13 @@ namespace sh::editor
 			break;
 		}
 	}
-
+	SH_EDITOR_API void EditorControl::LateUpdate()
+	{
+		if (Input::GetMouseReleased(Input::MouseType::Left))
+			ui->GetViewport().BlockLeftClick(false);
+		if (Input::GetMouseReleased(Input::MouseType::Right))
+			ui->GetViewport().BlockRightClick(false);
+	}
 	SH_EDITOR_API void EditorControl::SetCamera(Camera* camera)
 	{
 		this->camera = camera;

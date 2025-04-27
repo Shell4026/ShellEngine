@@ -33,7 +33,6 @@ namespace sh::game
 
 		bool bUpdateMatrix;
 	private:
-		void UpdateMatrix();
 		void RemoveChild(const Transform& child);
 	public:
 		const Vec3& position;
@@ -54,6 +53,8 @@ namespace sh::game
 		SH_GAME_API void Start() override;
 		SH_GAME_API void Update() override;
 
+		SH_GAME_API void UpdateMatrix();
+
 		SH_GAME_API auto GetParent() const -> Transform*;
 		SH_GAME_API auto GetChildren() const -> const std::vector<Transform*>&;
 		/// @brief 자식 객체를 배열상에서 한칸 왼쪽으로 미는 함수
@@ -67,6 +68,11 @@ namespace sh::game
 		SH_GAME_API void SetRotation(const Vec3& rot);
 		SH_GAME_API void SetRotation(const glm::quat& rot);
 		SH_GAME_API void SetModelMatrix(const glm::mat4& matrix);
+
+		SH_GAME_API void SetWorldPosition(const Vec3& pos);
+		SH_GAME_API void SetWorldPosition(float x, float y, float z);
+		SH_GAME_API void SetWorldRotation(const Vec3& rot);
+		SH_GAME_API void SetWorldRotation(const glm::quat& rot);
 
 		SH_GAME_API auto GetQuat() const -> const glm::quat&;
 		SH_GAME_API auto GetWorldQuat() const -> const glm::quat&;

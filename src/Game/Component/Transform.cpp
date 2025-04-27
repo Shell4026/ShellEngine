@@ -97,7 +97,7 @@ namespace sh::game
 		}
 	}
 
-	void Transform::UpdateMatrix()
+	SH_GAME_API void Transform::UpdateMatrix()
 	{
 		if (vRotation.x >= 360)
 			vRotation.x -= 360;
@@ -243,6 +243,44 @@ namespace sh::game
 		SetScale(s);
 	}
 
+	SH_GAME_API void Transform::SetWorldPosition(const Vec3& pos)
+	{
+		SetWorldPosition(pos.x, pos.y, pos.z);
+	}
+
+	SH_GAME_API void Transform::SetWorldPosition(float x, float y, float z)
+	{
+		const glm::vec4 worldPos{ x, y, z, 1.0f };
+		if (parent != nullptr)
+		{
+			glm::vec4 localPos = parent->GetWorldToLocalMatrix() * worldPos;
+			vPosition = glm::vec3(localPos);
+		}
+		else
+			vPosition = Vec3{ x, y, z };
+		bUpdateMatrix = true;
+	}
+
+	SH_GAME_API void Transform::SetWorldRotation(const Vec3& rot)
+	{
+		const glm::quat worldQuat = glm::quat{ glm::radians(glm::vec3{ rot }) };
+		SetWorldRotation(worldQuat);
+	}
+
+	SH_GAME_API void Transform::SetWorldRotation(const glm::quat& rot)
+	{
+		if (parent != nullptr)
+		{
+			glm::quat localQ = glm::inverse(parent->worldQuat) * rot;
+			SetRotation(localQ);
+		}
+		else
+		{
+			SetRotation(rot);
+		}
+		bUpdateMatrix = true;
+	}
+
 	SH_GAME_API void Transform::SetParent(Transform* parent)
 	{
 		if (parent == this)
@@ -277,7 +315,6 @@ namespace sh::game
 				quat = glm::quat{ glm::radians(glm::vec3{ worldRotation }) };
 				vRotation = worldRotation;
 				vScale = worldScale;
-				
 			}
 		}
 		else

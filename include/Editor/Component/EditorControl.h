@@ -19,6 +19,7 @@ namespace sh::game
 }
 namespace sh::editor
 {
+	class EditorUI;
 	class EditorControl : public game::Component
 	{
 		COMPONENT(EditorControl)
@@ -43,6 +44,8 @@ namespace sh::editor
 		PROPERTY(helper, core::PropertyOption::invisible)
 		game::LineRenderer* helper = nullptr;
 
+		EditorUI* ui = nullptr;
+
 		game::Vec3 posLast, scaleLast;
 		glm::quat quatLast;
 		game::Vec2 clickPos;
@@ -57,6 +60,7 @@ namespace sh::editor
 		SH_EDITOR_API ~EditorControl();
 
 		SH_EDITOR_API void Update() override;
+		SH_EDITOR_API void LateUpdate() override;
 
 		SH_EDITOR_API void SetCamera(game::Camera* camera);
 
