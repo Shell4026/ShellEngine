@@ -117,11 +117,11 @@ namespace sh::editor
 					}
 					if (ImGui::MenuItem("Save world", "Ctrl+S"))
 					{
-						project->SaveWorld();
+						project->SaveWorld("test");
 					}
 					if (ImGui::MenuItem("Load world", "Ctrl+O"))
 					{
-						project->LoadWorld();
+						project->LoadWorld("test");
 					}
 					if (ImGui::MenuItem("Build"))
 					{

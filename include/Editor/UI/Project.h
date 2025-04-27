@@ -67,8 +67,8 @@ namespace sh::editor
 		SH_EDITOR_API void CreateNewProject(const std::filesystem::path& dir);
 		SH_EDITOR_API void OpenProject(const std::filesystem::path& dir);
 
-		SH_EDITOR_API void SaveWorld();
-		SH_EDITOR_API void LoadWorld();
+		SH_EDITOR_API void SaveWorld(const std::string& name);
+		SH_EDITOR_API void LoadWorld(const std::string& name);
 
 		SH_EDITOR_API auto IsProjectOpen() const -> bool;
 

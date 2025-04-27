@@ -12,6 +12,9 @@
 
 #include "Render/RenderTexture.h"
 #include "Render/VulkanImpl/VulkanTextureBuffer.h"
+
+#include "External/imgui/backends/imgui_impl_vulkan.h"
+
 namespace sh::editor
 {
 	Viewport::Viewport(EditorWorld& world) :

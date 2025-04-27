@@ -8,6 +8,8 @@
 
 #include "Core/ThreadSyncManager.h"
 
+#include "External/imgui/backends/imgui_impl_vulkan.h"
+
 #include <iostream>
 
 namespace sh::game

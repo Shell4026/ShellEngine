@@ -320,9 +320,10 @@ namespace sh::game
 			if (sobj)
 			{
 				GameObject* obj = static_cast<GameObject*>(sobj);
-				for (auto component : obj->GetComponents())
+				for (int i = 1; i < obj->GetComponents().size(); ++i)
 				{
-					if (component->GetType() == Transform::GetStaticType())
+					Component* component = obj->GetComponents()[i];
+					if (component == nullptr)
 						continue;
 					component->SetUUID(core::UUID::Generate());
 					component->Destroy();

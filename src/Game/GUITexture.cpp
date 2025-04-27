@@ -4,6 +4,8 @@
 #include "Render/Texture.h"
 #include "Render/VulkanImpl/VulkanTextureBuffer.h"
 
+#include "External/imgui/backends/imgui_impl_vulkan.h"
+
 namespace sh::game
 {
 	SH_GAME_API GUITexture::GUITexture() :

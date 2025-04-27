@@ -367,18 +367,18 @@ namespace sh::editor
 		AssetDatabase::LoadAllAssets(world, assetPath, true);
 	}
 
-	SH_EDITOR_API void Project::SaveWorld()
+	SH_EDITOR_API void Project::SaveWorld(const std::string& name)
 	{
-		std::ofstream os{ assetPath / "test.world" };
+		std::ofstream os{ assetPath / (name + ".world") };
 		os << std::setw(4) << world.Serialize();
 		os.close();
 	}
-	SH_EDITOR_API void Project::LoadWorld()
+	SH_EDITOR_API void Project::LoadWorld(const std::string& name)
 	{
 		world.AddAfterSyncTask(
 			[&]()
 			{
-				auto file = core::FileSystem::LoadText(assetPath / "test.world");
+				auto file = core::FileSystem::LoadText(assetPath / (name + ".world"));
 				if (file)
 				{
 					world.Deserialize(core::Json::parse(file.value()));
@@ -398,12 +398,14 @@ namespace sh::editor
 				bool bSave = false;
 				if (userPlugin.handle != nullptr)
 				{
-					SaveWorld();
+					SaveWorld("temp");
 
 					for (auto obj : world.GetGameObjects())
 					{
 						for (auto component : obj->GetComponents())
 						{
+							if (component == nullptr)
+								continue;
 							for (auto& userComponent : userComponents)
 							{
 								if (component->GetType() == *userComponent.second)
@@ -425,7 +427,7 @@ namespace sh::editor
 
 				if (bSave)
 				{
-					LoadWorld();
+					LoadWorld("temp");
 					core::GarbageCollection::GetInstance()->Collect();
 				}
 			}
