@@ -9,12 +9,13 @@
 #include "Core/ISyncable.h"
 
 #include <vector>
-
+#include <variant>
 namespace sh::render
 {
 	class Drawable : 
 		public core::SObject, 
 		public core::INonCopyable,
+		public core::ISyncable,
 		public IRenderResource
 	{
 		SCLASS(Drawable)
@@ -41,7 +42,16 @@ namespace sh::render
 
 		uint32_t renderTag = 1;
 
+		struct SyncData
+		{
+			std::variant<const Material*, const Mesh*> changedPtr;
+		};
+		std::vector<SyncData> syncDatas;
+
 		bool bDirty = false;
+	protected:
+		SH_RENDER_API void SyncDirty() override;
+		SH_RENDER_API void Sync() override;
 	public:
 		SH_RENDER_API Drawable(const Material& material, const Mesh& mesh);
 		SH_RENDER_API Drawable(Drawable&& other) noexcept;

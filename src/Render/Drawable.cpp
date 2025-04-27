@@ -6,6 +6,35 @@
 
 namespace sh::render
 {
+	SH_RENDER_API void Drawable::SyncDirty()
+	{
+		if (bDirty)
+			return;
+
+		core::ThreadSyncManager::PushSyncable(*this);
+
+		bDirty = true;
+	}
+	SH_RENDER_API void Drawable::Sync()
+	{
+		for (auto& syncData : syncDatas)
+		{
+			if (syncData.changedPtr.index() == 0)
+			{
+				this->mat = std::get<0>(syncData.changedPtr);
+				if (core::IsValid(mat->GetShader()))
+					materialData.Create(*context, *mat->GetShader(), true);
+			}
+			else
+			{
+				this->mesh = std::get<1>(syncData.changedPtr);
+			}
+		}
+		syncDatas.clear();
+
+		bDirty = false;
+	}
+
 	Drawable::Drawable(const Material& material, const Mesh& mesh) :
 		mat(&material), mesh(&mesh), modelMatrix(1.0f)
 	{
@@ -37,13 +66,19 @@ namespace sh::render
 
 	SH_RENDER_API void Drawable::SetMesh(const Mesh& mesh)
 	{
-		this->mesh = &mesh;
+		SyncData data{};
+		data.changedPtr = &mesh;
+		syncDatas.push_back(data);
+
+		SyncDirty();
 	}
 	SH_RENDER_API void Drawable::SetMaterial(const Material& mat)
 	{
-		this->mat = &mat;
-		if (core::IsValid(mat.GetShader()))
-			materialData.Create(*context, *mat.GetShader(), true);
+		SyncData data{};
+		data.changedPtr = &mat;
+		syncDatas.push_back(data);
+
+		SyncDirty();
 	}
 
 	SH_RENDER_API auto Drawable::GetMaterial() const -> const Material*
