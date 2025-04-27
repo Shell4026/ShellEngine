@@ -29,7 +29,7 @@ namespace sh::game
 	SH_GAME_API GameObject::~GameObject()
 	{
 		if (bPlacementNew)
-			world.GetGameObjectPool().DeAllocate(this);
+			world.PushDeAllocatedGameObject(this);
 		SH_INFO_FORMAT("~GameObject: {}", GetName().ToString());
 	}
 

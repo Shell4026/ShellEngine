@@ -68,6 +68,7 @@ namespace sh::game
 		Octree lightOctree;
 
 		std::queue<std::function<void()>> afterSyncTasks;
+		std::queue<GameObject*> deallocatedObjs;
 
 		bool startLoop = false;
 	public:
@@ -85,6 +86,8 @@ namespace sh::game
 		core::Observer<false, Camera*> onCameraRemove;
 		core::Observer<false, GameObject*> onGameObjectAdded;
 		core::Observer<false, GameObject*> onGameObjectRemoved;
+	private:
+		auto AllocateGameObject() -> GameObject*;
 	protected:
 		SH_GAME_API void CleanObjs();
 	public:
@@ -108,6 +111,10 @@ namespace sh::game
 		SH_GAME_API auto GetGameObject(std::string_view name) const -> GameObject*;
 		SH_GAME_API auto GetGameObjects() const -> const core::SHashSet<GameObject*>&;
 		SH_GAME_API auto GetGameObjectPool() -> core::memory::MemoryPool<GameObject>&;
+		/// @brief 게임 오브젝트가 할당된 메모리를 반환 큐에 넣는 함수.
+		/// @param ptr 오브젝트 포인터
+		SH_GAME_API void PushDeAllocatedGameObject(GameObject* ptr);
+		SH_GAME_API auto DuplicateGameObject(const GameObject& obj) -> GameObject&;
 
 		SH_GAME_API void RegisterCamera(Camera* cam);
 		SH_GAME_API void UnRegisterCamera(Camera* cam);

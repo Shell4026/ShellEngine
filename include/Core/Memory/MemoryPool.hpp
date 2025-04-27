@@ -23,7 +23,7 @@ namespace sh::core::memory
 		// 할당된 T의 영역을 재활용하는 메모리
 		struct Block
 		{
-			Block* next;
+			Block* next = nullptr;
 		};
 		// 실질적인 데이터
 		class Buffer

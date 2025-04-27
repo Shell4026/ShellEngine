@@ -56,6 +56,15 @@ namespace sh::game
 	{
 		SH_INFO("Init resource");
 	}
+	auto World::AllocateGameObject() -> GameObject*
+	{
+		while (!deallocatedObjs.empty())
+		{
+			objPool.DeAllocate(deallocatedObjs.front());
+			deallocatedObjs.pop();
+		}
+		return objPool.Allocate();
+	}
 	SH_GAME_API void World::CleanObjs()
 	{
 		for (auto obj : objs)
@@ -68,7 +77,7 @@ namespace sh::game
 
 	SH_GAME_API auto World::AddGameObject(std::string_view name) -> GameObject*
 	{
-		GameObject* ptr = objPool.Allocate();
+		GameObject* ptr = AllocateGameObject();
 		auto obj = CreateAt<GameObject>(ptr, *this, std::string{ name });
 		objs.insert(obj);
 
@@ -123,6 +132,24 @@ namespace sh::game
 	SH_GAME_API auto World::GetGameObjectPool() -> core::memory::MemoryPool<GameObject>&
 	{
 		return objPool;
+	}
+
+	SH_GAME_API void World::PushDeAllocatedGameObject(GameObject* ptr)
+	{
+		deallocatedObjs.push(ptr);
+	}
+
+	SH_GAME_API auto World::DuplicateGameObject(const GameObject& obj) -> GameObject&
+	{
+		GameObject* ptr = AllocateGameObject();
+		auto duplicatedObj = CreateAt<GameObject>(ptr, obj);
+
+		objs.insert(duplicatedObj);
+
+		gc->SetRootSet(duplicatedObj);
+		onGameObjectAdded.Notify(duplicatedObj);
+
+		return *duplicatedObj;
 	}
 
 	SH_GAME_API void World::Start()
