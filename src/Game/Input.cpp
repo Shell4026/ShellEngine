@@ -9,6 +9,7 @@
 namespace sh::game
 {
 	std::bitset<100> Input::keyPressing{};
+	std::bitset<100> Input::keyPressingOneFrame{};
 	std::bitset<3> Input::mousePressing{};
 	glm::vec2 Input::mousePos{};
 	glm::vec2 Input::mouseDelta{};
@@ -18,17 +19,23 @@ namespace sh::game
 	const glm::vec2& Input::mousePositionDelta(mouseDelta);
 	const float& Input::mouseWheelDelta(wheelDelta);
 
-	void Input::Update()
+	SH_GAME_API void Input::Update()
 	{
 		wheelDelta = 0.f;
 
 		mouseDelta = { 0.f, 0.f };
+
+		keyPressingOneFrame.reset();
 	}
 
-	void Input::UpdateEvent(window::Event event)
+	SH_GAME_API void Input::UpdateEvent(window::Event event)
 	{
 		if (event.type == window::Event::EventType::KeyDown)
+		{
+			if (!keyPressing[static_cast<uint32_t>(event.keyType)])
+				keyPressingOneFrame[static_cast<uint32_t>(event.keyType)] = true;
 			keyPressing[static_cast<uint32_t>(event.keyType)] = true;
+		}
 		else if(event.type == window::Event::EventType::KeyUp)
 			keyPressing[static_cast<uint32_t>(event.keyType)] = false;
 
@@ -48,13 +55,19 @@ namespace sh::game
 		mouseDelta.y = mousePos.y - mouseDelta.y;
 	}
 
-	bool Input::GetKeyDown(KeyCode keycode, bool bIgnoreGui)
+	SH_GAME_API bool Input::GetKeyDown(KeyCode keycode, bool bIgnoreGui)
 	{
 		if (!bIgnoreGui && ImGui::GetIO().WantTextInput)
 			return false;
 		return  keyPressing[static_cast<uint32_t>(keycode)];
 	}
-	bool Input::GetMouseDown(MouseType mouseType)
+	SH_GAME_API auto Input::GetKeyPressed(KeyCode keycode, bool bIgnoreGui) -> bool
+	{
+		if (!bIgnoreGui && ImGui::GetIO().WantTextInput)
+			return false;
+		return  keyPressingOneFrame[static_cast<uint32_t>(keycode)];
+	}
+	SH_GAME_API bool Input::GetMouseDown(MouseType mouseType)
 	{
 		return mousePressing[static_cast<uint32_t>(mouseType)];
 	}

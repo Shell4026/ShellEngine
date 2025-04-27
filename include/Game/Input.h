@@ -13,6 +13,7 @@ namespace sh::game
 	{
 	private:
 		static std::bitset<100> keyPressing;
+		static std::bitset<100> keyPressingOneFrame;
 		static std::bitset<3> mousePressing;
 		static glm::vec2 mousePos;
 		static glm::vec2 mouseDelta;
@@ -31,8 +32,14 @@ namespace sh::game
 
 		/// @brief 현재 키가 눌러져 있는지 확인하는 함수.
 		/// @param keycode 키코드 enum
+		/// @param bIgnoreGui UI 입력을 무시할 것인지
 		/// @return 눌렀으면 true, 아니면 false.
 		SH_GAME_API static bool GetKeyDown(KeyCode keycode, bool bIgnoreGui = false);
+		/// @brief 현재 프레임에서 키를 눌렀는지 확인하는 함수.
+		/// @param keycode 키코드 enum
+		/// @param bIgnoreGui UI 입력을 무시할 것인지
+		/// @return 눌렀으면 true, 아니면 false.
+		SH_GAME_API static auto GetKeyPressed(KeyCode keycode, bool bIgnoreGui = false) -> bool;
 		/// @brief 현재 마우스가 눌러져 있는지 확인하는 함수.
 		/// @param mouseType 마우스 타입 enum
 		/// @return 눌렀으면 true, 아니면 false
