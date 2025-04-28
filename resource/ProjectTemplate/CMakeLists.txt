@@ -1,4 +1,4 @@
-set(ENGINE_DIR "Here is directory")
+﻿set(ENGINE_DIR "Here is directory")
 set(PROJECT_NAME "New Project")
 file(GLOB SRC CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/Source/*.cpp)
 file(GLOB HEADERS CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/Source/*.h)
@@ -64,7 +64,7 @@ target_link_libraries(ShellEngineUser PRIVATE nlohmann_json)
 FetchContent_Declare(
   reactphysics3d
   GIT_REPOSITORY "https://github.com/DanielChappuis/reactphysics3d"
-  GIT_TAG "v0.10.0"
+  GIT_TAG "v0.10.2"
   )
 FetchContent_Populate(reactphysics3d)
 target_include_directories(ShellEngineUser PRIVATE ${reactphysics3d_SOURCE_DIR}/include)
