@@ -10,7 +10,6 @@ namespace sh::phys
 	private:
 		reactphysics3d::PhysicsCommon physicsCommon;
 		reactphysics3d::PhysicsWorld* world = nullptr;
-		reactphysics3d::RigidBody* floor = nullptr;
 	public:
 		SH_PHYS_API PhysWorld();
 		SH_PHYS_API ~PhysWorld();

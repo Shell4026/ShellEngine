@@ -39,7 +39,7 @@ namespace sh::render
 		const Material* mat = drawable->GetMaterial();
 		if (replacementMat)
 			mat = replacementMat;
-		Mesh::Topology topology = drawable->GetMesh()->GetTopology();
+		Mesh::Topology topology = drawable->GetTopology(core::ThreadType::Render);
 
 		RenderGroup* renderGroup = nullptr;
 		for (auto& group : renderGroups)

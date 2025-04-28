@@ -38,8 +38,9 @@ namespace sh::editor
 		if (obj.GetType() == game::GameObject::GetStaticType())
 		{
 			game::GameObject* selectedObj = static_cast<game::GameObject*>(&obj);
-			auto control = selectedObj->GetComponent<EditorControl>();
-			if (!core::IsValid(control))
+
+			EditorControl* control = selectedObj->GetComponent<EditorControl>();
+			if (control == nullptr)
 			{
 				control = selectedObj->AddComponent<EditorControl>();
 				control->SetCamera(editorCamera);
@@ -151,6 +152,7 @@ namespace sh::editor
 		auto outlinePreMat = materials.AddResource("OutlinePreMaterial", render::Material{ outlinePreShader });
 		auto outlinePostMat = materials.AddResource("OutlinePostMaterial", render::Material{ outlinePostShader });
 
+		models.AddResource("CubeModel", modelLoader.Load("model/cube.obj"));
 		models.AddResource("SphereModel", modelLoader.Load("model/Sphere.obj"));
 
 		errorShader->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f0f" });

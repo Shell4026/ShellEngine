@@ -226,16 +226,22 @@ namespace sh::game
 			return;
 		}
 		if (!core::IsValid(mat))
-		{
-			mat = nullptr;
-			return;
-		}
+			mat = gameObject.world.materials.GetResource("ErrorMaterial");
 		if (!core::IsValid(mat->GetShader()))
 			return;
 
 		drawable = core::SObject::Create<render::Drawable>(*mat, *mesh);
 		drawable->SetRenderTagId(renderTag);
+		drawable->SetTopology(mesh->GetTopology());
 		drawable->Build(*world.renderer.GetContext());
+	}
+
+	SH_GAME_API void MeshRenderer::UpdateDrawable()
+	{
+		if (bShaderHasLight)
+			FillLightStruct(*drawable);
+
+		drawable->SetModelMatrix(gameObject.transform->localToWorldMatrix);
 	}
 
 	SH_GAME_API void MeshRenderer::Destroy()
@@ -270,12 +276,8 @@ namespace sh::game
 
 		mat->UpdateUniformBuffers();
 		UpdateMaterialData();
+		UpdateDrawable();
 
-		if (bShaderHasLight)
-		{
-			FillLightStruct(*drawable);
-		}
-		drawable->SetModelMatrix(gameObject.transform->localToWorldMatrix);
 		gameObject.world.renderer.PushDrawAble(drawable);
 	}
 

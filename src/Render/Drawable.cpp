@@ -19,18 +19,25 @@ namespace sh::render
 	{
 		for (auto& syncData : syncDatas)
 		{
-			if (syncData.changedPtr.index() == 0)
+			std::size_t index = syncData.changed.index();
+			if (index == 0)
+				continue;
+			else if (index == 1)
 			{
-				this->mat = std::get<0>(syncData.changedPtr);
+				this->mat = std::get<1>(syncData.changed);
 				if (core::IsValid(mat->GetShader()))
 					materialData.Create(*context, *mat->GetShader(), true);
 			}
+			else if (index == 2)
+			{
+				this->mesh = std::get<2>(syncData.changed);
+			}
 			else
 			{
-				this->mesh = std::get<1>(syncData.changedPtr);
+				topology[core::ThreadType::Render] = std::get<3>(syncData.changed);
 			}
+			syncData.changed = std::monostate{};
 		}
-		syncDatas.clear();
 
 		bDirty = false;
 	}
@@ -38,6 +45,8 @@ namespace sh::render
 	Drawable::Drawable(const Material& material, const Mesh& mesh) :
 		mat(&material), mesh(&mesh), modelMatrix(1.0f)
 	{
+		topology[core::ThreadType::Game] = Mesh::Topology::Face;
+		topology[core::ThreadType::Render] = Mesh::Topology::Face;
 	}
 	Drawable::Drawable(Drawable&& other) noexcept :
 		mat(other.mat), mesh(other.mesh), modelMatrix(other.modelMatrix),
@@ -47,6 +56,8 @@ namespace sh::render
 		bDirty(other.bDirty)
 	{
 		other.bDirty = false;
+		topology[core::ThreadType::Game] = other.topology[core::ThreadType::Game];
+		topology[core::ThreadType::Render] = other.topology[core::ThreadType::Render];
 	}
 	Drawable::~Drawable()
 	{
@@ -67,16 +78,16 @@ namespace sh::render
 	SH_RENDER_API void Drawable::SetMesh(const Mesh& mesh)
 	{
 		SyncData data{};
-		data.changedPtr = &mesh;
-		syncDatas.push_back(data);
+		data.changed = &mesh;
+		syncDatas[1] = data;
 
 		SyncDirty();
 	}
 	SH_RENDER_API void Drawable::SetMaterial(const Material& mat)
 	{
 		SyncData data{};
-		data.changedPtr = &mat;
-		syncDatas.push_back(data);
+		data.changed = &mat;
+		syncDatas[0]= data;
 
 		SyncDirty();
 	}
@@ -127,5 +138,20 @@ namespace sh::render
 	SH_RENDER_API auto Drawable::GetRenderTagId() const -> uint32_t
 	{
 		return renderTag;
+	}
+
+	SH_RENDER_API void Drawable::SetTopology(Mesh::Topology topology)
+	{
+		assert(core::ThreadSyncManager::IsMainThread());
+		if (this->topology[core::ThreadType::Game] != topology)
+		{
+			this->topology[core::ThreadType::Game] = topology;
+			syncDatas[2].changed = topology;
+			SyncDirty();
+		}
+	}
+	SH_RENDER_API auto Drawable::GetTopology(core::ThreadType thr) const -> Mesh::Topology
+	{
+		return topology[thr];
 	}
 }//namespace

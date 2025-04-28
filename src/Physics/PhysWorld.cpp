@@ -9,11 +9,6 @@ namespace sh::phys
 		physicsCommon()
 	{
 		world = physicsCommon.createPhysicsWorld();
-		floor = world->createRigidBody(reactphysics3d::Transform::identity());
-		floor->setType(reactphysics3d::BodyType::STATIC);
-		
-		auto collider = physicsCommon.createBoxShape(reactphysics3d::Vector3(10, 0.01, 10));
-		floor->addCollider(collider, reactphysics3d::Transform::identity());
 	}
 	SH_PHYS_API PhysWorld::~PhysWorld()
 	{

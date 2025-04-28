@@ -62,7 +62,9 @@ namespace sh::game
 		void FillLightStruct(render::Drawable& drawable) const;
 	protected:
 		/// @brief Drawable을 생성하거나 이미 존재 시 갱신하는 함수.
-		void CreateDrawable();
+		SH_GAME_API virtual void CreateDrawable();
+		/// @brief Update()마다 호출 되는 Drawable 설정 함수
+		SH_GAME_API virtual void UpdateDrawable();
 	public:
 		SH_GAME_API MeshRenderer(GameObject& owner);
 		SH_GAME_API ~MeshRenderer();

@@ -170,16 +170,30 @@ namespace sh::core
 				const core::Name& name = prop->GetName();
 
 				if (propType == core::reflection::GetType<int>())
+				{
 					core::DeserializeProperty(subJson, name, *prop->Get<int>(this));
+					OnPropertyChanged(*prop.get());
+				}
 				else if (propType == core::reflection::GetType<float>())
+				{
 					core::DeserializeProperty(subJson, name, *prop->Get<float>(this));
+					OnPropertyChanged(*prop.get());
+				}
 				else if (propType == core::reflection::GetType<std::string>())
+				{
 					core::DeserializeProperty(subJson, name, *prop->Get<std::string>(this));
+					OnPropertyChanged(*prop.get());
+				}
 				else if (propType == core::reflection::GetType<bool>())
+				{
 					core::DeserializeProperty(subJson, name, *prop->Get<bool>(this));
+					OnPropertyChanged(*prop.get());
+				}
 				else if (prop->isSObjectPointer)
+				{
 					core::DeserializeProperty(subJson, name, *prop->Get<SObject*>(this));
-				OnPropertyChanged(*prop.get());
+					OnPropertyChanged(*prop.get());
+				}
 			}
 			stypeInfo = stypeInfo->GetSuper();
 		}

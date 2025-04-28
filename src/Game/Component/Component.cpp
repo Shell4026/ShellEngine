@@ -145,21 +145,45 @@ namespace sh::game
 				const core::Name& name = prop->GetName();
 
 				if (propType == core::reflection::GetType<int>())
-					core::DeserializeProperty(compJson, name, *prop->Get<int>(this));
+				{
+					core::DeserializeProperty(compJson, name, *prop->Get<int>(this)); 
+					OnPropertyChanged(*prop.get());
+				}
 				else if (propType == core::reflection::GetType<float>())
+				{
 					core::DeserializeProperty(compJson, name, *prop->Get<float>(this));
+					OnPropertyChanged(*prop.get());
+				}
 				else if (propType == core::reflection::GetType<std::string>())
+				{
 					core::DeserializeProperty(compJson, name, *prop->Get<std::string>(this));
+					OnPropertyChanged(*prop.get());
+				}
 				else if (propType == core::reflection::GetType<bool>())
+				{
 					core::DeserializeProperty(compJson, name, *prop->Get<bool>(this));
+					OnPropertyChanged(*prop.get());
+				}
 				else if (propType == core::reflection::GetType<Vec4>())
+				{
 					core::DeserializeProperty(compJson, name, *prop->Get<Vec4>(this));
+					OnPropertyChanged(*prop.get());
+				}
 				else if (propType == core::reflection::GetType<Vec3>())
+				{
 					core::DeserializeProperty(compJson, name, *prop->Get<Vec3>(this));
+					OnPropertyChanged(*prop.get());
+				}
 				else if (propType == core::reflection::GetType<Vec2>())
+				{
 					core::DeserializeProperty(compJson, name, *prop->Get<Vec2>(this));
+					OnPropertyChanged(*prop.get());
+				}
 				else if (prop->isSObjectPointer)
+				{
 					core::DeserializeProperty(compJson, name, *prop->Get<SObject*>(this));
+					OnPropertyChanged(*prop.get());
+				}
 			}
 			type = type->GetSuper();
 		}

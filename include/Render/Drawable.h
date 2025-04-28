@@ -34,19 +34,18 @@ namespace sh::render
 		PROPERTY(mesh)
 		const Mesh* mesh = nullptr;
 
-		glm::mat4 modelMatrix;
-
 		MaterialData materialData;
-
 		Light light;
 
+		glm::mat4 modelMatrix;
 		uint32_t renderTag = 1;
+		core::SyncArray<Mesh::Topology> topology;
 
 		struct SyncData
 		{
-			std::variant<const Material*, const Mesh*> changedPtr;
+			std::variant<std::monostate, const Material*, const Mesh*, Mesh::Topology> changed;
 		};
-		std::vector<SyncData> syncDatas;
+		std::array<SyncData, 3> syncDatas;
 
 		bool bDirty = false;
 	protected:
@@ -59,6 +58,8 @@ namespace sh::render
 
 		SH_RENDER_API void Build(const IRenderContext& context) override;
 
+		/// @brief 메쉬를 지정한다.
+		/// @param mesh 메쉬
 		SH_RENDER_API void SetMesh(const Mesh& mesh);
 		SH_RENDER_API void SetMaterial(const Material& mat);
 
@@ -77,5 +78,8 @@ namespace sh::render
 
 		SH_RENDER_API void SetRenderTagId(uint32_t tagId);
 		SH_RENDER_API auto GetRenderTagId() const -> uint32_t;
+
+		SH_RENDER_API void SetTopology(Mesh::Topology topology);
+		SH_RENDER_API auto GetTopology(core::ThreadType thr = core::ThreadType::Game) const -> Mesh::Topology;
 	};
 }
