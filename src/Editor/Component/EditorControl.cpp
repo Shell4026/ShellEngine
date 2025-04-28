@@ -42,6 +42,8 @@ namespace sh::editor
 			helper = obj->GetComponent<LineRenderer>();
 		}
 		ui = &static_cast<EditorWorld&>(world).GetEditorUI();
+
+		canPlayInEditor = true;
 	}
 
 	EditorControl::~EditorControl()

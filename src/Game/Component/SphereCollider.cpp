@@ -26,8 +26,11 @@ namespace sh::game
 	SH_GAME_API void ShpereCollider::Destroy()
 	{
 		Super::Destroy();
-		debugRenderer->Destroy();
-		debugRenderer = nullptr;
+		if (debugRenderer != nullptr)
+		{
+			debugRenderer->Destroy();
+			debugRenderer = nullptr;
+		}
 	}
 
 	SH_GAME_API void ShpereCollider::OnDestroy()

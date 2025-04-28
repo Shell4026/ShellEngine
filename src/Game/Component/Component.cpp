@@ -48,10 +48,14 @@ namespace sh::game
 		{
 			if (!bInit)
 			{
-				Awake();
-				bInit = true;
+				if (world.IsPlaying() || canPlayInEditor)
+				{
+					Awake();
+					bInit = true;
+				}
 			}
-			OnEnable();
+			if (world.IsPlaying() || canPlayInEditor)
+				OnEnable();
 		}
 	}
 

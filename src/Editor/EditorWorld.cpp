@@ -191,7 +191,6 @@ namespace sh::editor
 		editorCamera = camObj->AddComponent<game::EditorCamera>();
 		editorCamera->SetUUID(core::UUID{ "61b7bc9f9fd2ca27dcbad8106745f62a" });
 		editorCamera->SetRenderTexture(viewportTexture);
-		this->SetMainCamera(editorCamera);
 
 		auto PickingCamObj = AddGameObject("PickingCamera");
 		PickingCamObj->bNotSave = true;

@@ -1,4 +1,5 @@
 ﻿#include "RenderPipeline.h"
+#include "Camera.h"
 
 #include "VulkanImpl/VulkanContext.h"
 #include "VulkanImpl/VulkanRenderPipelineImpl.h"
@@ -75,6 +76,8 @@ namespace sh::render
 		camVector.reserve(cameras.size());
 		for (auto cam : cameras)
 		{
+			if (!cam->GetActive())
+				continue;
 			if (auto it = std::find(ignoreCameras.begin(), ignoreCameras.end(), cam); it == ignoreCameras.end())
 				camVector.push_back(cam);
 		}

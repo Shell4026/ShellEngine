@@ -38,22 +38,29 @@ namespace sh::render
 			}
 			syncData.changed = std::monostate{};
 		}
-
+		if (bMatrixDirty)
+			std::swap(modelMatrix[core::ThreadType::Game], modelMatrix[core::ThreadType::Render]);
+		if (bLightDirty)
+			std::swap(light[core::ThreadType::Game], light[core::ThreadType::Render]);
+		bMatrixDirty = false;
+		bLightDirty = false;
 		bDirty = false;
 	}
 
 	Drawable::Drawable(const Material& material, const Mesh& mesh) :
-		mat(&material), mesh(&mesh), modelMatrix(1.0f)
+		mat(&material), mesh(&mesh)
 	{
 		topology[core::ThreadType::Game] = Mesh::Topology::Face;
 		topology[core::ThreadType::Render] = Mesh::Topology::Face;
+
+		modelMatrix[core::ThreadType::Game] = glm::mat4{ 1.f };
+		modelMatrix[core::ThreadType::Render] = glm::mat4{ 1.f };
 	}
 	Drawable::Drawable(Drawable&& other) noexcept :
 		mat(other.mat), mesh(other.mesh), modelMatrix(other.modelMatrix),
 		materialData(std::move(other.materialData)), 
 		light(other.light),
-		renderTag(other.renderTag), 
-		bDirty(other.bDirty)
+		renderTag(other.renderTag)
 	{
 		other.bDirty = false;
 		topology[core::ThreadType::Game] = other.topology[core::ThreadType::Game];
@@ -111,20 +118,24 @@ namespace sh::render
 
 	SH_RENDER_API void Drawable::SetModelMatrix(const glm::mat4& mat)
 	{
-		modelMatrix = mat;
+		modelMatrix[core::ThreadType::Game] = mat;
+		bMatrixDirty = true;
+		SyncDirty();
 	}
-	SH_RENDER_API auto Drawable::GetModelMatrix() const -> const glm::mat4&
+	SH_RENDER_API auto Drawable::GetModelMatrix(core::ThreadType thr) const -> const glm::mat4&
 	{
-		return modelMatrix;
+		return modelMatrix[thr];
 	}
 
 	SH_RENDER_API void Drawable::SetLightData(const Light& lightData)
 	{
-		light = lightData;
+		light[core::ThreadType::Game] = lightData;
+		bLightDirty = true;
+		SyncDirty();
 	}
-	SH_RENDER_API auto Drawable::GetLightData() const -> const Light&
+	SH_RENDER_API auto Drawable::GetLightData(core::ThreadType thr) const -> const Light&
 	{
-		return light;
+		return light[thr];
 	}
 
 	SH_RENDER_API auto Drawable::CheckAssetValid() const -> bool

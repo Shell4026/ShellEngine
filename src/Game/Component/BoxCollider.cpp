@@ -26,8 +26,11 @@ namespace sh::game
 	SH_GAME_API void BoxCollider::Destroy()
 	{
 		Super::Destroy();
-		debugRenderer->Destroy();
-		debugRenderer = nullptr;
+		if (debugRenderer)
+		{
+			debugRenderer->Destroy();
+			debugRenderer = nullptr;
+		}
 	}
 
 	SH_GAME_API void BoxCollider::OnDestroy()

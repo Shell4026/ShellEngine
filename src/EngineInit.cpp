@@ -163,9 +163,9 @@ namespace sh
 
 			world->Update(window->GetDeltaTime());
 
+			world->BeforeSync();
 			core::ThreadSyncManager::Sync();
 			gc->Update();
-			world->AfterSync();
 
 			core::ThreadSyncManager::AwakeThread();
 		}

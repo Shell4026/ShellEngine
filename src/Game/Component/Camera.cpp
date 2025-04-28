@@ -22,12 +22,13 @@ namespace sh::game
 		owner.world.RegisterCamera(this);
 		camera.SetNearPlane(0.1f);
 		camera.SetFarPlane(1000.f);
+		canPlayInEditor = true;
 	}
 	Camera::~Camera()
 	{
 	}
 	
-	void Camera::BeginUpdate()
+	SH_GAME_API void Camera::BeginUpdate()
 	{
 		if (renderTexture == nullptr)
 		{
@@ -45,32 +46,29 @@ namespace sh::game
 		camera.SetLookPos(lookPos);
 		camera.UpdateMatrix();
 	}
-	void Camera::Destroy()
+	SH_GAME_API void Camera::Destroy()
 	{
 		if (gameObject.world.GetMainCamera() == this)
 		{
-			//다음에 추가된 카메라를 메인 카메라로 한다.
-			for (auto& cam : gameObject.world.GetCameras())
-			{
-				if (cam == this)
-					continue;
-
-				gameObject.world.SetMainCamera(cam);
-				break;
-			}
+			gameObject.world.SetMainCamera(nullptr);
 		}
 		gameObject.world.UnRegisterCamera(this);
 		Super::Destroy();
 	}
-
-	auto Camera::GetProjMatrix() const -> const glm::mat4&
+	SH_GAME_API void Camera::SetActive(bool b)
 	{
-		return camera.GetProjMatrix();
+		Super::SetActive(b);
+		camera.SetActive(b);
 	}
 
-	auto Camera::GetViewMatrix() const -> const glm::mat4&
+	SH_GAME_API auto Camera::GetProjMatrix() const -> const glm::mat4&
 	{
-		return camera.GetViewMatrix();
+		return camera.GetProjMatrix(core::ThreadType::Game);
+	}
+
+	SH_GAME_API auto Camera::GetViewMatrix() const -> const glm::mat4&
+	{
+		return camera.GetViewMatrix(core::ThreadType::Game);
 	}
 
 	SH_GAME_API void Camera::SetDepth(int depth)
@@ -105,8 +103,8 @@ namespace sh::game
 
 	SH_GAME_API auto Camera::ScreenPointToRay(const Vec2& mousePos) const -> phys::Ray
 	{
-		float w = camera.GetWidth();
-		float h = camera.GetHeight();
+		float w = camera.GetWidth(core::ThreadType::Game);
+		float h = camera.GetHeight(core::ThreadType::Game);
 		float aspect = w / h;
 
 		float ndcX = 2.f * mousePos.x / w - 1.0f;
@@ -118,7 +116,7 @@ namespace sh::game
 		camCoord.y = ndcY;
 		camCoord.z = -1.f / glm::tan(camera.GetFovRadian() / 2.f);
 
-		glm::vec3 worldCoord{ glm::inverse(camera.GetViewMatrix()) * camCoord };
+		glm::vec3 worldCoord{ glm::inverse(camera.GetViewMatrix(core::ThreadType::Game)) * camCoord };
 		glm::vec3 dir = glm::normalize(worldCoord - glm::vec3{ gameObject.transform->position });
 
 		return phys::Ray(gameObject.transform->position, dir);
@@ -138,7 +136,7 @@ namespace sh::game
 	}
 	SH_GAME_API auto Camera::GetUpVector() const -> Vec3
 	{
-		return camera.GetUpVector();
+		return camera.GetUpVector(core::ThreadType::Game);
 	}
 	SH_GAME_API void Camera::SetWidth(float width)
 	{
@@ -146,7 +144,7 @@ namespace sh::game
 	}
 	SH_GAME_API auto Camera::GetWidth() const -> float
 	{
-		return camera.GetWidth();
+		return camera.GetWidth(core::ThreadType::Game);
 	}
 	SH_GAME_API void Camera::SetHeight(float height)
 	{
@@ -154,7 +152,7 @@ namespace sh::game
 	}
 	SH_GAME_API auto Camera::GetHeight() const -> float
 	{
-		return camera.GetHeight();
+		return camera.GetHeight(core::ThreadType::Game);
 	}
 
 	SH_GAME_API void Camera::OnPropertyChanged(const core::reflection::Property& prop)

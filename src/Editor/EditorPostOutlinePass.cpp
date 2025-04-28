@@ -37,7 +37,9 @@ namespace sh::editor
 	}
 	SH_EDITOR_API void EditorPostOutlinePass::RecordCommand(const std::vector<const render::Camera*>& cameras, uint32_t imgIdx)
 	{
-		std::vector<const render::Camera*> camVec{ &camera->GetNative() };
+		std::vector<const render::Camera*> camVec{};
+		if (camera->GetNative().GetActive())
+			camVec.push_back(&camera->GetNative());
 
 		render::RenderPipeline::RecordCommand(camVec, imgIdx);
 	}

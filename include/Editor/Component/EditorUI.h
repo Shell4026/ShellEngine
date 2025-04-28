@@ -30,6 +30,7 @@ namespace sh::editor
 		std::unique_ptr<Inspector> inspector;
 
 		bool bDirty;
+		bool bPlaying = false;
 	private:
 		inline void SetDockNode();
 		inline void DrawMenu();

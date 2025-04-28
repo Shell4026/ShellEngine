@@ -1,5 +1,7 @@
 ﻿#include "Camera.h"
 
+#include "Core/ThreadSyncManager.h"
+
 #include "glm/gtc/matrix_transform.hpp"
 
 #include <cassert>
@@ -8,14 +10,38 @@ namespace sh::render
 {
 	uint32_t Camera::nextId = 0;
 
+	SH_RENDER_API void Camera::SyncDirty()
+	{
+		if (bDirty)
+			return;
+		bDirty = true;
+		
+		core::ThreadSyncManager::PushSyncable(*this);
+	}
+	SH_RENDER_API void Camera::Sync()
+	{
+		std::swap(pos[core::ThreadType::Game], pos[core::ThreadType::Render]);
+		std::swap(to[core::ThreadType::Game], to[core::ThreadType::Render]);
+		std::swap(up[core::ThreadType::Game], up[core::ThreadType::Render]);
+		std::swap(nearPlane[core::ThreadType::Game], nearPlane[core::ThreadType::Render]);
+		std::swap(farPlane[core::ThreadType::Game], farPlane[core::ThreadType::Render]);
+		std::swap(width[core::ThreadType::Game], width[core::ThreadType::Render]);
+		std::swap(height[core::ThreadType::Game], height[core::ThreadType::Render]);
+		std::swap(bufferData[core::ThreadType::Game], bufferData[core::ThreadType::Render]);
+		bDirty = false;
+	}
 	Camera::Camera() :
 		id(nextId++),
 		renderTexture(nullptr), priority(0)
 	{
 		fovRadians = glm::radians(60.0f);
-		pos = glm::vec3(0.0f, 0.0f, 0.0f);
-		to = glm::vec3(0.0f, 0.0f, 1.0f);
-		up = glm::vec3(0.0f, 1.0f, 0.0f);
+		pos[core::ThreadType::Game] = glm::vec3(0.0f, 0.0f, 0.0f);
+		to[core::ThreadType::Game] = glm::vec3(0.0f, 0.0f, 1.0f);
+		up[core::ThreadType::Game] = glm::vec3(0.0f, 1.0f, 0.0f);
+
+		pos[core::ThreadType::Render] = glm::vec3(0.0f, 0.0f, 0.0f);
+		to[core::ThreadType::Render] = glm::vec3(0.0f, 0.0f, 1.0f);
+		up[core::ThreadType::Render] = glm::vec3(0.0f, 1.0f, 0.0f);
 	}
 	SH_RENDER_API void Camera::SetRenderTexture(RenderTexture* framebuffer)
 	{
@@ -46,74 +72,75 @@ namespace sh::render
 	{
 		return fovRadians;
 	}
-	SH_RENDER_API auto Camera::GetProjMatrix() const -> const glm::mat4&
+	SH_RENDER_API auto Camera::GetProjMatrix(core::ThreadType thr) const -> const glm::mat4&
 	{
-		return bufferData.matProj;
+		return bufferData[thr].matProj;
 	}
-	SH_RENDER_API auto Camera::GetViewMatrix() const -> const glm::mat4&
+	SH_RENDER_API auto Camera::GetViewMatrix(core::ThreadType thr) const -> const glm::mat4&
 	{
-		return bufferData.matView;
+		return bufferData[thr].matView;
 	}
 	SH_RENDER_API void Camera::SetPos(const glm::vec3& pos)
 	{
-		this->pos = pos;
+		this->pos[core::ThreadType::Game] = pos;
 	}
-	SH_RENDER_API auto Camera::GetPos() const -> const glm::vec3&
+	SH_RENDER_API auto Camera::GetPos(core::ThreadType thr) const -> const glm::vec3&
 	{
-		return pos;
+		return pos[thr];
 	}
 	SH_RENDER_API void Camera::SetLookPos(const glm::vec3& pos)
 	{
-		this->to = pos;
+		this->to[core::ThreadType::Game] = pos;
 	}
-	SH_RENDER_API auto Camera::GetLookPos() const -> const glm::vec3&
+	SH_RENDER_API auto Camera::GetLookPos(core::ThreadType thr) const -> const glm::vec3&
 	{
-		return to;
+		return to[thr];
 	}
 	SH_RENDER_API void Camera::SetUpVector(const glm::vec3& up)
 	{
-		this->up = up;
+		this->up[core::ThreadType::Game] = up;
 	}
-	SH_RENDER_API auto Camera::GetUpVector() const -> const glm::vec3&
+	SH_RENDER_API auto Camera::GetUpVector(core::ThreadType thr) const -> const glm::vec3&
 	{
-		return up;
+		return up[thr];
 	}
 	SH_RENDER_API void Camera::SetNearPlane(float near)
 	{
-		nearPlane = near;
+		nearPlane[core::ThreadType::Game] = near;
 	}
-	SH_RENDER_API auto Camera::GetNearPlane() const -> float
+	SH_RENDER_API auto Camera::GetNearPlane(core::ThreadType thr) const -> float
 	{
-		return nearPlane;
+		return nearPlane[thr];
 	}
 	SH_RENDER_API void Camera::SetFarPlane(float far)
 	{
-		farPlane = far;
+		farPlane[core::ThreadType::Game] = far;
 	}
-	SH_RENDER_API auto Camera::GetFarPlane() const -> float
+	SH_RENDER_API auto Camera::GetFarPlane(core::ThreadType thr) const -> float
 	{
-		return farPlane;
+		return farPlane[thr];
 	}
 	SH_RENDER_API void Camera::SetWidth(float width)
 	{
-		this->width = width;
+		this->width[core::ThreadType::Game] = width;
 	}
-	SH_RENDER_API auto Camera::GetWidth() const -> float
+	SH_RENDER_API auto Camera::GetWidth(core::ThreadType thr) const -> float
 	{
-		return width;
+		return width[thr];
 	}
 	SH_RENDER_API void Camera::SetHeight(float height)
 	{
-		this->height = height;
+		this->height[core::ThreadType::Game] = height;
 	}
-	SH_RENDER_API auto Camera::GetHeight() const -> float
+	SH_RENDER_API auto Camera::GetHeight(core::ThreadType thr) const -> float
 	{
-		return height;
+		return height[thr];
 	}
 	SH_RENDER_API void Camera::UpdateMatrix()
 	{
-		bufferData.matProj = glm::perspectiveFov(fovRadians, width, height, nearPlane, farPlane);
-		bufferData.matView = glm::lookAt(pos, to, up);
+		bufferData[core::ThreadType::Game].matProj = glm::perspectiveFov(fovRadians, width[core::ThreadType::Game], height[core::ThreadType::Game], nearPlane[core::ThreadType::Game], farPlane[core::ThreadType::Game]);
+		bufferData[core::ThreadType::Game].matView = glm::lookAt(pos[core::ThreadType::Game], to[core::ThreadType::Game], up[core::ThreadType::Game]);
+		SyncDirty();
 	}
 	SH_RENDER_API void Camera::SetRenderTagMask(uint32_t mask)
 	{
@@ -135,5 +162,13 @@ namespace sh::render
 	SH_RENDER_API auto Camera::CheckRenderTag(uint32_t tagId) const -> bool
 	{
 		return renderTagMask & tagId;
+	}
+	SH_RENDER_API void Camera::SetActive(bool bActive)
+	{
+		this->bActive = bActive;
+	}
+	SH_RENDER_API auto Camera::GetActive() const -> bool
+	{
+		return bActive;
 	}
 }//namespace render

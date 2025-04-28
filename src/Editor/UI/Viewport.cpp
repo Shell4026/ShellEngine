@@ -238,6 +238,62 @@ namespace sh::editor
 
 		bDirty = true;
 	}
+	SH_EDITOR_API auto Viewport::Play() -> bool
+	{
+		game::Camera* mainCam = world.GetMainCamera();
+		if (!core::IsValid(mainCam))
+		{
+			for (auto cam : world.GetCameras())
+			{
+				if (cam->GetType() == game::EditorCamera::GetStaticType() || cam->GetType() == game::PickingCamera::GetStaticType())
+					continue;
+				world.SetMainCamera(cam);
+				mainCam = world.GetMainCamera();
+				break;
+			}
+			if (world.GetMainCamera() == nullptr)
+			{
+				SH_ERROR("There are no cameras.");
+				return false;
+			}
+		}
+		if (mainCam->GetRenderTexture() != nullptr)
+		{
+			SH_ERROR("There are no cameras.");
+			return false;
+		}
+		renderTex = static_cast<render::RenderTexture*>(world.textures.GetResource("GameView"));
+		mainCam->SetRenderTexture(renderTex);
+		ChangeViewportSize();
+
+		world.ClearSelectedObjects();
+
+		world.AddBeforeSyncTask([&]{ world.Playing(); });
+
+		editorCamera->SetActive(false);
+		BlockLeftClick(true);
+		BlockRightClick(true);
+
+		SyncDirty();
+
+		return true;
+	}
+	SH_EDITOR_API void Viewport::Stop()
+	{
+		game::Camera* cam = world.GetMainCamera();
+		cam->SetRenderTexture(nullptr);
+
+		renderTex = world.GetGameObject("EditorCamera")->GetComponent<game::EditorCamera>()->GetRenderTexture();
+		ChangeViewportSize();
+
+		editorCamera->SetActive(true);
+		BlockLeftClick(false);
+		BlockRightClick(false);
+
+		world.AddBeforeSyncTask([&] { world.Stop(); });
+
+		SyncDirty();
+	}
 	SH_EDITOR_API void Viewport::Sync()
 	{
 		ImGui_ImplVulkan_RemoveTexture(static_cast<VkDescriptorSet>(viewportTexture));

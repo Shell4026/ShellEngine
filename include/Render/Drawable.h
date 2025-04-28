@@ -35,9 +35,9 @@ namespace sh::render
 		const Mesh* mesh = nullptr;
 
 		MaterialData materialData;
-		Light light;
+		core::SyncArray<Light> light;
 
-		glm::mat4 modelMatrix;
+		core::SyncArray<glm::mat4> modelMatrix;
 		uint32_t renderTag = 1;
 		core::SyncArray<Mesh::Topology> topology;
 
@@ -48,6 +48,8 @@ namespace sh::render
 		std::array<SyncData, 3> syncDatas;
 
 		bool bDirty = false;
+		bool bMatrixDirty = false;
+		bool bLightDirty = false;
 	protected:
 		SH_RENDER_API void SyncDirty() override;
 		SH_RENDER_API void Sync() override;
@@ -69,10 +71,10 @@ namespace sh::render
 		SH_RENDER_API auto GetMaterialData() -> MaterialData&;
 
 		SH_RENDER_API void SetModelMatrix(const glm::mat4& mat);
-		SH_RENDER_API auto GetModelMatrix() const -> const glm::mat4&;
+		SH_RENDER_API auto GetModelMatrix(core::ThreadType thr) const -> const glm::mat4&;
 
 		SH_RENDER_API void SetLightData(const Light& lightData);
-		SH_RENDER_API auto GetLightData() const -> const Light&;
+		SH_RENDER_API auto GetLightData(core::ThreadType thr) const -> const Light&;
 
 		SH_RENDER_API auto CheckAssetValid() const -> bool;
 

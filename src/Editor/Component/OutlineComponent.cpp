@@ -9,6 +9,7 @@ namespace sh::editor
 	{
 		this->mat = world.materials.GetResource("OutlinePreMaterial");
 		renderer = owner.GetComponent<MeshRenderer>();
+		canPlayInEditor = true;
 	}
 	SH_EDITOR_API void OutlineComponent::BeginUpdate()
 	{

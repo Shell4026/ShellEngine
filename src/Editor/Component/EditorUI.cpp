@@ -25,6 +25,8 @@ namespace sh::editor
 		bDirty(false)
 	{
 		ImGui::SetCurrentContext(world.GetUiContext().GetContext());
+
+		canPlayInEditor = true;
 	}
 
 	SH_EDITOR_API void EditorUI::Awake()
@@ -126,6 +128,23 @@ namespace sh::editor
 					if (ImGui::MenuItem("Build"))
 					{
 						//project->Build();
+					}
+					if (!bPlaying)
+					{
+						if (ImGui::MenuItem("Play"))
+						{
+							bPlaying = true;
+							if (!viewport->Play())
+								bPlaying = false;
+						}
+					}
+					else
+					{
+						if (ImGui::MenuItem("Stop"))
+						{
+							bPlaying = false;
+							viewport->Stop();
+						}
 					}
 				}
 				ImGui::EndMenu();

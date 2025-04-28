@@ -8,6 +8,7 @@ namespace sh::game
 		Component(owner)
 	{
 		world.GetLightOctree().Insert(*this);
+		canPlayInEditor = true;
 	}
 	SH_GAME_API PointLight::~PointLight()
 	{

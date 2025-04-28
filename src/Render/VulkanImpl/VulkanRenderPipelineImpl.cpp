@@ -126,7 +126,7 @@ namespace sh::render::vk
 							UniformStructLayout::Type::Object));
 						
 						if (pass->IsUsingLight())
-							drawable->GetMaterialData().SetUniformData(*pass, UniformStructLayout::Type::Object, 0, &drawable->GetLightData());
+							drawable->GetMaterialData().SetUniformData(*pass, UniformStructLayout::Type::Object, 0, &drawable->GetLightData(core::ThreadType::Render));
 
 						VkDescriptorSet objectDescriptorSet = VK_NULL_HANDLE;
 						if (objectUniformBuffer)
@@ -141,7 +141,7 @@ namespace sh::render::vk
 							&objectDescriptorSet, 0, nullptr);
 					}
 					if (pass->HasConstantUniform())
-						vkCmdPushConstants(cmd->GetCommandBuffer(), layout, VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &drawable->GetModelMatrix());
+						vkCmdPushConstants(cmd->GetCommandBuffer(), layout, VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT, 0, sizeof(glm::mat4), &drawable->GetModelMatrix(core::ThreadType::Render));
 
 					vkCmdDrawIndexed(cmd->GetCommandBuffer(), mesh->GetIndices().size(), 1, 0, 0, 0);
 					++drawCall;

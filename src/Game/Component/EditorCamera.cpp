@@ -98,7 +98,7 @@ namespace sh::game
 		xdir = (xdir >= 360.f) ? xdir - 360.f : (xdir < 0) ? xdir + 360.f : xdir;
 		ydir = (ydir >= 360.f) ? ydir - 360.f : (ydir < 0) ? ydir + 360.f : ydir;
 
-		Vec3 up = camera.GetUpVector();
+		Vec3 up = camera.GetUpVector(core::ThreadType::Game);
 		up.y = (xdir >= 90 && xdir < 270) ? -1 : 1;
 		camera.SetUpVector(up);
 	}

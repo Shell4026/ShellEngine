@@ -63,10 +63,14 @@ namespace sh::game
 	{
 		if (bInit)
 			return;
+
 		for (auto& component : components)
 		{
 			if (core::IsValid(component) && component->IsActive() && !component->IsInit())
-				component->Awake();
+			{
+				if (world.IsPlaying() || component->canPlayInEditor)
+					component->Awake();
+			}
 		}
 		bInit = true;
 	}
@@ -76,7 +80,8 @@ namespace sh::game
 		for (auto& component : components)
 		{
 			if (core::IsValid(component) && component->IsActive())
-				component->Start();
+				if (world.IsPlaying() || component->canPlayInEditor)
+					component->Start();
 		}
 	}
 
@@ -85,7 +90,8 @@ namespace sh::game
 		for (auto& component : components)
 		{
 			if(core::IsValid(component) && component->IsActive())
-				component->OnEnable();
+				if (world.IsPlaying() || component->canPlayInEditor)
+					component->OnEnable();
 		}
 	}
 	SH_GAME_API void GameObject::Destroy()
@@ -104,7 +110,8 @@ namespace sh::game
 		for (auto& component : components)
 		{
 			if (core::IsValid(component) && component->IsActive())
-				component->BeginUpdate();
+				if (world.IsPlaying() || component->canPlayInEditor)
+					component->BeginUpdate();
 		}
 	}
 	SH_GAME_API void GameObject::FixedUpdate()
@@ -112,7 +119,8 @@ namespace sh::game
 		for (auto& component : components)
 		{
 			if (core::IsValid(component) && component->IsActive())
-				component->FixedUpdate();
+				if (world.IsPlaying() || component->canPlayInEditor)
+					component->FixedUpdate();
 		}
 	}
 	SH_GAME_API void GameObject::Update()
@@ -120,7 +128,8 @@ namespace sh::game
 		for (auto& component : components)
 		{
 			if (core::IsValid(component) && component->IsActive())
-				component->Update();
+				if (world.IsPlaying() || component->canPlayInEditor)
+					component->Update();
 		}
 	}
 	SH_GAME_API void GameObject::LateUpdate()
@@ -128,7 +137,8 @@ namespace sh::game
 		for (auto& component : components)
 		{
 			if (core::IsValid(component) && component->IsActive())
-				component->LateUpdate();
+				if (world.IsPlaying() || component->canPlayInEditor)
+					component->LateUpdate();
 		}
 	}
 

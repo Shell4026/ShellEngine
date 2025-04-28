@@ -55,6 +55,10 @@ namespace sh::game
 	SH_GAME_API void World::InitResource()
 	{
 		SH_INFO("Init resource");
+
+		render::RenderTexture* gameViewTexture = core::SObject::Create<render::RenderTexture>(render::Texture::TextureFormat::SRGBA32);
+		gameViewTexture->Build(*renderer.GetContext());
+		textures.AddResource("GameView", gameViewTexture);
 	}
 	auto World::AllocateGameObject() -> GameObject*
 	{
@@ -226,12 +230,12 @@ namespace sh::game
 		imgui->End();
 	}
 
-	SH_GAME_API void World::AfterSync()
+	SH_GAME_API void World::BeforeSync()
 	{
-		while (!afterSyncTasks.empty())
+		while (!beforeSyncTasks.empty())
 		{
-			afterSyncTasks.front()();
-			afterSyncTasks.pop();
+			beforeSyncTasks.front()();
+			beforeSyncTasks.pop();
 		}
 	}
 
@@ -282,9 +286,9 @@ namespace sh::game
 		return lightOctree;
 	}
 
-	SH_GAME_API void World::AddAfterSyncTask(const std::function<void()>& func)
+	SH_GAME_API void World::AddBeforeSyncTask(const std::function<void()>& func)
 	{
-		afterSyncTasks.push(func);
+		beforeSyncTasks.push(func);
 	}
 
 	SH_GAME_API auto World::Serialize() const -> core::Json
@@ -385,5 +389,20 @@ namespace sh::game
 	SH_GAME_API auto World::GetUiContext() const -> ImGUImpl&
 	{
 		return *imgui;
+	}
+	SH_GAME_API void World::Playing()
+	{
+		if (playing)
+			return;
+		playing = true;
+		Start();
+	}
+	SH_GAME_API void World::Stop()
+	{
+		playing = false;
+	}
+	SH_GAME_API auto World::IsPlaying() const -> bool
+	{
+		return playing;
 	}
 }

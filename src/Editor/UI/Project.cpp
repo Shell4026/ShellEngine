@@ -375,7 +375,7 @@ namespace sh::editor
 	}
 	SH_EDITOR_API void Project::LoadWorld(const std::string& name)
 	{
-		world.AddAfterSyncTask(
+		world.AddBeforeSyncTask(
 			[&, name]()
 			{
 				auto file = core::FileSystem::LoadText(assetPath / (name + ".world"));
@@ -392,7 +392,7 @@ namespace sh::editor
 	}
 	SH_EDITOR_API void Project::ReloadModule()
 	{
-		world.AddAfterSyncTask(
+		world.AddBeforeSyncTask(
 			[&]()
 			{
 				bool bSave = false;

@@ -33,6 +33,7 @@ target_link_directories(ShellEngineUser PRIVATE ${ENGINE_DIR}/lib)
 target_link_libraries(ShellEngineUser PRIVATE ShellEngineCore)
 target_link_libraries(ShellEngineUser PRIVATE ShellEngineRender)
 target_link_libraries(ShellEngineUser PRIVATE ShellEngineGame)
+target_link_libraries(ShellEngineUser PRIVATE ShellEnginePhysics)
 
 include(FetchContent)
 
@@ -66,5 +67,6 @@ FetchContent_Declare(
   GIT_REPOSITORY "https://github.com/DanielChappuis/reactphysics3d"
   GIT_TAG "v0.10.2"
   )
-FetchContent_Populate(reactphysics3d)
+FETCHCONTENT_MAKEAVAILABLE(reactphysics3d)
+target_link_libraries(ShellEngineUser PRIVATE reactphysics3d)
 target_include_directories(ShellEngineUser PRIVATE ${reactphysics3d_SOURCE_DIR}/include)

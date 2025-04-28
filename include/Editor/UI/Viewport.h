@@ -82,5 +82,8 @@ namespace sh::editor
 		SH_EDITOR_API void Clean();
 
 		SH_EDITOR_API void SyncDirty() override;
+
+		SH_EDITOR_API auto Play() -> bool;
+		SH_EDITOR_API void Stop();
 	};
 }//namespace

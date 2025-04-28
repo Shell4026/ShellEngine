@@ -67,10 +67,11 @@ namespace sh::game
 
 		Octree lightOctree;
 
-		std::queue<std::function<void()>> afterSyncTasks;
+		std::queue<std::function<void()>> beforeSyncTasks;
 		std::queue<GameObject*> deallocatedObjs;
 
 		bool startLoop = false;
+		bool playing = false;
 	public:
 		render::Renderer& renderer;
 		const float& deltaTime = _deltaTime;
@@ -130,16 +131,20 @@ namespace sh::game
 		SH_GAME_API auto GetLightOctree() const -> const Octree&;
 
 		SH_GAME_API virtual void Start();
-		SH_GAME_API virtual void Update(float deltaTime);
-		SH_GAME_API virtual void AfterSync();
+		SH_GAME_API void Update(float deltaTime);
+		SH_GAME_API virtual void BeforeSync();
 
-		/// @brief 동기화 후에 실행될 작업을 지정한다. 작업은 1회만 실행된다.
+		/// @brief 동기화 전에 실행될 작업을 지정한다. 작업은 1회만 실행된다.
 		/// @param func 함수
-		SH_GAME_API void AddAfterSyncTask(const std::function<void()>& func);
+		SH_GAME_API void AddBeforeSyncTask(const std::function<void()>& func);
 
 		SH_GAME_API auto Serialize() const->core::Json override;
 		SH_GAME_API void Deserialize(const core::Json& json) override;
 
 		SH_GAME_API auto GetUiContext() const -> ImGUImpl&;
+
+		SH_GAME_API void Playing();
+		SH_GAME_API void Stop();
+		SH_GAME_API auto IsPlaying() const -> bool;
 	};
 }

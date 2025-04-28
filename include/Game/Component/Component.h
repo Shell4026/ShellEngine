@@ -44,6 +44,7 @@ namespace sh::game
 		World& world;
 		PROPERTY(hideInspector, core::PropertyOption::invisible)
 		bool hideInspector = false;
+		bool canPlayInEditor = false;
 	public:
 		SH_GAME_API Component(GameObject& object);
 		SH_GAME_API virtual ~Component() = default;
@@ -53,7 +54,7 @@ namespace sh::game
 		SH_GAME_API auto operator=(const Component& other) -> Component&;
 
 		SH_GAME_API auto IsActive() const -> bool;
-		SH_GAME_API void SetActive(bool b);
+		SH_GAME_API virtual void SetActive(bool b);
 
 		SH_GAME_API auto IsInit() const -> bool;
 

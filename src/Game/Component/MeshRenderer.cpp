@@ -26,6 +26,8 @@ namespace sh::game
 			}
 		);
 		gameObject.transform->onMatrixUpdate.Register(onMatrixUpdateListener);
+
+		canPlayInEditor = true;
 	}
 
 	MeshRenderer::~MeshRenderer()

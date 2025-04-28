@@ -19,6 +19,7 @@ namespace sh::game
 		bUpdateMatrix(false)
 	{
 		matModel = glm::translate(glm::mat4{ 1.0f }, glm::vec3{ vPosition }) * glm::mat4_cast(quat) * glm::scale(glm::mat4{ 1.0f }, glm::vec3{ vScale });
+		canPlayInEditor = true;
 	}
 	SH_GAME_API Transform::~Transform()
 	{
@@ -89,7 +90,7 @@ namespace sh::game
 	{
 	}
 
-	SH_GAME_API void Transform::Update()
+	SH_GAME_API void Transform::BeginUpdate()
 	{
 		if (bUpdateMatrix)
 		{

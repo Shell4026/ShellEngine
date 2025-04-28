@@ -46,8 +46,8 @@ namespace sh::render::vk
 			return;
 		std::size_t offset = GetDynamicOffset(camera);
 		Camera::BufferData* data = reinterpret_cast<Camera::BufferData*>((std::size_t)cameraData->GetData() + offset);
-		data->matView = camera.GetViewMatrix();
-		data->matProj = camera.GetProjMatrix();
+		data->matView = camera.GetViewMatrix(core::ThreadType::Render);
+		data->matProj = camera.GetProjMatrix(core::ThreadType::Render);
 	}
 	auto VulkanCameraBuffers::GetDynamicOffset(const Camera& camera) const -> uint32_t
 	{
