@@ -295,6 +295,7 @@ namespace sh::editor
 
 		auto mesh = core::SObject::Create<render::Mesh>();
 		mesh->GetBoundingBox().Set(min, max);
+		mesh->SetName("Mesh");
 
 		mesh->SetVertex(std::move(verts));
 		mesh->SetIndices(std::move(indices));
