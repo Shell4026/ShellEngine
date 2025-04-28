@@ -47,7 +47,7 @@ namespace sh::core
             std::vector<T>(std::move(other))
         {
             if constexpr (std::is_convertible_v<T, const SObject*>)
-                core::GarbageCollection::GetInstance()->RemoveContainerTracking(&other);
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
         }
         ~SVector()
         {
@@ -86,6 +86,18 @@ namespace sh::core
             if constexpr (std::is_convertible_v<T, const SObject*>)
                 core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
         }
+        SArray(const SArray& other) :
+            std::array<T, size>(other)
+        {
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
+        }
+        SArray(SArray&& other) noexcept :
+            std::array<T, size>(std::move(other))
+        {
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
+        }
         ~SArray()
         {
             if constexpr (std::is_convertible_v<T, const SObject*>)
@@ -118,6 +130,18 @@ namespace sh::core
         template<class... Args>
         SSet(Args&&... args) :
             std::set<T>(std::forward<Args>(args)...)
+        {
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
+        }
+        SSet(const SSet& other) :
+            std::set<T>(other)
+        {
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
+        }
+        SSet(SSet&& other) noexcept:
+            std::set<T>(std::move(other))
         {
             if constexpr (std::is_convertible_v<T, const SObject*>)
                 core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
@@ -159,6 +183,18 @@ namespace sh::core
             if constexpr (std::is_convertible_v<T, const SObject*>)
                 core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
         }
+        SHashSet(const SHashSet& other) :
+            std::unordered_set<T>(other)
+        {
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
+        }
+        SHashSet(SHashSet&& other) noexcept :
+            std::unordered_set<T>(std::move(other))
+        {
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
+        }
         ~SHashSet()
         {
             if constexpr (std::is_convertible_v<T, const SObject*>)
@@ -192,6 +228,18 @@ namespace sh::core
         template<class... Args>
         SMap(Args&&... args) :
             std::map<T, U>(std::forward<Args>(args)...)
+        {
+            if constexpr (std::is_convertible_v<T, const SObject*> || std::is_convertible_v<U, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
+        }
+        SMap(const SMap& other) :
+            std::map<T, U>(other)
+        {
+            if constexpr (std::is_convertible_v<T, const SObject*> || std::is_convertible_v<U, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
+        }
+        SMap(SMap&& other) noexcept :
+            std::map<T, U>(std::move(other))
         {
             if constexpr (std::is_convertible_v<T, const SObject*> || std::is_convertible_v<U, const SObject*>)
                 core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
@@ -233,6 +281,18 @@ namespace sh::core
             if constexpr (std::is_convertible_v<T, const SObject*> || std::is_convertible_v<U, const SObject*>)
                 core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
         }
+        SHashMap(const SHashMap& other) :
+            std::unordered_map<T, U>(other)
+        {
+            if constexpr (std::is_convertible_v<T, const SObject*> || std::is_convertible_v<U, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
+        }
+        SHashMap(SHashMap&& other) :
+            std::unordered_map<T, U>(std::move(other))
+        {
+            if constexpr (std::is_convertible_v<T, const SObject*> || std::is_convertible_v<U, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
+        }
         ~SHashMap()
         {
             if constexpr (std::is_convertible_v<T, const SObject*> || std::is_convertible_v<U, const SObject*>)
@@ -267,6 +327,18 @@ namespace sh::core
         template<class... Args>
         SList(Args&&... args) :
             std::list<T>(std::forward<Args>(args)...)
+        {
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
+        }
+        SList(const SList& other) :
+            std::list<T>(other)
+        {
+            if constexpr (std::is_convertible_v<T, const SObject*>)
+                core::GarbageCollection::GetInstance()->AddContainerTracking(*this);
+        }
+        SList(SList&& other) noexcept :
+            std::list<T>(std::move(other))
         {
             if constexpr (std::is_convertible_v<T, const SObject*>)
                 core::GarbageCollection::GetInstance()->AddContainerTracking(*this);

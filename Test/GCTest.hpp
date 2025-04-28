@@ -255,6 +255,7 @@ TEST(GCTest, SContainerTest)
 	gc.DefragmentRootSet();
 	{
 		SArray<const Object*, 10> objarr;
+		SVector<const Object*> objvecTemp;
 		SVector<const Object*> objvec;
 		SSet<const Object*> objSet;
 		SHashSet<const Object*> objHashSet;
@@ -267,7 +268,7 @@ TEST(GCTest, SContainerTest)
 		{
 			auto obj = SObject::Create<Object>(i);
 			objarr[i] = obj;
-			objvec.push_back(obj);
+			objvecTemp.push_back(obj);
 			objMapKey.insert_or_assign(obj, i);
 			objHashMapKey.insert_or_assign(obj, i);
 			objMapValue.insert_or_assign(i, obj);
@@ -277,6 +278,7 @@ TEST(GCTest, SContainerTest)
 			if (i == 7)
 				seven = obj;
 		}
+		objvec = std::move(objvecTemp);
 
 		gc.Collect();
 		const Object* five = objarr[5];
