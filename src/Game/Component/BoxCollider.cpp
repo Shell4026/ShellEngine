@@ -8,7 +8,7 @@
 namespace sh::game
 {
 	SH_GAME_API BoxCollider::BoxCollider(GameObject& owner) :
-		Component(owner), size{ 1.0f, 1.0f, 1.0f }
+		Collider(owner), size{ 1.0f, 1.0f, 1.0f }
 	{
 		shape = world.GetPhysWorld()->GetContext().createBoxShape(size / 2.0f);
 #if SH_EDITOR
@@ -39,7 +39,7 @@ namespace sh::game
 		}
 	}
 
-	auto BoxCollider::operator*() const -> reactphysics3d::BoxShape*
+	SH_GAME_API auto BoxCollider::GetCollisionShape() const -> reactphysics3d::CollisionShape*
 	{
 		return shape;
 	}

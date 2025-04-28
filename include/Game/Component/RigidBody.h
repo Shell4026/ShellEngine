@@ -3,8 +3,9 @@
 #include "Export.h"
 #include "Component.h"
 
-#include "BoxCollider.h"
+#include "Collider.h"
 
+#include "reactphysics3d/reactphysics3d.h"
 namespace sh::game
 {
 	class RigidBody : public Component
@@ -12,8 +13,8 @@ namespace sh::game
 		COMPONENT(RigidBody)
 	private:
 		PROPERTY(collision)
-		BoxCollider* collision = nullptr;
-		BoxCollider* collisionLast = nullptr;
+		Collider* collision = nullptr;
+		Collider* collisionLast = nullptr;
 		reactphysics3d::Collider* collider = nullptr;
 		reactphysics3d::RigidBody* rigidbody = nullptr;
 
@@ -35,10 +36,12 @@ namespace sh::game
 		/// @param set true 또는 false
 		SH_GAME_API void SetKinematic(bool set);
 		SH_GAME_API void SetGravity(bool use);
-		SH_GAME_API void SetCollider(BoxCollider* colliderComponent);
+		SH_GAME_API void SetCollider(Collider* colliderComponent);
 
 		SH_GAME_API bool IsKinematic() const;
 		SH_GAME_API bool IsGravityUse() const;
+
+		SH_GAME_API auto GetBody() const -> reactphysics3d::RigidBody*;
 #if SH_EDITOR
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 #endif

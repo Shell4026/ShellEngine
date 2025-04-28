@@ -11,29 +11,30 @@ namespace sh::game
 {
 	class RigidBody;
 	class DebugRenderer;
-	class BoxCollider : public Collider
+	class ShpereCollider : public Collider
 	{
-		COMPONENT(BoxCollider)
+		COMPONENT(ShpereCollider)
+		friend RigidBody;
 	private:
-		reactphysics3d::BoxShape* shape = nullptr;
+		reactphysics3d::SphereShape* shape = nullptr;
 
 		DebugRenderer* debugRenderer = nullptr;
 		PROPERTY(bDisplayArea)
 		bool bDisplayArea = false;
 
-		PROPERTY(size)
-		Vec3 size;
+		PROPERTY(radius)
+		float radius;
 	public:
-		SH_GAME_API BoxCollider(GameObject& owner);
-		SH_GAME_API ~BoxCollider();
+		SH_GAME_API ShpereCollider(GameObject& owner);
+		SH_GAME_API ~ShpereCollider();
 
 		SH_GAME_API void Destroy() override;
 		SH_GAME_API void OnDestroy() override;
 
-		SH_GAME_API auto GetCollisionShape() const -> reactphysics3d::CollisionShape* override;
+		SH_GAME_API auto GetCollisionShape() const -> reactphysics3d::CollisionShape*;
 
-		SH_GAME_API void SetSize(const Vec3& size);
-		SH_GAME_API auto GetSize() const -> const Vec3&;
+		SH_GAME_API void SetRadius(float r);
+		SH_GAME_API auto GetRadius() const -> float;
 
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 

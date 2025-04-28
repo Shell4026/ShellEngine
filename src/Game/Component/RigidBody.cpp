@@ -1,5 +1,4 @@
-﻿#include "PCH.h"
-#include "Component/RigidBody.h"
+﻿#include "Component/RigidBody.h"
 
 #include "GameObject.h"
 #include "PhysWorld.h"
@@ -73,7 +72,7 @@ namespace sh::game
 		bGravity = use;
 		rigidbody->enableGravity(bGravity);
 	}
-	SH_GAME_API void RigidBody::SetCollider(BoxCollider* colliderComponent)
+	SH_GAME_API void RigidBody::SetCollider(Collider* colliderComponent)
 	{
 		collision = colliderComponent;
 		if (collision == collisionLast)
@@ -93,7 +92,8 @@ namespace sh::game
 		if (core::IsValid(collision))
 		{
 			collision->rigidbodies.insert(this);
-			collider = rigidbody->addCollider(**collision, reactphysics3d::Transform::identity());
+			
+			collider = rigidbody->addCollider(collision->GetCollisionShape(), reactphysics3d::Transform::identity());
 		}
 		collisionLast = collision;
 	}
@@ -105,6 +105,11 @@ namespace sh::game
 	SH_GAME_API bool RigidBody::IsGravityUse() const
 	{
 		return bGravity;
+	}
+
+	SH_GAME_API auto RigidBody::GetBody() const -> reactphysics3d::RigidBody*
+	{
+		return rigidbody;
 	}
 
 #if SH_EDITOR
