@@ -20,6 +20,7 @@ namespace sh::render::vk
 	}
 	void VulkanCameraBuffers::AddCamera(const Camera& camera)
 	{
+		assert(cams.size() < cap);
 		if (emptyidx.empty())
 		{
 			cams.push_back(&camera);
