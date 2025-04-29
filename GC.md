@@ -19,7 +19,8 @@ for (auto& obj : objs)
 }
 ```
 # 객체 추적
-클래스에서 특정 SObject 객체의 포인터를 가지고 있고, 이 포인터를 PROPERTY매크로를 통해 리플렉션에 노출 시키면 가비지 컬렉터는 해당 객체가 사용 되고 있다는 것을 알게 됩니다.
+클래스에서 특정 SObject 객체의 포인터를 가지고 있고, 이 포인터를 PROPERTY매크로를 통해 리플렉션에 노출 시키면 가비지 컬렉터는 해당 객체가 사용 되고 있다는 것을 알게 됩니다.</br>
+객체는 RootSet이 아니며 특정한 객체가 참조하고 있지 않으면 제거 됩니다.
 
 ```c++
 PROPERTY(mesh)
@@ -28,11 +29,14 @@ PROPERTY(mat)
 Material* mat;
 PROPERTY(drawable, core::PropertyOption::invisible, core::PropertyOption::noSave)
 Drawable* drawable;
+PROPERTY(otherObjs)
+std::vector<GameObject*> otherObjs;
 ```
 해당 포인터가 가르키고 있는 객체가 지워진다면 가비지 컬렉터에서 해당 포인터를 nullptr로 바꾸므로 댕글링 포인터를 방지 할 수 있습니다.
 
 또한 core/Scontainer.hpp에 존재하는 컨테이너들을 이용한다면 프로퍼티에 등록 할 필요 없이 객체를 추적 할 수 있습니다. </br>
-Vector와 Array객체와 같은 요소의 삭제가 느린 컨테이너의 요소가 제거 되면 nullptr로 바뀌며, 삭제가 빠른 자료구조들은 객체가 제거(erase) 됩니다.
+Vector와 Array객체와 같은 요소의 삭제가 느린 컨테이너의 요소가 제거 되면 nullptr로 바뀌며, 삭제가 빠른 자료구조들은 객체가 제거(erase) 됩니다.</br>
+일반 컨테이너를 프로퍼티에 등록해도 같은 효과를 냅니다.
 ```c++
 sh::core::SHashSet<GameObject*> objHashSet;
 sh::core::SVector<GameObject*> objVector;
@@ -52,6 +56,7 @@ ProcessInput();
 
 world->Update(window->GetDeltaTime());
 
+world->BeforeSync();
 core::ThreadSyncManager::Sync();
 gc->Update();
 world->AfterSync();
