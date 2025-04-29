@@ -19,3 +19,16 @@
 특정축 조작: G/R/S 후 X/Y/Z</br>
 
 물체 복사: 물체 선택 후 Ctrl + D
+
+# 플레이
+![image](https://github.com/user-attachments/assets/c5749b0d-bb95-4d84-b44f-2f0f1822f8bb)
+
+에디터에서 게임 플레이 환경을 미리 볼 수 있습니다.
+
+플레이 모드에 들어가면 world의 메인 카메라를 기준으로 화면이 전환되며, 컴포넌트들이 생명주기대로 실행됩니다.
+
+만약 에디터 상에서 컴포넌트를 작동 시키고 싶다면 컴포넌트의 canPlayInEditor변수를 생성자에서 true로 설정 하면 됩니다.
+
+# 엔진 생명주기
+![생명주기 drawio](https://github.com/user-attachments/assets/7c99b8e1-58fd-4d2b-91da-89c0d45fe67a)
+
