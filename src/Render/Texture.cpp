@@ -14,8 +14,17 @@ namespace sh::render
 		{
 			if (textureBuffer == nullptr)
 				textureBuffer = std::make_unique<vk::VulkanTextureBuffer>();
-			textureBuffer->Create(*context, width, height, format);
-			textureBuffer->SetData(pixels.data());
+
+			ITextureBuffer::CreateInfo ci{};
+			ci.width = width;
+			ci.height = height;
+			ci.format = format;
+			ci.aniso = aniso;
+			ci.bGenerateMipmap = true;
+			textureBuffer->Create(*context, ci);
+
+			for (int m = 0; m < pixels.size(); ++m)
+				textureBuffer->SetData(pixels[m].data(), m);
 		}
 		onBufferUpdate.Notify(this);
 	}
@@ -26,12 +35,23 @@ namespace sh::render
 		return false;
 	}
 
-	Texture::Texture(TextureFormat format, uint32_t width, uint32_t height) :
+	Texture::Texture(TextureFormat format, uint32_t width, uint32_t height, bool bUseMipmap) :
 		context(nullptr),
-		format(format), width(width), height(height)
+		format(format), width(width), height(height),
+		aniso(1)
 	{
 		bSRGB = CheckSRGB();
-		pixels.resize(width * height * 4);
+
+		uint32_t mipLevels = bUseMipmap ? static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1 : 1;
+		pixels.resize(mipLevels);
+		int mipWidth = width;
+		int mipHeight = height;
+		for (int i = 0; i < mipLevels; ++i)
+		{
+			pixels[i].resize(mipWidth * mipHeight * 4);
+			mipWidth = std::max(1, mipWidth / 2);
+			mipHeight = std::max(1, mipHeight / 2);
+		}
 	}
 	Texture::Texture(Texture&& other) noexcept :
 		context(other.context),
@@ -47,14 +67,15 @@ namespace sh::render
 	{
 	}
 
-	SH_RENDER_API void Texture::SetPixelData(void* data)
+	SH_RENDER_API void Texture::SetPixelData(const std::vector<uint8_t>& pixels, uint32_t mipLevel)
 	{
-		std::memcpy(pixels.data(), data, pixels.size());
+		assert(this->pixels[mipLevel].size() == pixels.size());
+		this->pixels[mipLevel] = pixels;
 		bSetDataDirty = true;
 		SyncDirty();
 	}
 
-	SH_RENDER_API auto Texture::GetPixelData() const -> const std::vector<Byte>&
+	SH_RENDER_API auto Texture::GetPixelData() const -> const std::vector<std::vector<Byte>>&
 	{
 		return pixels;
 	}
@@ -91,6 +112,16 @@ namespace sh::render
 	SH_RENDER_API auto Texture::IsSRGB() const -> bool
 	{
 		return bSRGB;
+	}
+	SH_RENDER_API void sh::render::Texture::SetAnisoLevel(uint32_t aniso)
+	{
+		this->aniso = aniso;
+		bSetDataDirty = true;
+		SyncDirty();
+	}
+	SH_RENDER_API auto Texture::GetAnisoLevel() const -> uint32_t
+	{
+		return aniso;
 	}
 	SH_RENDER_API void Texture::SyncDirty()
 	{

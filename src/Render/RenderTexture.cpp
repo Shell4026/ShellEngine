@@ -8,11 +8,12 @@
 namespace sh::render
 {
 	RenderTexture::RenderTexture(Texture::TextureFormat format, bool bMSAA) :
-		Texture(format, 1024, 1024),
+		Texture(format, 1024, 1024, false),
 
 		width(1024), height(1024), 
 		bMSAA(bMSAA)
 	{
+		SetAnisoLevel(0);
 	}
 	RenderTexture::~RenderTexture()
 	{
@@ -44,15 +45,6 @@ namespace sh::render
 	SH_RENDER_API auto RenderTexture::GetFramebuffer() const -> Framebuffer*
 	{
 		return framebuffer.get();
-	}
-	SH_RENDER_API auto RenderTexture::GetPixelData() const -> const std::vector<Byte>&
-	{
-		assert(context->GetRenderAPIType() == RenderAPI::Vulkan); // TODO
-		if (context->GetRenderAPIType() == RenderAPI::Vulkan)
-		{
-
-		}
-		return pixels;
 	}
 	void RenderTexture::CreateBuffers()
 	{

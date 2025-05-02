@@ -34,6 +34,8 @@ namespace sh::render::vk
 		VkRenderPass renderPass = VK_NULL_HANDLE;
 		Config config;
 
+		VkImageLayout finalColorLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
+	private:
 		auto GetOffScreenSubPassDependency() const -> std::array<VkSubpassDependency, 2>;
 		auto GetOnScreenSubPassDependency() const->std::array<VkSubpassDependency, 2>;
 	public:
@@ -45,5 +47,6 @@ namespace sh::render::vk
 		SH_RENDER_API void Clear();
 		SH_RENDER_API auto GetVkRenderPass() const -> VkRenderPass;
 		SH_RENDER_API auto GetConfig() const -> const Config&;
+		SH_RENDER_API auto GetFinalColorLayout() const -> VkImageLayout;
 	};
 }//namespace

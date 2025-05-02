@@ -219,6 +219,8 @@ namespace sh::render::vk
 				viewport.height = -static_cast<float>(vkFramebuffer->GetHeight());
 
 				scissor.extent = { vkFramebuffer->GetWidth(), vkFramebuffer->GetHeight() };
+
+				vkFramebuffer->GetColorImg()->LayoutChangedByRenderPass(renderPass->GetFinalColorLayout());
 			}
 			
 			vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);

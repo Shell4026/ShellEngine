@@ -168,6 +168,7 @@ namespace sh::render::vk
 		VkResult result;
 
 		VkPhysicalDeviceFeatures deviceFeatures{};
+		deviceFeatures.samplerAnisotropy = true;
 
 		const float defaultPriority{ 0.f };
 
