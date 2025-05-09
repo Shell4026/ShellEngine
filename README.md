@@ -60,7 +60,7 @@ https://github.com/user-attachments/assets/50c5cc05-7eba-45cf-9a92-ca2046e119d2
 게임 스레드내의 모든 객체는 해당 생명 주기를 따릅니다.
 
 ## 구성 요소
-<center>![구조](https://github.com/user-attachments/assets/2cbb3291-e7cd-4441-86dc-6fe32df651c6)</center>
+![구조](https://github.com/user-attachments/assets/2cbb3291-e7cd-4441-86dc-6fe32df651c6)
 
 # 설치
 ## Windows
