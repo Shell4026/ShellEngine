@@ -198,6 +198,7 @@ namespace sh::render
 			if (!isSampler)
 				materialData->SetUniformData(*pass, uniformLayout->type, uniformLayout->binding, data.data());
 		}
+		dirtyProps.clear();
 		bPropertyDirty = false;
 	}
 

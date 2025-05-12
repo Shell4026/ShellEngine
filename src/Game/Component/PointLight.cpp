@@ -14,7 +14,7 @@ namespace sh::game
 	{
 	}
 
-	SH_GAME_API void PointLight::OnDestroy()
+	SH_GAME_API void PointLight::Destroy()
 	{
 		world.GetLightOctree().Erase(*this);
 	}
@@ -23,11 +23,12 @@ namespace sh::game
 	{
 		if (lastPos != gameObject.transform->position)
 			bUpdateOctree = true;
-		if (!bUpdateOctree)
-			return;
 
-		world.GetLightOctree().Erase(*this);
-		world.GetLightOctree().Insert(*this);
+		if (bUpdateOctree)
+		{
+			world.GetLightOctree().Erase(*this);
+			world.GetLightOctree().Insert(*this);
+		}
 	}
 
 	SH_GAME_API bool PointLight::Intersect(const render::AABB& aabb) const
