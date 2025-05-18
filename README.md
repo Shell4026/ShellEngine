@@ -1,5 +1,6 @@
 # ShellEngine
-![image](https://github.com/user-attachments/assets/f57f7cb3-3e14-4393-8339-fb6bcddbf579)
+![image](https://github.com/user-attachments/assets/c5aa3796-8969-4b63-aee8-8c236fbe6820)
+
 Vulkan 기반으로 개발중인 크로스 플랫폼 3D 게임 엔진입니다.</br>
 저수준 그래픽 API를 직접 다루면서, 현대 게임 엔진에 필요한 다양한 시스템을 설계하고 구현하는 것을 목표로 했습니다.
 
