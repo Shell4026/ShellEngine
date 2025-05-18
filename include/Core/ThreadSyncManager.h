@@ -19,11 +19,18 @@ namespace sh::core
 			{
 				ISyncable* ptr;
 				uint32_t priority = 0;
+
+				auto operator<(const SyncData& other) const -> bool
+				{
+					return priority > other.priority;
+				}
 			};
 			std::queue<SyncData> syncableQueue;
 		};
 		SH_CORE_API static std::vector<ThreadData> threads;
 		thread_local static int currentThreadIdx;
+		SH_CORE_API static std::priority_queue<ThreadData::SyncData> syncables;
+		SH_CORE_API static bool bOnSync;
 	private:
 		SH_CORE_API static auto GetThreadIndex() -> int;
 	public:
