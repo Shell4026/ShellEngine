@@ -4,6 +4,8 @@
 #include "VulkanFramebuffer.h"
 #include "VulkanQueueManager.h"
 
+#include <cmath>
+#include <utility>
 namespace sh::render::vk
 {
 	VulkanTextureBuffer::VulkanTextureBuffer() :
@@ -14,7 +16,7 @@ namespace sh::render::vk
 		context(other.context), queueManager(other.queueManager),
 		imgBuffer(std::move(other.imgBuffer)), cmd(std::move(other.cmd)),
 		isRenderTexture(other.isRenderTexture), framebuffer(other.framebuffer),
-		width(other.width), height(other.height), size(other.size)
+		width(other.width), height(other.height)
 	{
 		other.context = nullptr;
 		other.queueManager = nullptr;
@@ -32,7 +34,7 @@ namespace sh::render::vk
 		framebuffer = nullptr;
 	}
 
-	void VulkanTextureBuffer::CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
+	void VulkanTextureBuffer::CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, uint32_t mipLevel)
 	{
 		VkBufferImageCopy region{};
 		region.bufferOffset = 0;
@@ -40,7 +42,7 @@ namespace sh::render::vk
 		region.bufferImageHeight = 0;
 
 		region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-		region.imageSubresource.mipLevel = 0;
+		region.imageSubresource.mipLevel = mipLevel;
 		region.imageSubresource.baseArrayLayer = 0;
 		region.imageSubresource.layerCount = 1;
 
@@ -55,86 +57,37 @@ namespace sh::render::vk
 		vkCmdCopyBufferToImage(cmd->GetCommandBuffer(), buffer, image, VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 	}
 
-	void VulkanTextureBuffer::TransitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
-	{
-		VkImageMemoryBarrier barrier{};
-		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-		barrier.oldLayout = oldLayout;
-		barrier.newLayout = newLayout;
-		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-		barrier.image = imgBuffer->GetImage();
-		barrier.subresourceRange.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
-		barrier.subresourceRange.baseMipLevel = 0;
-		barrier.subresourceRange.levelCount = 1;
-		barrier.subresourceRange.baseArrayLayer = 0;
-		barrier.subresourceRange.layerCount = 1;
-		barrier.srcAccessMask = 0;
-		barrier.dstAccessMask = 0;
-
-		VkPipelineStageFlags sourceStage;
-		VkPipelineStageFlags destinationStage;
-
-		if (oldLayout == VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL) 
-		{
-			barrier.srcAccessMask = 0;
-			barrier.dstAccessMask = VkAccessFlagBits::VK_ACCESS_TRANSFER_WRITE_BIT;
-
-			sourceStage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
-			destinationStage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT;
-		}
-		else if (oldLayout == VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL) 
-		{
-			barrier.srcAccessMask = VkAccessFlagBits::VK_ACCESS_TRANSFER_WRITE_BIT;
-			barrier.dstAccessMask = VkAccessFlagBits::VK_ACCESS_SHADER_READ_BIT;
-
-			sourceStage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT;
-			destinationStage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-		}
-		else 
-		{
-			throw std::invalid_argument("Unsupported layout transition!");
-		}
-
-		vkCmdPipelineBarrier(
-			cmd->GetCommandBuffer(),
-			sourceStage, destinationStage,
-			0,
-			0, nullptr,
-			0, nullptr,
-			1, &barrier
-		);
-	}
-
-	SH_RENDER_API void VulkanTextureBuffer::Create(const IRenderContext& context, uint32_t width, uint32_t height, Texture::TextureFormat format)
+	SH_RENDER_API void VulkanTextureBuffer::Create(const IRenderContext& context, const CreateInfo& info)
 	{
 		this->context = &static_cast<const VulkanContext&>(context);
+		queueManager = &this->context->GetQueueManager();
 
 		isRenderTexture = false;
-		size = width * height * 4;
-		this->width = width;
-		this->height = height;
-		switch (format)
+		width = info.width;
+		height = info.height;
+		uint32_t mipLevels = info.bGenerateMipmap ? static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1 : 1;
+		switch (info.format)
 		{
+		case Texture::TextureFormat::SRGB24: [[fallthrough]]; // 일부 GPU는 3채널을 지원하지 않음
 		case Texture::TextureFormat::SRGBA32:
-			this->format = VkFormat::VK_FORMAT_R8G8B8A8_SRGB;
+			format = VkFormat::VK_FORMAT_R8G8B8A8_SRGB;
+			channel = 4;
 			break;
-		case Texture::TextureFormat::SRGB24:
-			this->format = VkFormat::VK_FORMAT_R8G8B8A8_SRGB;
-			break;
+		case Texture::TextureFormat::RGB24: [[fallthrough]]; // 일부 GPU는 3채널을 지원하지 않음
 		case Texture::TextureFormat::RGBA32:
-			this->format = VkFormat::VK_FORMAT_R8G8B8A8_UNORM;
-			break;
-		case Texture::TextureFormat::RGB24:
-			this->format = VkFormat::VK_FORMAT_R8G8B8A8_UNORM;
+			format = VkFormat::VK_FORMAT_R8G8B8A8_UNORM;
+			channel = 4;
 			break;
 		}
 		if (imgBuffer == nullptr)
 			imgBuffer = std::make_unique<VulkanImageBuffer>(*this->context);
-		imgBuffer->Create(width, height, this->format,
-			VkImageUsageFlagBits::VK_IMAGE_USAGE_TRANSFER_DST_BIT | VkImageUsageFlagBits::VK_IMAGE_USAGE_SAMPLED_BIT);
-
-		queueManager = &this->context->GetQueueManager();
+		imgBuffer->SetAnisotropy(info.aniso);
+		imgBuffer->Create(width, height, format,
+			VkImageUsageFlagBits::VK_IMAGE_USAGE_TRANSFER_DST_BIT |
+			VkImageUsageFlagBits::VK_IMAGE_USAGE_SAMPLED_BIT,
+			VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT,
+			VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT,
+			mipLevels);
 	}
 	SH_RENDER_API void VulkanTextureBuffer::Create(const Framebuffer& framebuffer)
 	{
@@ -142,10 +95,20 @@ namespace sh::render::vk
 		this->framebuffer = &framebuffer;
 	}
 
-	SH_RENDER_API void VulkanTextureBuffer::SetData(const void* data)
+	SH_RENDER_API void VulkanTextureBuffer::SetData(const void* data, uint32_t mipLevel)
 	{
 		VulkanBuffer stagingBuffer{ *context };
-		stagingBuffer.Create(size,
+
+		uint32_t mipWidth = width;
+		uint32_t mipHeight = height;
+		for (int i = 0; i < mipLevel; ++i)
+		{
+			mipWidth = std::max(1u, mipWidth / 2);
+			mipHeight = std::max(1u, mipHeight / 2);
+		}
+		std::size_t bufferSize = mipWidth * mipHeight * channel;
+
+		stagingBuffer.Create(bufferSize,
 			VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 			VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
@@ -157,15 +120,11 @@ namespace sh::render::vk
 
 		cmd->Build([&]
 			{
-				TransitionImageLayout(imgBuffer->GetImage(),
-					format,
-					VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED,
-					VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-				CopyBufferToImage(stagingBuffer.GetBuffer(), imgBuffer->GetImage(), width, height);
-				TransitionImageLayout(imgBuffer->GetImage(),
-					format,
-					VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-					VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+				imgBuffer->ChangeLayoutCommand(cmd->GetCommandBuffer(), VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+
+				CopyBufferToImage(stagingBuffer.GetBuffer(), imgBuffer->GetImage(), mipWidth, mipHeight, mipLevel);
+
+				imgBuffer->ChangeLayoutCommand(cmd->GetCommandBuffer(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 			}
 		);
 
@@ -184,6 +143,6 @@ namespace sh::render::vk
 	}
 	SH_RENDER_API auto VulkanTextureBuffer::GetSize() const -> std::size_t
 	{
-		return size;
+		return width * height * channel;
 	}
 }

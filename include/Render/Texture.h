@@ -35,6 +35,8 @@ namespace sh::render
 	private:
 		TextureFormat format;
 
+		uint32_t aniso;
+
 		std::atomic_flag bDirty;
 		bool bSRGB = false;
 		bool bSetDataDirty = false;
@@ -43,7 +45,7 @@ namespace sh::render
 
 		std::unique_ptr<ITextureBuffer> textureBuffer;
 
-		std::vector<Byte> pixels;
+		std::vector<std::vector<Byte>> pixels;
 	public:
 		mutable core::Observer<false, const Texture*> onBufferUpdate;
 
@@ -53,15 +55,15 @@ namespace sh::render
 		void CreateTextureBuffer();
 		auto CheckSRGB() const -> bool;
 	public:
-		SH_RENDER_API Texture(TextureFormat format, uint32_t width, uint32_t height);
+		SH_RENDER_API Texture(TextureFormat format, uint32_t width, uint32_t height, bool bUseMipmap = true);
 		SH_RENDER_API Texture(Texture&& other) noexcept;
 		SH_RENDER_API virtual ~Texture();
 
 		/// @brief 픽셀 데이터를 지정한다. 
 		/// @brief [주의] 동기화 타이밍에 텍스쳐 버퍼가 재설정됨.
 		/// @param data 데이터 포인터
-		SH_RENDER_API         void SetPixelData(void* data);
-		SH_RENDER_API virtual auto GetPixelData() const -> const std::vector<Byte>&;
+		SH_RENDER_API         void SetPixelData(const std::vector<uint8_t>& pixels, uint32_t mipLevel = 0);
+		SH_RENDER_API virtual auto GetPixelData() const -> const std::vector<std::vector<Byte>>&;
 
 		SH_RENDER_API virtual void Build(const IRenderContext& context);
 
@@ -76,6 +78,9 @@ namespace sh::render
 		SH_RENDER_API void ChangeTextureFormat(TextureFormat target);
 
 		SH_RENDER_API auto IsSRGB() const -> bool;
+
+		SH_RENDER_API void SetAnisoLevel(uint32_t aniso);
+		SH_RENDER_API auto GetAnisoLevel() const -> uint32_t;
 
 		SH_RENDER_API void SyncDirty() override;
 		SH_RENDER_API void Sync() override;

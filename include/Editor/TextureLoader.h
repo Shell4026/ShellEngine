@@ -1,14 +1,11 @@
 ﻿#pragma once
-
 #include "Export.h"
 #include "IImporter.h"
 
 #include "Render/Texture.h"
 
-#include "External/stb/stb_image.h"
-
 #include <string_view>
-
+#include <vector>
 namespace sh::render
 {
 	class IRenderContext;
@@ -21,6 +18,7 @@ namespace sh::editor
 	private:
 		const char* name = "TextureImporter";
 	public:
+		uint32_t aniso = 1;
 		bool bSRGB = false;
 		bool bGenerateMipmap = true;
 	public:
@@ -33,6 +31,8 @@ namespace sh::editor
 	{
 	public:
 		const render::IRenderContext& context;
+	private:
+		auto GenerateMipmaps(uint8_t* pixels, uint32_t width, uint32_t height) -> std::vector<std::vector<uint8_t>>;
 	public:
 		SH_EDITOR_API TextureLoader(const render::IRenderContext& context);
 		SH_EDITOR_API ~TextureLoader() = default;

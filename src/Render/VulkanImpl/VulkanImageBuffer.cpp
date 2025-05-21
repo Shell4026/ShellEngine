@@ -9,8 +9,7 @@ namespace sh::render::vk
 	SH_RENDER_API VulkanImageBuffer::VulkanImageBuffer(const VulkanContext& context) :
 		context(context),
 		device(context.GetDevice()), gpu(context.GetGPU()), allocator(context.GetAllocator()),
-		img(nullptr), imgMem(nullptr), imgView(nullptr), sampler(nullptr),
-		bUseAnisotropy(false)
+		img(nullptr), imgMem(nullptr), imgView(nullptr), sampler(nullptr)
 	{
 
 	}
@@ -18,8 +17,9 @@ namespace sh::render::vk
 		context(other.context),
 		device(other.device), gpu(other.gpu), allocator(other.allocator),
 		img(other.img), imgMem(other.imgMem), imgView(other.imgView), sampler(other.sampler),
-		mipCount(other.mipCount),
-		bUseAnisotropy(other.bUseAnisotropy)
+		layout(other.layout),
+		mipLevels(other.mipLevels),
+		aniso(other.aniso)
 	{
 		other.img = nullptr;
 		other.imgMem = nullptr;
@@ -42,8 +42,10 @@ namespace sh::render::vk
 		other.imgView = nullptr;
 		other.sampler = nullptr;
 
-		mipCount = other.mipCount;
-		bUseAnisotropy = other.bUseAnisotropy;
+		layout = other.layout;
+
+		mipLevels = other.mipLevels;
+		aniso = other.aniso;
 
 		return *this;
 	}
@@ -54,6 +56,7 @@ namespace sh::render::vk
 	}
 	SH_RENDER_API void VulkanImageBuffer::Clean()
 	{
+		layout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
 		if (sampler)
 		{
 			vkDestroySampler(device, sampler, nullptr);
@@ -72,14 +75,15 @@ namespace sh::render::vk
 		}
 	}
 
-	SH_RENDER_API void VulkanImageBuffer::UseAnisotropy(bool bUse)
+	SH_RENDER_API void VulkanImageBuffer::SetAnisotropy(uint32_t aniso)
 	{
-		bUseAnisotropy = bUse;
+		this->aniso = aniso;
 	}
 
-	SH_RENDER_API auto VulkanImageBuffer::Create(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspectFlag, VkSampleCountFlagBits sampleCount) -> VkResult
+	SH_RENDER_API auto VulkanImageBuffer::Create(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspectFlag, VkSampleCountFlagBits sampleCount, uint32_t mipLevels) -> VkResult
 	{
 		Clean();
+		this->mipLevels = mipLevels;
 
 		VkImageCreateInfo info{};
 		info.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -87,11 +91,11 @@ namespace sh::render::vk
 		info.extent.width = width;
 		info.extent.height = height;
 		info.extent.depth = 1;
-		info.mipLevels = (sampleCount == VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT) ? mipCount : 1;
+		info.mipLevels = (sampleCount == VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT) ? mipLevels : 1;
 		info.arrayLayers = 1;
 		info.format = format;
 		info.tiling = VkImageTiling::VK_IMAGE_TILING_OPTIMAL;
-		info.initialLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
+		info.initialLayout = layout;
 		info.usage = usage;
 		info.sharingMode = VkSharingMode::VK_SHARING_MODE_EXCLUSIVE;
 		info.samples = sampleCount;
@@ -112,7 +116,7 @@ namespace sh::render::vk
 		viewCreateInfo.format = format;
 		viewCreateInfo.subresourceRange.aspectMask = aspectFlag;
 		viewCreateInfo.subresourceRange.baseMipLevel = 0;
-		viewCreateInfo.subresourceRange.levelCount = 1;
+		viewCreateInfo.subresourceRange.levelCount = mipLevels;
 		viewCreateInfo.subresourceRange.baseArrayLayer = 0;
 		viewCreateInfo.subresourceRange.layerCount = 1;
 
@@ -128,8 +132,8 @@ namespace sh::render::vk
 		samplerInfo.addressModeU = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		samplerInfo.addressModeV = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		samplerInfo.addressModeW = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		samplerInfo.anisotropyEnable = bUseAnisotropy;
-		samplerInfo.maxAnisotropy = bUseAnisotropy ? context.GetGPUProperty().limits.maxSamplerAnisotropy : 0;
+		samplerInfo.anisotropyEnable = aniso > 0;
+		samplerInfo.maxAnisotropy = static_cast<float>(aniso);
 		samplerInfo.borderColor = VkBorderColor::VK_BORDER_COLOR_INT_OPAQUE_BLACK;
 		samplerInfo.unnormalizedCoordinates = false;
 		samplerInfo.compareEnable = false;
@@ -137,7 +141,7 @@ namespace sh::render::vk
 		samplerInfo.mipmapMode = VkSamplerMipmapMode::VK_SAMPLER_MIPMAP_MODE_LINEAR;
 		samplerInfo.mipLodBias = 0.0f;
 		samplerInfo.minLod = 0.0f;
-		samplerInfo.maxLod = 0.0f;
+		samplerInfo.maxLod = static_cast<float>(mipLevels);
 
 		result = vkCreateSampler(device, &samplerInfo, nullptr, &sampler);
 		assert(result == VkResult::VK_SUCCESS);
@@ -155,5 +159,74 @@ namespace sh::render::vk
 	SH_RENDER_API auto VulkanImageBuffer::GetSampler() const -> VkSampler
 	{
 		return sampler;
+	}
+
+	SH_RENDER_API void VulkanImageBuffer::LayoutChangedByRenderPass(VkImageLayout layout)
+	{
+		this->layout = layout;
+	}
+	SH_RENDER_API auto VulkanImageBuffer::GetLayout() const -> VkImageLayout
+	{
+		return layout;
+	}
+	SH_RENDER_API void VulkanImageBuffer::ChangeLayoutCommand(VkCommandBuffer cmd, VkImageLayout newLayout)
+	{
+		VkImageMemoryBarrier barrier{};
+		barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+		barrier.oldLayout = layout;
+		barrier.newLayout = newLayout;
+		barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+		barrier.image = img;
+		barrier.subresourceRange.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
+		barrier.subresourceRange.baseMipLevel = 0;
+		barrier.subresourceRange.levelCount = mipLevels;
+		barrier.subresourceRange.baseArrayLayer = 0;
+		barrier.subresourceRange.layerCount = 1;
+		barrier.srcAccessMask = 0;
+		barrier.dstAccessMask = 0;
+
+		VkPipelineStageFlags sourceStage;
+		VkPipelineStageFlags destinationStage;
+
+		if (layout == VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+		{
+			barrier.srcAccessMask = 0;
+			barrier.dstAccessMask = VkAccessFlagBits::VK_ACCESS_TRANSFER_WRITE_BIT;
+
+			sourceStage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+			destinationStage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT;
+		}
+		else if (layout == VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+		{
+			barrier.srcAccessMask = VkAccessFlagBits::VK_ACCESS_SHADER_READ_BIT;
+			barrier.dstAccessMask = VkAccessFlagBits::VK_ACCESS_TRANSFER_WRITE_BIT;
+
+			sourceStage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+			destinationStage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT;
+		}
+		else if (layout == VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && newLayout == VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+		{
+			barrier.srcAccessMask = VkAccessFlagBits::VK_ACCESS_TRANSFER_WRITE_BIT;
+			barrier.dstAccessMask = VkAccessFlagBits::VK_ACCESS_SHADER_READ_BIT;
+
+			sourceStage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT;
+			destinationStage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+		}
+		else
+		{
+			throw std::invalid_argument("Unsupported layout transition!");
+		}
+
+		vkCmdPipelineBarrier(
+			cmd,
+			sourceStage, destinationStage,
+			0,
+			0, nullptr,
+			0, nullptr,
+			1, &barrier
+		);
+
+		layout = newLayout;
 	}
 }

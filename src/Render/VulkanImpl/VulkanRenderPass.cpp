@@ -176,6 +176,11 @@ namespace sh::render::vk
 			: (bMSAA ? VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL // MSAA + no clear
 				: (config.bOffScreen ? VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 					: VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR));
+		finalColorLayout = 
+			bMSAA ? VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+			: config.bTransferSrc ? VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
+			: config.bOffScreen ? VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
 		VkAttachmentDescription colorAttachment{};
 		colorAttachment.format = config.format;
 		colorAttachment.samples = config.sampleCount;
@@ -184,16 +189,14 @@ namespace sh::render::vk
 		colorAttachment.stencilLoadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE;
 		colorAttachment.stencilStoreOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		colorAttachment.initialLayout = initialColorLayout;
-		colorAttachment.finalLayout = 
-			bMSAA ? VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-				: config.bTransferSrc ? VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL 
-					: config.bOffScreen ? VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		colorAttachment.finalLayout = finalColorLayout;
 
 		VkImageLayout initialResolveColorLayout =
 			config.bClear ? VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED
 				: config.bTransferSrc ? VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
 					: (config.bOffScreen ? VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 						: VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR);
+
 		VkAttachmentDescription resolveAttachment{};
 		resolveAttachment.format = config.format;
 		resolveAttachment.samples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
@@ -205,6 +208,9 @@ namespace sh::render::vk
 		resolveAttachment.finalLayout =
 			config.bTransferSrc ? VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL 
 				: config.bOffScreen ? VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+		if (bMSAA)
+			finalColorLayout = resolveAttachment.finalLayout;
 
 		VkAttachmentDescription depthAttachment{};
 		depthAttachment.format = config.depthFormat;
@@ -257,5 +263,9 @@ namespace sh::render::vk
 	SH_RENDER_API auto VulkanRenderPass::GetConfig() const -> const Config&
 	{
 		return config;
+	}
+	SH_RENDER_API auto VulkanRenderPass::GetFinalColorLayout() const -> VkImageLayout
+	{
+		return finalColorLayout;
 	}
 }//namespace

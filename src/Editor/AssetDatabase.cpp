@@ -153,6 +153,9 @@ namespace sh::editor
 	{
 		for (auto obj : dirtyObjs)
 		{
+			if (!core::IsValid(obj))
+				continue;
+
 			auto it = paths.find(obj->GetUUID());
 			if (it == paths.end())
 				continue;
@@ -167,6 +170,7 @@ namespace sh::editor
 				render::Texture* texture = reinterpret_cast<render::Texture*>(obj);
 				TextureImporter importer{};
 				importer.bSRGB = texture->IsSRGB();
+				importer.aniso = texture->GetAnisoLevel();
 				Meta meta{};
 				meta.Save(*texture, importer, CreateMetaDirectory(assetPath));
 			}

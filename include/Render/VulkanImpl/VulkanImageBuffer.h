@@ -26,9 +26,10 @@ namespace sh::render::vk
 		VkImageView imgView;
 		VkSampler sampler;
 
-		uint32_t mipCount = 1;
+		VkImageLayout layout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
 
-		bool bUseAnisotropy;
+		uint32_t aniso = 0;
+		uint32_t mipLevels = 1;
 	public:
 		SH_RENDER_API VulkanImageBuffer(const VulkanContext& context);
 		SH_RENDER_API VulkanImageBuffer(VulkanImageBuffer&& other) noexcept;
@@ -36,15 +37,22 @@ namespace sh::render::vk
 
 		SH_RENDER_API auto operator=(VulkanImageBuffer&& other) noexcept -> VulkanImageBuffer&;
 
-		SH_RENDER_API void UseAnisotropy(bool bUse);
+		SH_RENDER_API void SetAnisotropy(uint32_t aniso);
 
 		SH_RENDER_API auto Create(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, 
 			VkImageAspectFlags aspectFlag = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT, 
-			VkSampleCountFlagBits sampleCount = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT) -> VkResult;
+			VkSampleCountFlagBits sampleCount = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT, uint32_t mipLevels = 1) -> VkResult;
 		SH_RENDER_API void Clean();
 
 		SH_RENDER_API auto GetImage() const ->VkImage;
 		SH_RENDER_API auto GetImageView() const -> VkImageView;
 		SH_RENDER_API auto GetSampler() const -> VkSampler;
+
+		/// @brief 렌더 패스에 의해 레이아웃이 변경 됐다면 호출
+		/// @param layout 이미지 레이아웃
+		SH_RENDER_API void LayoutChangedByRenderPass(VkImageLayout layout);
+		SH_RENDER_API auto GetLayout() const -> VkImageLayout;
+
+		SH_RENDER_API void ChangeLayoutCommand(VkCommandBuffer cmd, VkImageLayout newLayout);
 	};
 }
