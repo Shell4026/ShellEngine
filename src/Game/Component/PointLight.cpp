@@ -16,6 +16,7 @@ namespace sh::game
 
 	SH_GAME_API void PointLight::Destroy()
 	{
+		Super::Destroy();
 		world.GetLightOctree().Erase(*this);
 	}
 
