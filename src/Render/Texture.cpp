@@ -58,6 +58,7 @@ namespace sh::render
 		format(other.format), width(other.width), height(other.height),
 		pixels(std::move(other.pixels)), textureBuffer(std::move(other.textureBuffer)),
 		onBufferUpdate(std::move(other.onBufferUpdate)),
+		aniso(other.aniso),
 		bSRGB(other.bSRGB), bSetDataDirty(other.bSetDataDirty)
 	{
 		if (other.bDirty.test_and_set(std::memory_order::memory_order_acquire))
@@ -71,8 +72,11 @@ namespace sh::render
 	{
 		assert(this->pixels[mipLevel].size() == pixels.size());
 		this->pixels[mipLevel] = pixels;
-		bSetDataDirty = true;
-		SyncDirty();
+		if (textureBuffer != nullptr)
+		{
+			bSetDataDirty = true;
+			SyncDirty();
+		}
 	}
 
 	SH_RENDER_API auto Texture::GetPixelData() const -> const std::vector<std::vector<Byte>>&
@@ -116,8 +120,11 @@ namespace sh::render
 	SH_RENDER_API void sh::render::Texture::SetAnisoLevel(uint32_t aniso)
 	{
 		this->aniso = aniso;
-		bSetDataDirty = true;
-		SyncDirty();
+		if (textureBuffer != nullptr)
+		{
+			bSetDataDirty = true;
+			SyncDirty();
+		}
 	}
 	SH_RENDER_API auto Texture::GetAnisoLevel() const -> uint32_t
 	{

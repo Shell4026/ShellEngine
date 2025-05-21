@@ -74,6 +74,7 @@ namespace sh::render
 						continue;
 
 					SetProperty(name, updated);
+					UpdateUniformBuffers();
 				}
 			}
 		);

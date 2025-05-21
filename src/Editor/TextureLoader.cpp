@@ -70,6 +70,7 @@ namespace sh::editor
 			texture->SetPixelData(mipMaps[m], m);
 		stbi_image_free(pixels);
 
+		texture->SetAnisoLevel(option.aniso);
 		texture->Build(context);
 
 		return texture;
@@ -82,12 +83,15 @@ namespace sh::editor
 	{
 		core::Json mainJson{};
 		mainJson["version"] = 1;
+		mainJson["aniso"] = aniso;
 		mainJson["bSRGB"] = bSRGB;
 		mainJson["bGenerateMipmap"] = bGenerateMipmap;
 		return mainJson;
 	}
 	SH_EDITOR_API void TextureImporter::Deserialize(const core::Json& json)
 	{
+		if (json.contains("aniso"))
+			aniso = json["aniso"];
 		if (json.contains("bSRGB"))
 			bSRGB = json["bSRGB"];
 		if (json.contains("bGenerateMipmap"))

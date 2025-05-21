@@ -2,6 +2,9 @@
 #include "AssetDatabase.h"
 
 #include "imgui.h"
+
+#include <cstdint>
+#include <algorithm>
 namespace sh::editor
 {
 	SH_EDITOR_API void MaterialInspector::RenderUI(void* obj)
@@ -110,6 +113,16 @@ namespace sh::editor
 				else if (format == Texture::TextureFormat::SRGBA32)
 					texture->ChangeTextureFormat(Texture::TextureFormat::RGBA32);
 			}
+
+			AssetDatabase::SetDirty(texture);
+			AssetDatabase::SaveAllAssets();
+		}
+		int anisoLevel = texture->GetAnisoLevel();
+		ImGui::Text("Aniso");
+		if (ImGui::InputInt("##Aniso", &anisoLevel))
+		{
+			anisoLevel = std::clamp(anisoLevel, 0, 12);
+			texture->SetAnisoLevel(anisoLevel);
 
 			AssetDatabase::SetDirty(texture);
 			AssetDatabase::SaveAllAssets();

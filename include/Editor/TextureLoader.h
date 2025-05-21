@@ -18,6 +18,7 @@ namespace sh::editor
 	private:
 		const char* name = "TextureImporter";
 	public:
+		uint32_t aniso = 1;
 		bool bSRGB = false;
 		bool bGenerateMipmap = true;
 	public:
