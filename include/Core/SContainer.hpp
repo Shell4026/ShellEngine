@@ -359,4 +359,74 @@ namespace sh::core
             return *this;
         }
     };
+
+    /// @brief GC에 추적 되는 포인터 객체. 가르키는 객체가 소멸되면 nullptr로 바뀐다.
+    /// @brief 해당 포인터로 객체를 참조 하고 있어도 GC에서 마킹을 하진 않는다.
+    /// @tparam T SObject타입
+    template<typename T, typename IsSObject>
+    class SObjWeakPtr
+    {
+    private:
+        T* obj = nullptr;
+    public:
+        SObjWeakPtr()
+        {
+            core::GarbageCollection::GetInstance()->AddPointerTracking(*this);
+        }
+        SObjWeakPtr(T* obj)
+        {
+            core::GarbageCollection::GetInstance()->AddPointerTracking(*this);
+            this->obj = obj;
+        }
+        SObjWeakPtr(const SObjWeakPtr& other)
+        {
+            core::GarbageCollection::GetInstance()->AddPointerTracking(*this);
+            obj = other.obj;
+        }
+        ~SObjWeakPtr()
+        {
+            core::GarbageCollection::GetInstance()->RemovePointerTracking(*this);
+        }
+        auto operator=(T* obj) -> SObjWeakPtr&
+        {
+            this->obj = obj;
+            return *this;
+        }
+        auto operator==(T* obj) const -> bool
+        {
+            return this->obj == obj;
+        }
+        auto operator!=(T* obj) const -> bool
+        {
+            return this->obj != obj;
+        }
+        auto operator==(const SObjWeakPtr& other) const -> bool
+        {
+            return obj == other.obj;
+        }
+        auto operator!=(const SObjWeakPtr& other) const -> bool
+        {
+            return obj != other.obj;
+        }
+        auto operator->() -> T*
+        {
+            return obj;
+        }
+        auto operator->() const -> const T*
+        {
+            return obj;
+        }
+        void Reset()
+        {
+            obj = nullptr;
+        }
+        auto Get() -> T*
+        {
+            return obj;
+        }
+        auto Get() const -> const T*
+        {
+            return obj;
+        }
+    };
 }//namespace

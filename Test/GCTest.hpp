@@ -305,3 +305,26 @@ TEST(GCTest, SContainerTest)
 	gc.Collect();
 	EXPECT_EQ(gc.GetObjectCount(), 0);
 }
+
+TEST(GCTest, SPointerTest)
+{
+	using namespace sh::core;
+
+	auto& gc = *GarbageCollection::GetInstance();
+	gc.DefragmentRootSet();
+	SObjWeakPtr<Object> ptr = SObject::Create<Object>(13);
+	EXPECT_EQ(ptr->num, 13);
+	gc.Collect();
+	EXPECT_EQ(gc.GetObjectCount(), 0);
+	EXPECT_EQ(ptr.Get(), nullptr);
+
+	Object* root = SObject::Create<Object>(10);
+	gc.SetRootSet(root);
+	ptr = root;
+	gc.Collect();
+	EXPECT_EQ(ptr.Get(), root);
+	root->Destroy();
+	EXPECT_FALSE(IsValid(ptr.Get()));
+	gc.Collect();
+	EXPECT_EQ(ptr.Get(), nullptr);
+}

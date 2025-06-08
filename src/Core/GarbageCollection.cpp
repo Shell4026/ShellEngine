@@ -1,6 +1,7 @@
 ﻿#include "GarbageCollection.h"
 #include "SObjectManager.h"
 #include "ThreadPool.h"
+#include "SContainer.hpp"
 
 #include "SObject.h"
 
@@ -307,9 +308,8 @@ namespace sh::core
 			case TrackingContainerInfo::Type::HashMapKey: [[fallthrough]];
 			case TrackingContainerInfo::Type::HashMapValue:
 			{
-				IMap* wrapper = reinterpret_cast<IMap*>(&std::get<1>(info.data));
-				wrapper->Checking(*this);
-				sizeof(std::variant<std::map<int, int>*, std::unordered_map<float, float>*>);
+				ICheckable* checkable = reinterpret_cast<ICheckable*>(&std::get<1>(info.data));
+				checkable->Checking(*this);
 				break;
 			}
 			}
@@ -340,6 +340,15 @@ namespace sh::core
 		}
 		for (int i = 0; i < futureIdx; ++i)
 			taskFutures[i].wait();
+	}
+	void GarbageCollection::CheckPtrs()
+	{
+		for (auto ptr : trackingPtrs)
+		{
+			SObjWeakPtr<SObject>& weakPtr = *reinterpret_cast<SObjWeakPtr<SObject>*>(ptr);
+			if (weakPtr->bPendingKill.load(std::memory_order::memory_order_acquire))
+				weakPtr.Reset();
+		}
 	}
 	GarbageCollection::GarbageCollection() :
 		objs(SObjectManager::GetInstance()->objs)
@@ -463,6 +472,7 @@ namespace sh::core
 				objPtr->bPendingKill.store(true, std::memory_order::memory_order_release);
 			}
 		}
+		CheckPtrs();
 		for (SObject* deletedPtr : deleted)
 		{
 			if (!deletedPtr->bPlacementNew)

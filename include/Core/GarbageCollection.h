@@ -24,6 +24,8 @@ namespace sh::core::reflection
 namespace sh::core
 {
 	class SObject;
+	template<typename T, typename IsSObject = std::enable_if_t<std::is_base_of_v<SObject, T>>>
+	class SObjWeakPtr;
 	
 	/// @brief 가비지 컬렉터
 	class GarbageCollection : public Singleton<GarbageCollection>
@@ -35,13 +37,13 @@ namespace sh::core
 		std::vector<SObject*> rootSets;
 		int emptyRootSetCount = 0;
 
-		struct IMap
+		struct ICheckable
 		{
 			virtual void Checking(GarbageCollection& gc) = 0;
 			virtual void Unchecking(GarbageCollection& gc) = 0;
 		};
 		template<typename T, typename U>
-		struct MapWrapper : IMap
+		struct MapWrapper : ICheckable
 		{
 			std::variant<std::map<T, U>*, std::unordered_map<T, U>*> mapPtr;
 
@@ -182,7 +184,7 @@ namespace sh::core
 				}
 			}
 		};
-		struct MapWrapperDummy
+		struct CheckableDummy
 		{
 			void* vtable;
 			void* ptr;
@@ -202,10 +204,11 @@ namespace sh::core
 				HashMapKey,
 				HashMapValue
 			} type;
-			std::variant<std::size_t, MapWrapperDummy> data;
+			std::variant<std::size_t, CheckableDummy> data; // size_t = array
 		};
 		std::unordered_map<void*, TrackingContainerInfo> trackingContainers;
 		using TrackingContainerIt = std::unordered_map<void*, TrackingContainerInfo>::iterator;
+		std::unordered_set<void*> trackingPtrs;
 
 		std::mutex mu;
 
@@ -228,6 +231,7 @@ namespace sh::core
 		SH_CORE_API void MarkProperties(SObject* obj, std::queue<SObject*>& bfs);
 		void CheckContainers(TrackingContainerIt start, TrackingContainerIt end);
 		void CheckContainersWithMultiThread();
+		void CheckPtrs();
 	protected:
 		SH_CORE_API GarbageCollection();
 	public:
@@ -304,7 +308,7 @@ namespace sh::core
 
 			TrackingContainerInfo info{};
 			info.type = TrackingContainerInfo::Type::MapKey;
-			info.data = MapWrapperDummy{};
+			info.data = CheckableDummy{};
 
 			std::memcpy(&info.data, &wrapper, sizeof(MapWrapper<T*, U>));
 			trackingContainers.insert_or_assign(reinterpret_cast<void*>(&container), info);
@@ -318,7 +322,7 @@ namespace sh::core
 
 			TrackingContainerInfo info{};
 			info.type = TrackingContainerInfo::Type::MapValue;
-			info.data = MapWrapperDummy{};
+			info.data = CheckableDummy{};
 
 			std::memcpy(&info.data, &wrapper, sizeof(MapWrapper<T, U*>));
 			trackingContainers.insert_or_assign(reinterpret_cast<void*>(&container), info);
@@ -332,7 +336,7 @@ namespace sh::core
 
 			TrackingContainerInfo info{};
 			info.type = TrackingContainerInfo::Type::HashMapKey;
-			info.data = MapWrapperDummy{};
+			info.data = CheckableDummy{};
 
 			std::memcpy(&info.data, &wrapper, sizeof(MapWrapper<T*, U>));
 			trackingContainers.insert_or_assign(reinterpret_cast<void*>(&container), info);
@@ -346,10 +350,23 @@ namespace sh::core
 
 			TrackingContainerInfo info{};
 			info.type = TrackingContainerInfo::Type::HashMapValue;
-			info.data = MapWrapperDummy{};
+			info.data = CheckableDummy{};
 
 			std::memcpy(&info.data, &wrapper, sizeof(MapWrapper<T, U*>));
 			trackingContainers.insert_or_assign(reinterpret_cast<void*>(&container), info);
+		}
+		template<typename T>
+		void AddPointerTracking(SObjWeakPtr<T>& ptr)
+		{
+			std::lock_guard<std::mutex> lock{ mu };
+
+			trackingPtrs.insert(reinterpret_cast<void*>(&ptr));
+		}
+		template<typename T>
+		void RemovePointerTracking(SObjWeakPtr<T>& ptr)
+		{
+			std::lock_guard<std::mutex> lock{ mu };
+			trackingPtrs.erase(&ptr);
 		}
 
 		void RemoveContainerTracking(const void* containerPtr)
