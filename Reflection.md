@@ -22,7 +22,7 @@ assert(Derived::GetStaticType().isPointer == false);
 ```
 인스턴스화 된 객체의 정보는 GetType()으로도 가져올 수 있습니다.
 ```c++
-Base base;
+Derived derived;
 assert(derived.GetType() == Derived::GetStaticType());
 assert(derived.GetType().IsChildOf(Base::GetStaticType())); // Base의 자식 객체다.
 assert(*derived.GetType().GetSuper() == Base::GetStaticType()); // derived인스턴스의 부모 클래스는 Base다.
@@ -86,5 +86,5 @@ for (auto it = prop->Begin(&nested); it != prop->End(&nested); ++it)
         assert(*ptr == expected++);
     }
 }
-EXPECT_EQ(*savedIterator.Get<int>(), 4); // 반복자 저장 가능
+assert(*savedIterator.Get<int>() == 4); // 반복자 저장 가능
 ```
