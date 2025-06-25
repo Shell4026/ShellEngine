@@ -16,6 +16,9 @@ namespace sh::core
 		SH_CORE_API static std::unordered_map<std::size_t, std::string> map;
 		SH_CORE_API static std::shared_mutex mu;
 
+#if SH_DEBUG
+		std::string debugString;
+#endif
 		std::size_t hash;
 	public:
 		SH_CORE_API Name(std::string_view str);

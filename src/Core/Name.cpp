@@ -8,6 +8,9 @@ namespace sh::core
 	Name::Name(std::string_view str) :
 		hash(Util::ConstexprHash(str))
 	{
+#if SH_DEBUG
+		debugString = str;
+#endif
 		{
 			std::shared_lock lock{ mu };
 			auto it = map.find(hash);
@@ -23,10 +26,16 @@ namespace sh::core
 	}
 	Name::Name(const Name& other) noexcept :
 		hash(other.hash)
+#if SH_DEBUG
+		, debugString(other.debugString)
+#endif
 	{
 	}
 	Name::Name(Name&& other) noexcept :
 		hash(other.hash)
+#if SH_DEBUG
+		, debugString(std::move(other.debugString))
+#endif
 	{
 	}
 	Name::~Name()
@@ -36,11 +45,17 @@ namespace sh::core
 	SH_CORE_API auto Name::operator=(const Name& other) noexcept -> Name&
 	{
 		hash = other.hash;
+#if SH_DEBUG
+		debugString = other.debugString;
+#endif
 		return *this;
 	}
 	SH_CORE_API auto Name::operator=(Name&& other) noexcept -> Name&
 	{
 		hash = other.hash;
+#if SH_DEBUG
+		debugString = std::move(other.debugString);
+#endif
 		return *this;
 	}
 	SH_CORE_API auto Name::operator==(const Name& other) const -> bool
