@@ -321,62 +321,43 @@ namespace sh::game
 			core::UUID objuuid{ objJson["uuid"].get<std::string>() };
 
 			auto sobj = objManager->GetSObject(objuuid);
-			if (sobj)
+			GameObject* gameObj = nullptr;
+			if (core::IsValid(sobj)) // 이미 월드 상에 존재 할 경우
 			{
-				GameObject* obj = static_cast<GameObject*>(sobj);
-				for (int i = 1; i < obj->GetComponents().size(); ++i)
+				gameObj = static_cast<GameObject*>(sobj);
+				// 모든 컴포넌트 제거 (Transform 제외)
+				for (int i = 1; i < gameObj->GetComponents().size(); ++i)
 				{
-					Component* component = obj->GetComponents()[i];
+					Component* component = gameObj->GetComponents()[i];
 					if (component == nullptr)
 						continue;
 					component->SetUUID(core::UUID::Generate());
 					component->Destroy();
 				}
-
-				for (auto& compJson : objJson["Components"])
-				{
-					std::string name{ compJson["name"].get<std::string>() };
-					std::string type{ compJson["type"].get<std::string>() };
-					core::UUID uuid{ compJson["uuid"].get<std::string>() };
-					if (type == "Transform") // 트랜스폼은 게임오브젝트 생성 시 이미 만들어져있다.
-						continue;
-
-					auto compType = ComponentModule::GetInstance()->GetComponent(name);
-					if (compType == nullptr)
-					{
-						SH_ERROR_FORMAT("Not found component - {}", type);
-						continue;
-					}
-					Component* component = compType->Create(*obj);
-					component->SetUUID(core::UUID{ uuid });
-					obj->AddComponent(component);
-				}
 			}
 			else
 			{
-				auto obj = this->AddGameObject(name);
-				obj->SetUUID(objuuid);
+				gameObj = this->AddGameObject(name);
+				gameObj->SetUUID(objuuid);
+			}
 
-				for (auto& compJson : objJson["Components"])
+			for (auto& compJson : objJson["Components"])
+			{
+				std::string name{ compJson["name"].get<std::string>() };
+				std::string type{ compJson["type"].get<std::string>() };
+				core::UUID uuid{ compJson["uuid"].get<std::string>() };
+				if (type == "Transform") // 트랜스폼은 게임오브젝트 생성 시 이미 만들어져있다.
+					continue;
+
+				auto compType = ComponentModule::GetInstance()->GetComponent(name);
+				if (compType == nullptr)
 				{
-					std::string name = compJson["name"].get<std::string>();
-					std::string type = compJson["type"].get<std::string>();
-					std::string uuid = compJson["uuid"].get<std::string>();
-					if (type == "Transform") // 트랜스폼은 게임오브젝트 생성 시 이미 만들어져있다.
-					{
-						obj->transform->SetUUID(core::UUID{ uuid });
-						continue;
-					}
-					auto compType = ComponentModule::GetInstance()->GetComponent(name);
-					if (compType == nullptr)
-					{
-						SH_ERROR_FORMAT("Not found component - {}", type);
-						continue;
-					}
-					Component* component = compType->Create(*obj);
-					component->SetUUID(core::UUID{ uuid });
-					obj->AddComponent(component);
+					SH_ERROR_FORMAT("Not found component - {}", type);
+					continue;
 				}
+				Component* component = compType->Create(*gameObj);
+				component->SetUUID(core::UUID{ uuid });
+				gameObj->AddComponent(component);
 			}
 		}
 		// 역 직렬화

@@ -37,6 +37,7 @@ namespace sh::core
 		SH_CORE_API auto operator new(std::size_t count) -> void*;
 		SH_CORE_API auto operator new(std::size_t count, void* ptr) -> void*;
 		SH_CORE_API void operator delete(void* ptr);
+		SH_CORE_API void operator delete(void* ptr, std::size_t size);
 
 		SH_CORE_API SObject();
 	public:

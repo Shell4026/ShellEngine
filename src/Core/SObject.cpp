@@ -47,6 +47,10 @@ namespace sh::core
 	{
 		::operator delete(ptr);
 	}
+	void SObject::operator delete(void* ptr, std::size_t size)
+	{
+		::operator delete(ptr, size);
+	}
 
 	SH_CORE_API auto SObject::IsPendingKill() const -> bool
 	{
