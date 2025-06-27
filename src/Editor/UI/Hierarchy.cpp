@@ -96,20 +96,33 @@ namespace sh::editor
 		bool isSelected = world.IsSelected(obj);
 		bool nodeOpen = false;
 		bool hasChildren = !obj->transform->GetChildren().empty();
+		bool bActive = obj->activeSelf;
 
 		DrawInvisibleSpace(obj);
 		if (hasChildren) 
 		{
+			if (!bActive)
+				ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Text, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
+
 			nodeOpen = ImGui::TreeNodeEx((void*)obj,
 				ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_OpenOnArrow | (isSelected ? ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_Selected : 0),
 				"%s", obj->GetName().ToString().c_str());
+
+			if (!bActive)
+				ImGui::PopStyleColor();
 		}
 		else {
+			if (!bActive)
+				ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Text, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
+
 			nodeOpen = ImGui::TreeNodeEx((void*)obj,
 				ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_Leaf |
 				ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_NoTreePushOnOpen |
 				(isSelected ? ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_Selected : 0),
 				"%s", obj->GetName().ToString().c_str());
+
+			if (!bActive)
+				ImGui::PopStyleColor();
 		}
 		// 객체 우클릭
 		if (ImGui::BeginPopupContextItem((obj->GetUUID().ToString() + "RightClickPopup").c_str()))

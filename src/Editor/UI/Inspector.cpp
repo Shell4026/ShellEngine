@@ -450,6 +450,15 @@ namespace sh::editor
 				static std::string name;
 				name = obj->GetName().ToString();
 
+				if (obj->GetType() == game::GameObject::GetStaticType())
+				{
+					auto gameObj = static_cast<game::GameObject*>(obj);
+					bool bActive = gameObj->activeSelf;
+					if (ImGui::Checkbox("##active", &bActive))
+						gameObj->SetActive(bActive);
+
+					ImGui::SameLine();
+				}
 				ImGui::SetNextItemWidth(100);
 				if (ImGui::InputText("Name", &name))
 					obj->SetName(name);
