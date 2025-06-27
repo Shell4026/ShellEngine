@@ -347,7 +347,10 @@ namespace sh::game
 				std::string type{ compJson["type"].get<std::string>() };
 				core::UUID uuid{ compJson["uuid"].get<std::string>() };
 				if (type == "Transform") // 트랜스폼은 게임오브젝트 생성 시 이미 만들어져있다.
+				{
+					gameObj->transform->SetUUID(core::UUID{ uuid });
 					continue;
+				}
 
 				auto compType = ComponentModule::GetInstance()->GetComponent(name);
 				if (compType == nullptr)
