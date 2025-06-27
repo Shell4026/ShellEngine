@@ -19,6 +19,7 @@ namespace sh::game
 		SCLASS(GameObject)
 	private:
 		core::SVector<Component*> components;
+		PROPERTY(bEnable)
 		bool bEnable;
 		bool bInit;
 	public:
