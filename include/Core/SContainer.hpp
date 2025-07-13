@@ -428,5 +428,9 @@ namespace sh::core
         {
             return obj;
         }
+        auto IsValid() const -> bool
+        {
+            return core::IsValid(obj);
+        }
     };
 }//namespace
