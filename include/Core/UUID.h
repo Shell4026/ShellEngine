@@ -23,6 +23,7 @@ namespace sh::core
 		/// @brief 올바르지 않은 형식이면 임의로 생성한다.
 		/// @param str 문자열UUID
 		SH_CORE_API UUID(std::string_view str);
+		SH_CORE_API UUID(const std::array<uint32_t, 4>& uuid);
 		SH_CORE_API UUID(const UUID& other) noexcept;
 		SH_CORE_API UUID(UUID&& other) noexcept;
 		SH_CORE_API ~UUID() = default;
@@ -34,6 +35,7 @@ namespace sh::core
 		/// @brief 문자열로 변환하는 함수
 		/// @return 16진수로 표기된 길이가 32인 문자열
 		SH_CORE_API auto ToString() const -> const std::string&;
+		SH_CORE_API auto GetRawData() const -> const std::array<uint32_t, 4>&;
 
 		/// @brief 새로운 UUID를 생성한다. 스레드 안전하다.
 		SH_CORE_API static auto Generate() -> UUID;

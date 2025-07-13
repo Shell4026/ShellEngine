@@ -30,6 +30,10 @@ namespace sh::core
 			this->operator=(Generate());
 		}
 	}
+	UUID::UUID(const std::array<uint32_t, 4>& uuid)
+	{
+		this->uuid = uuid;
+	}
 	SH_CORE_API UUID::UUID(const UUID& other) noexcept
 	{
 		for (int i = 0; i < uuid.size(); ++i)
@@ -107,5 +111,9 @@ namespace sh::core
 	SH_CORE_API auto UUID::ToString() const -> const std::string&
 	{
 		return uuidStr;
+	}
+	SH_CORE_API auto UUID::GetRawData() const -> const std::array<uint32_t, 4>&
+	{
+		return uuid;
 	}
 }//namespace
