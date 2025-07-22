@@ -109,7 +109,7 @@ namespace sh::editor
 
 	SH_EDITOR_API EditorWorld::~EditorWorld()
 	{
-		AssetDatabase::SaveAllAssets();
+		AssetDatabase::GetInstance()->SaveAllAssets();
 	}
 
 	SH_EDITOR_API void EditorWorld::Clean()
@@ -152,8 +152,8 @@ namespace sh::editor
 		auto outlinePreMat = materials.AddResource("OutlinePreMaterial", render::Material{ outlinePreShader });
 		auto outlinePostMat = materials.AddResource("OutlinePostMaterial", render::Material{ outlinePostShader });
 
-		models.AddResource("CubeModel", modelLoader.Load("model/cube.obj"));
-		models.AddResource("SphereModel", modelLoader.Load("model/Sphere.obj"));
+		models.AddResource("CubeModel", static_cast<render::Model*>(modelLoader.Load("model/cube.obj")));
+		models.AddResource("SphereModel", static_cast<render::Model*>(modelLoader.Load("model/Sphere.obj")));
 
 		errorShader->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f0f" });
 		defaultShader->SetUUID(core::UUID{ "ad9217609f6c7e0f1163785746cc153e" });

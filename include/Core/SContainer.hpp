@@ -416,6 +416,10 @@ namespace sh::core
         {
             return obj;
         }
+        auto operator*() const -> T&
+        {
+            return *obj;
+        }
         void Reset()
         {
             obj = nullptr;

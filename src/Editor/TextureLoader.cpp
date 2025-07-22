@@ -41,26 +41,19 @@ namespace sh::editor
 		context(context)
 	{
 	}
-
-	SH_EDITOR_API auto TextureLoader::Load(std::string_view filename) -> render::Texture*
-	{
-		return Load(filename, TextureImporter{});
-	}
-
-	SH_EDITOR_API auto TextureLoader::Load(std::string_view filename, const TextureImporter& option) -> render::Texture*
+	SH_EDITOR_API auto TextureLoader::Load(const std::filesystem::path& filePath) -> core::SObject*
 	{
 		int width, height, channel;
-		int info = stbi_info(filename.data(), &width, &height, &channel);
+		int info = stbi_info(filePath.string().c_str(), &width, &height, &channel);
 		if (!info)
 			return nullptr;
 
-		stbi_uc* pixels = stbi_load(filename.data(), &width, &height, &channel, STBI_rgb_alpha);
+		stbi_uc* pixels = stbi_load(filePath.string().c_str(), &width, &height, &channel, STBI_rgb_alpha);
 
-		render::Texture::TextureFormat format;
+		render::Texture::TextureFormat format = render::Texture::TextureFormat::SRGBA32;
 		if (channel == 3)
 		{
-			format = option.bSRGB ? 
-				render::Texture::TextureFormat::SRGB24 : render::Texture::TextureFormat::RGB24;
+			format = render::Texture::TextureFormat::SRGB24;
 		}
 		
 		auto mipMaps = GenerateMipmaps(pixels, width, height);
@@ -70,31 +63,39 @@ namespace sh::editor
 			texture->SetPixelData(mipMaps[m], m);
 		stbi_image_free(pixels);
 
-		texture->SetAnisoLevel(option.aniso);
 		texture->Build(context);
 
 		return texture;
 	}
-	SH_EDITOR_API auto TextureImporter::GetName() const -> const char*
+	SH_EDITOR_API auto TextureLoader::Load(const core::Asset& asset) -> core::SObject*
 	{
-		return name;
+		if (std::strcmp(asset.GetType(), ASSET_NAME) != 0)
+		{
+			SH_ERROR_FORMAT("Asset({}) is not a texture!", asset.GetUUID().ToString());
+			return nullptr;
+		}
+		const auto& texAsset = static_cast<const game::TextureAsset&>(asset);
+		const auto header = texAsset.GetHeader();
+		const auto pixelData = texAsset.GetPixelData();
+
+		render::Texture* texture = core::SObject::Create<render::Texture>(header.format, header.width, header.height, header.bMipmap);
+		texture->SetUUID(asset.GetUUID());
+
+		std::size_t offset = 0;
+		for (uint32_t mip = 0; mip < texture->GetMipLevel(); ++mip)
+		{
+			std::size_t size = texture->GetPixelData(mip).size();
+			texture->SetPixelData(pixelData.pixelDataPtr + offset, size, mip);
+			offset += size;
+		}
+
+		texture->SetAnisoLevel(header.aniso);
+		texture->Build(context);
+
+		return texture;
 	}
-	SH_EDITOR_API auto TextureImporter::Serialize() const -> core::Json
+	SH_EDITOR_API auto TextureLoader::GetAssetName() const -> const char*
 	{
-		core::Json mainJson{};
-		mainJson["version"] = 1;
-		mainJson["aniso"] = aniso;
-		mainJson["bSRGB"] = bSRGB;
-		mainJson["bGenerateMipmap"] = bGenerateMipmap;
-		return mainJson;
-	}
-	SH_EDITOR_API void TextureImporter::Deserialize(const core::Json& json)
-	{
-		if (json.contains("aniso"))
-			aniso = json["aniso"];
-		if (json.contains("bSRGB"))
-			bSRGB = json["bSRGB"];
-		if (json.contains("bGenerateMipmap"))
-			bGenerateMipmap = json["bGenerateMipmap"];
+		return ASSET_NAME;
 	}
 }

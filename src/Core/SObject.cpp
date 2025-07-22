@@ -121,8 +121,18 @@ namespace sh::core
 
 				if (propType == core::reflection::GetType<int>())
 					core::SerializeProperty(json, name, *prop->Get<int>(this));
+				else if (propType == core::reflection::GetType<uint32_t>())
+					core::SerializeProperty(json, name, *prop->Get<uint32_t>(this));
+				else if (propType == core::reflection::GetType<int64_t>())
+					core::SerializeProperty(json, name, *prop->Get<int64_t>(this));
+				else if (propType == core::reflection::GetType<uint64_t>())
+					core::SerializeProperty(json, name, *prop->Get<uint64_t>(this));
 				else if (propType == core::reflection::GetType<float>())
 					core::SerializeProperty(json, name, *prop->Get<float>(this));
+				else if (propType == core::reflection::GetType<double>())
+					core::SerializeProperty(json, name, *prop->Get<double>(this));
+				else if (propType == core::reflection::GetType<char>())
+					core::SerializeProperty(json, name, *prop->Get<char>(this));
 				else if (propType == core::reflection::GetType<std::string>())
 					core::SerializeProperty(json, name, *prop->Get<std::string>(this));
 				else if (propType == core::reflection::GetType<bool>())
@@ -178,9 +188,29 @@ namespace sh::core
 					core::DeserializeProperty(subJson, name, *prop->Get<int>(this));
 					OnPropertyChanged(*prop.get());
 				}
+				else if (propType == core::reflection::GetType<uint32_t>())
+				{
+					core::DeserializeProperty(subJson, name, *prop->Get<uint32_t>(this));
+					OnPropertyChanged(*prop.get());
+				}
+				else if (propType == core::reflection::GetType<int64_t>())
+				{
+					core::DeserializeProperty(subJson, name, *prop->Get<int64_t>(this));
+					OnPropertyChanged(*prop.get());
+				}
+				else if (propType == core::reflection::GetType<uint64_t>())
+				{
+					core::DeserializeProperty(subJson, name, *prop->Get<uint64_t>(this));
+					OnPropertyChanged(*prop.get());
+				}
 				else if (propType == core::reflection::GetType<float>())
 				{
 					core::DeserializeProperty(subJson, name, *prop->Get<float>(this));
+					OnPropertyChanged(*prop.get());
+				}
+				else if (propType == core::reflection::GetType<double>())
+				{
+					core::DeserializeProperty(subJson, name, *prop->Get<double>(this));
 					OnPropertyChanged(*prop.get());
 				}
 				else if (propType == core::reflection::GetType<std::string>())
@@ -196,6 +226,11 @@ namespace sh::core
 				else if (prop->isSObjectPointer)
 				{
 					core::DeserializeProperty(subJson, name, *prop->Get<SObject*>(this));
+					OnPropertyChanged(*prop.get());
+				}
+				else if (propType == core::reflection::GetType<char>())
+				{
+					core::DeserializeProperty(subJson, name, *prop->Get<char>(this));
 					OnPropertyChanged(*prop.get());
 				}
 			}

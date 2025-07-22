@@ -11,6 +11,7 @@
 #include <filesystem>
 namespace sh::editor
 {
+	class AssetDatabase;
 	class EditorWorld;
 	class Project
 	{
@@ -20,8 +21,11 @@ namespace sh::editor
 		std::filesystem::path rootPath;
 		std::filesystem::path assetPath;
 		std::filesystem::path binaryPath;
+		std::filesystem::path libraryPath;
 		std::filesystem::path currentPath;
 		std::filesystem::path selected;
+
+		AssetDatabase& assetDatabase;
 
 		std::vector<std::filesystem::path> foldersPath;
 		std::vector<std::filesystem::path> filesPath;
@@ -58,6 +62,7 @@ namespace sh::editor
 		void CopyProjectTemplate(const std::filesystem::path& targetDir);
 	public:
 		SH_EDITOR_API Project(EditorWorld& world);
+		SH_EDITOR_API ~Project();
 
 		SH_EDITOR_API void Update();
 		SH_EDITOR_API void Render();
@@ -73,5 +78,8 @@ namespace sh::editor
 		SH_EDITOR_API auto IsProjectOpen() const -> bool;
 
 		SH_EDITOR_API void ReloadModule();
+
+		SH_EDITOR_API auto GetAssetPath() const -> const std::filesystem::path&;
+		SH_EDITOR_API auto GetBinPath() const -> const std::filesystem::path&;
 	};
 }

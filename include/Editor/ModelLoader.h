@@ -1,8 +1,9 @@
 ﻿#pragma once
 #include "Export.h"
-#include "IImporter.h"
 
 #include "Core/Util.h"
+#include "Core/Asset.h"
+#include "Core/IAssetLoader.h"
 
 #include "Render/Mesh.h"
 
@@ -21,17 +22,7 @@ namespace sh::render
 }
 namespace sh::editor
 {
-	class MeshImporter : public IImporter
-	{
-	private:
-		const char* name = "MeshImporter";
-	public:
-		SH_EDITOR_API auto GetName() const -> const char* override;
-		SH_EDITOR_API auto Serialize() const -> core::Json override;
-		SH_EDITOR_API void Deserialize(const core::Json& json) override;
-	};
-
-	class ModelLoader
+	class ModelLoader : public core::IAssetLoader
 	{
 	private:
 		struct Indices
@@ -48,6 +39,7 @@ namespace sh::editor
 			}
 		};
 		friend std::hash<sh::editor::ModelLoader::Indices>;
+		static constexpr const char* ASSET_NAME = "mesh";
 	public:
 		const render::IRenderContext& context;
 	private:
@@ -55,11 +47,16 @@ namespace sh::editor
 			const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2,
 			const glm::vec2& uv0, const glm::vec2& uv1, const glm::vec2& uv2) const->glm::vec3;
 		void CreateTangents(std::vector<render::Mesh::Vertex>& verts, const std::vector<uint32_t>& indices);
+	protected:
+		SH_EDITOR_API auto LoadObj(const std::filesystem::path& dir) -> render::Model*;
+		SH_EDITOR_API auto LoadGLTF(const std::filesystem::path& dir) -> render::Model*;
 	public:
 		SH_EDITOR_API ModelLoader(const render::IRenderContext& context);
-		SH_EDITOR_API virtual ~ModelLoader() = default;
-		SH_EDITOR_API virtual auto Load(const std::filesystem::path& filename) -> render::Model*;
-		SH_EDITOR_API auto LoadGLTF(const std::filesystem::path& dir) -> render::Model*;
+
+		SH_EDITOR_API auto Load(const std::filesystem::path& filename) -> core::SObject* override;
+		SH_EDITOR_API auto Load(const core::Asset& asset) -> core::SObject* override;
+
+		SH_EDITOR_API auto GetAssetName() const -> const char*;
 	};
 }//namespace
 

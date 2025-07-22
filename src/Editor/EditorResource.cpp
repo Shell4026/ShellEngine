@@ -11,10 +11,10 @@ namespace sh::editor
 		auto& ctx = *world.renderer.GetContext();
 		TextureLoader texLoader{ ctx };
 
-		folderIcon.Create(ctx, *world.textures.AddResource("FolderIcon", texLoader.Load("textures/folder.png")));
-		fileIcon.Create(ctx, *world.textures.AddResource("FileIcon", texLoader.Load("textures/file.png")));
-		meshIcon.Create(ctx, *world.textures.AddResource("MeshIcon", texLoader.Load("textures/meshIcon.png")));
-		materialIcon.Create(ctx, *world.textures.AddResource("MaterialIcon", texLoader.Load("textures/MaterialIcon.png")));
+		folderIcon.Create(ctx, *world.textures.AddResource("FolderIcon", static_cast<render::Texture*>(texLoader.Load("textures/folder.png"))));
+		fileIcon.Create(ctx, *world.textures.AddResource("FileIcon", static_cast<render::Texture*>(texLoader.Load("textures/file.png"))));
+		meshIcon.Create(ctx, *world.textures.AddResource("MeshIcon", static_cast<render::Texture*>(texLoader.Load("textures/meshIcon.png"))));
+		materialIcon.Create(ctx, *world.textures.AddResource("MaterialIcon", static_cast<render::Texture*>(texLoader.Load("textures/MaterialIcon.png"))));
 	}
 
 	SH_EDITOR_API auto EditorResource::GetIcon(Icon icon) const -> const game::GUITexture*

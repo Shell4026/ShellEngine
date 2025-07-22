@@ -23,8 +23,8 @@ namespace sh::editor
 					if (ImGui::InputFloat(("##input_" + name).c_str(), &parameter))
 					{
 						mat->SetProperty(name, parameter);
-						AssetDatabase::SetDirty(mat);
-						AssetDatabase::SaveAllAssets();
+						AssetDatabase::GetInstance()->SetDirty(mat);
+						AssetDatabase::GetInstance()->SaveAllAssets();
 					}
 				}
 				else if (*propInfo.type == core::reflection::GetType<glm::vec2>())
@@ -33,8 +33,8 @@ namespace sh::editor
 					if (ImGui::InputFloat2(("##input_" + name).c_str(), &v[0]))
 					{
 						mat->SetProperty(name, v);
-						AssetDatabase::SetDirty(mat);
-						AssetDatabase::SaveAllAssets();
+						AssetDatabase::GetInstance()->GetInstance()->SetDirty(mat);
+						AssetDatabase::GetInstance()->SaveAllAssets();
 					}
 				}
 				else if (*propInfo.type == core::reflection::GetType<glm::vec3>())
@@ -43,8 +43,8 @@ namespace sh::editor
 					if (ImGui::InputFloat3(("##input_" + name).c_str(), &v[0]))
 					{
 						mat->SetProperty(name, v);
-						AssetDatabase::SetDirty(mat);
-						AssetDatabase::SaveAllAssets();
+						AssetDatabase::GetInstance()->SetDirty(mat);
+						AssetDatabase::GetInstance()->SaveAllAssets();
 					}
 				}
 				else if (*propInfo.type == core::reflection::GetType<glm::vec4>())
@@ -53,8 +53,8 @@ namespace sh::editor
 					if (ImGui::InputFloat4(("##input_" + name).c_str(), &v[0]))
 					{
 						mat->SetProperty(name, v);
-						AssetDatabase::SetDirty(mat);
-						AssetDatabase::SaveAllAssets();
+						AssetDatabase::GetInstance()->SetDirty(mat);
+						AssetDatabase::GetInstance()->SaveAllAssets();
 					}
 				}
 				else if (*propInfo.type == core::reflection::GetType<render::Texture>())
@@ -79,8 +79,8 @@ namespace sh::editor
 						{
 							const render::Texture* texture = *reinterpret_cast<render::Texture**>(payload->Data);
 							mat->SetProperty(name, texture);
-							AssetDatabase::SetDirty(mat);
-							AssetDatabase::SaveAllAssets();
+							AssetDatabase::GetInstance()->SetDirty(mat);
+							AssetDatabase::GetInstance()->SaveAllAssets();
 						}
 
 						ImGui::EndDragDropTarget();
@@ -114,8 +114,8 @@ namespace sh::editor
 					texture->ChangeTextureFormat(Texture::TextureFormat::RGBA32);
 			}
 
-			AssetDatabase::SetDirty(texture);
-			AssetDatabase::SaveAllAssets();
+			AssetDatabase::GetInstance()->SetDirty(texture);
+			AssetDatabase::GetInstance()->SaveAllAssets();
 		}
 		int anisoLevel = texture->GetAnisoLevel();
 		ImGui::Text("Aniso");
@@ -124,8 +124,8 @@ namespace sh::editor
 			anisoLevel = std::clamp(anisoLevel, 0, 12);
 			texture->SetAnisoLevel(anisoLevel);
 
-			AssetDatabase::SetDirty(texture);
-			AssetDatabase::SaveAllAssets();
+			AssetDatabase::GetInstance()->SetDirty(texture);
+			AssetDatabase::GetInstance()->SaveAllAssets();
 		}
 	}
 }//namespace

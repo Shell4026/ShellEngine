@@ -1,4 +1,5 @@
 ﻿#include "FileSystem.h"
+#include "Logger.h"
 
 #include <utility>
 #include <filesystem>
@@ -8,6 +9,7 @@
 #endif
 
 #include <array>
+#include <cstdint>
 
 namespace sh::core
 {
@@ -85,8 +87,6 @@ namespace sh::core
 	}
 	SH_CORE_API auto FileSystem::LoadBinary(const std::filesystem::path& path) -> std::optional<std::vector<unsigned char>>
 	{
-		std::vector<unsigned char> data;
-
 		FILE* file = nullptr;
 #if WIN32
 		file = _wfopen(path.c_str(), L"rb");
@@ -96,12 +96,18 @@ namespace sh::core
 		if (file == nullptr)
 			return {};
 
-		std::array<unsigned char, 100> buffer{};
-		size_t size = 0;
-		while ((size = fread(buffer.data(), sizeof(unsigned char), 100, file)) > 0)
+		std::vector<uint8_t> data(std::filesystem::file_size(path), 0);
+		if (data.size() == 0)
 		{
-			for (int i = 0; i < size; ++i)
-				data.push_back(buffer[i]);
+			fclose(file);
+			return data;
+		}
+
+		if (std::size_t size = fread(data.data(), sizeof(uint8_t), data.size(), file); size != data.size())
+		{
+			SH_ERROR_FORMAT("Loaded file size is {} (expected: {})", size, data.size());
+			fclose(file);
+			return std::nullopt;
 		}
 		fclose(file);
 
@@ -137,14 +143,9 @@ namespace sh::core
 			return {};
 
 		auto fileSize = std::filesystem::file_size(path);
-		strData.reserve(fileSize);
+		strData.resize(fileSize);
 
-		std::array<char, 4048> buffer{};
-		size_t size = 0;
-		while ((size = fread(buffer.data(), sizeof(unsigned char), buffer.size(), file)) > 0)
-		{
-			strData.append(buffer.data(), size);
-		}
+		fread(strData.data(), sizeof(unsigned char), fileSize, file);
 		fclose(file);
 
 		return strData;

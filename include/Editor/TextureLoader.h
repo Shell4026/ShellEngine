@@ -1,10 +1,14 @@
 ﻿#pragma once
 #include "Export.h"
-#include "IImporter.h"
+
+#include "Core/UUID.h"
+#include "Core/IAssetLoader.h"
+
+#include "Game/TextureAsset.h"
 
 #include "Render/Texture.h"
 
-#include <string_view>
+#include <filesystem>
 #include <vector>
 namespace sh::render
 {
@@ -12,23 +16,10 @@ namespace sh::render
 }
 namespace sh::editor
 {
-	class TextureImporter : public IImporter
+	class TextureLoader : public core::IAssetLoader
 	{
-		friend class TextureLoader;
 	private:
-		const char* name = "TextureImporter";
-	public:
-		uint32_t aniso = 1;
-		bool bSRGB = false;
-		bool bGenerateMipmap = true;
-	public:
-		SH_EDITOR_API auto GetName() const -> const char* override;
-		SH_EDITOR_API auto Serialize() const -> core::Json override;
-		SH_EDITOR_API void Deserialize(const core::Json& json) override;
-	};
-
-	class TextureLoader
-	{
+		static constexpr const char* ASSET_NAME = "tex";
 	public:
 		const render::IRenderContext& context;
 	private:
@@ -36,7 +27,9 @@ namespace sh::editor
 	public:
 		SH_EDITOR_API TextureLoader(const render::IRenderContext& context);
 		SH_EDITOR_API ~TextureLoader() = default;
-		SH_EDITOR_API auto Load(std::string_view filename) -> render::Texture*;
-		SH_EDITOR_API auto Load(std::string_view filename, const TextureImporter& option) -> render::Texture*;
+		SH_EDITOR_API auto Load(const std::filesystem::path& filePath) -> core::SObject* override;
+		SH_EDITOR_API auto Load(const core::Asset& asset) -> core::SObject* override;
+
+		SH_EDITOR_API auto GetAssetName() const -> const char* override;
 	};
 }

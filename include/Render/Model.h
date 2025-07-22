@@ -31,6 +31,8 @@ namespace sh::render
 
 		SH_RENDER_API void Destroy() override;
 
+		/// @brief 노드에 있는 모든 메쉬를 추가한다.
+		/// @param node 이동할 노드
 		SH_RENDER_API void AddMeshes(std::unique_ptr<Node>&& node);
 		/// @brief 해당 모델의 모든 메쉬를 가져오는 함수.
 		/// @return 메쉬 벡터

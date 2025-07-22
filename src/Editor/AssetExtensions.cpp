@@ -8,7 +8,8 @@ namespace sh::editor
 		{".glb", Type::Model},
 		{".png", Type::Texture},
 		{".jpg", Type::Texture},
-		{".mat", Type::Material}
+		{".mat", Type::Material},
+		{".world", Type::World}
 	};
 
 	SH_EDITOR_API auto AssetExtensions::CheckType(const std::string& extension) -> AssetExtensions::Type

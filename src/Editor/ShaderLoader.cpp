@@ -36,7 +36,7 @@ namespace sh::editor
 		return cachePath;
 	}
 
-	SH_EDITOR_API auto ShaderLoader::LoadShader(const std::filesystem::path& path) -> render::Shader*
+	SH_EDITOR_API auto ShaderLoader::Load(const std::filesystem::path& path) -> core::SObject*
 	{
 		auto src = core::FileSystem::LoadText(path);
 		if (!src.has_value())
@@ -47,7 +47,7 @@ namespace sh::editor
 		render::ShaderLexer lexer{};
 		render::ShaderParser parser{};
 		render::ShaderAST::ShaderNode shaderNode = parser.Parse(lexer.Lex(src.value()));
-		
+
 		render::ShaderCreateInfo shaderCI{};
 		shaderCI.SetShaderNode(shaderNode);
 		for (auto& pass : shaderNode.passes)
@@ -95,5 +95,15 @@ namespace sh::editor
 		// 셰이더 생성
 		auto shader = core::SObject::Create<render::Shader>(std::move(shaderCI));
 		return shader;
+	}
+
+	SH_EDITOR_API auto ShaderLoader::Load(const core::Asset& asset) -> core::SObject*
+	{
+		return nullptr;
+	}
+
+	SH_EDITOR_API auto ShaderLoader::GetAssetName() const -> const char*
+	{
+		return "shad";
 	}
 }//namespace

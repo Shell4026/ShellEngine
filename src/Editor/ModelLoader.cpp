@@ -6,6 +6,8 @@
 
 #include "Render/Model.h"
 
+#include "Game/ModelAsset.h"
+
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "External/tinyobjloader/tiny_obj_loader.h"
 #define TINYGLTF_IMPLEMENTATION
@@ -19,7 +21,94 @@
 #include <cstdint>
 namespace sh::editor
 {
-	auto ModelLoader::LoadGLTF(const std::filesystem::path& dir) -> render::Model*
+	SH_EDITOR_API auto ModelLoader::LoadObj(const std::filesystem::path& path) -> render::Model*
+	{
+		tinyobj::attrib_t attrib;
+		std::vector<tinyobj::shape_t> shapes;
+		std::vector<tinyobj::material_t> materials;
+		std::string warn, err;
+
+		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.string().c_str()))
+		{
+			SH_ERROR_FORMAT("Can't load {}!", path.u8string());
+			return nullptr;
+		}
+
+		std::unordered_map<Indices, uint32_t> uniqueVerts;
+		std::vector<render::Mesh::Vertex> verts;
+		std::vector<uint32_t> indices;
+
+		glm::vec3 min{}, max{};
+		for (const auto& shape : shapes)
+		{
+			uint32_t n = 0;
+			for (const auto& index : shape.mesh.indices)
+			{
+				glm::vec3 vert
+				{
+					attrib.vertices[3 * index.vertex_index + 0],
+					attrib.vertices[3 * index.vertex_index + 1],
+					attrib.vertices[3 * index.vertex_index + 2]
+				};
+				glm::vec3 normal
+				{
+					attrib.normals[3 * index.normal_index + 0],
+					attrib.normals[3 * index.normal_index + 1],
+					attrib.normals[3 * index.normal_index + 2]
+				};
+				glm::vec2 uv
+				{
+					attrib.texcoords[2 * index.texcoord_index + 0],
+					1 - attrib.texcoords[2 * index.texcoord_index + 1],
+				};
+
+				if (vert.x < min.x) min.x = vert.x;
+				if (vert.y < min.y) min.y = vert.y;
+				if (vert.z < min.z) min.z = vert.z;
+				if (vert.x > max.x) max.x = vert.x;
+				if (vert.y > max.y) max.y = vert.y;
+				if (vert.z > max.z) max.z = vert.z;
+
+				Indices indexList{ index.vertex_index, index.normal_index, index.texcoord_index };
+
+				// 버텍스 위치가 겹치더라도 노말이나 UV도 겹치는지 비교해야 인덱스로 재사용 할 수 있다.
+				auto it = uniqueVerts.find(indexList);
+				if (it == uniqueVerts.end())
+				{
+					uniqueVerts.insert({ indexList, n });
+
+					verts.push_back({ vert, uv, normal });
+					indices.push_back(n++);
+				}
+				else
+					indices.push_back(it->second);
+			}
+		}
+
+		CreateTangents(verts, indices);
+
+		auto model = core::SObject::Create<render::Model>();
+		model->SetName(path.filename().u8string());
+
+		auto mesh = core::SObject::Create<render::Mesh>();
+		mesh->GetBoundingBox().Set(min, max);
+		mesh->SetName("Mesh");
+
+		mesh->SetVertex(std::move(verts));
+		mesh->SetIndices(std::move(indices));
+
+		mesh->Build(context);
+
+		auto rootNode = std::make_unique<render::Model::Node>();
+		auto node = std::make_unique<render::Model::Node>();
+		node->mesh = mesh;
+
+		rootNode->children.push_back(std::move(node));
+
+		model->AddMeshes(std::move(rootNode));
+		return model;
+	}
+	SH_EDITOR_API auto ModelLoader::LoadGLTF(const std::filesystem::path& dir) -> render::Model*
 	{
 		static tinygltf::TinyGLTF gltfContext;
 		tinygltf::Model gltfModel;
@@ -224,103 +313,110 @@ namespace sh::editor
 	{
 	}
 
-	SH_EDITOR_API auto ModelLoader::Load(const std::filesystem::path& path) -> render::Model*
+	SH_EDITOR_API auto ModelLoader::Load(const std::filesystem::path& path) -> core::SObject*
 	{
-		tinyobj::attrib_t attrib;
-		std::vector<tinyobj::shape_t> shapes;
-		std::vector<tinyobj::material_t> materials;
-		std::string warn, err;
+		std::string ext = path.extension().string();
+		if (ext == ".obj")
+			return LoadObj(path);
+		else if (ext == ".glb")
+			return LoadGLTF(path);
+		return nullptr;
+	}
 
-		if (!tinyobj::LoadObj(&attrib, &shapes, &materials, &warn, &err, path.string().c_str()))
+	SH_EDITOR_API auto ModelLoader::Load(const core::Asset& asset) -> core::SObject*
+	{
+		if (std::strcmp(asset.GetType(), ASSET_NAME) != 0)
 		{
-			SH_ERROR_FORMAT("Can't load {}!", path.u8string());
+			SH_ERROR_FORMAT("Asset({}) is not a model!", asset.GetUUID().ToString());
 			return nullptr;
 		}
+		const auto& modelAsset = static_cast<const game::ModelAsset&>(asset);
+		const game::ModelAsset::ModelHeader header = modelAsset.GetHeader();
+		const game::ModelAsset::ModelData modelData = modelAsset.GetData();
+		const uint8_t* cursor = modelData.dataPtr;
 
-		std::unordered_map<Indices, uint32_t> uniqueVerts;
-		std::vector<render::Mesh::Vertex> verts;
-		std::vector<uint32_t> indices;
-		
-		glm::vec3 min{}, max{};
-		for (const auto& shape : shapes)
+		std::vector<render::Mesh*> meshes;
+		meshes.reserve(header.meshCount);
+
+		// 메쉬 로드
+		for (size_t i = 0; i < header.meshCount; ++i)
 		{
-			uint32_t n = 0;
-			for (const auto& index : shape.mesh.indices) 
+			game::ModelAsset::MeshHeader meshHeader;
+			if (cursor + sizeof(meshHeader) > modelData.dataPtr + modelData.size)
+				return nullptr;
+
+			std::memcpy(&meshHeader, cursor, sizeof(game::ModelAsset::MeshHeader));
+			cursor += sizeof(meshHeader);
+
+			// Vertex 배열 읽기
+			std::vector<render::Mesh::Vertex> vertices(meshHeader.vertexCount);
+			if (meshHeader.vertexCount > 0)
 			{
-				glm::vec3 vert
-				{
-					attrib.vertices[3 * index.vertex_index + 0],
-					attrib.vertices[3 * index.vertex_index + 1],
-					attrib.vertices[3 * index.vertex_index + 2]
-				};
-				glm::vec3 normal
-				{
-					attrib.normals[3 * index.normal_index + 0],
-					attrib.normals[3 * index.normal_index + 1],
-					attrib.normals[3 * index.normal_index + 2]
-				};
-				glm::vec2 uv
-				{
-					attrib.texcoords[2 * index.texcoord_index + 0],
-					1 - attrib.texcoords[2 * index.texcoord_index + 1],
-				};
-
-				if (vert.x < min.x) min.x = vert.x;
-				if (vert.y < min.y) min.y = vert.y;
-				if (vert.z < min.z) min.z = vert.z;
-				if (vert.x > max.x) max.x = vert.x;
-				if (vert.y > max.y) max.y = vert.y;
-				if (vert.z > max.z) max.z = vert.z;
-
-				Indices indexList{ index.vertex_index, index.normal_index, index.texcoord_index };
-
-				// 버텍스 위치가 겹치더라도 노말이나 UV도 겹치는지 비교해야 인덱스로 재사용 할 수 있다.
-				auto it = uniqueVerts.find(indexList);
-				if (it == uniqueVerts.end())
-				{
-					uniqueVerts.insert({ indexList, n });
-
-					verts.push_back({ vert, uv, normal });
-					indices.push_back(n++);
-				}
-				else
-					indices.push_back(it->second);
+				size_t vertexBytes = meshHeader.vertexCount * sizeof(render::Mesh::Vertex);
+				if (cursor + vertexBytes > modelData.dataPtr + modelData.size)
+					return nullptr;
+				std::memcpy(vertices.data(), cursor, vertexBytes);
+				cursor += vertexBytes;
 			}
+			// Index 배열 읽기
+			std::vector<uint32_t> indices(meshHeader.indexCount);
+			if (meshHeader.indexCount > 0)
+			{
+				size_t indexBytes = meshHeader.indexCount * sizeof(uint32_t);
+				if (cursor + indexBytes > modelData.dataPtr + modelData.size)
+					return nullptr;
+				std::memcpy(indices.data(), cursor, indexBytes);
+				cursor += indexBytes;
+			}
+			// Mesh 객체 생성
+			auto mesh = core::SObject::Create<render::Mesh>();
+			mesh->SetUUID(meshHeader.uuid);
+			mesh->SetVertex(std::move(vertices));
+			mesh->SetIndices(std::move(indices));
+			mesh->Build(context);
+
+			meshes.push_back(mesh);
+		}
+		// 노드 로드
+		std::vector<game::ModelAsset::NodeHeader> nodeHeaders(header.nodeCount);
+		if (header.nodeCount > 0)
+		{
+			size_t nodeBytes = header.nodeCount * sizeof(game::ModelAsset::NodeHeader);
+			if (cursor + nodeBytes > modelData.dataPtr + modelData.size)
+				return nullptr;
+			std::memcpy(nodeHeaders.data(), cursor, nodeBytes);
+			cursor += nodeBytes;
+		}
+		std::vector<std::unique_ptr<render::Model::Node>> nodes(header.nodeCount);
+		std::vector<render::Model::Node*> rawNodes(header.nodeCount);
+		for (size_t i = 0; i < nodeHeaders.size(); ++i)
+		{
+			nodes[i] = std::make_unique<render::Model::Node>();
+			nodes[i]->modelMatrix = nodeHeaders[i].modelMatrix;
+			nodes[i]->name = nodeHeaders[i].name;
+			rawNodes[i] = nodes[i].get();
+
+			if (nodeHeaders[i].meshIndex >= 0 && static_cast<size_t>(nodeHeaders[i].meshIndex) < meshes.size())
+				nodes[i]->mesh = meshes[nodeHeaders[i].meshIndex];
+		}
+		render::Model::Node* rootNodePtr = nullptr;
+		for (size_t i = 0; i < nodeHeaders.size(); ++i)
+		{
+			int32_t parentIdx = nodeHeaders[i].parentIndex;
+			if (parentIdx >= 0)
+				rawNodes[parentIdx]->children.push_back(std::move(nodes[i]));
+			else
+				rootNodePtr = nodes[i].release();
 		}
 
-		CreateTangents(verts, indices);
-
 		auto model = core::SObject::Create<render::Model>();
-		model->SetName(path.filename().u8string());
+		model->AddMeshes(std::unique_ptr<render::Model::Node>(rootNodePtr));
 
-		auto mesh = core::SObject::Create<render::Mesh>();
-		mesh->GetBoundingBox().Set(min, max);
-		mesh->SetName("Mesh");
-
-		mesh->SetVertex(std::move(verts));
-		mesh->SetIndices(std::move(indices));
-
-		mesh->Build(context);
-
-		auto rootNode = std::make_unique<render::Model::Node>();
-		auto node = std::make_unique<render::Model::Node>();
-		node->mesh = mesh;
-
-		rootNode->children.push_back(std::move(node));
-
-		model->AddMeshes(std::move(rootNode));
 		return model;
 	}
 
-	SH_EDITOR_API auto MeshImporter::GetName() const -> const char*
+	SH_EDITOR_API auto ModelLoader::GetAssetName() const -> const char*
 	{
-		return name;
+		return ASSET_NAME;
 	}
-	SH_EDITOR_API auto MeshImporter::Serialize() const -> core::Json
-	{
-		return core::Json{};
-	}
-	SH_EDITOR_API void MeshImporter::Deserialize(const core::Json& json)
-	{
-	}
-}
+}//namespace

@@ -33,6 +33,13 @@ namespace sh::core
 	UUID::UUID(const std::array<uint32_t, 4>& uuid)
 	{
 		this->uuid = uuid;
+		uuidStr.reserve(32);
+		for (int i = 0; i < 4; ++i)
+		{
+			std::array<char, 9> buffer{ '0','0','0','0','0','0','0','0','\0' };
+			std::to_chars(buffer.data(), buffer.data() + 8, uuid[i], 16);
+			uuidStr.append(buffer.data(), 8);
+		}
 	}
 	SH_CORE_API UUID::UUID(const UUID& other) noexcept
 	{
@@ -92,13 +99,14 @@ namespace sh::core
 			for (int i = 0; i < CHACHE_SIZE; ++i)
 			{
 				UUID uuid{};
+				uuid.uuidStr.reserve(32);
 				for (int i = 0; i < 4; ++i)
 				{
 					uuid.uuid[i] = Util::RandomRange(static_cast<uint32_t>(0), std::numeric_limits<uint32_t>::max());
 
 					std::array<char, 9> buffer{ '0','0','0','0','0','0','0','0','\0' };
 					std::to_chars(buffer.data(), buffer.data() + 8, uuid.uuid[i], 16);
-					uuid.uuidStr += std::string{ buffer.data(), 8 };
+					uuid.uuidStr.append(buffer.data(), 8);
 				}
 				uuids.push(std::move(uuid));
 			}

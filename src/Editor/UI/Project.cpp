@@ -21,13 +21,19 @@ namespace sh::editor
 	Project::Project(EditorWorld& world) :
 		world(world),
 		rootPath(std::filesystem::current_path()),
-		currentPath(rootPath)
+		currentPath(rootPath),
+		assetDatabase(*AssetDatabase::GetInstance())
 	{
 		invisibleExtensions.push_back(".meta");
 
 		InitResources();
 
 		GetAllFiles(currentPath);
+	}
+
+	Project::~Project()
+	{
+		assetDatabase.SaveDatabase(libraryPath / "AssetDB.json");
 	}
 
 	void Project::InitResources()
@@ -93,31 +99,19 @@ namespace sh::editor
 
 		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_::ImGuiDragDropFlags_None))
 		{
-			AssetExtensions::Type extType = AssetExtensions::CheckType(extension);
-			if (extType == AssetExtensions::Type::Model)
-			{
-				payloadName = core::reflection::GetType<render::Model>().name;
-				item = world.models.GetResource(pathStr);
-				if (item == nullptr)
-					item = AssetDatabase::ImportAsset(world, path);
-				ImGui::SetDragDropPayload(payloadName.c_str(), &item, sizeof(render::Model*));
-			}
-			else if (extType == AssetExtensions::Type::Material)
-			{
-				payloadName = core::reflection::GetTypeName<render::Material>();
-				item = world.materials.GetResource(pathStr);
-				if (item == nullptr)
-					item = AssetDatabase::ImportAsset(world, path);
-				ImGui::SetDragDropPayload(payloadName.c_str(), &item, sizeof(render::Material*));
-			}
-			else if (extType == AssetExtensions::Type::Texture)
-			{
-				payloadName = core::reflection::GetTypeName<render::Texture>();
-				item = world.textures.GetResource(pathStr);
-				if (item == nullptr)
-					item = AssetDatabase::ImportAsset(world, path);
-				ImGui::SetDragDropPayload(payloadName.c_str(), &item, sizeof(render::Texture*));
-			}
+			auto uuidOpt = assetDatabase.GetAssetUUID(path);
+			if (!uuidOpt.has_value())
+				item = assetDatabase.ImportAsset(world, path);
+			else
+				item = core::SObjectManager::GetInstance()->GetSObject(uuidOpt.value());
+
+			assert(item != nullptr);
+			if (item == nullptr)
+				return;
+
+			payloadName = reinterpret_cast<core::SObject*>(item)->GetType().type.name;
+			ImGui::SetDragDropPayload(payloadName.c_str(), &item, sizeof(void*));
+
 			ImGui::Text("%s", path.filename().u8string().c_str());
 			ImGui::EndDragDropSource();
 		}
@@ -154,7 +148,7 @@ namespace sh::editor
 		if (ImGui::ImageButton(path.u8string().c_str(), *icon, ImVec2{ iconSize, iconSize }))
 		{
 			selected = path;
-			auto uuidStr = AssetDatabase::GetAssetUUID(path);
+			auto uuidStr = assetDatabase.GetAssetUUID(path);
 			if (uuidStr)
 			{
 				auto objPtr = core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuidStr.value() });
@@ -213,7 +207,7 @@ namespace sh::editor
 					auto mat = world.materials.AddResource(name, render::Material{ defaultShader });
 					mat->SetName(name);
 					mat->Build(*world.renderer.GetContext());
-					AssetDatabase::CreateAsset(world, currentPath / name, *mat);
+					assetDatabase.CreateAsset(world, currentPath / name, *mat);
 
 					GetAllFiles(currentPath);
 				}
@@ -359,12 +353,15 @@ namespace sh::editor
 		rootPath = dir;
 		assetPath = rootPath / "Assets";
 		binaryPath = rootPath / "bin";
+		libraryPath = rootPath / "Library";
 		currentPath = dir;
 		GetAllFiles(currentPath);
 
 		LoadUserModule();
 
-		AssetDatabase::LoadAllAssets(world, assetPath, true);
+		assetDatabase.LoadDatabase(libraryPath / "AssetDB.json");
+		assetDatabase.SetProjectDirectory(rootPath);
+		assetDatabase.LoadAllAssets(world, assetPath, true);
 	}
 
 	SH_EDITOR_API void Project::SaveWorld(const std::string& name)
@@ -432,5 +429,13 @@ namespace sh::editor
 				}
 			}
 		);
+	}
+	SH_EDITOR_API auto Project::GetAssetPath() const -> const std::filesystem::path&
+	{
+		return assetPath;
+	}
+	SH_EDITOR_API auto Project::GetBinPath() const -> const std::filesystem::path&
+	{
+		return binaryPath;
 	}
 }

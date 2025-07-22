@@ -78,10 +78,25 @@ namespace sh::render
 			SyncDirty();
 		}
 	}
+	SH_RENDER_API void Texture::SetPixelData(const uint8_t* pixels, std::size_t size, uint32_t mipLevel)
+	{
+		assert(this->pixels[mipLevel].size() == size);
+		std::memcpy(this->pixels[mipLevel].data(), pixels, size);
+		if (textureBuffer != nullptr)
+		{
+			bSetDataDirty = true;
+			SyncDirty();
+		}
+	}
 
 	SH_RENDER_API auto Texture::GetPixelData() const -> const std::vector<std::vector<Byte>>&
 	{
 		return pixels;
+	}
+	SH_RENDER_API auto Texture::GetPixelData(uint32_t mipLevel) const -> const std::vector<Byte>&
+	{
+		assert(pixels.size() > mipLevel);
+		return pixels[mipLevel];
 	}
 
 	SH_RENDER_API void Texture::Build(const IRenderContext& context)
@@ -101,6 +116,14 @@ namespace sh::render
 	{
 		return format;
 	}
+	SH_RENDER_API auto Texture::GetWidth() const -> uint32_t
+	{
+		return width;
+	}
+	SH_RENDER_API auto Texture::GetHeight() const -> uint32_t
+	{
+		return height;
+	}
 
 	SH_RENDER_API void Texture::ChangeTextureFormat(TextureFormat target)
 	{
@@ -116,6 +139,10 @@ namespace sh::render
 	SH_RENDER_API auto Texture::IsSRGB() const -> bool
 	{
 		return bSRGB;
+	}
+	SH_RENDER_API auto Texture::GetMipLevel() const -> uint32_t
+	{
+		return pixels.size();
 	}
 	SH_RENDER_API void sh::render::Texture::SetAnisoLevel(uint32_t aniso)
 	{
@@ -144,5 +171,33 @@ namespace sh::render
 		}
 
 		bDirty.clear(std::memory_order::memory_order_relaxed);
+	}
+	SH_RENDER_API void Texture::SetSRGB(bool bSRGB)
+	{
+		if (bSRGB)
+		{
+			if (format == Texture::TextureFormat::RGB24)
+				ChangeTextureFormat(Texture::TextureFormat::SRGB24);
+			else if (format == Texture::TextureFormat::RGBA32)
+				ChangeTextureFormat(Texture::TextureFormat::SRGBA32);
+		}
+		else
+		{
+			if (format == Texture::TextureFormat::SRGB24)
+				ChangeTextureFormat(Texture::TextureFormat::RGB24);
+			else if (format == Texture::TextureFormat::SRGBA32)
+				ChangeTextureFormat(Texture::TextureFormat::RGBA32);
+		}
+	}
+	SH_RENDER_API void Texture::OnPropertyChanged(const core::reflection::Property& prop)
+	{
+		if (prop.GetName() == "aniso")
+		{
+			SetAnisoLevel(aniso);
+		}
+		else if (prop.GetName() == "bSRGB")
+		{
+			SetSRGB(bSRGB);
+		}
 	}
 }
