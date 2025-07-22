@@ -3,15 +3,17 @@
 #include "FileSystem.h"
 
 #include "../External/lz4/lz4.h"
+
+#include <cstring>
 namespace sh::core
 {
 	SH_CORE_API auto AssetImporter::Load(const std::filesystem::path& path) -> std::unique_ptr<Asset>
 	{
 		auto blobOpt = FileSystem::LoadBinary(path);
 		if (!blobOpt.has_value())
-			return false;
+			return nullptr;
 		if (blobOpt.value().size() < sizeof(Asset::Header))
-			return false;
+			return nullptr;
 		std::vector<uint8_t> blob = std::move(*blobOpt);
 
 		return LoadFromMemory(blob);

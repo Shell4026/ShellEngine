@@ -1,4 +1,4 @@
-﻿#include "component/DirectionalLight.h"
+﻿#include "Component/DirectionalLight.h"
 
 #include "GameObject.h"
 

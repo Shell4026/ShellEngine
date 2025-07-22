@@ -2,12 +2,12 @@
 #include "Component/EditorUI.h"
 #include "EditorWorld.h"
 
-#include "game/Component/Camera.h"
-#include "game/Component/LineRenderer.h"
-#include "game/GameObject.h"
-#include "game/World.h"
-#include "game/Input.h"
-#include "game/SMath.h"
+#include "Game/Component/Camera.h"
+#include "Game/Component/LineRenderer.h"
+#include "Game/GameObject.h"
+#include "Game/World.h"
+#include "Game/Input.h"
+#include "Game/SMath.h"
 
 #include "Render/Renderer.h"
 #include "Render/IRenderContext.h"

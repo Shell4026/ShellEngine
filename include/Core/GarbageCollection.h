@@ -15,6 +15,7 @@
 #include <mutex>
 #include <variant>
 #include <cstring> // std::memcpy
+#include <list>
 namespace sh::core::reflection
 {
 	class Property;

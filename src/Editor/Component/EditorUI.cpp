@@ -4,8 +4,8 @@
 
 #include "Core/ModuleLoader.h"
 
-#include "game/GameObject.h"
-#include "game/World.h"
+#include "Game/GameObject.h"
+#include "Game/World.h"
 
 #include "Render/VulkanImpl/VulkanTextureBuffer.h"
 #include "Render/RenderTexture.h"

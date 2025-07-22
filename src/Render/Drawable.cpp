@@ -1,6 +1,6 @@
 ﻿#include "Drawable.h"
 
-#include "core/ThreadSyncManager.h"
+#include "Core/ThreadSyncManager.h"
 
 #include <cassert>
 

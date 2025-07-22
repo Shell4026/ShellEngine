@@ -1,4 +1,4 @@
-﻿#include "component/PointLight.h"
+﻿#include "Component/PointLight.h"
 
 #include "GameObject.h"
 
