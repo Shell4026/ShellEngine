@@ -9,20 +9,23 @@
 #include <sys/wait.h>
 #endif
 
-#include <string>
-
 namespace sh::core
 {
     SH_CORE_API auto ExecuteProcess::Execute(const std::filesystem::path& exe, const std::vector<std::string>& args, std::string& output) -> bool
 	{
-        std::string command;
-        for (auto& arg : args)
+#if _WIN32
+        std::wstring command;
+        for (const std::string& arg : args)
         {
-            command += arg;
-            command += " ";
+            int size = MultiByteToWideChar(CP_UTF8, 0, arg.c_str(), -1, nullptr, 0);
+            std::wstring wstr(size, 0);
+            MultiByteToWideChar(CP_UTF8, 0, arg.c_str(), -1, &wstr[0], size);
+            wstr.pop_back();
+
+            command += wstr;
+            command += L" ";
         }
 
-#if _WIN32
         // 파이프 핸들
         HANDLE hReadPipe = NULL;
         HANDLE hWritePipe = NULL;
@@ -48,7 +51,7 @@ namespace sh::core
             return false;
         }
 
-		STARTUPINFOA si{};
+		STARTUPINFOW si{};
 		PROCESS_INFORMATION pi{};
 
 		ZeroMemory(&si, sizeof(si));
@@ -58,10 +61,10 @@ namespace sh::core
         si.dwFlags |= STARTF_USESTDHANDLES;
 		ZeroMemory(&pi, sizeof(pi));
 
-        std::string cmdLine = exe.string() + " " + command;
-        char* cmd = const_cast<char*>(cmdLine.c_str());
+        std::wstring cmdLine = exe.wstring() + L" " + command;
+        wchar_t* cmd = const_cast<wchar_t*>(cmdLine.c_str());
 
-        if (!CreateProcessA(NULL, cmd, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi))
+        if (!CreateProcessW(NULL, cmd, NULL, NULL, TRUE, 0, NULL, NULL, &si, &pi))
         {
             SH_ERROR_FORMAT("CreateProcess failed ({})!", GetLastError());
             return false;
@@ -93,6 +96,13 @@ namespace sh::core
 
         return exitCode == 0;
 #elif __linux__
+        std::string command;
+        for (auto& arg : args)
+        {
+            command += arg;
+            command += " ";
+        }
+
         int pipefd[2]; // 0이 읽기 1이 쓰기 파이프
         if (pipe(pipefd) == -1)
         {

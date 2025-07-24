@@ -3,7 +3,7 @@
 
 #include <filesystem>
 #include <vector>
-
+#include <string>
 namespace sh::core
 {
 	/// @brief 크로스 플랫폼 프로세스 실행 클래스
