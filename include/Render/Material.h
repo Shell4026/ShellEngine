@@ -114,9 +114,9 @@ namespace sh::render
 
 		for (auto& location : propInfo->locations)
 		{
-			auto it = std::find(dirtyProps.begin(), dirtyProps.end(), std::pair{ location.passPtr, location.layoutPtr });
+			auto it = std::find(dirtyProps.begin(), dirtyProps.end(), std::pair{ location.passPtr.Get(), location.layoutPtr});
 			if (it == dirtyProps.end())
-				dirtyProps.push_back({ location.passPtr, location.layoutPtr });
+				dirtyProps.push_back({ location.passPtr.Get(), location.layoutPtr});
 		}
 
 		bPropertyDirty = true;

@@ -233,4 +233,33 @@ namespace sh::render
 	{
 		return bUseLighting;
 	}
+	SH_RENDER_API void ShaderPass::StoreShaderCode(ShaderCode&& shaderCode)
+	{
+		this->shaderCode = std::move(shaderCode);
+	}
+	SH_RENDER_API auto ShaderPass::Serialize() const -> core::Json
+	{
+		core::Json mainJson = Super::Serialize();
+
+		mainJson["shaderPass"] = core::Json{};
+		core::Json& shaderPassJson = mainJson["shaderPass"];
+
+		shaderPassJson["vertShaderData"] = shaderCode.vert;
+		shaderPassJson["fragShaderData"] = shaderCode.frag;
+
+		return mainJson;
+	}
+	SH_RENDER_API void ShaderPass::Deserialize(const core::Json& json)
+	{
+		Super::Deserialize(json);
+
+		if (!json.contains("shaderPass"))
+			return;
+
+		const auto& shaderPassJson = json["shaderPass"];
+		if (shaderPassJson.contains("vertShaderData"))
+			shaderCode.vert = shaderPassJson["vertShaderData"].get<std::vector<uint8_t>>();
+		if (shaderPassJson.contains("fragShaderData"))
+			shaderCode.frag = shaderPassJson["fragShaderData"].get<std::vector<uint8_t>>();
+	}
 }

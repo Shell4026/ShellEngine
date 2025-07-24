@@ -1,6 +1,9 @@
 ﻿#pragma once
 #include "Export.h"
 
+#include "Core/Asset.h"
+#include "Core/IAssetLoader.h"
+
 #include "Render/Shader.h"
 
 #include <filesystem>
@@ -12,9 +15,11 @@ namespace sh::render
 
 namespace sh::editor 
 {
-	class ShaderLoader 
+	class ShaderLoader : public core::IAssetLoader
 	{
 	private:
+		static constexpr const char* ASSET_NAME = "shad";
+
 		std::filesystem::path cachePath;
 		render::ShaderPassBuilder* passBuilder;
 	public:
@@ -23,6 +28,9 @@ namespace sh::editor
 
 		SH_EDITOR_API void SetCachePath(const std::filesystem::path& path);
 		SH_EDITOR_API auto GetCachePath() const -> const std::filesystem::path&;
-		SH_EDITOR_API auto LoadShader(const std::filesystem::path& path) -> render::Shader*;
+
+		SH_EDITOR_API auto Load(const std::filesystem::path& filePath) -> core::SObject* override;
+		SH_EDITOR_API auto Load(const core::Asset& asset) -> core::SObject* override;
+		SH_EDITOR_API auto GetAssetName() const -> const char* override;
 	};
 }

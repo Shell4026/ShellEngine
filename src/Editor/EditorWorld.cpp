@@ -129,20 +129,20 @@ namespace sh::editor
 
 		render::vk::VulkanShaderPassBuilder shaderBuilder{ static_cast<sh::render::vk::VulkanContext&>(*renderer.GetContext()) };
 
-		ShaderLoader loader{ &shaderBuilder };
+		ShaderLoader shaderLoader{ &shaderBuilder };
 		TextureLoader texLoader{ *renderer.GetContext() };
 		ModelLoader modelLoader{ *renderer.GetContext() };
 
-		auto defaultShader = shaders.AddResource("DefaultShader", loader.LoadShader("shaders/default.shader"));
-		auto lineShader = shaders.AddResource("Line", loader.LoadShader("shaders/line.shader"));
-		auto errorShader = shaders.AddResource("ErrorShader", loader.LoadShader("shaders/error.shader"));
-		auto gridShader = shaders.AddResource("GridShader", loader.LoadShader("shaders/grid.shader"));
-		auto pickingShader = shaders.AddResource("EditorPickingShader", loader.LoadShader("shaders/EditorPicking.shader"));
-		auto outlineShader = shaders.AddResource("OutlineShader", loader.LoadShader("shaders/outline.shader"));
-		auto triangleShader = shaders.AddResource("TriangleShader", loader.LoadShader("shaders/triangle.shader"));
+		auto defaultShader = shaders.AddResource("DefaultShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/default.shader")));
+		auto lineShader = shaders.AddResource("Line", static_cast<render::Shader*>(shaderLoader.Load("shaders/line.shader")));
+		auto errorShader = shaders.AddResource("ErrorShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/error.shader")));
+		auto gridShader = shaders.AddResource("GridShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/grid.shader")));
+		auto pickingShader = shaders.AddResource("EditorPickingShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/EditorPicking.shader")));
+		auto outlineShader = shaders.AddResource("OutlineShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/outline.shader")));
+		auto triangleShader = shaders.AddResource("TriangleShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/triangle.shader")));
 
-		auto outlinePreShader = shaders.AddResource("OutlinePreShader", loader.LoadShader("shaders/EditorOutlinePre.shader"));
-		auto outlinePostShader = shaders.AddResource("OutlinePostShader", loader.LoadShader("shaders/EditorOutlinePost.shader"));
+		auto outlinePreShader = shaders.AddResource("OutlinePreShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/EditorOutlinePre.shader")));
+		auto outlinePostShader = shaders.AddResource("OutlinePostShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/EditorOutlinePost.shader")));
 
 		auto errorMat = materials.AddResource("ErrorMaterial", render::Material{ errorShader });
 		auto lineMat = materials.AddResource("LineMaterial", render::Material{ lineShader });

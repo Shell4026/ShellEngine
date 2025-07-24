@@ -12,6 +12,33 @@ namespace sh::editor
 		ImGui::Separator();
 		render::Material* mat = reinterpret_cast<render::Material*>(obj);
 		render::Shader* shader = mat->GetShader();
+		{
+			float iconSize = 20;
+			float buttonWidth = ImGui::GetContentRegionAvail().x - iconSize;
+
+			std::string shaderName = "Empty";
+			if (core::IsValid(shader))
+				shaderName = shader->GetName().ToString();
+
+			ImGui::Text("Shader");
+			if (ImGui::Button(shaderName.c_str(), ImVec2{ buttonWidth, iconSize }))
+			{
+			}
+
+			if (ImGui::BeginDragDropTarget())
+			{
+				auto p = ImGui::GetCurrentContext()->DragDropPayload;
+				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(std::string{ core::reflection::GetTypeName<render::Shader>() }.c_str());
+				if (payload)
+				{
+					render::Shader* shader = *reinterpret_cast<render::Shader**>(payload->Data);
+					mat->SetShader(shader);
+					AssetDatabase::GetInstance()->SetDirty(mat);
+					AssetDatabase::GetInstance()->SaveAllAssets();
+				}
+				ImGui::EndDragDropTarget();
+			}
+		}
 		if (core::IsValid(shader))
 		{
 			for (auto& [name, propInfo] : shader->GetProperties())

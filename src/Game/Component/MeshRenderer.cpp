@@ -4,7 +4,7 @@
 #include "Component/PointLight.h"
 #include "Component/DirectionalLight.h"
 
-#include "gameObject.h"
+#include "GameObject.h"
 
 #include "Core/Reflection.hpp"
 
@@ -106,7 +106,7 @@ namespace sh::game
 			bool isSampler = false;
 			for (auto& member : layoutPtr->GetMembers())
 			{
-				if (member.type == core::reflection::GetType<int>())
+				if (member.typeHash == core::reflection::GetType<int>().hash)
 				{
 					auto var = propertyBlock->GetScalarProperty(member.name);
 					if (var.has_value())
@@ -114,7 +114,7 @@ namespace sh::game
 					else
 						SetData(0, data, member.offset);
 				}
-				else if (member.type == core::reflection::GetType<float>())
+				else if (member.typeHash == core::reflection::GetType<float>().hash)
 				{
 					auto var = propertyBlock->GetScalarProperty(member.name);
 					if (var.has_value())
@@ -122,7 +122,7 @@ namespace sh::game
 					else
 						SetData(0.0f, data, member.offset);
 				}
-				else if (member.type == core::reflection::GetType<glm::vec2>())
+				else if (member.typeHash == core::reflection::GetType<glm::vec2>().hash)
 				{
 					auto var = propertyBlock->GetVectorProperty(member.name);
 					if (var)
@@ -130,7 +130,7 @@ namespace sh::game
 					else
 						SetData(glm::vec2{ 0.f }, data, member.offset);
 				}
-				else if (member.type == core::reflection::GetType<glm::vec3>())
+				else if (member.typeHash == core::reflection::GetType<glm::vec3>().hash)
 				{
 					auto var = propertyBlock->GetVectorProperty(member.name);
 					if (var)
@@ -138,7 +138,7 @@ namespace sh::game
 					else
 						SetData(glm::vec3{ 0.f }, data, member.offset);
 				}
-				else if (member.type == core::reflection::GetType<glm::vec4>())
+				else if (member.typeHash == core::reflection::GetType<glm::vec4>().hash)
 				{
 					auto var = propertyBlock->GetVectorProperty(member.name);
 					if (var)
@@ -146,7 +146,7 @@ namespace sh::game
 					else
 						SetData(glm::vec4{ 0.f }, data, member.offset);
 				}
-				else if (member.type == core::reflection::GetType<glm::mat2>())
+				else if (member.typeHash == core::reflection::GetType<glm::mat2>().hash)
 				{
 					auto var = propertyBlock->GetMatrixProperty(member.name);
 					if (var)
@@ -154,7 +154,7 @@ namespace sh::game
 					else
 						SetData(glm::mat2{ 1.f }, data, member.offset);
 				}
-				else if (member.type == core::reflection::GetType<glm::mat3>())
+				else if (member.typeHash == core::reflection::GetType<glm::mat3>().hash)
 				{
 					auto var = propertyBlock->GetMatrixProperty(member.name);
 					if (var)
@@ -162,7 +162,7 @@ namespace sh::game
 					else
 						SetData(glm::mat3{ 1.f }, data, member.offset);
 				}
-				else if (member.type == core::reflection::GetType<glm::mat4>())
+				else if (member.typeHash == core::reflection::GetType<glm::mat4>().hash)
 				{
 					auto var = propertyBlock->GetMatrixProperty(member.name);
 					if (var)
@@ -170,7 +170,7 @@ namespace sh::game
 					else
 						SetData(glm::mat2{ 1.f }, data, member.offset);
 				}
-				else if (member.type == core::reflection::GetType<render::Texture>())
+				else if (member.typeHash == core::reflection::GetType<render::Texture>().hash)
 				{
 					auto var = propertyBlock->GetTextureProperty(member.name);
 					if (var)
@@ -299,9 +299,9 @@ namespace sh::game
 				{
 					if (location.layoutPtr->type != render::UniformStructLayout::Type::Object)
 						continue;
-					auto it = std::find(localUniformLocations.begin(), localUniformLocations.end(), std::pair{ location.passPtr, location.layoutPtr });
+					auto it = std::find(localUniformLocations.begin(), localUniformLocations.end(), std::pair{ location.passPtr.Get(), location.layoutPtr});
 					if (it == localUniformLocations.end())
-						localUniformLocations.push_back({ location.passPtr, location.layoutPtr });
+						localUniformLocations.push_back({ location.passPtr.Get(), location.layoutPtr});
 				}
 			}
 		}

@@ -20,12 +20,16 @@ namespace sh::render::vk
 		return context;
 	}
 
-	SH_RENDER_API auto VulkanShaderPassBuilder::Build(const ShaderAST::PassNode& passNode) -> std::unique_ptr<render::ShaderPass>
+	SH_RENDER_API auto VulkanShaderPassBuilder::Build(const ShaderAST::PassNode& passNode) -> render::ShaderPass*
 	{
 		assert(context.GetDevice() != nullptr);
 
 		assert(vertShaderData.data());
 		assert(fragShaderData.data());
+
+		ShaderPass::ShaderCode shaderCode{};
+		shaderCode.vert = std::move(vertShaderData);
+		shaderCode.frag = std::move(fragShaderData);
 
 		VkShaderModule vertShader = VK_NULL_HANDLE;
 		VkShaderModule fragShader = VK_NULL_HANDLE;
@@ -34,8 +38,8 @@ namespace sh::render::vk
 		{
 			VkShaderModuleCreateInfo info{};
 			info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-			info.codeSize = vertShaderData.size();
-			info.pCode = reinterpret_cast<const uint32_t*>(vertShaderData.data());
+			info.codeSize = shaderCode.vert.size();
+			info.pCode = reinterpret_cast<const uint32_t*>(shaderCode.vert.data());
 
 			VkResult result = vkCreateShaderModule(context.GetDevice(), &info, nullptr, &vertShader);
 			assert(result == VkResult::VK_SUCCESS);
@@ -47,8 +51,8 @@ namespace sh::render::vk
 		{
 			VkShaderModuleCreateInfo info{};
 			info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-			info.codeSize = fragShaderData.size();
-			info.pCode = reinterpret_cast<const uint32_t*>(fragShaderData.data());
+			info.codeSize = shaderCode.frag.size();
+			info.pCode = reinterpret_cast<const uint32_t*>(shaderCode.frag.data());
 
 			VkResult result = vkCreateShaderModule(context.GetDevice(), &info, nullptr, &fragShader);
 			assert(result == VkResult::VK_SUCCESS);
@@ -60,7 +64,8 @@ namespace sh::render::vk
 		shaderModules.vert = vertShader;
 		shaderModules.frag = fragShader;
 
-		auto retShader = std::make_unique<render::vk::VulkanShaderPass>(context, shaderModules, passNode);
+		auto retShader = core::SObject::Create<render::vk::VulkanShaderPass>(context, shaderModules, passNode);
+		retShader->StoreShaderCode(std::move(shaderCode));
 		retShader->Build();
 
 		return retShader;

@@ -16,6 +16,7 @@ namespace sh::render::vk
 	class VulkanContext;
 	class VulkanShaderPass : public ShaderPass
 	{
+		SCLASS(VulkanShaderPass)
 	private:
 		const VulkanContext& context;
 

@@ -9,7 +9,8 @@ namespace sh::editor
 		{".png", Type::Texture},
 		{".jpg", Type::Texture},
 		{".mat", Type::Material},
-		{".world", Type::World}
+		{".world", Type::World},
+		{".shader", Type::Shader}
 	};
 
 	SH_EDITOR_API auto AssetExtensions::CheckType(const std::string& extension) -> AssetExtensions::Type

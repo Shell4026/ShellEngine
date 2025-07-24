@@ -38,7 +38,8 @@ namespace sh
 		SH_INFO("Engine shutdown");
 		world->Clean();
 		gc->DefragmentRootSet();
-		gc->Collect();
+		while(gc->GetRootSet().size() != gc->GetObjectCount())
+			gc->Collect();
 		gc->ForceDelete(world);
 		gui.reset();
 

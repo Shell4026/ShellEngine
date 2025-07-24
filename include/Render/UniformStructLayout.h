@@ -4,6 +4,7 @@
 
 #include "Core/Reflection.hpp"
 #include "Core/Util.h"
+#include "Core/ISerializable.h"
 
 #include <glm/fwd.hpp>
 
@@ -16,7 +17,7 @@ namespace sh::render
 	class Texture;
 
 	/// @brief 셰이더 유니폼 구조체 레이아웃
-	class UniformStructLayout
+	class UniformStructLayout : core::ISerializable
 	{
 	public:
 		enum class Layout
@@ -32,7 +33,7 @@ namespace sh::render
 		struct UniformMember
 		{
 			std::string name;
-			const core::reflection::TypeInfo& type;
+			std::size_t typeHash;
 			uint32_t offset;
 			uint32_t layoutSize;
 			uint32_t count;
@@ -77,6 +78,9 @@ namespace sh::render
 		/// @brief 유니폼 구조체의 사이즈를 반환 하는 함수.
 		/// @return 바이트
 		SH_RENDER_API auto GetSize() const -> std::size_t;
+
+		SH_RENDER_API auto Serialize() const -> core::Json override;
+		SH_RENDER_API void Deserialize(const core::Json& json) override;
 	};
 	template<typename T>
 	inline auto UniformStructLayout::GetSTD140Layout() -> Std140LayoutInfo
@@ -110,7 +114,7 @@ namespace sh::render
 	{
 		if constexpr (std::is_same_v<T, Texture>)
 		{
-			UniformMember member{ name, core::reflection::GetType<Texture>(), 0, 0, count, (count > 1), true };
+			UniformMember member{ name, core::reflection::GetType<Texture>().hash, 0, 0, count, (count > 1), true };
 			members.push_back(std::move(member));
 		}
 		else
@@ -124,7 +128,7 @@ namespace sh::render
 					arrayBaseAlignment : info.std140Size;
 				uint32_t totalSize = arrayStride * static_cast<uint32_t>(count);
 
-				UniformMember member{ name, core::reflection::GetType<T>(), 0, totalSize, count, (count > 1), false };
+				UniformMember member{ name, core::reflection::GetType<T>().hash, 0, totalSize, count, (count > 1), false };
 				if (members.empty())
 				{
 					members.push_back(std::move(member));

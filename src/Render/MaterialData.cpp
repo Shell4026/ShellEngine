@@ -18,16 +18,16 @@ namespace sh::render
 
 		for (auto& [passName, shaderPasses] : shader.GetAllShaderPass())
 		{
-			for (auto& shaderPass : shaderPasses)
+			for (ShaderPass* shaderPass : shaderPasses)
 			{
 				PassData passData{};
 				uint32_t maxSet = 0;
 				std::vector<uint32_t> sets;
 				// 유니폼 데이터 버퍼
-				auto layouts = { &shaderPass->GetVertexUniforms(), &shaderPass->GetFragmentUniforms() };
-				for (auto layout : layouts)
+				auto layouts = { shaderPass->GetVertexUniforms(), shaderPass->GetFragmentUniforms() };
+				for (auto& layout : layouts)
 				{
-					for (auto& uniformLayout : *layout)
+					for (auto& uniformLayout : layout)
 					{
 						if (uniformLayout.bConstant)
 							continue;
@@ -73,7 +73,7 @@ namespace sh::render
 					}
 				}
 
-				passData.pass = shaderPass.get();
+				passData.pass = shaderPass;
 				perPassData.push_back(std::move(passData));
 			}
 		}

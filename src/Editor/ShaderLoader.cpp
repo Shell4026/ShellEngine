@@ -10,8 +10,10 @@
 #include "Render/ShaderGenerator.h"
 #include "Render/ShaderCreateInfo.h"
 
-#include <string>
+#include "Game/ShaderAsset.h"
 
+#include <string>
+#include <filesystem>
 namespace sh::editor
 {
 	namespace fs = std::filesystem;
@@ -44,15 +46,18 @@ namespace sh::editor
 			SH_ERROR_FORMAT("Can't load file: {}", path.string());
 			return nullptr;
 		}
+		if (!std::filesystem::exists(cachePath))
+			std::filesystem::create_directory(cachePath);
+
 		render::ShaderLexer lexer{};
 		render::ShaderParser parser{};
-		render::ShaderAST::ShaderNode shaderNode = parser.Parse(lexer.Lex(src.value()));
 
 		render::ShaderCreateInfo shaderCI{};
-		shaderCI.SetShaderNode(shaderNode);
-		for (auto& pass : shaderNode.passes)
+		shaderCI.shaderNode = parser.Parse(lexer.Lex(src.value()));
+
+		for (auto& passNode : shaderCI.shaderNode.passes)
 		{
-			auto shaderPaths = render::ShaderGenerator::GenerateShaderFile(shaderNode.shaderName, pass, cachePath);
+			auto shaderPaths = render::ShaderGenerator::GenerateShaderFile(shaderCI.shaderNode.shaderName, passNode, cachePath);
 
 			for (auto& shaderPath : shaderPaths)
 			{
@@ -64,7 +69,7 @@ namespace sh::editor
 					stageType = render::ShaderPassBuilder::shaderType::Fragment;
 
 				// 컴파일
-				std::vector<std::string> args = { shaderPath.string(), "-o", spirvPath.string() };
+				std::vector<std::string> args = { fmt::format("\"{}\"", shaderPath.u8string()), "-o", fmt::format("\"{}\"", spirvPath.u8string()) };
 				std::string output;
 				std::string compiler = "glslc";
 #if _WIN32
@@ -86,11 +91,11 @@ namespace sh::editor
 			}
 
 			// 패스 생성
-			auto shaderPass = passBuilder->Build(pass);
+			render::ShaderPass* shaderPass = passBuilder->Build(passNode);
 			if (shaderPass == nullptr)
 				return nullptr;
 
-			shaderCI.AddShaderPass(std::move(shaderPass));
+			shaderCI.passes.push_back(shaderPass);
 		}
 		// 셰이더 생성
 		auto shader = core::SObject::Create<render::Shader>(std::move(shaderCI));
@@ -99,7 +104,50 @@ namespace sh::editor
 
 	SH_EDITOR_API auto ShaderLoader::Load(const core::Asset& asset) -> core::SObject*
 	{
-		return nullptr;
+		if (std::strcmp(asset.GetType(), ASSET_NAME) != 0)
+		{
+			SH_ERROR_FORMAT("Asset({}) is not a shader!", asset.GetUUID().ToString());
+			return nullptr;
+		}
+		const auto& shaderAsset = static_cast<const game::ShaderAsset&>(asset);
+		const core::Json& shaderObjJson = shaderAsset.GetShaderObjectJson();
+
+		if (!shaderObjJson.contains("shader"))
+			return nullptr;
+
+		const core::Json& shaderJson = shaderObjJson["shader"];
+
+		render::ShaderCreateInfo shaderCI{};
+		if (!shaderJson.contains("AST"))
+			return nullptr;
+
+		shaderCI.shaderNode.Deserialize(shaderJson["AST"]);
+
+		if (shaderCI.shaderNode.passes.size() != shaderJson["passes"].size())
+			return nullptr;
+
+		for (int i = 0; i < shaderCI.shaderNode.passes.size(); ++i)
+		{
+			const auto& passNode = shaderCI.shaderNode.passes[i];
+			const core::Json& shaderPassObjJson = *(shaderJson["passes"].begin() + i);
+			const core::Json& shaderPassJson = shaderPassObjJson["shaderPass"];
+
+			if (shaderPassJson.contains("vertShaderData"))
+				passBuilder->SetData(render::ShaderPassBuilder::shaderType::Vertex, shaderPassJson["vertShaderData"].get<std::vector<uint8_t>>());
+			if (shaderPassJson.contains("fragShaderData"))
+				passBuilder->SetData(render::ShaderPassBuilder::shaderType::Fragment, shaderPassJson["fragShaderData"].get<std::vector<uint8_t>>());
+
+			render::ShaderPass* shaderPass = passBuilder->Build(passNode);
+			if (shaderPass == nullptr)
+				return nullptr;
+			shaderPass->Deserialize(shaderPassObjJson);
+
+			shaderCI.passes.push_back(shaderPass);
+		}
+		auto shader = core::SObject::Create<render::Shader>(std::move(shaderCI));
+		shader->Deserialize(shaderObjJson);
+
+		return shader;
 	}
 
 	SH_EDITOR_API auto ShaderLoader::GetAssetName() const -> const char*

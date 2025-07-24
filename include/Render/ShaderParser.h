@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "Export.h"
-#include "ShaderAST.hpp"
+#include "ShaderAST.h"
 #include "ShaderLexer.h"
 
 #include "Core/ArrayView.hpp"

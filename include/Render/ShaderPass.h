@@ -4,8 +4,9 @@
 #include "StencilState.h"
 #include "UniformStructLayout.h"
 #include "ShaderEnum.h"
-#include "ShaderAST.hpp"
+#include "ShaderAST.h"
 
+#include "Core/SObject.h"
 #include "Core/Name.h"
 #include "Core/NonCopyable.h"
 #include "Core/SContainer.hpp"
@@ -20,8 +21,9 @@
 
 namespace sh::render
 {
-	class ShaderPass : public sh::core::INonCopyable
+	class ShaderPass : public core::SObject, public core::INonCopyable
 	{
+		SCLASS(ShaderPass)
 	private:
 		StencilState stencilState{};
 		CullMode cull = CullMode::Back;
@@ -34,9 +36,14 @@ namespace sh::render
 		struct AttributeData
 		{
 			uint32_t idx;
-			std::string_view typeName;
-			std::string name;
+			std::size_t typeHash;
 			std::size_t size;
+			std::string name;
+		};
+		struct ShaderCode
+		{
+			std::vector<uint8_t> vert;
+			std::vector<uint8_t> frag;
 		};
 	protected:
 		std::vector<AttributeData> attrs;
@@ -45,6 +52,8 @@ namespace sh::render
 		std::vector<UniformStructLayout> vertexUniforms;
 		std::vector<UniformStructLayout> fragmentUniforms;
 		std::vector<UniformStructLayout> samplerUniforms;
+
+		ShaderCode shaderCode;
 
 		ShaderType type;
 	private:
@@ -88,6 +97,15 @@ namespace sh::render
 
 		SH_RENDER_API bool HasAttribute(const std::string& name) const;
 		SH_RENDER_API auto GetAttribute(const std::string& name) const -> std::optional<AttributeData>;
+
+		SH_RENDER_API void StoreShaderCode(ShaderCode&& shaderCode);
+
+		/// @brief 셰이더 바이너리 데이터를 직렬화 한다.
+		/// @return 직렬화 된 json
+		SH_RENDER_API auto Serialize() const -> core::Json override;
+		/// @brief 셰이더 바이너리 데이터를 역직렬화 한다.
+		/// @param json 직렬화 된 json
+		SH_RENDER_API void Deserialize(const core::Json& json) override;
 	};
 
 	template<typename T>
@@ -104,7 +122,7 @@ namespace sh::render
 		AttributeData  attr;
 		attr.idx = loc;
 		attr.name = name;
-		attr.typeName = sh::core::reflection::GetTypeName<T>();
+		attr.typeHash = sh::core::reflection::GetType<T>().hash;
 		attr.size = sizeof(T);
 
 		attrs[loc] = attr;

@@ -61,17 +61,17 @@ namespace sh::render::vk
 			auto passVectorPtr = renderGroup.material->GetShader()->GetShaderPasses(lightingPassName);
 			if (passVectorPtr == nullptr)
 				continue;
-			for (auto& pass : *passVectorPtr)
+			for (ShaderPass* pass : *passVectorPtr)
 			{
 				auto pipelineHandle = context.GetPipelineManager().
-					GetOrCreatePipelineHandle(renderPass, static_cast<VulkanShaderPass&>(*pass.get()), renderGroup.topology);
+					GetOrCreatePipelineHandle(renderPass, static_cast<VulkanShaderPass&>(*pass), renderGroup.topology);
 				context.GetPipelineManager().BindPipeline(cmd->GetCommandBuffer(), pipelineHandle);
 				VkPipelineLayout layout = static_cast<VulkanShaderPass&>(*pass).GetPipelineLayout();
-				uint32_t setSize = static_cast<VulkanShaderPass*>(pass.get())->GetSetCount();
+				uint32_t setSize = static_cast<VulkanShaderPass*>(pass)->GetSetCount();
 
 				if (setSize > 0)
 				{
-					auto cameraUniformBuffer = static_cast<VulkanUniformBuffer*>(mat->GetMaterialData().GetUniformBuffer(*pass.get(),
+					auto cameraUniformBuffer = static_cast<VulkanUniformBuffer*>(mat->GetMaterialData().GetUniformBuffer(*pass,
 						UniformStructLayout::Type::Camera));
 
 					VkDescriptorSet cameraDescriptorSet = VK_NULL_HANDLE;
@@ -90,7 +90,7 @@ namespace sh::render::vk
 				}
 				if (setSize > 2)
 				{
-					auto materialUniformBuffer = static_cast<VulkanUniformBuffer*>(mat->GetMaterialData().GetUniformBuffer(*pass.get(),
+					auto materialUniformBuffer = static_cast<VulkanUniformBuffer*>(mat->GetMaterialData().GetUniformBuffer(*pass,
 						UniformStructLayout::Type::Material));
 
 					VkDescriptorSet materialDescriptorSet = VK_NULL_HANDLE;
@@ -122,7 +122,7 @@ namespace sh::render::vk
 
 					if (setSize > 1)
 					{
-						auto objectUniformBuffer = static_cast<VulkanUniformBuffer*>(drawable->GetMaterialData().GetUniformBuffer(*pass.get(),
+						auto objectUniformBuffer = static_cast<VulkanUniformBuffer*>(drawable->GetMaterialData().GetUniformBuffer(*pass,
 							UniformStructLayout::Type::Object));
 						
 						if (pass->IsUsingLight())

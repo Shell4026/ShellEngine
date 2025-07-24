@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "Export.h"
-#include "ShaderAST.hpp"
+#include "ShaderAST.h"
 
 #include <vector>
 #include <memory>
@@ -32,7 +32,7 @@ namespace sh::render
 		SH_RENDER_API void SetData(shaderType type, const std::vector<uint8_t>& data);
 		SH_RENDER_API void SetData(shaderType type, std::vector<uint8_t>&& data);
 
-		SH_RENDER_API virtual auto Build(const ShaderAST::PassNode& passNode) -> std::unique_ptr<render::ShaderPass> = 0;
+		SH_RENDER_API virtual auto Build(const ShaderAST::PassNode& passNode) -> render::ShaderPass* = 0;
 		SH_RENDER_API virtual void Clear();
 	};
 }

@@ -16,6 +16,6 @@ namespace sh::render::vk
 
 		SH_RENDER_API auto GetContext() const -> const VulkanContext&;
 
-		SH_RENDER_API auto Build(const ShaderAST::PassNode& passNode) -> std::unique_ptr<render::ShaderPass> override;
+		SH_RENDER_API auto Build(const ShaderAST::PassNode& passNode) -> render::ShaderPass* override;
 	};
 }

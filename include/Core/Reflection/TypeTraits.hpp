@@ -144,28 +144,54 @@ namespace sh::core::reflection
 	template<typename T>
 	struct HasErase<T, std::void_t<decltype(std::declval<T>().erase(std::declval<typename T::iterator>()))>> : std::bool_constant<true> {};
 
+	template<typename T>
+	constexpr auto RawTypeName()
+	{
+#if defined(__clang__)
+		return __PRETTY_FUNCTION__;
+#elif defined(__GNUC__)
+		return __PRETTY_FUNCTION__;
+#elif defined(_MSC_VER)
+		return __FUNCSIG__;
+#else
+#   error "Unsupported compiler"
+#endif
+	}
+	template<typename T>
+	constexpr std::string_view TypePrefix()
+	{
+#if defined(__clang__)
+		return "constexpr auto sh::core::reflection::RawTypeName() [with T = ";
+#elif defined(__GNUC__)
+		return "constexpr auto sh::core::reflection::RawTypeName() [with T = ";
+#elif defined(_MSC_VER)
+		return "auto __cdecl sh::core::reflection::RawTypeName<";
+#endif
+	}
+	template<typename T>
+	constexpr std::string_view TypeSuffix()
+	{
+#if defined(__clang__)
+		return "]";
+#elif defined(__GNUC__)
+		return "]";
+#elif defined(_MSC_VER)
+		return ">(void)";
+#endif
+	}
+
 	/// @brief 타입 이름(문자열)을 가져오는 함수
 	/// @tparam T 타입
 	template<typename T>
-	constexpr auto GetTypeName()
+	constexpr auto GetTypeName() -> std::string_view
 	{
+		constexpr std::string_view raw = RawTypeName<T>();
+		constexpr std::string_view prefix = TypePrefix<T>();
+		constexpr std::string_view suffix = TypeSuffix<T>();
 
-#ifdef __clang__
-		std::string_view prefix = "auto sh::core::reflection::GetTypeName() [T = ";
-		std::string_view suffix = "]";
-		std::string_view str = __PRETTY_FUNCTION__;
-#elif __GNUC__
-		std::string_view prefix = "constexpr auto sh::core::reflection::GetTypeName() [with T = ";
-		std::string_view suffix = "]";
-		std::string_view str = __PRETTY_FUNCTION__;
-#elif _MSC_VER
-		std::string_view prefix = "auto __cdecl sh::core::reflection::GetTypeName<";
-		std::string_view suffix = ">(void)";
-		std::string_view str = __FUNCSIG__;
-#endif
-		str.remove_prefix(prefix.size());
-		str.remove_suffix(suffix.size());
-
-		return str;
+		std::string_view name = raw;
+		name.remove_prefix(prefix.size());
+		name.remove_suffix(suffix.size());
+		return name;
 	}
 }//namespace

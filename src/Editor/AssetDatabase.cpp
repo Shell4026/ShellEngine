@@ -4,6 +4,7 @@
 #include "TextureLoader.h"
 #include "ModelLoader.h"
 #include "MaterialLoader.h"
+#include "ShaderLoader.h"
 #include "Meta.h"
 
 #include "Core/FileSystem.h"
@@ -13,6 +14,8 @@
 
 #include "Render/Renderer.h"
 #include "Render/Model.h"
+#include "Render/VulkanImpl/VulkanShaderPassBuilder.h"
+#include "Render/VulkanImpl/VulkanContext.h"
 
 #include "Game/World.h"
 #include "Game/TextureAsset.h"
@@ -85,15 +88,31 @@ namespace sh::editor
 		{
 			static TextureLoader loader{ *world.renderer.GetContext() };
 			render::Texture* texPtr = static_cast<render::Texture*>(LoadAsset(dir, loader));
-			world.textures.AddResource(texPtr->GetUUID().ToString(), texPtr);
+			if (texPtr != nullptr)
+				world.textures.AddResource(texPtr->GetUUID().ToString(), texPtr);
 			return texPtr;
 		}
 		if (type == AssetExtensions::Type::Model)
 		{
 			static ModelLoader loader{ *world.renderer.GetContext() };
 			render::Model* modelPtr = static_cast<render::Model*>(LoadAsset(dir, loader));
-			world.models.AddResource(modelPtr->GetUUID().ToString(), modelPtr);
+			if (modelPtr != nullptr)
+				world.models.AddResource(modelPtr->GetUUID().ToString(), modelPtr);
 			return modelPtr;
+		}
+		if (type == AssetExtensions::Type::Shader)
+		{
+			assert(world.renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan);
+			if (world.renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan)
+			{
+				static render::vk::VulkanShaderPassBuilder passBuilder{ static_cast<render::vk::VulkanContext&>(*world.renderer.GetContext()) };
+				static ShaderLoader loader{ &passBuilder };
+				loader.SetCachePath(projectPath / "temp");
+				render::Shader* shaderPtr = static_cast<render::Shader*>(LoadAsset(dir, loader));
+				if (shaderPtr != nullptr)
+					world.shaders.AddResource(shaderPtr->GetUUID().ToString(), shaderPtr);
+				return shaderPtr;
+			}
 		}
 		if (type == AssetExtensions::Type::Material)
 			return LoadMaterial(world, dir);
@@ -302,7 +321,15 @@ namespace sh::editor
 
 		auto json = serializable.Serialize();
 		if (json.contains("uuid"))
-			uuids.insert_or_assign(dir, core::UUID(json["uuid"].get<std::string>()));
+		{
+			std::filesystem::path relativePath = std::filesystem::relative(dir, projectPath);
+			if (relativePath.empty())
+				return false;
+
+			const core::UUID uuid{ json["uuid"].get<std::string>() };
+			uuids.insert_or_assign(relativePath, uuid);
+			paths.insert_or_assign(uuid, AssetInfo{ relativePath, relativePath });
+		}
 
 		std::ofstream os(dir);
 		os << std::setw(4) << json;

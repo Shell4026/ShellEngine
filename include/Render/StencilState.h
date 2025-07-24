@@ -1,4 +1,7 @@
 ﻿#pragma once
+#include "Export.h"
+
+#include "Core/ISerializable.h"
 
 #include <cstdint>
 #ifdef Always
@@ -7,7 +10,7 @@
 
 namespace sh::render
 {
-	struct StencilState
+	struct StencilState : core::ISerializable
 	{
 		enum class StencilOp
 		{
@@ -39,5 +42,8 @@ namespace sh::render
 		StencilOp passOp = StencilOp::Keep;
 		StencilOp failOp = StencilOp::Keep;
 		StencilOp depthFailOp = StencilOp::Keep;
+
+		SH_RENDER_API auto Serialize() const -> core::Json override;
+		SH_RENDER_API void Deserialize(const core::Json& json) override;
 	};
-}
+}//namespace

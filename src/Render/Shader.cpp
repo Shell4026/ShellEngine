@@ -11,15 +11,15 @@ namespace sh::render
 		passes.clear();
 	}
 
-	void Shader::AddShaderPass(std::unique_ptr<ShaderPass>&& pass)
+	void Shader::AddShaderPass(ShaderPass* pass)
 	{
 		auto& lightingPassName = pass->GetLightingPassName();
 
 		LightingPassData* lightingPassData = GetLightingPass(lightingPassName);
 		if (lightingPassData == nullptr)
 		{
-			std::vector<std::unique_ptr<ShaderPass>> v{};
-			v.push_back(std::move(pass));
+			std::vector<ShaderPass*> v{};
+			v.push_back(pass);
 
 			LightingPassData passData{ lightingPassName };
 			passData.passes = std::move(v);
@@ -57,12 +57,12 @@ namespace sh::render
 
 	Shader::Shader(ShaderCreateInfo&& shaderCreateInfo)
 	{
-		SetName(shaderCreateInfo.GetShaderNode().shaderName);
+		SetName(shaderCreateInfo.shaderNode.shaderName);
 
-		for (auto& pass : shaderCreateInfo.GetShaderPasses())
-			AddShaderPass(std::move(pass));
+		for (ShaderPass* pass : shaderCreateInfo.passes)
+			AddShaderPass(pass);
 
-		for (auto& prop : shaderCreateInfo.GetShaderNode().properties)
+		for (auto& prop : shaderCreateInfo.shaderNode.properties)
 		{
 			switch (prop.type)
 			{
@@ -77,8 +77,24 @@ namespace sh::render
 			case ShaderAST::VariableType::Sampler: AddProperty<  Texture>(prop.name); break;
 			}
 		}
+
+		shaderNode = std::move(shaderCreateInfo.shaderNode);
+
+		// 코드는 보존 할 필요 없음
+		for (auto& passNode : shaderNode.passes)
+		{
+			for (auto& stageNode : passNode.stages)
+			{
+				stageNode.code.clear(); 
+				stageNode.functions.clear();
+				stageNode.declaration.clear();
+			}
+		}
 	}
-	SH_RENDER_API auto Shader::GetShaderPasses(const core::Name& lightingPassName) const -> const std::vector<std::unique_ptr<ShaderPass>>*
+	Shader::~Shader()
+	{
+	}
+	SH_RENDER_API auto Shader::GetShaderPasses(const core::Name& lightingPassName) const -> const std::vector<ShaderPass*>*
 	{
 		const LightingPassData* lightingPassData = GetLightingPass(lightingPassName);
 		if (lightingPassData == nullptr)
@@ -99,5 +115,43 @@ namespace sh::render
 		if (it == properties.end())
 			return nullptr;
 		return &it->second;
+	}
+
+	SH_RENDER_API auto Shader::GetShaderAST() const -> const ShaderAST::ShaderNode&
+	{
+		return shaderNode;
+	}
+
+	SH_RENDER_API auto Shader::Serialize() const -> core::Json
+	{
+		core::Json mainJson = Super::Serialize();
+
+		mainJson["shader"] = core::Json{};
+		core::Json& json = mainJson["shader"];
+
+		json["AST"] = shaderNode.Serialize();
+
+		std::set<ShaderPass*> uniquePass;
+		for (const auto& [name, passVec] : passes)
+		{
+			for (ShaderPass* pass : passVec)
+				uniquePass.insert(pass);
+		}
+		for (const ShaderPass* pass : uniquePass)
+			json["passes"].push_back(pass->Serialize());
+
+		return mainJson;
+	}
+	SH_RENDER_API void Shader::Deserialize(const core::Json& json)
+	{
+		Super::Deserialize(json);
+
+		if (!json.contains("shader"))
+			return;
+
+		const core::Json& shaderJson = json["shader"];
+
+		if (shaderJson.contains("AST"))
+			shaderNode.Deserialize(shaderJson["AST"]);
 	}
 }//namepsace
