@@ -3,6 +3,7 @@
 
 #include <charconv>
 #include <mutex>
+#include <algorithm>
 namespace sh::core
 {
 	SH_CORE_API UUID::UUID(std::string_view str)
@@ -33,12 +34,15 @@ namespace sh::core
 	UUID::UUID(const std::array<uint32_t, 4>& uuid)
 	{
 		this->uuid = uuid;
-		uuidStr.reserve(32);
+		uuidStr.resize(32, '0');
 		for (int i = 0; i < 4; ++i)
 		{
 			std::array<char, 9> buffer{ '0','0','0','0','0','0','0','0','\0' };
-			std::to_chars(buffer.data(), buffer.data() + 8, uuid[i], 16);
-			uuidStr.append(buffer.data(), 8);
+			auto [ptr, err] = std::to_chars(buffer.data(), buffer.data() + 8, uuid[i], 16);
+			std::size_t len = ptr - buffer.data();
+			// ex) ab가 나왔다면, 000000ab로 저장해야한다.
+			for (int j = 0; j < len; ++j)
+				uuidStr[i * 8 + 8 - len + j] = buffer[j];
 		}
 	}
 	SH_CORE_API UUID::UUID(const UUID& other) noexcept
@@ -99,14 +103,17 @@ namespace sh::core
 			for (int i = 0; i < CHACHE_SIZE; ++i)
 			{
 				UUID uuid{};
-				uuid.uuidStr.reserve(32);
+				uuid.uuidStr.resize(32, '0');
 				for (int i = 0; i < 4; ++i)
 				{
 					uuid.uuid[i] = Util::RandomRange(static_cast<uint32_t>(0), std::numeric_limits<uint32_t>::max());
 
 					std::array<char, 9> buffer{ '0','0','0','0','0','0','0','0','\0' };
-					std::to_chars(buffer.data(), buffer.data() + 8, uuid.uuid[i], 16);
-					uuid.uuidStr.append(buffer.data(), 8);
+					auto [ptr, err] = std::to_chars(buffer.data(), buffer.data() + 8, uuid.uuid[i], 16);
+					std::size_t len = ptr - buffer.data();
+					// ex) ab가 나왔다면, 000000ab로 저장해야한다.
+					for (int j = 0; j < len; ++j)
+						uuid.uuidStr[i * 8 + 8 - len + j] = buffer[j];
 				}
 				uuids.push(std::move(uuid));
 			}
