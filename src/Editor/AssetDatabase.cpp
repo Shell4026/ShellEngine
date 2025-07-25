@@ -1,10 +1,6 @@
 ﻿#include "AssetDatabase.h"
 #include "AssetExtensions.h"
 #include "EditorWorld.h"
-#include "TextureLoader.h"
-#include "ModelLoader.h"
-#include "MaterialLoader.h"
-#include "ShaderLoader.h"
 #include "Meta.h"
 
 #include "Core/FileSystem.h"
@@ -18,8 +14,10 @@
 #include "Render/VulkanImpl/VulkanContext.h"
 
 #include "Game/World.h"
-#include "Game/TextureAsset.h"
-#include "Game/ModelAsset.h"
+#include "Game/TextureLoader.h"
+#include "Game/ModelLoader.h"
+#include "Game/MaterialLoader.h"
+#include "Game/ShaderLoader.h"
 
 #include <random>
 #include <istream>
@@ -47,7 +45,7 @@ namespace sh::editor
 	}
 	auto AssetDatabase::LoadMaterial(EditorWorld& world, const std::filesystem::path& dir) -> render::Material*
 	{
-		static MaterialLoader loader{ *world.renderer.GetContext() };
+		static game::MaterialLoader loader{ *world.renderer.GetContext() };
 		
 		auto matPtr = loader.Load(dir);
 		if (matPtr == nullptr)
@@ -86,7 +84,7 @@ namespace sh::editor
 		auto type = AssetExtensions::CheckType(extension);
 		if (type == AssetExtensions::Type::Texture)
 		{
-			static TextureLoader loader{ *world.renderer.GetContext() };
+			static game::TextureLoader loader{ *world.renderer.GetContext() };
 			render::Texture* texPtr = static_cast<render::Texture*>(LoadAsset(dir, loader));
 			if (texPtr != nullptr)
 				world.textures.AddResource(texPtr->GetUUID().ToString(), texPtr);
@@ -94,7 +92,7 @@ namespace sh::editor
 		}
 		if (type == AssetExtensions::Type::Model)
 		{
-			static ModelLoader loader{ *world.renderer.GetContext() };
+			static game::ModelLoader loader{ *world.renderer.GetContext() };
 			render::Model* modelPtr = static_cast<render::Model*>(LoadAsset(dir, loader));
 			if (modelPtr != nullptr)
 				world.models.AddResource(modelPtr->GetUUID().ToString(), modelPtr);
@@ -106,7 +104,7 @@ namespace sh::editor
 			if (world.renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan)
 			{
 				static render::vk::VulkanShaderPassBuilder passBuilder{ static_cast<render::vk::VulkanContext&>(*world.renderer.GetContext()) };
-				static ShaderLoader loader{ &passBuilder };
+				static game::ShaderLoader loader{ &passBuilder };
 				loader.SetCachePath(projectPath / "temp");
 				render::Shader* shaderPtr = static_cast<render::Shader*>(LoadAsset(dir, loader));
 				if (shaderPtr != nullptr)

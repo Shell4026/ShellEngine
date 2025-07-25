@@ -1,4 +1,5 @@
 ﻿#include "ShaderLoader.h"
+#include "ShaderAsset.h"
 
 #include "Core/FileSystem.h"
 #include "Core/Logger.h"
@@ -10,11 +11,9 @@
 #include "Render/ShaderGenerator.h"
 #include "Render/ShaderCreateInfo.h"
 
-#include "Game/ShaderAsset.h"
-
 #include <string>
 #include <filesystem>
-namespace sh::editor
+namespace sh::game
 {
 	namespace fs = std::filesystem;
 	ShaderLoader::ShaderLoader(render::ShaderPassBuilder* builder) :
@@ -28,17 +27,17 @@ namespace sh::editor
 	{
 	}
 
-	SH_EDITOR_API void ShaderLoader::SetCachePath(const std::filesystem::path& path)
+	SH_GAME_API void ShaderLoader::SetCachePath(const std::filesystem::path& path)
 	{
 		cachePath = path;
 	}
 
-	SH_EDITOR_API auto ShaderLoader::GetCachePath() const -> const std::filesystem::path&
+	SH_GAME_API auto ShaderLoader::GetCachePath() const -> const std::filesystem::path&
 	{
 		return cachePath;
 	}
 
-	SH_EDITOR_API auto ShaderLoader::Load(const std::filesystem::path& path) -> core::SObject*
+	SH_GAME_API auto ShaderLoader::Load(const std::filesystem::path& path) -> core::SObject*
 	{
 		auto src = core::FileSystem::LoadText(path);
 		if (!src.has_value())
@@ -102,7 +101,7 @@ namespace sh::editor
 		return shader;
 	}
 
-	SH_EDITOR_API auto ShaderLoader::Load(const core::Asset& asset) -> core::SObject*
+	SH_GAME_API auto ShaderLoader::Load(const core::Asset& asset) -> core::SObject*
 	{
 		if (std::strcmp(asset.GetType(), ASSET_NAME) != 0)
 		{
@@ -150,7 +149,7 @@ namespace sh::editor
 		return shader;
 	}
 
-	SH_EDITOR_API auto ShaderLoader::GetAssetName() const -> const char*
+	SH_GAME_API auto ShaderLoader::GetAssetName() const -> const char*
 	{
 		return "shad";
 	}

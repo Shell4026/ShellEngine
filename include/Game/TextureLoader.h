@@ -1,10 +1,9 @@
 ﻿#pragma once
 #include "Export.h"
+#include "TextureAsset.h"
 
 #include "Core/UUID.h"
 #include "Core/IAssetLoader.h"
-
-#include "Game/TextureAsset.h"
 
 #include "Render/Texture.h"
 
@@ -14,7 +13,7 @@ namespace sh::render
 {
 	class IRenderContext;
 }
-namespace sh::editor
+namespace sh::game
 {
 	class TextureLoader : public core::IAssetLoader
 	{
@@ -25,11 +24,11 @@ namespace sh::editor
 	private:
 		auto GenerateMipmaps(uint8_t* pixels, uint32_t width, uint32_t height) -> std::vector<std::vector<uint8_t>>;
 	public:
-		SH_EDITOR_API TextureLoader(const render::IRenderContext& context);
-		SH_EDITOR_API ~TextureLoader() = default;
-		SH_EDITOR_API auto Load(const std::filesystem::path& filePath) -> core::SObject* override;
-		SH_EDITOR_API auto Load(const core::Asset& asset) -> core::SObject* override;
+		SH_GAME_API TextureLoader(const render::IRenderContext& context);
+		SH_GAME_API ~TextureLoader() = default;
+		SH_GAME_API auto Load(const std::filesystem::path& filePath) -> core::SObject* override;
+		SH_GAME_API auto Load(const core::Asset& asset) -> core::SObject* override;
 
-		SH_EDITOR_API auto GetAssetName() const -> const char* override;
+		SH_GAME_API auto GetAssetName() const -> const char* override;
 	};
 }

@@ -9,7 +9,7 @@
 
 #include <glm/ext.hpp>
 
-namespace sh::editor
+namespace sh::game
 {
 	auto TextureLoader::GenerateMipmaps(uint8_t* pixels, uint32_t width, uint32_t height) -> std::vector<std::vector<uint8_t>>
 	{
@@ -41,7 +41,7 @@ namespace sh::editor
 		context(context)
 	{
 	}
-	SH_EDITOR_API auto TextureLoader::Load(const std::filesystem::path& filePath) -> core::SObject*
+	SH_GAME_API auto TextureLoader::Load(const std::filesystem::path& filePath) -> core::SObject*
 	{
 		int width, height, channel;
 		int info = stbi_info(filePath.string().c_str(), &width, &height, &channel);
@@ -67,7 +67,7 @@ namespace sh::editor
 
 		return texture;
 	}
-	SH_EDITOR_API auto TextureLoader::Load(const core::Asset& asset) -> core::SObject*
+	SH_GAME_API auto TextureLoader::Load(const core::Asset& asset) -> core::SObject*
 	{
 		if (std::strcmp(asset.GetType(), ASSET_NAME) != 0)
 		{
@@ -94,7 +94,7 @@ namespace sh::editor
 
 		return texture;
 	}
-	SH_EDITOR_API auto TextureLoader::GetAssetName() const -> const char*
+	SH_GAME_API auto TextureLoader::GetAssetName() const -> const char*
 	{
 		return ASSET_NAME;
 	}

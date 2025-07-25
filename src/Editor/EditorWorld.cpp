@@ -26,10 +26,9 @@
 #include "Game/Component/PickingCamera.h"
 #include "Game/Component/PickingRenderer.h"
 #include "Game/Component/LineRenderer.h"
-
-#include "ModelLoader.h"
-#include "TextureLoader.h"
-#include "ShaderLoader.h"
+#include "Game/ModelLoader.h"
+#include "Game/TextureLoader.h"
+#include "Game/ShaderLoader.h"
 
 namespace sh::editor
 {
@@ -129,9 +128,9 @@ namespace sh::editor
 
 		render::vk::VulkanShaderPassBuilder shaderBuilder{ static_cast<sh::render::vk::VulkanContext&>(*renderer.GetContext()) };
 
-		ShaderLoader shaderLoader{ &shaderBuilder };
-		TextureLoader texLoader{ *renderer.GetContext() };
-		ModelLoader modelLoader{ *renderer.GetContext() };
+		game::ShaderLoader shaderLoader{ &shaderBuilder };
+		game::TextureLoader texLoader{ *renderer.GetContext() };
+		game::ModelLoader modelLoader{ *renderer.GetContext() };
 
 		auto defaultShader = shaders.AddResource("DefaultShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/default.shader")));
 		auto lineShader = shaders.AddResource("Line", static_cast<render::Shader*>(shaderLoader.Load("shaders/line.shader")));

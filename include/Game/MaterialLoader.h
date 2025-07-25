@@ -10,15 +10,15 @@ namespace sh::render
 	class Material;
 }
 
-namespace sh::editor
+namespace sh::game
 {
 	class MaterialLoader
 	{
 	private:
 		const render::IRenderContext& context;
 	public:
-		SH_EDITOR_API MaterialLoader(const render::IRenderContext& context);
+		SH_GAME_API MaterialLoader(const render::IRenderContext& context);
 
-		SH_EDITOR_API virtual auto Load(const std::filesystem::path& path) -> render::Material*;
+		SH_GAME_API virtual auto Load(const std::filesystem::path& path) -> render::Material*;
 	};
 }//namespace

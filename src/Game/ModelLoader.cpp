@@ -1,12 +1,11 @@
 ﻿#include "ModelLoader.h"
+#include "ModelAsset.h"
 
 #include "Core/SObject.h"
 #include "Core/Logger.h"
 #include "Core/FileSystem.h"
 
 #include "Render/Model.h"
-
-#include "Game/ModelAsset.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "External/tinyobjloader/tiny_obj_loader.h"
@@ -19,9 +18,9 @@
 
 #include <string>
 #include <cstdint>
-namespace sh::editor
+namespace sh::game
 {
-	SH_EDITOR_API auto ModelLoader::LoadObj(const std::filesystem::path& path) -> render::Model*
+	SH_GAME_API auto ModelLoader::LoadObj(const std::filesystem::path& path) -> render::Model*
 	{
 		tinyobj::attrib_t attrib;
 		std::vector<tinyobj::shape_t> shapes;
@@ -108,7 +107,7 @@ namespace sh::editor
 		model->AddMeshes(std::move(rootNode));
 		return model;
 	}
-	SH_EDITOR_API auto ModelLoader::LoadGLTF(const std::filesystem::path& dir) -> render::Model*
+	SH_GAME_API auto ModelLoader::LoadGLTF(const std::filesystem::path& dir) -> render::Model*
 	{
 		static tinygltf::TinyGLTF gltfContext;
 		tinygltf::Model gltfModel;
@@ -313,7 +312,7 @@ namespace sh::editor
 	{
 	}
 
-	SH_EDITOR_API auto ModelLoader::Load(const std::filesystem::path& path) -> core::SObject*
+	SH_GAME_API auto ModelLoader::Load(const std::filesystem::path& path) -> core::SObject*
 	{
 		std::string ext = path.extension().string();
 		if (ext == ".obj")
@@ -323,7 +322,7 @@ namespace sh::editor
 		return nullptr;
 	}
 
-	SH_EDITOR_API auto ModelLoader::Load(const core::Asset& asset) -> core::SObject*
+	SH_GAME_API auto ModelLoader::Load(const core::Asset& asset) -> core::SObject*
 	{
 		if (std::strcmp(asset.GetType(), ASSET_NAME) != 0)
 		{
@@ -415,7 +414,7 @@ namespace sh::editor
 		return model;
 	}
 
-	SH_EDITOR_API auto ModelLoader::GetAssetName() const -> const char*
+	SH_GAME_API auto ModelLoader::GetAssetName() const -> const char*
 	{
 		return ASSET_NAME;
 	}

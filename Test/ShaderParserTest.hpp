@@ -6,7 +6,7 @@
 #include "Render/ShaderGenerator.h"
 #include "Render/VulkanImpl/VulkanShaderPassBuilder.h"
 
-#include "Editor/ShaderLoader.h"
+#include "Game/ShaderLoader.h"
 
 #ifdef Bool
 #undef Bool

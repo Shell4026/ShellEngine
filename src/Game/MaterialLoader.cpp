@@ -7,13 +7,13 @@
 #include "Render/ShaderPass.h"
 #include "Render/Material.h"
 
-namespace sh::editor
+namespace sh::game
 {
-	SH_EDITOR_API MaterialLoader::MaterialLoader(const render::IRenderContext& context) :
+	SH_GAME_API MaterialLoader::MaterialLoader(const render::IRenderContext& context) :
 		context(context)
 	{
 	}
-	SH_EDITOR_API auto MaterialLoader::Load(const std::filesystem::path& path) -> render::Material*
+	SH_GAME_API auto MaterialLoader::Load(const std::filesystem::path& path) -> render::Material*
 	{
 		auto file = core::FileSystem::LoadText(path);
 		if (!file.has_value())

@@ -20,7 +20,7 @@ namespace sh::render
 	class IRenderContext;
 	class Model;
 }
-namespace sh::editor
+namespace sh::game
 {
 	class ModelLoader : public core::IAssetLoader
 	{
@@ -38,7 +38,7 @@ namespace sh::editor
 					&& uv == other.uv;
 			}
 		};
-		friend std::hash<sh::editor::ModelLoader::Indices>;
+		friend std::hash<sh::game::ModelLoader::Indices>;
 		static constexpr const char* ASSET_NAME = "mesh";
 	public:
 		const render::IRenderContext& context;
@@ -48,25 +48,25 @@ namespace sh::editor
 			const glm::vec2& uv0, const glm::vec2& uv1, const glm::vec2& uv2) const->glm::vec3;
 		void CreateTangents(std::vector<render::Mesh::Vertex>& verts, const std::vector<uint32_t>& indices);
 	protected:
-		SH_EDITOR_API auto LoadObj(const std::filesystem::path& dir) -> render::Model*;
-		SH_EDITOR_API auto LoadGLTF(const std::filesystem::path& dir) -> render::Model*;
+		SH_GAME_API auto LoadObj(const std::filesystem::path& dir) -> render::Model*;
+		SH_GAME_API auto LoadGLTF(const std::filesystem::path& dir) -> render::Model*;
 	public:
-		SH_EDITOR_API ModelLoader(const render::IRenderContext& context);
+		SH_GAME_API ModelLoader(const render::IRenderContext& context);
 
-		SH_EDITOR_API auto Load(const std::filesystem::path& filename) -> core::SObject* override;
-		SH_EDITOR_API auto Load(const core::Asset& asset) -> core::SObject* override;
+		SH_GAME_API auto Load(const std::filesystem::path& filename) -> core::SObject* override;
+		SH_GAME_API auto Load(const core::Asset& asset) -> core::SObject* override;
 
-		SH_EDITOR_API auto GetAssetName() const -> const char*;
+		SH_GAME_API auto GetAssetName() const -> const char*;
 	};
 }//namespace
 
 namespace std
 {
 	template <>
-	class hash<sh::editor::ModelLoader::Indices>
+	class hash<sh::game::ModelLoader::Indices>
 	{
 	public:
-		auto operator()(const sh::editor::ModelLoader::Indices& indices) const -> std::uint64_t
+		auto operator()(const sh::game::ModelLoader::Indices& indices) const -> std::uint64_t
 		{
 			std::hash<uint32_t> hasher{};
 			std::size_t hash1 = sh::core::Util::CombineHash(hasher(indices.vert), hasher(indices.normal));

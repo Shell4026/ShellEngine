@@ -1,6 +1,7 @@
 ﻿#include "EditorResource.h"
 #include "EditorWorld.h"
-#include "TextureLoader.h"
+
+#include "Game/TextureLoader.h"
 
 namespace sh::editor
 {
@@ -9,7 +10,7 @@ namespace sh::editor
 		this->world = &world;
 
 		auto& ctx = *world.renderer.GetContext();
-		TextureLoader texLoader{ ctx };
+		game::TextureLoader texLoader{ ctx };
 
 		folderIcon.Create(ctx, *world.textures.AddResource("FolderIcon", static_cast<render::Texture*>(texLoader.Load("textures/folder.png"))));
 		fileIcon.Create(ctx, *world.textures.AddResource("FileIcon", static_cast<render::Texture*>(texLoader.Load("textures/file.png"))));
