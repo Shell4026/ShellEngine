@@ -32,49 +32,82 @@ namespace sh::editor
 			json.clear();
 			return false;
 		}
-		hash = json["metaHash"];
-
-		if (!json.contains("obj"))
-		{
-			SH_ERROR_FORMAT("Not found obj key from {}", path.u8string());
-			json.clear();
-			return false;
-		}
-		core::Json objJson{};
-		objJson = json["obj"];
-
-		std::hash<std::string> hasher{};
-		std::size_t objHash = hasher(objJson.dump());
-
-		bChanged = hash != objHash;
-
-		if (!objJson.contains("uuid"))
+		if (!json.contains("uuid"))
 		{
 			SH_ERROR_FORMAT("Not found UUID from {}", path.u8string());
 			json.clear();
 			return false;
 		}
-		uuid = core::UUID{ objJson["uuid"].get<std::string>() };
+		if (!json.contains("typeHash"))
+		{
+			SH_ERROR_FORMAT("Not found typeHash from {}", path.u8string());
+			json.clear();
+			return false;
+		}
+		if (!json.contains("name"))
+		{
+			SH_ERROR_FORMAT("Not found name from {}", path.u8string());
+			json.clear();
+			return false;
+		}
+		hash = json["metaHash"];
+		if (json.contains("obj"))
+		{
+			const core::Json objJson = json["obj"];
+			std::hash<std::string> hasher{};
+			const std::size_t objHash = hasher(objJson.dump());
+
+			bChanged = hash != objHash;
+		}
+		uuid = core::UUID{ json["uuid"].get<std::string>() };
+		typeHash = json["typeHash"];
+		name = json["name"];
 		return true;
 	}
 	SH_EDITOR_API auto Meta::DeserializeSObject(core::SObject& obj) const -> bool
 	{
 		assert(IsLoad());
+		if (!json.contains("obj"))
+			return false;
 		obj.Deserialize(json["obj"]);
 		return true;
 	}
-	SH_EDITOR_API void Meta::Save(const core::SObject& obj, const std::filesystem::path& path, bool bCalcHash)
+	SH_EDITOR_API void Meta::SaveWithObj(const core::SObject& obj, const std::filesystem::path& path, bool bCalcHash)
 	{
 		core::Json metaJson{};
-		metaJson["obj"] = obj.Serialize();
+		metaJson["uuid"] = obj.GetUUID().ToString();
+		metaJson["typeHash"] = obj.GetType().type.hash;
+		metaJson["name"] = obj.GetName().ToString();
+		metaJson["version"] = 1;
 
 		if (bCalcHash)
 		{
 			std::hash<std::string> hasher{};
-			metaJson["metaHash"] = hasher(metaJson["obj"].dump());
+			metaJson["metaHash"] = hasher(obj.Serialize().dump());
 		}
 		else
 			metaJson["metaHash"] = hash;
+
+		metaJson["obj"] = obj.Serialize();
+
+		std::ofstream os{ path };
+		if (os.is_open())
+		{
+			os << std::setw(4) << metaJson;
+			os.close();
+		}
+		else
+		{
+			SH_ERROR_FORMAT("Can't create meta: {}", path.u8string());
+		}
+	}
+	SH_EDITOR_API void Meta::Save(const core::SObject& obj, const std::filesystem::path& path, bool bCalcHash)
+	{
+		core::Json metaJson{};
+		metaJson["uuid"] = obj.GetUUID().ToString();
+		metaJson["typeHash"] = obj.GetType().type.hash;
+		metaJson["name"] = obj.GetName().ToString();
+		metaJson["version"] = VERSION;
 
 		std::ofstream os{ path };
 		if (os.is_open())
@@ -91,9 +124,29 @@ namespace sh::editor
 	{
 		return !json.empty();
 	}
+	SH_EDITOR_API auto Meta::HasObjData() const -> bool
+	{
+		if (!IsLoad())
+			return false;
+		return json.contains("obj");
+	}
 	SH_EDITOR_API auto Meta::GetUUID() const -> const core::UUID&
 	{
 		return uuid;
+	}
+	SH_EDITOR_API auto Meta::GetTypeHash() const -> std::size_t
+	{
+		return typeHash;
+	}
+	SH_EDITOR_API auto Meta::GetName() const -> const std::string&
+	{
+		return name;
+	}
+	SH_EDITOR_API auto Meta::GetObjJson() const -> const core::Json*
+	{
+		if (!HasObjData())
+			return nullptr;
+		return &json["obj"];
 	}
 	SH_EDITOR_API auto Meta::IsChanged() const -> bool
 	{

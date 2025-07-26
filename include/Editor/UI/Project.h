@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Export.h"
+#include "ProjectSetting.h"
 
 #include "Core/Reflection.hpp"
 #include "Core/SContainer.hpp"
@@ -27,6 +28,8 @@ namespace sh::editor
 
 		AssetDatabase& assetDatabase;
 
+		ProjectSetting setting;
+
 		std::vector<std::filesystem::path> foldersPath;
 		std::vector<std::filesystem::path> filesPath;
 		std::vector<std::string> invisibleExtensions;
@@ -39,6 +42,7 @@ namespace sh::editor
 
 		static bool bInitResource;
 		bool isOpen = false;
+		bool bSettingUI = false;
 	public:
 		static constexpr const char* name = "Project";
 		EditorWorld& world;
@@ -59,7 +63,12 @@ namespace sh::editor
 
 		void LoadUserModule();
 
+		void SaveProjectSetting();
+		void LoadProjectSetting();
+
 		void CopyProjectTemplate(const std::filesystem::path& targetDir);
+
+		void RenderSettingUI();
 	public:
 		SH_EDITOR_API Project(EditorWorld& world);
 		SH_EDITOR_API ~Project();
@@ -79,7 +88,13 @@ namespace sh::editor
 
 		SH_EDITOR_API void ReloadModule();
 
+		SH_EDITOR_API auto GetProjectPath() const -> const std::filesystem::path&;
 		SH_EDITOR_API auto GetAssetPath() const -> const std::filesystem::path&;
 		SH_EDITOR_API auto GetBinPath() const -> const std::filesystem::path&;
+		SH_EDITOR_API auto GetProjectSetting() const -> ProjectSetting&;
+
+		SH_EDITOR_API void OpenSettingUI();
+		
+		SH_EDITOR_API void Build();
 	};
 }

@@ -3,6 +3,7 @@
 #include "EditorResource.h"
 #include "AssetDatabase.h"
 #include "AssetExtensions.h"
+#include "BuildSystem.h"
 
 #include "Core/ModuleLoader.h"
 #include "Core/FileSystem.h"
@@ -33,6 +34,7 @@ namespace sh::editor
 
 	Project::~Project()
 	{
+		SaveProjectSetting();
 		assetDatabase.SaveDatabase(libraryPath / "AssetDB.json");
 	}
 
@@ -273,6 +275,30 @@ namespace sh::editor
 		}
 	}
 
+	void Project::SaveProjectSetting()
+	{
+		std::filesystem::path settingPath = rootPath / "ProjectSetting.json";
+		SH_INFO_FORMAT("Save project setting: {}", settingPath.u8string());
+		std::ofstream os{ settingPath };
+		os << std::setw(4) << setting.Serialize();
+		os.close();
+	}
+
+	void Project::LoadProjectSetting()
+	{
+		std::filesystem::path settingPath = rootPath / "ProjectSetting.json";
+		auto stringOpt = core::FileSystem::LoadText(settingPath);
+		if (stringOpt.has_value())
+		{
+			if (stringOpt.value().empty())
+				SaveProjectSetting();
+			else
+				setting.Deserialize(core::Json::parse(stringOpt.value()));
+		}
+		else
+			SaveProjectSetting();
+	}
+
 	void Project::CopyProjectTemplate(const std::filesystem::path& targetDir)
 	{
 		std::filesystem::path projectTemplate{ std::filesystem::current_path() / "ProjectTemplate" };
@@ -287,6 +313,27 @@ namespace sh::editor
 			cmakeStr = cmakeStr.replace(it, directoryStr.length(), std::filesystem::current_path().u8string());
 			core::FileSystem::SaveText(cmakeStr, targetDir / "CMakeLists.txt");
 		}
+	}
+
+	void Project::RenderSettingUI()
+	{
+		ImGui::SetNextWindowSize(ImVec2{ 512, 512 }, ImGuiCond_::ImGuiCond_Appearing);
+		ImGui::Begin("Project Setting", &bSettingUI);
+		ImGui::Text("Starting world");
+		std::string startingWorldStr = setting.startingWorldPath.empty() ? "None" : setting.startingWorldPath.u8string().c_str();
+		ImGui::Button(startingWorldStr.c_str(), ImVec2{-1, 20});
+		if (ImGui::BeginDragDropTarget())
+		{
+			std::string worldType{ core::reflection::TypeTraits::GetTypeName<game::World>() };
+			const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(worldType.c_str());
+			if (payload)
+			{
+				std::string pathStr(reinterpret_cast<const char*>(payload->Data), payload->DataSize);
+				setting.startingWorldPath = std::filesystem::u8path(pathStr);
+				SaveProjectSetting();
+			}
+		}
+		ImGui::End();
 	}
 
 	SH_EDITOR_API void Project::Update()
@@ -330,6 +377,9 @@ namespace sh::editor
 		ImGui::PopStyleVar();
 		RenderNameBar();
 		ImGui::End();
+
+		if (bSettingUI)
+			RenderSettingUI();
 	}
 
 	SH_EDITOR_API void Project::CreateNewProject(const std::filesystem::path& dir)
@@ -355,6 +405,7 @@ namespace sh::editor
 		binaryPath = rootPath / "bin";
 		libraryPath = rootPath / "Library";
 		currentPath = dir;
+		LoadProjectSetting();
 		GetAllFiles(currentPath);
 
 		LoadUserModule();
@@ -430,6 +481,10 @@ namespace sh::editor
 			}
 		);
 	}
+	SH_EDITOR_API auto Project::GetProjectPath() const -> const std::filesystem::path&
+	{
+		return rootPath;
+	}
 	SH_EDITOR_API auto Project::GetAssetPath() const -> const std::filesystem::path&
 	{
 		return assetPath;
@@ -437,5 +492,18 @@ namespace sh::editor
 	SH_EDITOR_API auto Project::GetBinPath() const -> const std::filesystem::path&
 	{
 		return binaryPath;
+	}
+	SH_EDITOR_API auto Project::GetProjectSetting() const -> ProjectSetting&
+	{
+		return const_cast<ProjectSetting&>(setting);
+	}
+	SH_EDITOR_API void Project::OpenSettingUI()
+	{
+		bSettingUI = true;
+	}
+	SH_EDITOR_API void Project::Build()
+	{
+		BuildSystem builder{};
+		builder.Build(*this, world, binaryPath);
 	}
 }

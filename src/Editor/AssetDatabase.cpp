@@ -58,6 +58,9 @@ namespace sh::editor
 
 		uuids.insert_or_assign(relativePath, matPtr->GetUUID());
 		paths.insert_or_assign(matPtr->GetUUID(), AssetInfo{ relativePath, relativePath });
+
+		Meta meta{};
+		meta.Save(*matPtr, GetMetaDirectory(projectPath / relativePath));
 		return matPtr;
 	}
 	void AssetDatabase::SaveMaterial(render::Material* mat, const std::filesystem::path& dir)
@@ -144,7 +147,7 @@ namespace sh::editor
 			{
 				render::Texture* texture = reinterpret_cast<render::Texture*>(obj);
 				Meta meta{};
-				meta.Save(*texture, GetMetaDirectory(projectPath / originalPath), false);
+				meta.SaveWithObj(*texture, GetMetaDirectory(projectPath / originalPath), false);
 			}
 		}
 		dirtyObjs.clear();
@@ -231,7 +234,7 @@ namespace sh::editor
 		uuids.insert_or_assign(relativePath, objPtr->GetUUID());
 		paths.insert_or_assign(objPtr->GetUUID(), AssetInfo{ relativePath, std::filesystem::relative(cachePath, projectPath) });
 
-		meta.Save(*objPtr, metaDir);
+		meta.SaveWithObj(*objPtr, metaDir);
 		return objPtr;
 	}
 	AssetDatabase::AssetDatabase()
@@ -336,7 +339,25 @@ namespace sh::editor
 		return true;
 	}
 
-	SH_EDITOR_API auto AssetDatabase::GetAssetUUID(const std::filesystem::path& assetPath) -> std::optional<core::UUID>
+	SH_EDITOR_API auto AssetDatabase::GetAsset(const core::UUID& uuid) -> std::unique_ptr<core::Asset>
+	{
+		auto it = paths.find(uuid);
+		if (it == paths.end())
+			return nullptr;
+
+		return core::AssetImporter::Load(projectPath / it->second.cachePath);
+	}
+
+		auto AssetDatabase::GetAssetOriginalPath(const core::UUID& uuid) const -> std::optional<std::filesystem::path>
+	{
+		auto it = paths.find(uuid);
+		if (it == paths.end())
+			return std::nullopt;
+
+		return it->second.originalPath;
+	}
+
+		auto AssetDatabase::GetAssetUUID(const std::filesystem::path& assetPath) -> std::optional<core::UUID>
 	{
 		std::filesystem::path relativePath = std::filesystem::relative(assetPath, projectPath);
 		auto it = uuids.find(relativePath);
