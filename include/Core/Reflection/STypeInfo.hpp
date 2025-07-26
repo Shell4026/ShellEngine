@@ -104,6 +104,7 @@ namespace sh::core::reflection
 		STypeInfo(const STypeInfo& other) = delete;
 		SH_CORE_API ~STypeInfo();
 
+		SH_CORE_API auto AddProperty(std::unique_ptr<Property>&& prop) -> Property*;
 		SH_CORE_API auto AddProperty(const Property& prop) -> Property*;
 
 		SH_CORE_API auto operator==(const STypeInfo& other) const -> bool;

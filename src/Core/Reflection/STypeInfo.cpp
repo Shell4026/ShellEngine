@@ -11,6 +11,18 @@ namespace sh::core::reflection
 		STypes::types.erase(hash);
 	}
 
+	SH_CORE_API auto STypeInfo::AddProperty(std::unique_ptr<Property>&& prop) -> Property*
+	{
+		if (GetProperty(prop->GetName()) != nullptr)
+			return nullptr;
+		properties.push_back(std::move(prop));
+		auto propPtr = properties.back().get();
+		if (propPtr->isSObjectPointer)
+			sobjPtrs.push_back(propPtr);
+		else if (propPtr->isSObjectPointerContainer)
+			sobjPtrContainers.push_back(propPtr);
+		return propPtr;
+	}
 	SH_CORE_API auto STypeInfo::AddProperty(const Property& prop) -> Property*
 	{
 		if (GetProperty(prop.GetName()) != nullptr)
