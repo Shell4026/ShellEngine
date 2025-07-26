@@ -440,7 +440,7 @@ namespace sh::core::reflection
 		template<typename ThisType, typename T, typename VariablePointer, VariablePointer ptr>
 		Property(const PropertyCreateInfo<ThisType, T, VariablePointer, ptr>& createInfo) :
 			type(GetType<T>()),
-			pureTypeName(GetTypeName<std::remove_const_t<std::remove_pointer_t<std::remove_reference_t<T>>>>()),
+			pureTypeName(TypeTraits::GetTypeName<std::remove_const_t<std::remove_pointer_t<std::remove_reference_t<T>>>>()),
 			name(createInfo.name),
 			containerNestedLevel(GetContainerNestedCount<T>::value),
 			bConstProperty(createInfo.option.bConst),

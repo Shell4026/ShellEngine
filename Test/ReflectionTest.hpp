@@ -83,6 +83,22 @@ public:
     }
 };
 
+namespace A::B
+{
+    class C
+    {
+    public:
+        class D
+        {
+
+        };
+    };
+}
+struct TestStruct
+{
+
+};
+
 TEST(ReflectionTest, TypeInfoTest) 
 {
     using namespace sh::core;
@@ -102,6 +118,44 @@ TEST(ReflectionTest, TypeInfoTest)
     auto& intType = reflection::GetType<const int>();
     EXPECT_EQ(reflection::GetType<int>(), reflection::GetType<const int>());
     EXPECT_TRUE(intType.isConst);
+}
+TEST(ReflectionTest, TypeNameTest)
+{
+    using namespace sh::core;
+    {
+        std::string typeName = std::string{ reflection::TypeTraits::GetTypeName<int>() };
+        EXPECT_EQ(typeName, "int");
+        typeName = std::string{ reflection::TypeTraits::GetTypeName<int32_t>() };
+        EXPECT_EQ(typeName, "int");
+    }
+    {
+        std::string typeName = std::string{ reflection::TypeTraits::GetTypeName<const int>() };
+        EXPECT_EQ(typeName, "const int");
+    }
+    {
+        std::string typeName = std::string{ reflection::TypeTraits::GetTypeName<TestStruct>() };
+        EXPECT_EQ(typeName, "TestStruct");
+    }
+    {
+        struct A
+        {
+        };
+        std::string typeName = std::string{ reflection::TypeTraits::GetTypeName<A>() };
+        // MSVC: struct ReflectionTest_TypeNameTest_Test::TestBody::A
+        // GCC: ReflectionTest_TypeNameTest_Test::TestBody()::A
+        EXPECT_NE(typeName, "A");
+    }
+    {
+        std::string typeName = std::string{ reflection::TypeTraits::GetTypeName<A::B::C>() };
+        EXPECT_EQ(typeName, "A::B::C");
+        typeName = std::string{ reflection::TypeTraits::GetTypeName<A::B::C::D>() };
+        EXPECT_EQ(typeName, "A::B::C::D");
+    }
+    {
+        using namespace A::B;
+        std::string typeName = std::string{ reflection::TypeTraits::GetTypeName<C>() };
+        EXPECT_EQ(typeName, "A::B::C");
+    }
 }
 
 TEST(ReflectionTest, ContainerTest)
@@ -124,7 +178,7 @@ TEST(ReflectionTest, PropertyTest)
     ASSERT_NE(numbersProperty, nullptr);
 
     EXPECT_EQ(*numberProperty->Get<int>(&derived), 42);
-    EXPECT_EQ(numbersProperty->type.name, sh::core::reflection::GetTypeName<std::vector<int>>());
+    EXPECT_EQ(numbersProperty->type.name, sh::core::reflection::TypeTraits::GetTypeName<std::vector<int>>());
 
     auto begin = numbersProperty->Begin(&derived);
     auto end = numbersProperty->End(&derived);

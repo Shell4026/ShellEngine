@@ -21,7 +21,7 @@ namespace sh::editor
 
 	SH_EDITOR_API auto Inspector::GetIcon(std::string_view typeName) -> const game::GUITexture*
 	{
-		if (typeName == core::reflection::GetTypeName<render::Mesh>())
+		if (typeName == core::reflection::TypeTraits::GetTypeName<render::Mesh>())
 		{
 			return EditorResource::GetInstance()->GetIcon(EditorResource::Icon::Mesh);
 		}

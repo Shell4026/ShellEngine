@@ -144,54 +144,69 @@ namespace sh::core::reflection
 	template<typename T>
 	struct HasErase<T, std::void_t<decltype(std::declval<T>().erase(std::declval<typename T::iterator>()))>> : std::bool_constant<true> {};
 
-	template<typename T>
-	constexpr auto RawTypeName()
+	class TypeTraits
 	{
+	private:
+		template<typename T>
+		static constexpr auto RawTypeName()
+		{
 #if defined(__clang__)
-		return __PRETTY_FUNCTION__;
+			return __PRETTY_FUNCTION__;
 #elif defined(__GNUC__)
-		return __PRETTY_FUNCTION__;
+			return __PRETTY_FUNCTION__;
 #elif defined(_MSC_VER)
-		return __FUNCSIG__;
+			return __FUNCSIG__;
 #else
 #   error "Unsupported compiler"
 #endif
-	}
-	template<typename T>
-	constexpr std::string_view TypePrefix()
-	{
+		}
+		template<typename T>
+		static constexpr std::string_view TypePrefix()
+		{
 #if defined(__clang__)
-		return "constexpr auto sh::core::reflection::RawTypeName() [with T = ";
+			return "static constexpr auto sh::core::reflection::TypeTraits::RawTypeName() [with T = ";
 #elif defined(__GNUC__)
-		return "constexpr auto sh::core::reflection::RawTypeName() [with T = ";
+			return "static constexpr auto sh::core::reflection::TypeTraits::RawTypeName() [with T = ";
 #elif defined(_MSC_VER)
-		return "auto __cdecl sh::core::reflection::RawTypeName<";
+			return "auto __cdecl sh::core::reflection::TypeTraits::RawTypeName<";
 #endif
-	}
-	template<typename T>
-	constexpr std::string_view TypeSuffix()
-	{
+		}
+		template<typename T>
+		static constexpr std::string_view TypeSuffix()
+		{
 #if defined(__clang__)
-		return "]";
+			return "]";
 #elif defined(__GNUC__)
-		return "]";
+			return "]";
 #elif defined(_MSC_VER)
-		return ">(void)";
+			return ">(void)";
 #endif
-	}
+		}
+		static constexpr auto CleanTypeName(std::string_view name) -> std::string_view
+		{
+			constexpr std::string_view classKeyword = "class ";
+			constexpr std::string_view structKeyword = "struct ";
+			if (name.find(classKeyword) != std::string_view::npos)
+				name.remove_prefix(classKeyword.size());
+			else if (name.find(structKeyword) != std::string_view::npos)
+				name.remove_prefix(structKeyword.size());
+			return name;
+		}
+	public:
+		/// @brief 타입 이름(문자열)을 가져오는 함수
+		/// @tparam T 타입
+		template<typename T>
+		static constexpr auto GetTypeName() -> std::string_view
+		{
+			constexpr std::string_view raw = RawTypeName<T>();
+			constexpr std::string_view prefix = TypePrefix<T>();
+			constexpr std::string_view suffix = TypeSuffix<T>();
 
-	/// @brief 타입 이름(문자열)을 가져오는 함수
-	/// @tparam T 타입
-	template<typename T>
-	constexpr auto GetTypeName() -> std::string_view
-	{
-		constexpr std::string_view raw = RawTypeName<T>();
-		constexpr std::string_view prefix = TypePrefix<T>();
-		constexpr std::string_view suffix = TypeSuffix<T>();
+			std::string_view name = raw;
+			name.remove_prefix(prefix.size());
+			name.remove_suffix(suffix.size());
 
-		std::string_view name = raw;
-		name.remove_prefix(prefix.size());
-		name.remove_suffix(suffix.size());
-		return name;
-	}
+			return CleanTypeName(name);
+		}
+	};
 }//namespace

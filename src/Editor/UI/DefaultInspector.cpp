@@ -28,7 +28,7 @@ namespace sh::editor
 			if (ImGui::BeginDragDropTarget())
 			{
 				auto p = ImGui::GetCurrentContext()->DragDropPayload;
-				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(std::string{ core::reflection::GetTypeName<render::Shader>() }.c_str());
+				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(std::string{ core::reflection::TypeTraits::GetTypeName<render::Shader>() }.c_str());
 				if (payload)
 				{
 					render::Shader* shader = *reinterpret_cast<render::Shader**>(payload->Data);
@@ -101,7 +101,7 @@ namespace sh::editor
 					if (ImGui::BeginDragDropTarget())
 					{
 						auto p = ImGui::GetCurrentContext()->DragDropPayload;
-						const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(std::string{ core::reflection::GetTypeName<render::Texture>() }.c_str());
+						const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(std::string{ core::reflection::TypeTraits::GetTypeName<render::Texture>() }.c_str());
 						if (payload)
 						{
 							const render::Texture* texture = *reinterpret_cast<render::Texture**>(payload->Data);

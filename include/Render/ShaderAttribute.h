@@ -69,7 +69,7 @@ namespace sh::render
 		ShaderAttributeBase(name, std::is_integral_v<T>), 
 		stride(sizeof(T))
 	{
-		mTypeName = core::reflection::GetTypeName<T>();
+		mTypeName = core::reflection::TypeTraits::GetTypeName<T>();
 	}
 	template<typename T>
 	inline ShaderAttribute<T>::ShaderAttribute(std::string_view name, std::initializer_list<T>&& datas) :
@@ -77,21 +77,21 @@ namespace sh::render
 		stride(sizeof(T))
 	{
 		SetData(datas);
-		mTypeName = core::reflection::GetTypeName<T>();
+		mTypeName = core::reflection::TypeTraits::GetTypeName<T>();
 	}
 	template<typename T>
 	inline ShaderAttribute<T>::ShaderAttribute(std::string_view name, const std::vector<T>& data) :
 		ShaderAttributeBase(name, std::is_integral_v<T>),
 		data(data), stride(sizeof(T))
 	{
-		mTypeName = core::reflection::GetTypeName<T>();
+		mTypeName = core::reflection::TypeTraits::GetTypeName<T>();
 	}
 	template<typename T>
 	inline ShaderAttribute<T>::ShaderAttribute(std::string_view name, std::vector<T>&& data) :
 		ShaderAttributeBase(name, std::is_integral_v<T>),
 		data(std::move(data)), stride(sizeof(T))
 	{
-		mTypeName = core::reflection::GetTypeName<T>();
+		mTypeName = core::reflection::TypeTraits::GetTypeName<T>();
 	}
 	template<typename T>
 	inline ShaderAttribute<T>::ShaderAttribute(ShaderAttribute&& other) noexcept :
