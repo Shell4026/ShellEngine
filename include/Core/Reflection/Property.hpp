@@ -459,6 +459,11 @@ namespace sh::core::reflection
 		}
 		SH_CORE_API Property(const Property& other) noexcept;
 
+		SH_CORE_API auto operator==(const Property& other) -> bool;
+		SH_CORE_API auto operator==(const TypeInfo& type) -> bool;
+		SH_CORE_API auto operator!=(const Property& other) -> bool;
+		SH_CORE_API auto operator!=(const TypeInfo& type) -> bool;
+
 		/// @brief 프로퍼티가 가지고 있는 값을 반환하는 함수.
 		/// @brief 주의: 타입 검사를 하지 않음.
 		/// @tparam T 반환 타입

@@ -90,6 +90,23 @@ namespace sh::core::reflection
 		isSObjectPointerContainer(other.isSObjectPointerContainer)
 	{
 	}
+	SH_CORE_API auto Property::operator==(const Property& other) -> bool
+	{
+		return type == other.type && isConst == other.isConst;
+	}
+	SH_CORE_API auto Property::operator==(const TypeInfo& type) -> bool
+	{
+		return this->type == type && isConst == type.isConst;
+	}
+	SH_CORE_API auto Property::operator!=(const Property& other) -> bool
+	{
+		return !operator==(other);
+	}
+	SH_CORE_API auto Property::operator!=(const TypeInfo& type) -> bool
+	{
+		return !operator==(type);
+	}
+
 	SH_CORE_API auto Property::GetName() const -> const core::Name&
 	{
 		return name;
