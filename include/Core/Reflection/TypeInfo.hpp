@@ -11,7 +11,7 @@ namespace sh::core::reflection
 		const std::size_t size;
 		const std::size_t hash;
 		constexpr TypeInfoCreateInfo() :
-			name(TypeTraits::GetTypeName<std::remove_const_t<T>>()), size(sizeof(T)), hash(Util::ConstexprHash(TypeTraits::GetTypeName<std::remove_const_t<T>>()))
+			name(TypeTraits::GetTypeName<std::remove_const_t<T>>()), size(sizeof(T)), hash(TypeTraits::GetTypeHash<std::remove_const_t<T>>())
 		{}
 	};
 

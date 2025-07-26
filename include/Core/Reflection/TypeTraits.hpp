@@ -1,4 +1,6 @@
 ﻿#pragma once
+#include "../Util.h"
+
 #include <type_traits>
 #include <array>
 #include <vector>
@@ -207,6 +209,12 @@ namespace sh::core::reflection
 			name.remove_suffix(suffix.size());
 
 			return CleanTypeName(name);
+		}
+		template<typename T>
+		static constexpr auto GetTypeHash() -> std::size_t
+		{
+			std::string_view typeName = GetTypeName<T>();
+			return Util::ConstexprHash(typeName);
 		}
 	};
 }//namespace

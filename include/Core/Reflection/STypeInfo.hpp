@@ -20,7 +20,7 @@ public:\
 	{\
 		if(stypeInfo == nullptr)\
 		{\
-			std::size_t hash = typeid(class_name).hash_code();\
+			constexpr std::size_t hash = sh::core::reflection::TypeTraits::GetTypeHash<class_name>();\
 			auto it = sh::core::reflection::STypes::types.find(hash);\
 			if (it == sh::core::reflection::STypes::types.end())\
 			{\
