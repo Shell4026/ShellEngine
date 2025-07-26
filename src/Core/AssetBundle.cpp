@@ -65,7 +65,7 @@ namespace sh::core
 		bundleStream.open(path, std::ios::binary | std::ios::out | std::ios::trunc);
 		if (!bundleStream.is_open())
 		{
-			SH_ERROR_FORMAT("Could not open file for writing: {}", path.u8string());
+			SH_ERROR_FORMAT(u8"Could not open file for writing: {}", path.u8string());
 			return false;
 		}
 

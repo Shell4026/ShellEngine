@@ -69,22 +69,24 @@ namespace sh::game
 			SetMaterialPropertyBlock(propertyBlock); // 로컬 프로퍼티 처리를 위해 다시 호출
 
 		auto shader = this->mat->GetShader();
-		for (auto& lightingPass : shader->GetAllShaderPass())
+		if (core::IsValid(shader))
 		{
-			bool exit = false;
-			for (auto& pass : lightingPass.passes)
+			for (auto& lightingPass : shader->GetAllShaderPass())
 			{
-				if (pass->IsUsingLight())
+				bool exit = false;
+				for (auto& pass : lightingPass.passes)
 				{
-					bShaderHasLight = true;
-					exit = true;
-					break;
+					if (pass->IsUsingLight())
+					{
+						bShaderHasLight = true;
+						exit = true;
+						break;
+					}
 				}
+				if (exit)
+					break;
 			}
-			if (exit)
-				break;
 		}
-
 	}
 
 	auto MeshRenderer::GetMaterial() const -> sh::render::Material*

@@ -113,6 +113,10 @@ namespace sh::editor
 				}
 				else
 				{
+					if (ImGui::MenuItem("Project setting"))
+					{
+						project->OpenSettingUI();
+					}
 					if (ImGui::MenuItem("Reload module"))
 					{
 						project->ReloadModule();
@@ -127,7 +131,7 @@ namespace sh::editor
 					}
 					if (ImGui::MenuItem("Build"))
 					{
-						//project->Build();
+						project->Build();
 					}
 					if (!bPlaying)
 					{
