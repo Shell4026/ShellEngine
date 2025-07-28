@@ -12,12 +12,17 @@ namespace sh::editor
 		world(world),
 		isDocking(false)
 	{
-		onGameObjectAddedListener.SetCallback([&](game::GameObject* obj)
+		gameObjectEventSubscriber.SetCallback(
+			[&](const game::WorldEvents::GameObjectEvent& event)
 			{
-				objList.push_back(obj);
+				if (event.type == game::WorldEvents::GameObjectEvent::Type::Added)
+				{
+					if (event.objPtr.IsValid())
+						objList.push_back(event.objPtr.Get());
+				}
 			}
 		);
-		world.onGameObjectAdded.Register(onGameObjectAddedListener);
+		world.SubscribeEvent(gameObjectEventSubscriber);
 
 		for (auto obj : world.GetGameObjects())
 		{

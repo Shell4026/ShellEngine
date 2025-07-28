@@ -11,6 +11,7 @@
 #include "Core/SContainer.hpp"
 #include "Core/Observer.hpp"
 #include "Core/Memory/MemoryPool.hpp"
+#include "Core/EventBus.h"
 
 #include "Render/Shader.h"
 #include "Render/Material.h"
@@ -70,6 +71,8 @@ namespace sh::game
 		std::queue<std::function<void()>> beforeSyncTasks;
 		std::queue<GameObject*> deallocatedObjs;
 
+		core::EventBus eventBus;
+
 		bool startLoop = false;
 		bool playing = false;
 	public:
@@ -83,10 +86,6 @@ namespace sh::game
 		ResourceManager<render::Texture> textures;
 	public:
 		const ComponentModule& componentModule;
-		core::Observer<false, Camera*> onCameraAdd;
-		core::Observer<false, Camera*> onCameraRemove;
-		core::Observer<false, GameObject*> onGameObjectAdded;
-		core::Observer<false, GameObject*> onGameObjectRemoved;
 	private:
 		auto AllocateGameObject() -> GameObject*;
 	protected:
@@ -142,6 +141,8 @@ namespace sh::game
 		SH_GAME_API void Deserialize(const core::Json& json) override;
 
 		SH_GAME_API auto GetUiContext() const -> ImGUImpl&;
+
+		SH_GAME_API void SubscribeEvent(core::ISubscriber& subscriber);
 
 		SH_GAME_API void Playing();
 		SH_GAME_API void Stop();

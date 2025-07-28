@@ -8,6 +8,7 @@
 #include "ShaderParserTest.hpp"
 #include "SpinLockTest.hpp"
 #include "ThreadPoolTest.hpp"
+#include "EventBusTest.hpp"
 #ifdef Bool
 #undef Bool
 #endif

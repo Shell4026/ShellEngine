@@ -1,6 +1,7 @@
 ﻿#include "World.h"
 #include "GameObject.h"
 #include "ImGUImpl.h"
+#include "WorldEvents.hpp"
 #include "Component/Camera.h"
 
 #include "Core/GarbageCollection.h"
@@ -82,11 +83,15 @@ namespace sh::game
 	SH_GAME_API auto World::AddGameObject(std::string_view name) -> GameObject*
 	{
 		GameObject* ptr = AllocateGameObject();
-		auto obj = CreateAt<GameObject>(ptr, *this, std::string{ name });
+		if (ptr == nullptr)
+			return nullptr;
+
+		GameObject* obj = CreateAt<GameObject>(ptr, *this, std::string{ name });
 		objs.insert(obj);
 
 		gc->SetRootSet(obj);
-		onGameObjectAdded.Notify(obj);
+
+		eventBus.Publish(WorldEvents::GameObjectEvent{ *obj, WorldEvents::GameObjectEvent::Type::Added });
 
 		return obj;
 	}
@@ -146,12 +151,12 @@ namespace sh::game
 	SH_GAME_API auto World::DuplicateGameObject(const GameObject& obj) -> GameObject&
 	{
 		GameObject* ptr = AllocateGameObject();
-		auto duplicatedObj = CreateAt<GameObject>(ptr, obj);
+		GameObject* duplicatedObj = CreateAt<GameObject>(ptr, obj);
 
 		objs.insert(duplicatedObj);
 
 		gc->SetRootSet(duplicatedObj);
-		onGameObjectAdded.Notify(duplicatedObj);
+		eventBus.Publish(WorldEvents::GameObjectEvent{ *duplicatedObj, WorldEvents::GameObjectEvent::Type::Added });
 
 		return *duplicatedObj;
 	}
@@ -246,7 +251,7 @@ namespace sh::game
 		cameras.insert(cam);
 		renderer.AddCamera(cam->GetNative());
 
-		onCameraAdd.Notify(cam);
+		eventBus.Publish(WorldEvents::CameraEvent{ *cam, WorldEvents::CameraEvent::Type::Added });
 	}
 	SH_GAME_API void World::UnRegisterCamera(Camera* cam)
 	{
@@ -255,7 +260,7 @@ namespace sh::game
 		cameras.erase(cam);
 		renderer.RemoveCamera(cam->GetNative());
 
-		onCameraRemove.Notify(cam);
+		eventBus.Publish(WorldEvents::CameraEvent{ *cam, WorldEvents::CameraEvent::Type::Removed });
 	}
 	SH_GAME_API auto World::GetCameras() const -> const std::unordered_set<Camera*>&
 	{
@@ -373,6 +378,10 @@ namespace sh::game
 	SH_GAME_API auto World::GetUiContext() const -> ImGUImpl&
 	{
 		return *imgui;
+	}
+	SH_GAME_API void World::SubscribeEvent(core::ISubscriber& subscriber)
+	{
+		eventBus.Subscribe(subscriber);
 	}
 	SH_GAME_API void World::Playing()
 	{

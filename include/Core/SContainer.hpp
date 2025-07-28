@@ -428,7 +428,7 @@ namespace sh::core
         {
             return obj;
         }
-        auto Get() const -> const T*
+        auto Get() const -> T*
         {
             return obj;
         }

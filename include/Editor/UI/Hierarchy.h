@@ -2,7 +2,9 @@
 #include "Export.h"
 
 #include "Core/SContainer.hpp"
-#include "Core/Observer.hpp"
+#include "Core/EventSubscriber.h"
+
+#include "Game/WorldEvents.hpp"
 
 #include <list>
 #include <unordered_map>
@@ -20,8 +22,7 @@ namespace sh::editor
 		EditorWorld& world;
 
 		core::SList<game::GameObject*> objList;
-		core::Observer<false, game::GameObject*>::Listener onGameObjectAddedListener;
-		//core::Observer<game::GameObject*>::Listener onGameObjectRemovedListener;
+		core::EventSubscriber<game::WorldEvents::GameObjectEvent> gameObjectEventSubscriber;
 
 		std::vector<std::pair<std::string, std::function<void(const ImGuiPayload& payload)>>> dragFunc;
 
