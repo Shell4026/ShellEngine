@@ -64,7 +64,7 @@ namespace sh::game
 		return *this;
 	}
 
-	SH_GAME_API void Transform::Destroy()
+	SH_GAME_API void Transform::OnDestroy()
 	{
 		for (Transform* child : childs)
 		{
@@ -72,13 +72,10 @@ namespace sh::game
 				child->gameObject.Destroy();
 		}
 		childs.clear();
-		Super::Destroy();
-	}
-
-	SH_GAME_API void Transform::OnDestroy()
-	{
 		if (core::IsValid(parent))
 			parent->RemoveChild(*this);
+
+		Super::OnDestroy();
 	}
 
 	SH_GAME_API void Transform::Awake()

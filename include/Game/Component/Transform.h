@@ -84,7 +84,6 @@ namespace sh::game
 		SH_GAME_API void SetParent(Transform* parent);
 		SH_GAME_API bool HasChild(const Transform& child) const;
 
-		SH_GAME_API void Destroy() override;
 		SH_GAME_API void OnDestroy() override;
 
 		SH_GAME_API auto Serialize() const -> core::Json override;

@@ -63,12 +63,18 @@ namespace sh::core
 
 	SH_CORE_API void SObject::Destroy()
 	{
-		GarbageCollection::GetInstance()->RemoveRootSet(this);
-		bPendingKill.store(true, std::memory_order::memory_order_release);
+		if (bPendingKill.exchange(true, std::memory_order::memory_order_acq_rel))
+			return;
+		GarbageCollection& gc = *GarbageCollection::GetInstance();
+		gc.RemoveRootSet(this);
+
+		OnDestroy();
 	}
 
 	SH_CORE_API void SObject::OnDestroy()
 	{
+		GarbageCollection& gc = *GarbageCollection::GetInstance();
+		gc.AddToPendingKillList(this);
 	}
 
 	SH_CORE_API void SObject::SetName(std::string_view name)
@@ -78,6 +84,10 @@ namespace sh::core
 	SH_CORE_API void SObject::SetName(const core::Name& name)
 	{
 		this->name = name;
+	}
+	SH_CORE_API void SObject::SetName(core::Name&& name)
+	{
+		this->name = std::move(name);
 	}
 	SH_CORE_API auto SObject::GetName() const -> const Name&
 	{

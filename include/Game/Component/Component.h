@@ -58,6 +58,8 @@ namespace sh::game
 
 		SH_GAME_API auto IsInit() const -> bool;
 
+		SH_GAME_API void OnDestroy() override;
+
 		SH_GAME_API void Awake() override;
 		SH_GAME_API void Start() override;
 		SH_GAME_API void OnEnable() override;
@@ -65,7 +67,6 @@ namespace sh::game
 		SH_GAME_API void BeginUpdate() override;
 		SH_GAME_API void Update() override;
 		SH_GAME_API void LateUpdate() override;
-		SH_GAME_API void OnDestroy() override;
 
 		SH_GAME_API auto Serialize() const -> core::Json override;
 		SH_GAME_API void Deserialize(const core::Json& json) override;

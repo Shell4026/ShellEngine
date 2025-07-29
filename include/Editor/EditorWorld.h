@@ -47,6 +47,8 @@ namespace sh::editor
 		SH_EDITOR_API EditorWorld(render::Renderer&, const game::ComponentModule& module, game::ImGUImpl& guiContext);
 		SH_EDITOR_API ~EditorWorld();
 
+		SH_EDITOR_API void OnDestroy() override;
+
 		SH_EDITOR_API void Clean() override;
 
 		SH_EDITOR_API void InitResource() override;

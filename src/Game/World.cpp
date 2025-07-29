@@ -44,6 +44,12 @@ namespace sh::game
 		physWorld.Clean();
 	}
 
+	SH_GAME_API void World::OnDestroy()
+	{
+		Clean();
+		Super::OnDestroy();
+	}
+
 	SH_GAME_API void World::Clean()
 	{
 		models.Clean();

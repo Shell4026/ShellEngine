@@ -111,6 +111,12 @@ namespace sh::editor
 		AssetDatabase::GetInstance()->SaveAllAssets();
 	}
 
+	SH_EDITOR_API void EditorWorld::OnDestroy()
+	{
+
+		Super::OnDestroy();
+	}
+
 	SH_EDITOR_API void EditorWorld::Clean()
 	{
 		Super::Clean();

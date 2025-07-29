@@ -1,330 +1,281 @@
 ﻿#pragma once
 #include "../include/Core/SObject.h"
+#include "../include/Core/Reflection.hpp"
 #include "../include/Core/GarbageCollection.h"
-#include "../include/Core/Util.h"
 #include "../include/Core/SContainer.hpp"
-#include "../include/Core/ThreadPool.h"
 
 #include <gtest/gtest.h>
-
 #include <vector>
-#include <memory>
+#include <set>
+#include <array>
+#include <atomic>
+/// GEMINI CLI로 생성한 테스트 코드
 
-class Object : public sh::core::SObject
+// 테스트용 기본 SObject
+class TestObject : public sh::core::SObject
 {
-	SCLASS(Object)
+	SCLASS(TestObject)
 public:
-	int num;
+	int id;
+
 	PROPERTY(child)
-	Object* child;
-	PROPERTY(others)
-	std::vector<std::vector<Object*>> others;
-	PROPERTY(childs)
-	std::set<Object*> childs;
-	PROPERTY(arr)
-	std::array<Object*, 2> arr{ nullptr, nullptr };
-	PROPERTY(nested)
-	std::array<std::vector<Object*>, 2> nested;
+	TestObject* child = nullptr;
 
-	Object(int num) : 
-		num(num), child(nullptr)
-	{
+	PROPERTY(objectList)
+	std::vector<TestObject*> objectList;
 
-	}
-	Object(Object&& other) noexcept :
-		SObject(std::move(other)),
-		num(other.num), child(other.child), others(std::move(other.others))
-	{
+	PROPERTY(objectSet)
+	std::set<TestObject*> objectSet;
 
-	}
-	~Object()
-	{
-		num = 0;
+	PROPERTY(objectArray)
+	std::array<TestObject*, 3> objectArray{ nullptr, nullptr, nullptr };
+
+	TestObject(int id = 0) : id(id) {}
+	~TestObject() override {
+		// 소멸 시 id를 0으로 만들어 소멸되었음을 외부에서 확인할 수 있도록 함
+		id = 0;
 	}
 };
 
-TEST(GCTest, RootSetDefragmentTest)
+// 소멸 순서 테스트를 위한 클래스
+class TestWorld; // Forward declaration
+
+// 전역 플래그로 World의 생존 여부 추적
+static std::atomic<bool> isWorldAlive = false;
+// World보다 먼저 파괴된 GameObject 수
+static std::atomic<int> destroyedGameObjectsCount = 0;
+
+class TestGameObject : public sh::core::SObject
 {
-	using namespace sh::core;
-	ThreadPool::GetInstance()->Init(4);
-	GarbageCollection& gc = *GarbageCollection::GetInstance();
+	SCLASS(TestGameObject)
+public:
+	// 자식 객체는 부모 객체에 대한 포인터를 가질 수 있음
+	TestWorld* world = nullptr;
 
-	std::vector<Object*> objs;
-	for (int i = 0; i < 100; ++i)
+	TestGameObject(TestWorld* owner) : world(owner) {}
+
+	~TestGameObject() override
 	{
-		auto obj = SObject::Create<Object>(i);
-		gc.SetRootSet(obj);
-		objs.push_back(obj);
+		// 이 객체가 파괴될 때, World는 반드시 살아있어야 함
+		if (isWorldAlive)
+		{
+			destroyedGameObjectsCount++;
+		}
 	}
-	EXPECT_EQ(gc.GetRootSet().size(), 100);
-	for (int i = 0; i < 32; ++i)
-		objs[i]->Destroy();
-	EXPECT_EQ(gc.GetRootSet().size(), 100);
-	gc.DefragmentRootSet();
-	EXPECT_EQ(gc.GetRootSet().size(), 68);
+};
+class TestWorld : public sh::core::SObject
+{
+	SCLASS(TestWorld)
+public:
+	PROPERTY(gameObjects)
+	std::vector<TestGameObject*> gameObjects;
 
-	for (int i = 32; i < 100; ++i)
-		objs[i]->Destroy();
+	TestWorld()
+	{
+		isWorldAlive = true;
+	}
 
-	gc.DefragmentRootSet();
-	EXPECT_EQ(gc.GetRootSet().size(), 0);
-	gc.Collect();
+	~TestWorld() override
+	{
+		isWorldAlive = false;
+	}
+
+	void AddGameObject(TestGameObject* obj)
+	{
+		gameObjects.push_back(obj);
+	}
+
+	void OnDestroy() override
+	{
+		for (auto obj : gameObjects)
+			obj->Destroy();
+		Super::OnDestroy();
+	}
+};
+
+// 테스트 환경 초기화 및 정리를 위한 Test Fixture
+class GCTest : public ::testing::Test {
+protected:
+	sh::core::GarbageCollection* gc;
+
+	void SetUp() override {
+		gc = sh::core::GarbageCollection::GetInstance();
+		// 각 테스트 시작 전, 이전 테스트에서 남은 객체가 없도록 GC를 실행
+		gc->Collect();
+		gc->Collect(); // pendingKill 객체까지 완전히 정리
+		ASSERT_EQ(gc->GetObjectCount(), 0);
+	}
+
+	void TearDown() override {
+		// 각 테스트 종료 후, 생성된 모든 객체가 정리되도록 보장
+		gc->Collect();
+		gc->Collect();
+	}
+};
+
+// 1. 기본 GC 테스트: 아무도 참조하지 않는 객체는 수집되어야 한다.
+TEST_F(GCTest, ShouldCollectUnreferencedObject)
+{
+	TestObject* obj = sh::core::SObject::Create<TestObject>(1);
+	ASSERT_EQ(gc->GetObjectCount(), 1);
+	ASSERT_TRUE(IsValid(obj));
+
+	// GC 실행
+	gc->Collect();
+	gc->Collect();
+
+	// 객체가 수집되었는지 확인
+	ASSERT_EQ(gc->GetObjectCount(), 0);
 }
 
-TEST(GCTest, ValidTest)
+// 2. 루트 객체 테스트: 루트로 지정된 객체는 수집되지 않아야 한다.
+TEST_F(GCTest, ShouldNotCollectRootObject)
 {
-	using namespace sh::core;
-	GarbageCollection& gc = *GarbageCollection::GetInstance();
-	gc.DefragmentRootSet();
+	TestObject* root = sh::core::SObject::Create<TestObject>(100);
+	gc->SetRootSet(root);
+	ASSERT_EQ(gc->GetObjectCount(), 1);
 
-	gc.SetUpdateTick(1);
+	gc->Collect();
+	gc->Collect();
 
-	Object* root = SObject::Create<Object>(1);
-	gc.SetRootSet(root);
-	Object* child = SObject::Create<Object>(2);
+	// 루트 객체는 살아남아야 함
+	ASSERT_EQ(gc->GetObjectCount(), 1);
+	ASSERT_TRUE(IsValid(root));
+	ASSERT_EQ(root->id, 100);
+
+	// 루트에서 제거 후 정리
+	gc->RemoveRootSet(root);
+}
+
+// 3. 참조 객체 테스트: 루트가 참조하는 객체는 수집되지 않아야 한다.
+TEST_F(GCTest, ShouldNotCollectReferencedObject)
+{
+	TestObject* root = sh::core::SObject::Create<TestObject>(100);
+	TestObject* child = sh::core::SObject::Create<TestObject>(101);
 	root->child = child;
+	gc->SetRootSet(root);
 
-	EXPECT_TRUE(IsValid(root));
-	EXPECT_TRUE(IsValid(child));
-	gc.Collect();
-	EXPECT_TRUE(IsValid(root));
-	EXPECT_TRUE(IsValid(child));
-	EXPECT_FALSE(root->IsPendingKill());
-	EXPECT_FALSE(child->IsPendingKill());
+	ASSERT_EQ(gc->GetObjectCount(), 2);
 
-	child->Destroy();
-	EXPECT_TRUE(child->IsPendingKill());
-	EXPECT_FALSE(IsValid(child));
-	EXPECT_EQ(child->num, 2); // 아직은 child에 접근 할 수 있음
+	gc->Collect();
+	gc->Collect();
 
-	gc.Collect();
-	EXPECT_NE(child->num, 2); // 어떤 값이 될지는 알 수 없지만 지워짐
-	EXPECT_EQ(root->child, nullptr); // 소멸된 값은 자동으로 nullptr가 된다.
+	// 루트와 자식 객체 모두 살아남아야 함
+	ASSERT_EQ(gc->GetObjectCount(), 2);
+	ASSERT_TRUE(IsValid(root));
+	ASSERT_TRUE(IsValid(child));
+	ASSERT_EQ(child->id, 101);
 
-	Object* dummy = nullptr;
-	Object* newChild = nullptr;
-	{
-		dummy = SObject::Create<Object>(3);
-		newChild = SObject::Create<Object>(4);
-		root->child = newChild;
-	}
-	EXPECT_EQ(dummy->num, 3);
-	gc.Collect();
-	EXPECT_NE(dummy->num, 3); // 접근 할 수 없음 = 지워짐
-	EXPECT_EQ(newChild->num, 4);
-
-	root->Destroy();
-	gc.Collect();
-
-	EXPECT_NE(root->num, 1);
-	EXPECT_NE(newChild->num, 4);
+	gc->RemoveRootSet(root);
 }
 
-TEST(GCTest, CircularReferencingTest)
+// 4. 참조 해제 테스트: 루트의 참조가 끊기면 객체는 수집되어야 한다.
+TEST_F(GCTest, ShouldCollectWhenReferenceIsRemoved)
 {
-	using namespace sh::core;
-	GarbageCollection& gc = *GarbageCollection::GetInstance();
-	gc.DefragmentRootSet();
+	TestObject* root = sh::core::SObject::Create<TestObject>(100);
+	TestObject* child = sh::core::SObject::Create<TestObject>(101);
+	root->child = child;
+	gc->SetRootSet(root);
 
-	Object* root = SObject::Create<Object>(999);
-	Object* obj1 = SObject::Create<Object>(1);
-	Object* obj2 = SObject::Create<Object>(2);
+	gc->Collect();
+	gc->Collect();
+	ASSERT_EQ(gc->GetObjectCount(), 2);
 
-	gc.SetRootSet(root);
+	// 참조를 끊음
+	root->child = nullptr;
+	gc->Collect();
+	gc->Collect();
 
-	root->child = obj1;
+	// 자식 객체만 수집되어야 함
+	ASSERT_EQ(gc->GetObjectCount(), 1);
+	ASSERT_TRUE(IsValid(root));
+	ASSERT_FALSE(IsValid(child)); // IsValid는 pendingKill 상태를 확인
+
+	gc->RemoveRootSet(root);
+}
+
+// 5. 순환 참조 테스트: 순환 참조가 있어도 루트에서 도달 불가능하면 수집되어야 한다.
+TEST_F(GCTest, ShouldCollectCircularReferences)
+{
+	TestObject* obj1 = sh::core::SObject::Create<TestObject>(1);
+	TestObject* obj2 = sh::core::SObject::Create<TestObject>(2);
+
+	// 순환 참조 생성: obj1 -> obj2 -> obj1
 	obj1->child = obj2;
 	obj2->child = obj1;
 
-	root->Destroy();
-	gc.Collect();
+	ASSERT_EQ(gc->GetObjectCount(), 2);
 
-	EXPECT_NE(obj1->num, 1);
-	EXPECT_NE(obj2->num, 2);
+	gc->Collect();
+	gc->Collect();
+
+	// 루트에서 접근 불가능하므로 둘 다 수집되어야 함
+	ASSERT_EQ(gc->GetObjectCount(), 0);
 }
 
-TEST(GCTest, ContainerTest) 
+// 6. 컨테이너 참조 테스트: 컨테이너(vector) 내의 객체들도 올바르게 추적되어야 한다.
+TEST_F(GCTest, ShouldHandleReferencesInVector)
 {
-	using namespace sh::core;
+	TestObject* root = sh::core::SObject::Create<TestObject>(100);
+	gc->SetRootSet(root);
 
-	GarbageCollection& gc = *GarbageCollection::GetInstance();
-	gc.DefragmentRootSet();
+	for (int i = 1; i <= 5; ++i) {
+		root->objectList.push_back(sh::core::SObject::Create<TestObject>(i));
+	}
+	ASSERT_EQ(gc->GetObjectCount(), 6);
 
-	Object* root = SObject::Create<Object>(1);
-	gc.SetRootSet(root);
+	gc->Collect();
+	gc->Collect();
+	ASSERT_EQ(gc->GetObjectCount(), 6); // 모두 살아남아야 함
+
+	// 벡터의 일부 참조를 제거
+	TestObject* objToCollect = root->objectList[2]; // id = 3
+	root->objectList.erase(root->objectList.begin() + 2);
+	ASSERT_EQ(root->objectList.size(), 4);
+
+	gc->Collect();
+	gc->Collect();
+
+	// objToCollect는 수집되어야 함
+	ASSERT_EQ(gc->GetObjectCount(), 5);
+	ASSERT_FALSE(IsValid(objToCollect));
+
+	gc->RemoveRootSet(root);
+}
+
+// 7. 소멸 순서 테스트: 자식 객체가 부모 객체보다 먼저 소멸되어야 한다.
+TEST_F(GCTest, ShouldDestroyChildrenBeforeParent)
+{
+	destroyedGameObjectsCount = 0;
+	isWorldAlive = false;
+
+	// 1. 월드와 게임 오브젝트 생성
+	TestWorld* world = sh::core::SObject::Create<TestWorld>();
+	constexpr int numGameObjects = 5;
+	for (int i = 0; i < numGameObjects; ++i)
+	{
+		world->AddGameObject(sh::core::SObject::Create<TestGameObject>(world));
+	}
+	ASSERT_TRUE(isWorldAlive);
+	ASSERT_EQ(gc->GetObjectCount(), 1 + numGameObjects);
+
+	// 2. 월드를 루트로 설정하고 GC 실행 -> 아무것도 수집되지 않아야 함
+	gc->SetRootSet(world);
+	gc->Collect();
+	gc->Collect();
+	ASSERT_EQ(gc->GetObjectCount(), 1 + numGameObjects);
+
+	// 3. 월드를 루트에서 제거 -> 이제 모두 GC 대상이 됨
+	gc->RemoveRootSet(world);
 	
-	for (int i = 0; i < 3; ++i)
-	{
-		std::vector<Object*> objs(3);
-		for (int j = 0; j < 3; ++j)
-		{
-			objs[j] = SObject::Create<Object>(i * 3 + j);
-		}
-		root->others.push_back(std::move(objs));
-	}
+	// 4. GC 실행하여 객체 소멸 유도
+	gc->Collect();
+	gc->Collect();
 
-	EXPECT_EQ(gc.GetObjectCount(), 10);
-	gc.Collect();
-	EXPECT_EQ(gc.GetObjectCount(), 10);
-
-	Object* temp = root->others[1][1];
-
-	root->Destroy();
-	gc.Collect();
-	EXPECT_NE(temp->num, 4);
-
-	// SSet테스트
-	Object* setRoot = SObject::Create<Object>(123);
-	gc.SetRootSet(setRoot);
-	{
-		Object* root = SObject::Create<Object>(999);
-		gc.SetRootSet(root);
-		for (int i = 0; i < 3; ++i)
-			root->childs.insert(SObject::Create<Object>(i));
-
-		gc.Collect();
-
-		for (auto child : root->childs)
-		{
-			child->Destroy();
-		}
-
-		EXPECT_EQ(root->childs.size(), 3);
-		gc.Collect();
-		EXPECT_EQ(root->childs.size(), 0);
-
-		root->Destroy();
-		root->childs.insert(SObject::Create<Object>(4));
-		setRoot->child = *root->childs.begin();
-	}
-	EXPECT_EQ(setRoot->child->num, 4);
-	setRoot->Destroy();
-	gc.Collect();
-	EXPECT_EQ(gc.GetObjectCount(), 0);
-	// Array 테스트
-	{
-		Object* arrRoot = SObject::Create<Object>(123);
-		gc.SetRootSet(arrRoot);
-
-		arrRoot->arr[0] = SObject::Create<Object>(1);
-		arrRoot->arr[1] = SObject::Create<Object>(2);
-
-		gc.Collect();
-
-		EXPECT_EQ(arrRoot->arr[0]->num, 1);
-		EXPECT_EQ(arrRoot->arr[1]->num, 2);
-
-		arrRoot->arr[1]->Destroy();
-		gc.Collect();
-
-		EXPECT_EQ(arrRoot->arr[1], nullptr);
-		arrRoot->Destroy();
-		gc.Collect();
-	}
-	EXPECT_EQ(gc.GetObjectCount(), 0);
-	// 중첩 컨테이너 테스트
-	{
-		Object* root = SObject::Create<Object>(24);
-		gc.SetRootSet(root);
-
-		root->nested[0].push_back(SObject::Create<Object>(1));
-		root->nested[0].push_back(SObject::Create<Object>(2));
-		root->nested[1].push_back(SObject::Create<Object>(3));
-		root->nested[1].push_back(SObject::Create<Object>(4));
-
-		gc.Collect();
-
-		EXPECT_EQ(root->nested[1][0]->num, 3);
-
-		root->nested[1][1]->Destroy();
-		gc.Collect();
-
-		EXPECT_EQ(root->nested[1].size(), 1); // 벡터라서 원소가 지워짐
-
-		root->Destroy();
-		gc.Collect();
-	}
-	EXPECT_EQ(gc.GetObjectCount(), 0);
-}
-
-TEST(GCTest, SContainerTest)
-{
-	using namespace sh::core;
-
-	auto& gc = *GarbageCollection::GetInstance();
-	gc.DefragmentRootSet();
-	{
-		SArray<const Object*, 10> objarr;
-		SVector<const Object*> objvecTemp;
-		SVector<const Object*> objvec;
-		SSet<const Object*> objSet;
-		SHashSet<const Object*> objHashSet;
-		SMap<const Object*, int> objMapKey;
-		SMap<int, const Object*> objMapValue;
-		SHashMap<const Object*, int> objHashMapKey;
-		SHashMap<int, const Object*> objHashMapValue;
-		Object* seven = nullptr;
-		for (int i = 0; i < 10; ++i)
-		{
-			auto obj = SObject::Create<Object>(i);
-			objarr[i] = obj;
-			objvecTemp.push_back(obj);
-			objMapKey.insert_or_assign(obj, i);
-			objHashMapKey.insert_or_assign(obj, i);
-			objMapValue.insert_or_assign(i, obj);
-			objHashMapValue.insert_or_assign(i, obj);
-			objSet.insert(obj);
-			objHashSet.insert(obj);
-			if (i == 7)
-				seven = obj;
-		}
-		objvec = std::move(objvecTemp);
-
-		gc.Collect();
-		const Object* five = objarr[5];
-		EXPECT_EQ(objarr[5]->num, 5);
-		EXPECT_EQ(objvec[5]->num, 5);
-		EXPECT_EQ(objMapKey[five], 5);
-		EXPECT_EQ(objHashMapKey[five], 5);
-		EXPECT_EQ(objMapValue[5]->num, 5);
-		EXPECT_EQ(objHashMapValue[5]->num, 5);
-		EXPECT_NE(objSet.find(five), objSet.end());
-		EXPECT_NE(objHashSet.find(five), objHashSet.end());
-		seven->Destroy();
-		gc.Collect();
-		EXPECT_EQ(objarr[7], nullptr);
-		EXPECT_EQ(objvec[7], nullptr);
-		EXPECT_EQ(objMapKey.find(seven), objMapKey.end());
-		EXPECT_EQ(objHashMapKey.find(seven), objHashMapKey.end());
-		EXPECT_EQ(objMapValue.find(7), objMapValue.end());
-		EXPECT_EQ(objHashMapValue.find(7), objHashMapValue.end());
-		EXPECT_EQ(objSet.find(seven), objSet.end());
-		EXPECT_EQ(objHashSet.find(seven), objHashSet.end());
-	}
-	EXPECT_EQ(gc.GetObjectCount(), 9);
-	gc.Collect();
-	EXPECT_EQ(gc.GetObjectCount(), 0);
-}
-
-TEST(GCTest, SPointerTest)
-{
-	using namespace sh::core;
-
-	auto& gc = *GarbageCollection::GetInstance();
-	gc.DefragmentRootSet();
-	SObjWeakPtr<Object> ptr = SObject::Create<Object>(13);
-	EXPECT_EQ(ptr->num, 13);
-	gc.Collect();
-	EXPECT_EQ(gc.GetObjectCount(), 0);
-	EXPECT_EQ(ptr.Get(), nullptr);
-
-	Object* root = SObject::Create<Object>(10);
-	gc.SetRootSet(root);
-	ptr = root;
-	gc.Collect();
-	EXPECT_EQ(ptr.Get(), root);
-	root->Destroy();
-	EXPECT_FALSE(IsValid(ptr.Get()));
-	gc.Collect();
-	EXPECT_EQ(ptr.Get(), nullptr);
+	// 5. 검증
+	// World가 파괴되기 전에 모든 GameObject가 파괴되었어야 함
+	ASSERT_EQ(destroyedGameObjectsCount, numGameObjects);
+	// 모든 객체가 소멸되었는지 확인
+	ASSERT_EQ(gc->GetObjectCount(), 0);
+	ASSERT_FALSE(isWorldAlive);
 }

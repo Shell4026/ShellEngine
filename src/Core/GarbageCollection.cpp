@@ -56,7 +56,7 @@ namespace sh::core
 
 				if (obj == nullptr)
 					continue;
-				if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
+				if (obj->bMark.test_and_set(std::memory_order::memory_order_acq_rel))
 					continue;
 
 				MarkProperties(obj, bfs);
@@ -174,7 +174,7 @@ namespace sh::core
 
 						if (obj == nullptr)
 							continue;
-						if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
+						if (obj->bMark.test_and_set(std::memory_order::memory_order_acq_rel))
 							continue;
 
 						MarkProperties(obj, bfs);
@@ -204,7 +204,7 @@ namespace sh::core
 
 						if (obj == nullptr)
 							continue;
-						if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
+						if (obj->bMark.test_and_set(std::memory_order::memory_order_acq_rel))
 							continue;
 
 						MarkProperties(obj, bfs);
@@ -237,7 +237,7 @@ namespace sh::core
 
 						if (obj == nullptr)
 							continue;
-						if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
+						if (obj->bMark.test_and_set(std::memory_order::memory_order_acq_rel))
 							continue;
 						MarkProperties(obj, bfs);
 					}
@@ -265,7 +265,7 @@ namespace sh::core
 
 						if (obj == nullptr)
 							continue;
-						if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
+						if (obj->bMark.test_and_set(std::memory_order::memory_order_acq_rel))
 							continue;
 
 						MarkProperties(obj, bfs);
@@ -294,7 +294,7 @@ namespace sh::core
 
 						if (obj == nullptr)
 							continue;
-						if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
+						if (obj->bMark.test_and_set(std::memory_order::memory_order_acq_rel))
 							continue;
 
 						MarkProperties(obj, bfs);
@@ -447,9 +447,9 @@ namespace sh::core
 	{
 		auto start = std::chrono::high_resolution_clock::now();
 		for (auto& [id, obj] : objs)
-			obj->bMark.clear(std::memory_order::memory_order_relaxed);
+			obj->bMark.clear(std::memory_order::memory_order_relaxed); // memory_order_relaxed - 어차피 다른 스레드들은 모두 자고 있음
 
-		const bool bThreadPoolInit = ThreadPool::GetInstance()->IsInit();
+			const bool bThreadPoolInit = ThreadPool::GetInstance()->IsInit();
 
 		if (trackingContainers.size() > 8 && bThreadPoolInit)
 			CheckContainersWithMultiThread();
@@ -461,25 +461,29 @@ namespace sh::core
 		else
 			Mark(0, rootSets.size());
 
-		// 모든 SObject를 순회하며 마킹이 안 됐으면 제거
-		std::vector<SObject*> deleted;
+		for (auto& objPtr : pendingKillObjs)
+		{
+			if (!objPtr->bPlacementNew)
+				delete objPtr;
+			else
+				std::destroy_at(objPtr);
+		}
+		pendingKillObjs.clear();
+
+		// 모든 SObject를 순회하며 마킹이 안 됐으면 보류 목록에 추가
+		// TODO: 나중에 멀티 스레드로 바꿀 때 메모리 오더 바꾸기
 		for (auto& [uuid, objPtr] : objs)
 		{
 			if (!objPtr->bMark.test_and_set(std::memory_order::memory_order_relaxed))
 			{
-				objPtr->OnDestroy();
-				deleted.push_back(objPtr);
-				objPtr->bPendingKill.store(true, std::memory_order::memory_order_release);
+				if (!objPtr->bPendingKill.load(std::memory_order::memory_order_relaxed))
+				{
+					objPtr->OnDestroy();
+					objPtr->bPendingKill.store(true, std::memory_order::memory_order_relaxed);
+				}
 			}
 		}
 		CheckPtrs();
-		for (SObject* deletedPtr : deleted)
-		{
-			if (!deletedPtr->bPlacementNew)
-				delete deletedPtr;
-			else
-				std::destroy_at(deletedPtr);
-		}
 
 		auto end = std::chrono::high_resolution_clock::now();
 
@@ -513,6 +517,11 @@ namespace sh::core
 			objs.erase(it);
 			delete obj;
 		}
+	}
+
+	SH_CORE_API void GarbageCollection::AddToPendingKillList(SObject* obj)
+	{
+		pendingKillObjs.push_back(obj);
 	}
 
 	SH_CORE_API auto sh::core::GarbageCollection::GetElapsedTime() -> uint32_t

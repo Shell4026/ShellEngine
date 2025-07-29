@@ -91,6 +91,7 @@ namespace sh::game
 	
 	SH_GAME_API void Component::OnDestroy()
 	{
+		Super::OnDestroy();
 	}
 
 	SH_GAME_API auto Component::Serialize() const -> core::Json

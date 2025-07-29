@@ -36,6 +36,7 @@ namespace sh::core
 		std::unordered_map<UUID, SObject*>& objs;
 		std::unordered_map<SObject*, std::size_t> rootSetIdx;
 		std::vector<SObject*> rootSets;
+		std::vector<SObject*> pendingKillObjs;
 		int emptyRootSetCount = 0;
 
 		struct ICheckable
@@ -266,6 +267,7 @@ namespace sh::core
 		/// @brief 강제로 메모리를 해제 하는 함수. 주의해서 써야한다. 해당 포인터를 참조하고 있던 값은 변하지 않는다.
 		/// @param obj SObject 포인터
 		SH_CORE_API void ForceDelete(SObject* obj);
+		SH_CORE_API void AddToPendingKillList(SObject* obj);
 
 		/// @brief 이전에 GC를 수행하는데 걸린 시간(ms)을 반환 하는 함수
 		SH_CORE_API auto GetElapsedTime() -> uint32_t;

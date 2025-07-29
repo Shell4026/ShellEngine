@@ -56,6 +56,7 @@ namespace sh::core
 
 		SH_CORE_API void SetName(std::string_view name);
 		SH_CORE_API void SetName(const core::Name& name);
+		SH_CORE_API void SetName(core::Name&& name);
 		SH_CORE_API auto GetName() const -> const Name&;
 
 		/// @brief UUID를 재설정한다. 이미 존재하는 UUID로 설정 시 실패한다.

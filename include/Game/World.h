@@ -95,6 +95,8 @@ namespace sh::game
 		SH_GAME_API World(World&& other) noexcept;
 		SH_GAME_API virtual ~World();
 
+		SH_GAME_API void OnDestroy() override;
+
 		SH_GAME_API virtual void Clean();
 
 		/// @brief 기본 리소스를 로드한다.
