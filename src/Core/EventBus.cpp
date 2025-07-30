@@ -5,6 +5,17 @@
 
 namespace sh::core
 {
+    EventBus::~EventBus()
+    {
+        for (auto& [hash, subscribers] : listeners)
+        {
+            for (auto& subscriber : subscribers)
+            {
+                subscriber->eventBus = nullptr;
+            }
+        }
+    }
+
     SH_CORE_API void EventBus::Subscribe(ISubscriber& subscriber)
     {
         subscriber.eventBus = this;

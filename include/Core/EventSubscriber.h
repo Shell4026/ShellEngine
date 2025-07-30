@@ -28,7 +28,7 @@ namespace sh::core
         EventSubscriber() = default;
         ~EventSubscriber()
         {
-            if (eventBus)
+            if (eventBus != nullptr)
                 eventBus->Unsubscribe(*this);
         }
 
