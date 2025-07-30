@@ -9,6 +9,15 @@ namespace sh::core
 		static_assert(sizeof(Header) == 8);
 		static_assert(sizeof(AssetEntry) == 48);
 	}
+	AssetBundle::AssetBundle(AssetBundle&& other) noexcept :
+		header(other.header),
+		bundlePath(std::move(other.bundlePath)),
+		assetEntries(std::move(other.assetEntries)),
+		bundleData(std::move(other.bundleData)),
+		nextAssetDataOffset(other.nextAssetDataOffset),
+		bundleStream(std::move(other.bundleStream))
+	{
+	}
 	SH_CORE_API void AssetBundle::Clear()
 	{
 		bundleStream.clear();
@@ -22,7 +31,7 @@ namespace sh::core
 	{
 		if (asset.IsEmpty())
 			return false;
-		if (assetEntries.find(asset.GetUUID()) != assetEntries.end())
+		if (assetEntries.find(asset.GetAssetUUID()) != assetEntries.end())
 			return false;
 
 		std::size_t lastOffset = bundleData.size();
@@ -30,7 +39,7 @@ namespace sh::core
 		std::vector<uint8_t> assetData = AssetExporter::SaveToMemory(asset, bCompress);
 
 		AssetEntry entry{};
-		entry.uuid = asset.GetUUID().GetRawData();
+		entry.uuid = asset.GetAssetUUID().GetRawData();
 		std::memcpy(entry.type, asset.GetType(), sizeof(entry.type));
 		entry.dataSize = assetData.size();
 		entry.dataOffset = lastOffset;
@@ -39,12 +48,16 @@ namespace sh::core
 		bundleData.resize(bundleData.size() + assetData.size());
 		std::memcpy(bundleData.data() + lastOffset, assetData.data(), assetData.size());
 
-		assetEntries.insert_or_assign(asset.GetUUID(), entry);
+		assetEntries.insert_or_assign(asset.GetAssetUUID(), entry);
 		return true;
 	}
 	SH_CORE_API auto AssetBundle::HasAsset(const UUID& uuid) const -> bool
 	{
 		return assetEntries.find(uuid) != assetEntries.end();
+	}
+	SH_CORE_API auto AssetBundle::IsLoaded() const -> bool
+	{
+		return bundleStream.is_open();
 	}
 	SH_CORE_API auto AssetBundle::GetAllAssetUUIDs() const -> std::vector<UUID>
 	{
@@ -84,6 +97,7 @@ namespace sh::core
 		{
 			bundleStream.write(reinterpret_cast<const char*>(bundleData.data()), bundleData.size());
 		}
+		bundleStream.close();
 		return true;
 	}
 	SH_CORE_API auto AssetBundle::LoadBundle(const std::filesystem::path& path) -> bool
@@ -100,7 +114,10 @@ namespace sh::core
 			}
 		}
 		else
-			bundleStream.seekg(0);
+		{
+			Clear();
+			return LoadBundle(path);
+		}
 
 		assetEntries.clear();
 

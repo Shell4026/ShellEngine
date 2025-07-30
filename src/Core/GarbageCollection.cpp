@@ -346,6 +346,8 @@ namespace sh::core
 		for (auto ptr : trackingPtrs)
 		{
 			SObjWeakPtr<SObject>& weakPtr = *reinterpret_cast<SObjWeakPtr<SObject>*>(ptr);
+			if (weakPtr == nullptr)
+				continue;
 			if (weakPtr->bPendingKill.load(std::memory_order::memory_order_acquire))
 				weakPtr.Reset();
 		}

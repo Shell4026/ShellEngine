@@ -52,16 +52,16 @@ namespace sh::game
 	}
 
 	TextureAsset::TextureAsset() : 
-		Asset("tex"),
+		Asset(ASSET_NAME),
 		texturePtr(nullptr)
 	{
 	}
 
 	TextureAsset::TextureAsset(const render::Texture& texture) :
-		Asset("tex"),
+		Asset(ASSET_NAME),
 		texturePtr(&texture)
 	{
-		uuid = texturePtr->GetUUID();
+		assetUUID = texturePtr->GetUUID();
 		SetHeader(header);
 	}
 	TextureAsset::~TextureAsset()
@@ -72,7 +72,7 @@ namespace sh::game
 		if (obj.GetType() != render::Texture::GetStaticType())
 			return;
 		texturePtr = static_cast<const render::Texture*>(&obj);
-		uuid = texturePtr->GetUUID();
+		assetUUID = texturePtr->GetUUID();
 		SetHeader(header);
 	}
 	SH_GAME_API auto TextureAsset::GetHeader() const -> TextureHeader

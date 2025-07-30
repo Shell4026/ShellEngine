@@ -40,7 +40,7 @@ namespace sh::game
 		SH_GAME_API ~Camera();
 		
 		SH_GAME_API void BeginUpdate() override;
-		SH_GAME_API void Destroy() override;
+		SH_GAME_API void OnDestroy() override;
 
 		SH_GAME_API void SetActive(bool b) override;
 

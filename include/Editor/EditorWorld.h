@@ -2,8 +2,10 @@
 #include "Export.h"
 
 #include "Core/Observer.hpp"
+#include "Core/EventSubscriber.h"
 
 #include "Game/World.h"
+#include "Game/WorldEvents.hpp"
 
 namespace sh::game
 {
@@ -13,6 +15,7 @@ namespace sh::game
 }
 namespace sh::editor
 {
+	class Project;
 	class EditorUI;
 	class EditorPickingPass;
 	class EditorOutlinePass;
@@ -22,6 +25,8 @@ namespace sh::editor
 	{
 		SCLASS(EditorWorld)
 	private:
+		Project& project;
+
 		core::SVector<core::SObject*> selectedObjs;
 
 		PROPERTY(editorCamera)
@@ -36,15 +41,13 @@ namespace sh::editor
 		EditorOutlinePass* outlinePass = nullptr;
 		EditorPostOutlinePass* postOutlinePass = nullptr;
 
-		core::Observer<false, game::Component*>::Listener onComponentAddListener;
-	public:
-		mutable core::Observer<false, game::GameObject*, game::Component*> onComponentAdd;
+		core::EventSubscriber<game::events::ComponentEvent> componentSubscriber;
 	private:
 		void AddEditorControlsToSelected(core::SObject& obj);
 		void RemoveEditorControls(core::SObject& obj);
 		void AddOrDestroyOutlineComponent(game::GameObject& obj, bool bAdd);
 	public:
-		SH_EDITOR_API EditorWorld(render::Renderer&, const game::ComponentModule& module, game::ImGUImpl& guiContext);
+		SH_EDITOR_API EditorWorld(Project& project);
 		SH_EDITOR_API ~EditorWorld();
 
 		SH_EDITOR_API void OnDestroy() override;

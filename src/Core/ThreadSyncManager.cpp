@@ -27,6 +27,10 @@ namespace sh::core
 			threads.push_back(ThreadData{ nullptr, thread.get_id() });
 		}
 	}
+	SH_CORE_API void ThreadSyncManager::Clear()
+	{
+		syncables = std::priority_queue<ThreadData::SyncData>{};
+	}
 	SH_CORE_API void ThreadSyncManager::PushSyncable(ISyncable& syncable, uint32_t priority)
 	{
 		if (!bOnSync)

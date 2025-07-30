@@ -32,10 +32,9 @@ namespace sh::editor
 	SH_EDITOR_API void EditorUI::Awake()
 	{
 		Super::Awake();
-		explorer = std::make_unique<ExplorerUI>(static_cast<EditorWorld&>(gameObject.world));
+		explorer = std::make_unique<ExplorerUI>();
 		viewport = std::make_unique<Viewport>(static_cast<EditorWorld&>(gameObject.world));
 		hierarchy = std::make_unique<Hierarchy>(static_cast<EditorWorld&>(gameObject.world));
-		project = std::make_unique<Project>(static_cast<EditorWorld&>(gameObject.world));
 		inspector = std::make_unique<Inspector>(static_cast<EditorWorld&>(gameObject.world));
 	}
 
@@ -94,7 +93,7 @@ namespace sh::editor
 				{
 					if (ImGui::MenuItem("New project"))
 					{
-						explorer->AddCallback([&](std::filesystem::path dir)
+						explorer->PushCallbackQueue([&](std::filesystem::path dir)
 							{
 								project->CreateNewProject(dir);
 							}
@@ -103,7 +102,7 @@ namespace sh::editor
 					}
 					if (ImGui::MenuItem("Open project"))
 					{
-						explorer->AddCallback([&](std::filesystem::path dir)
+						explorer->PushCallbackQueue([&](std::filesystem::path dir)
 							{
 								project->OpenProject(dir);
 							}
@@ -123,11 +122,29 @@ namespace sh::editor
 					}
 					if (ImGui::MenuItem("Save world", "Ctrl+S"))
 					{
-						project->SaveWorld("test");
+						project->SaveWorld();
+					}
+					if (ImGui::MenuItem("Save As world", "Shift+S"))
+					{
+						explorer->SetCurrentPath(project->GetAssetPath());
+						explorer->PushCallbackQueue(
+							[&](const std::filesystem::path& path)
+							{
+								project->SaveAsWorld(path);
+							}
+						);
+						explorer->Open(ExplorerUI::OpenMode::Create);
 					}
 					if (ImGui::MenuItem("Load world", "Ctrl+O"))
 					{
-						project->LoadWorld("test");
+						explorer->SetCurrentPath(project->GetAssetPath());
+						explorer->PushCallbackQueue(
+							[&](const std::filesystem::path& path)
+							{
+								project->LoadWorld(path);
+							}
+						);
+						explorer->Open();
 					}
 					if (ImGui::MenuItem("Build"))
 					{
@@ -137,9 +154,8 @@ namespace sh::editor
 					{
 						if (ImGui::MenuItem("Play"))
 						{
-							bPlaying = true;
-							if (!viewport->Play())
-								bPlaying = false;
+							if (viewport->Play())
+								bPlaying = true;
 						}
 					}
 					else
@@ -197,5 +213,9 @@ namespace sh::editor
 	SH_EDITOR_API void EditorUI::Clean()
 	{
 		viewport->Clean();
+	}
+	SH_EDITOR_API void EditorUI::SetProject(Project& project)
+	{
+		this->project = &project;
 	}
 }

@@ -46,14 +46,14 @@ namespace sh::game
 		camera.SetLookPos(lookPos);
 		camera.UpdateMatrix();
 	}
-	SH_GAME_API void Camera::Destroy()
+	SH_GAME_API void Camera::OnDestroy()
 	{
 		if (gameObject.world.GetMainCamera() == this)
 		{
 			gameObject.world.SetMainCamera(nullptr);
 		}
 		gameObject.world.UnRegisterCamera(this);
-		Super::Destroy();
+		Super::OnDestroy();
 	}
 	SH_GAME_API void Camera::SetActive(bool b)
 	{

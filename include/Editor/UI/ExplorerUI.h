@@ -31,20 +31,23 @@ namespace sh::editor
 		bool bOpen = false;
 	private:
 		void UpdateDirectoryEntries();
-		inline void DrawFolderIcon();
-		inline void RenderLeftSide();
-		inline void RenderRightSide();
+		void DrawFolderIcon();
+		void RenderLeftSide();
+		void RenderRightSide();
+
+		void SelectFile();
 	public:
-		SH_EDITOR_API ExplorerUI(EditorWorld& world);
+		SH_EDITOR_API ExplorerUI();
 
 		SH_EDITOR_API void Update();
 		SH_EDITOR_API void Render();
 
 		SH_EDITOR_API void Open(OpenMode mode = OpenMode::Select);
 
+		SH_EDITOR_API void SetCurrentPath(const std::filesystem::path& path);
 		/// @brief 경로 지정/파일 선택 시 실행 할 콜백 함수를 등록하는 함수
 		/// @brief 콜백 함수를 큐에 집어넣고 호출 시 제거한다.
 		/// @param func 콜백 함수
-		SH_EDITOR_API void AddCallback(const std::function<void(std::filesystem::path dir)>& func);
+		SH_EDITOR_API void PushCallbackQueue(const std::function<void(std::filesystem::path dir)>& func);
 	};
 }

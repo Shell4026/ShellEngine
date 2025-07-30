@@ -3,18 +3,24 @@
 #include "ImGUImpl.h"
 #include "WorldEvents.hpp"
 #include "Component/Camera.h"
+#include "TextureLoader.h"
+#include "ModelLoader.h"
+#include "MaterialLoader.h"
+#include "ShaderLoader.h"
+#include "AssetLoaderFactory.h"
 
 #include "Core/GarbageCollection.h"
 #include "Core/Util.h"
 #include "Core/SObjectManager.h"
+#include "Core/Asset.h"
 
 #include <utility>
 #include <cstdint>
 
 namespace sh::game
 {
-	SH_GAME_API World::World(sh::render::Renderer& renderer, const ComponentModule& componentModule, ImGUImpl& guiContext) :
-		renderer(renderer), componentModule(componentModule), imgui(&guiContext),
+	SH_GAME_API World::World(sh::render::Renderer& renderer, ImGUImpl& guiContext) :
+		renderer(renderer), componentModule(*game::ComponentModule::GetInstance()), imgui(&guiContext),
 		
 		shaders(renderer), materials(renderer), textures(renderer), models(renderer),
 		mainCamera(nullptr),
@@ -22,20 +28,6 @@ namespace sh::game
 	{
 		SetName("World");
 		gc = core::GarbageCollection::GetInstance();
-
-		gc->SetRootSet(this);
-	}
-	SH_GAME_API World::World(World&& other) noexcept :
-		renderer(other.renderer), gc(other.gc), componentModule(other.componentModule), imgui(other.imgui),
-		
-		_deltaTime(other._deltaTime), _fixedDeltaTime(other._fixedDeltaTime),
-		objs(std::move(other.objs)), addedObjs(std::move(other.addedObjs)),
-		shaders(std::move(other.shaders)), materials(std::move(other.materials)), textures(std::move(other.textures)), models(std::move(other.models)),
-		mainCamera(nullptr),
-		lightOctree(std::move(other.lightOctree))
-	{
-		gc->RemoveRootSet(&other);
-		gc->SetRootSet(this);
 	}
 	SH_GAME_API World::~World()
 	{
@@ -67,6 +59,22 @@ namespace sh::game
 		gameViewTexture->Build(*renderer.GetContext());
 		textures.AddResource("GameView", gameViewTexture);
 	}
+	SH_GAME_API auto World::LoadAssetBundle(const std::filesystem::path& path) -> bool
+	{
+		return assetBundle.LoadBundle(path);
+	}
+	SH_GAME_API auto World::LoadObjectFromBundle(const core::UUID& uuid) -> core::SObject*
+	{
+		auto asset = assetBundle.LoadAsset(uuid);
+		if (asset == nullptr)
+			return nullptr;
+
+		AssetLoaderFactory& factory = *AssetLoaderFactory::GetInstance();
+		auto loader = factory.GetLoader(asset->GetType());
+		if (loader == nullptr)
+			return nullptr;
+		return loader->Load(*asset);
+	}
 	auto World::AllocateGameObject() -> GameObject*
 	{
 		while (!deallocatedObjs.empty())
@@ -97,7 +105,7 @@ namespace sh::game
 
 		gc->SetRootSet(obj);
 
-		eventBus.Publish(WorldEvents::GameObjectEvent{ *obj, WorldEvents::GameObjectEvent::Type::Added });
+		eventBus.Publish(events::GameObjectEvent{ *obj, events::GameObjectEvent::Type::Added });
 
 		return obj;
 	}
@@ -162,7 +170,7 @@ namespace sh::game
 		objs.insert(duplicatedObj);
 
 		gc->SetRootSet(duplicatedObj);
-		eventBus.Publish(WorldEvents::GameObjectEvent{ *duplicatedObj, WorldEvents::GameObjectEvent::Type::Added });
+		eventBus.Publish(events::GameObjectEvent{ *duplicatedObj, events::GameObjectEvent::Type::Added });
 
 		return *duplicatedObj;
 	}
@@ -191,8 +199,8 @@ namespace sh::game
 	SH_GAME_API void World::Update(float deltaTime)
 	{
 		_deltaTime = deltaTime;
-		if (!startLoop)
-			startLoop = true;
+		if (!bStartLoop)
+			bStartLoop = true;
 
 		for (auto addedObj : addedObjs)
 			objs.insert(addedObj);
@@ -211,7 +219,8 @@ namespace sh::game
 		_fixedDeltaTime += _deltaTime;
 		while (_fixedDeltaTime >= FIXED_TIME)
 		{
-			physWorld.Update(FIXED_TIME);
+			if (bPlaying)
+				physWorld.Update(FIXED_TIME);
 			for (auto& obj : objs)
 			{
 				if (!sh::core::IsValid(obj))
@@ -250,6 +259,15 @@ namespace sh::game
 		}
 	}
 
+	SH_GAME_API void World::AfterSync()
+	{
+		while (!afterSyncTasks.empty())
+		{
+			afterSyncTasks.front()();
+			afterSyncTasks.pop();
+		}
+	}
+
 	SH_GAME_API void World::RegisterCamera(Camera* cam)
 	{
 		if (!core::IsValid(cam))
@@ -257,16 +275,16 @@ namespace sh::game
 		cameras.insert(cam);
 		renderer.AddCamera(cam->GetNative());
 
-		eventBus.Publish(WorldEvents::CameraEvent{ *cam, WorldEvents::CameraEvent::Type::Added });
+		eventBus.Publish(events::CameraEvent{ *cam, events::CameraEvent::Type::Added });
 	}
 	SH_GAME_API void World::UnRegisterCamera(Camera* cam)
 	{
-		if (!core::IsValid(cam))
+		if (cam == nullptr)
 			return;
 		cameras.erase(cam);
 		renderer.RemoveCamera(cam->GetNative());
 
-		eventBus.Publish(WorldEvents::CameraEvent{ *cam, WorldEvents::CameraEvent::Type::Removed });
+		eventBus.Publish(events::CameraEvent{ *cam, events::CameraEvent::Type::Removed });
 	}
 	SH_GAME_API auto World::GetCameras() const -> const std::unordered_set<Camera*>&
 	{
@@ -302,6 +320,11 @@ namespace sh::game
 		beforeSyncTasks.push(func);
 	}
 
+	SH_GAME_API void World::AddAfterSyncTask(const std::function<void()>& func)
+	{
+		afterSyncTasks.push(func);
+	}
+
 	SH_GAME_API auto World::Serialize() const -> core::Json
 	{
 		core::Json mainJson = Super::Serialize();
@@ -311,15 +334,17 @@ namespace sh::game
 		{
 			if (obj->bNotSave)
 				continue;
-			core::Json objJson{ obj->Serialize() };
-			objsJson.push_back(objJson);
+			objsJson.push_back(obj->Serialize());
 		}
-		mainJson["objs"] = objsJson;
+		mainJson["objs"] = std::move(objsJson);
 
 		return mainJson;
 	}
 	SH_GAME_API void World::Deserialize(const core::Json& json)
 	{
+		bLoaded = true;
+		Super::Deserialize(json);
+
 		if (!json.contains("objs"))
 			return;
 
@@ -381,27 +406,73 @@ namespace sh::game
 			obj->Deserialize(objJson);
 		}
 	}
+	SH_GAME_API void World::SaveWorldPoint(const core::Json& json)
+	{
+		lateSerializedData = json;
+	}
+	SH_GAME_API void World::SaveWorldPoint(core::Json&& json)
+	{
+		lateSerializedData = std::move(json);
+	}
+	SH_GAME_API void World::LoadWorldPoint()
+	{
+		if (lateSerializedData.empty())
+			return;
+		
+		Deserialize(lateSerializedData);
+	}
+	SH_GAME_API auto World::GetWorldPoint() const -> const core::Json&
+	{
+		return lateSerializedData;
+	}
 	SH_GAME_API auto World::GetUiContext() const -> ImGUImpl&
 	{
 		return *imgui;
+	}
+	SH_GAME_API void World::PublishEvent(const core::IEvent& event)
+	{
+		eventBus.Publish(event);
 	}
 	SH_GAME_API void World::SubscribeEvent(core::ISubscriber& subscriber)
 	{
 		eventBus.Subscribe(subscriber);
 	}
-	SH_GAME_API void World::Playing()
+	SH_GAME_API void World::Play()
 	{
-		if (playing)
+		if (bPlaying)
 			return;
-		playing = true;
+		bPlaying = true;
 		Start();
 	}
 	SH_GAME_API void World::Stop()
 	{
-		playing = false;
+		bPlaying = false;
 	}
 	SH_GAME_API auto World::IsPlaying() const -> bool
 	{
-		return playing;
+		return bPlaying;
+	}
+	SH_GAME_API auto World::IsLoaded() const -> bool
+	{
+		return bLoaded;
+	}
+	SH_GAME_API void World::ReallocateUUIDS()
+	{
+		auto changeObjUUIDfn =
+			[](GameObject* obj)
+			{
+				obj->SetUUID(core::UUID::Generate());
+				for (auto component : obj->GetComponents())
+					component->SetUUID(core::UUID::Generate());
+			};
+		for (auto obj : objs)
+		{
+			changeObjUUIDfn(obj);
+		}
+		for (auto obj : addedObjs)
+		{
+			changeObjUUIDfn(obj);
+		}
+		SetUUID(core::UUID::Generate());
 	}
 }

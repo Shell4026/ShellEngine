@@ -7,6 +7,7 @@
 #include "Core/FileSystem.h"
 
 #include "Game/World.h"
+#include "Game/WorldAsset.h"
 
 namespace sh::editor
 {
@@ -42,18 +43,24 @@ namespace sh::editor
         }
     }
 
-    void BuildSystem::PackingAssets(const std::filesystem::path& outputPath)
+    void BuildSystem::PackingAssets(game::World& world, const std::filesystem::path& outputPath)
     {
         core::AssetBundle bundle;
         for (const auto& uuid : uuids)
         {
             auto asset = AssetDatabase::GetInstance()->GetAsset(core::UUID{ uuid });
-            if (asset)
-            {
+            if (asset != nullptr)
                 bundle.AddAsset(*asset, true);
-            }
         }
+
+        game::WorldAsset worldAsset{ world };
+        bundle.AddAsset(worldAsset, true);
+
         bundle.SaveBundle(outputPath);
+    }
+
+    void BuildSystem::ExportGameManager(const std::filesystem::path& outputPath)
+    {
     }
 
     BuildSystem::BuildSystem() :
@@ -68,6 +75,7 @@ namespace sh::editor
         uuids.clear();
         core::Json worldJson = world.Serialize();
         ExtractUUIDs(worldJson);
-        PackingAssets(outputPath / "assets.bundle");
+        PackingAssets(world, outputPath / "assets.bundle");
+        ExportGameManager(outputPath / "gameManager.bin");
     }
 }//namespace

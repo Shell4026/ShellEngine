@@ -12,6 +12,7 @@ namespace sh::phys
 		reactphysics3d::PhysicsWorld* world = nullptr;
 	public:
 		SH_PHYS_API PhysWorld();
+		SH_PHYS_API PhysWorld(PhysWorld&& other) noexcept;
 		SH_PHYS_API ~PhysWorld();
 
 		SH_PHYS_API void Clean();

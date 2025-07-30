@@ -25,6 +25,12 @@ namespace sh::render
 
 	SH_RENDER_API void Renderer::Clear()
 	{
+		drawableQueue = std::queue<Drawable*>{};
+		cameraQueue = std::queue<CameraProcess>{};
+		drawcall = core::SyncArray<uint32_t>{};
+
+		cameras.clear();
+
 		renderPipelines.clear();
 		drawCalls.clear();
 	}

@@ -1,18 +1,17 @@
 ﻿#pragma once
-#include "Export.h"
-#include "GameObject.h"
-#include "Component/Camera.h"
-
 #include "Core/IEvent.h"
 #include "Core/Reflection/TypeTraits.hpp"
-#include "Core/SContainer.hpp"
 namespace sh::game
 {
-	struct WorldEvents
+	class GameObject;
+	class Component;
+	class Camera;
+
+	namespace events
 	{
 		struct CameraEvent : core::IEvent
 		{
-			const core::SObjWeakPtr<Camera> camPtr;
+			Camera& camera;
 
 			enum class Type
 			{
@@ -22,7 +21,7 @@ namespace sh::game
 			} const type;
 
 			CameraEvent(Camera& camera, Type type) :
-				camPtr(&camera), type(type)
+				camera(camera), type(type)
 			{
 			}
 
@@ -33,16 +32,16 @@ namespace sh::game
 		};
 		struct GameObjectEvent : core::IEvent
 		{
-			const core::SObjWeakPtr<GameObject> objPtr;
+			GameObject& gameObject;
 
 			enum class Type
 			{
 				Added,
-				Removed
+				Removed,
 			} const type;
 
 			GameObjectEvent(GameObject& obj, Type type) :
-				objPtr(&obj), type(type)
+				gameObject(obj), type(type)
 			{
 			}
 
@@ -51,5 +50,25 @@ namespace sh::game
 				return core::reflection::TypeTraits::GetTypeHash<GameObjectEvent>();
 			}
 		};
-	};//WorldEvents
+		struct ComponentEvent : core::IEvent
+		{
+			enum class Type
+			{
+				Added,
+				Removed,
+			} const type;
+
+			Component& component;
+
+			ComponentEvent(Component& comp, Type type) :
+				component(comp), type(type)
+			{
+			}
+
+			auto GetTypeHash() const -> std::size_t override
+			{
+				return core::reflection::TypeTraits::GetTypeHash<ComponentEvent>();
+			}
+		};
+	}//events namespace
 }//namespace

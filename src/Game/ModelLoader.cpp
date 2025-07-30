@@ -326,7 +326,7 @@ namespace sh::game
 	{
 		if (std::strcmp(asset.GetType(), ASSET_NAME) != 0)
 		{
-			SH_ERROR_FORMAT("Asset({}) is not a model!", asset.GetUUID().ToString());
+			SH_ERROR_FORMAT("Asset({}) is not a model!", asset.GetAssetUUID().ToString());
 			return nullptr;
 		}
 		const auto& modelAsset = static_cast<const game::ModelAsset&>(asset);

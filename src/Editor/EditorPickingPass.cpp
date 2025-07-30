@@ -8,14 +8,14 @@ namespace sh::editor
 	}
 	SH_EDITOR_API void EditorPickingPass::RecordCommand(const std::vector<const render::Camera*>& cameras, uint32_t imgIdx)
 	{
-		assert(pickingCamera);
+		assert(pickingCamera.IsValid());
 		std::vector<const render::Camera*> camVector{};
-		if (pickingCamera->GetActive())
-			camVector.push_back(pickingCamera);
+		if (pickingCamera->GetNative().GetActive())
+			camVector.push_back(&pickingCamera->GetNative());
 
 		render::RenderPipeline::RecordCommand(camVector, imgIdx);
 	}
-	SH_EDITOR_API void EditorPickingPass::SetCamera(const render::Camera& pickingCamera)
+	SH_EDITOR_API void EditorPickingPass::SetCamera(const game::Camera& pickingCamera)
 	{
 		this->pickingCamera = &pickingCamera;
 	}

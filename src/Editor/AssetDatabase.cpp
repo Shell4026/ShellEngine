@@ -1,7 +1,7 @@
 ﻿#include "AssetDatabase.h"
 #include "AssetExtensions.h"
-#include "EditorWorld.h"
 #include "Meta.h"
+#include "UI/Project.h"
 
 #include "Core/FileSystem.h"
 #include "Core/Asset.h"
@@ -13,11 +13,14 @@
 #include "Render/VulkanImpl/VulkanShaderPassBuilder.h"
 #include "Render/VulkanImpl/VulkanContext.h"
 
+#include "Game/GameManager.h"
 #include "Game/World.h"
 #include "Game/TextureLoader.h"
 #include "Game/ModelLoader.h"
 #include "Game/MaterialLoader.h"
 #include "Game/ShaderLoader.h"
+#include "Game/WorldLoader.h"
+#include "Game/AssetLoaderFactory.h"
 
 #include <random>
 #include <istream>
@@ -43,9 +46,12 @@ namespace sh::editor
 			return std::nullopt;
 		return metaFileDir;
 	}
-	auto AssetDatabase::LoadMaterial(EditorWorld& world, const std::filesystem::path& dir) -> render::Material*
+	auto AssetDatabase::LoadMaterial(const std::filesystem::path& dir) -> render::Material*
 	{
-		static game::MaterialLoader loader{ *world.renderer.GetContext() };
+		if (project == nullptr)
+			return nullptr;
+
+		static game::MaterialLoader loader{ *project->renderer.GetContext() };
 		
 		auto matPtr = loader.Load(dir);
 		if (matPtr == nullptr)
@@ -53,7 +59,7 @@ namespace sh::editor
 
 		std::filesystem::path relativePath{ std::filesystem::relative(dir, projectPath) };
 
-		world.materials.AddResource(matPtr->GetUUID().ToString(), matPtr);
+		project->loadedAssets.AddResource(matPtr->GetUUID(), matPtr);
 		matPtr->SetName(dir.stem().string());
 
 		uuids.insert_or_assign(relativePath, matPtr->GetUUID());
@@ -75,7 +81,7 @@ namespace sh::editor
 		os.close();
 	}
 
-	SH_EDITOR_API auto AssetDatabase::ImportAsset(EditorWorld& world, const std::filesystem::path& dir) -> core::SObject*
+	SH_EDITOR_API auto AssetDatabase::ImportAsset(const std::filesystem::path& dir) -> core::SObject*
 	{
 		if (!std::filesystem::exists(dir))
 			return nullptr;
@@ -87,36 +93,44 @@ namespace sh::editor
 		auto type = AssetExtensions::CheckType(extension);
 		if (type == AssetExtensions::Type::Texture)
 		{
-			static game::TextureLoader loader{ *world.renderer.GetContext() };
-			render::Texture* texPtr = static_cast<render::Texture*>(LoadAsset(dir, loader));
+			static game::TextureLoader loader{ *project->renderer.GetContext() };
+			render::Texture* texPtr = static_cast<render::Texture*>(LoadAsset(dir, loader, true));
 			if (texPtr != nullptr)
-				world.textures.AddResource(texPtr->GetUUID().ToString(), texPtr);
+				project->loadedAssets.AddResource(texPtr->GetUUID(), texPtr);
 			return texPtr;
 		}
 		if (type == AssetExtensions::Type::Model)
 		{
-			static game::ModelLoader loader{ *world.renderer.GetContext() };
-			render::Model* modelPtr = static_cast<render::Model*>(LoadAsset(dir, loader));
+			static game::ModelLoader loader{ *project->renderer.GetContext() };
+			render::Model* modelPtr = static_cast<render::Model*>(LoadAsset(dir, loader, true));
 			if (modelPtr != nullptr)
-				world.models.AddResource(modelPtr->GetUUID().ToString(), modelPtr);
+				project->loadedAssets.AddResource(modelPtr->GetUUID(), modelPtr);
 			return modelPtr;
 		}
 		if (type == AssetExtensions::Type::Shader)
 		{
-			assert(world.renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan);
-			if (world.renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan)
+			assert(project->renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan);
+			if (project->renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan)
 			{
-				static render::vk::VulkanShaderPassBuilder passBuilder{ static_cast<render::vk::VulkanContext&>(*world.renderer.GetContext()) };
+				static render::vk::VulkanShaderPassBuilder passBuilder{ static_cast<render::vk::VulkanContext&>(*project->renderer.GetContext()) };
 				static game::ShaderLoader loader{ &passBuilder };
 				loader.SetCachePath(projectPath / "temp");
-				render::Shader* shaderPtr = static_cast<render::Shader*>(LoadAsset(dir, loader));
+				render::Shader* shaderPtr = static_cast<render::Shader*>(LoadAsset(dir, loader, true));
 				if (shaderPtr != nullptr)
-					world.shaders.AddResource(shaderPtr->GetUUID().ToString(), shaderPtr);
+					project->loadedAssets.AddResource(shaderPtr->GetUUID(), shaderPtr);
 				return shaderPtr;
 			}
 		}
 		if (type == AssetExtensions::Type::Material)
-			return LoadMaterial(world, dir);
+			return LoadMaterial(dir);
+		if (type == AssetExtensions::Type::World)
+		{
+			static game::WorldLoader loader{ project->renderer, project->gui };
+			game::World* worldPtr = static_cast<game::World*>(LoadAsset(dir, loader, false));
+			if (worldPtr != nullptr)
+				game::GameManager::GetInstance()->AddWorld(*worldPtr);
+			return worldPtr;
+		}
 		return nullptr;
 	}
 
@@ -174,7 +188,7 @@ namespace sh::editor
 			}
 		}
 	}
-	auto AssetDatabase::LoadAsset(const std::filesystem::path& path, core::IAssetLoader& loader) -> core::SObject*
+	auto AssetDatabase::LoadAsset(const std::filesystem::path& path, core::IAssetLoader& loader, bool bMetaSaveWithObj) -> core::SObject*
 	{
 		std::filesystem::path metaDir{ GetMetaDirectory(path) };
 		std::filesystem::path relativePath{ std::filesystem::relative(path, projectPath) };
@@ -216,11 +230,16 @@ namespace sh::editor
 			meta.DeserializeSObject(*objPtr);
 		else
 		{
-			objPtr->SetUUID(meta.GetUUID());
 			objPtr->SetName(path.stem().u8string());
 		}
 
 		auto asset = core::Factory<core::Asset>::GetInstance()->Create(loader.GetAssetName());
+		if (asset == nullptr)
+		{
+			SH_ERROR_FORMAT("Asset type({}) is invalid", loader.GetAssetName());
+			return nullptr;
+		}
+
 		asset->SetAsset(*objPtr);
 		asset->SetWriteTime(writeTime);
 
@@ -234,7 +253,11 @@ namespace sh::editor
 		uuids.insert_or_assign(relativePath, objPtr->GetUUID());
 		paths.insert_or_assign(objPtr->GetUUID(), AssetInfo{ relativePath, std::filesystem::relative(cachePath, projectPath) });
 
-		meta.SaveWithObj(*objPtr, metaDir);
+		if (bMetaSaveWithObj)
+			meta.SaveWithObj(*objPtr, metaDir);
+		else
+			meta.Save(*objPtr, metaDir);
+
 		return objPtr;
 	}
 	AssetDatabase::AssetDatabase()
@@ -249,6 +272,10 @@ namespace sh::editor
 					dirtyObjs.erase(it);
 			}
 		);
+	}
+	SH_EDITOR_API void AssetDatabase::SetProject(Project& project)
+	{
+		this->project = &project;
 	}
 	SH_EDITOR_API void AssetDatabase::SaveDatabase(const std::filesystem::path& dir)
 	{
@@ -303,7 +330,7 @@ namespace sh::editor
 		projectPath = dir;
 		libPath = projectPath / "Library";
 	}
-	SH_EDITOR_API void AssetDatabase::LoadAllAssets(EditorWorld& world, const std::filesystem::path& dir, bool recursive)
+	SH_EDITOR_API void AssetDatabase::LoadAllAssets(const std::filesystem::path& dir, bool recursive)
 	{
 		LoadAllAssetsHelper(dir, recursive);
 
@@ -311,11 +338,11 @@ namespace sh::editor
 		{
 			AssetLoadData data = std::move(const_cast<AssetLoadData&>(loadingAssetsQueue.top()));
 			loadingAssetsQueue.pop();
-			ImportAsset(world, data.path);
+			ImportAsset(data.path);
 		}
 	}
 
-	SH_EDITOR_API bool AssetDatabase::CreateAsset(EditorWorld& world, const std::filesystem::path& dir, const core::ISerializable& serializable)
+	SH_EDITOR_API bool AssetDatabase::CreateAsset(const std::filesystem::path& dir, const core::ISerializable& serializable)
 	{
 		if (std::filesystem::exists(dir))
 			return false;
@@ -348,7 +375,7 @@ namespace sh::editor
 		return core::AssetImporter::Load(projectPath / it->second.cachePath);
 	}
 
-		auto AssetDatabase::GetAssetOriginalPath(const core::UUID& uuid) const -> std::optional<std::filesystem::path>
+	SH_EDITOR_API auto AssetDatabase::GetAssetOriginalPath(const core::UUID& uuid) const -> std::optional<std::filesystem::path>
 	{
 		auto it = paths.find(uuid);
 		if (it == paths.end())
@@ -357,9 +384,14 @@ namespace sh::editor
 		return it->second.originalPath;
 	}
 
-		auto AssetDatabase::GetAssetUUID(const std::filesystem::path& assetPath) -> std::optional<core::UUID>
+	SH_EDITOR_API auto AssetDatabase::GetAssetUUID(const std::filesystem::path& assetPath) -> std::optional<core::UUID>
 	{
-		std::filesystem::path relativePath = std::filesystem::relative(assetPath, projectPath);
+		std::filesystem::path relativePath{};
+		if (assetPath.is_absolute())
+			relativePath = std::filesystem::relative(assetPath, projectPath);
+		else
+			relativePath = assetPath;
+
 		auto it = uuids.find(relativePath);
 		if (it == uuids.end())
 			return {};

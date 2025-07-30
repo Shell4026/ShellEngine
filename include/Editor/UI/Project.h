@@ -1,20 +1,30 @@
 ﻿#pragma once
 #include "Export.h"
 #include "ProjectSetting.h"
+#include "ExplorerUI.h"
 
 #include "Core/Reflection.hpp"
 #include "Core/SContainer.hpp"
 #include "Core/Plugin.h"
+#include "Core/NonCopyable.h"
 
 #include "Game/GUITexture.h"
+#include "Game/ResourceManager.hpp"
 
 #include <string>
 #include <filesystem>
+namespace sh::render
+{
+	class Renderer;
+}
+namespace sh::game
+{
+	class ImGUImpl;
+}
 namespace sh::editor
 {
 	class AssetDatabase;
-	class EditorWorld;
-	class Project
+	class Project : public core::INonCopyable
 	{
 	private:
 		static constexpr const ImVec4 iconBackgroundColor{ 0, 0, 0, 0 };
@@ -24,6 +34,7 @@ namespace sh::editor
 		std::filesystem::path binaryPath;
 		std::filesystem::path libraryPath;
 		std::filesystem::path currentPath;
+		std::filesystem::path tempPath;
 		std::filesystem::path selected;
 
 		AssetDatabase& assetDatabase;
@@ -45,7 +56,10 @@ namespace sh::editor
 		bool bSettingUI = false;
 	public:
 		static constexpr const char* name = "Project";
-		EditorWorld& world;
+		render::Renderer& renderer;
+		game::ImGUImpl& gui;
+
+		game::ResourceManager<core::SObject, core::UUID> loadedAssets;
 	private:
 		void InitResources();
 		void GetAllFiles(const std::filesystem::path& path);
@@ -70,7 +84,7 @@ namespace sh::editor
 
 		void RenderSettingUI();
 	public:
-		SH_EDITOR_API Project(EditorWorld& world);
+		SH_EDITOR_API Project(render::Renderer& renderer, game::ImGUImpl& gui);
 		SH_EDITOR_API ~Project();
 
 		SH_EDITOR_API void Update();
@@ -81,8 +95,10 @@ namespace sh::editor
 		SH_EDITOR_API void CreateNewProject(const std::filesystem::path& dir);
 		SH_EDITOR_API void OpenProject(const std::filesystem::path& dir);
 
-		SH_EDITOR_API void SaveWorld(const std::string& name);
-		SH_EDITOR_API void LoadWorld(const std::string& name);
+		SH_EDITOR_API void NewWorld(const std::string& name);
+		SH_EDITOR_API void SaveWorld();
+		SH_EDITOR_API void SaveAsWorld(const std::filesystem::path& worldAssetPath);
+		SH_EDITOR_API void LoadWorld(const std::filesystem::path& worldAssetPath);
 
 		SH_EDITOR_API auto IsProjectOpen() const -> bool;
 

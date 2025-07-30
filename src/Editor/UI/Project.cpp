@@ -4,23 +4,27 @@
 #include "AssetDatabase.h"
 #include "AssetExtensions.h"
 #include "BuildSystem.h"
+#include "Component/EditorUI.h"
 
 #include "Core/ModuleLoader.h"
 #include "Core/FileSystem.h"
 #include "Core/GarbageCollection.h"
+#include "Core/ThreadSyncManager.h"
 
 #include "Render/Renderer.h"
 #include "Render/Model.h"
 
 #include "Game/ComponentModule.h"
 #include "Game/GameObject.h"
-
+#include "Game/GameManager.h"
 namespace sh::editor
 {
 	bool Project::bInitResource = false;
 
-	Project::Project(EditorWorld& world) :
-		world(world),
+	Project::Project(render::Renderer& renderer, game::ImGUImpl& gui) :
+		renderer(renderer), gui(gui),
+
+		loadedAssets(renderer),
 		rootPath(std::filesystem::current_path()),
 		currentPath(rootPath),
 		assetDatabase(*AssetDatabase::GetInstance())
@@ -36,6 +40,8 @@ namespace sh::editor
 	{
 		SaveProjectSetting();
 		assetDatabase.SaveDatabase(libraryPath / "AssetDB.json");
+
+		loadedAssets.Clean();
 	}
 
 	void Project::InitResources()
@@ -103,7 +109,7 @@ namespace sh::editor
 		{
 			auto uuidOpt = assetDatabase.GetAssetUUID(path);
 			if (!uuidOpt.has_value())
-				item = assetDatabase.ImportAsset(world, path);
+				item = assetDatabase.ImportAsset(path);
 			else
 				item = core::SObjectManager::GetInstance()->GetSObject(uuidOpt.value());
 
@@ -156,6 +162,7 @@ namespace sh::editor
 				auto objPtr = core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuidStr.value() });
 				if (core::IsValid(objPtr))
 				{
+					auto& world = static_cast<EditorWorld&>(*game::GameManager::GetInstance()->GetCurrentWorld());
 					world.ClearSelectedObjects();
 					world.AddSelectedObject(objPtr);
 				}
@@ -203,13 +210,15 @@ namespace sh::editor
 				}
 				if (ImGui::MenuItem("Material"))
 				{
+					auto& world = static_cast<EditorWorld&>(*game::GameManager::GetInstance()->GetCurrentWorld());
+
 					static render::Shader* defaultShader = world.shaders.GetResource("DefaultShader");
 					assert(defaultShader);
 					std::string name{ core::FileSystem::CreateUniqueFileName(currentPath, "NewMaterial.mat") };
 					auto mat = world.materials.AddResource(name, render::Material{ defaultShader });
 					mat->SetName(name);
 					mat->Build(*world.renderer.GetContext());
-					assetDatabase.CreateAsset(world, currentPath / name, *mat);
+					assetDatabase.CreateAsset(currentPath / name, *mat);
 
 					GetAllFiles(currentPath);
 				}
@@ -404,32 +413,90 @@ namespace sh::editor
 		assetPath = rootPath / "Assets";
 		binaryPath = rootPath / "bin";
 		libraryPath = rootPath / "Library";
+		tempPath = rootPath / "temp";
 		currentPath = dir;
 		LoadProjectSetting();
 		GetAllFiles(currentPath);
 
 		LoadUserModule();
 
+		assetDatabase.SetProject(*this);
 		assetDatabase.LoadDatabase(libraryPath / "AssetDB.json");
 		assetDatabase.SetProjectDirectory(rootPath);
-		assetDatabase.LoadAllAssets(world, assetPath, true);
+		auto& world = static_cast<EditorWorld&>(*game::GameManager::GetInstance()->GetCurrentWorld());
+		assetDatabase.LoadAllAssets(assetPath, true);
 	}
 
-	SH_EDITOR_API void Project::SaveWorld(const std::string& name)
+	SH_EDITOR_API void Project::NewWorld(const std::string& name)
 	{
-		std::ofstream os{ assetPath / (name + ".world") };
-		os << std::setw(4) << world.Serialize();
+		
+	}
+
+	SH_EDITOR_API void Project::SaveWorld()
+	{
+		game::World* currentWorld = game::GameManager::GetInstance()->GetCurrentWorld();
+		if (!core::IsValid(currentWorld))
+			return;
+
+		auto assetPathOpt = assetDatabase.GetAssetOriginalPath(currentWorld->GetUUID());
+		if (!assetPathOpt.has_value())
+			return;
+
+		const auto& assetPath = assetPathOpt.value();
+		std::ofstream os{ assetPath };
+		os << std::setw(4) << currentWorld->Serialize();
 		os.close();
 	}
-	SH_EDITOR_API void Project::LoadWorld(const std::string& name)
+
+	SH_EDITOR_API void Project::SaveAsWorld(const std::filesystem::path& worldAssetPath)
 	{
-		world.AddBeforeSyncTask(
-			[&, name]()
+		game::World* currentWorld = game::GameManager::GetInstance()->GetCurrentWorld();
+		if (!core::IsValid(currentWorld))
+			return;
+
+		currentWorld->ReallocateUUIDS();
+
+		std::ofstream os{ worldAssetPath };
+		os << std::setw(4) << currentWorld->Serialize();
+		os.close();
+	}
+
+	SH_EDITOR_API void Project::LoadWorld(const std::filesystem::path& worldAssetPath)
+	{
+		auto& gameManager = *game::GameManager::GetInstance();
+		game::World* currentWorld = gameManager.GetCurrentWorld();
+		currentWorld->AddAfterSyncTask(
+			[&, worldAssetPath]()
 			{
-				auto file = core::FileSystem::LoadText(assetPath / (name + ".world"));
-				if (file)
+				auto& gameManager = *game::GameManager::GetInstance();
+				game::World* currentWorld = gameManager.GetCurrentWorld();
+
+				auto uuidOpt = assetDatabase.GetAssetUUID(worldAssetPath);
+				if (uuidOpt.has_value())
 				{
-					world.Deserialize(core::Json::parse(file.value()));
+					core::SObject* obj = core::SObjectManager::GetInstance()->GetSObject(uuidOpt.value());
+					if (obj == nullptr)
+						return;
+					game::World* world = core::reflection::Cast<game::World>(obj);
+					if (world == nullptr)
+						return;
+
+					if (currentWorld != nullptr)
+					{
+						gameManager.UnloadWorld(*currentWorld);
+					}
+					core::GarbageCollection::GetInstance()->Collect();
+					core::GarbageCollection::GetInstance()->Collect();
+
+					renderer.Clear();
+					gui.ClearDrawData();
+					gui.AddDrawCallToRenderer();
+
+					world->InitResource();
+					world->LoadWorldPoint();
+					world->Start();
+					
+					gameManager.SetCurrentWorld(*world);
 				}
 			}
 		);
@@ -440,15 +507,17 @@ namespace sh::editor
 	}
 	SH_EDITOR_API void Project::ReloadModule()
 	{
-		world.AddBeforeSyncTask(
+		auto& gameManager = *game::GameManager::GetInstance();
+		game::World* currentWorld = gameManager.GetCurrentWorld();
+		currentWorld->AddBeforeSyncTask(
 			[&]()
 			{
 				bool bSave = false;
 				if (userPlugin.handle != nullptr)
 				{
-					SaveWorld("temp");
+					SaveAsWorld(tempPath / "temp.world");
 
-					for (auto obj : world.GetGameObjects())
+					for (auto obj : currentWorld->GetGameObjects())
 					{
 						for (auto component : obj->GetComponents())
 						{
@@ -475,7 +544,7 @@ namespace sh::editor
 
 				if (bSave)
 				{
-					LoadWorld("temp");
+					LoadWorld(tempPath / "temp.world");
 					core::GarbageCollection::GetInstance()->Collect();
 				}
 			}
@@ -504,6 +573,6 @@ namespace sh::editor
 	SH_EDITOR_API void Project::Build()
 	{
 		BuildSystem builder{};
-		builder.Build(*this, world, binaryPath);
+		builder.Build(*this, *game::GameManager::GetInstance()->GetCurrentWorld(), binaryPath);
 	}
 }

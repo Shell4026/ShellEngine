@@ -32,6 +32,8 @@ namespace sh::game
 		TextureHeader header;
 	private:
 		void SetHeader(TextureHeader& header) const;
+	public:
+		constexpr static const char* ASSET_NAME = "tex";
 	protected:
 		SH_GAME_API void SetAssetData() const override;
 		SH_GAME_API auto ParseAssetData() -> bool override;

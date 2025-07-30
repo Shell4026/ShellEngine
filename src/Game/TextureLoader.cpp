@@ -71,7 +71,7 @@ namespace sh::game
 	{
 		if (std::strcmp(asset.GetType(), ASSET_NAME) != 0)
 		{
-			SH_ERROR_FORMAT("Asset({}) is not a texture!", asset.GetUUID().ToString());
+			SH_ERROR_FORMAT("Asset({}) is not a texture!", asset.GetAssetUUID().ToString());
 			return nullptr;
 		}
 		const auto& texAsset = static_cast<const game::TextureAsset&>(asset);
@@ -79,7 +79,7 @@ namespace sh::game
 		const auto pixelData = texAsset.GetPixelData();
 
 		render::Texture* texture = core::SObject::Create<render::Texture>(header.format, header.width, header.height, header.bMipmap);
-		texture->SetUUID(asset.GetUUID());
+		texture->SetUUID(asset.GetAssetUUID());
 
 		std::size_t offset = 0;
 		for (uint32_t mip = 0; mip < texture->GetMipLevel(); ++mip)

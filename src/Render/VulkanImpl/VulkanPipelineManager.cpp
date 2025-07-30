@@ -9,6 +9,35 @@ namespace sh::render::vk
 	VulkanPipelineManager::VulkanPipelineManager(const VulkanContext& context) :
 		context(context), device(context.GetDevice())
 	{
+		// TODO: pipelines에 nullptr가 많아지면 어떻게 할지 생각해두기
+		shaderDestroyedListener.SetCallback(
+			[&](const core::SObject* obj)
+			{
+				auto shaderPassPtr = static_cast<const VulkanShaderPass*>(obj);
+				std::shared_lock<std::shared_mutex> readLock{ mu };
+				auto it = shaderIdxs.find(shaderPassPtr);
+				if (it != shaderIdxs.end())
+				{
+					auto& idxs = it->second;
+					readLock.unlock();
+
+					std::unique_lock<std::shared_mutex> writeLock{ mu };
+
+					for (std::size_t idx : idxs)
+						pipelines[idx] = nullptr;
+					shaderIdxs.erase(it);
+
+					for (auto it = infoIdx.begin(); it != infoIdx.end();)
+					{
+						auto& info = it->first;
+						if (info.shader == shaderPassPtr)
+							it = infoIdx.erase(it);
+						else
+							++it;
+					}
+				}
+			}
+		);
 	}
 
 	VulkanPipelineManager::VulkanPipelineManager(VulkanPipelineManager&& other) noexcept :
@@ -137,6 +166,8 @@ namespace sh::render::vk
 			auto it = infoIdx.find(info);
 			if (it != infoIdx.end())
 				return it->second;
+
+			shader.onDestroy.Register(shaderDestroyedListener);
 
 			pipelines.push_back(BuildPipeline(renderPass, shader, topology));
 			pipelinesInfo.push_back(info);

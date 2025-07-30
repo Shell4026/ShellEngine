@@ -8,6 +8,7 @@
 #include "Core/SContainer.hpp"
 #include "Core/Util.h"
 #include "Core/NonCopyable.h"
+#include "Core/Observer.hpp"
 
 #include <memory>
 #include <stack>
@@ -60,6 +61,8 @@ namespace sh::render::vk
 		std::unordered_map<const VulkanShaderPass*, std::vector<std::size_t>> shaderIdxs;
 
 		std::shared_mutex mu;
+
+		core::Observer<false, const core::SObject*>::Listener shaderDestroyedListener;
 	private:
 		auto BuildPipeline(const VulkanRenderPass& renderPass, const VulkanShaderPass& shader, Mesh::Topology topology) -> std::unique_ptr<VulkanPipeline>;
 		auto ConvertStencilState(const StencilState& stencilState) const -> VkStencilOpState;

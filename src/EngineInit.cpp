@@ -4,6 +4,7 @@
 #include "Core/GarbageCollection.h"
 #include "Core/ThreadSyncManager.h"
 #include "Core/ThreadPool.h"
+#include "Core/Factory.hpp"
 
 #include "Window/Window.h"
 
@@ -16,11 +17,26 @@
 #include "Game/Input.h"
 
 #include "Game/ComponentModule.h"
+#include "Game/GameManager.h"
 
 #if SH_EDITOR
+#include "Editor/EditorResource.h"
 #include "Editor/EditorWorld.h"
+#include "Editor/AssetDatabase.h"
 #else
+#include "Core/AssetBundle.h"
 #include "Game/World.h"
+#include "Game/AssetLoaderFactory.h"
+#include "Game/TextureLoader.h"
+#include "Game/ModelLoader.h"
+#include "Game/ModelAsset.h"
+#include "Game/MaterialLoader.h"
+#include "Game/ShaderLoader.h"
+#include "Game/ShaderAsset.h"
+#include "Game/WorldLoader.h"
+#include "Game/WorldAsset.h"
+#include "Render/VulkanImpl/VulkanShaderPassBuilder.h"
+#include "Render/VulkanImpl/VulkanContext.h"
 #endif
 
 namespace sh
@@ -36,7 +52,11 @@ namespace sh
 	void EngineInit::Clean()
 	{
 		SH_INFO("Engine shutdown");
-		world->Destroy();
+#if SH_EDITOR
+		project.reset();
+		editor::AssetDatabase::Destroy();
+#endif
+		gameManager->Clean();
 		gc->DefragmentRootSet();
 		while(gc->GetRootSet().size() != gc->GetObjectCount())
 			gc->Collect();
@@ -50,7 +70,10 @@ namespace sh
 	inline void EngineInit::InitResource()
 	{
 		SH_INFO("Resource initialization");
-		world->InitResource();
+#if SH_EDITOR
+		editor::EditorResource::GetInstance()->LoadAllAssets(*project);
+#endif
+		gameManager->GetCurrentWorld()->InitResource();
 	}
 
 	void EngineInit::ProcessInput()
@@ -104,7 +127,9 @@ namespace sh
 
 		SH_INFO_FORMAT("System thread count: {}", std::thread::hardware_concurrency());
 
+		SH_INFO("GarbageCollection initialization");
 		gc = core::GarbageCollection::GetInstance(); // GC 초기화
+
 		SH_INFO("Window initialization");
 		window = std::make_unique<window::Window>();
 		window->Create(u8"ShellEngine", 1024, 768, sh::window::Window::Style::Resize);
@@ -117,15 +142,41 @@ namespace sh
 
 		gui = std::make_unique<game::ImGUImpl>(*window, static_cast<render::vk::VulkanRenderer&>(*renderer));
 		gui->Init();
+
+		gameManager = game::GameManager::GetInstance();
+
+		auto& worldFactory = *core::Factory<game::World, game::World*>::GetInstance();
+		worldFactory.Register(game::World::GetStaticType().name.ToString(),
+			[renderer = renderer.get(), componentModule, gui = gui.get()]() -> game::World*
+			{
+				return core::SObject::Create<game::World>(*renderer, *gui);
+			}
+		);
 #if SH_EDITOR
-		world = core::SObject::Create<editor::EditorWorld>(*renderer, *componentModule, *gui);
+		project = std::make_unique<editor::Project>(*renderer, *gui);
+
+		worldFactory.Register(editor::EditorWorld::GetStaticType().name.ToString(),
+			[project = project.get()]() -> game::World*
+			{
+				return core::SObject::Create<editor::EditorWorld>(*project);
+			}
+		);
+		auto defaultWorld = core::SObject::Create<editor::EditorWorld>(*project); // 기본 월드
+		gameManager->AddWorld(*defaultWorld);
+		gameManager->SetCurrentWorld(*defaultWorld);
 #else
 		world = core::SObject::Create<game::World>(*renderer.get(), *componentModule, *gui);
+		
+		static render::vk::VulkanShaderPassBuilder vkShaderPassBuilder{ static_cast<render::vk::VulkanContext&>(*renderer->GetContext()) };
+
+		auto factory = game::AssetLoaderFactory::GetInstance();
+		factory->RegisterLoader(game::TextureAsset::ASSET_NAME, std::make_unique<game::TextureLoader>(*renderer->GetContext()));
+		factory->RegisterLoader(game::ModelAsset::ASSET_NAME, std::make_unique<game::ModelLoader>(*renderer->GetContext()));
+		//factory->RegisterLoader("MATL", std::make_unique<game::MaterialLoader>(*renderer->GetContext()));
+		factory->RegisterLoader(game::ShaderAsset::ASSET_NAME, std::make_unique<game::ShaderLoader>(&vkShaderPassBuilder));
+		factory->RegisterLoader(game::WorldAsset::ASSET_NAME, std::make_unique<game::WorldLoader>());
+
 #endif
-		gc->SetRootSet(world);
-
-		renderer->AddRenderPipeline<sh::render::RenderPipeline>();
-
 		SH_INFO("Thread creation");
 		core::ThreadPool::GetInstance()->Init(std::max(2u, std::thread::hardware_concurrency() / 2));
 		core::ThreadSyncManager::Init();
@@ -136,7 +187,7 @@ namespace sh
 		InitResource();
 
 		SH_INFO("Start world");
-		world->Start();
+		gameManager->GetCurrentWorld()->Start();
 		renderThread->Run();
 
 		SH_INFO("Start loop");
@@ -161,10 +212,10 @@ namespace sh
 			if (bStop)
 				return;
 
-			world->Update(window->GetDeltaTime());
-
-			world->BeforeSync();
+			gameManager->UpdateWorld(window->GetDeltaTime());
 			core::ThreadSyncManager::Sync();
+			gameManager->GetCurrentWorld()->AfterSync();
+
 			gc->Update();
 
 			core::ThreadSyncManager::AwakeThread();

@@ -136,14 +136,14 @@ namespace sh::game
         return true;
     }
     ModelAsset::ModelAsset() :
-        Asset("mesh")
+        Asset(ASSET_NAME)
     {
     }
     ModelAsset::ModelAsset(const render::Model& model) :
-        Asset("mesh"),
+        Asset(ASSET_NAME),
         modelPtr(&model)
     {
-        uuid = modelPtr->GetUUID();
+        assetUUID = modelPtr->GetUUID();
         SetHeader(header);
     }
     ModelAsset::~ModelAsset()
@@ -155,7 +155,7 @@ namespace sh::game
             return;
 
         modelPtr = static_cast<const render::Model*>(&obj);
-        uuid = modelPtr->GetUUID();
+        assetUUID = modelPtr->GetUUID();
 
         SetHeader(header);
     }

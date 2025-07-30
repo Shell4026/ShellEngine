@@ -16,6 +16,8 @@ namespace sh::render::vk
 	{
 		friend core::Singleton<VulkanCameraBuffers>;
 	private:
+		const VulkanContext* context = nullptr;
+
 		std::vector<const Camera*> cams;
 		uint32_t cap = 10;
 		std::stack<uint32_t> emptyidx;
@@ -27,6 +29,8 @@ namespace sh::render::vk
 		VulkanCameraBuffers() = default;
 	public:
 		SH_RENDER_API void Init(const VulkanContext& context);
+		SH_RENDER_API void Clear();
+
 		SH_RENDER_API void AddCamera(const Camera& camera);
 		SH_RENDER_API void RemoveCamera(const Camera& camera);
 		SH_RENDER_API void UploadDataToGPU(const Camera& camera);

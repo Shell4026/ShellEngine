@@ -13,12 +13,12 @@ namespace sh::editor
 		isDocking(false)
 	{
 		gameObjectEventSubscriber.SetCallback(
-			[&](const game::WorldEvents::GameObjectEvent& event)
+			[&](const game::events::GameObjectEvent& event)
 			{
-				if (event.type == game::WorldEvents::GameObjectEvent::Type::Added)
+				if (event.type == game::events::GameObjectEvent::Type::Added)
 				{
-					if (event.objPtr.IsValid())
-						objList.push_back(event.objPtr.Get());
+					if (!event.gameObject.IsPendingKill())
+						objList.push_back(&event.gameObject);
 				}
 			}
 		);
@@ -29,7 +29,8 @@ namespace sh::editor
 			objList.push_back(obj);
 		}
 
-		RegisterDragItemFunction("GameObject", [&](const ImGuiPayload& payload)
+		RegisterDragItemFunction("GameObject", 
+			[&](const ImGuiPayload& payload)
 			{
 				IM_ASSERT(payload.DataSize == sizeof(game::GameObject*));
 				game::GameObject* draggedObj = *(game::GameObject**)payload.Data;

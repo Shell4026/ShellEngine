@@ -44,6 +44,8 @@ namespace sh::game
 		ModelHeader header;
 	private:
 		auto SetHeader(ModelHeader& header) const -> std::vector<NodeHeader>;
+	public:
+		constexpr static const char* ASSET_NAME = "mesh";
 	protected:
 		SH_GAME_API void SetAssetData() const override;
 		SH_GAME_API auto ParseAssetData() -> bool override;

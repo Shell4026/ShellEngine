@@ -3,6 +3,7 @@
 #include "EditorPickingPass.h"
 #include "EditorOutlinePass.h"
 #include "EditorPostOutlinePass.h"
+#include "UI/Project.h"
 #include "AssetDatabase.h"
 
 #include "Component/EditorUI.h"
@@ -29,6 +30,7 @@
 #include "Game/ModelLoader.h"
 #include "Game/TextureLoader.h"
 #include "Game/ShaderLoader.h"
+#include "Game/WorldEvents.hpp"
 
 namespace sh::editor
 {
@@ -82,28 +84,30 @@ namespace sh::editor
 		}
 	}
 
-	SH_EDITOR_API EditorWorld::EditorWorld(render::Renderer& renderer, const game::ComponentModule& module, game::ImGUImpl& guiContext) :
-		World(renderer, module, guiContext)
+	SH_EDITOR_API EditorWorld::EditorWorld(Project& project) :
+		World(project.renderer, project.gui),
+		project(project)
 	{
-		pickingPass = renderer.AddRenderPipeline<EditorPickingPass>();
-		outlinePass = renderer.AddRenderPipeline<EditorOutlinePass>();
-
-		onComponentAddListener.SetCallback([&](game::Component* component)
+		componentSubscriber.SetCallback(
+			[&](const game::events::ComponentEvent& event)
 			{
-				game::GameObject* obj = &component->gameObject;
-				onComponentAdd.Notify(obj, component);
-				if (obj == grid || obj == axis)
+				game::Component& component = event.component;
+				game::GameObject& obj = component.gameObject;
+				
+				if (&obj == grid || &obj == axis)
 					return;
-				if (component->GetType() == game::MeshRenderer::GetStaticType())
+				if (component.GetType() == game::MeshRenderer::GetStaticType())
 				{
-					auto pickingRenderer = obj->AddComponent<game::PickingRenderer>();
+					auto pickingRenderer = obj.AddComponent<game::PickingRenderer>();
 					pickingRenderer->hideInspector = true;
 					pickingRenderer->SetCamera(*pickingCamera);
-					pickingRenderer->SetMeshRenderer(static_cast<game::MeshRenderer&>(*component));
+					pickingRenderer->SetMeshRenderer(static_cast<game::MeshRenderer&>(component));
 				}
 			}
 		);
-		ImGui::SetCurrentContext(guiContext.GetContext());
+		eventBus.Subscribe(componentSubscriber);
+
+		ImGui::SetCurrentContext(project.gui.GetContext());
 	}
 
 	SH_EDITOR_API EditorWorld::~EditorWorld()
@@ -128,8 +132,9 @@ namespace sh::editor
 	{
 		Super::InitResource();
 
-		EditorResource::GetInstance()->LoadAllAssets(*this);
-
+		pickingPass = renderer.AddRenderPipeline<EditorPickingPass>();
+		outlinePass = renderer.AddRenderPipeline<EditorOutlinePass>();
+		renderer.AddRenderPipeline<render::RenderPipeline>();
 		postOutlinePass = renderer.AddRenderPipeline<EditorPostOutlinePass>();
 
 		render::vk::VulkanShaderPassBuilder shaderBuilder{ static_cast<sh::render::vk::VulkanContext&>(*renderer.GetContext()) };
@@ -164,6 +169,7 @@ namespace sh::editor
 		defaultShader->SetUUID(core::UUID{ "ad9217609f6c7e0f1163785746cc153e" });
 
 		render::RenderTexture* viewportTexture = core::SObject::Create<render::RenderTexture>(render::Texture::TextureFormat::SRGBA32);
+		viewportTexture->SetUUID(core::UUID{ "180635b4e4d1a98ebb0064ab47dc452a" });
 		viewportTexture->Build(*renderer.GetContext());
 		textures.AddResource("Viewport", viewportTexture);
 
@@ -190,22 +196,26 @@ namespace sh::editor
 		outlinePostMat->Build(*renderer.GetContext());
 
 		game::GameObject* camObj = AddGameObject("EditorCamera");
+		camObj->SetUUID(core::UUID{ "e071c2f9898d000823c56389418e8147" });
 		camObj->transform->SetPosition({ 2.f, 2.f, 2.f });
 		camObj->hideInspector = true;
 		camObj->bNotSave = true;
 		editorCamera = camObj->AddComponent<game::EditorCamera>();
 		editorCamera->SetUUID(core::UUID{ "61b7bc9f9fd2ca27dcbad8106745f62a" });
 		editorCamera->SetRenderTexture(viewportTexture);
+		editorCamera->GetNative().SetActive(true);
 
 		auto PickingCamObj = AddGameObject("PickingCamera");
 		PickingCamObj->bNotSave = true;
+		PickingCamObj->SetUUID(core::UUID{ "94702dba2122b976d2941638731507fa" });
 		PickingCamObj->transform->SetParent(camObj->transform);
 		PickingCamObj->transform->SetPosition({ 0.f, 0.f, 0.f });
 		pickingCamera = PickingCamObj->AddComponent<game::PickingCamera>();
 		pickingCamera->SetUUID(core::UUID{ "af9cac824334bcaccd86aad8a18e3cba" });
 		pickingCamera->SetFollowCamera(editorCamera);
+		pickingCamera->GetNative().SetActive(true);
 
-		pickingPass->SetCamera(pickingCamera->GetNative());
+		pickingPass->SetCamera(*pickingCamera);
 		outlinePass->SetCamera(*editorCamera);
 		outlinePass->SetOutTexture(*outlineTexture);
 
@@ -229,6 +239,31 @@ namespace sh::editor
 		uiObj->hideInspector = true;
 		uiObj->bNotSave = true;
 		editorUI = uiObj->AddComponent<EditorUI>();
+		editorUI->SetProject(project);
+
+		grid = AddGameObject("Grid"); // Grid와 Axis는 피킹 렌더러가 추가 되면 안 된다.
+		grid->hideInspector = true;
+		grid->bNotSave = true;
+		auto meshRenderer = grid->AddComponent<game::MeshRenderer>();
+		auto gridMesh = core::SObject::Create<render::Grid>();
+		gridMesh->Build(*renderer.GetContext());
+		meshRenderer->SetMesh(gridMesh);
+		meshRenderer->SetMaterial(this->materials.GetResource("GridMaterial"));
+
+		axis = AddGameObject("Axis");
+		axis->hideInspector = true;
+		axis->bNotSave = true;
+		axis->transform->SetPosition(0.f, 0.01f, 0.f);
+		axis->transform->SetParent(grid->transform);
+		auto line = axis->AddComponent<game::LineRenderer>();
+		line->SetEnd({ 10.f, 0.f, 0.f });
+		line->SetColor({ 1.f, 0.f, 0.f, 1.f });
+		line = axis->AddComponent<game::LineRenderer>();
+		line->SetEnd({ 0.f, 10.f, 0.f });
+		line->SetColor({ 0.f, 1.f, 0.f, 1.f });
+		line = axis->AddComponent<game::LineRenderer>();
+		line->SetEnd({ 0.f, 0.f, 10.f });
+		line->SetColor({ 0.f, 0.f, 1.f, 1.f });
 	}
 
 	SH_EDITOR_API void EditorWorld::AddSelectedObject(core::SObject* obj)
@@ -274,16 +309,13 @@ namespace sh::editor
 	SH_EDITOR_API auto EditorWorld::AddGameObject(std::string_view name) -> game::GameObject*
 	{
 		auto obj = Super::AddGameObject(name);
-		obj->onComponentAdd.Register(onComponentAddListener);
-		
 		return obj;
 	}
 
 	SH_EDITOR_API auto EditorWorld::DuplicateGameObject(const game::GameObject& obj) -> game::GameObject&
 	{
 		game::GameObject& dup = Super::DuplicateGameObject(obj);
-		dup.onComponentAdd.Register(onComponentAddListener);
-		
+
 		std::queue<game::GameObject*> bfs{};
 		bfs.push(&dup);
 		while (!bfs.empty())
@@ -314,30 +346,6 @@ namespace sh::editor
 
 	SH_EDITOR_API void EditorWorld::Start()
 	{
-		grid = AddGameObject("Grid"); // Grid와 Axis는 피킹 렌더러가 추가 되면 안 된다.
-		grid->hideInspector = true;
-		grid->bNotSave = true;
-		auto meshRenderer = grid->AddComponent<game::MeshRenderer>();
-		auto gridMesh = core::SObject::Create<render::Grid>();
-		gridMesh->Build(*renderer.GetContext());
-		meshRenderer->SetMesh(gridMesh);
-		meshRenderer->SetMaterial(this->materials.GetResource("GridMaterial"));
-
-		axis = AddGameObject("Axis");
-		axis->hideInspector = true;
-		axis->bNotSave = true;
-		axis->transform->SetPosition(0.f, 0.01f, 0.f);
-		axis->transform->SetParent(grid->transform);
-		auto line = axis->AddComponent<game::LineRenderer>();
-		line->SetEnd({ 10.f, 0.f, 0.f });
-		line->SetColor({ 1.f, 0.f, 0.f, 1.f });
-		line = axis->AddComponent<game::LineRenderer>();
-		line->SetEnd({ 0.f, 10.f, 0.f });
-		line->SetColor({ 0.f, 1.f, 0.f, 1.f });
-		line = axis->AddComponent<game::LineRenderer>();
-		line->SetEnd({ 0.f, 0.f, 10.f });
-		line->SetColor({ 0.f, 0.f, 1.f, 1.f });
-
 		//auto tri = this->AddGameObject("Triangle");
 		//auto meshRenderer = tri->AddComponent<game::MeshRenderer>();
 		//meshRenderer->SetMesh(this->meshes.GetResource("PlaneMesh"));

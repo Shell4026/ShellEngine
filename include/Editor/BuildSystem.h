@@ -26,8 +26,8 @@ namespace sh::editor
 		std::unordered_set<std::string> uuids;
 
 		void ExtractUUIDs(const core::Json& world);
-		void ExtractUUID(const core::Json& node);
-		void PackingAssets(const std::filesystem::path& outputPath);
+		void PackingAssets(game::World& world, const std::filesystem::path& outputPath);
+		void ExportGameManager(const std::filesystem::path& outputPath);
 	public:
 		SH_EDITOR_API BuildSystem();
 

@@ -1,10 +1,10 @@
 ﻿#pragma once
 #include "Export.h"
-
 #include "IObject.h"
+#include "WorldEvents.hpp"
+#include "World.h"
 #include "Component/Component.h"
 #include "Component/Transform.h"
-#include "World.h"
 
 #include "Core/Reflection.hpp"
 #include "Core/Util.h"
@@ -30,7 +30,6 @@ namespace sh::game
 
 		const bool& activeSelf;
 
-		mutable core::Observer<false, Component*> onComponentAdd;
 		PROPERTY(hideInspector, core::PropertyOption::invisible)
 		bool hideInspector = false;
 		bool bNotSave = false;
@@ -76,7 +75,7 @@ namespace sh::game
 			ptr->SetActive(true);
 			ptr->SetName(components.back()->GetType().name);
 
-			onComponentAdd.Notify(ptr);
+			world.PublishEvent(events::ComponentEvent{ *ptr, events::ComponentEvent::Type::Added });
 
 			return static_cast<T*>(ptr);
 		}

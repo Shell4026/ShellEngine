@@ -16,14 +16,14 @@ namespace sh::game
 		return true;
 	}
 	ShaderAsset::ShaderAsset() :
-		Asset("shad")
+		Asset(ASSET_NAME)
 	{
 	}
 	ShaderAsset::ShaderAsset(const render::Shader& shader) :
-		Asset("shad"),
+		Asset(ASSET_NAME),
 		shaderPtr(static_cast<const render::Shader*>(&shader))
 	{
-		uuid = shaderPtr->GetUUID();
+		assetUUID = shaderPtr->GetUUID();
 	}
 	SH_GAME_API void ShaderAsset::SetAsset(const core::SObject& obj)
 	{
@@ -31,7 +31,7 @@ namespace sh::game
 			return;
 
 		shaderPtr = static_cast<const render::Shader*>(&obj);
-		uuid = shaderPtr->GetUUID();
+		assetUUID = shaderPtr->GetUUID();
 	}
 	SH_GAME_API auto ShaderAsset::GetShaderObjectJson() const -> const core::Json&
 	{

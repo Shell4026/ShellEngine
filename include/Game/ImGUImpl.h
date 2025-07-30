@@ -43,9 +43,11 @@ namespace sh::game
 		SH_GAME_API ImGUImpl(window::Window& window, render::Renderer& renderer);
 		SH_GAME_API ~ImGUImpl();
 		SH_GAME_API void Clean();
+		SH_GAME_API void ClearDrawData();
 
 		/// @brief ImGUI세팅 후 렌더러에 드로우콜을 추가하는 함수.
 		SH_GAME_API void Init();
+		SH_GAME_API void AddDrawCallToRenderer();
 		SH_GAME_API void Resize();
 		SH_GAME_API void ProcessEvent(window::Event event);
 		SH_GAME_API void Begin();

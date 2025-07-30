@@ -1,10 +1,13 @@
 ﻿#include "VulkanCameraBuffers.h"
+
 #include "Core/Util.h"
 
 namespace sh::render::vk
 {
 	void VulkanCameraBuffers::Init(const VulkanContext& context)
 	{
+		this->context = &context;
+
 		cameraData = std::make_unique<VulkanBuffer>(context);
 		std::size_t minUboAlignment = context.GetGPUProperty().limits.minUniformBufferOffsetAlignment;
 
@@ -17,6 +20,11 @@ namespace sh::render::vk
 			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 			VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 			true);
+	}
+	SH_RENDER_API void VulkanCameraBuffers::Clear()
+	{
+		cams.clear();
+		emptyidx = std::stack<uint32_t>{};
 	}
 	void VulkanCameraBuffers::AddCamera(const Camera& camera)
 	{

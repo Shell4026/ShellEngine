@@ -36,6 +36,7 @@ namespace sh::core
 	public:
 		/// @brief 초기화 함수. 반드시 메인 스레드에서 호출 할 것.
 		SH_CORE_API static void Init();
+		SH_CORE_API static void Clear();
 		SH_CORE_API static void PushSyncable(ISyncable& syncable, uint32_t priority = 0);
 		SH_CORE_API static void AddThread(EngineThread& thread);
 		/// @brief 동기화 객체들을 동기화 하는 함수. 모든 스레드가 작업을 마치고 수면중일 때 호출 해야한다.

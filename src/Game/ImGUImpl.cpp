@@ -29,11 +29,7 @@ namespace sh::game
 		if (src == nullptr || !src->Valid)
 			return;
 
-		// DrawData.Clear()는 drawData*를 해제 하지 않기에 수동 소멸시켜야 함.
-		for (int i = 0; i < drawData.CmdListsCount; ++i)
-			IM_DELETE(drawData.CmdLists[i]);
-		drawData.Clear();
-		drawData.CmdLists.clear();
+		ClearDrawData();
 
 		// CmdLists 제외 복사
 		ImVector<ImDrawList*> temp;
@@ -70,6 +66,15 @@ namespace sh::game
 		ImGui_ImplVulkan_Shutdown();
 		ImGui::DestroyContext();
 		bInit = false;
+	}
+
+	SH_GAME_API void ImGUImpl::ClearDrawData()
+	{
+		// DrawData.Clear()는 drawData*를 해제 하지 않기에 수동 소멸시켜야 함.
+		for (int i = 0; i < drawData.CmdListsCount; ++i)
+			IM_DELETE(drawData.CmdLists[i]);
+		drawData.Clear();
+		drawData.CmdLists.clear();
 	}
 
 	void ImGUImpl::WindowInit()
@@ -124,6 +129,17 @@ namespace sh::game
 			initInfo.UseDynamicRendering = false;
 			ImGui_ImplVulkan_Init(&initInfo);
 			ImGui_ImplVulkan_CreateFontsTexture();
+
+			AddDrawCallToRenderer();
+		}
+		bInit = true;
+	}
+
+	SH_GAME_API void ImGUImpl::AddDrawCallToRenderer()
+	{
+		if (renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan)
+		{
+			render::vk::VulkanContext& vkContext = static_cast<render::vk::VulkanContext&>(*renderer.GetContext());
 			renderer.AddDrawCall
 			(
 				[&]()
@@ -133,7 +149,6 @@ namespace sh::game
 				}
 			);
 		}
-		bInit = true;
 	}
 
 	SH_GAME_API void ImGUImpl::Resize()

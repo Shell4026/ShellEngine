@@ -1,5 +1,4 @@
 ﻿#pragma once
-
 #include "Export.h"
 #include "ResourceManager.hpp"
 #include "ComponentModule.h"
@@ -12,6 +11,7 @@
 #include "Core/Observer.hpp"
 #include "Core/Memory/MemoryPool.hpp"
 #include "Core/EventBus.h"
+#include "Core/AssetBundle.h"
 
 #include "Render/Shader.h"
 #include "Render/Material.h"
@@ -55,7 +55,7 @@ namespace sh::game
 		core::memory::MemoryPool<GameObject> objPool;
 
 		core::SHashSet<GameObject*> objs;
-		std::unordered_set<Camera*> cameras;
+		core::SHashSet<Camera*> cameras;
 
 		std::vector<GameObject*> addedObjs; // 루프 도중 추가 된 객체
 
@@ -69,12 +69,18 @@ namespace sh::game
 		Octree lightOctree;
 
 		std::queue<std::function<void()>> beforeSyncTasks;
+		std::queue<std::function<void()>> afterSyncTasks;
 		std::queue<GameObject*> deallocatedObjs;
 
-		core::EventBus eventBus;
+		core::AssetBundle assetBundle;
 
-		bool startLoop = false;
-		bool playing = false;
+		core::Json lateSerializedData;
+
+		bool bStartLoop = false;
+		bool bPlaying = false;
+		bool bLoaded = false;
+	protected:
+		core::EventBus eventBus;
 	public:
 		render::Renderer& renderer;
 		const float& deltaTime = _deltaTime;
@@ -91,8 +97,8 @@ namespace sh::game
 	protected:
 		SH_GAME_API void CleanObjs();
 	public:
-		SH_GAME_API World(render::Renderer& renderer, const ComponentModule& componentModule, ImGUImpl& guiContext);
-		SH_GAME_API World(World&& other) noexcept;
+		SH_GAME_API World(render::Renderer& renderer, ImGUImpl& guiContext);
+		SH_GAME_API World(World&& other) = delete;
 		SH_GAME_API virtual ~World();
 
 		SH_GAME_API void OnDestroy() override;
@@ -101,6 +107,9 @@ namespace sh::game
 
 		/// @brief 기본 리소스를 로드한다.
 		SH_GAME_API virtual void InitResource();
+
+		SH_GAME_API auto LoadAssetBundle(const std::filesystem::path& path) -> bool;
+		SH_GAME_API auto LoadObjectFromBundle(const core::UUID& uuid) -> core::SObject*;
 
 		/// @brief 게임 오브젝트를 추가한다.
 		/// @param name 오브젝트 이름
@@ -134,20 +143,33 @@ namespace sh::game
 		SH_GAME_API virtual void Start();
 		SH_GAME_API void Update(float deltaTime);
 		SH_GAME_API virtual void BeforeSync();
-
+		SH_GAME_API virtual void AfterSync();
 		/// @brief 동기화 전에 실행될 작업을 지정한다. 작업은 1회만 실행된다.
 		/// @param func 함수
 		SH_GAME_API void AddBeforeSyncTask(const std::function<void()>& func);
+		/// @brief 동기화 후에 실행될 작업을 지정한다. 작업은 1회만 실행된다.
+		/// @param func 함수
+		SH_GAME_API void AddAfterSyncTask(const std::function<void()>& func);
 
 		SH_GAME_API auto Serialize() const->core::Json override;
 		SH_GAME_API void Deserialize(const core::Json& json) override;
 
+		SH_GAME_API void SaveWorldPoint(const core::Json& json);
+		SH_GAME_API void SaveWorldPoint(core::Json&& json);
+		SH_GAME_API void LoadWorldPoint();
+		SH_GAME_API auto GetWorldPoint() const -> const core::Json&;
+
 		SH_GAME_API auto GetUiContext() const -> ImGUImpl&;
 
+		SH_GAME_API void PublishEvent(const core::IEvent& event);
 		SH_GAME_API void SubscribeEvent(core::ISubscriber& subscriber);
 
-		SH_GAME_API void Playing();
+		SH_GAME_API void Play();
 		SH_GAME_API void Stop();
 		SH_GAME_API auto IsPlaying() const -> bool;
+
+		SH_GAME_API auto IsLoaded() const -> bool;
+
+		SH_GAME_API virtual void ReallocateUUIDS();
 	};
 }

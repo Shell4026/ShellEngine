@@ -19,7 +19,7 @@
 
 namespace sh::game
 {
-	template<typename T, 
+	template<typename T, typename KeyType = std::string,
 		typename Condition = std::enable_if_t<std::is_base_of_v<sh::core::SObject, T>>>
 	class ResourceManager : public sh::core::INonCopyable
 	{
@@ -27,7 +27,7 @@ namespace sh::game
 		core::GarbageCollection& gc;
 		render::Renderer& renderer;
 
-		core::SHashMap<std::string, T*> resources;
+		std::unordered_map<KeyType, T*> resources;
 	public:
 		core::Observer<false, T*> onResourceDestroy;
 	public:
@@ -59,72 +59,53 @@ namespace sh::game
 		}
 
 		/// @brief 에셋을 추가한다.
-		/// @param _name 구분용 이름 (에셋 이름과 다를 수 있음)
+		/// @param key 에셋 키
 		/// @param resource 에셋 포인터
 		/// @return 에셋 포인터
-		auto AddResource(const std::string& _name, T* resource) -> T*
+		auto AddResource(const KeyType& key, T* resource) -> T*
 		{
 			assert(resource);
 
-			std::string name{ _name };
-
-			int idx = 0;
-			auto it = resources.find(name);
-			while (it != resources.end())
-			{
-				name += std::to_string(idx);
-				it = resources.find(name);
-			}
+			auto it = resources.find(key);
+			if (it != resources.end())
+				return nullptr;
 
 			gc.SetRootSet(resource);
-			return resources.insert({ std::move(name), resource }).first->second;
+			return resources.insert({ key, resource }).first->second;
 		}
 		/// @brief 에셋을 이동시켜 추가한다.
-		/// @param _name 구분용 이름 (에셋 이름과 다를 수 있음)
+		/// @param key 에셋 키
 		/// @param resource 임시 에셋 객체
 		/// @return 에셋 포인터
-		auto AddResource(const std::string& _name, T&& resource) -> T*
+		auto AddResource(const KeyType& key, T&& resource) -> T*
 		{
-			std::string name{ _name };
-
-			int idx = 0;
-			auto it = resources.find(name);
-			while (it != resources.end())
-			{
-				name += std::to_string(idx);
-				it = resources.find(name);
-			}
+			auto it = resources.find(key);
+			if (it != resources.end())
+				return nullptr;
 
 			auto resourcePtr = core::SObject::Create<T>(std::move(resource));
-			resourcePtr->SetName(name);
 
 			gc.SetRootSet(resourcePtr);
-			return resources.insert({ std::move(name), resourcePtr }).first->second;
+			return resources.insert({ key, resourcePtr }).first->second;
 		}
 		/// @brief 에셋을 복사하여 추가한다.
-		/// @param _name 구분용 이름 (에셋 이름과 다를 수 있음)
+		/// @param key 에셋 키
 		/// @param resource 에셋 참조
 		/// @return 에셋 포인터
-		auto AddResource(const std::string& _name, const T& resource) -> T*
+		auto AddResource(const KeyType& key, const T& resource) -> T*
 		{
-			std::string name{ _name };
-
-			int idx = 0;
-			auto it = resources.find(name);
-			while (it != resources.end())
-			{
-				name += std::to_string(idx);
-				it = resources.find(name);
-			}
+			auto it = resources.find(key);
+			if (it != resources.end())
+				return nullptr;
 
 			auto resourcePtr = core::SObject::Create<T>(resource);
 			gc.SetRootSet(resourcePtr);
-			return resources.insert({ std::move(name), resourcePtr }).first->second.get();
+			return resources.insert({ key, resourcePtr }).first->second.get();
 		}
 
-		bool DestroyResource(const std::string& name)
+		bool DestroyResource(const KeyType& key)
 		{
-			auto it = resources.find(name);
+			auto it = resources.find(key);
 			if (it == resources.end())
 				return false;
 
@@ -136,9 +117,9 @@ namespace sh::game
 			return true;
 		}
 
-		auto GetResource(const std::string& name) -> T*
+		auto GetResource(const KeyType& key) -> T*
 		{
-			auto it = resources.find(name);
+			auto it = resources.find(key);
 			if (it == resources.end())
 				return nullptr;
 

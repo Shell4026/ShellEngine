@@ -18,7 +18,7 @@ namespace sh::core
 		Asset::Header header{};
 		header.version = Asset::VERSION;
 		std::memcpy(header.type, asset.GetType(), sizeof(header.type));
-		header.uuid = asset.uuid.GetRawData();
+		header.uuid = asset.assetUUID.GetRawData();
 		header.originalDataSize = asset.data.size();
 		header.compressedDataSize = header.originalDataSize;
 		header.writeTime = asset.writeTime;

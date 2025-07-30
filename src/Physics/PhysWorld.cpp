@@ -10,6 +10,12 @@ namespace sh::phys
 	{
 		world = physicsCommon.createPhysicsWorld();
 	}
+	PhysWorld::PhysWorld(PhysWorld&& other) noexcept :
+		physicsCommon(),
+		world(other.world)
+	{
+		other.world = nullptr;
+	}
 	SH_PHYS_API PhysWorld::~PhysWorld()
 	{
 		SH_INFO("~PhysWorld()");

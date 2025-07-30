@@ -45,9 +45,7 @@ namespace sh::game
 		world(other.world), transform(other.transform),
 		
 		bInit(other.bInit), bEnable(other.bEnable), activeSelf(bEnable),
-		components(std::move(other.components)),
-
-		onComponentAdd(std::move(other.onComponentAdd))
+		components(std::move(other.components))
 	{
 		other.transform = nullptr;
 	}
@@ -166,7 +164,7 @@ namespace sh::game
 		components.push_back(std::move(component));
 		components.back()->SetActive(true);
 
-		onComponentAdd.Notify(components.back());
+		world.PublishEvent(events::ComponentEvent{ *component, events::ComponentEvent::Type::Added });
 	}
 
 	SH_GAME_API auto GameObject::Clone() const -> GameObject&

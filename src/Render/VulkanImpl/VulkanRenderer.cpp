@@ -29,20 +29,22 @@ namespace sh::render::vk
 
 	SH_RENDER_API VulkanRenderer::~VulkanRenderer()
 	{
-		if(isInit)
+		if (isInit)
+		{
 			Clear();
+
+			camManager->Destroy();
+			vkDeviceWaitIdle(context->GetDevice());
+			DestroySyncObjects();
+			context->Clean();
+		}
 	}
 
 	SH_RENDER_API void VulkanRenderer::Clear()
 	{
 		Renderer::Clear();
 
-		camManager->Destroy();
-		vkDeviceWaitIdle(context->GetDevice());
-		DestroySyncObjects();
-		context->Clean();
-
-		isInit = false;
+		camManager->Clear();
 	}
 
 	auto VulkanRenderer::CreateSyncObjects() -> VkResult
@@ -178,101 +180,107 @@ namespace sh::render::vk
 		VulkanCommandBuffer* cmd = context->GetCommandBuffer(core::ThreadType::Render);
 		cmd->Reset();
 
-		std::vector<const Camera*> cams{};
-		cams.reserve(cameras.size());
-		for (auto camera : cameras)
-		{
-			camManager->UploadDataToGPU(*camera);
-			cams.push_back(camera);
-		}
-
-		std::vector<std::future<std::pair<int, std::unique_ptr<VulkanCommandBuffer>>>> futureCommands;
-		futureCommands.reserve(renderPipelines.size());
-		int num = 0;
-		for (auto& renderPipeline : renderPipelines)
-		{
-			futureCommands.push_back(core::ThreadPool::GetInstance()->AddTask(
-				[&, num, pipeline = renderPipeline.get()]() -> std::pair<int, std::unique_ptr<VulkanCommandBuffer>>
-				{
-					std::thread::id tid{ std::this_thread::get_id() };
-					std::hash<std::thread::id> hasher{};
-
-					auto cmdPool = context->GetCommandPool(tid);
-					if (cmdPool == VK_NULL_HANDLE)
-						cmdPool = context->CreateThreadCommandPool(context->GetQueueManager().GetGraphicsQueueFamilyIdx(), tid);
-					auto cmd = std::make_unique<VulkanCommandBuffer>(*context);
-					cmd->Create(cmdPool);
-
-					static_cast<VulkanRenderPipelineImpl*>(pipeline->GetImpl())->SetCommandBuffer(*cmd);
-					cmd->Build(
-						[&]
-						{
-							pipeline->RecordCommand(cams, imgIdx);
-						}
-					);
-					
-					return { num, std::move(cmd) };
-				}
-			));
-			++num;
-		}
 		cmd->Build([&]
+			{
+				const VulkanFramebuffer* mainFramebuffer = static_cast<const VulkanFramebuffer*>(context->GetMainFramebuffer(imgIdx));
+
+				VkRenderPassBeginInfo renderPassInfo{};
+				std::array<VkClearValue, 2> clear;
+				clear[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+				clear[1].depthStencil = { 1.0f, 0 };
+
+				std::array<VkClearValue, 3> clearMSAA;
+				clearMSAA[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+				clearMSAA[1].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+				clearMSAA[2].depthStencil = { 1.0f, 0 };
+
+				bool bMSAA = context->GetSampleCount() != VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
+
+				renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+				renderPassInfo.renderPass = mainFramebuffer->GetRenderPass()->GetVkRenderPass();
+				renderPassInfo.framebuffer = mainFramebuffer->GetVkFramebuffer();
+				renderPassInfo.renderArea.offset = { 0, 0 };
+				renderPassInfo.renderArea.extent = context->GetSwapChain().GetSwapChainSize();
+				renderPassInfo.clearValueCount = bMSAA ? static_cast<uint32_t>(clearMSAA.size()) : static_cast<uint32_t>(clear.size());
+				renderPassInfo.pClearValues = bMSAA ? clearMSAA.data() : clear.data();
+				vkCmdBeginRenderPass(cmd->GetCommandBuffer(), &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
+
+				VkViewport viewport{};
+				float width = context->GetViewportEnd().x - context->GetViewportStart().x;
+				float height = context->GetViewportEnd().y - context->GetViewportStart().y;
+				float surfWidth = static_cast<float>(context->GetSwapChain().GetSwapChainSize().width);
+				float surfHeight = static_cast<float>(context->GetSwapChain().GetSwapChainSize().height);
+				viewport.x = context->GetViewportStart().x;
+				viewport.y = context->GetViewportEnd().y;
+				viewport.width = std::min(width, surfWidth);
+				viewport.height = -std::min(height, surfHeight);
+				viewport.minDepth = 0.0f;
+				viewport.maxDepth = 1.0f;
+				vkCmdSetViewport(cmd->GetCommandBuffer(), 0, 1, &viewport);
+
+				VkRect2D scissor{};
+				scissor.offset = { 0, 0 };
+				scissor.extent = context->GetSwapChain().GetSwapChainSize();
+				vkCmdSetScissor(cmd->GetCommandBuffer(), 0, 1, &scissor);
+
+				for (auto& func : drawCalls)
+					func();
+
+				vkCmdEndRenderPass(cmd->GetCommandBuffer());
+			}
+		);
+		if (cameras.size() > 0)
 		{
-			const VulkanFramebuffer* mainFramebuffer = static_cast<const VulkanFramebuffer*>(context->GetMainFramebuffer(imgIdx));
+			std::vector<const Camera*> cams{};
+			cams.reserve(cameras.size());
+			for (auto camera : cameras)
+			{
+				if (!camera->GetActive())
+					continue;
+				camManager->UploadDataToGPU(*camera);
+				cams.push_back(camera);
+			}
 
-			VkRenderPassBeginInfo renderPassInfo{};
-			std::array<VkClearValue, 2> clear;
-			clear[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-			clear[1].depthStencil = { 1.0f, 0 };
+			std::vector<std::future<std::pair<int, std::unique_ptr<VulkanCommandBuffer>>>> futureCommands;
+			futureCommands.reserve(renderPipelines.size());
+			int num = 0;
+			for (auto& renderPipeline : renderPipelines)
+			{
+				futureCommands.push_back(core::ThreadPool::GetInstance()->AddTask(
+					[&, num, pipeline = renderPipeline.get()]() -> std::pair<int, std::unique_ptr<VulkanCommandBuffer>>
+					{
+						std::thread::id tid{ std::this_thread::get_id() };
+						std::hash<std::thread::id> hasher{};
 
-			std::array<VkClearValue, 3> clearMSAA;
-			clearMSAA[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-			clearMSAA[1].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-			clearMSAA[2].depthStencil = { 1.0f, 0 };
+						auto cmdPool = context->GetCommandPool(tid);
+						if (cmdPool == VK_NULL_HANDLE)
+							cmdPool = context->CreateThreadCommandPool(context->GetQueueManager().GetGraphicsQueueFamilyIdx(), tid);
+						auto cmd = std::make_unique<VulkanCommandBuffer>(*context);
+						cmd->Create(cmdPool);
 
-			bool bMSAA = context->GetSampleCount() != VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
+						static_cast<VulkanRenderPipelineImpl*>(pipeline->GetImpl())->SetCommandBuffer(*cmd);
+						cmd->Build(
+							[&]
+							{
+								pipeline->RecordCommand(cams, imgIdx);
+							}
+						);
 
-			renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-			renderPassInfo.renderPass = mainFramebuffer->GetRenderPass()->GetVkRenderPass();
-			renderPassInfo.framebuffer = mainFramebuffer->GetVkFramebuffer();
-			renderPassInfo.renderArea.offset = { 0, 0 };
-			renderPassInfo.renderArea.extent = context->GetSwapChain().GetSwapChainSize();
-			renderPassInfo.clearValueCount = bMSAA ? static_cast<uint32_t>(clearMSAA.size()) : static_cast<uint32_t>(clear.size());
-			renderPassInfo.pClearValues = bMSAA ? clearMSAA.data() : clear.data();
-			vkCmdBeginRenderPass(cmd->GetCommandBuffer(), &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
-
-			VkViewport viewport{};
-			float width = context->GetViewportEnd().x - context->GetViewportStart().x;
-			float height = context->GetViewportEnd().y - context->GetViewportStart().y;
-			float surfWidth = static_cast<float>(context->GetSwapChain().GetSwapChainSize().width);
-			float surfHeight = static_cast<float>(context->GetSwapChain().GetSwapChainSize().height);
-			viewport.x = context->GetViewportStart().x;
-			viewport.y = context->GetViewportEnd().y;
-			viewport.width = std::min(width, surfWidth);
-			viewport.height = -std::min(height, surfHeight);
-			viewport.minDepth = 0.0f;
-			viewport.maxDepth = 1.0f;
-			vkCmdSetViewport(cmd->GetCommandBuffer(), 0, 1, &viewport);
-
-			VkRect2D scissor{};
-			scissor.offset = { 0, 0 };
-			scissor.extent = context->GetSwapChain().GetSwapChainSize();
-			vkCmdSetScissor(cmd->GetCommandBuffer(), 0, 1, &scissor);
-
-			for (auto& func : drawCalls)
-				func();
-
-			vkCmdEndRenderPass(cmd->GetCommandBuffer());
-		});
-		std::vector<std::unique_ptr<VulkanCommandBuffer>> recordedCommands;
-		recordedCommands.resize(futureCommands.size());
-		for (auto& futureCommand : futureCommands)
-		{
-			auto [idx, VulkanCommandBuffer] = futureCommand.get();
-			recordedCommands[idx] = std::move(VulkanCommandBuffer);
+						return { num, std::move(cmd) };
+					}
+				));
+				++num;
+			}
+			std::vector<std::unique_ptr<VulkanCommandBuffer>> recordedCommands;
+			recordedCommands.resize(futureCommands.size());
+			for (auto& futureCommand : futureCommands)
+			{
+				auto [idx, VulkanCommandBuffer] = futureCommand.get();
+				recordedCommands[idx] = std::move(VulkanCommandBuffer);
+			}
+			for (auto& cmd : recordedCommands)
+				context->GetQueueManager().SubmitCommand(*cmd, nullptr, false);
 		}
-		for (auto& cmd : recordedCommands)
-			context->GetQueueManager().SubmitCommand(*cmd, nullptr, false);
 		context->GetQueueManager().SubmitCommand(*cmd, inFlightFence);
 
 		uint32_t drawCallCount = 0;

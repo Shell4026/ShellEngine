@@ -105,7 +105,7 @@ namespace sh::game
 	{
 		if (std::strcmp(asset.GetType(), ASSET_NAME) != 0)
 		{
-			SH_ERROR_FORMAT("Asset({}) is not a shader!", asset.GetUUID().ToString());
+			SH_ERROR_FORMAT("Asset({}) is not a shader!", asset.GetAssetUUID().ToString());
 			return nullptr;
 		}
 		const auto& shaderAsset = static_cast<const game::ShaderAsset&>(asset);

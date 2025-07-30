@@ -26,12 +26,6 @@ namespace sh::editor
 		}
 		json = core::Json::parse(metaText.value());
 		
-		if (!json.contains("metaHash"))
-		{
-			SH_ERROR_FORMAT("Not found metaHash key from {}", path.u8string());
-			json.clear();
-			return false;
-		}
 		if (!json.contains("uuid"))
 		{
 			SH_ERROR_FORMAT("Not found UUID from {}", path.u8string());
@@ -50,14 +44,19 @@ namespace sh::editor
 			json.clear();
 			return false;
 		}
-		hash = json["metaHash"];
-		if (json.contains("obj"))
+		if (!json.contains("metaHash"))
+			SH_WARN_FORMAT("Not found metaHash key from {}", path.u8string());
+		else
 		{
-			const core::Json objJson = json["obj"];
-			std::hash<std::string> hasher{};
-			const std::size_t objHash = hasher(objJson.dump());
+			hash = json["metaHash"];
+			if (json.contains("obj"))
+			{
+				const core::Json objJson = json["obj"];
+				std::hash<std::string> hasher{};
+				const std::size_t objHash = hasher(objJson.dump());
 
-			bChanged = hash != objHash;
+				bChanged = hash != objHash;
+			}
 		}
 		uuid = core::UUID{ json["uuid"].get<std::string>() };
 		typeHash = json["typeHash"];

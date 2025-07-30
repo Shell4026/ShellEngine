@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include "Export.h"
 
+#include "Core/SContainer.hpp"
+
 #include "Render/RenderPipeline.h"
 
 #include "Game/Component/Camera.h"
@@ -15,9 +17,8 @@ namespace sh::editor
 	class EditorOutlinePass : public render::RenderPipeline
 	{
 	private:
-		render::RenderTexture* output = nullptr;
-
-		game::Camera* camera = nullptr;
+		core::SObjWeakPtr<render::RenderTexture> output = nullptr;
+		core::SObjWeakPtr<game::Camera> camera = nullptr;
 	public:
 		SH_EDITOR_API EditorOutlinePass();
 		SH_EDITOR_API ~EditorOutlinePass();

@@ -2,17 +2,17 @@
 namespace sh::core
 {
 	Asset::Asset(const char* type) :
-		uuid(UUID::Generate()), type(type)
+		assetUUID(UUID::Generate()), type(type)
 	{
 	}
 	Asset::Asset(const Asset& other) :
-		uuid(other.uuid),
+		assetUUID(other.assetUUID),
 		type(other.type),
 		data(other.data)
 	{
 	}
 	Asset::Asset(Asset&& other) noexcept :
-		uuid(std::move(other.uuid)),
+		assetUUID(std::move(other.assetUUID)),
 		type(other.type),
 		data(std::move(other.data))
 	{
@@ -29,9 +29,9 @@ namespace sh::core
 	{
 		return data.size();
 	}
-	SH_CORE_API auto Asset::GetUUID() const -> const UUID&
+	SH_CORE_API auto Asset::GetAssetUUID() const -> const UUID&
 	{
-		return uuid;
+		return assetUUID;
 	}
 	SH_CORE_API auto Asset::GetType() const -> const char*
 	{

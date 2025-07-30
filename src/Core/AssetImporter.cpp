@@ -41,7 +41,7 @@ namespace sh::core
 			return nullptr;
 
 		asset->assetVersion = header.version;
-		asset->uuid = header.uuid;
+		asset->assetUUID = header.uuid;
 		asset->data.resize(header.originalDataSize, 0);
 		asset->writeTime = header.writeTime;
 

@@ -1,21 +1,28 @@
 ﻿#include "EditorResource.h"
-#include "EditorWorld.h"
+#include "UI/Project.h"
 
 #include "Game/TextureLoader.h"
 
 namespace sh::editor
 {
-	SH_EDITOR_API void EditorResource::LoadAllAssets(EditorWorld& world)
+	SH_EDITOR_API void EditorResource::LoadAllAssets(Project& project)
 	{
-		this->world = &world;
-
-		auto& ctx = *world.renderer.GetContext();
+		auto& ctx = *project.renderer.GetContext();
 		game::TextureLoader texLoader{ ctx };
 
-		folderIcon.Create(ctx, *world.textures.AddResource("FolderIcon", static_cast<render::Texture*>(texLoader.Load("textures/folder.png"))));
-		fileIcon.Create(ctx, *world.textures.AddResource("FileIcon", static_cast<render::Texture*>(texLoader.Load("textures/file.png"))));
-		meshIcon.Create(ctx, *world.textures.AddResource("MeshIcon", static_cast<render::Texture*>(texLoader.Load("textures/meshIcon.png"))));
-		materialIcon.Create(ctx, *world.textures.AddResource("MaterialIcon", static_cast<render::Texture*>(texLoader.Load("textures/MaterialIcon.png"))));
+		auto folderTex = static_cast<render::Texture*>(project.loadedAssets.AddResource(core::UUID::Generate(), static_cast<render::Texture*>(texLoader.Load("textures/folder.png"))));
+		assert(folderTex != nullptr);
+		auto fileTex = static_cast<render::Texture*>(project.loadedAssets.AddResource(core::UUID::Generate(), static_cast<render::Texture*>(texLoader.Load("textures/file.png"))));
+		assert(fileTex != nullptr);
+		auto meshTex = static_cast<render::Texture*>(project.loadedAssets.AddResource(core::UUID::Generate(), static_cast<render::Texture*>(texLoader.Load("textures/meshIcon.png"))));
+		assert(meshTex != nullptr);
+		auto materialTex = static_cast<render::Texture*>(project.loadedAssets.AddResource(core::UUID::Generate(), static_cast<render::Texture*>(texLoader.Load("textures/MaterialIcon.png"))));
+		assert(materialTex != nullptr);
+
+		folderIcon.Create(ctx, *folderTex);
+		fileIcon.Create(ctx, *fileTex);
+		meshIcon.Create(ctx, *meshTex);
+		materialIcon.Create(ctx, *materialTex);
 	}
 
 	SH_EDITOR_API auto EditorResource::GetIcon(Icon icon) const -> const game::GUITexture*

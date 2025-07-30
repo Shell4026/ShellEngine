@@ -27,7 +27,6 @@ namespace sh::core
 	}
 	SH_CORE_API SObject::~SObject()
 	{
-		onDestroy.Notify(this);
 		SObjectManager::GetInstance()->UnRegisterSObject(this);
 	}
 
@@ -75,6 +74,7 @@ namespace sh::core
 	{
 		GarbageCollection& gc = *GarbageCollection::GetInstance();
 		gc.AddToPendingKillList(this);
+		onDestroy.Notify(this);
 	}
 
 	SH_CORE_API void SObject::SetName(std::string_view name)
@@ -150,6 +150,7 @@ namespace sh::core
 				else if (prop->isSObjectPointer)
 				{
 					auto ptr = prop->Get<SObject*>(this);
+
 					if (core::IsValid(*ptr))
 						core::SerializeProperty(json, name, *ptr);
 				}

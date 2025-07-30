@@ -37,7 +37,7 @@ namespace sh::core
 		uint32_t assetVersion = 0;
 		int64_t writeTime = 0;
 	protected:
-		UUID uuid;
+		UUID assetUUID;
 		mutable std::vector<uint8_t> data;
 	public:
 		constexpr static uint32_t VERSION = 2;
@@ -60,7 +60,7 @@ namespace sh::core
 		/// @brief 에셋의 데이터 사이즈를 반환 한다.
 		/// @return 에셋 데이터 사이즈
 		SH_CORE_API auto GetAssetDataSize() const -> uint64_t;
-		SH_CORE_API auto GetUUID() const -> const UUID&;
+		SH_CORE_API auto GetAssetUUID() const -> const UUID&;
 		SH_CORE_API auto GetType() const -> const char*;
 
 		/// @brief 마지막 쓰기 시간을 해당 경로에 있는 파일의 마지막 쓰기 시간으로 변경한다. 파일이 없으면 아무 일도 일어나지 않는다.

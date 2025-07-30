@@ -8,7 +8,7 @@
 #include <algorithm>
 namespace sh::editor
 {
-    SH_EDITOR_API ExplorerUI::ExplorerUI(EditorWorld& world) :
+    SH_EDITOR_API ExplorerUI::ExplorerUI() :
 		currentPath(std::filesystem::current_path())
 	{
 	}
@@ -94,51 +94,53 @@ namespace sh::editor
                 selected = fileName;
             if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_::ImGuiMouseButton_Left))
             {
+                SelectFile();
             }
         }
         ImGui::EndChild();
 
         ImGui::Separator();
+        static std::string name{};
+        name = selected.u8string();
+        ImGui::InputText("Name", &name, ImGuiInputTextFlags_EnterReturnsTrue);
+        selected = name;
+        ImGui::SameLine();
+
         if (mode == OpenMode::Select)
         {
-            static std::string name = selected.u8string();
-            ImGui::InputText("Name", &name, ImGuiInputTextFlags_EnterReturnsTrue);
-            ImGui::SameLine();
             if (ImGui::Button("Select"))
             {
-                while (!callbacks.empty())
-                {
-                    auto& func = callbacks.front();
-                    if (selected.empty())
-                        func(currentPath);
-                    else
-                        func(currentPath / selected);
-                    callbacks.pop();
-                }
-                bOpen = false;
+                if (std::filesystem::exists(currentPath / selected))
+                    SelectFile();
             }
         }
         else if (mode == OpenMode::Create)
         {
-            static std::string name{};
-            ImGui::InputText("Name", &name, ImGuiInputTextFlags_EnterReturnsTrue);
-            ImGui::SameLine();
             if (ImGui::Button("Create"))
             {
-                while (!callbacks.empty())
+                if (!name.empty())
                 {
-                    auto& func = callbacks.front();
-                    if (name.empty())
-                        func(currentPath);
-                    else
-                        func(currentPath / name);
-                    callbacks.pop();
+                    selected = name;
+                    SelectFile();
                 }
-                bOpen = false;
             }
         }
 
         ImGui::EndGroup();
+    }
+
+    void ExplorerUI::SelectFile()
+    {
+        while (!callbacks.empty())
+        {
+            auto& func = callbacks.front();
+            if (selected.empty())
+                func(currentPath);
+            else
+                func(currentPath / selected);
+            callbacks.pop();
+        }
+        bOpen = false;
     }
 
     SH_EDITOR_API void ExplorerUI::Update()
@@ -149,6 +151,7 @@ namespace sh::editor
         if (!bOpen)
             return;
         UpdateDirectoryEntries();
+        ImGui::SetNextWindowSize(ImVec2(800, 500), ImGuiCond_::ImGuiCond_Once);
         ImGui::Begin("File Explorer", &bOpen, ImGuiWindowFlags_::ImGuiWindowFlags_NoDocking);
 
         RenderLeftSide();
@@ -162,7 +165,11 @@ namespace sh::editor
         this->mode = mode;
         bOpen = true;
     }
-    SH_EDITOR_API void ExplorerUI::AddCallback(const std::function<void(std::filesystem::path dir)>& func)
+    SH_EDITOR_API void ExplorerUI::SetCurrentPath(const std::filesystem::path& path)
+    {
+        currentPath = path;
+    }
+    SH_EDITOR_API void ExplorerUI::PushCallbackQueue(const std::function<void(std::filesystem::path dir)>& func)
     {
         callbacks.push(func);
     }

@@ -22,7 +22,7 @@ namespace sh::editor
 		EditorWorld& world;
 
 		core::SList<game::GameObject*> objList;
-		core::EventSubscriber<game::WorldEvents::GameObjectEvent> gameObjectEventSubscriber;
+		core::EventSubscriber<game::events::GameObjectEvent> gameObjectEventSubscriber;
 
 		std::vector<std::pair<std::string, std::function<void(const ImGuiPayload& payload)>>> dragFunc;
 

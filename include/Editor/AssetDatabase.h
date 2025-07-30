@@ -30,7 +30,7 @@ namespace sh::game
 
 namespace sh::editor
 {
-	class EditorWorld;
+	class Project;
 	class AssetDatabase : public core::Singleton<AssetDatabase>
 	{
 		friend core::Singleton<AssetDatabase>;
@@ -72,6 +72,8 @@ namespace sh::editor
 			std::filesystem::path originalPath;
 			std::filesystem::path cachePath;
 		};
+		Project* project = nullptr;
+
 		std::filesystem::path projectPath;
 		std::filesystem::path libPath;
 
@@ -87,13 +89,15 @@ namespace sh::editor
 		/// @param dir 파일 경로
 		/// @return 있다면 메타 파일의 경로를 반환, 없다면 nullopt 반환
 		auto HasMetaFile(const std::filesystem::path& dir) -> std::optional<std::filesystem::path>;
-		auto LoadMaterial(EditorWorld& world, const std::filesystem::path& dir) -> render::Material*;
+		auto LoadMaterial(const std::filesystem::path& dir) -> render::Material*;
 		void SaveMaterial(render::Material* mat, const std::filesystem::path& dir);
 		void LoadAllAssetsHelper(const std::filesystem::path& dir, bool recursive);
-		auto LoadAsset(const std::filesystem::path& path, core::IAssetLoader& loader) -> core::SObject*;
+		auto LoadAsset(const std::filesystem::path& path, core::IAssetLoader& loader, bool bMetaSaveWithObj) -> core::SObject*;
 	protected:
 		SH_EDITOR_API AssetDatabase();
 	public:
+		SH_EDITOR_API void SetProject(Project& project);
+
 		SH_EDITOR_API void SaveDatabase(const std::filesystem::path& dir);
 		SH_EDITOR_API auto LoadDatabase(const std::filesystem::path& dir) -> bool;
 
@@ -104,9 +108,9 @@ namespace sh::editor
 		/// @brief 해당 경로에 있는 에셋을 모두 불러오는 함수
 		/// @param dir 경로
 		/// @param recursive 하위 경로도 포함 할 것인지
-		SH_EDITOR_API void LoadAllAssets(EditorWorld& world, const std::filesystem::path& dir, bool recursive);
-		SH_EDITOR_API auto ImportAsset(EditorWorld& world, const std::filesystem::path& dir) -> core::SObject*;
-		SH_EDITOR_API bool CreateAsset(EditorWorld& world, const std::filesystem::path& dir, const core::ISerializable& serializable);
+		SH_EDITOR_API void LoadAllAssets(const std::filesystem::path& dir, bool recursive);
+		SH_EDITOR_API auto ImportAsset(const std::filesystem::path& dir) -> core::SObject*;
+		SH_EDITOR_API bool CreateAsset(const std::filesystem::path& dir, const core::ISerializable& serializable);
 		SH_EDITOR_API auto GetAsset(const core::UUID& uuid) -> std::unique_ptr<core::Asset>;
 		SH_EDITOR_API auto GetAssetOriginalPath(const core::UUID& uuid) const -> std::optional<std::filesystem::path>;
 		/// @brief 해당 경로의 파일의 에셋의 UUID를 반환한다.

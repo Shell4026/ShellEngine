@@ -23,10 +23,10 @@ namespace sh::editor
 
 		ImGuiID dockspaceId;
 
+		Project* project = nullptr;
 		std::unique_ptr<ExplorerUI> explorer;
 		std::unique_ptr<Viewport> viewport;
 		std::unique_ptr<Hierarchy> hierarchy;
-		std::unique_ptr<Project> project;
 		std::unique_ptr<Inspector> inspector;
 
 		bool bDirty;
@@ -46,5 +46,7 @@ namespace sh::editor
 		SH_EDITOR_API auto GetHierarchy() -> Hierarchy&;
 
 		SH_EDITOR_API void Clean();
+
+		SH_EDITOR_API void SetProject(Project& project);
 	};
 }

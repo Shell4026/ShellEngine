@@ -16,6 +16,8 @@ namespace sh::game
 		core::SObjWeakPtr<const render::Shader> shaderPtr;
 
 		core::Json shaderObjJson;
+	public:
+		constexpr static const char* ASSET_NAME = "shad";
 	protected:
 		SH_GAME_API void SetAssetData() const override;
 		SH_GAME_API auto ParseAssetData() -> bool override;
