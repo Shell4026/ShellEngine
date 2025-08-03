@@ -486,7 +486,7 @@ namespace sh::editor
 						gameManager.UnloadWorld(*currentWorld);
 					}
 					core::GarbageCollection::GetInstance()->Collect();
-					core::GarbageCollection::GetInstance()->Collect();
+					core::GarbageCollection::GetInstance()->DestroyPendingKillObjs();
 
 					renderer.Clear();
 					gui.ClearDrawData();

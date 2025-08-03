@@ -102,14 +102,14 @@ protected:
 		gc = sh::core::GarbageCollection::GetInstance();
 		// 각 테스트 시작 전, 이전 테스트에서 남은 객체가 없도록 GC를 실행
 		gc->Collect();
-		gc->Collect(); // pendingKill 객체까지 완전히 정리
+		gc->DestroyPendingKillObjs();
 		ASSERT_EQ(gc->GetObjectCount(), 0);
 	}
 
 	void TearDown() override {
 		// 각 테스트 종료 후, 생성된 모든 객체가 정리되도록 보장
 		gc->Collect();
-		gc->Collect();
+		gc->DestroyPendingKillObjs();
 	}
 };
 
@@ -122,7 +122,7 @@ TEST_F(GCTest, ShouldCollectUnreferencedObject)
 
 	// GC 실행
 	gc->Collect();
-	gc->Collect();
+	gc->DestroyPendingKillObjs();
 
 	// 객체가 수집되었는지 확인
 	ASSERT_EQ(gc->GetObjectCount(), 0);
@@ -136,7 +136,7 @@ TEST_F(GCTest, ShouldNotCollectRootObject)
 	ASSERT_EQ(gc->GetObjectCount(), 1);
 
 	gc->Collect();
-	gc->Collect();
+	gc->DestroyPendingKillObjs();
 
 	// 루트 객체는 살아남아야 함
 	ASSERT_EQ(gc->GetObjectCount(), 1);
@@ -158,7 +158,7 @@ TEST_F(GCTest, ShouldNotCollectReferencedObject)
 	ASSERT_EQ(gc->GetObjectCount(), 2);
 
 	gc->Collect();
-	gc->Collect();
+	gc->DestroyPendingKillObjs();
 
 	// 루트와 자식 객체 모두 살아남아야 함
 	ASSERT_EQ(gc->GetObjectCount(), 2);
@@ -178,13 +178,13 @@ TEST_F(GCTest, ShouldCollectWhenReferenceIsRemoved)
 	gc->SetRootSet(root);
 
 	gc->Collect();
-	gc->Collect();
+	gc->DestroyPendingKillObjs();
 	ASSERT_EQ(gc->GetObjectCount(), 2);
 
 	// 참조를 끊음
 	root->child = nullptr;
 	gc->Collect();
-	gc->Collect();
+	gc->DestroyPendingKillObjs();
 
 	// 자식 객체만 수집되어야 함
 	ASSERT_EQ(gc->GetObjectCount(), 1);
@@ -207,7 +207,7 @@ TEST_F(GCTest, ShouldCollectCircularReferences)
 	ASSERT_EQ(gc->GetObjectCount(), 2);
 
 	gc->Collect();
-	gc->Collect();
+	gc->DestroyPendingKillObjs();
 
 	// 루트에서 접근 불가능하므로 둘 다 수집되어야 함
 	ASSERT_EQ(gc->GetObjectCount(), 0);
@@ -225,7 +225,7 @@ TEST_F(GCTest, ShouldHandleReferencesInVector)
 	ASSERT_EQ(gc->GetObjectCount(), 6);
 
 	gc->Collect();
-	gc->Collect();
+	gc->DestroyPendingKillObjs();
 	ASSERT_EQ(gc->GetObjectCount(), 6); // 모두 살아남아야 함
 
 	// 벡터의 일부 참조를 제거
@@ -234,7 +234,7 @@ TEST_F(GCTest, ShouldHandleReferencesInVector)
 	ASSERT_EQ(root->objectList.size(), 4);
 
 	gc->Collect();
-	gc->Collect();
+	gc->DestroyPendingKillObjs();
 
 	// objToCollect는 수집되어야 함
 	ASSERT_EQ(gc->GetObjectCount(), 5);
@@ -262,7 +262,7 @@ TEST_F(GCTest, ShouldDestroyChildrenBeforeParent)
 	// 2. 월드를 루트로 설정하고 GC 실행 -> 아무것도 수집되지 않아야 함
 	gc->SetRootSet(world);
 	gc->Collect();
-	gc->Collect();
+	gc->DestroyPendingKillObjs();
 	ASSERT_EQ(gc->GetObjectCount(), 1 + numGameObjects);
 
 	// 3. 월드를 루트에서 제거 -> 이제 모두 GC 대상이 됨
@@ -270,7 +270,7 @@ TEST_F(GCTest, ShouldDestroyChildrenBeforeParent)
 	
 	// 4. GC 실행하여 객체 소멸 유도
 	gc->Collect();
-	gc->Collect();
+	gc->DestroyPendingKillObjs();
 
 	// 5. 검증
 	// World가 파괴되기 전에 모든 GameObject가 파괴되었어야 함

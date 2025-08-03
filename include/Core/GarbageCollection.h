@@ -218,6 +218,7 @@ namespace sh::core
 		uint32_t tick = 0;
 		uint32_t updatePeriodTick = 1000;
 		bool bContainerIteratorErased = false;
+		bool bPendingKill = false;
 	public:
 		static constexpr int DEFRAGMENT_ROOTSET_CAP = 32;
 	private:
@@ -255,7 +256,7 @@ namespace sh::core
 		/// @brief 쓰레기 수집이 시작되기 전 1프레임 전에 DEFRAGMENT_ROOTSET_CAP보다 빈 공간이 많아지면 실행 된다.
 		SH_CORE_API void DefragmentRootSet();
 
-		/// @brief GC를 갱신하며 지정된 시간이 흐르면 Collect()가 호출 된다.
+		/// @brief GC를 갱신하며 지정된 시간이 흐르면 Collect()와 DestroyPendingKillObjs()가 호출 된다.
 		SH_CORE_API void Update();
 		/// @brief 쓰레기 수집 시작
 		SH_CORE_API void Collect();
@@ -267,7 +268,11 @@ namespace sh::core
 		/// @brief 강제로 메모리를 해제 하는 함수. 주의해서 써야한다. 해당 포인터를 참조하고 있던 값은 변하지 않는다.
 		/// @param obj SObject 포인터
 		SH_CORE_API void ForceDelete(SObject* obj);
+		/// @brief 삭제 보류 목록에 오브젝트를 추가한다.
+		/// @param obj 오브젝트
 		SH_CORE_API void AddToPendingKillList(SObject* obj);
+		/// @brief 삭제 보류중인 객체들을 즉시 메모리에서 제거한다.
+		SH_CORE_API void DestroyPendingKillObjs();
 
 		/// @brief 이전에 GC를 수행하는데 걸린 시간(ms)을 반환 하는 함수
 		SH_CORE_API auto GetElapsedTime() -> uint32_t;

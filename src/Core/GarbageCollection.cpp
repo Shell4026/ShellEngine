@@ -410,7 +410,7 @@ namespace sh::core
 			if (rootset == nullptr)
 				continue;
 
-			std::size_t idx = tmp.size();
+			const std::size_t idx = tmp.size();
 			tmp.push_back(rootset);
 			tmpIdx.insert_or_assign(rootset, idx);
 		}
@@ -434,6 +434,7 @@ namespace sh::core
 			if (tick == updatePeriodTick)
 			{
 				tick = 0;
+				DestroyPendingKillObjs();
 				Collect();
 				return;
 			}
@@ -442,6 +443,7 @@ namespace sh::core
 		{
 			if (emptyRootSetCount >= DEFRAGMENT_ROOTSET_CAP)
 				DefragmentRootSet();
+			DestroyPendingKillObjs();
 			Collect();
 		}
 	}
@@ -451,7 +453,7 @@ namespace sh::core
 		for (auto& [id, obj] : objs)
 			obj->bMark.clear(std::memory_order::memory_order_relaxed); // memory_order_relaxed - 어차피 다른 스레드들은 모두 자고 있음
 
-			const bool bThreadPoolInit = ThreadPool::GetInstance()->IsInit();
+		const bool bThreadPoolInit = ThreadPool::GetInstance()->IsInit();
 
 		if (trackingContainers.size() > 8 && bThreadPoolInit)
 			CheckContainersWithMultiThread();
@@ -462,15 +464,6 @@ namespace sh::core
 			MarkWithMultiThread();
 		else
 			Mark(0, rootSets.size());
-
-		for (auto& objPtr : pendingKillObjs)
-		{
-			if (!objPtr->bPlacementNew)
-				delete objPtr;
-			else
-				std::destroy_at(objPtr);
-		}
-		pendingKillObjs.clear();
 
 		// 모든 SObject를 순회하며 마킹이 안 됐으면 보류 목록에 추가
 		// TODO: 나중에 멀티 스레드로 바꿀 때 메모리 오더 바꾸기
@@ -486,6 +479,7 @@ namespace sh::core
 			}
 		}
 		CheckPtrs();
+		bPendingKill = true;
 
 		auto end = std::chrono::high_resolution_clock::now();
 
@@ -524,6 +518,22 @@ namespace sh::core
 	SH_CORE_API void GarbageCollection::AddToPendingKillList(SObject* obj)
 	{
 		pendingKillObjs.push_back(obj);
+	}
+
+	SH_CORE_API void GarbageCollection::DestroyPendingKillObjs()
+	{
+		if (!bPendingKill)
+			return;
+
+		for (auto& objPtr : pendingKillObjs)
+		{
+			if (!objPtr->bPlacementNew)
+				delete objPtr;
+			else
+				std::destroy_at(objPtr);
+		}
+		pendingKillObjs.clear();
+		bPendingKill = false;
 	}
 
 	SH_CORE_API auto sh::core::GarbageCollection::GetElapsedTime() -> uint32_t

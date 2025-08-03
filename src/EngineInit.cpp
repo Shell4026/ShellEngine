@@ -59,7 +59,10 @@ namespace sh
 		gameManager->Clean();
 		gc->DefragmentRootSet();
 		while(gc->GetRootSet().size() != gc->GetObjectCount())
+		{
 			gc->Collect();
+			gc->DestroyPendingKillObjs();
+		}
 		gui.reset();
 
 		renderer.reset();
