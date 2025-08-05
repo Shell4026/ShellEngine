@@ -229,6 +229,8 @@ namespace sh::render::vk
 				vkCmdEndRenderPass(cmd->GetCommandBuffer());
 			}
 		);
+
+		std::vector<std::unique_ptr<VulkanCommandBuffer>> recordedCommands;
 		if (cameras.size() > 0)
 		{
 			std::vector<const Camera*> cams{};
@@ -271,7 +273,6 @@ namespace sh::render::vk
 				));
 				++num;
 			}
-			std::vector<std::unique_ptr<VulkanCommandBuffer>> recordedCommands;
 			recordedCommands.resize(futureCommands.size());
 			for (auto& futureCommand : futureCommands)
 			{
