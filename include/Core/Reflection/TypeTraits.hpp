@@ -81,6 +81,11 @@ namespace sh::core::reflection
 	template<typename T, std::size_t size>
 	struct IsArray<T[size]> : std::true_type {};
 
+	template<typename T>
+	struct IsUniquePtr : std::false_type {};
+	template<typename T>
+	struct IsUniquePtr<std::unique_ptr<T>> : std::true_type {};
+
 	// 컨테이너 중첩 수 구하기
 	template<typename T>
 	struct GetContainerNestedCount : std::integral_constant<uint32_t, 0> {};

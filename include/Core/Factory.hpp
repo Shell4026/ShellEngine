@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Singleton.hpp"
+#include "Reflection/TypeTraits.hpp"
 
 #include <memory>
 #include <unordered_map>
@@ -49,7 +50,7 @@ namespace sh::core
 		auto it = factories.find(name);
 		if (it == factories.end())
 		{
-			if constexpr (std::is_pointer_v<T>)
+			if constexpr (std::is_pointer_v<ReturnType> || reflection::IsUniquePtr<ReturnType>::value)
 				return nullptr;
 			else
 				throw std::runtime_error{ "Unregistered object!" };
