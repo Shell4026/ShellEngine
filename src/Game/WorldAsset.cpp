@@ -1,6 +1,7 @@
 ﻿#include "WorldAsset.h"
 #include "Game/World.h"
 
+#include <cassert>
 namespace sh::game
 {
 	WorldAsset::WorldAsset() : 
@@ -17,6 +18,9 @@ namespace sh::game
 
 	void WorldAsset::SetAsset(const core::SObject& obj)
 	{
+		assert(obj.GetType().IsChildOf(game::World::GetStaticType()));
+		if (!obj.GetType().IsChildOf(game::World::GetStaticType()))
+			return;
 		worldPtr = static_cast<const World*>(&obj);
 		assetUUID = worldPtr->GetUUID();
 	}

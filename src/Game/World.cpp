@@ -463,7 +463,10 @@ namespace sh::game
 			{
 				obj->SetUUID(core::UUID::Generate());
 				for (auto component : obj->GetComponents())
-					component->SetUUID(core::UUID::Generate());
+				{
+					if (component != nullptr)
+						component->SetUUID(core::UUID::Generate());
+				}
 			};
 		for (auto obj : objs)
 		{

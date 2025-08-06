@@ -2,6 +2,7 @@
 #include "AssetExtensions.h"
 #include "Meta.h"
 #include "UI/Project.h"
+#include "EditorWorld.h"
 
 #include "Core/FileSystem.h"
 #include "Core/Asset.h"
@@ -29,6 +30,7 @@
 #include <algorithm>
 #include <fstream>
 #include <cstdint>
+#include <chrono>
 namespace sh::editor
 {
 	auto AssetDatabase::GetMetaDirectory(const std::filesystem::path& assetPath) -> std::filesystem::path
@@ -161,7 +163,20 @@ namespace sh::editor
 			{
 				render::Texture* texture = reinterpret_cast<render::Texture*>(obj);
 				Meta meta{};
-				meta.SaveWithObj(*texture, GetMetaDirectory(projectPath / originalPath), false);
+				meta.SaveWithObj(*texture, GetMetaDirectory(projectPath / originalPath), true);
+			}
+			else if (obj->GetType().IsChildOf(game::World::GetStaticType()))
+			{
+				const game::World* world = static_cast<game::World*>(obj);
+
+				const auto worldPath = projectPath / originalPath;
+
+				std::ofstream os{ worldPath };
+				os << std::setw(4) << world->Serialize();
+				os.close();
+
+				Meta meta{};
+				meta.Save(*world, GetMetaDirectory(projectPath / originalPath), false);
 			}
 		}
 		dirtyObjs.clear();
@@ -233,22 +248,9 @@ namespace sh::editor
 			objPtr->SetName(path.stem().u8string());
 		}
 
-		auto asset = core::Factory<core::Asset>::GetInstance()->Create(loader.GetAssetName());
-		if (asset == nullptr)
-		{
-			SH_ERROR_FORMAT("Asset type({}) is invalid", loader.GetAssetName());
-			return nullptr;
-		}
-
-		asset->SetAsset(*objPtr);
-		asset->SetWriteTime(writeTime);
-
 		std::filesystem::path cachePath{ libPath / fmt::format("{}.asset", objPtr->GetUUID().ToString()) };
-		if (!core::AssetExporter::Save(*asset, cachePath, true))
-		{
-			SH_ERROR_FORMAT("Asset export failed: {}", cachePath.u8string());
+		if (!ExportAsset(*objPtr, cachePath, writeTime))
 			return nullptr;
-		}
 
 		uuids.insert_or_assign(relativePath, objPtr->GetUUID());
 		paths.insert_or_assign(objPtr->GetUUID(), AssetInfo{ relativePath, std::filesystem::relative(cachePath, projectPath) });
@@ -403,5 +405,47 @@ namespace sh::editor
 		obj->onDestroy.Register(onDestroyListener);
 		if(core::IsValid(obj))
 			dirtyObjs.push_back(obj);
+	}
+	SH_EDITOR_API auto AssetDatabase::ExportAsset(const core::SObject& obj, const std::filesystem::path& path, int64_t writeTime) const -> bool
+	{
+		std::string assetType;
+
+		if (obj.GetType() == render::Texture::GetStaticType())
+			assetType = "tex";
+		else if (obj.GetType() == render::Model::GetStaticType())
+			assetType = "mesh";
+		else if (obj.GetType() == game::World::GetStaticType() || obj.GetType() == editor::EditorWorld::GetStaticType())
+			assetType = "worl";
+		else
+			return false;
+
+		auto asset = core::Factory<core::Asset>::GetInstance()->Create(assetType);
+		if (asset == nullptr)
+		{
+			SH_ERROR_FORMAT("Asset type({}) is invalid", assetType);
+			return false;
+		}
+		asset->SetAsset(obj);
+		if (writeTime > 0)
+		{
+			asset->SetWriteTime(writeTime);
+			if (!core::AssetExporter::Save(*asset, path, true))
+			{
+				SH_ERROR_FORMAT("Asset export failed: {}", path.u8string());
+				return false;
+			}
+		}
+		else
+		{
+			auto writeTime = std::filesystem::file_time_type::clock::now();
+			asset->SetWriteTime(writeTime.time_since_epoch().count());
+			if (!core::AssetExporter::Save(*asset, path, true))
+			{
+				SH_ERROR_FORMAT("Asset export failed: {}", path.u8string());
+				return false;
+			}
+			std::filesystem::last_write_time(path, writeTime);
+		}
+		return true;
 	}
 }//namespace

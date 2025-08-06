@@ -24,6 +24,10 @@ set(CMAKE_CXX_STANDARD_REQUIRED true)
 add_library(ShellEngineUser SHARED ${SRC} ${HEADERS})
 add_library(ShellEngine::User ALIAS ShellEngineUser)
 
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+	target_compile_definitions(ShellEngineUser PUBLIC SH_DEBUG)
+endif()
+
 target_compile_definitions(ShellEngineUser PUBLIC SH_PROJECT_NAME="${PROJECT_NAME}")
 
 target_include_directories(ShellEngineUser PRIVATE ${ENGINE_DIR}/include)

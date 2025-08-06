@@ -8,9 +8,9 @@
 #include <array>
 
 #define SASSET(className, assetType)\
-	struct _AssetRegistry_\
+	struct _AssetRegistry_##className\
 	{\
-		_AssetRegistry_()\
+		_AssetRegistry_##className()\
 		{\
 			sh::core::Factory<Asset>::GetInstance()->Register(assetType, [] { return std::make_unique<className>(); });\
 		}\

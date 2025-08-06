@@ -99,6 +99,7 @@ namespace sh::editor
 		SH_EDITOR_API void SaveWorld();
 		SH_EDITOR_API void SaveAsWorld(const std::filesystem::path& worldAssetPath);
 		SH_EDITOR_API void LoadWorld(const std::filesystem::path& worldAssetPath);
+		SH_EDITOR_API void ReloadCurrentWorld();
 
 		SH_EDITOR_API auto IsProjectOpen() const -> bool;
 

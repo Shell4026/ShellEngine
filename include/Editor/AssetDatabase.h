@@ -120,5 +120,7 @@ namespace sh::editor
 		/// @brief 에셋에 변경 사항이 존재한다고 알리는 함수
 		/// @param obj 포인터
 		SH_EDITOR_API void SetDirty(core::SObject* obj);
+
+		SH_EDITOR_API auto ExportAsset(const core::SObject& obj, const std::filesystem::path& path, int64_t writeTime = 0) const -> bool;
 	};
 }//namespace
