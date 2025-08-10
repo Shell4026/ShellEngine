@@ -100,7 +100,6 @@ namespace sh::game
 		if (currentWorld == nullptr)
 			return;
 		currentWorld->Update(dt);
-		currentWorld->BeforeSync();
 	}
 	SH_GAME_API void GameManager::UnloadWorld(World& world)
 	{

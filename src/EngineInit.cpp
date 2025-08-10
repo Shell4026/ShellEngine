@@ -216,6 +216,7 @@ namespace sh
 				return;
 
 			gameManager->UpdateWorld(window->GetDeltaTime());
+			gameManager->GetCurrentWorld()->BeforeSync();
 			core::ThreadSyncManager::Sync();
 			gameManager->GetCurrentWorld()->AfterSync();
 
