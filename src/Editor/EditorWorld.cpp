@@ -11,13 +11,8 @@
 
 #include "Core/Name.h"
 
-#include "Render/VulkanImpl/VulkanContext.h"
-#include "Render/VulkanImpl/VulkanShaderPass.h"
-#include "Render/VulkanImpl/VulkanShaderPassBuilder.h"
-#include "Render/Mesh/Plane.h"
 #include "Render/Mesh/Grid.h"
 #include "Render/Model.h"
-#include "Render/MaterialPropertyBlock.h"
 
 #include "Editor/Component/EditorControl.h"
 
@@ -27,9 +22,6 @@
 #include "Game/Component/PickingCamera.h"
 #include "Game/Component/PickingRenderer.h"
 #include "Game/Component/LineRenderer.h"
-#include "Game/ModelLoader.h"
-#include "Game/TextureLoader.h"
-#include "Game/ShaderLoader.h"
 #include "Game/WorldEvents.hpp"
 
 namespace sh::editor
@@ -137,63 +129,10 @@ namespace sh::editor
 		renderer.AddRenderPipeline<render::RenderPipeline>();
 		postOutlinePass = renderer.AddRenderPipeline<EditorPostOutlinePass>();
 
-		render::vk::VulkanShaderPassBuilder shaderBuilder{ static_cast<sh::render::vk::VulkanContext&>(*renderer.GetContext()) };
-
-		game::ShaderLoader shaderLoader{ &shaderBuilder };
-		game::TextureLoader texLoader{ *renderer.GetContext() };
-		game::ModelLoader modelLoader{ *renderer.GetContext() };
-
-		auto defaultShader = shaders.AddResource("DefaultShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/default.shader")));
-		auto lineShader = shaders.AddResource("Line", static_cast<render::Shader*>(shaderLoader.Load("shaders/line.shader")));
-		auto errorShader = shaders.AddResource("ErrorShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/error.shader")));
-		auto gridShader = shaders.AddResource("GridShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/grid.shader")));
-		auto pickingShader = shaders.AddResource("EditorPickingShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/EditorPicking.shader")));
-		auto outlineShader = shaders.AddResource("OutlineShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/outline.shader")));
-		auto triangleShader = shaders.AddResource("TriangleShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/triangle.shader")));
-
-		auto outlinePreShader = shaders.AddResource("OutlinePreShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/EditorOutlinePre.shader")));
-		auto outlinePostShader = shaders.AddResource("OutlinePostShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/EditorOutlinePost.shader")));
-
-		auto errorMat = materials.AddResource("ErrorMaterial", render::Material{ errorShader });
-		auto lineMat = materials.AddResource("LineMaterial", render::Material{ lineShader });
-		auto gridMat = materials.AddResource("GridMaterial", render::Material{ gridShader });
-		auto pickingMat = materials.AddResource("PickingMaterial", render::Material{ pickingShader });
-		auto triMat = materials.AddResource("TriangleMaterial", render::Material{ triangleShader });
-		auto outlinePreMat = materials.AddResource("OutlinePreMaterial", render::Material{ outlinePreShader });
-		auto outlinePostMat = materials.AddResource("OutlinePostMaterial", render::Material{ outlinePostShader });
-
-		models.AddResource("CubeModel", static_cast<render::Model*>(modelLoader.Load("model/cube.obj")));
-		models.AddResource("SphereModel", static_cast<render::Model*>(modelLoader.Load("model/Sphere.obj")));
-
-		errorShader->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f0f" });
-		defaultShader->SetUUID(core::UUID{ "ad9217609f6c7e0f1163785746cc153e" });
-
 		render::RenderTexture* viewportTexture = core::SObject::Create<render::RenderTexture>(render::Texture::TextureFormat::SRGBA32);
 		viewportTexture->SetUUID(core::UUID{ "180635b4e4d1a98ebb0064ab47dc452a" });
 		viewportTexture->Build(*renderer.GetContext());
 		textures.AddResource("Viewport", viewportTexture);
-
-		render::RenderTexture* outlineTexture = core::SObject::Create<render::RenderTexture>(render::Texture::TextureFormat::R8);
-		outlineTexture->SetSize(1024, 1024);
-		outlineTexture->Build(*renderer.GetContext());
-		textures.AddResource("OutlineTexture", outlineTexture);
-
-		errorMat->Build(*renderer.GetContext());
-		pickingMat->Build(*renderer.GetContext());
-		lineMat->Build(*renderer.GetContext());
-
-		gridMat->SetProperty("color", glm::vec4{ 0.6f, 0.6f, 0.8f, 0.2f });
-		gridMat->Build(*renderer.GetContext());
-
-		triMat->SetProperty("color", glm::vec3{ 0.f, 1.f, 0.f });
-		triMat->Build(*renderer.GetContext());
-
-		outlinePreMat->Build(*renderer.GetContext());
-
-		outlinePostMat->SetProperty("outlineWidth", 1.0f);
-		outlinePostMat->SetProperty("outlineColor", glm::vec4{ 41 / 255.0f, 74 / 255.0f, 122 / 255.0f, 1.0f });
-		outlinePostMat->SetProperty("tex", outlineTexture);
-		outlinePostMat->Build(*renderer.GetContext());
 
 		game::GameObject* camObj = AddGameObject("EditorCamera");
 		camObj->SetUUID(core::UUID{ "e071c2f9898d000823c56389418e8147" });
@@ -217,9 +156,14 @@ namespace sh::editor
 
 		pickingPass->SetCamera(*pickingCamera);
 		outlinePass->SetCamera(*editorCamera);
-		outlinePass->SetOutTexture(*outlineTexture);
+
+		auto outlineTexture = EditorResource::GetInstance()->GetTexture("OutlineTexture");
+		assert(outlineTexture);
+		outlinePass->SetOutTexture(static_cast<render::RenderTexture&>(*outlineTexture));
 
 		postOutlinePass->SetCamera(*editorCamera);
+		auto outlinePostMat = EditorResource::GetInstance()->GetMaterial("OutlinePostMaterial");
+		assert(outlinePostMat);
 		postOutlinePass->SetOutlineMaterial(*outlinePostMat);
 
 		renderer.GetRenderPipeline(core::Name{ "Forward" })->IgnoreCamera(pickingCamera->GetNative());
@@ -248,7 +192,7 @@ namespace sh::editor
 		auto gridMesh = core::SObject::Create<render::Grid>();
 		gridMesh->Build(*renderer.GetContext());
 		meshRenderer->SetMesh(gridMesh);
-		meshRenderer->SetMaterial(this->materials.GetResource("GridMaterial"));
+		meshRenderer->SetMaterial(EditorResource::GetInstance()->GetMaterial("GridMaterial"));
 
 		axis = AddGameObject("Axis");
 		axis->hideInspector = true;

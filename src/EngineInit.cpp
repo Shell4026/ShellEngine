@@ -55,8 +55,11 @@ namespace sh
 #if SH_EDITOR
 		project.reset();
 		editor::AssetDatabase::Destroy();
+		editor::EditorResource::Destroy();
 #endif
 		gameManager->Clean();
+		renderer->ClearRenderPipeline();
+
 		gc->DefragmentRootSet();
 		while(gc->GetRootSet().size() != gc->GetObjectCount())
 		{
@@ -64,7 +67,6 @@ namespace sh
 			gc->DestroyPendingKillObjs();
 		}
 		gui.reset();
-
 		renderer.reset();
 
 		window.reset();

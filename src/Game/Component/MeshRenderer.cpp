@@ -230,7 +230,7 @@ namespace sh::game
 			return;
 		}
 		if (!core::IsValid(mat))
-			mat = gameObject.world.materials.GetResource("ErrorMaterial");
+			mat = static_cast<render::Material*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{"bbc4ef7ec45dce223297a224f8093f10"}));
 		if (!core::IsValid(mat->GetShader()))
 			return;
 

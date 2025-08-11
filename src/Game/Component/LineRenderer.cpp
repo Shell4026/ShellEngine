@@ -24,7 +24,7 @@ namespace sh::game
 		mesh.Build(*world.renderer.GetContext());
 		Super::SetMesh(&mesh);
 
-		mat = world.materials.GetResource("LineMaterial");
+		mat = static_cast<render::Material*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{"bbc4ef7ec45dce223297a224f8093f11"}));
 		assert(mat);
 		Super::SetMaterial(mat);
 

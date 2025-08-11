@@ -14,7 +14,8 @@ namespace sh::game
 		id = PickingIdManager::AssignId(this);
 		//SH_INFO_FORMAT("ID: {}", id);
 
-		this->mat = world.materials.GetResource("PickingMaterial");
+		mat = static_cast<render::Material*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ "bbc4ef7ec45dce223297a224f8093f12" }));
+		assert(mat);
 
 		SetMaterialPropertyBlock(SObject::Create<render::MaterialPropertyBlock>());
 	}

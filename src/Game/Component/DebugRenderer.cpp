@@ -24,6 +24,7 @@ namespace sh::game
 		MeshRenderer(owner)
 	{
 		mat = world.materials.GetResource("WireframeMat");
+		assert(mat);
 		position = Vec3{ 0.f, 0.f, 0.f };
 		scale = Vec3{ 1.0f, 1.0f, 1.0f };
 		rotation = Vec3{ 0.f, 0.f, 0.f };

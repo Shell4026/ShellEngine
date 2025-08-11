@@ -46,7 +46,7 @@ namespace sh::editor
 	SH_EDITOR_API void EditorPostOutlinePass::ClearDrawable()
 	{
 		RenderPipeline::ClearDrawable();
-		if (drawable)
+		if (drawable != nullptr)
 			RenderPipeline::PushDrawable(drawable);
 	}
 	SH_EDITOR_API void EditorPostOutlinePass::SetCamera(game::Camera& camera)
@@ -56,6 +56,9 @@ namespace sh::editor
 	SH_EDITOR_API void EditorPostOutlinePass::SetOutlineMaterial(render::Material& mat)
 	{
 		this->mat = &mat;
+
+		if (drawable != nullptr)
+			drawable->Destroy();
 
 		drawable = core::SObject::Create<render::Drawable>(mat, *plane);
 		drawable->Build(*context);

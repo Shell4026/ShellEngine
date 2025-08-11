@@ -7,7 +7,8 @@ namespace sh::editor
 	OutlineComponent::OutlineComponent(game::GameObject& owner) :
 		game::MeshRenderer(owner)
 	{
-		this->mat = world.materials.GetResource("OutlinePreMaterial");
+		mat = static_cast<render::Material*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ "bbc4ef7ec45dce223297a224f8093f13" }));
+		assert(mat);
 		renderer = owner.GetComponent<MeshRenderer>();
 		canPlayInEditor = true;
 	}
