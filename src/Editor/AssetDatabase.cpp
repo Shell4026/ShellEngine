@@ -48,29 +48,6 @@ namespace sh::editor
 			return std::nullopt;
 		return metaFileDir;
 	}
-	auto AssetDatabase::LoadMaterial(const std::filesystem::path& dir) -> render::Material*
-	{
-		if (project == nullptr)
-			return nullptr;
-
-		static game::MaterialLoader loader{ *project->renderer.GetContext() };
-		
-		auto matPtr = loader.Load(dir);
-		if (matPtr == nullptr)
-			return nullptr;
-
-		std::filesystem::path relativePath{ std::filesystem::relative(dir, projectPath) };
-
-		project->loadedAssets.AddResource(matPtr->GetUUID(), matPtr);
-		matPtr->SetName(dir.stem().string());
-
-		uuids.insert_or_assign(relativePath, matPtr->GetUUID());
-		paths.insert_or_assign(matPtr->GetUUID(), AssetInfo{ relativePath, relativePath });
-
-		Meta meta{};
-		meta.Save(*matPtr, GetMetaDirectory(projectPath / relativePath));
-		return matPtr;
-	}
 	void AssetDatabase::SaveMaterial(render::Material* mat, const std::filesystem::path& dir)
 	{
 		if (!core::IsValid(mat))
@@ -81,6 +58,9 @@ namespace sh::editor
 		std::ofstream os{ dir };
 		os << std::setw(4) << matJson;
 		os.close();
+
+		Meta meta{};
+		meta.Save(*mat, GetMetaDirectory(dir), false);
 	}
 
 	SH_EDITOR_API auto AssetDatabase::ImportAsset(const std::filesystem::path& dir) -> core::SObject*
@@ -124,7 +104,13 @@ namespace sh::editor
 			}
 		}
 		if (type == AssetExtensions::Type::Material)
-			return LoadMaterial(dir);
+		{
+			static game::MaterialLoader loader{ *project->renderer.GetContext() };
+			render::Material* matPtr = static_cast<render::Material*>(LoadAsset(dir, loader, false));
+			if (matPtr != nullptr)
+				project->loadedAssets.AddResource(matPtr->GetUUID(), matPtr);
+			return matPtr;
+		}
 		if (type == AssetExtensions::Type::World)
 		{
 			static game::WorldLoader loader{ project->renderer, project->gui };
@@ -416,6 +402,8 @@ namespace sh::editor
 			assetType = "mesh";
 		else if (obj.GetType() == game::World::GetStaticType() || obj.GetType() == editor::EditorWorld::GetStaticType())
 			assetType = "worl";
+		else if (obj.GetType() == render::Material::GetStaticType())
+			assetType = "mat";
 		else
 			return false;
 
