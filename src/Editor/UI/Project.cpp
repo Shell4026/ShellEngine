@@ -331,13 +331,36 @@ namespace sh::editor
 		ImGui::Button(startingWorldStr.c_str(), ImVec2{-1, 20});
 		if (ImGui::BeginDragDropTarget())
 		{
-			std::string worldType{ core::reflection::TypeTraits::GetTypeName<game::World>() };
+			const std::string worldType{ core::reflection::TypeTraits::GetTypeName<game::World>() };
+
 			const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(worldType.c_str());
-			if (payload)
+			if (payload != nullptr)
 			{
-				std::string pathStr(reinterpret_cast<const char*>(payload->Data), payload->DataSize);
-				setting.startingWorldPath = std::filesystem::u8path(pathStr);
-				SaveProjectSetting();
+				core::SObject* sobjPtr = *reinterpret_cast<core::SObject**>(payload->Data);
+				auto pathOpt = assetDatabase.GetAssetOriginalPath(sobjPtr->GetUUID());
+				if (pathOpt.has_value())
+				{
+					setting.startingWorldPath = pathOpt.value();
+					SaveProjectSetting();
+				}
+			}
+			else
+			{
+				const ImGuiPayload* currentPayload = ImGui::GetDragDropPayload();
+				core::SObject* sobjPtr = *reinterpret_cast<core::SObject**>(currentPayload->Data);
+				if (sobjPtr->GetType().IsChildOf(game::World::GetStaticType()))
+				{
+					payload = ImGui::AcceptDragDropPayload(currentPayload->DataType);
+					if (payload != nullptr)
+					{
+						auto pathOpt = assetDatabase.GetAssetOriginalPath(sobjPtr->GetUUID());
+						if (pathOpt.has_value())
+						{
+							setting.startingWorldPath = pathOpt.value();
+							SaveProjectSetting();
+						}
+					}
+				}
 			}
 		}
 		ImGui::End();
