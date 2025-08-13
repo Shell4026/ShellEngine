@@ -1,5 +1,6 @@
 ﻿#include "Component/EditorUI.h"
 #include "UI/Project.h"
+#include "UI/BundleViewer.h"
 #include "EditorWorld.h"
 
 #include "Core/ModuleLoader.h"
@@ -36,6 +37,7 @@ namespace sh::editor
 		viewport = std::make_unique<Viewport>(static_cast<EditorWorld&>(gameObject.world));
 		hierarchy = std::make_unique<Hierarchy>(static_cast<EditorWorld&>(gameObject.world));
 		inspector = std::make_unique<Inspector>(static_cast<EditorWorld&>(gameObject.world));
+		bundleViewer = std::make_unique<BundleViewer>();
 	}
 
 	void EditorUI::SetDockNode()
@@ -169,6 +171,14 @@ namespace sh::editor
 				}
 				ImGui::EndMenu();
 			}
+			if (ImGui::BeginMenu("Tools"))
+			{
+				if (ImGui::MenuItem("Bundle Viewer"))
+				{
+					bundleViewer->Open();
+				}
+				ImGui::EndMenu();
+			}
 			ImGui::EndMainMenuBar();
 		}
 	}
@@ -198,6 +208,7 @@ namespace sh::editor
 		}
 		DrawMenu();
 		explorer->Render();
+		bundleViewer->Render();
 	}
 
 	SH_EDITOR_API auto EditorUI::GetViewport() -> Viewport&

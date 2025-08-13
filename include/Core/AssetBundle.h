@@ -81,5 +81,7 @@ namespace sh::core
         /// @brief 열린 번들의 버전을 반환 한다.
         /// @return 번들 버전
         SH_CORE_API auto GetVersion() const -> uint32_t;
+
+        SH_CORE_API auto GetAssetEntries() const -> const std::unordered_map<UUID, AssetEntry>&;
 	};
 }//namespace

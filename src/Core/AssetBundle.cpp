@@ -169,4 +169,8 @@ namespace sh::core
 	{
 		return header.version;
 	}
+	SH_CORE_API auto AssetBundle::GetAssetEntries() const -> const std::unordered_map<UUID, AssetEntry>&
+	{
+		return assetEntries;
+	}
 }//namespace
