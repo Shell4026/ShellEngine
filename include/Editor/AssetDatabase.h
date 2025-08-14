@@ -112,6 +112,7 @@ namespace sh::editor
 		SH_EDITOR_API bool CreateAsset(const std::filesystem::path& dir, const core::ISerializable& serializable);
 		SH_EDITOR_API auto GetAsset(const core::UUID& uuid) -> std::unique_ptr<core::Asset>;
 		SH_EDITOR_API auto GetAssetOriginalPath(const core::UUID& uuid) const -> std::optional<std::filesystem::path>;
+		SH_EDITOR_API auto GetAssetPath(const core::UUID& uuid) const -> const AssetInfo*;
 		/// @brief 해당 경로의 파일의 에셋의 UUID를 반환한다.
 		/// @param assetPath 에셋 경로
 		/// @return 에셋이 로드 돼 있지 않다면 nullopt반환, 로드 돼 있다면 UUID를 반환
@@ -120,6 +121,13 @@ namespace sh::editor
 		/// @param obj 포인터
 		SH_EDITOR_API void SetDirty(core::SObject* obj);
 
+		/// @brief SObject객체를 에셋으로 내보내는 함수.
+		/// @param obj SObject 객체
+		/// @param path 내보낼 경로
+		/// @param writeTime 쓰기 시간 (0일 시 현재 시간)
+		/// @return 성공 여부
 		SH_EDITOR_API auto ExportAsset(const core::SObject& obj, const std::filesystem::path& path, int64_t writeTime = 0) const -> bool;
+
+		SH_EDITOR_API auto IsAssetChanged(const std::filesystem::path& assetPath) -> bool;
 	};
 }//namespace

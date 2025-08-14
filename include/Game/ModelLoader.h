@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Export.h"
+#include "ModelAsset.h"
 
 #include "Core/Util.h"
 #include "Core/Asset.h"
@@ -39,7 +40,7 @@ namespace sh::game
 			}
 		};
 		friend std::hash<sh::game::ModelLoader::Indices>;
-		static constexpr const char* ASSET_NAME = "mesh";
+		static constexpr const char* ASSET_NAME = ModelAsset::ASSET_NAME;
 	public:
 		const render::IRenderContext& context;
 	private:

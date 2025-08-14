@@ -5,6 +5,7 @@
 #include "Core/Util.h"
 #include "Core/SObjectManager.h"
 #include "Core/SContainer.hpp"
+#include "Core/AssetResolver.h"
 
 namespace sh::render
 {
@@ -296,8 +297,14 @@ namespace sh::render
 			const auto& texJson = propertyJson["textures"];
 			for (const auto& [name, value] : texJson.items())
 			{
-				std::string uuid = value.get<std::string>();
-				auto ptr = core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuid });
+				std::string& uuidStr = value.get<std::string>();
+				const core::UUID uuid{ uuidStr };
+				auto ptr = core::SObjectManager::GetInstance()->GetSObject(uuid);
+				if (ptr == nullptr)
+				{
+					auto& resolverFn = core::AssetResolverRegistry::GetResolver();
+					ptr = resolverFn(uuid);
+				}
 				if (!core::IsValid(ptr))
 					continue;
 				if (ptr->GetType() == Texture::GetStaticType())

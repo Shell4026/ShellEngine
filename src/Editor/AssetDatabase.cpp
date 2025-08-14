@@ -18,10 +18,17 @@
 #include "Game/World.h"
 #include "Game/TextureLoader.h"
 #include "Game/ModelLoader.h"
+#include "Game/MeshLoader.h"
 #include "Game/MaterialLoader.h"
 #include "Game/ShaderLoader.h"
 #include "Game/WorldLoader.h"
 #include "Game/AssetLoaderFactory.h"
+#include "Game/TextureAsset.h"
+#include "Game/ModelAsset.h"
+#include "Game/MeshAsset.h"
+#include "Game/MaterialAsset.h"
+#include "Game/ShaderAsset.h"
+#include "Game/WorldAsset.h"
 
 #include <random>
 #include <istream>
@@ -84,9 +91,25 @@ namespace sh::editor
 		if (type == AssetExtensions::Type::Model)
 		{
 			static game::ModelLoader loader{ *project->renderer.GetContext() };
+
+			const bool isAssetChanged = IsAssetChanged(dir);
 			render::Model* modelPtr = static_cast<render::Model*>(LoadAsset(dir, loader, true));
 			if (modelPtr != nullptr)
+			{
 				project->loadedAssets.AddResource(modelPtr->GetUUID(), modelPtr);
+
+				if (isAssetChanged)
+				{
+					for (const auto& mesh : modelPtr->GetMeshes())
+					{
+						if (mesh == nullptr)
+							continue;
+						const std::filesystem::path cachePath{ libPath / fmt::format("{}.asset", mesh->GetUUID().ToString()) };
+						ExportAsset(*mesh, cachePath);
+						paths.insert_or_assign(mesh->GetUUID(), AssetInfo{ std::filesystem::path{}, std::filesystem::relative(cachePath, projectPath) });
+					}
+				}
+			}
 			return modelPtr;
 		}
 		if (type == AssetExtensions::Type::Shader)
@@ -116,7 +139,7 @@ namespace sh::editor
 			static game::WorldLoader loader{ project->renderer, project->gui };
 			game::World* worldPtr = static_cast<game::World*>(LoadAsset(dir, loader, false));
 			if (worldPtr != nullptr)
-				game::GameManager::GetInstance()->AddWorld(*worldPtr);
+				project->loadedAssets.AddResource(worldPtr->GetUUID(), worldPtr);
 			return worldPtr;
 		}
 		return nullptr;
@@ -193,7 +216,7 @@ namespace sh::editor
 	{
 		std::filesystem::path metaDir{ GetMetaDirectory(path) };
 		std::filesystem::path relativePath{ std::filesystem::relative(path, projectPath) };
-		int64_t writeTime = std::filesystem::last_write_time(path).time_since_epoch().count();
+		const int64_t writeTime = std::filesystem::last_write_time(path).time_since_epoch().count();
 
 		Meta meta{};
 		if (meta.Load(metaDir))
@@ -328,6 +351,7 @@ namespace sh::editor
 			loadingAssetsQueue.pop();
 			ImportAsset(data.path);
 		}
+		SaveDatabase(project->GetLibraryPath() / "AssetDB.json");
 	}
 
 	SH_EDITOR_API bool AssetDatabase::CreateAsset(const std::filesystem::path& dir, const core::ISerializable& serializable)
@@ -372,6 +396,14 @@ namespace sh::editor
 		return it->second.originalPath;
 	}
 
+	SH_EDITOR_API auto AssetDatabase::GetAssetPath(const core::UUID& uuid) const -> const AssetInfo*
+	{
+		auto it = paths.find(uuid);
+		if (it == paths.end())
+			return nullptr;
+		return &it->second;
+	}
+
 	SH_EDITOR_API auto AssetDatabase::GetAssetUUID(const std::filesystem::path& assetPath) -> std::optional<core::UUID>
 	{
 		std::filesystem::path relativePath{};
@@ -397,13 +429,17 @@ namespace sh::editor
 		std::string assetType;
 
 		if (obj.GetType() == render::Texture::GetStaticType())
-			assetType = "tex";
+			assetType = game::TextureAsset::ASSET_NAME;
 		else if (obj.GetType() == render::Model::GetStaticType())
-			assetType = "mesh";
+			assetType = game::ModelAsset::ASSET_NAME;
 		else if (obj.GetType() == game::World::GetStaticType() || obj.GetType() == editor::EditorWorld::GetStaticType())
-			assetType = "worl";
+			assetType = game::WorldAsset::ASSET_NAME;
 		else if (obj.GetType() == render::Material::GetStaticType())
-			assetType = "mat";
+			assetType = game::MaterialAsset::ASSET_NAME;
+		else if (obj.GetType() == render::Mesh::GetStaticType())
+			assetType = game::MeshAsset::ASSET_NAME;
+		else if (obj.GetType() == render::Shader::GetStaticType())
+			assetType = game::ShaderAsset::ASSET_NAME;
 		else
 			return false;
 
@@ -435,5 +471,28 @@ namespace sh::editor
 			std::filesystem::last_write_time(path, writeTime);
 		}
 		return true;
+	}
+	SH_EDITOR_API auto AssetDatabase::IsAssetChanged(const std::filesystem::path& assetPath) -> bool
+	{
+		const std::filesystem::path metaPath{ GetMetaDirectory(assetPath) };
+
+		Meta meta{};
+		if (!meta.Load(metaPath))
+			return false;
+
+		auto it = paths.find(meta.GetUUID());
+		if (it == paths.end())
+			return false;
+
+		const auto& [filePath, assetCachePath] = it->second;
+		std::unique_ptr<core::Asset> asset = core::AssetImporter::Load(projectPath / assetCachePath);
+		if (asset == nullptr)
+			return false;
+
+		const int64_t writeTime = std::filesystem::last_write_time(assetPath).time_since_epoch().count();
+		const int64_t assetWriteTime = asset->GetWriteTime();
+		const bool bMetaChanged = meta.IsChanged();
+
+		return (assetWriteTime != writeTime) || bMetaChanged;
 	}
 }//namespace

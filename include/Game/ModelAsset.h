@@ -14,7 +14,7 @@ namespace sh::game
 	///	@brief 모델 헤더 | (메쉬 헤더 | 메쉬 데이터(버텍스, 인덱스)) | 노드 헤더
 	class ModelAsset : public core::Asset
 	{
-		SASSET(ModelAsset, "mesh")
+		SASSET(ModelAsset, "mdel")
 	public:
 		struct ModelHeader
 		{
@@ -45,7 +45,7 @@ namespace sh::game
 	private:
 		auto SetHeader(ModelHeader& header) const -> std::vector<NodeHeader>;
 	public:
-		constexpr static const char* ASSET_NAME = "mesh";
+		constexpr static const char* ASSET_NAME = "mdel";
 	protected:
 		SH_GAME_API void SetAssetData() const override;
 		SH_GAME_API auto ParseAssetData() -> bool override;

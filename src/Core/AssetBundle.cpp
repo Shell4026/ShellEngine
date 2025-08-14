@@ -29,8 +29,6 @@ namespace sh::core
 	}
 	SH_CORE_API auto AssetBundle::AddAsset(const Asset& asset, bool bCompress) -> bool
 	{
-		if (asset.IsEmpty())
-			return false;
 		if (assetEntries.find(asset.GetAssetUUID()) != assetEntries.end())
 			return false;
 

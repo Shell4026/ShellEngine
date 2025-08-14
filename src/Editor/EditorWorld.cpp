@@ -120,14 +120,16 @@ namespace sh::editor
 		selectedObjs.clear();
 	}
 
-	SH_EDITOR_API void EditorWorld::InitResource()
+	SH_EDITOR_API void EditorWorld::SetRenderPass()
 	{
-		Super::InitResource();
-
 		pickingPass = renderer.AddRenderPipeline<EditorPickingPass>();
 		outlinePass = renderer.AddRenderPipeline<EditorOutlinePass>();
 		renderer.AddRenderPipeline<render::RenderPipeline>();
 		postOutlinePass = renderer.AddRenderPipeline<EditorPostOutlinePass>();
+	}
+	SH_EDITOR_API void EditorWorld::InitResource()
+	{
+		Super::InitResource();
 
 		render::RenderTexture* viewportTexture = core::SObject::Create<render::RenderTexture>(render::Texture::TextureFormat::SRGBA32);
 		viewportTexture->SetUUID(core::UUID{ "180635b4e4d1a98ebb0064ab47dc452a" });

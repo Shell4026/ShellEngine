@@ -102,17 +102,5 @@ namespace sh::core
 			json[key] = value->GetUUID().ToString();
 	}
 	template<>
-	inline void DeserializeProperty(const core::Json& json, const std::string& key, SObject*& value)
-	{
-		if (json.contains(key))
-		{
-			std::string uuid = json[key].get<std::string>();
-			auto objectManager = SObjectManager::GetInstance();
-			SObject* ptr = objectManager->GetSObject(UUID{ uuid });
-			if (ptr == nullptr)
-				return;
-
-			value = ptr;
-		}
-	}
+	SH_CORE_API void DeserializeProperty(const core::Json& json, const std::string& key, SObject*& value);
 }//namespace

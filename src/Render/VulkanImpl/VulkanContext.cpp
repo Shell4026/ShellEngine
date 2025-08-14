@@ -256,6 +256,7 @@ namespace sh::render::vk
 	void VulkanContext::CreateRenderPass()
 	{
 		renderPassManager = std::make_unique<VulkanRenderPassManager>(*this);
+
 		VulkanRenderPass::Config config{};
 		config.format = swapChain->GetSwapChainImageFormat();
 		config.depthFormat = FindSupportedDepthFormat(true);
@@ -266,6 +267,9 @@ namespace sh::render::vk
 		config.sampleCount = sample;
 
 		mainRenderPass = &renderPassManager->GetOrCreateRenderPass(config);
+
+		config.bClear = false;
+		uiRenderPass = &renderPassManager->GetOrCreateRenderPass(config);
 	}
 	void VulkanContext::CreateFrameBuffer()
 	{
@@ -630,6 +634,10 @@ namespace sh::render::vk
 	SH_RENDER_API auto VulkanContext::GetMainRenderPass() const -> VkRenderPass
 	{
 		return mainRenderPass->GetVkRenderPass();
+	}
+	SH_RENDER_API auto VulkanContext::GetUIRenderPass() const -> VkRenderPass
+	{
+		return uiRenderPass->GetVkRenderPass();
 	}
 	SH_RENDER_API auto VulkanContext::GetMainFramebuffer(uint32_t idx) const -> const VulkanFramebuffer*
 	{

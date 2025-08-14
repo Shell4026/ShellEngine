@@ -2,65 +2,110 @@
 #include "AssetDatabase.h"
 #include "Meta.h"
 #include "UI/Project.h"
+#include "EditorResource.h"
 
 #include "Core/AssetBundle.h"
 #include "Core/FileSystem.h"
 
 #include "Game/World.h"
 #include "Game/WorldAsset.h"
+#include "Game/ShaderAsset.h"
+#include "Game/MaterialAsset.h"
+#include "Game/GameManager.h"
 
+#include <fstream>
 namespace sh::editor
 {
-    void BuildSystem::ExtractUUIDs(const core::Json& data)
+    void BuildSystem::ExtractUUIDs(std::unordered_set<std::string>& set, const core::Json& worldJson)
     {
-        if (data.is_object())
+        if (worldJson.is_object())
         {
-            for (auto const& [key, val] : data.items())
+            for (auto const& [key, val] : worldJson.items())
             {
-                ExtractUUIDs(val);
+                ExtractUUIDs(set, val);
             }
         }
-        else if (data.is_array())
+        else if (worldJson.is_array())
         {
-            for (const auto& item : data)
+            for (const auto& item : worldJson)
             {
-                ExtractUUIDs(item);
+                ExtractUUIDs(set, item);
             }
         }
-        else if (data.is_string())
+        else if (worldJson.is_string())
         {
-            const std::string& value = data.get<std::string>();
+            const std::string& value = worldJson.get<std::string>();
             if (std::regex_match(value, uuidRegex))
             {
-                if (uuids.find(value) == uuids.end())
+                if (set.find(value) == set.end())
                 {
-                    uuids.insert(value);
+                    set.insert(value);
                     core::SObject* obj = core::SObjectManager::GetInstance()->GetSObject(core::UUID{ value });
                     if (core::IsValid(obj))
-                        ExtractUUIDs(obj->Serialize());
+                    {
+                        ExtractUUIDs(set,obj->Serialize());
+                    }
                 }
             }
         }
     }
 
-    void BuildSystem::PackingAssets(game::World& world, const std::filesystem::path& outputPath)
+    void BuildSystem::PackingAssets(core::AssetBundle& bundle, game::World& world)
     {
-        core::AssetBundle bundle;
+        auto editorResource = EditorResource::GetInstance();
+        game::ShaderAsset errorShaderAsset{ *editorResource->GetShader("ErrorShader") };
+        bundle.AddAsset(errorShaderAsset, true);
+        game::ShaderAsset lineShaderAsset{ *editorResource->GetShader("Line") };
+        bundle.AddAsset(lineShaderAsset, true);
+        game::MaterialAsset errorMatAsset{ *editorResource->GetMaterial("ErrorMaterial") };
+        bundle.AddAsset(errorMatAsset, true);
+        game::MaterialAsset lineMatAsset{ *editorResource->GetMaterial("LineMaterial") };
+        bundle.AddAsset(lineMatAsset, true);
+
         for (const auto& uuid : uuids)
         {
+            if (world.GetUUID() == core::UUID{ uuid })
+                continue;
             auto asset = AssetDatabase::GetInstance()->GetAsset(core::UUID{ uuid });
             if (asset != nullptr)
                 bundle.AddAsset(*asset, true);
         }
 
         game::WorldAsset worldAsset{ world };
+        worldAsset.ConvertToGameWorldType();
         bundle.AddAsset(worldAsset, true);
-
-        bundle.SaveBundle(outputPath);
     }
 
     void BuildSystem::ExportGameManager(const std::filesystem::path& outputPath)
     {
+        game::GameManager& manager = *game::GameManager::GetInstance();
+        ProjectSetting& projectSetting = currentProject->GetProjectSetting();
+
+        manager.SetStartingWorld(*projectSetting.startingWorld);
+
+        core::Json mainJson{};
+
+        mainJson["manager"] = manager.Serialize();
+        for (const auto& [worldUUIDStr, uuids] : worldUUIDs)
+        {
+            core::Json worldUUIDs{};
+            for (const auto& uuid : uuids)
+            {
+                worldUUIDs[worldUUIDStr].push_back(uuid);
+            }
+            mainJson["uuids"].push_back(std::move(worldUUIDs));
+        }
+
+        const std::vector<uint8_t> data{ core::Json::to_bson(mainJson) };
+
+        std::ofstream of{ outputPath, std::ios_base::binary };
+        if (!of.is_open())
+        {
+            SH_ERROR_FORMAT("Failed to export game setting!: {}", outputPath.u8string());
+            return;
+        }
+        of.write(reinterpret_cast<const char*>(data.data()), data.size());
+        of.close();
     }
 
     BuildSystem::BuildSystem() :
@@ -68,14 +113,32 @@ namespace sh::editor
     {
     }
 
-    void BuildSystem::Build(Project& project, game::World& world, const std::filesystem::path& outputPath)
+    void BuildSystem::Build(Project& project, const std::filesystem::path& outputPath)
     {
         currentProject = &project;
 
         uuids.clear();
-        core::Json worldJson = world.Serialize();
-        ExtractUUIDs(worldJson);
-        PackingAssets(world, outputPath / "assets.bundle");
+
+        core::AssetBundle bundle;
+        for (const auto& [uuid, worldPtr] : game::GameManager::GetInstance()->GetWorlds())
+        {
+            core::Json worldJson{};
+            if (worldPtr->IsLoaded())
+                worldJson = worldPtr->Serialize();
+            else
+                worldJson = worldPtr->GetWorldPoint();
+
+            std::unordered_set<std::string> uuids;
+            ExtractUUIDs(uuids, worldJson);
+            for (const auto& uuidStr : uuids)
+            {
+                this->uuids.insert(uuidStr);
+                worldUUIDs[worldPtr->GetUUID().ToString()].push_back(uuidStr);
+            }
+            PackingAssets(bundle, *worldPtr);
+        }
+        bundle.SaveBundle(outputPath / "assets.bundle");
+
         ExportGameManager(outputPath / "gameManager.bin");
     }
 }//namespace

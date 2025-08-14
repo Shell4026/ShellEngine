@@ -4,21 +4,26 @@
 #include "Core/Singleton.hpp"
 #include "Core/ISerializable.h"
 #include "Core/UUID.h"
+#include "Core/AssetBundle.h"
 
 #include <unordered_map>
+#include <filesystem>
+namespace sh::core
+{
+	class Plugin;
+}
+namespace sh::render
+{
+	class Renderer;
+}
 namespace sh::game
 {
 	class World;
+	class ImGUImpl;
+
 	class GameManager : public core::Singleton<GameManager>, core::ISerializable
 	{
 		friend core::Singleton<GameManager>;
-	private:
-		World* startingWorld = nullptr;
-		World* currentWorld = nullptr;
-
-		std::unordered_map<core::UUID, World*> worlds;
-	protected:
-		SH_GAME_API GameManager() = default;
 	public:
 		SH_GAME_API void Clean();
 
@@ -41,5 +46,21 @@ namespace sh::game
 		SH_GAME_API void UpdateWorld(float dt);
 
 		SH_GAME_API void UnloadWorld(World& world);
+
+		SH_GAME_API auto LoadGame(const std::filesystem::path& managerPath, core::AssetBundle& bundle) -> bool;
+	protected:
+		SH_GAME_API GameManager() = default;
+		SH_GAME_API ~GameManager();
+	private:
+		void LoadDefaultAsset(core::AssetBundle& bundle);
+		void LoadUserModule();
+	private:
+		World* startingWorld = nullptr;
+		World* currentWorld = nullptr;
+
+		std::unordered_map<core::UUID, World*> worlds;
+		std::unordered_map<core::UUID, std::vector<core::UUID>> worldUUIDs;
+
+		std::unique_ptr<core::Plugin> userPlugin;
 	};
 }//namespace

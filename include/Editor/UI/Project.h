@@ -108,6 +108,8 @@ namespace sh::editor
 		SH_EDITOR_API auto GetProjectPath() const -> const std::filesystem::path&;
 		SH_EDITOR_API auto GetAssetPath() const -> const std::filesystem::path&;
 		SH_EDITOR_API auto GetBinPath() const -> const std::filesystem::path&;
+		SH_EDITOR_API auto GetLibraryPath() const -> const std::filesystem::path&;
+
 		SH_EDITOR_API auto GetProjectSetting() const -> ProjectSetting&;
 
 		SH_EDITOR_API void OpenSettingUI();

@@ -212,7 +212,7 @@ namespace sh::editor
 				{
 					auto& world = static_cast<EditorWorld&>(*game::GameManager::GetInstance()->GetCurrentWorld());
 
-					static render::Shader* defaultShader = world.shaders.GetResource("DefaultShader");
+					static render::Shader* defaultShader = EditorResource::GetInstance()->GetMaterial("error");
 					assert(defaultShader);
 					std::string name{ core::FileSystem::CreateUniqueFileName(currentPath, "NewMaterial.mat") };
 					auto mat = world.materials.AddResource(name, render::Material{ defaultShader });
@@ -300,7 +300,15 @@ namespace sh::editor
 			if (stringOpt.value().empty())
 				SaveProjectSetting();
 			else
+			{
 				setting.Deserialize(core::Json::parse(stringOpt.value()));
+				if (setting.startingWorld != nullptr)
+				{
+					auto gameManager = game::GameManager::GetInstance();
+					gameManager->SetStartingWorld(*setting.startingWorld);
+					gameManager->AddWorld(*setting.startingWorld);
+				}
+			}
 		}
 		else
 			SaveProjectSetting();
@@ -327,7 +335,7 @@ namespace sh::editor
 		ImGui::SetNextWindowSize(ImVec2{ 512, 512 }, ImGuiCond_::ImGuiCond_Appearing);
 		ImGui::Begin("Project Setting", &bSettingUI);
 		ImGui::Text("Starting world");
-		std::string startingWorldStr = setting.startingWorldPath.empty() ? "None" : setting.startingWorldPath.u8string().c_str();
+		std::string startingWorldStr = setting.startingWorld == nullptr ? "None" : setting.startingWorld->GetName().ToString();
 		ImGui::Button(startingWorldStr.c_str(), ImVec2{-1, 20});
 		if (ImGui::BeginDragDropTarget())
 		{
@@ -340,7 +348,7 @@ namespace sh::editor
 				auto pathOpt = assetDatabase.GetAssetOriginalPath(sobjPtr->GetUUID());
 				if (pathOpt.has_value())
 				{
-					setting.startingWorldPath = pathOpt.value();
+					setting.startingWorld = static_cast<game::World*>(sobjPtr);
 					SaveProjectSetting();
 				}
 			}
@@ -356,7 +364,7 @@ namespace sh::editor
 						auto pathOpt = assetDatabase.GetAssetOriginalPath(sobjPtr->GetUUID());
 						if (pathOpt.has_value())
 						{
-							setting.startingWorldPath = pathOpt.value();
+							setting.startingWorld = static_cast<game::World*>(sobjPtr);
 							SaveProjectSetting();
 						}
 					}
@@ -436,7 +444,6 @@ namespace sh::editor
 		libraryPath = rootPath / "Library";
 		tempPath = rootPath / "temp";
 		currentPath = dir;
-		LoadProjectSetting();
 		GetAllFiles(currentPath);
 
 		LoadUserModule();
@@ -444,8 +451,9 @@ namespace sh::editor
 		assetDatabase.SetProject(*this);
 		assetDatabase.LoadDatabase(libraryPath / "AssetDB.json");
 		assetDatabase.SetProjectDirectory(rootPath);
-		auto& world = static_cast<EditorWorld&>(*game::GameManager::GetInstance()->GetCurrentWorld());
 		assetDatabase.LoadAllAssets(assetPath, true);
+
+		LoadProjectSetting();
 	}
 
 	SH_EDITOR_API void Project::NewWorld(const std::string& name)
@@ -612,6 +620,10 @@ namespace sh::editor
 	{
 		return binaryPath;
 	}
+	SH_EDITOR_API auto Project::GetLibraryPath() const -> const std::filesystem::path&
+	{
+		return libraryPath;
+	}
 	SH_EDITOR_API auto Project::GetProjectSetting() const -> ProjectSetting&
 	{
 		return const_cast<ProjectSetting&>(setting);
@@ -623,6 +635,9 @@ namespace sh::editor
 	SH_EDITOR_API void Project::Build()
 	{
 		BuildSystem builder{};
-		builder.Build(*this, *game::GameManager::GetInstance()->GetCurrentWorld(), binaryPath);
+		if (core::IsValid(setting.startingWorld))
+		{
+			builder.Build(*this, binaryPath);
+		}
 	}
 }

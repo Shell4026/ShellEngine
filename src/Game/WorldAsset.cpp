@@ -25,18 +25,34 @@ namespace sh::game
 		assetUUID = worldPtr->GetUUID();
 	}
 
+	SH_GAME_API void WorldAsset::ConvertToGameWorldType(bool bConvert)
+	{
+		bConvertWorldType = bConvert;
+	}
+
 	void WorldAsset::SetAssetData() const
 	{
 		if (!core::IsValid(worldPtr))
 			return;
 
 		if (worldPtr->IsLoaded())
-			data = core::Json::to_bson(worldPtr->Serialize());
+		{
+			auto json = worldPtr->Serialize();
+
+			if (bConvertWorldType)
+				json["type"] = game::World::GetStaticType().name.ToString();
+
+			data = core::Json::to_bson(json);
+		}
 		else
 		{
-			const core::Json& worldPoint = worldPtr->GetWorldPoint();
+			core::Json worldPoint = worldPtr->GetWorldPoint();
 			if (worldPoint.empty() || worldPoint.is_discarded())
 				return;
+
+			if (bConvertWorldType)
+				worldPoint["type"] = game::World::GetStaticType().name.ToString();
+
 			data = core::Json::to_bson(worldPoint);
 		}
 	}

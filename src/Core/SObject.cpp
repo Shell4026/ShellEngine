@@ -2,9 +2,28 @@
 #include "GarbageCollection.h"
 #include "Observer.hpp"
 #include "Util.h"
+#include "AssetResolver.h"
 
 namespace sh::core
 {
+	template<>
+	SH_CORE_API void DeserializeProperty(const core::Json& json, const std::string& key, SObject*& value)
+	{
+		if (json.contains(key))
+		{
+			std::string uuid = json[key].get<std::string>();
+			auto objectManager = SObjectManager::GetInstance();
+			SObject* ptr = objectManager->GetSObject(UUID{ uuid });
+			if (ptr == nullptr)
+			{
+				auto& resolver = AssetResolverRegistry::GetResolver();
+				if (resolver)
+					ptr = resolver(UUID{ uuid });
+			}
+			value = ptr;
+		}
+	}
+
 	SH_CORE_API SObject::SObject() :
 		bPendingKill(false),
 		uuid(UUID::Generate()), name("Unknown")

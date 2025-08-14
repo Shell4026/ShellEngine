@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include "Game/Export.h"
 #include "Core/Singleton.hpp"
 #include "Core/IAssetLoader.h"
@@ -13,11 +13,9 @@ namespace sh::game
 		friend class core::Singleton<AssetLoaderFactory>;
 	private:
 		AssetLoaderFactory() = default;
-
 	public:
-		void RegisterLoader(const std::string& type, std::unique_ptr<core::IAssetLoader> loader);
-		auto GetLoader(const std::string& type) -> core::IAssetLoader*;
-
+		SH_GAME_API void RegisterLoader(const std::string& type, std::unique_ptr<core::IAssetLoader> loader);
+		SH_GAME_API auto GetLoader(const std::string& type) -> core::IAssetLoader*;
 	private:
 		std::unordered_map<std::string, std::unique_ptr<core::IAssetLoader>> loaders;
 	};

@@ -54,6 +54,7 @@ namespace sh::editor
 
 		SH_EDITOR_API void Clean() override;
 
+		SH_EDITOR_API void SetRenderPass() override;
 		SH_EDITOR_API void InitResource() override;
 
 		SH_EDITOR_API void AddSelectedObject(core::SObject* obj);

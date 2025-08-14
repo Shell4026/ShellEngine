@@ -32,11 +32,13 @@ namespace sh::editor
 			Material
 		};
 	public:
-		SH_EDITOR_API void LoadAllAssets(Project& world);
+		SH_EDITOR_API void LoadAllAssets(Project& project);
 
 		SH_EDITOR_API auto GetIcon(Icon icon) const -> const game::GUITexture*;
 		SH_EDITOR_API auto GetShader(const std::string& name) -> render::Shader*;
 		SH_EDITOR_API auto GetMaterial(const std::string& name) -> render::Material*;
 		SH_EDITOR_API auto GetTexture(const std::string& name) -> render::Texture*;
+
+		SH_EDITOR_API void ExtractAllAssetToLibrary(Project& project);
 	};
 }//namespace

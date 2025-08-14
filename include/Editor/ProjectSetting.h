@@ -5,6 +5,11 @@
 
 #include <filesystem>
 #include <string>
+
+namespace sh::game
+{
+	class World;
+}
 namespace sh::editor
 {
 	class ProjectSetting : public core::ISerializable
@@ -12,7 +17,7 @@ namespace sh::editor
 	private:
 		int version;
 	public:
-		std::filesystem::path startingWorldPath;
+		game::World* startingWorld = nullptr;
 	public:
 		SH_EDITOR_API ProjectSetting();
 

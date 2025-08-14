@@ -1,5 +1,9 @@
 ﻿#include "ProjectSetting.h"
 
+#include "Core/Util.h"
+
+#include "Game/World.h"
+
 namespace sh::editor
 {
 	ProjectSetting::ProjectSetting() :
@@ -10,7 +14,8 @@ namespace sh::editor
 	{
 		core::Json json;
 		json["version"] = version;
-		json["startingWorld"] = startingWorldPath.u8string();
+		if (core::IsValid(startingWorld))
+			json["startingWorld"] = startingWorld->GetUUID().ToString();
 		return json;
 	}
 	SH_EDITOR_API void ProjectSetting::Deserialize(const core::Json& json)
@@ -18,6 +23,10 @@ namespace sh::editor
 		if (json.contains("version"))
 			version = json["version"];
 		if (json.contains("startingWorld"))
-			startingWorldPath = std::filesystem::u8path(std::string{ json["startingWorld"] });
+		{
+			core::SObject* worldObj = core::SObjectManager::GetInstance()->GetSObject(core::UUID{ json["startingWorld"].get<std::string>()});
+			if (core::IsValid(worldObj))
+				startingWorld = static_cast<game::World*>(worldObj);
+		}
 	}
 }

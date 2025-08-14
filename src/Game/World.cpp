@@ -58,6 +58,12 @@ namespace sh::game
 		render::RenderTexture* gameViewTexture = core::SObject::Create<render::RenderTexture>(render::Texture::TextureFormat::SRGBA32);
 		gameViewTexture->Build(*renderer.GetContext());
 		textures.AddResource("GameView", gameViewTexture);
+
+		SetRenderPass();
+	}
+	SH_GAME_API void World::SetRenderPass()
+	{
+		renderer.AddRenderPipeline<render::RenderPipeline>();
 	}
 	SH_GAME_API auto World::LoadAssetBundle(const std::filesystem::path& path) -> bool
 	{
@@ -442,7 +448,6 @@ namespace sh::game
 		if (bPlaying)
 			return;
 		bPlaying = true;
-		Start();
 	}
 	SH_GAME_API void World::Stop()
 	{

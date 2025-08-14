@@ -10,6 +10,7 @@ namespace sh
 	namespace core
 	{
 		class GarbageCollection;
+		class AssetBundle;
 	}
 	namespace window
 	{
@@ -43,8 +44,9 @@ namespace sh
 		std::unique_ptr<game::ImGUImpl> gui;
 #if SH_EDITOR
 		std::unique_ptr<editor::Project> project;
+#else
+		std::unique_ptr<core::AssetBundle> assetBundle;
 #endif
-
 		std::unique_ptr<render::Renderer> renderer;
 
 		int limitFps = 144;

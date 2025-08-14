@@ -268,7 +268,13 @@ namespace sh::editor
 
 		world.ClearSelectedObjects();
 
-		world.AddAfterSyncTask([&]{ world.Play(); });
+		world.AddAfterSyncTask(
+			[&]
+			{ 
+				world.Play(); 
+				world.Start();
+			}
+		);
 
 		editorCamera->SetActive(false);
 		BlockLeftClick(true);

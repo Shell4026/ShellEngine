@@ -244,6 +244,7 @@ namespace sh::core
 		/// @param obj 루트셋으로 지정할 SObject 포인터
 		SH_CORE_API void SetRootSet(SObject* obj);
 		SH_CORE_API auto GetRootSet() const -> const std::vector<SObject*>&;
+		SH_CORE_API auto GetRootSetCount() const -> uint64_t;
 		/// @brief 해당 프레임마다 가비지 컬렉터를 수행한다.
 		/// @param tick 목표 프레임
 		SH_CORE_API void SetUpdateTick(uint32_t tick);

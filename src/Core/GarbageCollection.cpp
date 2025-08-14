@@ -378,6 +378,10 @@ namespace sh::core
 	{
 		return rootSets;
 	}
+	SH_CORE_API auto GarbageCollection::GetRootSetCount() const -> uint64_t
+	{
+		return rootSets.size() - emptyRootSetCount;
+	}
 	SH_CORE_API void GarbageCollection::SetUpdateTick(uint32_t tick)
 	{
 		updatePeriodTick = tick;

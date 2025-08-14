@@ -1,6 +1,8 @@
 ﻿#include "EditorResource.h"
 #include "UI/Project.h"
 
+#include "Core/AssetExporter.h"
+
 #include "Render/VulkanImpl/VulkanContext.h"
 #include "Render/VulkanImpl/VulkanShaderPassBuilder.h"
 #include "Render/Material.h"
@@ -9,9 +11,30 @@
 #include "Game/TextureLoader.h"
 #include "Game/ShaderLoader.h"
 #include "Game/ModelLoader.h"
+#include "Game/ShaderAsset.h"
+#include "Game/TextureAsset.h"
 
+#include <filesystem>
 namespace sh::editor
 {
+	void EditorResource::ExtractAllAssetToLibrary(Project& project)
+	{
+		for (auto& [name, shaderPtr] : shaders)
+		{
+			if (!core::IsValid(shaderPtr))
+				continue;
+
+			game::ShaderAsset asset{ *shaderPtr };
+			auto writeTime = std::filesystem::file_time_type::clock::now();
+			asset.SetWriteTime(writeTime.time_since_epoch().count());
+
+			const auto path = project.GetLibraryPath() / (shaderPtr->GetUUID().ToString() + ".asset");
+			if (core::AssetExporter::Save(asset, path, true))
+			{
+				std::filesystem::last_write_time(path, writeTime);
+			}
+		}
+	}
 	SH_EDITOR_API void EditorResource::LoadAllAssets(Project& project)
 	{
 		auto& ctx = *project.renderer.GetContext();

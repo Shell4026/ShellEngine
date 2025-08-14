@@ -25,18 +25,26 @@
 #include "Editor/AssetDatabase.h"
 #else
 #include "Core/AssetBundle.h"
+#include "Core/AssetResolver.h"
+
+#include "Render/VulkanImpl/VulkanShaderPassBuilder.h"
+#include "Render/VulkanImpl/VulkanContext.h"
+
 #include "Game/World.h"
 #include "Game/AssetLoaderFactory.h"
 #include "Game/TextureLoader.h"
 #include "Game/ModelLoader.h"
-#include "Game/ModelAsset.h"
+#include "Game/MeshLoader.h"
 #include "Game/MaterialLoader.h"
 #include "Game/ShaderLoader.h"
-#include "Game/ShaderAsset.h"
 #include "Game/WorldLoader.h"
+
+#include "Game/TextureAsset.h"
+#include "Game/MaterialAsset.h"
+#include "Game/ShaderAsset.h"
+#include "Game/ModelAsset.h"
+#include "Game/MeshAsset.h"
 #include "Game/WorldAsset.h"
-#include "Render/VulkanImpl/VulkanShaderPassBuilder.h"
-#include "Render/VulkanImpl/VulkanContext.h"
 #endif
 
 namespace sh
@@ -57,11 +65,11 @@ namespace sh
 		editor::AssetDatabase::Destroy();
 		editor::EditorResource::Destroy();
 #endif
-		gameManager->Clean();
+		gameManager->Destroy();
 		renderer->ClearRenderPipeline();
 
 		gc->DefragmentRootSet();
-		while(gc->GetRootSet().size() != gc->GetObjectCount())
+		while(gc->GetRootSetCount() != gc->GetObjectCount())
 		{
 			gc->Collect();
 			gc->DestroyPendingKillObjs();
@@ -145,9 +153,11 @@ namespace sh
 		renderer->Init(*window);
 		renderer->GetContext()->SetViewport({ 150.f, 0.f }, { window->width - 150.f, window->height - 180 });
 
+		SH_INFO("UIContext initialization");
 		gui = std::make_unique<game::ImGUImpl>(*window, static_cast<render::vk::VulkanRenderer&>(*renderer));
 		gui->Init();
 
+		SH_INFO("GameManager initialization");
 		gameManager = game::GameManager::GetInstance();
 
 		auto& worldFactory = *core::Factory<game::World, game::World*>::GetInstance();
@@ -157,6 +167,10 @@ namespace sh
 				return core::SObject::Create<game::World>(*renderer, *gui);
 			}
 		);
+
+		SH_INFO("Thread creation");
+		core::ThreadPool::GetInstance()->Init(std::max(2u, std::thread::hardware_concurrency() / 2));
+		core::ThreadSyncManager::Init();
 #if SH_EDITOR
 		project = std::make_unique<editor::Project>(*renderer, *gui);
 
@@ -167,24 +181,39 @@ namespace sh
 			}
 		);
 		auto defaultWorld = core::SObject::Create<editor::EditorWorld>(*project); // 기본 월드
-		gameManager->AddWorld(*defaultWorld);
 		gameManager->SetCurrentWorld(*defaultWorld);
 #else
-		world = core::SObject::Create<game::World>(*renderer.get(), *componentModule, *gui);
-		
 		static render::vk::VulkanShaderPassBuilder vkShaderPassBuilder{ static_cast<render::vk::VulkanContext&>(*renderer->GetContext()) };
 
-		auto factory = game::AssetLoaderFactory::GetInstance();
-		factory->RegisterLoader(game::TextureAsset::ASSET_NAME, std::make_unique<game::TextureLoader>(*renderer->GetContext()));
-		factory->RegisterLoader(game::ModelAsset::ASSET_NAME, std::make_unique<game::ModelLoader>(*renderer->GetContext()));
-		//factory->RegisterLoader("MATL", std::make_unique<game::MaterialLoader>(*renderer->GetContext()));
-		factory->RegisterLoader(game::ShaderAsset::ASSET_NAME, std::make_unique<game::ShaderLoader>(&vkShaderPassBuilder));
-		factory->RegisterLoader(game::WorldAsset::ASSET_NAME, std::make_unique<game::WorldLoader>());
+		auto assetLoaderFactory = game::AssetLoaderFactory::GetInstance();
+		assetLoaderFactory->RegisterLoader(game::TextureAsset::ASSET_NAME, std::make_unique<game::TextureLoader>(*renderer->GetContext()));
+		assetLoaderFactory->RegisterLoader(game::ModelAsset::ASSET_NAME, std::make_unique<game::ModelLoader>(*renderer->GetContext()));
+		assetLoaderFactory->RegisterLoader(game::MeshAsset::ASSET_NAME, std::make_unique<game::MeshLoader>(*renderer->GetContext()));
+		assetLoaderFactory->RegisterLoader(game::MaterialAsset::ASSET_NAME, std::make_unique<game::MaterialLoader>(*renderer->GetContext()));
+		assetLoaderFactory->RegisterLoader(game::ShaderAsset::ASSET_NAME, std::make_unique<game::ShaderLoader>(&vkShaderPassBuilder));
+		assetLoaderFactory->RegisterLoader(game::WorldAsset::ASSET_NAME, std::make_unique<game::WorldLoader>(*renderer, *gui));
+		
+		core::AssetResolverRegistry::SetResolver(
+			[this](const core::UUID& uuid) -> core::SObject*
+			{
+				auto asset = assetBundle->LoadAsset(uuid);
+				if (asset == nullptr)
+					return nullptr;
+				auto assetLoader = game::AssetLoaderFactory::GetInstance()->GetLoader(asset->GetType());
+				if (assetLoader == nullptr)
+					return nullptr;
+				core::SObject* assetPtr = assetLoader->Load(*asset);
+				return assetPtr;
+			}
+		);
 
+		assetBundle = std::make_unique<core::AssetBundle>();
+		if (!assetBundle->LoadBundle("assets.bundle"))
+			return;
+		if (!gameManager->LoadGame("gameManager.bin", *assetBundle))
+			return;
 #endif
-		SH_INFO("Thread creation");
-		core::ThreadPool::GetInstance()->Init(std::max(2u, std::thread::hardware_concurrency() / 2));
-		core::ThreadSyncManager::Init();
+		SH_INFO("Render thread creation");
 		renderThread = game::RenderThread::GetInstance();
 		renderThread->Init(*renderer);
 		core::ThreadSyncManager::AddThread(*renderThread);

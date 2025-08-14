@@ -107,6 +107,7 @@ namespace sh::game
 
 		/// @brief 기본 리소스를 로드한다.
 		SH_GAME_API virtual void InitResource();
+		SH_GAME_API virtual void SetRenderPass();
 
 		SH_GAME_API auto LoadAssetBundle(const std::filesystem::path& path) -> bool;
 		SH_GAME_API auto LoadObjectFromBundle(const core::UUID& uuid) -> core::SObject*;
