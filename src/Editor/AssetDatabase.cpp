@@ -172,7 +172,7 @@ namespace sh::editor
 			{
 				render::Texture* texture = reinterpret_cast<render::Texture*>(obj);
 				Meta meta{};
-				meta.SaveWithObj(*texture, GetMetaDirectory(projectPath / originalPath), true);
+				meta.SaveWithObj(*texture, GetMetaDirectory(projectPath / originalPath), false);
 			}
 			else if (obj->GetType().IsChildOf(game::World::GetStaticType()))
 			{
@@ -354,26 +354,29 @@ namespace sh::editor
 		SaveDatabase(project->GetLibraryPath() / "AssetDB.json");
 	}
 
-	SH_EDITOR_API bool AssetDatabase::CreateAsset(const std::filesystem::path& dir, const core::ISerializable& serializable)
+	SH_EDITOR_API bool AssetDatabase::CreateAsset(const std::filesystem::path& dir, const core::SObject& obj)
 	{
 		if (std::filesystem::exists(dir))
 			return false;
 
-		auto json = serializable.Serialize();
-		if (json.contains("uuid"))
-		{
-			std::filesystem::path relativePath = std::filesystem::relative(dir, projectPath);
-			if (relativePath.empty())
-				return false;
+		const std::filesystem::path relativePath = std::filesystem::relative(dir, projectPath);
+		const std::filesystem::path cachePath = project->GetLibraryPath() / fmt::format("{}.asset", obj.GetUUID().ToString());
 
-			const core::UUID uuid{ json["uuid"].get<std::string>() };
-			uuids.insert_or_assign(relativePath, uuid);
-			paths.insert_or_assign(uuid, AssetInfo{ relativePath, relativePath });
-		}
+		if (!ExportAsset(obj, cachePath))
+			return false;
+
+		if (relativePath.empty())
+			return false;
+
+		uuids.insert_or_assign(relativePath, obj.GetUUID());
+		paths.insert_or_assign(obj.GetUUID(), AssetInfo{relativePath, std::filesystem::relative(cachePath, projectPath)});
 
 		std::ofstream os(dir);
-		os << std::setw(4) << json;
+		os << std::setw(4) << obj.Serialize();
 		os.close();
+
+		Meta meta{};
+		meta.Save(obj, dir);
 
 		return true;
 	}

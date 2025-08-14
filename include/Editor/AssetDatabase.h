@@ -109,7 +109,7 @@ namespace sh::editor
 		/// @param recursive 하위 경로도 포함 할 것인지
 		SH_EDITOR_API void LoadAllAssets(const std::filesystem::path& dir, bool recursive);
 		SH_EDITOR_API auto ImportAsset(const std::filesystem::path& dir) -> core::SObject*;
-		SH_EDITOR_API bool CreateAsset(const std::filesystem::path& dir, const core::ISerializable& serializable);
+		SH_EDITOR_API bool CreateAsset(const std::filesystem::path& dir, const core::SObject& obj);
 		SH_EDITOR_API auto GetAsset(const core::UUID& uuid) -> std::unique_ptr<core::Asset>;
 		SH_EDITOR_API auto GetAssetOriginalPath(const core::UUID& uuid) const -> std::optional<std::filesystem::path>;
 		SH_EDITOR_API auto GetAssetPath(const core::UUID& uuid) const -> const AssetInfo*;
