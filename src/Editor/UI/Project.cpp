@@ -212,7 +212,7 @@ namespace sh::editor
 				{
 					auto& world = static_cast<EditorWorld&>(*game::GameManager::GetInstance()->GetCurrentWorld());
 
-					static render::Shader* defaultShader = EditorResource::GetInstance()->GetMaterial("error");
+					static render::Shader* defaultShader = EditorResource::GetInstance()->GetShader("ErrorShader");
 					assert(defaultShader);
 					std::string name{ core::FileSystem::CreateUniqueFileName(currentPath, "NewMaterial.mat") };
 					auto mat = world.materials.AddResource(name, render::Material{ defaultShader });
