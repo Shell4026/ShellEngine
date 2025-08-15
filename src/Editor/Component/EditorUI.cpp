@@ -109,7 +109,7 @@ namespace sh::editor
 								project->OpenProject(dir);
 							}
 						);
-						explorer->Open();
+						explorer->Open(ExplorerUI::OpenMode::Select, ExplorerUI::FlagEnum::FolderOnly);
 					}
 				}
 				else
@@ -140,9 +140,11 @@ namespace sh::editor
 					if (ImGui::MenuItem("Load world", "Ctrl+O"))
 					{
 						explorer->SetCurrentPath(project->GetAssetPath());
+						explorer->SetExtensionFilter(".world");
 						explorer->PushCallbackQueue(
 							[&](const std::filesystem::path& path)
 							{
+								explorer->ClearExtensionFilter();
 								project->LoadWorld(path);
 							}
 						);

@@ -15,14 +15,29 @@ namespace sh::editor
 
 	void ExplorerUI::UpdateDirectoryEntries()
 	{
+        auto a = {1, 2 ,3};
         folders.clear();
         files.clear();
 		for (const auto& entry : std::filesystem::directory_iterator(currentPath)) 
         {
             if (std::filesystem::is_directory(entry))
+            {
                 folders.push_back(entry.path().filename());
+            }
             else
-                files.push_back(entry.path().filename());
+            {
+                if (flag & FlagEnum::FolderOnly)
+                    continue;
+                if (extensionFilters.empty())
+                    files.push_back(entry.path().filename());
+                else
+                {
+
+                    auto it = std::find(extensionFilters.begin(), extensionFilters.end(), entry.path().extension().u8string());
+                    if (it != extensionFilters.end())
+                        files.push_back(entry.path().filename());
+                }
+            }
 			//directoryEntries.push_back(entry.path().filename().string());
 		}
         std::sort(folders.begin(), folders.end());
@@ -160,14 +175,29 @@ namespace sh::editor
 
         ImGui::End();
     }
-    SH_EDITOR_API void ExplorerUI::Open(OpenMode mode)
+    SH_EDITOR_API void ExplorerUI::Open(OpenMode mode, Flag flag)
     {
         this->mode = mode;
+        this->flag = flag;
         bOpen = true;
     }
     SH_EDITOR_API void ExplorerUI::SetCurrentPath(const std::filesystem::path& path)
     {
         currentPath = path;
+    }
+    SH_EDITOR_API void ExplorerUI::SetExtensionFilter(const std::string& extension)
+    {
+        ClearExtensionFilter();
+        extensionFilters.push_back(extension);
+    }
+    SH_EDITOR_API void ExplorerUI::SetExtensionFilter(const std::initializer_list<std::string>& extensions)
+    {
+        ClearExtensionFilter();
+        extensionFilters.assign(extensions);
+    }
+    SH_EDITOR_API void ExplorerUI::ClearExtensionFilter()
+    {
+        extensionFilters.clear();
     }
     SH_EDITOR_API void ExplorerUI::PushCallbackQueue(const std::function<void(std::filesystem::path dir)>& func)
     {

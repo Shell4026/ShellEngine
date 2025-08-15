@@ -9,6 +9,7 @@ namespace sh::editor
         : bShow(false)
     {
         explorer = std::make_unique<ExplorerUI>();
+        explorer->SetExtensionFilter(".bundle");
     }
 
     BundleViewer::~BundleViewer() = default;
