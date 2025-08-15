@@ -10,6 +10,7 @@ namespace sh::render
 	class Shader;
 	class Material;
 	class Texture;
+	class Model;
 }
 namespace sh::editor
 {
@@ -23,6 +24,7 @@ namespace sh::editor
 		core::SMap<std::string, render::Shader*> shaders;
 		core::SMap<std::string, render::Material*> materials;
 		core::SMap<std::string, render::Texture*> textures;
+		core::SMap<std::string, render::Model*> models;
 	public:
 		enum class Icon
 		{
@@ -38,6 +40,7 @@ namespace sh::editor
 		SH_EDITOR_API auto GetShader(const std::string& name) -> render::Shader*;
 		SH_EDITOR_API auto GetMaterial(const std::string& name) -> render::Material*;
 		SH_EDITOR_API auto GetTexture(const std::string& name) -> render::Texture*;
+		SH_EDITOR_API auto GetModel(const std::string& name) -> render::Model*;
 
 		SH_EDITOR_API void ExtractAllAssetToLibrary(Project& project);
 	};

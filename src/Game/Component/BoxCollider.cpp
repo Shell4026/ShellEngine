@@ -13,7 +13,8 @@ namespace sh::game
 		shape = world.GetPhysWorld()->GetContext().createBoxShape(size / 2.0f);
 #if SH_EDITOR
 		debugRenderer = gameObject.AddComponent<DebugRenderer>();
-		debugRenderer->SetMesh(world.models.GetResource("CubeModel")->GetMeshes()[0]);
+		render::Model* cubeModel = static_cast<render::Model*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ "bbc4ef7ec45dce223297a224f8093f16" })); // Cube Model
+		debugRenderer->SetMesh(cubeModel->GetMeshes()[0]);
 		debugRenderer->hideInspector = true;
 #endif
 	}
@@ -23,23 +24,18 @@ namespace sh::game
 		world.GetPhysWorld()->GetContext().destroyBoxShape(shape);
 	}
 
-	SH_GAME_API void BoxCollider::Destroy()
+	SH_GAME_API void BoxCollider::OnDestroy()
 	{
-		Super::Destroy();
 		if (debugRenderer)
 		{
 			debugRenderer->Destroy();
 			debugRenderer = nullptr;
 		}
-	}
-
-	SH_GAME_API void BoxCollider::OnDestroy()
-	{
-		SH_INFO("Destroy!");
 		for (auto rb : rigidbodies)
 		{
 			rb->SetCollider(nullptr);
 		}
+		Super::OnDestroy();
 	}
 
 	SH_GAME_API auto BoxCollider::GetCollisionShape() const -> reactphysics3d::CollisionShape*

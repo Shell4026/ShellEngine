@@ -23,7 +23,7 @@ namespace sh::game
 	DebugRenderer::DebugRenderer(game::GameObject& owner) :
 		MeshRenderer(owner)
 	{
-		mat = world.materials.GetResource("WireframeMat");
+		mat = static_cast<render::Material*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{"bbc4ef7ec45dce223297a224f8093f10"})); // ErrorMaterial
 		assert(mat);
 		position = Vec3{ 0.f, 0.f, 0.f };
 		scale = Vec3{ 1.0f, 1.0f, 1.0f };

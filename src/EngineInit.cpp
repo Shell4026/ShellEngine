@@ -212,7 +212,7 @@ namespace sh
 			return;
 		if (!gameManager->LoadGame("gameManager.bin", *assetBundle))
 			return;
-#endif
+ #endif
 		SH_INFO("Render thread creation");
 		renderThread = game::RenderThread::GetInstance();
 		renderThread->Init(*renderer);

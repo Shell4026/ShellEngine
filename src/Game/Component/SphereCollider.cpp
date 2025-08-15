@@ -13,7 +13,8 @@ namespace sh::game
 		shape = world.GetPhysWorld()->GetContext().createSphereShape(radius);
 #if SH_EDITOR
 		debugRenderer = gameObject.AddComponent<DebugRenderer>();
-		debugRenderer->SetMesh(world.models.GetResource("SphereModel")->GetMeshes()[0]);
+		render::Model* sphereModel = static_cast<render::Model*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ "bbc4ef7ec45dce223297a224f8093f15" })); // Sphere Model
+		debugRenderer->SetMesh(sphereModel->GetMeshes()[0]);
 		debugRenderer->hideInspector = true;
 #endif
 	}
@@ -23,23 +24,18 @@ namespace sh::game
 		world.GetPhysWorld()->GetContext().destroySphereShape(shape);
 	}
 
-	SH_GAME_API void ShpereCollider::Destroy()
+	SH_GAME_API void ShpereCollider::OnDestroy()
 	{
-		Super::Destroy();
 		if (debugRenderer != nullptr)
 		{
 			debugRenderer->Destroy();
 			debugRenderer = nullptr;
 		}
-	}
-
-	SH_GAME_API void ShpereCollider::OnDestroy()
-	{
-		SH_INFO("Destroy!");
 		for (auto rb : rigidbodies)
 		{
 			rb->SetCollider(nullptr);
 		}
+		Super::OnDestroy();
 	}
 
 	SH_GAME_API auto ShpereCollider::GetCollisionShape() const -> reactphysics3d::CollisionShape*
@@ -50,6 +46,8 @@ namespace sh::game
 	SH_GAME_API void ShpereCollider::SetRadius(float r)
 	{
 		radius = r;
+		if (r < 0.0001f)
+			radius = 0.0001f;
 		shape->setRadius(radius);
 	}
 	SH_GAME_API auto ShpereCollider::GetRadius() const -> float

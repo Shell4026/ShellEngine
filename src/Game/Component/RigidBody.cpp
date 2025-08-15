@@ -28,13 +28,14 @@ namespace sh::game
 	}
 	SH_GAME_API void RigidBody::OnDestroy()
 	{
-		SH_INFO("Destory!!!");
 		if (collider)
 			rigidbody->removeCollider(collider);
 
 		auto world = gameObject.world.GetPhysWorld()->GetWorld();
 		gameObject.world.GetPhysWorld()->DestroyRigidBody(rigidbody);
 		rigidbody = nullptr;
+
+		Super::OnDestroy();
 	}
 	SH_GAME_API void RigidBody::BeginUpdate()
 	{
@@ -112,7 +113,6 @@ namespace sh::game
 		return rigidbody;
 	}
 
-#if SH_EDITOR
 	SH_GAME_API void RigidBody::OnPropertyChanged(const core::reflection::Property& prop)
 	{
 		if (prop.GetName() == "collision")
@@ -128,5 +128,4 @@ namespace sh::game
 			SetKinematic(bKinematic);
 		}
 	}
-#endif
 }//namespace

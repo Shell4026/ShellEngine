@@ -42,8 +42,6 @@ namespace sh::game
 		SH_GAME_API bool IsGravityUse() const;
 
 		SH_GAME_API auto GetBody() const -> reactphysics3d::RigidBody*;
-#if SH_EDITOR
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
-#endif
 	};
 }//namespace

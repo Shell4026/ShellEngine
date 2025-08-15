@@ -198,10 +198,13 @@ namespace sh::render::vk
 				bool bMSAA = context->GetSampleCount() != VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
 
 				renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+				//renderPassInfo.renderPass = context->GetMainRenderPass();
 				renderPassInfo.renderPass = context->GetUIRenderPass();
 				renderPassInfo.framebuffer = mainFramebuffer->GetVkFramebuffer();
 				renderPassInfo.renderArea.offset = { 0, 0 };
 				renderPassInfo.renderArea.extent = context->GetSwapChain().GetSwapChainSize();
+				//renderPassInfo.clearValueCount = bMSAA ? clearMSAA.size() : clear.size();
+				//renderPassInfo.pClearValues = bMSAA ? clearMSAA.data() : clear.data();
 				renderPassInfo.clearValueCount = 0;
 				renderPassInfo.pClearValues = nullptr;
 				vkCmdBeginRenderPass(cmd->GetCommandBuffer(), &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);

@@ -117,7 +117,10 @@ namespace sh::core
 	{
 		SObjectManager& objManager = *SObjectManager::GetInstance();
 		if (objManager.GetSObject(uuid) != nullptr)
+		{
+			SH_ERROR_FORMAT("UUID({}) already exists!", uuid.ToString());
 			return false;
+		}
 
 		objManager.UnRegisterSObject(this);
 		this->uuid = uuid;

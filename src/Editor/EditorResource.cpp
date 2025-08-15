@@ -77,8 +77,10 @@ namespace sh::editor
 		auto outlinePreMat = materials.insert_or_assign("OutlinePreMaterial", core::SObject::Create<render::Material>(outlinePreShader)).first->second;
 		auto outlinePostMat = materials.insert_or_assign("OutlinePostMaterial", core::SObject::Create<render::Material>(outlinePostShader)).first->second;
 
-		//models.insert_or_assign("CubeModel", static_cast<render::Model*>(modelLoader.Load("model/cube.obj")));
-		//models.insert_or_assign("SphereModel", static_cast<render::Model*>(modelLoader.Load("model/Sphere.obj")));
+		auto sphereModel = models.insert_or_assign("SphereModel", static_cast<render::Model*>(modelLoader.Load("model/Sphere.obj"))).first->second;
+		sphereModel->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f15" });
+		auto cubeModel = models.insert_or_assign("CubeModel", static_cast<render::Model*>(modelLoader.Load("model/cube.obj"))).first->second;
+		cubeModel->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f16" });
 
 		render::RenderTexture* outlineTexture = core::SObject::Create<render::RenderTexture>(render::Texture::TextureFormat::R8);
 		outlineTexture->SetSize(1024, 1024);
@@ -147,6 +149,13 @@ namespace sh::editor
 	{
 		auto it = textures.find(name);
 		if (it == textures.end())
+			return nullptr;
+		return it->second;
+	}
+	SH_EDITOR_API auto EditorResource::GetModel(const std::string& name) -> render::Model*
+	{
+		auto it = models.find(name);
+		if (it == models.end())
 			return nullptr;
 		return it->second;
 	}

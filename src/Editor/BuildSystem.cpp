@@ -8,10 +8,12 @@
 #include "Core/FileSystem.h"
 
 #include "Game/World.h"
+#include "Game/GameManager.h"
+
 #include "Game/WorldAsset.h"
 #include "Game/ShaderAsset.h"
 #include "Game/MaterialAsset.h"
-#include "Game/GameManager.h"
+#include "Game/MeshAsset.h"
 
 #include <fstream>
 namespace sh::editor
@@ -61,6 +63,10 @@ namespace sh::editor
         bundle.AddAsset(errorMatAsset, true);
         game::MaterialAsset lineMatAsset{ *editorResource->GetMaterial("LineMaterial") };
         bundle.AddAsset(lineMatAsset, true);
+        game::MeshAsset cubeMesh{ *editorResource->GetModel("CubeModel")->GetMeshes()[0] };
+        bundle.AddAsset(cubeMesh, true);
+        game::MeshAsset sphereMesh{ *editorResource->GetModel("SphereModel")->GetMeshes()[0] };
+        bundle.AddAsset(sphereMesh, true);
 
         for (const auto& uuid : uuids)
         {

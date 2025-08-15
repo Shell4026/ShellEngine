@@ -28,7 +28,6 @@ namespace sh::game
 		SH_GAME_API ShpereCollider(GameObject& owner);
 		SH_GAME_API ~ShpereCollider();
 
-		SH_GAME_API void Destroy() override;
 		SH_GAME_API void OnDestroy() override;
 
 		SH_GAME_API auto GetCollisionShape() const -> reactphysics3d::CollisionShape*;
