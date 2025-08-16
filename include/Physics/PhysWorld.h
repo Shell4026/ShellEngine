@@ -1,15 +1,12 @@
 ﻿#pragma once
 #include "Export.h"
+#include "Ray.h"
 
-#include "reactphysics3d/reactphysics3d.h"
-
+#include <memory>
 namespace sh::phys
 {
 	class PhysWorld
 	{
-	private:
-		reactphysics3d::PhysicsCommon physicsCommon;
-		reactphysics3d::PhysicsWorld* world = nullptr;
 	public:
 		SH_PHYS_API PhysWorld();
 		SH_PHYS_API PhysWorld(PhysWorld&& other) noexcept;
@@ -17,11 +14,15 @@ namespace sh::phys
 
 		SH_PHYS_API void Clean();
 
-		SH_PHYS_API auto GetContext() -> reactphysics3d::PhysicsCommon&;
-		SH_PHYS_API auto GetWorld() const -> reactphysics3d::PhysicsWorld*;
-
 		SH_PHYS_API void Update(float deltaTime);
 
-		SH_PHYS_API void DestroyRigidBody(reactphysics3d::RigidBody* body);
+		SH_PHYS_API auto RayCastHit(const Ray& ray) const -> bool;
+
+		SH_PHYS_API auto GetContext() const -> void*;
+		SH_PHYS_API auto GetNative() const -> void*;
+	private:
+		struct Impl;
+		
+		std::unique_ptr<Impl> impl;
 	};
 }//namespace

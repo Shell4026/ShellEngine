@@ -5,12 +5,22 @@
 #include "Game/GameObject.h"
 #include "Game/World.h"
 
+#include "reactphysics3d/reactphysics3d.h"
 namespace sh::game
 {
+	struct BoxCollider::Impl
+	{
+		reactphysics3d::BoxShape* shape = nullptr;
+	};
+
 	SH_GAME_API BoxCollider::BoxCollider(GameObject& owner) :
 		Collider(owner), size{ 1.0f, 1.0f, 1.0f }
 	{
-		shape = world.GetPhysWorld()->GetContext().createBoxShape(size / 2.0f);
+		impl = std::make_unique<Impl>();
+
+		auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld()->GetContext());
+		Vec3 halfSize = size / 2.0f;
+		impl->shape = ctx->createBoxShape(reactphysics3d::Vector3{ halfSize.x, halfSize.y, halfSize.z });
 #if SH_EDITOR
 		debugRenderer = gameObject.AddComponent<DebugRenderer>();
 		render::Model* cubeModel = static_cast<render::Model*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ "bbc4ef7ec45dce223297a224f8093f16" })); // Cube Model
@@ -21,7 +31,8 @@ namespace sh::game
 	SH_GAME_API BoxCollider::~BoxCollider()
 	{
 		SH_INFO("~BoxCollider");
-		world.GetPhysWorld()->GetContext().destroyBoxShape(shape);
+		auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld()->GetContext());
+		ctx->destroyBoxShape(impl->shape);
 	}
 
 	SH_GAME_API void BoxCollider::OnDestroy()
@@ -38,15 +49,16 @@ namespace sh::game
 		Super::OnDestroy();
 	}
 
-	SH_GAME_API auto BoxCollider::GetCollisionShape() const -> reactphysics3d::CollisionShape*
+	SH_GAME_API auto BoxCollider::GetNative() const -> void*
 	{
-		return shape;
+		return impl->shape;
 	}
 
 	SH_GAME_API void BoxCollider::SetSize(const Vec3& size)
 	{
 		this->size = size;
-		shape->setHalfExtents(size * 0.5f);
+		Vec3 halfSize = size / 2.0f;
+		impl->shape->setHalfExtents(reactphysics3d::Vector3{ halfSize.x, halfSize.y, halfSize.z });
 	}
 	SH_GAME_API auto BoxCollider::GetSize() const -> const Vec3&
 	{

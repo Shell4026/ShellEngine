@@ -1,17 +1,17 @@
 ﻿#pragma once
-
 #include "Export.h"
 
-#include "glm/vec3.hpp"
+#include "Game/Vector.h"
 
 namespace sh::phys
 {
 	class Ray
 	{
 	public:
-		const glm::vec3 origin;
-		const glm::vec3 direction;
+		SH_PHYS_API Ray(const game::Vec3& origin, const game::Vec3& dir, float distance = 1000.0f);
 	public:
-		SH_PHYS_API Ray(const glm::vec3& origin, const glm::vec3& dir);
+		const game::Vec3 origin;
+		const game::Vec3 direction;
+		const float distance;
 	};
 }//namespace

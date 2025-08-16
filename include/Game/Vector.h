@@ -7,8 +7,8 @@
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
 #include "glm/vec4.hpp"
-#include "reactphysics3d/mathematics/Vector2.h"
-#include "reactphysics3d/mathematics/Vector3.h"
+//#include "reactphysics3d/mathematics/Vector2.h"
+//#include "reactphysics3d/mathematics/Vector3.h"
 
 #include <cassert>
 #include <type_traits>
@@ -132,26 +132,26 @@ namespace sh::game
             else if constexpr (N >= 1)
                 return glm::vec4{ x, 0.f, 0.f, 0.f };
         }
-        operator reactphysics3d::Vector2() const
-        {
-            static_assert(N >= 1);
+        //operator reactphysics3d::Vector2() const
+        //{
+        //    static_assert(N >= 1);
 
-            if constexpr (N >= 2)
-                return reactphysics3d::Vector2{ x, y };
-            else if constexpr (N >= 1)
-                return reactphysics3d::Vector2{ x, 0.f };
-        }
-        operator reactphysics3d::Vector3() const
-        {
-            static_assert(N >= 1);
+        //    if constexpr (N >= 2)
+        //        return reactphysics3d::Vector2{ x, y };
+        //    else if constexpr (N >= 1)
+        //        return reactphysics3d::Vector2{ x, 0.f };
+        //}
+        //operator reactphysics3d::Vector3() const
+        //{
+        //    static_assert(N >= 1);
 
-            if constexpr (N >= 3)
-                return reactphysics3d::Vector3{ x, y, z };
-            else if constexpr (N >= 2)
-                return reactphysics3d::Vector3{ x, y, 0.f };
-            else if constexpr (N >= 1)
-                return reactphysics3d::Vector3{ x, 0.f, 0.f };
-        }
+        //    if constexpr (N >= 3)
+        //        return reactphysics3d::Vector3{ x, y, z };
+        //    else if constexpr (N >= 2)
+        //        return reactphysics3d::Vector3{ x, y, 0.f };
+        //    else if constexpr (N >= 1)
+        //        return reactphysics3d::Vector3{ x, 0.f, 0.f };
+        //}
         bool operator==(const Vec<N>& other) const
         {
             return x == other.x && y == other.y && z == other.z;

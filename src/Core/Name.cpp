@@ -74,6 +74,14 @@ namespace sh::core
 	{
 		return hash != core::Util::ConstexprHash(str);
 	}
+	SH_CORE_API auto Name::operator==(std::size_t hash) const -> bool
+	{
+		return this->hash == hash;
+	}
+	SH_CORE_API auto Name::operator!=(std::size_t hash) const -> bool
+	{
+		return this->hash != hash;
+	}
 
 	SH_CORE_API Name::operator const std::string& () const
 	{

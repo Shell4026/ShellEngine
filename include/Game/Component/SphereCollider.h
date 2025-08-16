@@ -6,7 +6,7 @@
 
 #include "Core/SContainer.hpp"
 
-#include "reactphysics3d/reactphysics3d.h"
+#include <memory>
 namespace sh::game
 {
 	class RigidBody;
@@ -15,22 +15,13 @@ namespace sh::game
 	{
 		COMPONENT(ShpereCollider)
 		friend RigidBody;
-	private:
-		reactphysics3d::SphereShape* shape = nullptr;
-
-		DebugRenderer* debugRenderer = nullptr;
-		PROPERTY(bDisplayArea)
-		bool bDisplayArea = false;
-
-		PROPERTY(radius)
-		float radius;
 	public:
 		SH_GAME_API ShpereCollider(GameObject& owner);
 		SH_GAME_API ~ShpereCollider();
 
 		SH_GAME_API void OnDestroy() override;
 
-		SH_GAME_API auto GetCollisionShape() const -> reactphysics3d::CollisionShape*;
+		SH_GAME_API auto GetNative() const -> void* override;
 
 		SH_GAME_API void SetRadius(float r);
 		SH_GAME_API auto GetRadius() const -> float;
@@ -40,5 +31,15 @@ namespace sh::game
 		SH_GAME_API void Update() override;
 
 		SH_GAME_API void DisplayArea(bool bDisplay = true);
+	private:
+		struct Impl;
+		std::unique_ptr<Impl> impl;
+
+		DebugRenderer* debugRenderer = nullptr;
+		PROPERTY(bDisplayArea)
+		bool bDisplayArea = false;
+
+		PROPERTY(radius)
+		float radius;
 	};
 }//namespace

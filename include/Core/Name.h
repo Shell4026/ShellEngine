@@ -32,6 +32,8 @@ namespace sh::core
 		SH_CORE_API auto operator!=(const Name& other) const -> bool;
 		SH_CORE_API auto operator==(const std::string_view str) const -> bool;
 		SH_CORE_API auto operator!=(const std::string_view str) const -> bool;
+		SH_CORE_API auto operator==(std::size_t hash) const -> bool;
+		SH_CORE_API auto operator!=(std::size_t hash) const -> bool;
 
 		SH_CORE_API operator const std::string& () const;
 		SH_CORE_API auto ToString() const -> const std::string&;
