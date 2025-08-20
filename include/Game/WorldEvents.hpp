@@ -70,5 +70,24 @@ namespace sh::game
 				return core::reflection::TypeTraits::GetTypeHash<ComponentEvent>();
 			}
 		};
+		struct WorldEvent : core::IEvent
+		{
+			enum class Type
+			{
+				Play,
+				Stop,
+				Pause
+			} const type;
+
+			WorldEvent(Type type) :
+				type(type)
+			{}
+
+
+			auto GetTypeHash() const -> std::size_t override
+			{
+				return core::reflection::TypeTraits::GetTypeHash<WorldEvent>();
+			}
+		};
 	}//events namespace
 }//namespace

@@ -510,12 +510,13 @@ namespace sh::editor
 					{
 						gameManager.UnloadWorld(*currentWorld);
 					}
-					core::GarbageCollection::GetInstance()->Collect();
-					core::GarbageCollection::GetInstance()->DestroyPendingKillObjs();
 
 					renderer.Clear();
 					gui.ClearDrawData();
 					gui.AddDrawCallToRenderer();
+
+					core::GarbageCollection::GetInstance()->Collect();
+					core::GarbageCollection::GetInstance()->DestroyPendingKillObjs();
 
 					world->InitResource();
 					world->LoadWorldPoint();

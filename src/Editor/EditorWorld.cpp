@@ -38,6 +38,8 @@ namespace sh::editor
 				control = selectedObj->AddComponent<EditorControl>();
 				control->SetCamera(editorCamera);
 				control->hideInspector = true;
+				if (IsPlaying())
+					control->SetActive(false);
 			}
 			AddOrDestroyOutlineComponent(*selectedObj, true);
 		}

@@ -447,11 +447,17 @@ namespace sh::game
 	{
 		if (bPlaying)
 			return;
+
 		bPlaying = true;
+		eventBus.Publish(events::WorldEvent{ events::WorldEvent::Type::Play });
 	}
 	SH_GAME_API void World::Stop()
 	{
+		if (!bPlaying)
+			return;
+
 		bPlaying = false;
+		eventBus.Publish(events::WorldEvent{ events::WorldEvent::Type::Stop });
 	}
 	SH_GAME_API auto World::IsPlaying() const -> bool
 	{

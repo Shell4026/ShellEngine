@@ -1,8 +1,11 @@
 ﻿#pragma once
 #include "Export.h"
 
+#include "Core/EventSubscriber.h"
+
 #include "Game/Component/Component.h"
 #include "Game/Vector.h"
+#include "Game/WorldEvents.hpp"
 
 #include "glm/gtc/quaternion.hpp"
 
@@ -51,6 +54,8 @@ namespace sh::editor
 		game::Vec2 clickPos;
 
 		game::Vec3 up, right, forward;
+
+		core::EventSubscriber<game::events::WorldEvent> worldEventSubscriber;
 	private:
 		inline void MoveControl();
 		inline void ScaleControl();
@@ -59,6 +64,7 @@ namespace sh::editor
 		SH_EDITOR_API EditorControl(game::GameObject& owner);
 		SH_EDITOR_API ~EditorControl();
 
+		SH_EDITOR_API void Awake() override;
 		SH_EDITOR_API void Update() override;
 		SH_EDITOR_API void LateUpdate() override;
 

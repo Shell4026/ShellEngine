@@ -44,6 +44,16 @@ namespace sh::editor
 		ui = &static_cast<EditorWorld&>(world).GetEditorUI();
 
 		canPlayInEditor = true;
+
+		worldEventSubscriber.SetCallback(
+			[&](const game::events::WorldEvent& event)
+			{
+				if (event.type == game::events::WorldEvent::Type::Play)
+					SetActive(false);
+				else if (event.type == game::events::WorldEvent::Type::Stop)
+					SetActive(true);
+			}
+		);
 	}
 
 	EditorControl::~EditorControl()
@@ -167,6 +177,12 @@ namespace sh::editor
 			}
 			gameObject.transform->SetWorldRotation(glm::angleAxis(dot > 0 ? angleRad : -angleRad, rotAxis) * quatLast);
 		}
+	}
+
+	SH_EDITOR_API void EditorControl::Awake()
+	{
+		Super::Awake();
+		world.SubscribeEvent(worldEventSubscriber);
 	}
 
 	SH_EDITOR_API void EditorControl::Update()
