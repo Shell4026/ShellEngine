@@ -14,11 +14,15 @@
 
 #include "Physics/Ray.h"
 
+#include <cmath>
 namespace sh::editor
 {
 	std::set<EditorControl*> EditorControl::controls;
+	float EditorControl::snapDis = 0.25f;
+	float EditorControl::snapAngle = 15.f;
 	bool EditorControl::bPivot = true;
 	bool EditorControl::bUpdatedControls = false;
+	bool EditorControl::bSnap = true;
 
 	using namespace game;
 	SH_EDITOR_API EditorControl::EditorControl(GameObject& owner) :
@@ -67,38 +71,53 @@ namespace sh::editor
 		glm::vec3 facePoint = gameObject.transform->position;
 
 		auto clickRay = camera->ScreenPointToRay(clickPos);
-		glm::vec3 clickHit = SMath::GetPlaneCollisionPoint(clickRay.origin, clickRay.direction, facePoint, forward).value_or(glm::vec3{ 0.f });
+		const glm::vec3 clickHit = SMath::GetPlaneCollisionPoint(clickRay.origin, clickRay.direction, facePoint, forward).value_or(glm::vec3{ 0.f });
 		auto ray = camera->ScreenPointToRay(Input::mousePosition);
-		glm::vec3 hit = SMath::GetPlaneCollisionPoint(ray.origin, ray.direction, facePoint, forward).value_or(glm::vec3{ 0.f });
+		const glm::vec3 hit = SMath::GetPlaneCollisionPoint(ray.origin, ray.direction, facePoint, forward).value_or(glm::vec3{ 0.f });
 
-		glm::vec3 delta = hit - clickHit;
+		const glm::vec3 delta = hit - clickHit;
 
-		float deltaX = 0.f;
-		float deltaY = 0.f;
 		glm::vec3 pos{ 0.f };
 
 		if (axis == Axis::None)
 		{
-			deltaX = glm::dot(delta, glm::vec3{ right });
-			deltaY = glm::dot(delta, glm::vec3{ up });
+			float deltaX = glm::dot(delta, glm::vec3{ right });
+			float deltaY = glm::dot(delta, glm::vec3{ up });
+			if (bSnap)
+			{
+				deltaX = glm::round(deltaX / snapDis) * snapDis;
+				deltaY = glm::round(deltaY / snapDis) * snapDis;
+			}
 			pos = posLast + (right * deltaX + up * deltaY);
 		}
 		else if (axis == Axis::X)
 		{
 			pos = posLast;
+
 			float deltaX = glm::dot(glm::vec3{ 1.f, 0.f, 0.f }, delta);
+			if (bSnap)
+				deltaX = glm::round(deltaX / snapDis) * snapDis;
+
 			pos.x = posLast.x + deltaX;
 		}
 		else if (axis == Axis::Y)
 		{
 			pos = posLast;
+
 			float deltaY = glm::dot(glm::vec3{ 0.f, 1.f, 0.f }, delta);
+			if (bSnap)
+				deltaY = glm::round(deltaY / snapDis) * snapDis;
+
 			pos.y = posLast.y + deltaY;
 		}
 		else if (axis == Axis::Z)
 		{
 			pos = posLast;
+
 			float deltaZ = glm::dot(glm::vec3{ 0.f, 0.f, 1.f }, delta);
+			if (bSnap)
+				deltaZ = glm::round(deltaZ / snapDis) * snapDis;
+
 			pos.z = posLast.z + deltaZ;
 		}
 
@@ -143,12 +162,17 @@ namespace sh::editor
 
 		screenPos.y = end.y - screenPos.y;
 		
-		glm::vec2 v = glm::normalize(screenPos - glm::vec2{ clickPos });
-		glm::vec2 v2 = glm::normalize(screenPos - Input::mousePosition);
+		const glm::vec2 v = glm::normalize(screenPos - glm::vec2{ clickPos });
+		const glm::vec2 v2 = glm::normalize(screenPos - Input::mousePosition);
 		if (glm::dot((v - v2), (v - v2)) < 0.0001f)
 			return;
 
-		float angleRad = glm::acos(glm::dot(v, v2));
+		const float snapRad = glm::radians(snapAngle);
+		float angleRad = glm::acos(glm::dot(v, v2)); // 0 ~ pi
+		if (bSnap)
+		{
+			angleRad = glm::round(angleRad / snapRad) * snapRad;
+		}
 
 		float crossProduct = v.x * v2.y - v.y * v2.x;
 		if (crossProduct < 0)
@@ -305,5 +329,29 @@ namespace sh::editor
 	SH_EDITOR_API auto EditorControl::Serialize() const -> core::Json
 	{
 		return core::Json{};
+	}
+	SH_EDITOR_API void EditorControl::SetSnap(bool bSnap)
+	{
+		EditorControl::bSnap = bSnap;
+	}
+	SH_EDITOR_API auto sh::editor::EditorControl::GetSnap() -> bool
+	{
+		return bSnap;
+	}
+	SH_EDITOR_API void sh::editor::EditorControl::SetSnapDistance(float dis)
+	{
+		snapDis = dis;
+	}
+	SH_EDITOR_API auto sh::editor::EditorControl::GetSnapDistance() -> float
+	{
+		return snapDis;
+	}
+	SH_EDITOR_API void EditorControl::SetSnapAngle(float degree)
+	{
+		snapAngle = degree;
+	}
+	SH_EDITOR_API auto EditorControl::GetSnapAngle() -> float
+	{
+		return snapAngle;
 	}
 }//namespace

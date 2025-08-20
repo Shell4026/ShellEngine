@@ -1,4 +1,5 @@
 ﻿#include "Component/EditorUI.h"
+#include "Component/EditorControl.h"
 #include "UI/Project.h"
 #include "UI/BundleViewer.h"
 #include "EditorWorld.h"
@@ -179,6 +180,23 @@ namespace sh::editor
 				{
 					bundleViewer->Open();
 				}
+				ImGui::Separator();
+				if (ImGui::BeginMenu("Snap"))
+				{
+					static bool bEnabled = true;
+					bEnabled = EditorControl::GetSnap();
+					if (ImGui::MenuItem("Enabled", "", &bEnabled))
+						EditorControl::SetSnap(bEnabled);
+					static float snapDis = 0.25f;
+					snapDis = EditorControl::GetSnapDistance();
+					if (ImGui::InputFloat("Snap distance", &snapDis))
+						EditorControl::SetSnapDistance(snapDis);
+					static float snapAngle = 15.0f;
+					snapAngle = EditorControl::GetSnapAngle();
+					if (ImGui::InputFloat("Snap angle", &snapAngle))
+						EditorControl::SetSnapAngle(snapAngle);
+					ImGui::EndMenu();
+				}
 				ImGui::EndMenu();
 			}
 			ImGui::EndMainMenuBar();
@@ -207,6 +225,21 @@ namespace sh::editor
 			inspector->Render();
 			project->Render();
 			viewport->Render();
+		}
+		else
+		{
+			const auto flag = 
+				ImGuiWindowFlags_::ImGuiWindowFlags_NoResize | 
+				ImGuiWindowFlags_::ImGuiWindowFlags_NoInputs | 
+				ImGuiWindowFlags_::ImGuiWindowFlags_NoDocking |
+				ImGuiWindowFlags_::ImGuiWindowFlags_NoDecoration |
+				ImGuiWindowFlags_::ImGuiWindowFlags_NoMouseInputs |
+				ImGuiWindowFlags_::ImGuiWindowFlags_NoSavedSettings;
+			ImGui::SetNextWindowPos(ImVec2{ 0, 0 }, ImGuiCond_::ImGuiCond_Always);
+			ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize, ImGuiCond_::ImGuiCond_Always);
+			ImGui::Begin("#background", nullptr, flag);
+
+			ImGui::End();
 		}
 		DrawMenu();
 		explorer->Render();

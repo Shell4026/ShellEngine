@@ -18,6 +18,23 @@ namespace sh::editor
 	class EditorUI : public game::UI
 	{
 		COMPONENT(EditorUI, "Editor")	
+	public:
+		SH_EDITOR_API EditorUI(game::GameObject& owner);
+
+		SH_EDITOR_API void Awake() override;
+
+		SH_EDITOR_API void BeginUpdate() override;
+		SH_EDITOR_API void Update() override;
+		
+		SH_EDITOR_API auto GetViewport() -> Viewport&;
+		SH_EDITOR_API auto GetHierarchy() -> Hierarchy&;
+
+		SH_EDITOR_API void Clean();
+
+		SH_EDITOR_API void SetProject(Project& project);
+	private:
+		inline void SetDockNode();
+		inline void DrawMenu();
 	private:
 		float hierarchyWidth;
 		float hierarchyHeight;
@@ -33,22 +50,5 @@ namespace sh::editor
 
 		bool bDirty;
 		bool bPlaying = false;
-	private:
-		inline void SetDockNode();
-		inline void DrawMenu();
-	public:
-		SH_EDITOR_API EditorUI(game::GameObject& owner);
-
-		SH_EDITOR_API void Awake() override;
-
-		SH_EDITOR_API void BeginUpdate() override;
-		SH_EDITOR_API void Update() override;
-		
-		SH_EDITOR_API auto GetViewport() -> Viewport&;
-		SH_EDITOR_API auto GetHierarchy() -> Hierarchy&;
-
-		SH_EDITOR_API void Clean();
-
-		SH_EDITOR_API void SetProject(Project& project);
 	};
 }

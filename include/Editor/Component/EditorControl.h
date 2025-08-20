@@ -27,9 +27,34 @@ namespace sh::editor
 	{
 		COMPONENT(EditorControl)
 	private:
+		inline void MoveControl();
+		inline void ScaleControl();
+		inline void RotateControl();
+	public:
+		SH_EDITOR_API EditorControl(game::GameObject& owner);
+		SH_EDITOR_API ~EditorControl();
+
+		SH_EDITOR_API void Awake() override;
+		SH_EDITOR_API void Update() override;
+		SH_EDITOR_API void LateUpdate() override;
+
+		SH_EDITOR_API void SetCamera(game::Camera* camera);
+
+		SH_EDITOR_API auto Serialize() const -> core::Json override;
+
+		SH_EDITOR_API static void SetSnap(bool bSnap);
+		SH_EDITOR_API static auto GetSnap() -> bool;
+		SH_EDITOR_API static void SetSnapDistance(float dis);
+		SH_EDITOR_API static auto GetSnapDistance() -> float;
+		SH_EDITOR_API static void SetSnapAngle(float degree);
+		SH_EDITOR_API static auto GetSnapAngle() -> float;
+	private:
 		static std::set<EditorControl*> controls;
+		static float snapDis;
+		static float snapAngle;
 		static bool bPivot;
 		static bool bUpdatedControls;
+		static bool bSnap;
 
 		enum class Mode
 		{
@@ -56,20 +81,5 @@ namespace sh::editor
 		game::Vec3 up, right, forward;
 
 		core::EventSubscriber<game::events::WorldEvent> worldEventSubscriber;
-	private:
-		inline void MoveControl();
-		inline void ScaleControl();
-		inline void RotateControl();
-	public:
-		SH_EDITOR_API EditorControl(game::GameObject& owner);
-		SH_EDITOR_API ~EditorControl();
-
-		SH_EDITOR_API void Awake() override;
-		SH_EDITOR_API void Update() override;
-		SH_EDITOR_API void LateUpdate() override;
-
-		SH_EDITOR_API void SetCamera(game::Camera* camera);
-
-		SH_EDITOR_API auto Serialize() const -> core::Json override;
 	};
 }//namespace

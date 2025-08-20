@@ -262,12 +262,13 @@ namespace sh::editor
 			SH_ERROR("There are no cameras.");
 			return false;
 		}
+		world.SaveWorldPoint(world.Serialize());
+
 		renderTex = static_cast<render::RenderTexture*>(world.textures.GetResource("GameView"));
 		mainCam->SetRenderTexture(renderTex);
 		ChangeViewportSize();
 
 		world.ClearSelectedObjects();
-
 		world.AddAfterSyncTask(
 			[&]
 			{ 
@@ -296,7 +297,13 @@ namespace sh::editor
 		BlockLeftClick(false);
 		BlockRightClick(false);
 
-		world.AddBeforeSyncTask([&] { world.Stop(); });
+		world.AddAfterSyncTask(
+			[&]
+			{ 
+				world.Stop(); 
+				world.LoadWorldPoint();
+			}
+		);
 
 		SyncDirty();
 	}

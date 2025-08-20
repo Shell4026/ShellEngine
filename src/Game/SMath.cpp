@@ -5,6 +5,10 @@ namespace sh::game
 {
 	SH_GAME_API auto SMath::GetPlaneCollisionPoint(const glm::vec3& linePoint, const glm::vec3& lineDir, const glm::vec3& planePoint, const glm::vec3& planeNormal) -> std::optional<glm::vec3>
 	{
+        // 직선의 방정식 L = p + t x d
+        // 평면의 방정식 (x - p0) x n = 0
+        // 평면의 방정식에 직선의 방정식을 대입해 t를 구하는 코드.
+
         float cos = glm::dot(planeNormal, lineDir);
 
         if (glm::abs(cos) < 0.000001f)
