@@ -44,6 +44,7 @@ namespace sh::game
 		SH_GAME_API void RegisterWaitingComponents();
 		SH_GAME_API auto GetWaitingComponents() const -> const std::vector<ComponentInfo>&;
 		SH_GAME_API void DestroyComponent(const std::string& name);
+		SH_GAME_API void DestroyComponent(const std::string& name, const std::string& group);
 	};
 
 	template<typename T>

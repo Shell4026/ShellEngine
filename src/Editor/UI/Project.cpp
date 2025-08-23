@@ -587,13 +587,7 @@ namespace sh::editor
 					core::GarbageCollection::GetInstance()->Collect();
 					core::GarbageCollection::GetInstance()->DestroyPendingKillObjs();
 
-					auto componentModule = game::ComponentModule::GetInstance();
-					for (const auto& componentInfo : userComponents)
-					{
-						componentModule->DestroyComponent(componentInfo.first);
-					}
 					userComponents.clear();
-
 					core::ModuleLoader loader{};
 					loader.Clean(userPlugin);
 

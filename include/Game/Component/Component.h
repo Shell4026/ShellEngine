@@ -15,15 +15,22 @@
 	SCLASS(className)\
 	struct _ComponentBuilder_##className\
 	{\
-		_ComponentBuilder_##className()\
+		~_ComponentBuilder_##className()\
 		{\
 			auto componentModule = sh::game::ComponentModule::GetInstance();\
-			componentModule->RegisterComponent<className>(#className, std::string{__VA_ARGS__});\
+			componentModule->DestroyComponent(#className, std::string{__VA_ARGS__});\
+			SH_INFO_FORMAT("Component({}) was unloaded.", #className);\
 		}\
 		static auto GetStatic() -> _ComponentBuilder_##className*\
 		{\
-			static _ComponentBuilder_##className builder{};\
-			return &builder;\
+			auto componentModule = sh::game::ComponentModule::GetInstance();\
+			if (componentModule->GetComponent(#className) == nullptr) \
+			{\
+				componentModule->RegisterComponent<className>(#className, std::string{__VA_ARGS__});\
+				static _ComponentBuilder_##className builder{};\
+				return &builder;\
+			}\
+			return nullptr;\
 		}\
 	}; \
 	inline static _ComponentBuilder_##className* _componentBuilder = _ComponentBuilder_##className::GetStatic();

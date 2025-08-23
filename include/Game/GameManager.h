@@ -10,7 +10,7 @@
 #include <filesystem>
 namespace sh::core
 {
-	class Plugin;
+	struct Plugin;
 }
 namespace sh::render
 {

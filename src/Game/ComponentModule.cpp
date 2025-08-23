@@ -33,4 +33,21 @@ namespace sh::game
 		if (it != components.end())
 			components.erase(it);
 	}
+	SH_GAME_API void ComponentModule::DestroyComponent(const std::string& name, const std::string& group)
+	{
+		std::string fullName{};
+		if (group.size() == 0)
+			fullName = name;
+		else
+		{
+			fullName.reserve(group.size() + name.size() + 1);
+			fullName = group;
+			fullName += '/';
+			fullName += name;
+		}
+
+		auto it = components.find(fullName);
+		if (it != components.end())
+			components.erase(it);
+	}
 }
