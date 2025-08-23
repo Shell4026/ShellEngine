@@ -319,12 +319,14 @@ namespace sh::core
     }
 
     template<std::size_t n>
-    inline void DeserializeProperty(const core::Json& json, const std::string& key, game::Vec<n>& vec)
+    inline auto DeserializeProperty(const core::Json& json, const std::string& key, game::Vec<n>& vec) -> bool
     {
         if (json.contains(key) && json[key].is_array() && json[key].size() == n) 
         {
             for(std::size_t i = 0; i < n; ++i)
                 vec.data[i] = json[key][i].get<float>();
+            return true;
         }
+        return false;
     }
 }

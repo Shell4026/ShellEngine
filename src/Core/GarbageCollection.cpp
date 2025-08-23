@@ -95,7 +95,7 @@ namespace sh::core
 			auto& ptrProps = type->GetSObjectPtrProperties();
 			for (auto ptrProp : ptrProps)
 			{
-				SObject** propertyPtr = ptrProp->Get<SObject*>(obj);
+				SObject** propertyPtr = ptrProp->Get<SObject*>(*obj);
 				SObject* ptr = *propertyPtr;
 				if (ptr == nullptr)
 					continue;
@@ -110,7 +110,7 @@ namespace sh::core
 			for (auto ptrProp : ptrContainerProps)
 			{
 				int nested = ptrProp->GetContainerNestedLevel();
-				for (auto it = ptrProp->Begin(obj); it != ptrProp->End(obj);)
+				for (auto it = ptrProp->Begin(*obj); it != ptrProp->End(*obj);)
 				{
 					if (nested == 1)
 					{

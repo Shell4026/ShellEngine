@@ -27,6 +27,144 @@ namespace sh::editor
 		}
 		return nullptr;
 	}
+	SH_EDITOR_API void Inspector::RenderProperty(const core::reflection::Property& prop, core::SObject& owner, int idx)
+	{
+		auto& type = prop.type;
+		const bool constant = prop.bConstProperty || prop.isConst;
+		const std::string& name = prop.GetName().ToString();
+
+		auto inputFlag = constant ? ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly : ImGuiInputTextFlags_::ImGuiInputTextFlags_None;
+
+		if (type == core::reflection::GetType<game::Vec4>())
+		{
+			game::Vec4* parameter = prop.Get<game::Vec4>(owner);
+			float v[4] = { parameter->x, parameter->y, parameter->z };
+			ImGui::LabelText(("##" + name).c_str(), name.c_str());
+			if (constant)
+			{
+				ImGui::InputFloat4(("##" + name + std::to_string(idx)).c_str(), v, "%.3f", inputFlag);
+			}
+			else
+			{
+				if (ImGui::InputFloat4(("##" + name + std::to_string(idx)).c_str(), v))
+				{
+					parameter->x = v[0];
+					parameter->y = v[1];
+					parameter->z = v[2];
+					parameter->w = v[3];
+					owner.OnPropertyChanged(prop);
+					AssetDatabase::GetInstance()->SetDirty(&owner);
+					AssetDatabase::GetInstance()->SaveAllAssets();
+				}
+			}
+		}
+		else if (type == core::reflection::GetType<game::Vec3>())
+		{
+			game::Vec3* parameter = prop.Get<game::Vec3>(owner);
+			float v[3] = { parameter->x, parameter->y, parameter->z };
+			ImGui::LabelText(("##" + name).c_str(), name.c_str());
+			if (constant)
+			{
+				ImGui::InputFloat3(("##" + name + std::to_string(idx)).c_str(), v, "%.3f", inputFlag);
+			}
+			else
+			{
+				if (ImGui::InputFloat3(("##" + name + std::to_string(idx)).c_str(), v))
+				{
+					parameter->x = v[0];
+					parameter->y = v[1];
+					parameter->z = v[2];
+					owner.OnPropertyChanged(prop);
+					AssetDatabase::GetInstance()->SetDirty(&owner);
+					AssetDatabase::GetInstance()->SaveAllAssets();
+				}
+			}
+		}
+		else if (type == core::reflection::GetType<game::Vec2>())
+		{
+			game::Vec2* parameter = prop.Get<game::Vec2>(owner);
+			float v[2] = { parameter->x, parameter->y };
+			ImGui::LabelText(("##" + name).c_str(), name.c_str());
+			if (constant)
+				ImGui::InputFloat2(("##" + name + std::to_string(idx)).c_str(), v, "%.3f", inputFlag);
+			else
+			{
+				if (ImGui::InputFloat2(("##" + name + std::to_string(idx)).c_str(), v))
+				{
+					parameter->x = v[0];
+					parameter->y = v[1];
+					owner.OnPropertyChanged(prop);
+					AssetDatabase::GetInstance()->SetDirty(&owner);
+					AssetDatabase::GetInstance()->SaveAllAssets();
+				}
+			}
+		}
+		else if (type == core::reflection::GetType<float>())
+		{
+			float* parameter = prop.Get<float>(owner);
+			ImGui::Text(name.c_str());
+			if (constant)
+				ImGui::InputFloat(("##input_" + name + std::to_string(idx)).c_str(), parameter, 0.f, 0.f, "%.3f", inputFlag);
+			else
+				if (ImGui::InputFloat(("##input_" + name + std::to_string(idx)).c_str(), parameter))
+				{
+					owner.OnPropertyChanged(prop);
+					AssetDatabase::GetInstance()->SetDirty(&owner);
+					AssetDatabase::GetInstance()->SaveAllAssets();
+				}
+		}
+		else if (type == core::reflection::GetType<int>())
+		{
+			int* parameter = prop.Get<int>(owner);
+			ImGui::LabelText(("##" + name).c_str(), name.c_str());
+			if (constant)
+				ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), parameter, 0, 0, inputFlag);
+			else
+				if (ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), parameter))
+				{
+					owner.OnPropertyChanged(prop);
+					AssetDatabase::GetInstance()->SetDirty(&owner);
+					AssetDatabase::GetInstance()->SaveAllAssets();
+				}
+		}
+		else if (type == core::reflection::GetType<uint32_t>())
+		{
+			uint32_t* parameter = prop.Get<uint32_t>(owner);
+			ImGui::LabelText(("##" + name).c_str(), name.c_str());
+			if (constant)
+				ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), reinterpret_cast<int*>(parameter), 0, 0, inputFlag);
+			else
+				if (ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), reinterpret_cast<int*>(parameter)))
+				{
+					owner.OnPropertyChanged(prop);
+					AssetDatabase::GetInstance()->SetDirty(&owner);
+					AssetDatabase::GetInstance()->SaveAllAssets();
+				}
+		}
+		else if (type == core::reflection::GetType<std::string>())
+		{
+			std::string* parameter = prop.Get<std::string>(owner);
+			ImGui::LabelText(("##" + name).c_str(), name.c_str());
+			if (constant)
+				ImGui::InputText(("##Input_" + name + std::to_string(idx)).c_str(), parameter, inputFlag);
+			else
+				if (ImGui::InputText(("##Input_" + name + std::to_string(idx)).c_str(), parameter, inputFlag))
+				{
+					owner.OnPropertyChanged(prop);
+					AssetDatabase::GetInstance()->SetDirty(&owner);
+					AssetDatabase::GetInstance()->SaveAllAssets();
+				}
+		}
+		else if (type == core::reflection::GetType<bool>())
+		{
+			bool* parameter = prop.Get<bool>(owner);
+			if (!constant)
+				ImGui::Checkbox(name.c_str(), parameter);
+			owner.OnPropertyChanged(prop);
+			AssetDatabase::GetInstance()->SetDirty(&owner);
+			AssetDatabase::GetInstance()->SaveAllAssets();
+		}
+	}
 	inline auto Inspector::GetComponentGroupAndName(std::string_view fullname) -> std::pair<std::string, std::string>
 	{
 		auto pos = fullname.find('/');
@@ -89,19 +227,16 @@ namespace sh::editor
 				bAddComponent = false;
 		}
 	}
-	inline void Inspector::RenderProperties(const core::reflection::STypeInfo* type, core::SObject* obj, int idx)
+	inline void Inspector::RenderProperties(const core::reflection::STypeInfo& type, core::SObject& obj, int idx)
 	{
-		if (type == nullptr)
-			return;
-
 		ICustomInspector* customInspector = customInspectorManager->GetCustomInspector(type);
 		if (customInspector)
 		{
-			customInspector->RenderUI(obj);
+			customInspector->RenderUI(&obj);
 			return;
 		}
 
-		auto currentType = type;
+		auto currentType = &type;
 		do
 		{
 			auto& props = currentType->GetProperties();
@@ -109,158 +244,26 @@ namespace sh::editor
 			{
 				if (prop->bVisibleProperty == false)
 					continue;
-				const core::reflection::TypeInfo& type = prop->type;
-				bool constant = prop->bConstProperty || prop->isConst;
-				std::string name = prop->GetName().ToString();
 
-				auto inputFlag = constant ? ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly : ImGuiInputTextFlags_::ImGuiInputTextFlags_None;
-
+				const std::string& propName = prop->GetName().ToString();
 				// SObject 포인터 형식, 드래그 앤 드랍 기능
 				if (prop->isSObjectPointer)
 				{
-					RenderSObjectPtrProperty(*prop, obj, name);
+					RenderSObjectPtrProperty(*prop, obj, propName);
 				}
 				if (prop->isContainer)
 				{
-					RenderContainerProperty(*prop, obj, name);
+					RenderContainerProperty(*prop, obj, propName);
 				}
 				else
 				{
-					if (type == core::reflection::GetType<game::Vec4>())
-					{
-						game::Vec4* parameter = prop->Get<game::Vec4>(obj);
-						float v[4] = { parameter->x, parameter->y, parameter->z };
-						ImGui::LabelText(("##" + name).c_str(), name.c_str());
-						if (constant)
-						{
-							ImGui::InputFloat4(("##" + name + std::to_string(idx)).c_str(), v, "%.3f", inputFlag);
-						}
-						else
-						{
-							if (ImGui::InputFloat4(("##" + name + std::to_string(idx)).c_str(), v))
-							{
-								parameter->x = v[0];
-								parameter->y = v[1];
-								parameter->z = v[2];
-								parameter->w = v[3];
-								obj->OnPropertyChanged(*prop);
-								AssetDatabase::GetInstance()->SetDirty(obj);
-								AssetDatabase::GetInstance()->SaveAllAssets();
-							}
-						}
-					}
-					else if (type == core::reflection::GetType<game::Vec3>())
-					{
-						game::Vec3* parameter = prop->Get<game::Vec3>(obj);
-						float v[3] = { parameter->x, parameter->y, parameter->z };
-						ImGui::LabelText(("##" + name).c_str(), name.c_str());
-						if (constant)
-						{
-							ImGui::InputFloat3(("##" + name + std::to_string(idx)).c_str(), v, "%.3f", inputFlag);
-						}
-						else
-						{
-							if (ImGui::InputFloat3(("##" + name + std::to_string(idx)).c_str(), v))
-							{
-								parameter->x = v[0];
-								parameter->y = v[1];
-								parameter->z = v[2];
-								obj->OnPropertyChanged(*prop);
-								AssetDatabase::GetInstance()->SetDirty(obj);
-								AssetDatabase::GetInstance()->SaveAllAssets();
-							}
-						}
-					}
-					else if (type == core::reflection::GetType<game::Vec2>())
-					{
-						game::Vec2* parameter = prop->Get<game::Vec2>(obj);
-						float v[2] = { parameter->x, parameter->y };
-						ImGui::LabelText(("##" + name).c_str(), name.c_str());
-						if (constant)
-							ImGui::InputFloat2(("##" + name + std::to_string(idx)).c_str(), v, "%.3f", inputFlag);
-						else
-						{
-							if (ImGui::InputFloat2(("##" + name + std::to_string(idx)).c_str(), v))
-							{
-								parameter->x = v[0];
-								parameter->y = v[1];
-								obj->OnPropertyChanged(*prop);
-								AssetDatabase::GetInstance()->SetDirty(obj);
-								AssetDatabase::GetInstance()->SaveAllAssets();
-							}
-						}
-					}
-					else if (type == core::reflection::GetType<float>())
-					{
-						float* parameter = prop->Get<float>(obj);
-						ImGui::Text(name.c_str());
-						if (constant)
-							ImGui::InputFloat(("##input_" + name + std::to_string(idx)).c_str(), parameter, 0.f, 0.f, "%.3f", inputFlag);
-						else
-							if (ImGui::InputFloat(("##input_" + name + std::to_string(idx)).c_str(), parameter))
-							{
-								obj->OnPropertyChanged(*prop);
-								AssetDatabase::GetInstance()->SetDirty(obj);
-								AssetDatabase::GetInstance()->SaveAllAssets();
-							}
-					}
-					else if (type == core::reflection::GetType<int>())
-					{
-						int* parameter = prop->Get<int>(obj);
-						ImGui::LabelText(("##" + name).c_str(), name.c_str());
-						if (constant)
-							ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), parameter, 0, 0, inputFlag);
-						else
-							if (ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), parameter))
-							{
-								obj->OnPropertyChanged(*prop);
-								AssetDatabase::GetInstance()->SetDirty(obj);
-								AssetDatabase::GetInstance()->SaveAllAssets();
-							}
-					}
-					else if (type == core::reflection::GetType<uint32_t>())
-					{
-						uint32_t* parameter = prop->Get<uint32_t>(obj);
-						ImGui::LabelText(("##" + name).c_str(), name.c_str());
-						if (constant)
-							ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), reinterpret_cast<int*>(parameter), 0, 0, inputFlag);
-						else
-							if (ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), reinterpret_cast<int*>(parameter)))
-							{
-								obj->OnPropertyChanged(*prop);
-								AssetDatabase::GetInstance()->SetDirty(obj);
-								AssetDatabase::GetInstance()->SaveAllAssets();
-							}
-					}
-					else if (type == core::reflection::GetType<std::string>())
-					{
-						std::string* parameter = prop->Get<std::string>(obj);
-						ImGui::LabelText(("##" + name).c_str(), name.c_str());
-						if (constant)
-							ImGui::InputText(("##Input_" + name + std::to_string(idx)).c_str(), parameter, inputFlag);
-						else
-							if (ImGui::InputText(("##Input_" + name + std::to_string(idx)).c_str(), parameter, inputFlag))
-							{
-								obj->OnPropertyChanged(*prop);
-								AssetDatabase::GetInstance()->SetDirty(obj);
-								AssetDatabase::GetInstance()->SaveAllAssets();
-							}
-					}
-					else if (type == core::reflection::GetType<bool>())
-					{
-						bool* parameter = prop->Get<bool>(obj);
-						if (!constant)
-							ImGui::Checkbox(name.c_str(), parameter);
-						obj->OnPropertyChanged(*prop);
-						AssetDatabase::GetInstance()->SetDirty(obj);
-						AssetDatabase::GetInstance()->SaveAllAssets();
-					}
+					RenderProperty(*prop, obj, idx);
 				}
 			}
 			currentType = const_cast<core::reflection::STypeInfo*>(currentType->GetSuper());
 		} while (currentType);
 	}
-	inline void Inspector::RenderSObjectPtrProperty(const core::reflection::Property& prop, core::SObject* propertyOwner, const std::string& name, 
+	inline void Inspector::RenderSObjectPtrProperty(const core::reflection::Property& prop, core::SObject& propertyOwner, const std::string& name, 
 		core::SObject** objPtr, const core::reflection::TypeInfo* type)
 	{
 		std::string typeName{ type == nullptr ? prop.pureTypeName : type->name };
@@ -304,8 +307,8 @@ namespace sh::editor
 			if (payload)
 			{
 				*parameter = *reinterpret_cast<core::SObject**>(payload->Data);
-				propertyOwner->OnPropertyChanged(prop);
-				AssetDatabase::GetInstance()->SetDirty(propertyOwner);
+				propertyOwner.OnPropertyChanged(prop);
+				AssetDatabase::GetInstance()->SetDirty(&propertyOwner);
 				AssetDatabase::GetInstance()->SaveAllAssets();
 			}
 			else
@@ -341,7 +344,7 @@ namespace sh::editor
 			ImGui::Image(*icon, ImVec2{ iconSize, iconSize });
 		}
 	}
-	inline void Inspector::RenderContainerProperty(const core::reflection::Property& prop, core::SObject* obj, const std::string& name)
+	inline void Inspector::RenderContainerProperty(const core::reflection::Property& prop, core::SObject& obj, const std::string& name)
 	{
 		float itemWidth = ImGui::GetContentRegionAvail().x / 2.f - 1;
 		if (ImGui::TreeNodeEx(name.c_str(), ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_OpenOnArrow))
@@ -368,8 +371,8 @@ namespace sh::editor
 					{
 						if (ImGui::InputInt(("##1" + name + std::to_string(idx)).c_str(), it.GetPairSecond<int>(), 0, 0))
 						{
-							obj->OnPropertyChanged(prop);
-							AssetDatabase::GetInstance()->SetDirty(obj);
+							obj.OnPropertyChanged(prop);
+							AssetDatabase::GetInstance()->SetDirty(&obj);
 							AssetDatabase::GetInstance()->SaveAllAssets();
 						}
 					}
@@ -377,8 +380,8 @@ namespace sh::editor
 					{
 						if (ImGui::InputFloat(("##1" + name + std::to_string(idx)).c_str(), it.GetPairSecond<float>(), 0, 0))
 						{
-							obj->OnPropertyChanged(prop);
-							AssetDatabase::GetInstance()->SetDirty(obj);
+							obj.OnPropertyChanged(prop);
+							AssetDatabase::GetInstance()->SetDirty(&obj);
 							AssetDatabase::GetInstance()->SaveAllAssets();
 						}
 					}
@@ -390,8 +393,8 @@ namespace sh::editor
 						{
 							v->x = input[0];
 							v->y = input[1];
-							obj->OnPropertyChanged(prop);
-							AssetDatabase::GetInstance()->SetDirty(obj);
+							obj.OnPropertyChanged(prop);
+							AssetDatabase::GetInstance()->SetDirty(&obj);
 							AssetDatabase::GetInstance()->SaveAllAssets();
 						}
 					}
@@ -404,8 +407,8 @@ namespace sh::editor
 							v->x = input[0];
 							v->y = input[1];
 							v->z = input[2];
-							obj->OnPropertyChanged(prop);
-							AssetDatabase::GetInstance()->SetDirty(obj);
+							obj.OnPropertyChanged(prop);
+							AssetDatabase::GetInstance()->SetDirty(&obj);
 							AssetDatabase::GetInstance()->SaveAllAssets();
 						}
 					}
@@ -419,8 +422,8 @@ namespace sh::editor
 							v->y = input[1];
 							v->z = input[2];
 							v->w = input[3];
-							obj->OnPropertyChanged(prop);
-							AssetDatabase::GetInstance()->SetDirty(obj);
+							obj.OnPropertyChanged(prop);
+							AssetDatabase::GetInstance()->SetDirty(&obj);
 							AssetDatabase::GetInstance()->SaveAllAssets();
 						}
 					}
@@ -493,7 +496,7 @@ namespace sh::editor
 						}
 						if (bOpenComponent && core::IsValid(component))
 						{
-							RenderProperties(&component->GetType(), component, idx);
+							RenderProperties(component->GetType(), *component, idx);
 						}
 						++idx;
 					}//for auto& component
@@ -502,7 +505,7 @@ namespace sh::editor
 					RenderAddComponent(*static_cast<game::GameObject*>(obj));
 				}
 				else
-					RenderProperties(&obj->GetType(), obj, 0);
+					RenderProperties(obj->GetType(), *obj, 0);
 			}
 		}
 

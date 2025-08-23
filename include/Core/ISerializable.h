@@ -20,9 +20,13 @@ namespace sh::core
 		json[key] = value;
 	}
 	template<typename T>
-	inline void DeserializeProperty(const core::Json& json, const std::string& key, T& value)
+	inline auto DeserializeProperty(const core::Json& json, const std::string& key, T& value) -> bool
 	{
 		if (json.contains(key))
+		{
 			value = json.at(key).get<T>();
+			return true;
+		}
+		return false;
 	}
 }

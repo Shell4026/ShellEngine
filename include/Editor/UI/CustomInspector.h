@@ -42,6 +42,6 @@ namespace sh::editor
 			map.insert_or_assign(&T::GetStaticType(), std::make_unique<U>());
 		}
 
-		SH_EDITOR_API auto GetCustomInspector(const core::reflection::STypeInfo* type) const -> ICustomInspector*;
+		SH_EDITOR_API auto GetCustomInspector(const core::reflection::STypeInfo& type) const -> ICustomInspector*;
 	};
 }//namespace

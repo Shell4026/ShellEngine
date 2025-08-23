@@ -87,7 +87,8 @@ namespace sh::core::reflection
 		isContainer(other.isContainer),
 		isSObject(other.isSObject),
 		isSObjectPointer(other.isSObjectPointer),
-		isSObjectPointerContainer(other.isSObjectPointerContainer)
+		isSObjectPointerContainer(other.isSObjectPointerContainer),
+		isEnum(other.isEnum)
 	{
 	}
 	SH_CORE_API auto Property::operator==(const Property& other) -> bool
@@ -111,22 +112,22 @@ namespace sh::core::reflection
 	{
 		return name;
 	}
-	SH_CORE_API auto Property::Begin(SObject* SObject) -> PropertyIterator
+	SH_CORE_API auto Property::Begin(SObject& SObject) -> PropertyIterator
 	{
-		return data->Begin(SObject);
+		return data->Begin(&SObject);
 	}
-	SH_CORE_API auto Property::Begin(SObject* SObject) const -> PropertyIterator
+	SH_CORE_API auto Property::Begin(SObject& SObject) const -> PropertyIterator
 	{
-		return data->Begin(SObject);
+		return data->Begin(&SObject);
 	}
 
-	SH_CORE_API auto Property::End(SObject* SObject) -> PropertyIterator
+	SH_CORE_API auto Property::End(SObject& SObject) -> PropertyIterator
 	{
-		return data->End(SObject);
+		return data->End(&SObject);
 	}
-	SH_CORE_API auto Property::End(SObject* SObject) const -> PropertyIterator
+	SH_CORE_API auto Property::End(SObject& SObject) const -> PropertyIterator
 	{
-		return data->End(SObject);
+		return data->End(&SObject);
 	}
 	SH_CORE_API auto Property::GetContainerNestedLevel() const -> uint32_t
 	{

@@ -436,6 +436,7 @@ namespace sh::core::reflection
 		const bool isSObject;
 		const bool isSObjectPointer;
 		const bool isSObjectPointerContainer;
+		const bool isEnum;
 	public:
 		template<typename ThisType, typename T, typename VariablePointer, VariablePointer ptr>
 		Property(const PropertyCreateInfo<ThisType, T, VariablePointer, ptr>& createInfo) :
@@ -451,7 +452,8 @@ namespace sh::core::reflection
 			isContainer(IsContainer<T>::value),
 			isSObject(IsSObject<T>::value),
 			isSObjectPointer(std::is_convertible_v<T, const SObject*>),
-			isSObjectPointerContainer(reflection::IsContainer<T>::value && std::is_convertible_v<typename reflection::GetContainerLastType<T>::type, const SObject*>)
+			isSObjectPointerContainer(reflection::IsContainer<T>::value && std::is_convertible_v<typename reflection::GetContainerLastType<T>::type, const SObject*>),
+			isEnum(std::is_enum_v<T>)
 		{
 			// 메모) 템플릿 인자로 인해 클래스 맴버 변수 별로 메모리 상에 하나만 존재하게 된다.
 			static PropertyData<ThisType, T, VariablePointer, ptr> data{};
@@ -467,35 +469,34 @@ namespace sh::core::reflection
 		/// @brief 프로퍼티가 가지고 있는 값을 반환하는 함수.
 		/// @brief 주의: 타입 검사를 하지 않음.
 		/// @tparam T 반환 타입
-		/// @tparam ThisType SObject의 타입
 		/// @param sobject 해당 프로퍼티를 가지고 있는 SObject객체
 		/// @return 실제 값
-		template<typename T, typename ThisType>
-		auto Get(ThisType* sobject) const -> T*
+		template<typename T>
+		auto Get(SObject& sobject) const -> T*
 		{
 			assert(isConst ? std::is_const_v<T> : true);
-			return &static_cast<IPropertyData<T>*>(data)->Get(sobject);
+			return &static_cast<IPropertyData<T>*>(data)->Get(&sobject);
 		}
-		template<typename T, typename ThisType>
-		auto Get(const ThisType* sobject) const -> const T*
+		template<typename T>
+		auto Get(const SObject& sobject) const -> const T*
 		{
-			return &static_cast<IPropertyData<T>*>(data)->Get(sobject);
+			return &static_cast<IPropertyData<T>*>(data)->Get(&sobject);
 		}
-		template<typename T, typename ThisType>
-		auto GetSafe(ThisType* sobject) const -> T*
+		template<typename T>
+		auto GetSafe(SObject& sobject) const -> T*
 		{
 			if (data->GetType() != reflection::GetType<T>())
 				return nullptr;
  			if (isConst ? !std::is_const_v<T> : false)
 				return nullptr;
-			return Get<T, ThisType>(sobject);
+			return Get<T>(sobject);
 		}
-		template<typename T, typename ThisType>
-		auto GetSafe(const ThisType* sobject) const -> const T*
+		template<typename T>
+		auto GetSafe(const SObject& sobject) const -> const T*
 		{
 			if (data->GetType() != reflection::GetType<T>())
 				return nullptr;
-			return Get<T, ThisType>(sobject);
+			return Get<T>(sobject);
 		}
 		/// @brief 변수의 이름을 반환한다.
 		/// @return 변수 이름
@@ -503,13 +504,13 @@ namespace sh::core::reflection
 		/// @brief 해당 프로퍼티가 컨테이너라면 시작 반복자를 반환한다.
 		/// @param SObject 프로퍼티 소유 객체
 		/// @return 컨테이너가 아니라면 빈 반복자를 반환한다.
-		SH_CORE_API auto Begin(SObject* SObject) -> PropertyIterator;
-		SH_CORE_API auto Begin(SObject* SObject) const -> PropertyIterator;
+		SH_CORE_API auto Begin(SObject& SObject) -> PropertyIterator;
+		SH_CORE_API auto Begin(SObject& SObject) const -> PropertyIterator;
 		/// @brief 해당 프로퍼티가 컨테이너라면 시작 반복자를 반환한다.
 		/// @param SObject 프로퍼티 소유 객체
 		/// @return 컨테이너가 아니라면 빈 반복자를 반환한다.
-		SH_CORE_API auto End(SObject* SObject) -> PropertyIterator;
-		SH_CORE_API auto End(SObject* SObject) const -> PropertyIterator;
+		SH_CORE_API auto End(SObject& SObject) -> PropertyIterator;
+		SH_CORE_API auto End(SObject& SObject) const -> PropertyIterator;
 
 		/// @brief 프로퍼티가 컨테이너라면 얼마나 중첩된 컨테이너인지 반환한다.
 		/// @return 1이면 단일 컨테이너, 컨테이너가 아니라면 0

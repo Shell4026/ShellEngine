@@ -102,5 +102,5 @@ namespace sh::core
 			json[key] = value->GetUUID().ToString();
 	}
 	template<>
-	SH_CORE_API void DeserializeProperty(const core::Json& json, const std::string& key, SObject*& value);
+	SH_CORE_API auto DeserializeProperty(const core::Json& json, const std::string& key, SObject*& value) -> bool;
 }//namespace

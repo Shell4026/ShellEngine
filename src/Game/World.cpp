@@ -406,7 +406,7 @@ namespace sh::game
 			}
 		}
 		// 역 직렬화
-		for (auto& objJson : json["objs"])
+		for (const auto& objJson : json["objs"])
 		{
 			GameObject* obj = static_cast<GameObject*>(objManager->GetSObject(core::UUID{ objJson["uuid"].get<std::string>() }));
 			obj->Deserialize(objJson);

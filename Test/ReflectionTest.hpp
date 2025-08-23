@@ -44,6 +44,14 @@ public:
     const int* constPtr;
     PROPERTY(constInt)
     const int constInt = 3;
+
+    enum class Enum
+    {
+        Test1,
+        Test2
+    };
+    PROPERTY(enumv);
+    Enum enumv = Enum::Test2;
 };
 
 class Nested : public sh::core::SObject
@@ -177,11 +185,18 @@ TEST(ReflectionTest, PropertyTest)
     ASSERT_NE(numberProperty, nullptr);
     ASSERT_NE(numbersProperty, nullptr);
 
-    EXPECT_EQ(*numberProperty->Get<int>(&derived), 42);
+    EXPECT_EQ(*numberProperty->Get<int>(derived), 42);
     EXPECT_EQ(numbersProperty->type.name, sh::core::reflection::TypeTraits::GetTypeName<std::vector<int>>());
 
-    auto begin = numbersProperty->Begin(&derived);
-    auto end = numbersProperty->End(&derived);
+    // enum
+    auto* enumProp = derived.GetType().GetProperty("enumv");
+    EXPECT_TRUE(enumProp->isEnum);
+    EXPECT_EQ(*enumProp->Get<int>(derived), 1);
+    *enumProp->Get<int>(derived) = 0;
+    EXPECT_EQ(derived.enumv, Derived::Enum::Test1);
+
+    auto begin = numbersProperty->Begin(derived);
+    auto end = numbersProperty->End(derived);
 
     std::vector<int> expected = { 1, 2, 3 };
     for (size_t i = 0; begin != end; ++begin, ++i) 
@@ -196,7 +211,7 @@ TEST(ReflectionTest, PropertyTest)
     
     auto setProp = derived.GetType().GetProperty("set");
     EXPECT_TRUE(setProp->isContainer);
-    auto setIterator = setProp->Begin(&derived);
+    auto setIterator = setProp->Begin(derived);
     EXPECT_TRUE(setIterator.IsConst());
 
     const int* ptr = setIterator.Get<const int>();
@@ -216,7 +231,7 @@ TEST(ReflectionTest, PropertyTest)
     {
         auto prop = derived.GetType().GetProperty("sobjectArr");
         EXPECT_EQ(prop->isContainer, true);
-        auto arrIterator = prop->Begin(&derived);
+        auto arrIterator = prop->Begin(derived);
         EXPECT_FALSE(arrIterator.IsConst());
     }
     // map 요소 변경 테스트
@@ -225,7 +240,7 @@ TEST(ReflectionTest, PropertyTest)
         derived.map.insert({ "test1", 1 });
         auto prop = derived.GetType().GetProperty("map");
         EXPECT_TRUE(prop->isContainer);
-        for (auto it = prop->Begin(&derived); it != prop->End(&derived); ++it)
+        for (auto it = prop->Begin(derived); it != prop->End(derived); ++it)
         {
             EXPECT_TRUE(it.IsPair());
             EXPECT_TRUE(it.GetPairType()->first.isConst);
@@ -245,9 +260,9 @@ TEST(ReflectionTest, ConstTest)
         derived.constPtr = new int(4);
         auto prop = derived.GetType().GetProperty("constPtr");
         EXPECT_FALSE(prop->isConst);
-        const int* constIntegerPtr = *prop->Get<const int*>(&derived);
+        const int* constIntegerPtr = *prop->Get<const int*>(derived);
         EXPECT_EQ(*constIntegerPtr, 4);
-        int* integerPtr = *prop->Get<int*>(&derived);
+        int* integerPtr = *prop->Get<int*>(derived);
         EXPECT_EQ(*integerPtr, 4);
         *integerPtr = 5; // const인데도 바뀔 수 있다. 생성된 객체 자체는 수정 가능한 메모리 영역에 있기 때문
         delete derived.constPtr;
@@ -255,10 +270,10 @@ TEST(ReflectionTest, ConstTest)
     {
         auto prop = derived.GetType().GetProperty("constInt");
         EXPECT_TRUE(prop->isConst);
-        const int* constIntegerPtr = prop->Get<const int>(&derived);
+        const int* constIntegerPtr = prop->Get<const int>(derived);
         EXPECT_EQ(*constIntegerPtr, 3);
         // int* integerPtr = prop->Get<int>(&derived); // 디버그 모드에서 assert에 걸림
-        int* integerPtr = prop->GetSafe<int>(&derived);
+        int* integerPtr = prop->GetSafe<int>(derived);
         EXPECT_EQ(integerPtr, nullptr);
     }
 }
@@ -270,7 +285,7 @@ TEST(ReflectionTest, NestedContainerPropertyTest)
     int expected = 0;
 
     sh::core::reflection::PropertyIterator savedIterator;
-    for (auto it = prop->Begin(&nested0); it != prop->End(&nested0); ++it)
+    for (auto it = prop->Begin(nested0); it != prop->End(nested0); ++it)
     {
         for (auto it2 = it.GetNestedBegin(); it2 != it.GetNestedEnd(); ++it2)
         {
@@ -285,7 +300,7 @@ TEST(ReflectionTest, NestedContainerPropertyTest)
     prop = nested0.GetType().GetProperty("arr2");
     EXPECT_EQ(prop->GetContainerNestedLevel(), 3);
     expected = 0;
-    for (auto it = prop->Begin(&nested0); it != prop->End(&nested0); ++it)
+    for (auto it = prop->Begin(nested0); it != prop->End(nested0); ++it)
     {
         for (auto it2 = it.GetNestedBegin(); it2 != it.GetNestedEnd(); ++it2)
         {
@@ -302,8 +317,8 @@ TEST(ReflectionTest, NestedContainerPropertyTest)
     Nested nested1;
     nested1.arr.clear();
     prop = nested1.GetType().GetProperty("arr");
-    auto itBegin = prop->Begin(&nested1);
-    auto itEnd = prop->End(&nested1);
+    auto itBegin = prop->Begin(nested1);
+    auto itEnd = prop->End(nested1);
  
     EXPECT_TRUE(itBegin == itEnd);
 }
@@ -314,9 +329,9 @@ TEST(ReflectionTest, SafePropertyTest)
     derived.number = 123;
 
     auto prop = Derived::GetStaticType().GetProperty("number");
-    int number = *prop->GetSafe<int>(&derived);
+    int number = *prop->GetSafe<int>(derived);
     EXPECT_EQ(number, 123);
 
-    float* floatPtr = prop->GetSafe<float>(&derived);
+    float* floatPtr = prop->GetSafe<float>(derived);
     EXPECT_EQ(floatPtr, nullptr);
 }
