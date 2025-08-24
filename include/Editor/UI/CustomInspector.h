@@ -15,13 +15,26 @@
 /// @param Type Inspector에 보여질 객체 타입
 #define INSPECTOR(Class, Type)\
 private:\
-	struct InspectorRegisterFactory\
+	struct InspectorRegisterFactory##Class\
 	{\
-		InspectorRegisterFactory()\
+		~InspectorRegisterFactory##Class()\
 		{\
-			CustomInspectorManager::GetInstance()->Register<Type, Class>();\
+			SH_INFO_FORMAT("Inspector({}) was unloaded.", #Class);\
+			CustomInspectorManager::GetInstance()->UnRegister<Type>();\
 		}\
-	} static inline inspectorFactory{};
+		static auto Get() -> InspectorRegisterFactory##Class*\
+		{\
+			auto manager = CustomInspectorManager::GetInstance();\
+			if (manager->GetCustomInspector(Type::GetStaticType()) == nullptr)\
+			{\
+				static InspectorRegisterFactory##Class factory {};\
+				manager->Register<Type, Class>(); \
+				return &factory;\
+			}\
+			return nullptr;\
+		}\
+	};\
+	static inline InspectorRegisterFactory##Class* inspectorFactory = InspectorRegisterFactory##Class::Get();
 
 namespace sh::editor
 {
@@ -40,6 +53,11 @@ namespace sh::editor
 		void Register()
 		{
 			map.insert_or_assign(&T::GetStaticType(), std::make_unique<U>());
+		}
+		template<typename T>
+		void UnRegister()
+		{
+			map.erase(&T::GetStaticType());
 		}
 
 		SH_EDITOR_API auto GetCustomInspector(const core::reflection::STypeInfo& type) const -> ICustomInspector*;
