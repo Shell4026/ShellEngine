@@ -65,12 +65,3 @@ FETCHCONTENT_DECLARE(
 )
 FETCHCONTENT_MAKEAVAILABLE(JSON)
 target_link_libraries(ShellEngineUser PRIVATE nlohmann_json)
-
-FetchContent_Declare(
-  reactphysics3d
-  GIT_REPOSITORY "https://github.com/DanielChappuis/reactphysics3d"
-  GIT_TAG "v0.10.2"
-  )
-FETCHCONTENT_MAKEAVAILABLE(reactphysics3d)
-target_link_libraries(ShellEngineUser PRIVATE reactphysics3d)
-target_include_directories(ShellEngineUser PRIVATE ${reactphysics3d_SOURCE_DIR}/include)
