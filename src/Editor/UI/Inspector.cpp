@@ -29,6 +29,8 @@ namespace sh::editor
 	}
 	SH_EDITOR_API void Inspector::RenderProperty(const core::reflection::Property& prop, core::SObject& owner, int idx)
 	{
+		if (!prop.bVisibleProperty)
+			return;
 		auto& type = prop.type;
 		const bool constant = prop.bConstProperty || prop.isConst;
 		const std::string& name = prop.GetName().ToString();
@@ -232,7 +234,7 @@ namespace sh::editor
 		ICustomInspector* customInspector = customInspectorManager->GetCustomInspector(type);
 		if (customInspector)
 		{
-			customInspector->RenderUI(&obj);
+			customInspector->RenderUI(&obj, idx);
 			return;
 		}
 

@@ -41,7 +41,7 @@ namespace sh::editor
 	struct ICustomInspector
 	{
 		virtual ~ICustomInspector() = default;
-		virtual void RenderUI(void* obj) = 0;
+		virtual void RenderUI(void* obj, int idx) = 0;
 	};
 
 	class CustomInspectorManager : public core::Singleton<CustomInspectorManager>

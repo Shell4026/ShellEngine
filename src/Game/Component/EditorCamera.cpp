@@ -1,5 +1,4 @@
-﻿#include "PCH.h"
-#include "Game/Component/EditorCamera.h"
+﻿#include "Game/Component/EditorCamera.h"
 
 #include "Game/Input.h"
 #include "Game/GameObject.h"
@@ -95,11 +94,18 @@ namespace sh::game
 
 	void EditorCamera::ClampAngles()
 	{
-		xdir = (xdir >= 360.f) ? xdir - 360.f : (xdir < 0) ? xdir + 360.f : xdir;
-		ydir = (ydir >= 360.f) ? ydir - 360.f : (ydir < 0) ? ydir + 360.f : ydir;
+		xdir = (xdir >= 360.f) ? 
+			xdir - 360.f : (xdir <= 0.f) ? 
+				xdir + 360.f : xdir;
 
+		ydir = (ydir >= 360.f) ? 
+			ydir - 360.f : (ydir <= 0.f) ? 
+				ydir + 360.f : ydir;
+
+		glm::vec3 v = gameObject.transform->GetWorldPosition() - lookPos;
+		//glm::vec3 up = glm::cross(glm::vec3{ 1.0f, 0.f, 0.f }, glm::normalize(v));
 		Vec3 up = camera.GetUpVector(core::ThreadType::Game);
-		up.y = (xdir >= 90 && xdir < 270) ? -1 : 1;
+		up.y = (xdir >= 90 && xdir <= 270) ? -1 : 1;
 		camera.SetUpVector(up);
 	}
 
@@ -113,11 +119,11 @@ namespace sh::game
 
 	SH_GAME_API void EditorCamera::Start()
 	{
-		glm::vec3 v = gameObject.transform->GetWorldPosition() - lookPos;
-		glm::vec3 cross = glm::cross(glm::vec3{ 1.0f, 0.f, 0.f }, glm::normalize(glm::vec3{ v.x, 0.f, v.z }));
-		xdir = glm::degrees(glm::asin(glm::length(cross)));
-		cross = glm::cross(glm::vec3{ 1.0f, 0.f, 0.f }, glm::normalize(glm::vec3{ v.x, v.y, 0.f }));
-		ydir = glm::degrees(glm::asin(glm::length(cross)));
+		const glm::vec3 forward = glm::normalize(glm::vec3{ gameObject.transform->GetWorldPosition() - lookPos });
+		const float yaw = glm::degrees(atan2(forward.z, forward.x));
+		const float pitch = glm::degrees(asin(forward.y));
+		xdir = pitch;
+		ydir = yaw;
 	}
 
 	SH_GAME_API void EditorCamera::BeginUpdate()
@@ -136,5 +142,19 @@ namespace sh::game
 	SH_GAME_API void EditorCamera::SetFocus(bool bfocus)
 	{
 		this->bFocus = bfocus;
+	}
+	SH_GAME_API void EditorCamera::SetDirection(float pitch, float yaw)
+	{
+		this->xdir = pitch;
+		this->ydir = yaw;
+	}
+	SH_GAME_API void EditorCamera::SetPosition(const game::Vec3& pos)
+	{
+		gameObject.transform->SetWorldPosition(pos);
+		const glm::vec3 forward = glm::normalize(glm::vec3{ gameObject.transform->GetWorldPosition() - lookPos });
+		const float yaw = glm::degrees(atan2(forward.z, forward.x));
+		const float pitch = glm::degrees(asin(forward.y));
+		xdir = pitch;
+		ydir = yaw;
 	}
 }//namespace

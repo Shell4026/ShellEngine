@@ -9,7 +9,7 @@
 #include "Core/ThreadSyncManager.h"
 
 #include "External/imgui/backends/imgui_impl_vulkan.h"
-
+#include "External/imgui/ImGuizmo.h"
 #include <iostream>
 
 namespace sh::game
@@ -495,6 +495,7 @@ namespace sh::game
 		ImGui_ImplVulkan_NewFrame();
 		//ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();
+		ImGuizmo::BeginFrame();
 		ImGui::ShowDemoWindow();
 	}
 	SH_GAME_API void ImGUImpl::End()

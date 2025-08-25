@@ -7,6 +7,23 @@ namespace sh::game
 	class EditorCamera : public Camera
 	{
 		COMPONENT(EditorCamera)
+	public:
+		SH_GAME_API EditorCamera(GameObject& owner);
+
+		SH_GAME_API void Start() override;
+		SH_GAME_API void BeginUpdate() override;
+		SH_GAME_API void Update() override;
+		SH_GAME_API void SetFocus(bool bfocus);
+
+		SH_GAME_API void SetDirection(float pitch, float yaw);
+		SH_GAME_API void SetPosition(const game::Vec3& pos);
+	private:
+		void HandleMouseInput();
+		void HandleLeftMouseDrag();
+		void HandleMiddleMouseDrag();
+		void Zoom();
+		void ClampAngles();
+		void UpdateCameraPosition();
 	private:
 		float distance;
 
@@ -26,19 +43,5 @@ namespace sh::game
 		bool leftMousePressed;
 		bool middleMousePressed;
 		bool bFocus = false;
-	private:
-		inline void HandleMouseInput();
-		inline void HandleLeftMouseDrag();
-		inline void HandleMiddleMouseDrag();
-		inline void Zoom();
-		inline void ClampAngles();
-		inline void UpdateCameraPosition();
-	public:
-		SH_GAME_API EditorCamera(GameObject& owner);
-
-		SH_GAME_API void Start() override;
-		SH_GAME_API void BeginUpdate() override;
-		SH_GAME_API void Update() override;
-		SH_GAME_API void SetFocus(bool bfocus);
 	};
 }//namespace

@@ -248,11 +248,11 @@ namespace sh::game
 		drawable->SetModelMatrix(gameObject.transform->localToWorldMatrix);
 	}
 
-	SH_GAME_API void MeshRenderer::Destroy()
+	SH_GAME_API void MeshRenderer::OnDestroy()
 	{
-		if (drawable)
+		if (drawable != nullptr)
 			drawable->Destroy();
-		Super::Destroy();
+		Super::OnDestroy();
 	}
 
 	void MeshRenderer::Awake()

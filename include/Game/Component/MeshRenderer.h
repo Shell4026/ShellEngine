@@ -24,27 +24,33 @@ namespace sh::game
 	class MeshRenderer : public Component
 	{
 		COMPONENT(MeshRenderer)
-	private:
-		render::AABB worldAABB;
-		
-		PROPERTY(propertyBlock, core::PropertyOption::invisible)
-		render::MaterialPropertyBlock* propertyBlock = nullptr;
+	public:
+		SH_GAME_API MeshRenderer(GameObject& owner);
+		SH_GAME_API ~MeshRenderer();
 
-		std::vector<std::pair<const render::ShaderPass*, const render::UniformStructLayout*>> localUniformLocations;
+		SH_GAME_API void SetMesh(const render::Mesh* mesh);
+		SH_GAME_API auto GetMesh() const -> const render::Mesh*;
 
-		core::Observer<false, const glm::mat4&>::Listener onMatrixUpdateListener;
+		SH_GAME_API void SetMaterial(render::Material* mat);
+		SH_GAME_API auto GetMaterial() const -> render::Material*;
 
-		PROPERTY(renderTag)
-		uint32_t renderTag = 1;
+		SH_GAME_API void OnDestroy() override;
+		SH_GAME_API void Awake() override;
+		SH_GAME_API void Start() override;
+		SH_GAME_API void Update() override;
 
-		bool bShaderHasLight = false;
+		SH_GAME_API void SetMaterialPropertyBlock(render::MaterialPropertyBlock* block);
+		SH_GAME_API auto GetMaterialPropertyBlock() const -> render::MaterialPropertyBlock*;
+
+		SH_GAME_API void SetRenderTagId(uint32_t tagId);
+		SH_GAME_API auto GetRenderTagId() const -> uint32_t;
+
+		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 	protected:
-		PROPERTY(mesh)
-		const render::Mesh* mesh;
-		PROPERTY(mat)
-		render::Material* mat;
-		PROPERTY(drawable, core::PropertyOption::invisible, core::PropertyOption::noSave)
-		render::Drawable* drawable;
+		/// @brief Drawable을 생성하거나 이미 존재 시 갱신하는 함수.
+		SH_GAME_API virtual void CreateDrawable();
+		/// @brief Update()마다 호출 되는 Drawable 설정 함수
+		SH_GAME_API virtual void UpdateDrawable();
 	private:
 		void UpdateMaterialData();
 
@@ -61,31 +67,25 @@ namespace sh::game
 
 		void FillLightStruct(render::Drawable& drawable) const;
 	protected:
-		/// @brief Drawable을 생성하거나 이미 존재 시 갱신하는 함수.
-		SH_GAME_API virtual void CreateDrawable();
-		/// @brief Update()마다 호출 되는 Drawable 설정 함수
-		SH_GAME_API virtual void UpdateDrawable();
-	public:
-		SH_GAME_API MeshRenderer(GameObject& owner);
-		SH_GAME_API ~MeshRenderer();
+		PROPERTY(mesh)
+		const render::Mesh* mesh;
+		PROPERTY(mat)
+		render::Material* mat;
+		PROPERTY(drawable, core::PropertyOption::invisible, core::PropertyOption::noSave)
+		render::Drawable* drawable;
+	private:
+		render::AABB worldAABB;
 
-		SH_GAME_API void SetMesh(const render::Mesh* mesh);
-		SH_GAME_API auto GetMesh() const -> const render::Mesh*;
+		PROPERTY(propertyBlock, core::PropertyOption::invisible)
+		render::MaterialPropertyBlock* propertyBlock = nullptr;
 
-		SH_GAME_API void SetMaterial(render::Material* mat);
-		SH_GAME_API auto GetMaterial() const -> render::Material*;
+		std::vector<std::pair<const render::ShaderPass*, const render::UniformStructLayout*>> localUniformLocations;
 
-		SH_GAME_API void Destroy() override;
-		SH_GAME_API void Awake() override;
-		SH_GAME_API void Start() override;
-		SH_GAME_API void Update() override;
+		core::Observer<false, const glm::mat4&>::Listener onMatrixUpdateListener;
 
-		SH_GAME_API void SetMaterialPropertyBlock(render::MaterialPropertyBlock* block);
-		SH_GAME_API auto GetMaterialPropertyBlock() const -> render::MaterialPropertyBlock*;
+		PROPERTY(renderTag)
+		uint32_t renderTag = 1;
 
-		SH_GAME_API void SetRenderTagId(uint32_t tagId);
-		SH_GAME_API auto GetRenderTagId() const -> uint32_t;
-
-		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
+		bool bShaderHasLight = false;
 	};
-}
+}//namespace

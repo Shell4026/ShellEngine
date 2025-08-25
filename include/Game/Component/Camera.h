@@ -22,19 +22,12 @@ namespace sh::game
 	class Camera : public Component
 	{
 		COMPONENT(Camera)
-	private:
-		PROPERTY(renderTexture)
-		render::RenderTexture* renderTexture;
-
-		PROPERTY(depth)
-		int depth;
-		PROPERTY(fov)
-		float fov;
-	protected:
-		render::Camera camera;
-
-		PROPERTY(lookPos)
-		Vec3 lookPos;
+	public:
+		enum class Projection
+		{
+			Perspective,
+			Orthographic
+		};
 	public:
 		SH_GAME_API Camera(GameObject& owner);
 		SH_GAME_API ~Camera();
@@ -68,6 +61,24 @@ namespace sh::game
 		SH_GAME_API void SetHeight(float height);
 		SH_GAME_API auto GetHeight() const -> float;
 
+		SH_GAME_API void SetProjection(Projection proj);
+		SH_GAME_API auto GetProjection() const -> Projection;
+
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
+	protected:
+		render::Camera camera;
+
+		PROPERTY(lookPos)
+		Vec3 lookPos;
+	private:
+		PROPERTY(renderTexture)
+		render::RenderTexture* renderTexture;
+
+		PROPERTY(depth)
+		int depth;
+		PROPERTY(fov)
+		float fov;
+		PROPERTY(projection)
+		Projection projection = Projection::Perspective;
 	};
 }

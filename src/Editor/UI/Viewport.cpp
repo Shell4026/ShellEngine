@@ -14,7 +14,9 @@
 #include "Render/VulkanImpl/VulkanTextureBuffer.h"
 
 #include "External/imgui/backends/imgui_impl_vulkan.h"
+#include "External/imgui/ImGuizmo.h"
 
+#include <glm/gtc/type_ptr.hpp>
 namespace sh::editor
 {
 	Viewport::Viewport(EditorWorld& world) :
@@ -207,6 +209,37 @@ namespace sh::editor
 			ChangeViewportSize();
 		}
 		ImGui::Image(viewportTexture, { width, height });
+
+		const float windowWidth = (float)ImGui::GetWindowWidth();
+		const float viewManipulateRight = ImGui::GetWindowPos().x + windowWidth;
+		const float viewManipulateTop = ImGui::GetWindowPos().y;
+
+		glm::mat4 viewMat = editorCamera->GetViewMatrix();
+		ImGuizmo::SetDrawlist();
+		ImGuizmo::ViewManipulate(glm::value_ptr(viewMat), 8.f, ImVec2(viewManipulateRight - 128, viewManipulateTop), ImVec2(128, 128), 0x10101010);
+		if (ImGuizmo::IsUsingViewManipulate())
+		{
+			const glm::mat4 invView = glm::inverse(viewMat);
+			const glm::vec3 cameraPos = glm::vec3(invView[3]);
+			editorCamera->SetPosition(cameraPos);
+		}
+		ImGui::SetCursorScreenPos(ImVec2{ viewManipulateRight - 128, viewManipulateTop + 128 });
+		if (editorCamera->GetProjection() == game::Camera::Projection::Perspective)
+		{
+			if (ImGui::Button("Perspective"))
+			{
+				editorCamera->SetProjection(game::Camera::Projection::Orthographic);
+				pickingCamera->SetProjection(game::Camera::Projection::Orthographic);
+			}
+		}
+		else
+		{
+			if (ImGui::Button("Orthographic"))
+			{
+				editorCamera->SetProjection(game::Camera::Projection::Perspective);
+				pickingCamera->SetProjection(game::Camera::Projection::Perspective);
+			}
+		}
 		ImGui::PopStyleVar();
 
 		RenderPopup();

@@ -155,15 +155,27 @@ namespace sh::game
 		return camera.GetHeight(core::ThreadType::Game);
 	}
 
+	SH_GAME_API void Camera::SetProjection(Projection proj)
+	{
+		projection = proj;
+		if (proj == Projection::Perspective)
+			camera.SetOrthographic(false);
+		else
+			camera.SetOrthographic(true);
+	}
+
+	SH_GAME_API auto Camera::GetProjection() const -> Projection
+	{
+		return projection;
+	}
+
 	SH_GAME_API void Camera::OnPropertyChanged(const core::reflection::Property& prop)
 	{
-		if (prop.GetName() == "depth")
-		{
+		if (prop.GetName() == core::Util::ConstexprHash("depth"))
 			SetDepth(depth);
-		}
-		else if (prop.GetName() == "fov")
-		{
+		else if (prop.GetName() == core::Util::ConstexprHash("fov"))
 			SetFov(fov);
-		}
+		else if (prop.GetName() == core::Util::ConstexprHash("projection"))
+			SetProjection(projection);
 	}
 }

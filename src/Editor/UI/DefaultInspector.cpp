@@ -1,4 +1,5 @@
 ﻿#include "UI/DefaultInspector.h"
+#include "UI/Inspector.h"
 #include "AssetDatabase.h"
 
 #include "imgui.h"
@@ -7,7 +8,7 @@
 #include <algorithm>
 namespace sh::editor
 {
-	SH_EDITOR_API void MaterialInspector::RenderUI(void* obj)
+	SH_EDITOR_API void MaterialInspector::RenderUI(void* obj, int idx)
 	{
 		ImGui::Separator();
 		render::Material* mat = reinterpret_cast<render::Material*>(obj);
@@ -117,7 +118,7 @@ namespace sh::editor
 		}
 		ImGui::Separator();
 	}
-	SH_EDITOR_API void TextureInspector::RenderUI(void* obj)
+	SH_EDITOR_API void TextureInspector::RenderUI(void* obj, int idx)
 	{
 		using namespace render;
 		Texture* texture = reinterpret_cast<Texture*>(obj);
@@ -154,5 +155,33 @@ namespace sh::editor
 			AssetDatabase::GetInstance()->SetDirty(texture);
 			AssetDatabase::GetInstance()->SaveAllAssets();
 		}
+	}
+	SH_EDITOR_API void CameraInspector::RenderUI(void* obj, int idx)
+	{
+		game::Component* component = reinterpret_cast<game::Component*>(obj);
+		auto currentType = &component->GetType();
+		do
+		{
+			for (auto& prop : currentType->GetProperties())
+			{
+				if (prop->GetName() == core::Util::ConstexprHash("projection"))
+				{
+					const char* items[] = { "Perspective", "Orthographic" };
+					static int current = 0;
+					int* proj = prop->Get<int>(*component);
+					current = *proj;
+					ImGui::Text("Projection");
+					if (ImGui::ListBox(fmt::format("##Projection{}", idx).c_str(), &current, items, IM_ARRAYSIZE(items), 4))
+					{
+						*proj = current;
+						component->OnPropertyChanged(*prop);
+					}
+					continue;
+				}
+				Inspector::RenderProperty(*prop, *component, idx);
+			}
+			currentType = currentType->GetSuper();
+		} 
+		while (currentType != nullptr);
 	}
 }//namespace

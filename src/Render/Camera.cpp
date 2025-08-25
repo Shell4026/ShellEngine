@@ -136,9 +136,22 @@ namespace sh::render
 	{
 		return height[thr];
 	}
+	SH_RENDER_API void Camera::SetOrthographic(bool bEnable)
+	{
+		bPerspective = !bEnable;
+	}
 	SH_RENDER_API void Camera::UpdateMatrix()
 	{
-		bufferData[core::ThreadType::Game].matProj = glm::perspectiveFov(fovRadians, width[core::ThreadType::Game], height[core::ThreadType::Game], nearPlane[core::ThreadType::Game], farPlane[core::ThreadType::Game]);
+		if (bPerspective)
+			bufferData[core::ThreadType::Game].matProj =
+			glm::perspectiveFovRH_ZO(fovRadians, width[core::ThreadType::Game], height[core::ThreadType::Game], nearPlane[core::ThreadType::Game], farPlane[core::ThreadType::Game]);
+		else
+		{
+			const float dis = glm::length(to[core::ThreadType::Game] - pos[core::ThreadType::Game]) / 2.0f;
+			const float aspect = width[core::ThreadType::Game] / height[core::ThreadType::Game];
+			bufferData[core::ThreadType::Game].matProj =
+				glm::orthoRH_ZO(-dis * aspect, dis * aspect, -dis, dis, nearPlane[core::ThreadType::Game], farPlane[core::ThreadType::Game]);
+		}
 		bufferData[core::ThreadType::Game].matView = glm::lookAt(pos[core::ThreadType::Game], to[core::ThreadType::Game], up[core::ThreadType::Game]);
 		SyncDirty();
 	}
