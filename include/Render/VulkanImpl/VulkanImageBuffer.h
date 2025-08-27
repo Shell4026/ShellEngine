@@ -13,23 +13,6 @@ namespace sh::render::vk
 
 	class VulkanImageBuffer : public core::INonCopyable
 	{
-	private:
-		const VulkanContext& context;
-
-		VkDevice device;
-		VkPhysicalDevice gpu;
-		VmaAllocator allocator;
-
-		VkImage img;
-		VmaAllocation imgMem;
-
-		VkImageView imgView;
-		VkSampler sampler;
-
-		VkImageLayout layout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
-
-		uint32_t aniso = 0;
-		uint32_t mipLevels = 1;
 	public:
 		SH_RENDER_API VulkanImageBuffer(const VulkanContext& context);
 		SH_RENDER_API VulkanImageBuffer(VulkanImageBuffer&& other) noexcept;
@@ -54,5 +37,22 @@ namespace sh::render::vk
 		SH_RENDER_API auto GetLayout() const -> VkImageLayout;
 
 		SH_RENDER_API void ChangeLayoutCommand(VkCommandBuffer cmd, VkImageLayout newLayout);
+	private:
+		const VulkanContext& context;
+
+		VkDevice device;
+		VkPhysicalDevice gpu;
+		VmaAllocator allocator;
+
+		VkImage img;
+		VmaAllocation imgMem;
+
+		VkImageView imgView;
+		VkSampler sampler;
+
+		VkImageLayout layout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
+
+		uint32_t aniso = 0;
+		uint32_t mipLevels = 1;
 	};
 }

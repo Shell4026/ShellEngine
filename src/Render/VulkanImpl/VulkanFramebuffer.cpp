@@ -70,8 +70,9 @@ namespace sh::render::vk
 		this->renderPass = &renderPass;
 
 		VkSampleCountFlagBits sampleCount = renderPass.GetConfig().sampleCount;
-		bool bMSAA = sampleCount != VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
+		const bool bMSAA = sampleCount != VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
 
+		// colorImgMSAA = 멀티 샘플링 이미지
 		if (bMSAA)
 		{
 			colorImgMSAA = std::make_unique<VulkanImageBuffer>(context);
@@ -301,6 +302,8 @@ namespace sh::render::vk
 
 	SH_RENDER_API auto VulkanFramebuffer::GetColorImg() const -> VulkanImageBuffer*
 	{
+		if (colorImg == nullptr && colorImgMSAA != nullptr)
+			return colorImgMSAA.get();
 		return colorImg.get();
 	}
 	SH_RENDER_API auto VulkanFramebuffer::GetDepthImg() const -> VulkanImageBuffer*

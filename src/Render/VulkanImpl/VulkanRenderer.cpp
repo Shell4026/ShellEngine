@@ -195,16 +195,18 @@ namespace sh::render::vk
 				clearMSAA[1].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
 				clearMSAA[2].depthStencil = { 1.0f, 0 };
 
-				bool bMSAA = context->GetSampleCount() != VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
+				auto& uiRenderPass = context->GetUIRenderPass();
+
+				if (mainFramebuffer->GetColorImg() != nullptr && uiRenderPass.GetInitialColorLayout() != mainFramebuffer->GetColorImg()->GetLayout())
+					mainFramebuffer->GetColorImg()->ChangeLayoutCommand(cmd->GetCommandBuffer(), uiRenderPass.GetInitialColorLayout());
+				if (uiRenderPass.GetInitialDepthLayout() != mainFramebuffer->GetDepthImg()->GetLayout())
+					mainFramebuffer->GetDepthImg()->ChangeLayoutCommand(cmd->GetCommandBuffer(), uiRenderPass.GetInitialDepthLayout());
 
 				renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-				//renderPassInfo.renderPass = context->GetMainRenderPass();
-				renderPassInfo.renderPass = context->GetUIRenderPass();
+				renderPassInfo.renderPass = uiRenderPass.GetVkRenderPass();
 				renderPassInfo.framebuffer = mainFramebuffer->GetVkFramebuffer();
 				renderPassInfo.renderArea.offset = { 0, 0 };
 				renderPassInfo.renderArea.extent = context->GetSwapChain().GetSwapChainSize();
-				//renderPassInfo.clearValueCount = bMSAA ? clearMSAA.size() : clear.size();
-				//renderPassInfo.pClearValues = bMSAA ? clearMSAA.data() : clear.data();
 				renderPassInfo.clearValueCount = 0;
 				renderPassInfo.pClearValues = nullptr;
 				vkCmdBeginRenderPass(cmd->GetCommandBuffer(), &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
@@ -231,6 +233,9 @@ namespace sh::render::vk
 					func();
 
 				vkCmdEndRenderPass(cmd->GetCommandBuffer());
+				if (mainFramebuffer->GetColorImg() != nullptr)
+					mainFramebuffer->GetColorImg()->LayoutChangedByRenderPass(uiRenderPass.GetFinalColorLayout());
+				mainFramebuffer->GetDepthImg()->LayoutChangedByRenderPass(uiRenderPass.GetFInalDepthLayout());
 			}
 		);
 

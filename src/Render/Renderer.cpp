@@ -10,6 +10,7 @@ namespace sh::render
 	void Renderer::SetDrawCallCount(uint32_t drawcall)
 	{
 		this->drawcall[static_cast<uint32_t>(core::ThreadType::Render)] = drawcall;
+		bDrawCallDirty = true;
 		SyncDirty();
 	}
 
@@ -109,9 +110,11 @@ namespace sh::render
 				OnCameraRemoved(process.cameraPtr);
 			}
 		}
-		std::swap(drawcall[core::ThreadType::Game], drawcall[core::ThreadType::Render]);
+		if (bDrawCallDirty)
+			std::swap(drawcall[core::ThreadType::Game], drawcall[core::ThreadType::Render]);
 
 		bDirty = false;
+		bDrawCallDirty = false;
 	}
 
 	SH_RENDER_API auto Renderer::AddRenderPipeline(std::unique_ptr<RenderPipeline>&& renderPipeline) -> RenderPipeline*

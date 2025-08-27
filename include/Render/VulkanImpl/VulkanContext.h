@@ -66,8 +66,8 @@ namespace sh::render::vk
 		SH_RENDER_API auto GetCommandBuffer(core::ThreadType thr) const -> VulkanCommandBuffer*;
 		SH_RENDER_API auto GetCommandBuffer(std::thread::id thr) const->VulkanCommandBuffer*;
 		SH_RENDER_API auto GetQueueManager() const -> VulkanQueueManager&;
-		SH_RENDER_API auto GetMainRenderPass() const -> VkRenderPass;
-		SH_RENDER_API auto GetUIRenderPass() const -> VkRenderPass;
+		SH_RENDER_API auto GetMainRenderPass() const -> VulkanRenderPass&;
+		SH_RENDER_API auto GetUIRenderPass() const -> VulkanRenderPass&;
 		SH_RENDER_API auto GetMainFramebuffer(uint32_t idx = 0) const -> const VulkanFramebuffer*;
 		SH_RENDER_API auto GetDescriptorPool() const -> VulkanDescriptorPool&;
 		SH_RENDER_API auto GetAllocator() const -> VmaAllocator;

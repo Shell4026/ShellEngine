@@ -31,45 +31,6 @@ namespace sh::render
 	class Renderer : public core::ISyncable
 	{
 		SCLASS(Renderer)
-	private:
-		const sh::window::Window* window;
-
-		struct CameraCompare
-		{
-			bool operator()(const Camera* left, const Camera* right) const
-			{
-				if (left->GetPriority() == right->GetPriority())
-					return left->id < right->id;
-				return left->GetPriority() < right->GetPriority();
-			}
-		};
-		struct CameraProcess
-		{
-			const Camera* cameraPtr;
-			enum class Mode
-			{
-				Create,
-				Destroy
-			} mode;
-		};
-
-		std::queue<CameraProcess> cameraQueue;
-
-		core::SyncArray<uint32_t> drawcall;
-
-		bool bDirty;
-	protected:
-		std::queue<Drawable*> drawableQueue;
-		std::set<const Camera*, CameraCompare> cameras;
-		std::vector<std::function<void()>> drawCalls;
-		std::vector<std::unique_ptr<RenderPipeline>> renderPipelines;
-
-		std::atomic_bool bPause;
-	protected:
-		virtual void OnCameraAdded(const Camera* camera) {};
-		virtual void OnCameraRemoved(const Camera* camera) {};
-
-		void SetDrawCallCount(uint32_t drawcall);
 	public:
 		SH_RENDER_API Renderer();
 		SH_RENDER_API virtual ~Renderer();
@@ -119,6 +80,44 @@ namespace sh::render
 		SH_RENDER_API void RemoveCamera(const Camera& camera);
 
 		SH_RENDER_API auto GetDrawCall(core::ThreadType thread) const -> uint32_t;
+	protected:
+		virtual void OnCameraAdded(const Camera* camera) {};
+		virtual void OnCameraRemoved(const Camera* camera) {};
+
+		void SetDrawCallCount(uint32_t drawcall);
+	protected:
+		struct CameraCompare
+		{
+			bool operator()(const Camera* left, const Camera* right) const
+			{
+				if (left->GetPriority() == right->GetPriority())
+					return left->id < right->id;
+				return left->GetPriority() < right->GetPriority();
+			}
+		};
+		struct CameraProcess
+		{
+			const Camera* cameraPtr;
+			enum class Mode
+			{
+				Create,
+				Destroy
+			} mode;
+		};
+		std::queue<Drawable*> drawableQueue;
+		std::set<const Camera*, CameraCompare> cameras;
+		std::vector<std::function<void()>> drawCalls;
+		std::vector<std::unique_ptr<RenderPipeline>> renderPipelines;
+
+		std::atomic_bool bPause;
+	private:
+		const sh::window::Window* window;
+		std::queue<CameraProcess> cameraQueue;
+
+		core::SyncArray<uint32_t> drawcall;
+
+		bool bDirty;
+		bool bDrawCallDirty = false;
 	};
 
 	template<typename T, typename Check>

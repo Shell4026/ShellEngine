@@ -36,7 +36,12 @@ namespace sh::render::vk
 		const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, 
 		void* pUserData) -> VkBool32
 	{
-		SH_INFO_FORMAT("{}", pCallbackData->pMessage);
+		if (messageSeverity == VkDebugUtilsMessageSeverityFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+			SH_ERROR_FORMAT("{}", pCallbackData->pMessage);
+		else if (messageSeverity == VkDebugUtilsMessageSeverityFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT)
+			SH_WARN_FORMAT("{}", pCallbackData->pMessage);
+		else
+			SH_INFO_FORMAT("{}", pCallbackData->pMessage);
 		return VK_FALSE;
 	}
 	void VulkanContext::CreateDebugInfo()
@@ -631,13 +636,13 @@ namespace sh::render::vk
 	{
 		return *queueManager.get();
 	}
-	SH_RENDER_API auto VulkanContext::GetMainRenderPass() const -> VkRenderPass
+	SH_RENDER_API auto VulkanContext::GetMainRenderPass() const -> VulkanRenderPass&
 	{
-		return mainRenderPass->GetVkRenderPass();
+		return *mainRenderPass;
 	}
-	SH_RENDER_API auto VulkanContext::GetUIRenderPass() const -> VkRenderPass
+	SH_RENDER_API auto VulkanContext::GetUIRenderPass() const -> VulkanRenderPass&
 	{
-		return uiRenderPass->GetVkRenderPass();
+		return *uiRenderPass;
 	}
 	SH_RENDER_API auto VulkanContext::GetMainFramebuffer(uint32_t idx) const -> const VulkanFramebuffer*
 	{
