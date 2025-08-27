@@ -107,4 +107,16 @@ namespace sh::core
 	{
 		return threads[0].threadID == std::this_thread::get_id();
 	}
+
+	SH_CORE_API auto ThreadSyncManager::GetSyncableCount() -> uint32_t
+	{
+		return syncables.size();
+	}
+	SH_CORE_API auto ThreadSyncManager::GetCurrentThreadData() -> ThreadData&
+	{
+		if (currentThreadIdx == -1)
+			currentThreadIdx = GetThreadIndex();
+		assert(currentThreadIdx != -1);
+		return threads[currentThreadIdx];
+	}
 }//namespace

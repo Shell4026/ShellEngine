@@ -323,9 +323,6 @@ namespace sh::editor
 		game::Camera* cam = world.GetMainCamera();
 		cam->SetRenderTexture(nullptr);
 
-		renderTex = world.GetGameObject("EditorCamera")->GetComponent<game::EditorCamera>()->GetRenderTexture();
-		ChangeViewportSize();
-
 		editorCamera->SetActive(true);
 		BlockLeftClick(false);
 		BlockRightClick(false);
@@ -333,16 +330,29 @@ namespace sh::editor
 		world.AddAfterSyncTask(
 			[&]
 			{ 
+				world.GetUiContext().ClearDrawData();
+
+				VkDescriptorSet viewportDescSetLast = static_cast<VkDescriptorSet>(viewportTexture);
+				ImGui_ImplVulkan_RemoveTexture(viewportDescSetLast);
+				viewportTexture = nullptr;
+
 				world.Stop(); 
 				world.LoadWorldPoint();
+
+				editorCamera = world.GetGameObject("EditorCamera")->GetComponent<game::EditorCamera>();
+				pickingCamera = world.GetGameObject("PickingCamera")->GetComponent<game::PickingCamera>();
+
+				renderTex = editorCamera->GetRenderTexture();
+				ChangeViewportSize();
+
+				core::ThreadSyncManager::Sync();
 			}
 		);
-
-		SyncDirty();
 	}
 	SH_EDITOR_API void Viewport::Sync()
 	{
-		ImGui_ImplVulkan_RemoveTexture(static_cast<VkDescriptorSet>(viewportTexture));
+		if (viewportTexture != nullptr)
+			ImGui_ImplVulkan_RemoveTexture(static_cast<VkDescriptorSet>(viewportTexture));
 		VkDescriptorSet viewportDescSetLast = static_cast<VkDescriptorSet>(viewportTexture);
 
 		auto vkTexBuffer = static_cast<render::vk::VulkanTextureBuffer*>(renderTex->GetTextureBuffer());

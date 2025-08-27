@@ -10,7 +10,7 @@ namespace sh::core
 	/// @brief 스레드간 동기화를 관리하는 전역 객체.
 	class ThreadSyncManager
 	{
-	private:
+	public:
 		struct ThreadData
 		{
 			EngineThread* threadPtr;
@@ -27,12 +27,6 @@ namespace sh::core
 			};
 			std::queue<SyncData> syncableQueue;
 		};
-		SH_CORE_API static std::vector<ThreadData> threads;
-		thread_local static int currentThreadIdx;
-		SH_CORE_API static std::priority_queue<ThreadData::SyncData> syncables;
-		SH_CORE_API static bool bOnSync;
-	private:
-		SH_CORE_API static auto GetThreadIndex() -> int;
 	public:
 		/// @brief 초기화 함수. 반드시 메인 스레드에서 호출 할 것.
 		SH_CORE_API static void Init();
@@ -45,5 +39,15 @@ namespace sh::core
 		/// @brief 이 함수를 실행 하는 스레드가 메인 스레드인지
 		/// @return 맞으면 true, 아니면 false
 		SH_CORE_API static auto IsMainThread() -> bool;
+
+		SH_CORE_API static auto GetSyncableCount() -> uint32_t;
+		SH_CORE_API static auto GetCurrentThreadData() -> ThreadData&;
+	private:
+		SH_CORE_API static auto GetThreadIndex() -> int;
+	private:
+		SH_CORE_API static std::vector<ThreadData> threads;
+		thread_local static int currentThreadIdx;
+		SH_CORE_API static std::priority_queue<ThreadData::SyncData> syncables;
+		SH_CORE_API static bool bOnSync;
 	};
 }//namespace
