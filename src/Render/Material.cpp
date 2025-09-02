@@ -233,6 +233,29 @@ namespace sh::render
 
 		bPropertyDirty = true;
 	}
+	SH_RENDER_API void Material::SetProperty(const std::string& name, const glm::vec4& data)
+	{
+		if (!core::IsValid(shader))
+			return;
+		const Shader::PropertyInfo* propInfo = shader->GetProperty(name);
+		if (propInfo == nullptr)
+			return;
+
+		if (*propInfo->type == core::reflection::GetType<glm::vec4>())
+		{
+			SetProperty<glm::vec4>(name, data);
+		}
+		else if (*propInfo->type == core::reflection::GetType<glm::vec3>())
+		{
+			glm::vec3 dataVec3{ data };
+			SetProperty(name, dataVec3);
+		}
+		else if (*propInfo->type == core::reflection::GetType<glm::vec2>())
+		{
+			glm::vec2 dataVec2{ data };
+			SetProperty(name, dataVec2);
+		}
+	}
 	SH_RENDER_API void Material::SetProperty(const std::string& name, Texture* data)
 	{
 		SetProperty(name, static_cast<const Texture*>(data));

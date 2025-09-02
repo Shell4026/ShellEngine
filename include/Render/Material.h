@@ -33,36 +33,6 @@ namespace sh::render
 		public IRenderResource
 	{
 		SCLASS(Material)
-	private:
-		const IRenderContext* context = nullptr;
-
-		PROPERTY(shader)
-		Shader* shader;
-
-		PROPERTY(propertyBlock, core::PropertyOption::noSave)
-		MaterialPropertyBlock* propertyBlock = nullptr;
-
-		std::unique_ptr<MaterialData> materialData;
-
-		std::vector<std::pair<const ShaderPass*, const UniformStructLayout*>> dirtyProps;
-
-		core::Observer<false, const Texture*>::Listener onBufferUpdateListener;
-
-		bool bPropertyDirty = false;
-	private:
-		void Clear();
-		void SetDefaultProperties();
-		template<typename T>
-		void SetData(const T& data, std::vector<uint8_t>& uniformData, std::size_t offset, std::size_t size)
-		{
-			std::memcpy(uniformData.data() + offset, &data, size);
-		}
-		template<typename T>
-		void SetData(const T& data, std::vector<uint8_t>& uniformData, std::size_t offset)
-		{
-			std::memcpy(uniformData.data() + offset, &data, sizeof(T));
-		}
-		void UpdateListener();
 	public:
 		SH_RENDER_API Material();
 		SH_RENDER_API Material(Shader* shader);
@@ -80,6 +50,7 @@ namespace sh::render
 
 		              template<typename T>
 		              void SetProperty(const std::string& name, const T& data);
+		SH_RENDER_API void SetProperty(const std::string& name, const glm::vec4& data);
 		SH_RENDER_API void SetProperty(const std::string& name, const Texture* data);
 		SH_RENDER_API void SetProperty(const std::string& name, Texture* data);
 		SH_RENDER_API void SetProperty(const std::string& name, const RenderTexture* data);
@@ -93,6 +64,36 @@ namespace sh::render
 
 		SH_RENDER_API auto Serialize() const -> core::Json override;
 		SH_RENDER_API void Deserialize(const core::Json& json) override;
+	private:
+		void Clear();
+		void SetDefaultProperties();
+		template<typename T>
+		void SetData(const T& data, std::vector<uint8_t>& uniformData, std::size_t offset, std::size_t size)
+		{
+			std::memcpy(uniformData.data() + offset, &data, size);
+		}
+		template<typename T>
+		void SetData(const T& data, std::vector<uint8_t>& uniformData, std::size_t offset)
+		{
+			std::memcpy(uniformData.data() + offset, &data, sizeof(T));
+		}
+		void UpdateListener();
+	private:
+		const IRenderContext* context = nullptr;
+
+		PROPERTY(shader)
+		Shader* shader;
+
+		PROPERTY(propertyBlock, core::PropertyOption::noSave)
+		MaterialPropertyBlock* propertyBlock = nullptr;
+
+		std::unique_ptr<MaterialData> materialData;
+
+		std::vector<std::pair<const ShaderPass*, const UniformStructLayout*>> dirtyProps;
+
+		core::Observer<false, const Texture*>::Listener onBufferUpdateListener;
+
+		bool bPropertyDirty = false;
 	};
 
 	template<typename T>
