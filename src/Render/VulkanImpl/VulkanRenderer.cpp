@@ -104,7 +104,7 @@ namespace sh::render::vk
 		VulkanCameraBuffers::GetInstance()->RemoveCamera(*camera);
 	}
 
-	SH_RENDER_API bool VulkanRenderer::Init(const sh::window::Window& win)
+	SH_RENDER_API bool VulkanRenderer::Init(sh::window::Window& win)
 	{
 		Renderer::Init(win);
 

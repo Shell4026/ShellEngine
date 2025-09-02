@@ -37,7 +37,7 @@ namespace sh::render
 	}
 
 
-	SH_RENDER_API bool Renderer::Init(const sh::window::Window& win)
+	SH_RENDER_API bool Renderer::Init(sh::window::Window& win)
 	{
 		window = &win;
 		return true;
@@ -57,7 +57,7 @@ namespace sh::render
 		drawCalls.push_back(func);
 	}
 
-	SH_RENDER_API auto Renderer::GetWindow() const -> const sh::window::Window&
+	SH_RENDER_API auto Renderer::GetWindow() const -> sh::window::Window&
 	{
 		assert(window);
 		return *window;

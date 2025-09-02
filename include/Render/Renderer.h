@@ -35,7 +35,7 @@ namespace sh::render
 		SH_RENDER_API Renderer();
 		SH_RENDER_API virtual ~Renderer();
 
-		SH_RENDER_API virtual bool Init(const sh::window::Window& win);
+		SH_RENDER_API virtual bool Init(sh::window::Window& win);
 		SH_RENDER_API virtual bool Resizing() = 0;
 		SH_RENDER_API virtual void Clear();
 
@@ -56,7 +56,7 @@ namespace sh::render
 		/// @param func 드로우 콜 함수
 		SH_RENDER_API void AddDrawCall(const std::function<void()>& func);
 
-		SH_RENDER_API auto GetWindow() const -> const sh::window::Window&;
+		SH_RENDER_API auto GetWindow() const -> sh::window::Window&;
 
 		/// @brief 렌더러가 일시정지 상태인지 반환한다.
 		/// @return 일시정지 시 true 그 외 false
@@ -116,7 +116,7 @@ namespace sh::render
 
 		std::atomic_bool bPause;
 	private:
-		const sh::window::Window* window;
+		sh::window::Window* window;
 		std::queue<CameraProcess> cameraQueue;
 
 		core::SyncArray<uint32_t> drawcall;

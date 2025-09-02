@@ -28,7 +28,7 @@ namespace sh::render::vk
 		SH_RENDER_API VulkanRenderer();
 		SH_RENDER_API ~VulkanRenderer();
 
-		SH_RENDER_API bool Init(const sh::window::Window& win) override;
+		SH_RENDER_API bool Init(sh::window::Window& win) override;
 		SH_RENDER_API bool Resizing() override;
 		SH_RENDER_API void Clear() override;
 
