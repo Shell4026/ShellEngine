@@ -67,6 +67,8 @@ namespace sh::editor
         bundle.AddAsset(cubeMesh, true);
         game::MeshAsset sphereMesh{ *editorResource->GetModel("SphereModel")->GetMeshes()[0] };
         bundle.AddAsset(sphereMesh, true);
+        game::MeshAsset planeMesh{ *editorResource->GetModel("PlaneModel")->GetMeshes()[0] };
+        bundle.AddAsset(planeMesh, true);
 
         for (const auto& uuid : uuids)
         {
