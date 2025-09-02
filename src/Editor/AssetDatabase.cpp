@@ -381,6 +381,22 @@ namespace sh::editor
 		return true;
 	}
 
+	SH_EDITOR_API void AssetDatabase::AssetWasMoved(const core::UUID& uuid, const std::filesystem::path& newPath)
+	{
+		auto it = paths.find(uuid);
+		if (it == paths.end())
+			return;
+
+		std::filesystem::path relativePath = std::filesystem::relative(newPath, projectPath);
+
+		uuids.erase(it->second.originalPath);
+		uuids.insert_or_assign(relativePath, uuid);
+
+		it->second.originalPath = relativePath;
+
+		SaveDatabase(project->GetLibraryPath() / "AssetDB.json");
+	}
+
 	SH_EDITOR_API auto AssetDatabase::GetAsset(const core::UUID& uuid) -> std::unique_ptr<core::Asset>
 	{
 		auto it = paths.find(uuid);

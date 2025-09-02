@@ -224,6 +224,37 @@ namespace sh::editor
 				}
 				ImGui::EndMenu();
 			}
+			if (!selected.empty())
+			{
+				if (ImGui::BeginMenu("Rename"))
+				{
+					std::string name = selected.filename().u8string();
+					const std::filesystem::path parent = selected.parent_path();
+					if (ImGui::InputText("##Rename", &name, ImGuiInputTextFlags_::ImGuiInputTextFlags_EnterReturnsTrue))
+					{
+						auto uuidOpt = assetDatabase.GetAssetUUID(selected);
+						if (uuidOpt.has_value())
+						{
+							const std::filesystem::path metaPath = parent / std::filesystem::u8path(selected.filename().u8string() + ".meta");
+							const std::filesystem::path newPath = parent / std::filesystem::u8path(name);
+							std::filesystem::rename(selected, newPath);
+							if (std::filesystem::exists(metaPath))
+								std::filesystem::rename(metaPath, parent / std::filesystem::u8path(name + ".meta"));
+
+							assetDatabase.AssetWasMoved(uuidOpt.value(), newPath);
+
+							selected = newPath;
+
+							GetAllFiles(currentPath);
+						}
+					}
+					ImGui::EndMenu();
+				}
+			}
+			if (ImGui::MenuItem("Refresh"))
+			{
+				GetAllFiles(currentPath);
+			}
 			ImGui::EndPopup();
 		}
 	}
@@ -387,6 +418,12 @@ namespace sh::editor
 		float h = ImGui::GetWindowContentRegionMax().y - 50;
 		ImGui::BeginChild("Explorer", ImVec2{ 0.f, h }, ImGuiChildFlags_::ImGuiChildFlags_None, ImGuiWindowFlags_::ImGuiWindowFlags_AlwaysVerticalScrollbar);
 
+		ImVec2 contentMin = ImGui::GetWindowContentRegionMin();
+		ImVec2 contentMax = ImGui::GetWindowContentRegionMax();
+		ImVec2 windowPos = ImGui::GetWindowPos(); // 스크린 좌표
+
+		ImVec2 spaceMin = ImVec2(windowPos.x + contentMin.x, windowPos.y + contentMin.y);
+		ImVec2 spaceMax = ImVec2(windowPos.x + contentMax.x, windowPos.y + contentMax.y);
 		float availableWidth = ImGui::GetContentRegionAvail().x;
 		float cursorX = ImGui::GetCursorPosX();
 		float spacing = ImGui::GetStyle().ItemSpacing.x;
@@ -409,10 +446,24 @@ namespace sh::editor
 				break;
 		}
 
+		if (ImGui::IsMouseHoveringRect(spaceMin, spaceMax))
+		{
+			if (ImGui::IsMouseClicked(ImGuiMouseButton_::ImGuiMouseButton_Left))
+			{
+				if (!ImGui::IsAnyItemHovered())
+				{
+					selected.clear();
+					auto& world = static_cast<EditorWorld&>(*game::GameManager::GetInstance()->GetCurrentWorld());
+					world.ClearSelectedObjects();
+				}
+			}
+		}
+
 		ShowRightClickPopup();
 
 		ImGui::EndChild();
 		ImGui::PopStyleVar();
+
 		RenderNameBar();
 		ImGui::End();
 
