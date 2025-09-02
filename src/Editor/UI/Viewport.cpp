@@ -218,7 +218,8 @@ namespace sh::editor
 
 		glm::mat4 viewMat = editorCamera->GetViewMatrix();
 		ImGuizmo::SetDrawlist();
-		ImGuizmo::ViewManipulate(glm::value_ptr(viewMat), 8.f, ImVec2(viewManipulateRight - 128, viewManipulateTop), ImVec2(128, 128), 0x10101010);
+		float distance = glm::length(glm::vec3{ editorCamera->GetLookPos() - editorCamera->gameObject.transform->GetWorldPosition() });
+		ImGuizmo::ViewManipulate(glm::value_ptr(viewMat), distance, ImVec2(viewManipulateRight - 128, viewManipulateTop), ImVec2(128, 128), 0x10101010);
 		if (ImGuizmo::IsUsingViewManipulate())
 		{
 			const glm::mat4 invView = glm::inverse(viewMat);
