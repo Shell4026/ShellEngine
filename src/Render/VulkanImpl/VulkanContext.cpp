@@ -45,7 +45,7 @@ namespace sh::render::vk
 	}
 	void VulkanContext::CreateDebugInfo()
 	{
-		validationEnables.push_back(VkValidationFeatureEnableEXT::VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT);
+		//validationEnables.push_back(VkValidationFeatureEnableEXT::VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT);
 		validationEnables.push_back(VkValidationFeatureEnableEXT::VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT);
 		//validationEnables.push_back(VkValidationFeatureEnableEXT::VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT);
 
@@ -203,9 +203,13 @@ namespace sh::render::vk
 			queueInfos.push_back(queueInfo);
 		}
 
+		VkPhysicalDeviceTimelineSemaphoreFeatures timelineFeatures{};
+		timelineFeatures.sType = VkStructureType::VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
+		timelineFeatures.timelineSemaphore = VK_TRUE;
+
 		VkDeviceCreateInfo deviceInfo = {};
 		deviceInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-		deviceInfo.pNext = nullptr;
+		deviceInfo.pNext = &timelineFeatures;
 		deviceInfo.queueCreateInfoCount = queueInfos.size();
 		deviceInfo.pQueueCreateInfos = queueInfos.data();
 		deviceInfo.enabledLayerCount = 0;
