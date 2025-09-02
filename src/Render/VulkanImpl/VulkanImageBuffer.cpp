@@ -57,22 +57,23 @@ namespace sh::render::vk
 	SH_RENDER_API void VulkanImageBuffer::Clean()
 	{
 		layout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
-		if (sampler)
+		if (sampler != nullptr)
 		{
 			vkDestroySampler(device, sampler, nullptr);
 			sampler = nullptr;
 		}
-		if (imgView)
+		if (imgView != nullptr)
 		{
 			vkDestroyImageView(device, imgView, nullptr);
 			imgView = nullptr;
 		}
-		if (img)
+		if (img != nullptr && !bOtherImg)
 		{
 			vmaDestroyImage(allocator, img, imgMem);
 			img = nullptr;
 			imgMem = nullptr;
 		}
+		bOtherImg = false;
 	}
 
 	SH_RENDER_API void VulkanImageBuffer::SetAnisotropy(uint32_t aniso)
@@ -147,6 +148,34 @@ namespace sh::render::vk
 		assert(result == VkResult::VK_SUCCESS);
 		return result;
 	}
+	SH_RENDER_API auto VulkanImageBuffer::Create(VkImage image, VkFormat format) -> VkResult
+	{
+		img = image;
+
+		VkImageViewCreateInfo createInfo{};
+		createInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+		createInfo.image = img;
+		createInfo.viewType = VkImageViewType::VK_IMAGE_VIEW_TYPE_2D;
+		createInfo.format = format;
+		createInfo.components.r = VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.components.g = VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.components.b = VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.components.a = VkComponentSwizzle::VK_COMPONENT_SWIZZLE_IDENTITY;
+		createInfo.subresourceRange.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
+		createInfo.subresourceRange.baseMipLevel = 0;
+		createInfo.subresourceRange.levelCount = 1;
+		createInfo.subresourceRange.baseArrayLayer = 0;
+		createInfo.subresourceRange.layerCount = 1;
+
+		auto result = vkCreateImageView(context.GetDevice(), &createInfo, nullptr, &imgView);
+		assert(result == VkResult::VK_SUCCESS);
+		if (result != VkResult::VK_SUCCESS)
+			throw std::runtime_error(std::string{ "vkCreateImageView()" } + string_VkResult(result));
+
+		bOtherImg = true;
+
+		return result;
+	}
 
 	SH_RENDER_API auto VulkanImageBuffer::GetImage() const -> VkImage
 	{
@@ -205,6 +234,14 @@ namespace sh::render::vk
 			sourceStage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 			destinationStage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 		}
+		else if (layout == VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED && newLayout == VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR)
+		{
+			barrier.srcAccessMask = 0;
+			barrier.dstAccessMask = 0;
+
+			sourceStage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
+			destinationStage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
+		}
 		else if (layout == VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL && newLayout == VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
 		{
 			barrier.srcAccessMask = VkAccessFlagBits::VK_ACCESS_SHADER_READ_BIT;
@@ -223,7 +260,7 @@ namespace sh::render::vk
 		}
 		else if (layout == VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR && newLayout == VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL)
 		{
-			barrier.srcAccessMask = VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+			barrier.srcAccessMask = VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_MEMORY_READ_BIT;
 			barrier.dstAccessMask = VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
 
 			sourceStage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;

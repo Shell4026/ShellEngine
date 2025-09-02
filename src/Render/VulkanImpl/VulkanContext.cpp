@@ -3,6 +3,7 @@
 #include "VulkanSwapChain.h"
 #include "VulkanQueueManager.h"
 #include "VulkanFramebuffer.h"
+#include "VulkanCommandBufferPool.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanDescriptorPool.h"
 #include "VulkanPipelineManager.h"
@@ -15,7 +16,6 @@
 #include <stdexcept>
 #include <string>
 #include <string_view>
-
 namespace sh::render::vk
 {
 	void VulkanContext::PrepareValidationLayer()
@@ -24,7 +24,6 @@ namespace sh::render::vk
 		{
 			bFindValidationLayer = true;
 			requestedLayer.push_back(VALIDATION_LAYER_NAME);
-			requestedExtension.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
 			requestedExtension.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 
 			CreateDebugInfo();
@@ -46,6 +45,15 @@ namespace sh::render::vk
 	}
 	void VulkanContext::CreateDebugInfo()
 	{
+		validationEnables.push_back(VkValidationFeatureEnableEXT::VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT);
+		validationEnables.push_back(VkValidationFeatureEnableEXT::VK_VALIDATION_FEATURE_ENABLE_SYNCHRONIZATION_VALIDATION_EXT);
+		//validationEnables.push_back(VkValidationFeatureEnableEXT::VK_VALIDATION_FEATURE_ENABLE_BEST_PRACTICES_EXT);
+
+		validationFeatures.sType = VkStructureType::VK_STRUCTURE_TYPE_VALIDATION_FEATURES_EXT;
+		validationFeatures.enabledValidationFeatureCount = validationEnables.size();
+		validationFeatures.pEnabledValidationFeatures = validationEnables.data();
+		validationFeatures.pNext = &debugInfo;
+
 		debugInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
 		debugInfo.messageSeverity =
 			VkDebugUtilsMessageSeverityFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT |
@@ -95,7 +103,7 @@ namespace sh::render::vk
 		instanceInfo.ppEnabledLayerNames = requestedLayer.data();
 		instanceInfo.enabledExtensionCount = requestedExtension.size();
 		instanceInfo.ppEnabledExtensionNames = requestedExtension.data();
-		instanceInfo.pNext = bEnableValidationLayers ? &debugInfo : nullptr;
+		instanceInfo.pNext = bEnableValidationLayers ? &validationFeatures : nullptr;
 		VkResult result = vkCreateInstance(&instanceInfo, nullptr, &instance);
 		assert(result == VkResult::VK_SUCCESS);
 		if (result != VkResult::VK_SUCCESS)
@@ -175,41 +183,23 @@ namespace sh::render::vk
 		VkPhysicalDeviceFeatures deviceFeatures{};
 		deviceFeatures.samplerAnisotropy = true;
 
-		const float defaultPriority{ 0.f };
+		auto graphicsFamily = queueManager->GetGraphicsQueueFamily();
+		auto transferFamily = queueManager->GetTransferQueueFamily();
+		auto surfaceFamily = queueManager->GetSurfaceQueueFamily();
 
-		uint8_t graphicsIdx = queueManager->GetGraphicsQueueFamilyIdx();
-		uint8_t transferIdx = queueManager->GetTransferQueueFamilyIdx();
-		uint8_t surfaceIdx = queueManager->GetSurfaceQueueFamilyIdx();
-
+		std::vector<float> defaultPriorities(3, 0.f);
 		std::vector<VkDeviceQueueCreateInfo> queueInfos;
+		assert(graphicsFamily.idx == transferFamily.idx && transferFamily.idx == surfaceFamily.idx);
+		if (graphicsFamily.idx == transferFamily.idx && transferFamily.idx == surfaceFamily.idx)
+		{
+			const uint32_t queueCount = graphicsFamily.queueCount >= 3 ? 3 : 1;
 
-		{
 			VkDeviceQueueCreateInfo queueInfo = {};
-			queueInfo.queueFamilyIndex = graphicsIdx;
+			queueInfo.queueFamilyIndex = graphicsFamily.idx;
 			queueInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
 			queueInfo.pNext = nullptr;
-			queueInfo.queueCount = 1;
-			queueInfo.pQueuePriorities = &defaultPriority;
-			queueInfos.push_back(queueInfo);
-		}
-		if (transferIdx != graphicsIdx)
-		{
-			VkDeviceQueueCreateInfo queueInfo = {};
-			queueInfo.queueFamilyIndex = transferIdx;
-			queueInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-			queueInfo.pNext = nullptr;
-			queueInfo.queueCount = 1;
-			queueInfo.pQueuePriorities = &defaultPriority;
-			queueInfos.push_back(queueInfo);
-		}
-		if (surfaceIdx != graphicsIdx && surfaceIdx != transferIdx)
-		{
-			VkDeviceQueueCreateInfo queueInfo = {};
-			queueInfo.queueFamilyIndex = surfaceIdx;
-			queueInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-			queueInfo.pNext = nullptr;
-			queueInfo.queueCount = 1;
-			queueInfo.pQueuePriorities = &defaultPriority;
+			queueInfo.queueCount = queueCount;
+			queueInfo.pQueuePriorities = defaultPriorities.data();
 			queueInfos.push_back(queueInfo);
 		}
 
@@ -223,7 +213,6 @@ namespace sh::render::vk
 		deviceInfo.enabledExtensionCount = requestedDeviceExtension.size();
 		deviceInfo.ppEnabledExtensionNames = requestedDeviceExtension.data();
 		deviceInfo.pEnabledFeatures = &deviceFeatures;
-
 		result = vkCreateDevice(gpu, &deviceInfo, nullptr, &device);
 		assert(result == VkResult::VK_SUCCESS);
 		if (result != VkResult::VK_SUCCESS)
@@ -280,75 +269,25 @@ namespace sh::render::vk
 	{
 		framebuffers.clear();
 
-		auto& imgViews = swapChain->GetSwapChainImageViews();
-		framebuffers.reserve(imgViews.size());
-		for (size_t i = 0; i < imgViews.size(); ++i)
+		auto& imgs = swapChain->GetSwapChainImages();
+		framebuffers.reserve(imgs.size());
+		for (size_t i = 0; i < imgs.size(); ++i)
 		{
 			framebuffers.push_back(VulkanFramebuffer{ *this });
 
-			VkResult result = framebuffers[i].Create(*mainRenderPass, swapChain->GetSwapChainSize().width, swapChain->GetSwapChainSize().height, imgViews[i]);
+			VkResult result = framebuffers[i].Create(*mainRenderPass, swapChain->GetSwapChainSize().width, swapChain->GetSwapChainSize().height, imgs[i].GetImageView());
 			assert(result == VkResult::VK_SUCCESS);
 			if (result != VkResult::VK_SUCCESS)
 				throw std::runtime_error(std::string{ "Can't create framebuffer: " } + string_VkResult(result));
 		}
 	}
-	void VulkanContext::CreateCommandPool(uint32_t queueFamilyIdx)
+	void VulkanContext::CreateCommandPool()
 	{
-		assert(device != nullptr);
-
-		VkCommandPoolCreateInfo poolInfo = {};
-		poolInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		poolInfo.pNext = nullptr;
-		poolInfo.queueFamilyIndex = queueFamilyIdx;
-		poolInfo.flags = VkCommandPoolCreateFlagBits::VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; //명령 버퍼가 개별적으로 기록되도록 허용
-
-		for (auto& cmdPool : cmdPools)
-		{
-			VkResult result;
-			result = vkCreateCommandPool(device, &poolInfo, nullptr, &cmdPool);
-			if (result != VkResult::VK_SUCCESS)
-				throw std::runtime_error{ std::string{ "Can't create VkCommandPool: " } + string_VkResult(result) };
-		}
+		cmdPool = std::make_unique<VulkanCommandBufferPool>(*this, queueManager->GetGraphicsQueueFamily().idx, queueManager->GetTransferQueueFamily().idx);
 	}
 	void VulkanContext::DestroyCommandPool()
 	{
-		for (auto& cmdPool : cmdPools)
-		{
-			if (cmdPool == nullptr)
-				continue;
-
-			vkDestroyCommandPool(device, cmdPool, nullptr);
-			cmdPool = nullptr;
-		}
-		for (auto& [id, cmdPool] : otherCmdPools)
-		{
-			if (cmdPool == nullptr)
-				continue;
-			vkDestroyCommandPool(device, cmdPool, nullptr);
-			cmdPool = nullptr;
-		}
-	}
-	void VulkanContext::CreateCommandBuffers()
-	{
-		VkResult result;
-		cmdBuffer[core::ThreadType::Game] = std::make_unique<VulkanCommandBuffer>(*this);
-		result = cmdBuffer[core::ThreadType::Game]->Create(cmdPools[core::ThreadType::Game]);
-		assert(result == VkResult::VK_SUCCESS);
-		if (result != VkResult::VK_SUCCESS)
-			throw std::runtime_error(std::string{ "Can't create VkCommandBuffer: " } + string_VkResult(result));
-
-		cmdBuffer[core::ThreadType::Render] = std::make_unique<VulkanCommandBuffer>(*this);
-		result = cmdBuffer[core::ThreadType::Render]->Create(cmdPools[core::ThreadType::Render]);
-		assert(result == VkResult::VK_SUCCESS);
-		if (result != VkResult::VK_SUCCESS)
-			throw std::runtime_error(std::string{ "Can't create VkCommandBuffer: " } + string_VkResult(result));
-	}
-	void VulkanContext::DestroyCommandBuffers()
-	{
-		cmdBuffer[core::ThreadType::Game]->Clear();
-		cmdBuffer[core::ThreadType::Render]->Clear();
-		for (auto& cmdBuffer : otherCmdBuffers)
-			cmdBuffer.second->Clear();
+		cmdPool.reset();
 	}
 	void VulkanContext::CreateEmptyDescriptor()
 	{
@@ -406,24 +345,22 @@ namespace sh::render::vk
 			throw std::runtime_error("Can't find suitable GPU");
 		vkGetPhysicalDeviceProperties(gpu, &gpuProp);
 
-		queueManager = std::make_unique<VulkanQueueManager>(gpu);
+		queueManager = std::make_unique<VulkanQueueManager>(*this);
+		queueManager->QueryQueueFamily(swapChain->GetSurface());
 
 		CreateDevice(gpu);
-
-		queueManager->SetDevice(device);
+		
 		queueManager->CreateGraphicsQueue();
 		queueManager->CreateTransferQueue();
 		queueManager->CreateSurfaceQueue(swapChain->GetSurface());
-
 		CreateAllocator();
 
-		swapChain->CreateSwapChain(queueManager->GetGraphicsQueueFamilyIdx(), queueManager->GetSurfaceQueueFamilyIdx(), false);
+		swapChain->CreateSwapChain(queueManager->GetGraphicsQueueFamily().idx, queueManager->GetSurfaceQueueFamily().idx, false);
 
 		CreateRenderPass();
 		CreateFrameBuffer();
 
-		CreateCommandPool(queueManager->GetGraphicsQueueFamilyIdx());
-		CreateCommandBuffers();
+		CreateCommandPool();
 
 		descPool = std::make_unique<VulkanDescriptorPool>(device);
 		CreateEmptyDescriptor();
@@ -443,7 +380,6 @@ namespace sh::render::vk
 			emptyDescLayout = nullptr;
 		}
 		descPool.reset();
-		DestroyCommandBuffers();
 		DestroyCommandPool();
 		framebuffers.clear();
 		renderPassManager.reset();
@@ -465,10 +401,9 @@ namespace sh::render::vk
 	{
 		framebuffers.clear();
 		//swapChain->DestroySwapChain();
-		swapChain->CreateSwapChain(queueManager->GetGraphicsQueueFamilyIdx(), queueManager->GetSurfaceQueueFamilyIdx(), false);
+		swapChain->CreateSwapChain(queueManager->GetGraphicsQueueFamily().idx, queueManager->GetSurfaceQueueFamily().idx, false);
 
-		auto& imgs = swapChain->GetSwapChainImageViews();
-		framebuffers.reserve(imgs.size());
+		framebuffers.reserve(swapChain->GetSwapChainImageCount());
 
 		CreateFrameBuffer();
 		return true;
@@ -496,16 +431,6 @@ namespace sh::render::vk
 		for (auto& i : layers->GetGPUExtensions())
 			SH_INFO_FORMAT("ExtensionName: {}", i.extensionName);
 	}
-	SH_RENDER_API auto VulkanContext::ResetCommandPools() -> VkResult
-	{
-		for (auto& cmdPool : cmdPools)
-		{
-			auto result = vkResetCommandPool(device, cmdPool, VkCommandPoolResetFlagBits::VK_COMMAND_POOL_RESET_RELEASE_RESOURCES_BIT);
-			if (result != VkResult::VK_SUCCESS)
-				throw std::runtime_error{ std::string{"Can't reset VkCommandPool!: "} + string_VkResult(result) };
-		}
-		return VkResult::VK_SUCCESS;
-	}
 	SH_RENDER_API auto VulkanContext::FindSupportedDepthFormat(bool bUseStencil) const -> VkFormat
 	{
 		const std::array<VkFormat, 3> formats = { VkFormat::VK_FORMAT_D32_SFLOAT_S8_UINT, VkFormat::VK_FORMAT_D24_UNORM_S8_UINT, VkFormat::VK_FORMAT_D16_UNORM_S8_UINT };
@@ -521,40 +446,6 @@ namespace sh::render::vk
 		}
 
 		throw std::runtime_error("Failed to find supported Depth format!");
-	}
-	auto VulkanContext::CreateThreadCommandPool(uint32_t queueFamilyIdx, std::thread::id thr) -> VkCommandPool
-	{
-		assert(device != nullptr);
-
-		VkCommandPoolCreateInfo poolInfo = {};
-		poolInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		poolInfo.pNext = nullptr;
-		poolInfo.queueFamilyIndex = queueFamilyIdx;
-		poolInfo.flags = VkCommandPoolCreateFlagBits::VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; //명령 버퍼가 개별적으로 기록되도록 허용
-
-		VkCommandPool cmdPool = VK_NULL_HANDLE;
-		std::lock_guard<std::mutex> lock{ deviceMutex };
-		VkResult result = vkCreateCommandPool(device, &poolInfo, nullptr, &cmdPool);
-		if (result != VkResult::VK_SUCCESS)
-			throw std::runtime_error{ std::string{ "Can't create VkCommandPool: " } + string_VkResult(result) };
-
-		otherCmdPools.push_back({ thr, cmdPool });
-		return cmdPool;
-	}
-	SH_RENDER_API auto VulkanContext::CreateThreadCommandBuffer(std::thread::id thr) -> VulkanCommandBuffer*
-	{
-		VkCommandPool pool = GetCommandPool(thr);
-		if (pool == VK_NULL_HANDLE)
-			pool = CreateThreadCommandPool(queueManager->GetGraphicsQueueFamilyIdx(), thr);
-
-		auto cmd = std::make_unique<VulkanCommandBuffer>(*this);
-		VkResult result = cmd->Create(pool);
-		if (result != VkResult::VK_SUCCESS)
-			throw std::runtime_error{ std::string{ "Can't create VkCommandBuffer: " } + string_VkResult(result) };
-
-		VulkanCommandBuffer* returnPtr = cmd.get();
-		otherCmdBuffers.push_back({ thr, std::move(cmd) });
-		return returnPtr;
 	}
 	SH_RENDER_API void VulkanContext::SetSampleCount(VkSampleCountFlagBits sample)
 	{
@@ -606,31 +497,9 @@ namespace sh::render::vk
 	{
 		return *swapChain.get();
 	}
-	SH_RENDER_API auto VulkanContext::GetCommandPool(core::ThreadType thr) const -> VkCommandPool
+	SH_RENDER_API auto VulkanContext::GetCommandBufferPool() const -> VulkanCommandBufferPool&
 	{
-		return cmdPools[thr];
-	}
-	SH_RENDER_API auto VulkanContext::GetCommandPool(std::thread::id thr) const -> VkCommandPool
-	{
-		for (auto& [tid, commandPool] : otherCmdPools)
-		{
-			if (tid == thr)
-				return commandPool;
-		}
-		return VK_NULL_HANDLE;
-	}
-	SH_RENDER_API auto VulkanContext::GetCommandBuffer(core::ThreadType thr) const -> VulkanCommandBuffer*
-	{
-		return cmdBuffer[thr].get();
-	}
-	SH_RENDER_API auto VulkanContext::GetCommandBuffer(std::thread::id thr) const -> VulkanCommandBuffer*
-	{
-		for (auto& [tid, cmd] : otherCmdBuffers)
-		{
-			if (tid == thr)
-				return cmd.get();
-		}
-		return nullptr;
+		return *cmdPool;
 	}
 	SH_RENDER_API auto VulkanContext::GetQueueManager() const -> VulkanQueueManager&
 	{
@@ -687,9 +556,5 @@ namespace sh::render::vk
 	SH_RENDER_API auto VulkanContext::GetViewportEnd() const -> const glm::vec2&
 	{
 		return viewportEnd;
-	}
-	SH_RENDER_API auto VulkanContext::GetDeviceMutex() const -> std::mutex&
-	{
-		return deviceMutex;
 	}
 }//namespace

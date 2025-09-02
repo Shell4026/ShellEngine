@@ -9,43 +9,30 @@
 #include <utility>
 #include <optional>
 #include <vector>
-
+#include <mutex>
 namespace sh::render::vk
 {
+	class VulkanContext;
 	class VulkanCommandBuffer;
 
 	/// @brief 스레드 안전한 Vulkan 큐 매니저
 	class VulkanQueueManager : public core::INonCopyable
 	{
-	private:
-		VkDevice device = nullptr;
-		VkPhysicalDevice gpu = nullptr;
-
-		std::vector<VkQueueFamilyProperties> queueFamilyProps;
-
-		uint8_t graphicsQueueFamilyIdx = 0;
-		uint8_t surfaceQueueFamilyIdx = 0;
-		uint8_t transferQueueFamilyIdx = 0;
-
-		VkQueue graphicsQueue = nullptr;
-		VkQueue surfaceQueue = nullptr;
-		VkQueue transferQueue = nullptr; // 큐 하나만 지원하면 nullptr
-
-		core::SpinLock spinLock;
-	private:
-		void GetQueueFamilyProperties();
-		auto SelectQueueFamily(VkQueueFlagBits queueType) -> std::optional<int>;
-		auto GetSurfaceQueueFamily(VkSurfaceKHR surface) -> std::optional<int>;
 	public:
-		SH_RENDER_API VulkanQueueManager(VkPhysicalDevice gpu);
-		SH_RENDER_API VulkanQueueManager(VulkanQueueManager&& other);
+		struct QueueFamily
+		{
+			uint32_t idx = 0;
+			uint32_t queueCount = 0;
+		};
+	public:
+		SH_RENDER_API VulkanQueueManager(const VulkanContext& ctx);
+		SH_RENDER_API VulkanQueueManager(VulkanQueueManager&& other) noexcept;
 		SH_RENDER_API ~VulkanQueueManager();
 
-		SH_RENDER_API void SetDevice(VkDevice device);
-
-		SH_RENDER_API auto GetGraphicsQueueFamilyIdx() const -> uint8_t;
-		SH_RENDER_API auto GetTransferQueueFamilyIdx() const -> uint8_t;
-		SH_RENDER_API auto GetSurfaceQueueFamilyIdx() const -> uint8_t;
+		SH_RENDER_API void QueryQueueFamily(VkSurfaceKHR surface);
+		SH_RENDER_API auto GetGraphicsQueueFamily() const -> QueueFamily;
+		SH_RENDER_API auto GetTransferQueueFamily() const -> QueueFamily;
+		SH_RENDER_API auto GetSurfaceQueueFamily() const -> QueueFamily;
 
 		SH_RENDER_API void CreateGraphicsQueue();
 		SH_RENDER_API void CreateTransferQueue();
@@ -55,6 +42,28 @@ namespace sh::render::vk
 		SH_RENDER_API auto GetTransferQueue() const -> VkQueue;
 		SH_RENDER_API auto GetSurfaceQueue() const -> VkQueue;
 
-		SH_RENDER_API void SubmitCommand(const VulkanCommandBuffer& cmd, VkFence fence = nullptr, bool bBlocking = true);
+		/// @brief 큐에 커맨드를 제출한다.
+		/// @param queue 큐
+		/// @param cmd 커맨드 버퍼
+		/// @param fence 펜스
+		SH_RENDER_API void SubmitCommand(VkQueue queue, const VulkanCommandBuffer& cmd, VkFence fence = nullptr);
+	private:
+		void GetQueueFamilyProperties();
+		auto SelectQueueFamily(VkQueueFlagBits queueType) const -> std::optional<QueueFamily>;
+		auto GetSurfaceQueueFamily(VkSurfaceKHR surface) const -> std::optional<QueueFamily>;
+	private:
+		const VulkanContext& ctx;
+
+		std::vector<VkQueueFamilyProperties> queueFamilyProps;
+
+		QueueFamily graphicsQueueFamily;
+		QueueFamily surfaceQueueFamily;
+		QueueFamily transferQueueFamily;
+
+		VkQueue graphicsQueue = nullptr;
+		VkQueue surfaceQueue = nullptr;
+		VkQueue transferQueue = nullptr;
+
+		core::SpinLock spinLock;
 	};
 }//namespace

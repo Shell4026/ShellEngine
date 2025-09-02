@@ -144,7 +144,7 @@ namespace sh::core
 			type = type->GetSuper(); // 부모 클래스의 프로퍼티들도 검사
 		}
 	}
-	void GarbageCollection::CheckContainers(TrackingContainerIt start, TrackingContainerIt end)
+	void GarbageCollection::MarkContainers(TrackingContainerIt start, TrackingContainerIt end)
 	{
 		for (auto it = start; it != end; ++it)
 		{
@@ -315,7 +315,7 @@ namespace sh::core
 			}
 		}
 	}
-	void GarbageCollection::CheckContainersWithMultiThread()
+	void GarbageCollection::MarkContainersWithMultiThread()
 	{
 		const auto threadPool = core::ThreadPool::GetInstance();
 		const int threadNum = threadPool->GetThreadNum();
@@ -334,7 +334,7 @@ namespace sh::core
 			taskFutures[futureIdx++] = (threadPool->AddTask(
 				[&, startIt, endIt]
 				{
-					CheckContainers(startIt, endIt);
+					MarkContainers(startIt, endIt);
 				}
 			));
 		}
@@ -387,6 +387,14 @@ namespace sh::core
 		updatePeriodTick = tick;
 		this->tick = 0;
 	}
+	SH_CORE_API auto GarbageCollection::GetUpdateTick() const -> uint32_t
+	{
+		return updatePeriodTick;
+	}
+	SH_CORE_API auto GarbageCollection::GetCurrentTick() const -> uint32_t
+	{
+		return tick;
+	}
 
 	SH_CORE_API void GarbageCollection::RemoveRootSet(const SObject* obj)
 	{
@@ -438,8 +446,8 @@ namespace sh::core
 			if (tick == updatePeriodTick)
 			{
 				tick = 0;
-				DestroyPendingKillObjs();
 				Collect();
+				DestroyPendingKillObjs();
 				return;
 			}
 		}
@@ -447,8 +455,8 @@ namespace sh::core
 		{
 			if (emptyRootSetCount >= DEFRAGMENT_ROOTSET_CAP)
 				DefragmentRootSet();
-			DestroyPendingKillObjs();
 			Collect();
+			DestroyPendingKillObjs();
 		}
 	}
 	SH_CORE_API void sh::core::GarbageCollection::Collect()
@@ -460,9 +468,9 @@ namespace sh::core
 		const bool bThreadPoolInit = ThreadPool::GetInstance()->IsInit();
 
 		if (trackingContainers.size() > 8 && bThreadPoolInit)
-			CheckContainersWithMultiThread();
+			MarkContainersWithMultiThread();
 		else
-			CheckContainers(trackingContainers.begin(), trackingContainers.end());
+			MarkContainers(trackingContainers.begin(), trackingContainers.end());
 
 		if (rootSets.size() > 128 && bThreadPoolInit)
 			MarkWithMultiThread();
@@ -538,6 +546,8 @@ namespace sh::core
 		}
 		pendingKillObjs.clear();
 		bPendingKill = false;
+
+		SH_INFO("Destroy pending objects");
 	}
 
 	SH_CORE_API auto sh::core::GarbageCollection::GetElapsedTime() -> uint32_t

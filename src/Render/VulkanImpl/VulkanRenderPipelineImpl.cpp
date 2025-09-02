@@ -9,6 +9,7 @@
 #include "VulkanUniformBuffer.h"
 #include "VulkanCameraBuffers.h"
 #include "VulkanRenderPassManager.h"
+#include "VulkanCommandBuffer.h"
 #include "RenderTexture.h"
 #include "Camera.h"
 #include "Mesh.h"
@@ -25,6 +26,9 @@ namespace sh::render::vk
 	{
 		cameraManager = VulkanCameraBuffers::GetInstance();
 	}
+	VulkanRenderPipelineImpl::~VulkanRenderPipelineImpl()
+	{
+	}
 	void VulkanRenderPipelineImpl::SetClearSetting(VkRenderPassBeginInfo& beginInfo, bool bMSAA)
 	{
 		static std::array<VkClearValue, 2> clear;
@@ -32,25 +36,15 @@ namespace sh::render::vk
 		clear[1].depthStencil = { 1.0f, 0 };
 
 		static std::array<VkClearValue, 3> clearMSAA;
-		clearMSAA[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
-		clearMSAA[1].color = { { 0.0f, 0.0f, 0.0f, 1.0f } };
+		clearMSAA[0].color = { { 0.0f, 0.0f, 0.0f, 1.0f } }; // sample 이미지
+		clearMSAA[1].color = { { 0.0f, 0.0f, 0.0f, 1.0f } }; // resolve 이미지
 		clearMSAA[2].depthStencil = { 1.0f, 0 };
 
-		if (bClearFramebuffer)
-		{
-			beginInfo.clearValueCount = bMSAA ? static_cast<uint32_t>(clearMSAA.size()) : static_cast<uint32_t>(clear.size());
-			beginInfo.pClearValues = bMSAA ? clearMSAA.data() : clear.data();
-		}
-		else
-		{
-			beginInfo.clearValueCount = 0;
-			beginInfo.pClearValues = nullptr;
-		}
+		beginInfo.clearValueCount = bMSAA ? static_cast<uint32_t>(clearMSAA.size()) : static_cast<uint32_t>(clear.size());
+		beginInfo.pClearValues = bMSAA ? clearMSAA.data() : clear.data();
 	}
 	SH_RENDER_API void VulkanRenderPipelineImpl::RenderDrawable(const core::Name& lightingPassName, const Camera& camera, const std::vector<RenderGroup>& renderGroups, const VulkanRenderPass& renderPass)
 	{
-		assert(cmd);
-
 		uint32_t cameraOffset = cameraManager->GetDynamicOffset(camera);
 
 		for (auto& renderGroup : renderGroups)
@@ -69,6 +63,9 @@ namespace sh::render::vk
 				VkPipelineLayout layout = static_cast<VulkanShaderPass&>(*pass).GetPipelineLayout();
 				uint32_t setSize = static_cast<VulkanShaderPass*>(pass)->GetSetCount();
 
+				// set = 0 카메라
+				// set = 1 객체 고유
+				// set = 2 메테리얼
 				if (setSize > 0)
 				{
 					auto cameraUniformBuffer = static_cast<VulkanUniformBuffer*>(mat->GetMaterialData().GetUniformBuffer(*pass,
@@ -149,15 +146,9 @@ namespace sh::render::vk
 			}
 		}
 	}
-	SH_RENDER_API void VulkanRenderPipelineImpl::SetCommandBuffer(const VulkanCommandBuffer& cmd)
-	{
-		this->cmd = &cmd;
-	}
 	SH_RENDER_API void VulkanRenderPipelineImpl::RecordCommand(const core::Name& lightingPassName, const std::vector<const Camera*>& cameras, const std::vector<RenderGroup>& renderData, uint32_t imgIdx)
 	{
 		drawCall = 0;
-
-		assert(cmd != nullptr);
 
 		VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -239,8 +230,17 @@ namespace sh::render::vk
 		bClearFramebuffer = bClear;
 	}
 
+	SH_RENDER_API void VulkanRenderPipelineImpl::SetCommandBuffer(VulkanCommandBuffer& cmd)
+	{
+		this->cmd = &cmd;
+	}
+
 	SH_RENDER_API auto VulkanRenderPipelineImpl::GetDrawCallCount() const -> uint32_t
 	{
 		return drawCall;
+	}
+	SH_RENDER_API auto VulkanRenderPipelineImpl::GetCommandBuffer() const -> VulkanCommandBuffer*
+	{
+		return cmd;
 	}
 }//namespace

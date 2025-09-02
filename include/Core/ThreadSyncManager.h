@@ -33,7 +33,7 @@ namespace sh::core
 		SH_CORE_API static void Clear();
 		SH_CORE_API static void PushSyncable(ISyncable& syncable, uint32_t priority = 0);
 		SH_CORE_API static void AddThread(EngineThread& thread);
-		/// @brief 동기화 객체들을 동기화 하는 함수. 모든 스레드가 작업을 마치고 수면중일 때 호출 해야한다.
+		/// @brief 동기화 객체들을 동기화 하는 함수. 모든 스레드가 작업을 마칠 때 까지 대기한다.
 		SH_CORE_API static void Sync();
 		SH_CORE_API static void AwakeThread();
 		/// @brief 이 함수를 실행 하는 스레드가 메인 스레드인지

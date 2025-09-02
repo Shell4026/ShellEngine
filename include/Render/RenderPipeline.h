@@ -37,19 +37,6 @@ namespace sh::render
 
 	class RenderPipeline
 	{
-	private:
-		const Material* replacementMat = nullptr;
-
-		core::Observer<false, const core::SObject*>::Listener materialDestroyListener;
-		
-		bool bClear = true;
-	protected:
-		std::vector<RenderGroup> renderGroups;
-		std::vector<const Camera*> ignoreCameras;
-
-		core::Name passName = core::Name{ "Forward" };
-
-		std::unique_ptr<IRenderPipelineImpl> impl;
 	public:
 		SH_RENDER_API RenderPipeline();
 		SH_RENDER_API virtual ~RenderPipeline();
@@ -74,5 +61,18 @@ namespace sh::render
 		SH_RENDER_API auto GetPassName() const -> const core::Name&;
 
 		SH_RENDER_API auto GetImpl() const -> IRenderPipelineImpl*;
+	protected:
+		std::vector<RenderGroup> renderGroups;
+		std::vector<const Camera*> ignoreCameras;
+
+		core::Name passName = core::Name{ "Forward" };
+
+		std::unique_ptr<IRenderPipelineImpl> impl;
+	private:
+		const Material* replacementMat = nullptr;
+
+		core::Observer<false, const core::SObject*>::Listener materialDestroyListener;
+
+		bool bClear = true;
 	};
 }//namespace

@@ -7,10 +7,7 @@
 #include "Core/Factory.hpp"
 
 #include "Window/Window.h"
-
-#include "Render/RenderPipeline.h"
 #include "Render/VulkanImpl/VulkanRenderer.h"
-#include "Render/VulkanImpl/VulkanContext.h"
 
 #include "Game/ImGUImpl.h"
 #include "Game/RenderThread.h"
@@ -66,6 +63,7 @@ namespace sh
 		editor::EditorResource::Destroy();
 #endif
 		gameManager->Destroy();
+		renderer->WaitForCurrentFrame();
 		renderer->ClearRenderPipeline();
 
 		gc->DefragmentRootSet();
@@ -247,10 +245,10 @@ namespace sh
 				return;
 
 			gameManager->UpdateWorld(window->GetDeltaTime());
+
 			gameManager->GetCurrentWorld()->BeforeSync();
 			core::ThreadSyncManager::Sync();
 			gameManager->GetCurrentWorld()->AfterSync();
-
 			gc->Update();
 
 			core::ThreadSyncManager::AwakeThread();

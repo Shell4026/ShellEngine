@@ -11,6 +11,7 @@
 #include <memory>
 #include <mutex>
 #include <thread>
+#include <shared_mutex>
 namespace sh::window
 {
 	class Window;
@@ -21,6 +22,7 @@ namespace sh::render::vk
 	class VulkanLayer;
 	class VulkanSwapChain;
 	class VulkanPipeline;
+	class VulkanCommandBufferPool;
 	class VulkanCommandBuffer;
 	class VulkanFramebuffer;
 	class VulkanDescriptorPool;
@@ -42,12 +44,8 @@ namespace sh::render::vk
 		SH_RENDER_API auto ReSizing() -> bool;
 
 		SH_RENDER_API void PrintLayers();
-		SH_RENDER_API auto ResetCommandPools() -> VkResult;
 
 		SH_RENDER_API auto FindSupportedDepthFormat(bool bUseStencil) const -> VkFormat;
-
-		SH_RENDER_API auto CreateThreadCommandPool(uint32_t queueFamilyIdx, std::thread::id thr) -> VkCommandPool;
-		SH_RENDER_API auto CreateThreadCommandBuffer(std::thread::id thr) -> VulkanCommandBuffer*;
 
 		/// @brief 멀티 샘플링의 샘플을 지정한다. 기기에서 지원하지 않는다면 최대 지원하는 샘플 수로 지정된다.
 		/// @param sample 샘플 수
@@ -61,10 +59,7 @@ namespace sh::render::vk
 		SH_RENDER_API auto GetMaxSampleCount() const ->VkSampleCountFlagBits;
 		SH_RENDER_API auto GetDevice() const -> VkDevice;
 		SH_RENDER_API auto GetSwapChain() const -> VulkanSwapChain&;
-		SH_RENDER_API auto GetCommandPool(core::ThreadType thr) const -> VkCommandPool;
-		SH_RENDER_API auto GetCommandPool(std::thread::id thr) const -> VkCommandPool;
-		SH_RENDER_API auto GetCommandBuffer(core::ThreadType thr) const -> VulkanCommandBuffer*;
-		SH_RENDER_API auto GetCommandBuffer(std::thread::id thr) const->VulkanCommandBuffer*;
+		SH_RENDER_API auto GetCommandBufferPool() const -> VulkanCommandBufferPool&;
 		SH_RENDER_API auto GetQueueManager() const -> VulkanQueueManager&;
 		SH_RENDER_API auto GetMainRenderPass() const -> VulkanRenderPass&;
 		SH_RENDER_API auto GetUIRenderPass() const -> VulkanRenderPass&;
@@ -79,8 +74,6 @@ namespace sh::render::vk
 		SH_RENDER_API void SetViewport(const glm::vec2& start, const glm::vec2& end) override;
 		SH_RENDER_API auto GetViewportStart() const -> const glm::vec2& override;
 		SH_RENDER_API auto GetViewportEnd() const -> const glm::vec2& override;
-
-		SH_RENDER_API auto GetDeviceMutex() const -> std::mutex&;
 	private:
 		void PrepareValidationLayer();
 		void CreateDebugInfo();
@@ -97,13 +90,11 @@ namespace sh::render::vk
 		void DestroyAllocator();
 		void CreateRenderPass();
 		void CreateFrameBuffer();
-		void CreateCommandPool(uint32_t queueFamilyIdx);
+		void CreateCommandPool();
 		void DestroyCommandPool();
-		void CreateCommandBuffers();
-		void DestroyCommandBuffers();
 		void CreateEmptyDescriptor();
 	private:
-		static constexpr int VULKAN_API_VER = VK_API_VERSION_1_1;
+		static constexpr int VULKAN_API_VER = VK_API_VERSION_1_2;
 		static constexpr const char* VALIDATION_LAYER_NAME = "VK_LAYER_KHRONOS_validation";
 
 		const sh::window::Window& window;
@@ -116,6 +107,8 @@ namespace sh::render::vk
 		std::unique_ptr<VulkanLayer> layers;
 
 		VkDebugUtilsMessengerCreateInfoEXT debugInfo{};
+		std::vector<VkValidationFeatureEnableEXT> validationEnables;
+		VkValidationFeaturesEXT validationFeatures{};
 		VkDebugUtilsMessengerEXT debugMessenger = VK_NULL_HANDLE;
 
 		VkInstance instance = VK_NULL_HANDLE;
@@ -133,10 +126,7 @@ namespace sh::render::vk
 
 		std::unique_ptr<VulkanQueueManager> queueManager;
 		std::unique_ptr<VulkanSwapChain> swapChain;
-		core::SyncArray<VkCommandPool> cmdPools;
-		core::SyncArray<std::unique_ptr<VulkanCommandBuffer>> cmdBuffer;
-		std::vector<std::pair<std::thread::id, VkCommandPool>> otherCmdPools;
-		std::vector<std::pair<std::thread::id, std::unique_ptr<VulkanCommandBuffer>>> otherCmdBuffers;
+		std::unique_ptr<VulkanCommandBufferPool> cmdPool;
 		std::unique_ptr<VulkanDescriptorPool> descPool;
 		std::unique_ptr<VulkanPipelineManager> pipelineManager;
 		std::unique_ptr<VulkanRenderPassManager> renderPassManager;
@@ -149,7 +139,8 @@ namespace sh::render::vk
 
 		VkSampleCountFlagBits sample;
 
-		mutable std::mutex deviceMutex;
+		mutable std::shared_mutex commandPoolMutex;
+		mutable std::shared_mutex commandBufferMutex;
 
 		bool bInit = false;
 		bool bFindValidationLayer = false;

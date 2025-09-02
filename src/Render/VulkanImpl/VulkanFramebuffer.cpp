@@ -1,4 +1,5 @@
 ﻿#include "VulkanFramebuffer.h"
+#include "VulkanCommandBufferPool.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanQueueManager.h"
 #include "VulkanRenderPass.h"
@@ -6,7 +7,7 @@
 
 #include <array>
 #include <cassert>
-
+#include <limits>
 namespace sh::render::vk
 {
 	SH_RENDER_API VulkanFramebuffer::VulkanFramebuffer(const VulkanContext& context) :
@@ -69,7 +70,7 @@ namespace sh::render::vk
 		this->height = height;
 		this->renderPass = &renderPass;
 
-		VkSampleCountFlagBits sampleCount = renderPass.GetConfig().sampleCount;
+		const VkSampleCountFlagBits sampleCount = renderPass.GetConfig().sampleCount;
 		const bool bMSAA = sampleCount != VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
 
 		// colorImgMSAA = 멀티 샘플링 이미지
@@ -89,10 +90,8 @@ namespace sh::render::vk
 			img, depthImg->GetImageView()
 		};
 		std::array<VkImageView, 3> viewsMSAA = {
-			VK_NULL_HANDLE, img, depthImg->GetImageView()
+			colorImgMSAA->GetImageView(), img, depthImg->GetImageView()
 		};
-		if (bMSAA)
-			viewsMSAA[0] = colorImgMSAA->GetImageView();
 
 		VkFramebufferCreateInfo framebufferInfo{};
 		framebufferInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -210,7 +209,7 @@ namespace sh::render::vk
 			framebuffer = nullptr;
 		}
 	}
-	SH_RENDER_API void VulkanFramebuffer::TransferImageToBuffer(VulkanCommandBuffer* cmd, VkBuffer buffer, int x, int y)
+	SH_RENDER_API void VulkanFramebuffer::TransferImageToBuffer(VkBuffer buffer, int x, int y)
 	{
 		auto& config = renderPass->GetConfig();
 
@@ -250,44 +249,57 @@ namespace sh::render::vk
 		toColorAttachmentBarrier.subresourceRange.baseArrayLayer = 0;
 		toColorAttachmentBarrier.subresourceRange.layerCount = 1;
 
-		cmd->Build([&]
-		{
-			if (!config.bTransferSrc)
+		VulkanCommandBuffer* cmd = context.GetCommandBufferPool().AllocateCommandBuffer(std::this_thread::get_id(), VkQueueFlagBits::VK_QUEUE_TRANSFER_BIT);
+		assert(cmd != nullptr);
+		cmd->Build(
+			[&]()
 			{
+				if (!config.bTransferSrc)
+				{
+					vkCmdPipelineBarrier(
+						cmd->GetCommandBuffer(),
+						VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+						VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT,
+						0, 0, nullptr, 0, nullptr, 1, &barrier
+					);
+				}
+
+				VkBufferImageCopy region{};
+				region.bufferOffset = 0;
+				region.bufferRowLength = 0;
+				region.bufferImageHeight = 0;
+				region.imageSubresource.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
+				region.imageSubresource.mipLevel = 0;
+				region.imageSubresource.baseArrayLayer = 0;
+				region.imageSubresource.layerCount = 1;
+				region.imageOffset = { x, y, 0 };
+				region.imageExtent = { 1, 1, 1 };
+
+				vkCmdCopyImageToBuffer(cmd->GetCommandBuffer(),
+					colorImg->GetImage(),
+					VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
+					buffer, 1, &region
+				);
+
 				vkCmdPipelineBarrier(
 					cmd->GetCommandBuffer(),
-					VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
 					VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT,
-					0, 0, nullptr, 0, nullptr, 1, &barrier
+					VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+					0, 0, nullptr, 0, nullptr, 1, &toColorAttachmentBarrier
 				);
-			}
+			},
+			true
+		);
 
-			VkBufferImageCopy region{};
-			region.bufferOffset = 0;
-			region.bufferRowLength = 0;
-			region.bufferImageHeight = 0;
-			region.imageSubresource.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
-			region.imageSubresource.mipLevel = 0;
-			region.imageSubresource.baseArrayLayer = 0;
-			region.imageSubresource.layerCount = 1;
-			region.imageOffset = { x, y, 0 };
-			region.imageExtent = { 1, 1, 1 };
+		VkFence fence = cmd->GetFence();
 
-			vkCmdCopyImageToBuffer(cmd->GetCommandBuffer(),
-				colorImg->GetImage(),
-				VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL,
-				buffer, 1, &region
-			);
+		VkQueue transferQueue = context.GetQueueManager().GetTransferQueue();
+		context.GetQueueManager().SubmitCommand(transferQueue, *cmd, fence);
+		auto result = vkWaitForFences(context.GetDevice(), 1, &fence, true, std::numeric_limits<uint64_t>::max());
+		assert(result == VkResult::VK_SUCCESS);
+		vkResetFences(context.GetDevice(), 1, &fence);
 
-			vkCmdPipelineBarrier(
-				cmd->GetCommandBuffer(),
-				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT,
-				VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
-				0, 0, nullptr, 0, nullptr, 1, &toColorAttachmentBarrier
-			);
-		});
-
-		context.GetQueueManager().SubmitCommand(*cmd);
+		context.GetCommandBufferPool().DeallocateCommandBuffer(*cmd);
 	}
 
 	SH_RENDER_API auto VulkanFramebuffer::GetRenderPass() const -> const VulkanRenderPass*

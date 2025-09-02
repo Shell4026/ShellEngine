@@ -46,7 +46,7 @@ namespace sh::render::vk
 		SH_RENDER_API auto Create(const VulkanRenderPass& renderPass, uint32_t width, uint32_t height, VkImageView img) -> VkResult;
 		SH_RENDER_API auto CreateOffScreen(const VulkanRenderPass& renderPass, uint32_t width, uint32_t height) -> VkResult;
 		SH_RENDER_API void Clean();
-		SH_RENDER_API void TransferImageToBuffer(VulkanCommandBuffer* cmd, VkBuffer buffer, int x, int y);
+		SH_RENDER_API void TransferImageToBuffer(VkBuffer buffer, int x, int y);
 
 		SH_RENDER_API auto GetRenderPass() const -> const VulkanRenderPass*;
 		SH_RENDER_API auto GetVkFramebuffer() const -> VkFramebuffer;

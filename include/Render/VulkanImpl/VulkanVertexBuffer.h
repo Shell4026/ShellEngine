@@ -2,7 +2,6 @@
 #include "Export.h"
 #include "IVertexBuffer.h"
 #include "VulkanBuffer.h"
-#include "VulkanCommandBuffer.h"
 
 #include <cstdint>
 #include <vector>
@@ -15,8 +14,6 @@ namespace sh::render::vk
 	{
 	private:
 		const VulkanContext& context;
-
-		VulkanCommandBuffer cmd;
 
 		VulkanBuffer vertexBuffer;
 		VulkanBuffer indexBuffer;

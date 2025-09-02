@@ -5,6 +5,7 @@
 #include "VulkanTextureBuffer.h"
 #include "VulkanDescriptorPool.h"
 
+#include <mutex>
 namespace sh::render::vk
 {
 	VulkanUniformBuffer::VulkanUniformBuffer() :
@@ -44,6 +45,7 @@ namespace sh::render::vk
 	{
 		if (descSet == nullptr || context == nullptr)
 			return;
+
 		context->GetDescriptorPool().FreeDescriptorSet(descSet);
 	}
 	void VulkanUniformBuffer::Link(uint32_t binding, const IBuffer& buffer, std::size_t bufferSize)

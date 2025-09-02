@@ -62,7 +62,12 @@ namespace sh::render
 		assert(window);
 		return *window;
 	}
-
+	SH_RENDER_API void Renderer::Render()
+	{
+		if (!bFirstRender)
+			threadId = std::this_thread::get_id();
+		bFirstRender = true;
+	}
 	SH_RENDER_API void Renderer::Pause(bool b)
 	{
 		bPause.store(b, std::memory_order::memory_order_release);
@@ -141,7 +146,10 @@ namespace sh::render
 		}
 		return renderPipeline;
 	}
-
+	SH_RENDER_API auto Renderer::GetRenderPipelines() -> std::vector<std::unique_ptr<RenderPipeline>>&
+	{
+		return renderPipelines;
+	}
 	SH_RENDER_API void Renderer::AddCamera(const Camera& camera)
 	{
 		cameraQueue.push({ &camera, CameraProcess::Mode::Create });
@@ -156,5 +164,9 @@ namespace sh::render
 	SH_RENDER_API auto Renderer::GetDrawCall(core::ThreadType thread) const -> uint32_t
 	{
 		return drawcall[static_cast<uint32_t>(thread)];
+	}
+	SH_RENDER_API auto Renderer::GetThreadId() const -> std::thread::id
+	{
+		return threadId;
 	}
 }

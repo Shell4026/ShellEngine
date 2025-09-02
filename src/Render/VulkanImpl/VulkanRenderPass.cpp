@@ -77,38 +77,45 @@ namespace sh::render::vk
 	auto VulkanRenderPass::GetOnScreenSubPassDependency() const->std::array<VkSubpassDependency, 2>
 	{
 		std::array<VkSubpassDependency, 2> dependencies;
-		// 깊이 버퍼
+
+		// 서브패스 시작 시점(조기 프래그먼트 테스트와 컬러 출력 단계)에서 depth/color에 대한 읽기/쓰기 접근이 허용되어야 한다라는 의미
 		dependencies[0].srcSubpass = VK_SUBPASS_EXTERNAL; // 외부 작업
 		dependencies[0].dstSubpass = 0;
 
-		dependencies[0].srcStageMask = // 해당 단계가 마무리 되야함
-			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT; // 초기 상태
-		dependencies[0].dstStageMask = // 이 단계 시작전에
-			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+		dependencies[0].srcStageMask = // 이전 프레임의 컬러 어태치먼트 출력 단계가 완료될 때까지 기다린다.
+			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+		dependencies[0].dstStageMask = // 현재 렌더 패스의 Early Fragment Tests 단계와 Color Attachment Output 단계가 시작되기 전에 동기화가 이뤄짐
+			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 
-		dependencies[0].srcAccessMask =  // 해당 작업이 완료 되야함
-			VkAccessFlagBits::VK_ACCESS_NONE;
-		dependencies[0].dstAccessMask = // 이 작업 전에
+		dependencies[0].srcAccessMask = // 이전 작업에서 발생한 메모리 읽기 작업이 완료되었는지 확인한다.
+			VkAccessFlagBits::VK_ACCESS_MEMORY_READ_BIT;
+		dependencies[0].dstAccessMask = // 현재 렌더 패스에서 수행될 읽기/쓰기 작업이 안전하게 시작되도록 보장
 			VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
-			VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+			VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+			VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+			VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
 
-		dependencies[0].dependencyFlags = 0; // 전체 영역 동기화 필요
+		dependencies[0].dependencyFlags = VkDependencyFlagBits::VK_DEPENDENCY_BY_REGION_BIT;
 
-		// 컬러 버퍼
 		dependencies[1].srcSubpass = 0;
 		dependencies[1].dstSubpass = VK_SUBPASS_EXTERNAL;
 
 		dependencies[1].srcStageMask =
-			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT |
+			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
 		dependencies[1].dstStageMask =
-			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+			VkPipelineStageFlagBits::VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 
 		dependencies[1].srcAccessMask =
-			VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
+			VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_READ_BIT |
+			VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT |
+			VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT |
+			VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
 		dependencies[1].dstAccessMask =
-			VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+			VkAccessFlagBits::VK_ACCESS_NONE;
 
-		dependencies[1].dependencyFlags = 0;
+		dependencies[1].dependencyFlags = VkDependencyFlagBits::VK_DEPENDENCY_BY_REGION_BIT;
 
 		return dependencies;
 	}
@@ -152,13 +159,13 @@ namespace sh::render::vk
 		if (_config.bUseStencil)
 			config.bUseDepth = true;
 
-		bool bMSAA = config.sampleCount != VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
+		const bool bMSAA = config.sampleCount != VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
 
 		// 렌더패스 중 ColorAttachment는 색상 첨부 전용 최적화 레이아웃이 된다. (픽셀 셰이더 출력)
 		VkAttachmentReference colorAttachmentRef{};
 		colorAttachmentRef.attachment = 0; //VkRenderPassCreateInfo의 pAttachments에 해당하는 인덱스
 		colorAttachmentRef.layout = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		// 멀티 샘플링용
+		// 멀티 샘플링용 리졸브 어태치먼트
 		VkAttachmentReference resolveAttachmentRef{};
 		resolveAttachmentRef.attachment = 1; //VkRenderPassCreateInfo의 pAttachments에 해당하는 인덱스
 		resolveAttachmentRef.layout = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
@@ -180,116 +187,22 @@ namespace sh::render::vk
 		else
 			dependencies = GetOnScreenSubPassDependency();
 
-		VkImageLayout colorInitialLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
-		VkImageLayout colorFinalLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
-		VkAttachmentLoadOp colorLoadOp = config.bClear ? VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR : VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-
-		VkImageLayout resolveInitialLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
-		VkImageLayout resolveFinalLayout =
-			config.bTransferSrc ? VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL
-				: config.bOffScreen ? VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL : VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-
-		initialDepthLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
-		finalDepthLayout = VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-		VkAttachmentLoadOp depthLoadOp = config.bClear ? VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR : VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_LOAD;
-
-		if (!bMSAA)
-		{
-			if (config.bOffScreen)
-			{
-				colorInitialLayout = config.bClear ? VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED : VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-				colorFinalLayout = config.bTransferSrc ? VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL : VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			}
-			else // onscreen (swapchain)
-			{
-				colorInitialLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
-				colorFinalLayout = config.bTransferSrc ? VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL : VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-				colorLoadOp = config.bClear ? VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR : VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			}
-			resolveInitialLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
-		}
-		else
-		{
-			colorInitialLayout = config.bClear ? VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED : VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			colorFinalLayout = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			colorLoadOp = config.bClear ? VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR : VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_LOAD;
-
-			if (config.bOffScreen)
-			{
-				resolveInitialLayout = config.bClear ? VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED : VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-				resolveFinalLayout = config.bTransferSrc ? VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL : VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-			}
-			else
-			{
-				// resolve -> swapchain
-				resolveInitialLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
-				resolveFinalLayout = config.bTransferSrc ? VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL : VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-			}
-		}
 		if (config.bUseDepth)
 		{
-			if (config.bClear)
-			{
-				initialDepthLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
-				depthLoadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR;
-			}
-			else
-			{
-				initialDepthLayout = VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-				depthLoadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_LOAD;
-			}
+			initialDepthLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
 			finalDepthLayout = VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 		}
-
-		initialColorLayout = colorInitialLayout;
-		finalColorLayout = colorFinalLayout;
-
-		VkAttachmentDescription colorAttachment{};
-		colorAttachment.format = config.format;
-		colorAttachment.samples = config.sampleCount;
-		colorAttachment.loadOp = colorLoadOp;
-		colorAttachment.storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE; // Clear하는게 성능에 좋지만, 다음 패스에서 clear를 안 하고 그대로 쓰는 경우엔 저장해야 한다.
-		colorAttachment.stencilLoadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		colorAttachment.stencilStoreOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		colorAttachment.initialLayout = colorInitialLayout;
-		colorAttachment.finalLayout = colorFinalLayout;
-
-		VkAttachmentDescription resolveAttachment{};
-		resolveAttachment.format = config.format;
-		resolveAttachment.samples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
-		resolveAttachment.loadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		resolveAttachment.storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE;
-		resolveAttachment.stencilLoadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-		resolveAttachment.stencilStoreOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		resolveAttachment.initialLayout = resolveInitialLayout;
-		resolveAttachment.finalLayout = resolveFinalLayout;
-
-		VkAttachmentDescription depthAttachment{};
-		depthAttachment.format = config.depthFormat;
-		depthAttachment.samples = config.sampleCount;
-		depthAttachment.loadOp = depthLoadOp;
-		depthAttachment.storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE;
-		if (config.bUseStencil)
-		{
-			depthAttachment.stencilLoadOp = config.bClear ? VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR : VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_LOAD;
-			depthAttachment.stencilStoreOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		}
-		else
-		{
-			depthAttachment.stencilLoadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-			depthAttachment.stencilStoreOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		}
-		depthAttachment.initialLayout = initialDepthLayout;
-		depthAttachment.finalLayout = finalDepthLayout;
 		
-		std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
-		std::array<VkAttachmentDescription, 3> MSAAattachments = { colorAttachment, resolveAttachment, depthAttachment };
+		std::vector<VkAttachmentDescription> attachments;
+		if (bMSAA)
+			attachments = CreateMSAAAttachments();
+		else
+			attachments = CreateAttachments();
+
 		VkRenderPassCreateInfo renderPassInfo{};
-		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		renderPassInfo.attachmentCount = bMSAA ? static_cast<uint32_t>(MSAAattachments.size()) : static_cast<uint32_t>(attachments.size());
-		if (!config.bUseDepth)
-			renderPassInfo.attachmentCount -= 1;
-		renderPassInfo.pAttachments = bMSAA ? MSAAattachments.data() : attachments.data();
+		renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+		renderPassInfo.attachmentCount = attachments.size();
+		renderPassInfo.pAttachments = attachments.data();
 		renderPassInfo.subpassCount = 1;
 		renderPassInfo.pSubpasses = &subpass;
 		renderPassInfo.dependencyCount = static_cast<uint32_t>(dependencies.size());
@@ -331,5 +244,109 @@ namespace sh::render::vk
 	SH_RENDER_API auto VulkanRenderPass::GetFInalDepthLayout() const -> VkImageLayout
 	{
 		return finalDepthLayout;
+	}
+	auto VulkanRenderPass::CreateMSAAAttachments() -> std::vector<VkAttachmentDescription>
+	{
+		initialColorLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
+		if (config.bOffScreen)
+		{
+			finalColorLayout = config.bTransferSrc ? VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL : VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		}
+		else
+		{
+			// resolve -> swapchain
+			finalColorLayout = config.bTransferSrc ? VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL : VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		}
+
+		VkAttachmentDescription colorAttachment{};
+		colorAttachment.format = config.format;
+		colorAttachment.samples = config.sampleCount;
+		colorAttachment.loadOp = config.bClear ? VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR : VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_LOAD;
+		colorAttachment.storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE; // 원래는 초기화 하는게 맞는데 다른 곳에서 clear 안 하고 쓸 수도 있어서..
+		colorAttachment.stencilLoadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		colorAttachment.stencilStoreOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		colorAttachment.initialLayout = config.bClear ? VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED : VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+		colorAttachment.finalLayout = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+		VkAttachmentDescription resolveAttachment{};
+		resolveAttachment.format = config.format;
+		resolveAttachment.samples = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
+		resolveAttachment.loadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		resolveAttachment.storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE;
+		resolveAttachment.stencilLoadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		resolveAttachment.stencilStoreOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		resolveAttachment.initialLayout = initialColorLayout;
+		resolveAttachment.finalLayout = finalColorLayout;
+
+		VkAttachmentDescription depthAttachment{};
+		depthAttachment.format = config.depthFormat;
+		depthAttachment.samples = config.sampleCount;
+		depthAttachment.loadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR;
+		depthAttachment.storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		if (config.bUseStencil)
+		{
+			depthAttachment.stencilLoadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR;
+			depthAttachment.stencilStoreOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		}
+		else
+		{
+			depthAttachment.stencilLoadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			depthAttachment.stencilStoreOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		}
+		depthAttachment.initialLayout = initialDepthLayout;
+		depthAttachment.finalLayout = finalDepthLayout;
+
+		std::vector<VkAttachmentDescription> result{ colorAttachment, resolveAttachment };
+		if (config.bUseDepth)
+			result.push_back(depthAttachment);
+
+		return result;
+	}
+	auto VulkanRenderPass::CreateAttachments() -> std::vector<VkAttachmentDescription>
+	{
+		if (config.bOffScreen)
+		{
+			initialColorLayout = config.bClear ? VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED : VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+			finalColorLayout = config.bTransferSrc ? VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL : VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		}
+		else // onscreen (swapchain)
+		{
+			initialColorLayout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
+			finalColorLayout = config.bTransferSrc ? VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL : VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+		}
+
+		VkAttachmentDescription colorAttachment{};
+		colorAttachment.format = config.format;
+		colorAttachment.samples = config.sampleCount;
+		colorAttachment.loadOp = config.bClear ? VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR : VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_LOAD;
+		colorAttachment.storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE;
+		colorAttachment.stencilLoadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		colorAttachment.stencilStoreOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		colorAttachment.initialLayout = initialColorLayout;
+		colorAttachment.finalLayout = finalColorLayout;
+
+		VkAttachmentDescription depthAttachment{};
+		depthAttachment.format = config.depthFormat;
+		depthAttachment.samples = config.sampleCount;
+		depthAttachment.loadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR;
+		depthAttachment.storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		if (config.bUseStencil)
+		{
+			depthAttachment.stencilLoadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR;
+			depthAttachment.stencilStoreOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		}
+		else
+		{
+			depthAttachment.stencilLoadOp = VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+			depthAttachment.stencilStoreOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		}
+		depthAttachment.initialLayout = initialDepthLayout;
+		depthAttachment.finalLayout = finalDepthLayout;
+
+		std::vector<VkAttachmentDescription> result{ colorAttachment };
+		if (config.bUseDepth)
+			result.push_back(depthAttachment);
+
+		return result;
 	}
 }//namespace

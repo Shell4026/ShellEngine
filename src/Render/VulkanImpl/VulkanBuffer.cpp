@@ -71,6 +71,7 @@ namespace sh::render::vk
 			//vkDestroyBuffer(device, buffer, nullptr);
 			buffer = nullptr;
 			bufferMem = nullptr;
+			data = nullptr;
 		}
 
 		/*if (bufferMem)

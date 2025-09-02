@@ -251,7 +251,10 @@ namespace sh::game
 	SH_GAME_API void MeshRenderer::OnDestroy()
 	{
 		if (drawable != nullptr)
+		{
 			drawable->Destroy();
+			drawable = nullptr;
+		}
 		Super::OnDestroy();
 	}
 

@@ -48,54 +48,6 @@ namespace sh::game
 		SCLASS(World)
 	private:
 		static constexpr float FIXED_TIME = 0.02f;
-
-		core::GarbageCollection* gc;
-		ImGUImpl* imgui = nullptr;
-        
-		core::memory::MemoryPool<GameObject> objPool;
-
-		core::SHashSet<GameObject*> objs;
-		core::SHashSet<Camera*> cameras;
-
-		std::vector<GameObject*> addedObjs; // 루프 도중 추가 된 객체
-
-		float _deltaTime = 0.f;
-		float _fixedDeltaTime = 0.f;
-
-		Camera* mainCamera;
-
-		phys::PhysWorld physWorld;
-
-		Octree lightOctree;
-
-		std::queue<std::function<void()>> beforeSyncTasks;
-		std::queue<std::function<void()>> afterSyncTasks;
-		std::queue<GameObject*> deallocatedObjs;
-
-		core::AssetBundle assetBundle;
-
-		core::Json lateSerializedData;
-
-		bool bStartLoop = false;
-		bool bPlaying = false;
-		bool bLoaded = false;
-	protected:
-		core::EventBus eventBus;
-	public:
-		render::Renderer& renderer;
-		const float& deltaTime = _deltaTime;
-		const float& fixedDeltaTime = _fixedDeltaTime;
-
-		ResourceManager<render::Shader> shaders;
-		ResourceManager<render::Material> materials;
-		ResourceManager<render::Model> models;
-		ResourceManager<render::Texture> textures;
-	public:
-		const ComponentModule& componentModule;
-	private:
-		auto AllocateGameObject() -> GameObject*;
-	protected:
-		SH_GAME_API void CleanObjs();
 	public:
 		SH_GAME_API World(render::Renderer& renderer, ImGUImpl& guiContext);
 		SH_GAME_API World(World&& other) = delete;
@@ -172,5 +124,54 @@ namespace sh::game
 		SH_GAME_API auto IsLoaded() const -> bool;
 
 		SH_GAME_API virtual void ReallocateUUIDS();
+	protected:
+		SH_GAME_API void CleanObjs();
+	private:
+		auto AllocateGameObject() -> GameObject*;
+	public:
+		render::Renderer& renderer;
+		const float& deltaTime = _deltaTime;
+		const float& fixedDeltaTime = _fixedDeltaTime;
+
+		ResourceManager<render::Shader> shaders;
+		ResourceManager<render::Material> materials;
+		ResourceManager<render::Model> models;
+		ResourceManager<render::Texture> textures;
+	public:
+		const ComponentModule& componentModule;
+	protected:
+		core::EventBus eventBus;
+	private:
+		core::GarbageCollection* gc;
+		ImGUImpl* imgui = nullptr;
+
+		core::memory::MemoryPool<GameObject> objPool;
+
+		core::SHashSet<GameObject*> objs;
+		core::SHashSet<Camera*> cameras;
+
+		std::vector<GameObject*> addedObjs; // 루프 도중 추가 된 객체
+
+		float _deltaTime = 0.f;
+		float _fixedDeltaTime = 0.f;
+
+		PROPERTY(mainCamera)
+		Camera* mainCamera;
+
+		phys::PhysWorld physWorld;
+
+		Octree lightOctree;
+
+		std::queue<std::function<void()>> beforeSyncTasks;
+		std::queue<std::function<void()>> afterSyncTasks;
+		std::queue<GameObject*> deallocatedObjs;
+
+		core::AssetBundle assetBundle;
+
+		core::Json lateSerializedData;
+
+		bool bStartLoop = false;
+		bool bPlaying = false;
+		bool bLoaded = false;
 	};
 }

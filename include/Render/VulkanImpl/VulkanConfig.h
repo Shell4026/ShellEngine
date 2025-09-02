@@ -13,7 +13,7 @@
 #include <vulkan/vk_enum_string_helper.h>
 
 #ifndef VMA_VULKAN_VERSION
-#define VMA_VULKAN_VERSION 1001000
+#define VMA_VULKAN_VERSION 1002000
 #endif
 
 #include "../vma-src/include/vk_mem_alloc.h"

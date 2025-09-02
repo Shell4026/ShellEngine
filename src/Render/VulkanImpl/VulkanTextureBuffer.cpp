@@ -3,6 +3,8 @@
 #include "VulkanBuffer.h"
 #include "VulkanFramebuffer.h"
 #include "VulkanQueueManager.h"
+#include "VulkanCommandBuffer.h"
+#include "VulkanCommandBufferPool.h"
 
 #include <cmath>
 #include <utility>
@@ -14,7 +16,7 @@ namespace sh::render::vk
 	}
 	VulkanTextureBuffer::VulkanTextureBuffer(VulkanTextureBuffer&& other) noexcept :
 		context(other.context), queueManager(other.queueManager),
-		imgBuffer(std::move(other.imgBuffer)), cmd(std::move(other.cmd)),
+		imgBuffer(std::move(other.imgBuffer)),
 		isRenderTexture(other.isRenderTexture), framebuffer(other.framebuffer),
 		width(other.width), height(other.height)
 	{
@@ -30,18 +32,17 @@ namespace sh::render::vk
 	{
 		isRenderTexture = false;
 		imgBuffer.reset();
-		cmd.reset();
 		framebuffer = nullptr;
 	}
 
-	void VulkanTextureBuffer::CopyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, uint32_t mipLevel)
+	void VulkanTextureBuffer::CopyBufferToImageCommand(VkCommandBuffer cmd, VkBuffer buffer, VkImage image, uint32_t width, uint32_t height, uint32_t mipLevel)
 	{
 		VkBufferImageCopy region{};
 		region.bufferOffset = 0;
 		region.bufferRowLength = 0;
 		region.bufferImageHeight = 0;
 
-		region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+		region.imageSubresource.aspectMask = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT;
 		region.imageSubresource.mipLevel = mipLevel;
 		region.imageSubresource.baseArrayLayer = 0;
 		region.imageSubresource.layerCount = 1;
@@ -54,7 +55,7 @@ namespace sh::render::vk
 			1
 		};
 
-		vkCmdCopyBufferToImage(cmd->GetCommandBuffer(), buffer, image, VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+		vkCmdCopyBufferToImage(cmd, buffer, image, VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 	}
 
 	SH_RENDER_API void VulkanTextureBuffer::Create(const IRenderContext& context, const CreateInfo& info)
@@ -114,24 +115,24 @@ namespace sh::render::vk
 			VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		stagingBuffer.SetData(data);
 		
-		if (cmd == nullptr)
-			cmd = std::make_unique<VulkanCommandBuffer>(*context, VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
-		cmd->Create(context->GetCommandPool(core::ThreadType::Game));
-
+		VulkanCommandBuffer* cmd = context->GetCommandBufferPool().AllocateCommandBuffer(std::this_thread::get_id(), VkQueueFlagBits::VK_QUEUE_TRANSFER_BIT);
 		cmd->Build([&]
 			{
 				imgBuffer->ChangeLayoutCommand(cmd->GetCommandBuffer(), VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
-				CopyBufferToImage(stagingBuffer.GetBuffer(), imgBuffer->GetImage(), mipWidth, mipHeight, mipLevel);
+				CopyBufferToImageCommand(cmd->GetCommandBuffer(), stagingBuffer.GetBuffer(), imgBuffer->GetImage(), mipWidth, mipHeight, mipLevel);
 
 				imgBuffer->ChangeLayoutCommand(cmd->GetCommandBuffer(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-			}
+			},
+			true
 		);
 
-		assert(queueManager != nullptr);
-		queueManager->SubmitCommand(*cmd);
+		VkFence fence = cmd->GetFence();
+		queueManager->SubmitCommand(queueManager->GetTransferQueue(), *cmd, fence);
+		vkWaitForFences(context->GetDevice(), 1, &fence, true, std::numeric_limits<uint64_t>::max());
+		vkResetFences(context->GetDevice(), 1, &fence);
 
-		cmd->Reset();
+		context->GetCommandBufferPool().DeallocateCommandBuffer(*cmd);
 	}
 
 	SH_RENDER_API auto VulkanTextureBuffer::GetImageBuffer() const -> VulkanImageBuffer*

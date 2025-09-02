@@ -12,6 +12,8 @@
 
 #include "Render/RenderTexture.h"
 #include "Render/VulkanImpl/VulkanTextureBuffer.h"
+#include "Render/VulkanImpl/VulkanRenderer.h"
+#include "Render/VulkanImpl/VulkanContext.h"
 
 #include "External/imgui/backends/imgui_impl_vulkan.h"
 #include "External/imgui/ImGuizmo.h"
@@ -323,6 +325,9 @@ namespace sh::editor
 		game::Camera* cam = world.GetMainCamera();
 		cam->SetRenderTexture(nullptr);
 
+		renderTex = world.GetGameObject("EditorCamera")->GetComponent<game::EditorCamera>()->GetRenderTexture();
+		ChangeViewportSize();
+
 		editorCamera->SetActive(true);
 		BlockLeftClick(false);
 		BlockRightClick(false);
@@ -330,20 +335,16 @@ namespace sh::editor
 		world.AddAfterSyncTask(
 			[&]
 			{ 
+				auto& renderer = static_cast<render::vk::VulkanRenderer&>(world.renderer);
+				auto context = static_cast<render::vk::VulkanContext*>(renderer.GetContext());
+
 				world.GetUiContext().ClearDrawData();
+				for (auto& pipeline : world.renderer.GetRenderPipelines())
+					pipeline->ClearDrawable();
 
-				VkDescriptorSet viewportDescSetLast = static_cast<VkDescriptorSet>(viewportTexture);
-				ImGui_ImplVulkan_RemoveTexture(viewportDescSetLast);
-				viewportTexture = nullptr;
-
-				world.Stop(); 
+				SH_INFO("Stop");
+				world.Stop();
 				world.LoadWorldPoint();
-
-				editorCamera = world.GetGameObject("EditorCamera")->GetComponent<game::EditorCamera>();
-				pickingCamera = world.GetGameObject("PickingCamera")->GetComponent<game::PickingCamera>();
-
-				renderTex = editorCamera->GetRenderTexture();
-				ChangeViewportSize();
 
 				core::ThreadSyncManager::Sync();
 			}

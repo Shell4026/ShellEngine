@@ -5,6 +5,8 @@
 #include "Render/VulkanImpl/VulkanFramebuffer.h"
 #include "Render/VulkanImpl/VulkanQueueManager.h"
 #include "Render/VulkanImpl/VulkanRenderPass.h"
+#include "Render/VulkanImpl/VulkanCommandBufferPool.h"
+#include "Render/VulkanImpl/VulkanRenderer.h"
 
 #include "Core/ThreadSyncManager.h"
 
@@ -116,7 +118,7 @@ namespace sh::game
 			initInfo.Instance = vkContext.GetInstance();
 			initInfo.PhysicalDevice = vkContext.GetGPU();
 			initInfo.Device = vkContext.GetDevice();
-			initInfo.QueueFamily = vkContext.GetQueueManager().GetGraphicsQueueFamilyIdx();
+			initInfo.QueueFamily = vkContext.GetQueueManager().GetGraphicsQueueFamily().idx;
 			initInfo.Queue = vkContext.GetQueueManager().GetGraphicsQueue();
 			initInfo.DescriptorPool = &vkContext.GetDescriptorPool();
 			initInfo.RenderPass = static_cast<const render::vk::VulkanFramebuffer*>(vkContext.GetMainFramebuffer())->GetRenderPass()->GetVkRenderPass();
@@ -140,12 +142,13 @@ namespace sh::game
 		if (renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan)
 		{
 			render::vk::VulkanContext& vkContext = static_cast<render::vk::VulkanContext&>(*renderer.GetContext());
+			auto& vkRenderer = static_cast<render::vk::VulkanRenderer&>(renderer);
 			renderer.AddDrawCall
 			(
 				[&]()
 				{
 					if (drawData.Valid)
-						ImGui_ImplVulkan_RenderDrawData(&drawData, vkContext.GetCommandBuffer(core::ThreadType::Render)->GetCommandBuffer());
+						ImGui_ImplVulkan_RenderDrawData(&drawData, vkRenderer.GetCommandBuffer()->GetCommandBuffer());
 				}
 			);
 		}

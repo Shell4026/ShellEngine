@@ -30,8 +30,10 @@ namespace sh::render::vk
 	VulkanSwapChain::VulkanSwapChain(VulkanSwapChain&& other) noexcept :
 		context(other.context),
 		swapChain(other.swapChain), surface(other.surface),
-		swapChainImages(std::move(other.swapChainImages)), swapChainImageViews(std::move(other.swapChainImageViews)), 
-		swapChainImageCount(other.swapChainImageCount)
+		swapChainImages(std::move(other.swapChainImages)),
+		swapChainImageCount(other.swapChainImageCount),
+		swapChainImageFormat(other.swapChainImageFormat),
+		swapChainSize(other.swapChainSize)
 	{
 		other.swapChain = nullptr;
 		other.surface = nullptr;
@@ -193,11 +195,7 @@ namespace sh::render::vk
 
 		if (oldSwapchain != nullptr)
 		{
-			for (auto imageView : swapChainImageViews)
-			{
-				vkDestroyImageView(context.GetDevice(), imageView, nullptr);
-			}
-			swapChainImageViews.clear();
+			swapChainImages.clear();
 			vkDestroySwapchainKHR(context.GetDevice(), oldSwapchain, nullptr);
 		}
 
@@ -206,35 +204,18 @@ namespace sh::render::vk
 		if (result != VkResult::VK_SUCCESS)
 			throw std::runtime_error(std::string{ "vkGetSwapchainImagesKHR()" } + string_VkResult(result));
 
-		swapChainImages.resize(swapChainImageCount);
+		std::vector<VkImage> images(swapChainImageCount, nullptr);
+		swapChainImages.reserve(swapChainImageCount);
 
-		result = vkGetSwapchainImagesKHR(context.GetDevice(), swapChain, &swapChainImageCount, swapChainImages.data());
+		result = vkGetSwapchainImagesKHR(context.GetDevice(), swapChain, &swapChainImageCount, images.data());
 		assert(result == VkResult::VK_SUCCESS);
 		if (result != VkResult::VK_SUCCESS)
 			throw std::runtime_error(std::string{ "vkGetSwapchainImagesKHR()" } + string_VkResult(result));
 
-		swapChainImageViews.resize(swapChainImageCount);
-		for (size_t i = 0; i < swapChainImages.size(); i++) 
+		for (VkImage img : images)
 		{
-			VkImageViewCreateInfo createInfo{};
-			createInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			createInfo.image = swapChainImages[i];
-			createInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			createInfo.format = swapChainImageFormat;
-			createInfo.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-			createInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			createInfo.subresourceRange.baseMipLevel = 0;
-			createInfo.subresourceRange.levelCount = 1;
-			createInfo.subresourceRange.baseArrayLayer = 0;
-			createInfo.subresourceRange.layerCount = 1;
-
-			result = vkCreateImageView(context.GetDevice(), &createInfo, nullptr, &swapChainImageViews[i]);
-			assert(result == VkResult::VK_SUCCESS);
-			if (result != VkResult::VK_SUCCESS)
-				throw std::runtime_error(std::string{ "vkCreateImageView()" } + string_VkResult(result));
+			VulkanImageBuffer& imgBuffer = swapChainImages.emplace_back(context);
+			imgBuffer.Create(img, swapChainImageFormat);
 		}
 	}
 
@@ -242,11 +223,7 @@ namespace sh::render::vk
 	{
 		if (swapChain != nullptr)
 		{
-			for (auto imageView : swapChainImageViews)
-			{
-				vkDestroyImageView(context.GetDevice(), imageView, nullptr);
-			}
-			swapChainImageViews.clear();
+			swapChainImages.clear();
 			vkDestroySwapchainKHR(context.GetDevice(), swapChain, nullptr);
 		}
 		swapChain = nullptr;
@@ -279,13 +256,13 @@ namespace sh::render::vk
 	{
 		return swapChainImageFormat;
 	}
-	SH_RENDER_API auto VulkanSwapChain::GetSwapChainImages() const -> const std::vector<VkImage>&
+	SH_RENDER_API auto VulkanSwapChain::GetSwapChainImages() const -> const std::vector<VulkanImageBuffer>&
 	{
 		return swapChainImages;
 	}
-	SH_RENDER_API auto VulkanSwapChain::GetSwapChainImageViews() const -> const std::vector<VkImageView>&
+	SH_RENDER_API auto VulkanSwapChain::GetSwapChainImages() -> std::vector<VulkanImageBuffer>&
 	{
-		return swapChainImageViews;
+		return swapChainImages;
 	}
 	SH_RENDER_API auto VulkanSwapChain::GetSwapChainImageCount() const -> uint32_t
 	{

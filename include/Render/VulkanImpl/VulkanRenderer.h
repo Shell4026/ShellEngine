@@ -1,5 +1,4 @@
 ﻿#pragma once
-
 #include "../Renderer.h"
 #include "VulkanConfig.h"
 
@@ -20,29 +19,11 @@ namespace sh::render::vk
 {
 	class VulkanContext;
 	class VulkanCameraBuffers;
+	class VulkanCommandBuffer;
 
 	class VulkanRenderer :
 		public Renderer, public sh::core::INonCopyable
 	{
-	private:
-		std::unique_ptr<VulkanContext> context;
-
-		VkSemaphore imageAvailableSemaphore;
-		VkSemaphore renderFinishedSemaphore;
-		VkSemaphore gameThreadSemaphore;
-		VkFence inFlightFence;
-
-		VulkanCameraBuffers* camManager = nullptr;
-
-		int currentFrame;
-
-		bool isInit = false;
-	private:
-		auto CreateSyncObjects() -> VkResult;
-		void DestroySyncObjects();
-	protected:
-		void OnCameraAdded(const Camera* camera) override;
-		void OnCameraRemoved(const Camera* camera) override;
 	public:
 		SH_RENDER_API VulkanRenderer();
 		SH_RENDER_API ~VulkanRenderer();
@@ -55,17 +36,47 @@ namespace sh::render::vk
 
 		SH_RENDER_API void Render() override;
 
-		SH_RENDER_API void WaitForCurrentFrame();
+		SH_RENDER_API void WaitForCurrentFrame() override;
 
 		SH_RENDER_API auto GetCurrentFrame() const -> int;
 		SH_RENDER_API auto GetWidth() const -> uint32_t override;
 		SH_RENDER_API auto GetHeight() const -> uint32_t override;
 		
-		SH_RENDER_API auto GetRenderFinshedSemaphore() const -> VkSemaphore;
-		SH_RENDER_API auto GetGameThreadSemaphore() const -> VkSemaphore;
+		SH_RENDER_API auto GetTimelineSemaphore() const -> VkSemaphore;
+		/// @brief [원자적] 첫번째 패스의 타임라인 세마포어의 값을 가져온다.
+		/// @return 타임라인 세마포어 값
+		SH_RENDER_API auto GetTimelineValue() const -> uint64_t;
 
 		SH_RENDER_API auto GetContext() const -> IRenderContext* override;
 
+		SH_RENDER_API auto GetCommandBuffer() const -> VulkanCommandBuffer*;
+
 		SH_RENDER_API void Sync() override;
+	protected:
+		void OnCameraAdded(const Camera* camera) override;
+		void OnCameraRemoved(const Camera* camera) override;
+	private:
+		auto CreateSyncObjects() -> VkResult;
+		void DestroySyncObjects();
+	private:
+		std::unique_ptr<VulkanContext> context;
+
+		VulkanCommandBuffer* cmd = nullptr;
+
+		VkSemaphore imageAvailableSemaphore = VK_NULL_HANDLE;
+		VkSemaphore renderFinishedSemaphore = VK_NULL_HANDLE;
+		VkSemaphore timelineSemaphore = VK_NULL_HANDLE;
+
+		uint64_t timelineValue = 0;
+		std::atomic<uint64_t> timelineValueAtomic = 0;
+
+		std::vector<VkFence> frameFences;
+		VkFence inFlightFence;
+
+		VulkanCameraBuffers* camManager = nullptr;
+
+		int currentFrame;
+
+		bool isInit = false;
 	};
 }//namespace

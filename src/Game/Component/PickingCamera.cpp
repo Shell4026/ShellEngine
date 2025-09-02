@@ -4,6 +4,7 @@
 #include "Game/GameObject.h"
 #include "Game/RenderThread.h"
 
+#include "Render/VulkanImpl/VulkanRenderer.h"
 #include "Render/VulkanImpl/VulkanFramebuffer.h"
 #include "Render/VulkanImpl/VulkanImageBuffer.h"
 #include "Render/VulkanImpl/VulkanContext.h"
@@ -50,37 +51,33 @@ namespace sh::game
 		Super::BeginUpdate();
 		if (!pickingCallback.Empty())
 		{
-			if (!addTask)
+			assert(world.renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan);
+			if (world.renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan)
 			{
-				RenderThread::GetInstance()->AddEndTaskFromOtherThread([&]
-					{
-						renderFinished.store(true, std::memory_order::memory_order_release);
-					}
-				);
-				addTask = true;
-			}
-			else
-			{
-				if (renderFinished.load(std::memory_order::memory_order_acquire))
-				{
-					// 요청을 받은 후 적어도 1프레임 뒤에 알 수 있다.
-					// (에디터 요청 -> 렌더링 요청) -> 스레드 동기화 -> 렌더링 -> renderFinsihed에 신호 전달 - 0프레임
-					// 신호를 받았으면 처리, 아니면 다음 프레임 - 1프레임
-					assert(world.renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan);
-					if (world.renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan)
-					{
-						auto vkFramebuffer = static_cast<render::vk::VulkanFramebuffer*>(renderTex->GetFramebuffer());
-						auto& vkContext = static_cast<render::vk::VulkanContext&>(*world.renderer.GetContext());
-						auto vkBuffer = static_cast<render::vk::VulkanBuffer*>(buffer.get());
+				auto& vkRenderer = static_cast<render::vk::VulkanRenderer&>(world.renderer);
+				auto vkFramebuffer = static_cast<render::vk::VulkanFramebuffer*>(renderTex->GetFramebuffer());
+				auto& vkContext = static_cast<render::vk::VulkanContext&>(*world.renderer.GetContext());
+				auto vkBuffer = static_cast<render::vk::VulkanBuffer*>(buffer.get());
 
-						vkFramebuffer->TransferImageToBuffer(vkContext.GetCommandBuffer(core::ThreadType::Game), vkBuffer->GetBuffer(), x, y);
-						pixels = reinterpret_cast<uint8_t*>(buffer->GetData());
-					}
-					SH_INFO_FORMAT("{}, {}, {}, {}", pixels[0], pixels[1], pixels[2], pixels[3]);
-					pickingCallback.Notify({ pixels[0], pixels[1], pixels[2], pixels[3] });
-					addTask = false;
-				}
+				VkSemaphore timelineSemaphore = vkRenderer.GetTimelineSemaphore();
+				// 첫번째 패스의 타임라인 값을 가져오는데, 첫번째 패스는 pickingPass다.
+				// 즉, 피킹 패스가 끝날 때 까지 대기하는 코드.
+				uint64_t timelineValue = vkRenderer.GetTimelineValue();
+
+				VkSemaphoreWaitInfo info{};
+				info.sType = VkStructureType::VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
+				info.semaphoreCount = 1;
+				info.pSemaphores = &timelineSemaphore;
+				info.pValues = &timelineValue;
+				info.flags = VkSemaphoreWaitFlagBits::VK_SEMAPHORE_WAIT_ANY_BIT;
+
+				auto result = vkWaitSemaphores(vkContext.GetDevice(), &info, std::numeric_limits<uint64_t>::max());
+				assert(result == VkResult::VK_SUCCESS);
+				vkFramebuffer->TransferImageToBuffer(vkBuffer->GetBuffer(), x, y);
+				pixels = reinterpret_cast<uint8_t*>(buffer->GetData());
 			}
+			SH_INFO_FORMAT("{}, {}, {}, {}", pixels[0], pixels[1], pixels[2], pixels[3]);
+			pickingCallback.Notify({ pixels[0], pixels[1], pixels[2], pixels[3] });
 		}
 	}
 

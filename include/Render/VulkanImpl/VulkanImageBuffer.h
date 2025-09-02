@@ -25,9 +25,10 @@ namespace sh::render::vk
 		SH_RENDER_API auto Create(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, 
 			VkImageAspectFlags aspectFlag = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT, 
 			VkSampleCountFlagBits sampleCount = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT, uint32_t mipLevels = 1) -> VkResult;
+		SH_RENDER_API auto Create(VkImage image, VkFormat format) -> VkResult;
 		SH_RENDER_API void Clean();
 
-		SH_RENDER_API auto GetImage() const ->VkImage;
+		SH_RENDER_API auto GetImage() const -> VkImage;
 		SH_RENDER_API auto GetImageView() const -> VkImageView;
 		SH_RENDER_API auto GetSampler() const -> VkSampler;
 
@@ -54,5 +55,7 @@ namespace sh::render::vk
 
 		uint32_t aniso = 0;
 		uint32_t mipLevels = 1;
+
+		bool bOtherImg = false;
 	};
 }

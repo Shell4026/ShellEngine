@@ -195,6 +195,7 @@ namespace sh::render::vk
 		if (pipeline == nullptr)
 			return false;
 
+		readLock.unlock();
 		vkCmdBindPipeline(cmd, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetPipeline());
 		return true;
 	}

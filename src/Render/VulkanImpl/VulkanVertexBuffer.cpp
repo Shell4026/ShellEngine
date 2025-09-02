@@ -1,6 +1,8 @@
 ﻿#include "VulkanVertexBuffer.h"
 #include "VulkanContext.h"
 #include "VulkanQueueManager.h"
+#include "VulkanCommandBuffer.h"
+#include "VulkanCommandBufferPool.h"
 #include "Mesh.h"
 
 #include <cstddef>
@@ -8,27 +10,25 @@
 
 #include "../vma-src/include/vk_mem_alloc.h"
 
+#include <limits>
 namespace sh::render::vk
 {
 	VulkanVertexBuffer::VulkanVertexBuffer(const VulkanContext& context) :
 		context(context),
 		vertexBuffer(context),
-		indexBuffer(context),
-		cmd(context, VkQueueFlagBits::VK_QUEUE_TRANSFER_BIT)
+		indexBuffer(context)
 	{
 	}
 	VulkanVertexBuffer::VulkanVertexBuffer(const VulkanVertexBuffer& other) :
 		context(other.context),
 		vertexBuffer(other.vertexBuffer),
-		indexBuffer(other.indexBuffer),
-		cmd(context, VkQueueFlagBits::VK_QUEUE_TRANSFER_BIT)
+		indexBuffer(other.indexBuffer)
 	{
 	}
 	VulkanVertexBuffer::VulkanVertexBuffer(VulkanVertexBuffer&& other) noexcept :
 		context(other.context),
 		vertexBuffer(std::move(other.vertexBuffer)),
-		indexBuffer(std::move(other.indexBuffer)),
-		cmd(std::move(other.cmd))
+		indexBuffer(std::move(other.indexBuffer))
 	{
 	}
 	VulkanVertexBuffer::~VulkanVertexBuffer()
@@ -51,8 +51,6 @@ namespace sh::render::vk
 
 	void VulkanVertexBuffer::Clean()
 	{
-		cmd.Clear();
-
 		vertexBuffer.Clean();
 		indexBuffer.Clean();
 	}
@@ -62,6 +60,8 @@ namespace sh::render::vk
 		if (mesh.GetVertexCount() == 0)
 			return;
 
+		VulkanCommandBuffer* cmd = context.GetCommandBufferPool().AllocateCommandBuffer(std::this_thread::get_id(), VkQueueFlagBits::VK_QUEUE_TRANSFER_BIT);
+		assert(cmd != nullptr);
 		// 버텍스 버퍼
 		size_t vertexBufferSize = sizeof(Mesh::Vertex) * mesh.GetVertexCount();
 		VulkanBuffer stagingBuffer1{ context };
@@ -88,33 +88,38 @@ namespace sh::render::vk
 			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 			VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
 
-		// 스테이징 버퍼에서 실제 버퍼로 복사
-		VkCommandBufferBeginInfo info{};
-		info.sType = VkStructureType::VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-		info.flags = VkCommandBufferUsageFlagBits::VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-		cmd.Build([&]()
-		{
-			VkBufferCopy cpy{};
-			cpy.srcOffset = 0;
-			cpy.dstOffset = 0;
-			cpy.size = vertexBufferSize;
-			vkCmdCopyBuffer(cmd.GetCommandBuffer(), stagingBuffer1.GetBuffer(), vertexBuffer.GetBuffer(), 1, &cpy);
+		cmd->Build(
+			[&]()
+			{
+				VkBufferCopy cpy{};
+				cpy.srcOffset = 0;
+				cpy.dstOffset = 0;
+				cpy.size = vertexBufferSize;
+				vkCmdCopyBuffer(cmd->GetCommandBuffer(), stagingBuffer1.GetBuffer(), vertexBuffer.GetBuffer(), 1, &cpy);
 
-			VkBufferCopy cpyIndices{};
-			cpyIndices.srcOffset = 0;
-			cpyIndices.dstOffset = 0;
-			cpyIndices.size = indicesSize;
-			vkCmdCopyBuffer(cmd.GetCommandBuffer(), stagingBuffer2.GetBuffer(), indexBuffer.GetBuffer(), 1, &cpyIndices);
-		}, &info);
+				VkBufferCopy cpyIndices{};
+				cpyIndices.srcOffset = 0;
+				cpyIndices.dstOffset = 0;
+				cpyIndices.size = indicesSize;
+				vkCmdCopyBuffer(cmd->GetCommandBuffer(), stagingBuffer2.GetBuffer(), indexBuffer.GetBuffer(), 1, &cpyIndices);
+			}, 
+			true
+		);
 
-		context.GetQueueManager().SubmitCommand(cmd);
+		VkQueue transferQueue = context.GetQueueManager().GetTransferQueue();
+
+		VkFence fence = cmd->GetFence();
+		context.GetQueueManager().SubmitCommand(transferQueue, *cmd, fence);
+		vkWaitForFences(context.GetDevice(), 1, &fence, true, std::numeric_limits<uint64_t>::max());
+		vkResetFences(context.GetDevice(), 1, &fence);
+
+		context.GetCommandBufferPool().DeallocateCommandBuffer(*cmd);
 	}
 
 	void VulkanVertexBuffer::Create(const Mesh& mesh)
 	{
 		Clean();
 
-		cmd.Create(context.GetCommandPool(core::ThreadType::Game));
 		CreateVertexBuffer(mesh);
 	}
 	auto VulkanVertexBuffer::Clone() const -> std::unique_ptr<IVertexBuffer>

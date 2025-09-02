@@ -55,6 +55,8 @@ namespace sh::render
 
 		modelMatrix[core::ThreadType::Game] = glm::mat4{ 1.f };
 		modelMatrix[core::ThreadType::Render] = glm::mat4{ 1.f };
+
+		SH_INFO("Creation");
 	}
 	Drawable::Drawable(Drawable&& other) noexcept :
 		mat(other.mat), mesh(other.mesh), modelMatrix(other.modelMatrix),
@@ -65,6 +67,7 @@ namespace sh::render
 		other.bDirty = false;
 		topology[core::ThreadType::Game] = other.topology[core::ThreadType::Game];
 		topology[core::ThreadType::Render] = other.topology[core::ThreadType::Render];
+		SH_INFO("Creation");
 	}
 	Drawable::~Drawable()
 	{

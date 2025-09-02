@@ -232,8 +232,8 @@ namespace sh::core
 		void Mark(std::size_t start, std::size_t end);
 		void MarkWithMultiThread();
 		SH_CORE_API void MarkProperties(SObject* obj, std::queue<SObject*>& bfs);
-		void CheckContainers(TrackingContainerIt start, TrackingContainerIt end);
-		void CheckContainersWithMultiThread();
+		void MarkContainers(TrackingContainerIt start, TrackingContainerIt end);
+		void MarkContainersWithMultiThread();
 		void CheckPtrs();
 	protected:
 		SH_CORE_API GarbageCollection();
@@ -248,6 +248,8 @@ namespace sh::core
 		/// @brief 해당 프레임마다 가비지 컬렉터를 수행한다.
 		/// @param tick 목표 프레임
 		SH_CORE_API void SetUpdateTick(uint32_t tick);
+		SH_CORE_API auto GetUpdateTick() const -> uint32_t;
+		SH_CORE_API auto GetCurrentTick() const -> uint32_t;
 
 		/// @brief 루트셋에서 해당 객체를 제외하는 함수.
 		/// @param obj SObject 포인터

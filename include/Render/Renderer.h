@@ -17,7 +17,7 @@
 #include <set>
 #include <utility>
 #include <functional>
-
+#include <thread>
 namespace sh::window
 {
 	class Window;
@@ -39,13 +39,14 @@ namespace sh::render
 		SH_RENDER_API virtual bool Resizing() = 0;
 		SH_RENDER_API virtual void Clear();
 
-		SH_RENDER_API virtual void Render() = 0;
+		SH_RENDER_API virtual void Render();
 		SH_RENDER_API virtual void Pause(bool b);
 
 		SH_RENDER_API virtual bool IsInit() const = 0;
 
 		SH_RENDER_API virtual auto GetWidth() const -> uint32_t = 0;
 		SH_RENDER_API virtual auto GetHeight() const -> uint32_t = 0;
+		SH_RENDER_API virtual void WaitForCurrentFrame() = 0;
 
 		/// @brief [게임 스레드 전용] 드로우 객체를 큐에 집어 넣는다.
 		/// @brief 큐에 들어간 객체는 sync 타이밍에 렌더러에 들어간다.
@@ -71,6 +72,7 @@ namespace sh::render
 		              auto AddRenderPipeline() -> T*;
 		SH_RENDER_API void ClearRenderPipeline();
 		SH_RENDER_API auto GetRenderPipeline(const core::Name& name) const -> RenderPipeline*;
+		SH_RENDER_API auto GetRenderPipelines() -> std::vector<std::unique_ptr<RenderPipeline>>&;
 
 		/// @brief 카메라를 추가한다. 동기화 타이밍 때 추가 된다.
 		/// @param camera 카메라 참조
@@ -80,6 +82,9 @@ namespace sh::render
 		SH_RENDER_API void RemoveCamera(const Camera& camera);
 
 		SH_RENDER_API auto GetDrawCall(core::ThreadType thread) const -> uint32_t;
+
+		/// @brief 현재 렌더러가 돌아가는 스레드의 번호를 반환한다. 한번이라도 렌더링을 한 후에 갱신된다.
+		SH_RENDER_API auto GetThreadId() const -> std::thread::id;
 	protected:
 		virtual void OnCameraAdded(const Camera* camera) {};
 		virtual void OnCameraRemoved(const Camera* camera) {};
@@ -116,6 +121,9 @@ namespace sh::render
 
 		core::SyncArray<uint32_t> drawcall;
 
+		std::thread::id threadId;
+
+		bool bFirstRender = false;
 		bool bDirty;
 		bool bDrawCallDirty = false;
 	};

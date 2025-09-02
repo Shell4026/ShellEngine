@@ -1,5 +1,4 @@
-﻿#include "PCH.h"
-#include "RenderThread.h"
+﻿#include "RenderThread.h"
 
 #include "Core/Logger.h"
 

@@ -379,6 +379,8 @@ namespace sh::game
 			}
 			else
 			{
+				if (sobj != nullptr) // pending kill
+					sobj->SetUUID(core::UUID::Generate());
 				gameObj = this->AddGameObject(name);
 				gameObj->SetUUID(objuuid);
 			}
@@ -390,7 +392,8 @@ namespace sh::game
 				core::UUID uuid{ compJson["uuid"].get<std::string>() };
 				if (type == "Transform") // 트랜스폼은 게임오브젝트 생성 시 이미 만들어져있다.
 				{
-					gameObj->transform->SetUUID(core::UUID{ uuid });
+					if (gameObj->transform->GetUUID() != uuid)
+						gameObj->transform->SetUUID(uuid);
 					continue;
 				}
 
