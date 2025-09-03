@@ -1,5 +1,4 @@
 ﻿#pragma once
-
 #include "Export.h"
 
 #include "Event.h"
@@ -17,16 +16,16 @@ struct _XDisplay;
 using XWindow = unsigned long;
 #endif
 
-namespace sh::window {
+namespace sh::window 
+{
 #ifdef _WIN32
 	using WinHandle = HWND__*;
 #elif __linux__
 	using WinHandle = std::pair<_XDisplay*, XWindow>;
 #endif
 
-	class WindowImpl {
-	private:
-		std::queue<Event> events;
+	class WindowImpl 
+	{
 	public:
 		SH_WINDOW_API virtual ~WindowImpl();
 
@@ -43,5 +42,8 @@ namespace sh::window {
 		/// @brief 일정 시간동안 스레드를 멈추는 함수
 		/// @param ms 밀리초
 		SH_WINDOW_API virtual void StopTimer(uint32_t ms) = 0;
+		SH_WINDOW_API virtual void Resize(int width, int height) = 0;
+	private:
+		std::queue<Event> events;
 	};
-}
+}//namespace

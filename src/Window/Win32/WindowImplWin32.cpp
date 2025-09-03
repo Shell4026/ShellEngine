@@ -307,4 +307,8 @@ namespace sh::window {
 		::Sleep(static_cast<DWORD>(ms));
 		timeEndPeriod(periodMin);
 	}
+	void WindowImplWin32::Resize(int width, int height)
+	{
+		SetWindowPos(window, HWND_TOP, 0, 0, width, height, SWP_NOMOVE | SWP_NOZORDER);
+	}
 }

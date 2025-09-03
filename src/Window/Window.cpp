@@ -116,11 +116,16 @@ namespace sh::window {
 		winImpl->SetTitle(title);
 	}
 
-	auto Window::GetWidth() const -> uint32_t
+	SH_WINDOW_API void Window::SetSize(int width, int height)
+	{
+		winImpl->Resize(width, height);
+	}
+
+	SH_WINDOW_API auto Window::GetWidth() const -> uint32_t
 	{
 		return winImpl->GetWidth();
 	}
-	auto Window::GetHeight() const -> uint32_t
+	SH_WINDOW_API auto Window::GetHeight() const -> uint32_t
 	{
 		return winImpl->GetHeight();
 	}

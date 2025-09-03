@@ -344,5 +344,45 @@ namespace sh::window {
 
 		while (::nanosleep(&ts, &ts) == -1 && errno == EINTR); // 이 방법은 신호에 의해 중단될 수 있음. EINTR 오류를 반환할 경우 루프를 통해 다시 시도
 	}
+	void WindowImplUnix::Resize(int width, int height)
+	{
+		if (!display || win == 0)
+			return;
+
+		if (width <= 0) 
+			width = 1;
+		if (height <= 0) 
+			height = 1;
+
+		// 서버(또는 윈도우 매니저)에 크기 변경 요청
+		XResizeWindow(display, win, static_cast<unsigned int>(width), static_cast<unsigned int>(height));
+
+		// 만약 이전에 고정 크기(min == max)로 설정되어 있었다면,
+		// 그 힌트를 새 크기에 맞춰 갱신해 윈도우 매니저가 강제로 원래 크기를 유지하는 상황을 방지
+		XSizeHints hints;
+		long supplied_return;
+		if (XGetWMNormalHints(display, win, &hints, &supplied_return))
+		{
+			bool wasFixed = false;
+			if ((hints.flags & PMinSize) && (hints.flags & PMaxSize))
+			{
+				if (hints.min_width == hints.max_width && hints.min_height == hints.max_height)
+					wasFixed = true;
+			}
+
+			if (wasFixed)
+			{
+				hints.min_width = hints.max_width = width;
+				hints.min_height = hints.max_height = height;
+				hints.flags |= PMinSize | PMaxSize;
+				XSetWMNormalHints(display, win, &hints);
+			}
+		}
+
+		XFlush(display);
+
+		widthPrevious = width;
+		heightPrevious = height;
+	}
 
 }//namespace
