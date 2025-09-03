@@ -64,6 +64,24 @@ namespace sh::phys
 
 		return callback.hit;
 	}
+	SH_PHYS_API auto PhysWorld::RayCast(const Ray& ray) const -> std::optional<HitPoint>
+	{
+		reactphysics3d::Vector3 start{ ray.origin.x, ray.origin.y, ray.origin.z };
+		reactphysics3d::Vector3 dir{ ray.direction.x, ray.direction.y, ray.direction.z };
+		dir.normalize();
+		reactphysics3d::Ray reactPhysRay{ start , start + dir * ray.distance };
+		GroundRaycastCallback callback;
+		impl->world->raycast(reactPhysRay, &callback);
+
+		if (!callback.hit)
+			return {};
+
+		HitPoint hit{};
+		hit.hitPoint = { callback.worldPoint.x, callback.worldPoint.y, callback.worldPoint.z };
+		hit.hitNormal = { callback.worldNormal.x, callback.worldNormal.y, callback.worldNormal.z };
+
+		return hit;
+	}
 	SH_PHYS_API auto PhysWorld::GetContext() const -> void*
 	{
 		return &impl->physicsCommon;
@@ -71,5 +89,14 @@ namespace sh::phys
 	SH_PHYS_API auto PhysWorld::GetNative() const -> void*
 	{
 		return impl->world;
+	}
+	SH_PHYS_API void PhysWorld::SetGravity(const glm::vec3& gravity)
+	{
+		impl->world->setGravity({ gravity.x,gravity.y,gravity.z });
+	}
+	SH_PHYS_API auto PhysWorld::GetGravity() const -> glm::vec3
+	{
+		auto g = impl->world->getGravity();
+		return glm::vec3{ g.x, g.y, g.z };
 	}
 }//namespace

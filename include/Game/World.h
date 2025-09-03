@@ -47,7 +47,7 @@ namespace sh::game
 	{
 		SCLASS(World)
 	public:
-		static constexpr float FIXED_TIME = 0.02f;
+		static constexpr float FIXED_TIME = 0.0166f; // 60hz
 	public:
 		SH_GAME_API World(render::Renderer& renderer, ImGUImpl& guiContext);
 		SH_GAME_API World(World&& other) = delete;
