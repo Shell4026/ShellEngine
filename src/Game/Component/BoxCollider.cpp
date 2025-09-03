@@ -42,10 +42,6 @@ namespace sh::game
 			debugRenderer->Destroy();
 			debugRenderer = nullptr;
 		}
-		for (auto rb : rigidbodies)
-		{
-			rb->SetCollider(nullptr);
-		}
 		Super::OnDestroy();
 	}
 

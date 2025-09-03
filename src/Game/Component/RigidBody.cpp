@@ -30,6 +30,19 @@ namespace sh::game
 		impl->rigidbody = world->createRigidBody(transform);
 		impl->rigidbody->setType(reactphysics3d::BodyType::DYNAMIC);
 		impl->rigidbody->enableGravity(bGravity);
+
+		colliderDestroyListener.SetCallback(
+			[&](const core::SObject* obj)
+			{
+				const Collider* colliderComponent = static_cast<const Collider*>(obj);
+				if (impl->collider != nullptr)
+				{
+					if (impl->rigidbody != nullptr)
+						impl->rigidbody->removeCollider(impl->collider);
+					impl->collider = nullptr;
+				}
+			}
+		);
 	}
 	SH_GAME_API RigidBody::~RigidBody()
 	{
@@ -50,9 +63,19 @@ namespace sh::game
 	{
 		if(impl->collider != nullptr && !core::IsValid(collision))
 			SetCollider(nullptr);
+
 		auto& objQuat = gameObject.transform->GetQuat();
 		const Vec3& pos = gameObject.transform->position;
 		impl->rigidbody->setTransform(reactphysics3d::Transform{ {pos.x, pos.y, pos.z}, reactphysics3d::Quaternion{objQuat.x, objQuat.y, objQuat.z, objQuat.w} });
+		if (&collision->gameObject != &gameObject)
+		{
+			if (core::IsValid(collision))
+			{
+				const auto& pos = collision->gameObject.transform->position;
+				const auto& quat = collision->gameObject.transform->GetQuat();
+				impl->collider->setLocalToBodyTransform(reactphysics3d::Transform{ {pos.x, pos.y, pos.z}, {quat.x, quat.y, quat.z, quat.w} });
+			}
+		}
 	}
 	SH_GAME_API void RigidBody::FixedUpdate()
 	{
@@ -85,16 +108,18 @@ namespace sh::game
 	}
 	SH_GAME_API void RigidBody::SetCollider(Collider* colliderComponent)
 	{
-		collision = colliderComponent;
-		if (collision == collisionLast)
-			return;
 		if (impl->rigidbody == nullptr)
 			return;
 
-		if (core::IsValid(collisionLast))
-			collisionLast->rigidbodies.erase(this);
+		if (collision != nullptr)
+			collision->onDestroy.UnRegister(colliderDestroyListener);
 
-		if (impl->collider)
+		collision = colliderComponent;
+
+		if (collision != nullptr)
+			collision->onDestroy.Register(colliderDestroyListener);
+
+		if (impl->collider != nullptr)
 		{
 			impl->rigidbody->removeCollider(impl->collider);
 			impl->collider = nullptr;
@@ -102,12 +127,16 @@ namespace sh::game
 
 		if (core::IsValid(collision))
 		{
-			collision->rigidbodies.insert(this);
-			
 			auto shape = reinterpret_cast<reactphysics3d::CollisionShape*>(collision->GetNative());
-			impl->collider = impl->rigidbody->addCollider(shape, reactphysics3d::Transform::identity());
+			const auto& quat = colliderComponent->gameObject.transform->GetQuat();
+			const Vec3& pos = colliderComponent->gameObject.transform->position;
+			reactphysics3d::Transform transform{};
+			// 리지드 바디랑 콜라이더랑 같은 오브젝트에 있으면 transform은 identity
+			if (&colliderComponent->gameObject != &gameObject)
+				transform = reactphysics3d::Transform{ { pos.x, pos.y, pos.z }, { quat.x,quat.y,quat.z,quat.w } };
+			impl->collider = impl->rigidbody->addCollider(shape, transform);
+			//impl->rigidbody->getCollider(0)->set
 		}
-		collisionLast = collision;
 	}
 
 	SH_GAME_API void RigidBody::SetMass(float mass)
@@ -153,6 +182,25 @@ namespace sh::game
 	SH_GAME_API void RigidBody::AddForce(const game::Vec3& force)
 	{
 		impl->rigidbody->applyLocalForceAtCenterOfMass({ force.x, force.y, force.z });
+	}
+
+	SH_GAME_API void RigidBody::SetAxisLock(const game::Vec3& dir)
+	{
+		axisLock = dir;
+		axisLock.x = std::clamp(std::roundf(axisLock.x), 0.f, 1.f);
+		axisLock.y = std::clamp(std::roundf(axisLock.y), 0.f, 1.f);
+		axisLock.z = std::clamp(std::roundf(axisLock.z), 0.f, 1.f);
+
+		// reactPhysics에선 0이 허용, 1이 잠금이기 때문에 반전 시켜야함.
+		bool x = !static_cast<bool>(dir.x);
+		bool y = !static_cast<bool>(dir.y);
+		bool z = !static_cast<bool>(dir.z);
+		impl->rigidbody->setAngularLockAxisFactor({ static_cast<float>(x), static_cast<float>(y), static_cast<float>(z) });
+	}
+
+	SH_GAME_API auto RigidBody::GetAxisLock() const -> const game::Vec3&
+	{
+		return axisLock;
 	}
 
 	SH_GAME_API bool RigidBody::IsKinematic() const
@@ -220,6 +268,10 @@ namespace sh::game
 		else if (prop.GetName() == core::Util::ConstexprHash("angularDamping"))
 		{
 			SetAngularDamping(angularDamping);
+		}
+		else if (prop.GetName() == core::Util::ConstexprHash("axisLock"))
+		{
+			SetAxisLock(axisLock);
 		}
 	}
 }//namespace

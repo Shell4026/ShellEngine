@@ -9,9 +9,6 @@ namespace sh::game
 	class Collider : public Component
 	{
 		SCLASS(Collider)
-		friend RigidBody;
-	protected:
-		core::SSet<RigidBody*> rigidbodies;
 	public:
 		SH_GAME_API Collider(GameObject& owner);
 		SH_GAME_API virtual ~Collider() = default;

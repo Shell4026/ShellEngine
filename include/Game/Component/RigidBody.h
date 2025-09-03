@@ -4,6 +4,8 @@
 #include "Collider.h"
 #include "../Vector.h"
 
+#include "Core/Observer.hpp"
+
 namespace sh::game
 {
 	class RigidBody : public Component
@@ -33,6 +35,10 @@ namespace sh::game
 		SH_GAME_API void AddWorldForce(const game::Vec3& force);
 		SH_GAME_API void AddTorque(const game::Vec3& torque);
 		SH_GAME_API void AddForce(const game::Vec3& force);
+		/// @brief 특정 축의 움직임을 제한한다.
+		/// @param dir 1이면 해당 축의 움직임을 제한, 0이면 허용
+		SH_GAME_API void SetAxisLock(const game::Vec3& dir);
+		SH_GAME_API auto GetAxisLock() const -> const game::Vec3&;
 
 		SH_GAME_API bool IsKinematic() const;
 		SH_GAME_API bool IsGravityUse() const;
@@ -50,10 +56,11 @@ namespace sh::game
 
 		PROPERTY(collision)
 		Collider* collision = nullptr;
-		Collider* collisionLast = nullptr;
 
 		std::unique_ptr<Impl> impl;
 
+		PROPERTY(axisLock)
+		game::Vec3 axisLock{ 0.f, 0.f, 0.f };
 		PROPERTY(mass)
 		float mass = 1.0f;
 		PROPERTY(linearDamping)
@@ -64,5 +71,7 @@ namespace sh::game
 		bool bKinematic = false;
 		PROPERTY(bGravity)
 		bool bGravity = false;
+
+		core::Observer<false, const SObject*>::Listener colliderDestroyListener;
 	};
 }//namespace

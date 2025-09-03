@@ -304,8 +304,8 @@ namespace sh::editor
 		if (ImGui::BeginDragDropTarget())
 		{
 			// 드래그로 받는 객체의 타입 이름 == 드래그 중인 객체의 타입 이름이면 받음
-			 const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(typeName.c_str());
-			//SH_INFO_FORMAT("payload: {}", ImGui::GetDragDropPayload()->DataType);
+			const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(typeName.c_str());
+			auto payloadt = ImGui::GetDragDropPayload();
 			if (payload)
 			{
 				*parameter = *reinterpret_cast<core::SObject**>(payload->Data);
@@ -316,7 +316,8 @@ namespace sh::editor
 			else
 			{
 				// 게임 오브젝트라면 컴포넌트 검사
-				if (std::strcmp(ImGui::GetDragDropPayload()->DataType, "GameObject") == 0)
+				std::string gameObjTypeName{ core::reflection::GetType<game::GameObject>().name };
+				if (gameObjTypeName == ImGui::GetDragDropPayload()->DataType)
 				{
 					game::GameObject* obj = *reinterpret_cast<game::GameObject**>(ImGui::GetDragDropPayload()->Data);
 					for (auto payloadComponent : obj->GetComponents())

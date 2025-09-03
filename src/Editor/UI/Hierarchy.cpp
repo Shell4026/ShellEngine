@@ -51,7 +51,8 @@ namespace sh::editor
 
 		if (ImGui::BeginDragDropTarget())
 		{
-			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("GameObject"))
+			const std::string typeName{ core::reflection::GetType<game::GameObject>().name };
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(typeName.c_str()))
 			{
 				IM_ASSERT(payload->DataSize == sizeof(game::GameObject*));
 				game::GameObject* draggedObj = *(game::GameObject**)payload->Data;
@@ -160,17 +161,18 @@ namespace sh::editor
 			}
 		}
 
+		const std::string typeName{ core::reflection::GetType<game::GameObject>().name };
 		// 드래그 되는 대상의 시점
 		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_::ImGuiDragDropFlags_None))
 		{
-			ImGui::SetDragDropPayload("GameObject", &obj, sizeof(game::GameObject*));
+			ImGui::SetDragDropPayload(typeName.c_str(), &obj, sizeof(game::GameObject*));
 			ImGui::Text("%s", obj->GetName().ToString().c_str());
 			ImGui::EndDragDropSource();
 		}
 		// 드래그 받는 대상의 시점
 		if (ImGui::BeginDragDropTarget()) 
 		{
-			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("GameObject")) 
+			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(typeName.c_str()))
 			{
 				IM_ASSERT(payload->DataSize == sizeof(game::GameObject*));
 				game::GameObject* draggedObj = *reinterpret_cast<game::GameObject**>(payload->Data);
@@ -268,7 +270,8 @@ namespace sh::editor
 			}
 			for (auto& [name, func] : dragFunc)
 			{
-				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("GameObject"))
+				const std::string typeName{ core::reflection::GetType<game::GameObject>().name };
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(typeName.c_str()))
 					func(*payload);
 			}
 

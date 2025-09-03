@@ -41,10 +41,6 @@ namespace sh::game
 			debugRenderer->Destroy();
 			debugRenderer = nullptr;
 		}
-		for (auto rb : rigidbodies)
-		{
-			rb->SetCollider(nullptr);
-		}
 		Super::OnDestroy();
 	}
 
@@ -70,7 +66,7 @@ namespace sh::game
 	}
 	SH_GAME_API void ShpereCollider::OnPropertyChanged(const core::reflection::Property& prop)
 	{
-		if (prop.GetName() == "radius")
+		if (prop.GetName() == core::Util::ConstexprHash("radius"))
 			SetRadius(radius);
 	}
 	SH_GAME_API void ShpereCollider::Update()
