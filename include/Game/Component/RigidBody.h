@@ -6,6 +6,7 @@
 
 #include "Core/Observer.hpp"
 
+#include <glm/gtc/quaternion.hpp>
 namespace sh::game
 {
 	class RigidBody : public Component
@@ -15,6 +16,7 @@ namespace sh::game
 		SH_GAME_API RigidBody(GameObject& owner);
 		SH_GAME_API ~RigidBody();
 
+		SH_GAME_API void Start() override;
 		SH_GAME_API void OnDestroy() override;
 		SH_GAME_API void BeginUpdate() override;
 		SH_GAME_API void FixedUpdate() override;
@@ -50,6 +52,9 @@ namespace sh::game
 		SH_GAME_API auto GetAngularVelocity() const -> game::Vec3;
 		SH_GAME_API auto GetForce() const -> game::Vec3;
 
+		/// @brief 물리 객체의 transform을 현재 오브젝트의 transform으로 초기화 하는 코드
+		SH_GAME_API void ResetPhysicsTransform();
+
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 	private:
 		struct Impl;
@@ -71,6 +76,11 @@ namespace sh::game
 		bool bKinematic = false;
 		PROPERTY(bGravity)
 		bool bGravity = false;
+
+		glm::vec3 prevPos;
+		glm::vec3 currPos;
+		glm::quat prevRot;
+		glm::quat currRot;
 
 		core::Observer<false, const SObject*>::Listener colliderDestroyListener;
 	};

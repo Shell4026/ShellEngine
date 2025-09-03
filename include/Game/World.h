@@ -46,7 +46,7 @@ namespace sh::game
 	class World : public sh::core::SObject, public sh::core::INonCopyable
 	{
 		SCLASS(World)
-	private:
+	public:
 		static constexpr float FIXED_TIME = 0.02f;
 	public:
 		SH_GAME_API World(render::Renderer& renderer, ImGUImpl& guiContext);

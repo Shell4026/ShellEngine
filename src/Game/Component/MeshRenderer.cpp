@@ -272,7 +272,7 @@ namespace sh::game
 			CreateDrawable();
 	}
 
-	void MeshRenderer::Update()
+	void MeshRenderer::LateUpdate()
 	{
 		if (!sh::core::IsValid(mesh) || !sh::core::IsValid(mat) || !sh::core::IsValid(mat->GetShader()) || drawable == nullptr)
 			return;

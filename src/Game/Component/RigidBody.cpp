@@ -48,6 +48,26 @@ namespace sh::game
 	{
 		SH_INFO("~RigidBody");
 	}
+	SH_GAME_API void RigidBody::Start()
+	{
+		const auto& objQuat = gameObject.transform->GetQuat();
+		const Vec3& objPos = gameObject.transform->position;
+		impl->rigidbody->setTransform(reactphysics3d::Transform{ {objPos.x, objPos.y, objPos.z}, reactphysics3d::Quaternion{objQuat.x, objQuat.y, objQuat.z, objQuat.w} });
+		if (&collision->gameObject != &gameObject)
+		{
+			if (core::IsValid(collision))
+			{
+				const auto& pos = collision->gameObject.transform->position;
+				const auto& quat = collision->gameObject.transform->GetQuat();
+				impl->collider->setLocalToBodyTransform(reactphysics3d::Transform{ {pos.x, pos.y, pos.z}, {quat.x, quat.y, quat.z, quat.w} });
+			}
+		}
+
+		prevPos = objPos;
+		prevRot = objQuat;
+		currPos = objPos;
+		currRot = objQuat;
+	}
 	SH_GAME_API void RigidBody::OnDestroy()
 	{
 		if (impl->collider != nullptr)
@@ -61,12 +81,9 @@ namespace sh::game
 	}
 	SH_GAME_API void RigidBody::BeginUpdate()
 	{
-		if(impl->collider != nullptr && !core::IsValid(collision))
+		if (impl->collider != nullptr && !core::IsValid(collision))
 			SetCollider(nullptr);
 
-		auto& objQuat = gameObject.transform->GetQuat();
-		const Vec3& pos = gameObject.transform->position;
-		impl->rigidbody->setTransform(reactphysics3d::Transform{ {pos.x, pos.y, pos.z}, reactphysics3d::Quaternion{objQuat.x, objQuat.y, objQuat.z, objQuat.w} });
 		if (&collision->gameObject != &gameObject)
 		{
 			if (core::IsValid(collision))
@@ -79,18 +96,27 @@ namespace sh::game
 	}
 	SH_GAME_API void RigidBody::FixedUpdate()
 	{
+		prevPos = currPos;
+		prevRot = currRot;
+
 		auto& pos = impl->rigidbody->getTransform().getPosition();
 		auto& quat = impl->rigidbody->getTransform().getOrientation();
-		gameObject.transform->SetPosition(pos.x, pos.y, pos.z);
-		gameObject.transform->SetRotation(glm::quat{ quat.w, quat.x, quat.y, quat.z });
+		currPos = glm::vec3(pos.x, pos.y, pos.z);
+		currRot = glm::quat{ quat.w, quat.x, quat.y, quat.z };
 	}
 	SH_GAME_API void RigidBody::Update()
 	{
+		float alpha = std::clamp(gameObject.world.fixedDeltaTime / gameObject.world.FIXED_TIME, 0.f, 1.f);
+		glm::vec3 interpPos = glm::mix(prevPos, currPos, alpha);
+		glm::quat interpRot = glm::slerp(prevRot, currRot, alpha);
+		interpRot = glm::normalize(interpRot);
 
+		gameObject.transform->SetPosition(interpPos);
+		gameObject.transform->SetRotation(interpRot);
+		gameObject.transform->UpdateMatrix();
 	}
 	SH_GAME_API void RigidBody::LateUpdate()
 	{
-
 	}
 
 	SH_GAME_API void RigidBody::SetKinematic(bool set)
@@ -241,6 +267,14 @@ namespace sh::game
 	{
 		auto& f = impl->rigidbody->getForce();
 		return game::Vec3{ f.x, f.y, f.z };
+	}
+
+	SH_GAME_API void RigidBody::ResetPhysicsTransform()
+	{
+		const Vec3& objPos = gameObject.transform->position;
+		auto& objQuat = gameObject.transform->GetQuat();
+		
+		impl->rigidbody->setTransform(reactphysics3d::Transform{ {objPos.x, objPos.y, objPos.z}, reactphysics3d::Quaternion{objQuat.x, objQuat.y, objQuat.z, objQuat.w} });
 	}
 
 	SH_GAME_API void RigidBody::OnPropertyChanged(const core::reflection::Property& prop)

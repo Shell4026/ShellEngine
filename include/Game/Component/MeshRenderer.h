@@ -37,7 +37,7 @@ namespace sh::game
 		SH_GAME_API void OnDestroy() override;
 		SH_GAME_API void Awake() override;
 		SH_GAME_API void Start() override;
-		SH_GAME_API void Update() override;
+		SH_GAME_API void LateUpdate() override;
 
 		SH_GAME_API void SetMaterialPropertyBlock(render::MaterialPropertyBlock* block);
 		SH_GAME_API auto GetMaterialPropertyBlock() const -> render::MaterialPropertyBlock*;
