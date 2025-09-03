@@ -291,12 +291,22 @@ namespace sh::game
 		return game::Vec3{ f.x, f.y, f.z };
 	}
 
+	SH_GAME_API void RigidBody::SetSleep()
+	{
+		impl->rigidbody->setIsSleeping(true);
+	}
+
 	SH_GAME_API void RigidBody::ResetPhysicsTransform()
 	{
 		const Vec3& objPos = gameObject.transform->position;
 		auto& objQuat = gameObject.transform->GetQuat();
 		
 		impl->rigidbody->setTransform(reactphysics3d::Transform{ {objPos.x, objPos.y, objPos.z}, reactphysics3d::Quaternion{objQuat.x, objQuat.y, objQuat.z, objQuat.w} });
+
+		prevPos = objPos;
+		prevRot = objQuat;
+		currPos = objPos;
+		currRot = objQuat;
 	}
 
 	SH_GAME_API void RigidBody::OnPropertyChanged(const core::reflection::Property& prop)

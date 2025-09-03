@@ -54,6 +54,8 @@ namespace sh::game
 		SH_GAME_API auto GetAngularVelocity() const -> game::Vec3;
 		SH_GAME_API auto GetForce() const -> game::Vec3;
 
+		SH_GAME_API void SetSleep();
+
 		/// @brief 물리 객체의 transform을 현재 오브젝트의 transform으로 초기화 하는 코드
 		SH_GAME_API void ResetPhysicsTransform();
 
