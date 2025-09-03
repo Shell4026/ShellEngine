@@ -31,6 +31,7 @@ namespace sh::game
 
 		std::memcpy(rawData.data(), &header, sizeof(TextureHeader));
 		std::size_t offset = sizeof(TextureHeader);
+
 		for (const auto& row : originalPixelData)
 		{
 			std::memcpy(rawData.data() + offset, row.data(), row.size());

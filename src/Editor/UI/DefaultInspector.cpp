@@ -122,11 +122,38 @@ namespace sh::editor
 	{
 		using namespace render;
 		Texture* texture = reinterpret_cast<Texture*>(obj);
+		Texture::TextureFormat format = texture->GetTextureFormat();
+
+		std::string formatText = "";
+		switch (format)
+		{
+		case Texture::TextureFormat::RGB24:
+			formatText = "RGB24";
+			break;
+		case Texture::TextureFormat::RGBA32:
+			formatText = "RGBA32";
+			break;
+		case Texture::TextureFormat::SRGB24:
+			formatText = "SRGB24";
+			break;
+		case Texture::TextureFormat::SRGBA32:
+			formatText = "SRGBA32";
+			break;
+		case Texture::TextureFormat::R8:
+			formatText = "R8";
+			break;
+		}
+		ImGui::Text("format: %s", formatText.c_str());
+		ImGui::Text("width: %d", texture->GetWidth());
+		ImGui::Text("height: %d", texture->GetHeight());
+		ImGui::Text("mipLevel: %d", texture->GetMipLevel());
+
+		ImGui::Separator();
+
 		ImGui::Text("SRGB");
 		bool bSRGB = texture->IsSRGB();
 		if (ImGui::Checkbox("##SRGB", &bSRGB))
 		{
-			Texture::TextureFormat format = texture->GetTextureFormat();
 			if (bSRGB)
 			{
 				if (format == Texture::TextureFormat::RGB24)
@@ -142,6 +169,14 @@ namespace sh::editor
 					texture->ChangeTextureFormat(Texture::TextureFormat::RGBA32);
 			}
 
+			AssetDatabase::GetInstance()->SetDirty(texture);
+			AssetDatabase::GetInstance()->SaveAllAssets();
+		}
+		bool bGenerateMipmap = texture->IsGenerateMipmap();
+		ImGui::Text("Generate mipmap");
+		if (ImGui::Checkbox("##mipmap", &bGenerateMipmap))
+		{
+			texture->SetGenerateMipmap(bGenerateMipmap);
 			AssetDatabase::GetInstance()->SetDirty(texture);
 			AssetDatabase::GetInstance()->SaveAllAssets();
 		}

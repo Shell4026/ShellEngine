@@ -45,6 +45,8 @@ namespace sh::render
 		std::atomic_flag bDirty;
 		PROPERTY(bSRGB)
 		bool bSRGB = false;
+		PROPERTY(bGenerateMipmap)
+		bool bGenerateMipmap = true;
 		bool bSetDataDirty = false;
 	protected:
 		const IRenderContext* context;
@@ -95,6 +97,9 @@ namespace sh::render
 
 		SH_RENDER_API void SetAnisoLevel(uint32_t aniso);
 		SH_RENDER_API auto GetAnisoLevel() const -> uint32_t;
+
+		SH_RENDER_API void SetGenerateMipmap(bool bGenerate);
+		SH_RENDER_API auto IsGenerateMipmap() const -> bool;
 
 		SH_RENDER_API void SyncDirty() override;
 		SH_RENDER_API void Sync() override;

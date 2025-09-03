@@ -20,10 +20,11 @@ namespace sh::render
 			ci.height = height;
 			ci.format = format;
 			ci.aniso = aniso;
-			ci.bGenerateMipmap = true;
+			ci.bGenerateMipmap = bGenerateMipmap;
 			textureBuffer->Create(*context, ci);
 
-			for (int m = 0; m < pixels.size(); ++m)
+			const int mipLevel = bGenerateMipmap ? pixels.size() : 1;
+			for (int m = 0; m < mipLevel; ++m)
 				textureBuffer->SetData(pixels[m].data(), m);
 		}
 		onBufferUpdate.Notify(this);
@@ -41,6 +42,7 @@ namespace sh::render
 		aniso(1)
 	{
 		bSRGB = CheckSRGB();
+		bGenerateMipmap = bUseMipmap;
 
 		uint32_t mipLevels = bUseMipmap ? static_cast<uint32_t>(std::floor(std::log2(std::max(width, height)))) + 1 : 1;
 		pixels.resize(mipLevels);
@@ -142,6 +144,8 @@ namespace sh::render
 	}
 	SH_RENDER_API auto Texture::GetMipLevel() const -> uint32_t
 	{
+		if (!bGenerateMipmap)
+			return 1;
 		return pixels.size();
 	}
 	SH_RENDER_API void sh::render::Texture::SetAnisoLevel(uint32_t aniso)
@@ -156,6 +160,16 @@ namespace sh::render
 	SH_RENDER_API auto Texture::GetAnisoLevel() const -> uint32_t
 	{
 		return aniso;
+	}
+	SH_RENDER_API void Texture::SetGenerateMipmap(bool bGenerate)
+	{
+		bGenerateMipmap = bGenerate;
+		bSetDataDirty = true;
+		SyncDirty();
+	}
+	SH_RENDER_API auto Texture::IsGenerateMipmap() const -> bool
+	{
+		return bGenerateMipmap;
 	}
 	SH_RENDER_API void Texture::SyncDirty()
 	{
@@ -191,13 +205,17 @@ namespace sh::render
 	}
 	SH_RENDER_API void Texture::OnPropertyChanged(const core::reflection::Property& prop)
 	{
-		if (prop.GetName() == "aniso")
+		if (prop.GetName() == core::Util::ConstexprHash("aniso"))
 		{
 			SetAnisoLevel(aniso);
 		}
-		else if (prop.GetName() == "bSRGB")
+		else if (prop.GetName() == core::Util::ConstexprHash("bSRGB"))
 		{
 			SetSRGB(bSRGB);
+		}
+		else if (prop.GetName() == core::Util::ConstexprHash("bGenerateMipmap"))
+		{
+			SetGenerateMipmap(bGenerateMipmap);
 		}
 	}
 }
