@@ -169,6 +169,23 @@ namespace sh::game
 		return projection;
 	}
 
+	SH_GAME_API void Camera::SetNearPlane(float near)
+	{
+		camera.SetNearPlane(near);
+	}
+	SH_GAME_API auto Camera::GetNearPlane() const -> float
+	{
+		return camera.GetNearPlane(core::ThreadType::Game);
+	}
+	SH_GAME_API void Camera::SetFarPlane(float far)
+	{
+		camera.SetFarPlane(far);
+	}
+	SH_GAME_API auto Camera::GetFarPlane() const -> float
+	{
+		return camera.GetFarPlane(core::ThreadType::Game);
+	}
+
 	SH_GAME_API void Camera::OnPropertyChanged(const core::reflection::Property& prop)
 	{
 		if (prop.GetName() == core::Util::ConstexprHash("depth"))

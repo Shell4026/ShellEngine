@@ -124,6 +124,7 @@ namespace sh::game
 		const float pitch = glm::degrees(asin(forward.y));
 		xdir = pitch;
 		ydir = yaw;
+		camera.SetFarPlane(10000.0f);
 	}
 
 	SH_GAME_API void EditorCamera::BeginUpdate()

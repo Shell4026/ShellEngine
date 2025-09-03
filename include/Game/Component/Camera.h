@@ -64,6 +64,11 @@ namespace sh::game
 		SH_GAME_API void SetProjection(Projection proj);
 		SH_GAME_API auto GetProjection() const -> Projection;
 
+		SH_GAME_API void SetNearPlane(float near);
+		SH_GAME_API auto GetNearPlane() const -> float;
+		SH_GAME_API void SetFarPlane(float near);
+		SH_GAME_API auto GetFarPlane() const -> float;
+
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 	protected:
 		render::Camera camera;
