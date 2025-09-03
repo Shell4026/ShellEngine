@@ -3,16 +3,14 @@
 #include "ImGUImpl.h"
 #include "WorldEvents.hpp"
 #include "Component/Camera.h"
-#include "TextureLoader.h"
-#include "ModelLoader.h"
-#include "MaterialLoader.h"
-#include "ShaderLoader.h"
 #include "AssetLoaderFactory.h"
 
 #include "Core/GarbageCollection.h"
 #include "Core/Util.h"
 #include "Core/SObjectManager.h"
 #include "Core/Asset.h"
+
+#include "Render/TransparentPipeline.h"
 
 #include <utility>
 #include <cstdint>
@@ -64,6 +62,7 @@ namespace sh::game
 	SH_GAME_API void World::SetRenderPass()
 	{
 		renderer.AddRenderPipeline<render::RenderPipeline>();
+		renderer.AddRenderPipeline<render::TransparentPipeline>();
 	}
 	SH_GAME_API auto World::LoadAssetBundle(const std::filesystem::path& path) -> bool
 	{

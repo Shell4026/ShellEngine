@@ -13,6 +13,7 @@
 
 #include "Render/Mesh/Grid.h"
 #include "Render/Model.h"
+#include "Render/TransparentPipeline.h"
 
 #include "Editor/Component/EditorControl.h"
 
@@ -127,6 +128,7 @@ namespace sh::editor
 		pickingPass = renderer.AddRenderPipeline<EditorPickingPass>();
 		outlinePass = renderer.AddRenderPipeline<EditorOutlinePass>();
 		renderer.AddRenderPipeline<render::RenderPipeline>();
+		transParentPass = renderer.AddRenderPipeline<render::TransparentPipeline>();
 		postOutlinePass = renderer.AddRenderPipeline<EditorPostOutlinePass>();
 	}
 	SH_EDITOR_API void EditorWorld::InitResource()
@@ -171,7 +173,7 @@ namespace sh::editor
 		postOutlinePass->SetOutlineMaterial(*outlinePostMat);
 
 		renderer.GetRenderPipeline(core::Name{ "Forward" })->IgnoreCamera(pickingCamera->GetNative());
-
+		transParentPass->IgnoreCamera(pickingCamera->GetNative());
 		// 렌더 테스트용 객체
 		//auto prop = core::SObject::Create<render::MaterialPropertyBlock>();
 		//prop->SetProperty("offset", glm::vec2{ 0.5f, 0.f });

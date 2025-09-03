@@ -32,9 +32,13 @@ namespace sh::render
 			{
 				this->mesh = std::get<2>(syncData.changed);
 			}
-			else
+			else if (index == 3)
 			{
 				topology[core::ThreadType::Render] = std::get<3>(syncData.changed);
+			}
+			else if (index == 4)
+			{
+				priority[core::ThreadType::Render] = std::get<4>(syncData.changed);
 			}
 			syncData.changed = std::monostate{};
 		}
@@ -56,13 +60,17 @@ namespace sh::render
 		modelMatrix[core::ThreadType::Game] = glm::mat4{ 1.f };
 		modelMatrix[core::ThreadType::Render] = glm::mat4{ 1.f };
 
+		priority[core::ThreadType::Game] = 0;
+		priority[core::ThreadType::Render] = 0;
+
 		SH_INFO("Creation");
 	}
 	Drawable::Drawable(Drawable&& other) noexcept :
 		mat(other.mat), mesh(other.mesh), modelMatrix(other.modelMatrix),
-		materialData(std::move(other.materialData)), 
+		materialData(std::move(other.materialData)),
 		light(other.light),
-		renderTag(other.renderTag)
+		renderTag(other.renderTag),
+		priority(other.priority)
 	{
 		other.bDirty = false;
 		topology[core::ThreadType::Game] = other.topology[core::ThreadType::Game];
@@ -167,5 +175,19 @@ namespace sh::render
 	SH_RENDER_API auto Drawable::GetTopology(core::ThreadType thr) const -> Mesh::Topology
 	{
 		return topology[thr];
+	}
+	SH_RENDER_API void Drawable::SetPriority(int priority)
+	{
+		assert(core::ThreadSyncManager::IsMainThread());
+		if (this->priority[core::ThreadType::Game] != priority)
+		{
+			this->priority[core::ThreadType::Game] = priority;
+			syncDatas[3].changed = priority;
+			SyncDirty();
+		}
+	}
+	SH_RENDER_API auto Drawable::GetPriority(core::ThreadType thr) const -> int
+	{
+		return priority[thr];
 	}
 }//namespace

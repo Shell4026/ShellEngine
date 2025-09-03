@@ -13,6 +13,10 @@ namespace sh::game
 	class EditorCamera;
 	class PickingCamera;
 }
+namespace sh::render
+{
+	class TransparentPipeline;
+}
 namespace sh::editor
 {
 	class Project;
@@ -40,6 +44,7 @@ namespace sh::editor
 		EditorPickingPass* pickingPass = nullptr;
 		EditorOutlinePass* outlinePass = nullptr;
 		EditorPostOutlinePass* postOutlinePass = nullptr;
+		render::TransparentPipeline* transParentPass = nullptr;
 
 		core::EventSubscriber<game::events::ComponentEvent> componentSubscriber;
 	private:

@@ -26,33 +26,6 @@ namespace sh::render
 			alignas(16) glm::vec4 lightPos[10];
 			alignas(16) glm::vec4 other[10];
 		};
-	private:
-		const IRenderContext* context = nullptr;
-
-		PROPERTY(mat)
-		const Material* mat = nullptr;
-		PROPERTY(mesh)
-		const Mesh* mesh = nullptr;
-
-		MaterialData materialData;
-		core::SyncArray<Light> light;
-
-		core::SyncArray<glm::mat4> modelMatrix;
-		uint32_t renderTag = 1;
-		core::SyncArray<Mesh::Topology> topology;
-
-		struct SyncData
-		{
-			std::variant<std::monostate, const Material*, const Mesh*, Mesh::Topology> changed;
-		};
-		std::array<SyncData, 3> syncDatas;
-
-		bool bDirty = false;
-		bool bMatrixDirty = false;
-		bool bLightDirty = false;
-	protected:
-		SH_RENDER_API void SyncDirty() override;
-		SH_RENDER_API void Sync() override;
 	public:
 		SH_RENDER_API Drawable(const Material& material, const Mesh& mesh);
 		SH_RENDER_API Drawable(Drawable&& other) noexcept;
@@ -83,5 +56,36 @@ namespace sh::render
 
 		SH_RENDER_API void SetTopology(Mesh::Topology topology);
 		SH_RENDER_API auto GetTopology(core::ThreadType thr = core::ThreadType::Game) const -> Mesh::Topology;
+
+		SH_RENDER_API void SetPriority(int priority);
+		SH_RENDER_API auto GetPriority(core::ThreadType thr = core::ThreadType::Game) const -> int;
+	protected:
+		SH_RENDER_API void SyncDirty() override;
+		SH_RENDER_API void Sync() override;
+	private:
+		const IRenderContext* context = nullptr;
+
+		PROPERTY(mat)
+			const Material* mat = nullptr;
+		PROPERTY(mesh)
+			const Mesh* mesh = nullptr;
+
+		MaterialData materialData;
+		core::SyncArray<Light> light;
+
+		core::SyncArray<glm::mat4> modelMatrix;
+		uint32_t renderTag = 1;
+		core::SyncArray<Mesh::Topology> topology;
+		core::SyncArray<int> priority;
+
+		struct SyncData
+		{
+			std::variant<std::monostate, const Material*, const Mesh*, Mesh::Topology, int> changed;
+		};
+		std::array<SyncData, 4> syncDatas;
+
+		bool bDirty = false;
+		bool bMatrixDirty = false;
+		bool bLightDirty = false;
 	};
 }
