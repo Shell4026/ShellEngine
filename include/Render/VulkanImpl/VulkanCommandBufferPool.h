@@ -78,6 +78,6 @@ namespace sh::render::vk
 		std::map<VulkanCommandBuffer*, AllocData> allocated;
 		std::shared_mutex mu;
 
-		int cap = 4;
+		int cap = 8;
 	};
 }//namespace
