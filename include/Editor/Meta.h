@@ -16,15 +16,6 @@ namespace sh::editor
 	{
 	private:
 		constexpr static int VERSION = 1;
-
-		std::string name;
-		std::size_t typeHash;
-		core::UUID uuid;
-		std::filesystem::path path;
-		core::Json json;
-		std::size_t hash = 0;
-
-		bool bChanged = false;
 	public:
 		SH_EDITOR_API Meta();
 
@@ -42,5 +33,17 @@ namespace sh::editor
 		SH_EDITOR_API auto GetTypeHash() const -> std::size_t;
 		SH_EDITOR_API auto GetName() const -> const std::string&;
 		SH_EDITOR_API auto GetObjJson() const -> const core::Json*;
+
+		SH_EDITOR_API void Clear();
+	private:
+
+		std::string name;
+		std::size_t typeHash;
+		core::UUID uuid;
+		std::filesystem::path path;
+		core::Json json;
+		std::size_t hash = 0;
+
+		bool bChanged = false;
 	};
 }//namespace

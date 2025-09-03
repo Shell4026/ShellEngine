@@ -120,7 +120,7 @@ namespace sh::editor
 				static render::vk::VulkanShaderPassBuilder passBuilder{ static_cast<render::vk::VulkanContext&>(*project->renderer.GetContext()) };
 				static game::ShaderLoader loader{ &passBuilder };
 				loader.SetCachePath(projectPath / "temp");
-				render::Shader* shaderPtr = static_cast<render::Shader*>(LoadAsset(dir, loader, true));
+				render::Shader* shaderPtr = static_cast<render::Shader*>(LoadAsset(dir, loader, false));
 				if (shaderPtr != nullptr)
 					project->loadedAssets.AddResource(shaderPtr->GetUUID(), shaderPtr);
 				return shaderPtr;
@@ -242,7 +242,9 @@ namespace sh::editor
 						return objPtr;
 					}
 					else
+					{
 						SH_INFO_FORMAT("Asset {} was changed!", relativePath.u8string());
+					}
 				}
 			}
 		}

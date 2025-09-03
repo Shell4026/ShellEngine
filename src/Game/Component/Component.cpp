@@ -106,7 +106,7 @@ namespace sh::game
 					continue;
 				const core::reflection::TypeInfo& propType = prop->type;
 				const core::Name& name = prop->GetName();
-				if (propType == core::reflection::GetType<int>())
+				if (propType == core::reflection::GetType<int>() || prop->isEnum)
 					core::SerializeProperty(json, name, *prop->Get<int>(*this));
 				else if (propType == core::reflection::GetType<float>())
 					core::SerializeProperty(json, name, *prop->Get<float>(*this));
@@ -148,7 +148,7 @@ namespace sh::game
 				const core::reflection::TypeInfo& propType = prop->type;
 				const core::Name& name = prop->GetName();
 
-				if (propType == core::reflection::GetType<int>())
+				if (propType == core::reflection::GetType<int>() || prop->isEnum)
 				{
 					if (core::DeserializeProperty(compJson, name, *prop->Get<int>(*this)))
 						OnPropertyChanged(*prop.get());

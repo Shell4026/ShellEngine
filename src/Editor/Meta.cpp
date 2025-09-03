@@ -147,6 +147,10 @@ namespace sh::editor
 			return nullptr;
 		return &json["obj"];
 	}
+	SH_EDITOR_API void Meta::Clear()
+	{
+		return json.clear();
+	}
 	SH_EDITOR_API auto Meta::IsChanged() const -> bool
 	{
 		return bChanged;

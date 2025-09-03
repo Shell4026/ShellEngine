@@ -302,6 +302,7 @@ namespace sh::editor
 
 		renderTex = static_cast<render::RenderTexture*>(world.textures.GetResource("GameView"));
 		mainCam->SetRenderTexture(renderTex);
+		mainCam->SetActive(true);
 		ChangeViewportSize();
 
 		world.ClearSelectedObjects();
@@ -325,6 +326,7 @@ namespace sh::editor
 	{
 		game::Camera* cam = world.GetMainCamera();
 		cam->SetRenderTexture(nullptr);
+		cam->SetActive(false);
 
 		renderTex = world.GetGameObject("EditorCamera")->GetComponent<game::EditorCamera>()->GetRenderTexture();
 		ChangeViewportSize();
