@@ -41,6 +41,8 @@ namespace sh::game
 		/// @param dir 1이면 해당 축의 움직임을 제한, 0이면 허용
 		SH_GAME_API void SetAxisLock(const game::Vec3& dir);
 		SH_GAME_API auto GetAxisLock() const -> const game::Vec3&;
+		SH_GAME_API void SetBouncy(float bouncy);
+		SH_GAME_API auto GetBouncy() const -> float;
 
 		SH_GAME_API bool IsKinematic() const;
 		SH_GAME_API bool IsGravityUse() const;
@@ -68,6 +70,8 @@ namespace sh::game
 		game::Vec3 axisLock{ 0.f, 0.f, 0.f };
 		PROPERTY(mass)
 		float mass = 1.0f;
+		PROPERTY(bouncy)
+		float bouncy = 0.2f;
 		PROPERTY(linearDamping)
 		float linearDamping = 0.f;
 		PROPERTY(angularDamping)

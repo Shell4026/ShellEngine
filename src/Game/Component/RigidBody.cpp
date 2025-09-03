@@ -50,8 +50,8 @@ namespace sh::game
 	}
 	SH_GAME_API void RigidBody::Start()
 	{
-		const auto& objQuat = gameObject.transform->GetQuat();
-		const Vec3& objPos = gameObject.transform->position;
+		const auto& objQuat = gameObject.transform->GetWorldQuat();
+		const Vec3& objPos = gameObject.transform->GetWorldPosition();
 		impl->rigidbody->setTransform(reactphysics3d::Transform{ {objPos.x, objPos.y, objPos.z}, reactphysics3d::Quaternion{objQuat.x, objQuat.y, objQuat.z, objQuat.w} });
 		if (&collision->gameObject != &gameObject)
 		{
@@ -106,14 +106,23 @@ namespace sh::game
 	}
 	SH_GAME_API void RigidBody::Update()
 	{
-		float alpha = std::clamp(gameObject.world.fixedDeltaTime / gameObject.world.FIXED_TIME, 0.f, 1.f);
-		glm::vec3 interpPos = glm::mix(prevPos, currPos, alpha);
-		glm::quat interpRot = glm::slerp(prevRot, currRot, alpha);
-		interpRot = glm::normalize(interpRot);
+		if (!bKinematic)
+		{
+			float alpha = std::clamp(gameObject.world.fixedDeltaTime / gameObject.world.FIXED_TIME, 0.f, 1.f);
+			glm::vec3 interpPos = glm::mix(prevPos, currPos, alpha);
+			glm::quat interpRot = glm::slerp(prevRot, currRot, alpha);
+			interpRot = glm::normalize(interpRot);
 
-		gameObject.transform->SetPosition(interpPos);
-		gameObject.transform->SetRotation(interpRot);
-		gameObject.transform->UpdateMatrix();
+			gameObject.transform->SetWorldPosition(interpPos);
+			gameObject.transform->SetWorldRotation(interpRot);
+			gameObject.transform->UpdateMatrix();
+		}
+		else
+		{
+			gameObject.transform->SetWorldPosition(currPos);
+			gameObject.transform->SetWorldRotation(currRot);
+			gameObject.transform->UpdateMatrix();
+		}
 	}
 	SH_GAME_API void RigidBody::LateUpdate()
 	{
@@ -161,6 +170,7 @@ namespace sh::game
 			if (&colliderComponent->gameObject != &gameObject)
 				transform = reactphysics3d::Transform{ { pos.x, pos.y, pos.z }, { quat.x,quat.y,quat.z,quat.w } };
 			impl->collider = impl->rigidbody->addCollider(shape, transform);
+			impl->collider->getMaterial().setBounciness(bouncy);
 			//impl->rigidbody->getCollider(0)->set
 		}
 	}
@@ -227,6 +237,18 @@ namespace sh::game
 	SH_GAME_API auto RigidBody::GetAxisLock() const -> const game::Vec3&
 	{
 		return axisLock;
+	}
+
+	SH_GAME_API void RigidBody::SetBouncy(float bouncy)
+	{
+		this->bouncy = std::clamp(bouncy, 0.f, 1.f);
+		if (impl->collider != nullptr)
+			impl->collider->getMaterial().setBounciness(bouncy);
+	}
+
+	SH_GAME_API auto RigidBody::GetBouncy() const -> float
+	{
+		return bouncy;
 	}
 
 	SH_GAME_API bool RigidBody::IsKinematic() const
@@ -306,6 +328,10 @@ namespace sh::game
 		else if (prop.GetName() == core::Util::ConstexprHash("axisLock"))
 		{
 			SetAxisLock(axisLock);
+		}
+		else if (prop.GetName() == core::Util::ConstexprHash("bouncy"))
+		{
+			SetBouncy(bouncy);
 		}
 	}
 }//namespace
