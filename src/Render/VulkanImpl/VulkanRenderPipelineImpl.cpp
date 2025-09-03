@@ -169,9 +169,18 @@ namespace sh::render::vk
 			const VulkanRenderPass* renderPass = nullptr;
 			if (renderTexture == nullptr)
 			{
-				SetClearSetting(renderPassInfo, context.GetSampleCount() != VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT);
 				const VulkanFramebuffer* mainFramebuffer = static_cast<const VulkanFramebuffer*>(context.GetMainFramebuffer(imgIdx));
-				renderPass = mainFramebuffer->GetRenderPass();
+				VulkanRenderPass::Config config{ mainFramebuffer->GetRenderPass()->GetConfig() };
+				if (config.bClear != bClearFramebuffer)
+				{
+					config.bClear = bClearFramebuffer;
+					renderPass = &context.GetRenderPassManager().GetOrCreateRenderPass(config);
+				}
+				else
+					renderPass = mainFramebuffer->GetRenderPass();
+
+				SetClearSetting(renderPassInfo, context.GetSampleCount() != VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT);
+
 				renderPassInfo.renderPass = renderPass->GetVkRenderPass();
 				renderPassInfo.framebuffer = mainFramebuffer->GetVkFramebuffer();
 				renderPassInfo.renderArea.extent = context.GetSwapChain().GetSwapChainSize();
