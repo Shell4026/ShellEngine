@@ -68,11 +68,14 @@ namespace sh::game
 					stageType = render::ShaderPassBuilder::shaderType::Fragment;
 
 				// 컴파일
-				std::vector<std::string> args = { fmt::format("\"{}\"", shaderPath.u8string()), "-o", fmt::format("\"{}\"", spirvPath.u8string()) };
+				
 				std::string output;
 				std::string compiler = "glslc";
 #if _WIN32
+				std::vector<std::string> args = { fmt::format("\"{}\"", shaderPath.u8string()), "-o", fmt::format("\"{}\"", spirvPath.u8string()) };
 				compiler += ".exe";
+#else
+				std::vector<std::string> args = { fmt::format("{}", shaderPath.u8string()), "-o", fmt::format("{}", spirvPath.u8string()) };
 #endif
 				if (!core::ExecuteProcess::Execute(compiler, args, output))
 				{

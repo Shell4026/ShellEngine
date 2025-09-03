@@ -320,6 +320,8 @@ namespace sh::editor
 		{
 			SH_ERROR_FORMAT("Parsing failed: {}", dir.u8string());
 		}
+		if (json.is_array())
+			json = json[0];
 		for (auto it = json.begin(); it != json.end(); ++it)
 		{
 			core::UUID uuid{ it.key() };

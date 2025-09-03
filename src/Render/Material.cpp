@@ -320,8 +320,7 @@ namespace sh::render
 			const auto& texJson = propertyJson["textures"];
 			for (const auto& [name, value] : texJson.items())
 			{
-				std::string& uuidStr = value.get<std::string>();
-				const core::UUID uuid{ uuidStr };
+				const core::UUID uuid{ value.get<std::string>() };
 				auto ptr = core::SObjectManager::GetInstance()->GetSObject(uuid);
 				if (ptr == nullptr)
 				{
