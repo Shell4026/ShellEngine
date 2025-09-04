@@ -9,7 +9,7 @@
 
 namespace sh::core
 {
-	void GarbageCollection::ContainerMark(std::queue<SObject*>& bfs, SObject* parent, int depth, int maxDepth, sh::core::reflection::PropertyIterator& it)
+	void GarbageCollection::ContainerMark(std::queue<SObject*>& bfs, SObject* parent, int depth, int maxDepth, sh::core::reflection::PropertyIteratorT& it)
 	{
 		if (depth == maxDepth)
 		{

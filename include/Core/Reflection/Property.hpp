@@ -37,49 +37,109 @@ namespace sh::core
 
 namespace sh::core::reflection
 {
-	class IPropertyIteratorBase;
-	template<typename T>
+	template<typename T, bool Constant>
 	class IPropertyIterator;
-	template<typename TContainer, typename T = typename TContainer::value_type>
+	template<typename TContainer, typename T = typename TContainer::value_type, bool Constant = false>
 	class PropertyIteratorData;
+	template<bool Constant>
+	class PropertyIterator;
 
+	using PropertyIteratorT = PropertyIterator<false>;
+	using ConstPropertyIteratorT = PropertyIterator<true>;
+
+	/// @brief 자료형과 컨테이너를 숨긴 프로퍼티 반복자 인터페이스
+	template<bool Constant>
+	class IPropertyIteratorBase
+	{
+	public:
+		virtual ~IPropertyIteratorBase() = default;
+		virtual void operator++() = 0;
+		virtual auto operator==(const IPropertyIteratorBase& other) -> bool = 0;
+		virtual auto operator!=(const IPropertyIteratorBase& other) -> bool = 0;
+
+		virtual auto GetNestedBegin() -> PropertyIterator<Constant> = 0;
+		virtual auto GetNestedEnd() -> PropertyIterator<Constant> = 0;
+
+		virtual auto IsPair() const -> bool = 0;
+		virtual auto IsConst() const -> bool = 0;
+
+		virtual auto GetPairFirst() const -> void* = 0;
+		virtual auto GetPairSecond() const -> void* = 0;
+
+		virtual void Erase() = 0;
+
+		virtual auto GetType() const -> const TypeInfo& = 0;
+		virtual auto GetPairType() const->std::optional<std::pair<TypeInfo, TypeInfo>> = 0;
+
+		virtual auto Clone(void* buffer) const -> IPropertyIteratorBase* = 0;
+	};
 	//추상화된 프로퍼티 반복자
+	template<bool Constant>
 	class PropertyIterator
 	{
-	private:
-		alignas(alignof(std::max_align_t)) uint8_t iteratorBuffer[48]; // 힙 할당을 최소화 하기 위해 도입, 메모리 정렬도 맞춰야 성능 보장
-		IPropertyIteratorBase* iteratorDataPtr = nullptr;
 	public:
-		SH_CORE_API PropertyIterator();
-		template<typename TContainer, typename T = typename TContainer::value_type>
-		PropertyIterator(const PropertyIteratorData<TContainer, T>& data)
+		PropertyIterator()
 		{
-			static_assert(sizeof(PropertyIteratorData<TContainer, T>) <= sizeof(iteratorBuffer), "Iterator size exceeds buffer");
-			iteratorDataPtr = new (iteratorBuffer) PropertyIteratorData<TContainer, T>{data};
+			std::memset(iteratorBuffer, 0, sizeof(iteratorBuffer));
 		}
-		SH_CORE_API PropertyIterator(const PropertyIterator& other);
-		SH_CORE_API ~PropertyIterator();
+		template<typename TContainer, typename T = typename TContainer::value_type>
+		PropertyIterator(const PropertyIteratorData<TContainer, T, Constant>& data)
+		{
+			static_assert(sizeof(PropertyIteratorData<TContainer, T, Constant>) <= sizeof(iteratorBuffer), "Iterator size exceeds buffer");
+			iteratorDataPtr = new (iteratorBuffer) PropertyIteratorData<TContainer, T, Constant>{data};
+		}
+		PropertyIterator(const PropertyIterator& other)
+		{
+			other.iteratorDataPtr->Clone(iteratorBuffer);
+			iteratorDataPtr = reinterpret_cast<IPropertyIteratorBase*>(iteratorBuffer);
+		}
+		~PropertyIterator()
+		{
+			if (iteratorDataPtr != nullptr)
+				iteratorDataPtr->~IPropertyIteratorBase<Constant>();
+		}
 
-		SH_CORE_API auto operator=(const PropertyIterator& other) -> PropertyIterator&;
-		SH_CORE_API auto operator==(const PropertyIterator& other) -> bool;
-		SH_CORE_API auto operator!=(const PropertyIterator& other) -> bool;
-		SH_CORE_API auto operator++() -> PropertyIterator&;
+		auto operator=(const PropertyIterator& other) -> PropertyIterator&
+		{
+			other.iteratorDataPtr->Clone(iteratorBuffer);
+			iteratorDataPtr = reinterpret_cast<IPropertyIteratorBase<Constant>*>(iteratorBuffer);
+			return *this;
+		}
+		auto operator==(const PropertyIterator& other) -> bool
+		{
+			return *iteratorDataPtr == *other.iteratorDataPtr;
+		}
+		auto operator!=(const PropertyIterator& other) -> bool
+		{
+			return *iteratorDataPtr != *other.iteratorDataPtr;
+		}
+		auto operator++() -> PropertyIterator&
+		{
+			++(*iteratorDataPtr);
+			return *this;
+		}
 
 		/// @brief 원소의 타입을 반환 하는 함수
 		/// @return 타입 객체
-		SH_CORE_API auto GetType() const -> const TypeInfo&;
+		auto GetType() const -> const TypeInfo&
+		{
+			return iteratorDataPtr->GetType();
+		}
 		/// @brief Pair타입 원소의 타입을 반환 하는 함수
 		/// @return Pair가 아니라면 {}를 반환, 맞다면 Pair의 first와 second 타입을 반환
-		SH_CORE_API auto GetPairType() const -> std::optional<std::pair<TypeInfo, TypeInfo>>;
+		auto GetPairType() const -> std::optional<std::pair<TypeInfo, TypeInfo>>
+		{
+			return iteratorDataPtr->GetPairType();
+		}
 		template<typename T>
-		auto Get() -> T*
+		auto Get() -> std::conditional_t<Constant, const T*, T*>
 		{
 			//컨테이너 클래스가 아닌경우를 뜻한다.
 			if (iteratorDataPtr == nullptr)
 				return nullptr;
 
-			IPropertyIterator<T>* it = static_cast<IPropertyIterator<T>*>(iteratorDataPtr);
-			return &it->Get();
+			auto itPtr = static_cast<IPropertyIterator<T, Constant>*>(iteratorDataPtr);
+			return &itPtr->Get();
 		}
 
 		/// @brief 값이 std::pair일 경우 페어의 첫번째 값을 반환 하는 함수
@@ -103,48 +163,40 @@ namespace sh::core::reflection
 
 		/// @brief 자식 컨테이너의 반복자를 가져오는 함수
 		/// @return 프로퍼티 반복자
-		SH_CORE_API auto GetNestedBegin() -> PropertyIterator;
-		SH_CORE_API auto GetNestedEnd() -> PropertyIterator;
+		auto GetNestedBegin() -> PropertyIteratorT
+		{
+			return iteratorDataPtr->GetNestedBegin();
+		}
+		auto GetNestedEnd() -> PropertyIteratorT
+		{
+			return iteratorDataPtr->GetNestedEnd();
+		}
 
-		SH_CORE_API auto IsPair() const -> bool;
+		auto IsPair() const -> bool
+		{
+			return iteratorDataPtr->IsPair();
+		}
 		/// @brief 원소가 const 변수인지 반환하는 함수.
 		/// @return 맞으면 true, 아니면 false
-		SH_CORE_API auto IsConst() const -> bool;
+		auto IsConst() const -> bool
+		{
+			return iteratorDataPtr->IsConst();
+		}
 
 		/// @brief 컨테이너에서 해당 반복자 위치의 원소를 지우는 함수.
-		SH_CORE_API void Erase();
+		template<bool C = Constant, typename = typename std::enable_if_t<C == false>>
+		void Erase()
+		{
+			iteratorDataPtr->Erase();
+		}
+	private:
+		alignas(alignof(std::max_align_t)) uint8_t iteratorBuffer[48]; // 힙 할당을 최소화 하기 위해 도입, 메모리 정렬도 맞춰야 성능 보장
+		IPropertyIteratorBase<Constant>* iteratorDataPtr = nullptr;
 	};
-
-	/// @brief 자료형과 컨테이너를 숨긴 프로퍼티 반복자 인터페이스
-	class IPropertyIteratorBase
-	{
-	public:
-		virtual ~IPropertyIteratorBase() = default;
-		virtual void operator++() = 0;
-		virtual auto operator==(const IPropertyIteratorBase& other) -> bool = 0;
-		virtual auto operator!=(const IPropertyIteratorBase& other) -> bool = 0;
-
-		virtual auto GetNestedBegin() -> PropertyIterator = 0;
-		virtual auto GetNestedEnd() -> PropertyIterator = 0;
-
-		virtual auto IsPair() const -> bool = 0;
-		virtual auto IsConst() const -> bool = 0;
-
-		virtual auto GetPairFirst() const -> void* = 0;
-		virtual auto GetPairSecond() const -> void* = 0;
-
-		virtual void Erase() = 0;
-
-		virtual auto GetType() const -> const TypeInfo& = 0;
-		virtual auto GetPairType() const->std::optional<std::pair<TypeInfo, TypeInfo>> = 0;
-
-		virtual auto Clone(void* buffer) const -> IPropertyIteratorBase* = 0;
-	};
-
 	/// @brief 컨테이너 타입을 숨긴 프로퍼티 반복자 인터페이스
 	/// @tparam T 컨테이너가 담고 있는 값의 타입
-	template<typename T>
-	class IPropertyIterator : public IPropertyIteratorBase
+	template<typename T, bool Constant>
+	class IPropertyIterator : public IPropertyIteratorBase<Constant>
 	{
 	public:
 		auto GetType() const -> const TypeInfo& override
@@ -166,16 +218,18 @@ namespace sh::core::reflection
 	/// @brief 실질적인 프로퍼티 반복자 데이터
 	/// @tparam TContainer 컨테이너 타입
 	/// @tparam T 컨테이너가 담고 있는 값의 타입
-	template<typename TContainer, typename T>
-	class PropertyIteratorData : public IPropertyIterator<T>
+	template<typename TContainer, typename T, bool Constant>
+	class PropertyIteratorData : public IPropertyIterator<T, Constant>
 	{
 	private:
-		using IteratorType = typename std::iterator_traits<typename TContainer::iterator>::reference;
+		using RawContainer = std::remove_cv_t<std::remove_reference_t<TContainer>>;
+		using IteratorTypeT = std::conditional_t<std::is_const_v<TContainer>, typename RawContainer::const_iterator, typename RawContainer::iterator>;
+		using IteratorReference = typename std::iterator_traits<IteratorTypeT>::reference;
 
-		typename TContainer::iterator it;
+		IteratorTypeT it;
 		TContainer* container = nullptr;
 	public:
-		PropertyIteratorData(TContainer* container, typename TContainer::iterator initIterator) :
+		PropertyIteratorData(TContainer* container, IteratorTypeT initIterator) :
 			container(container), it(initIterator)
 		{
 		}
@@ -205,44 +259,50 @@ namespace sh::core::reflection
 			if constexpr (!sh::core::reflection::IsPair<T>::value)
 				return nullptr;
 			else
-				return &it->second;
+				return const_cast<void*>(reinterpret_cast<const void*>(&it->second));
 		}
 
 		/// @brief 내부 중첩된 컨테이너의 시작 반복자를 반환하는 함수
 		/// @return 반복자
-		auto GetNestedBegin() -> PropertyIterator override
+		auto GetNestedBegin() -> PropertyIterator<Constant> override
 		{
 			if constexpr (GetContainerNestedCount<TContainer>::value > 1)
 			{
 				if constexpr (sh::core::reflection::IsPair<T>::value)
 				{
 					using NestedType = typename T::second_type;
-					return PropertyIterator{ PropertyIteratorData<NestedType>{ &it->second, it->second.begin() } };
+					using NestedValueT = typename std::remove_reference_t<NestedType>::value_type;
+					return PropertyIterator<Constant>{ PropertyIteratorData<NestedType, NestedValueT, Constant>{ &it->second, it->second.begin() } };
 				}
 				else
 				{
-					return PropertyIterator{ PropertyIteratorData<T>{ &(*it), it->begin() } };
+					using NestedContainerT = T; // T는 컨테이너 타입
+					using NestedValueT = typename std::remove_reference_t<NestedContainerT>::value_type;
+					return PropertyIterator<Constant>{ PropertyIteratorData<NestedContainerT, NestedValueT, Constant>{ &(*it), it->begin() } };
 				}
 			}
-			return PropertyIterator{};
+			return PropertyIterator<Constant>{};
 		}
 		/// @brief 내부 중첩된 컨테이너의 끝 반복자를 반환하는 함수
 		/// @return 반복자
-		auto GetNestedEnd() -> PropertyIterator override
+		auto GetNestedEnd() -> PropertyIterator<Constant> override
 		{
 			if constexpr (GetContainerNestedCount<TContainer>::value > 1)
 			{
 				if constexpr (sh::core::reflection::IsPair<T>::value)
 				{
 					using NestedType = typename T::second_type;
-					return PropertyIterator{ PropertyIteratorData<NestedType>{ &it->second, it->second.end() } };
+					using NestedValueT = typename std::remove_reference_t<NestedType>::value_type;
+					return PropertyIterator<Constant>{ PropertyIteratorData<NestedType, NestedValueT, Constant>{ &it->second, it->second.end() } };
 				}
 				else
 				{
-					return PropertyIterator{ PropertyIteratorData<T>{ &(*it), it->end() } };
+					using NestedContainerT = T; // T는 컨테이너 타입
+					using NestedValueT = typename std::remove_reference_t<NestedContainerT>::value_type;
+					return PropertyIterator<Constant>{ PropertyIteratorData<NestedContainerT, NestedValueT, Constant>{ &(*it), it->end() } };
 				}
 			}
-			return PropertyIterator{};
+			return PropertyIterator<Constant>{};
 		}
 
 		/// @brief 해당 타입이 std::pair인지
@@ -255,17 +315,17 @@ namespace sh::core::reflection
 		/// @return 맞다면 true 아니면 false
 		auto IsConst() const -> bool override
 		{
-			return std::is_const<std::remove_reference_t<IteratorType>>::value;
+			return std::is_const<std::remove_reference_t<IteratorReference>>::value;
 		}
 
-		auto operator==(const IPropertyIteratorBase& other) -> bool override
+		auto operator==(const IPropertyIteratorBase<Constant>& other) -> bool override
 		{
-			return static_cast<const PropertyIteratorData<TContainer, T>*>(&other)->it == it;
+			return static_cast<const PropertyIteratorData<TContainer, T, Constant>*>(&other)->it == it;
 		}
 
-		auto operator!=(const IPropertyIteratorBase& other) -> bool override
+		auto operator!=(const IPropertyIteratorBase<Constant>& other) -> bool override
 		{
-			return static_cast<const PropertyIteratorData<TContainer, T>*>(&other)->it != it;
+			return static_cast<const PropertyIteratorData<TContainer, T, Constant>*>(&other)->it != it;
 		}
 
 		void operator++() override
@@ -282,15 +342,15 @@ namespace sh::core::reflection
 				it = container->erase(it);
 			else
 			{
-				if constexpr (std::is_pointer_v<T> && !std::is_const_v<std::remove_reference_t<IteratorType>>)
+				if constexpr (std::is_pointer_v<T> && !std::is_const_v<std::remove_reference_t<IteratorReference>>)
 					*it = nullptr;
 			}
 		}
 
-		auto Clone(void* buffer) const -> IPropertyIteratorBase* override
+		auto Clone(void* buffer) const -> IPropertyIteratorBase<Constant>* override
 		{
-			new (buffer) PropertyIteratorData<TContainer, T>{ *this };
-			return reinterpret_cast<PropertyIteratorData<TContainer, T>*>(buffer);
+			new (buffer) PropertyIteratorData<TContainer, T, Constant>{ *this };
+			return reinterpret_cast<PropertyIteratorData<TContainer, T, Constant>*>(buffer);
 		}
 	};
 
@@ -299,8 +359,10 @@ namespace sh::core::reflection
 	{
 	public:
 		virtual auto GetType() const -> const TypeInfo& = 0;
-		virtual auto Begin(void* sobject) const -> PropertyIterator = 0;
-		virtual auto End(void* sobject) const -> PropertyIterator = 0;
+		virtual auto Begin(void* sobject) const -> PropertyIteratorT = 0;
+		virtual auto Begin(const void* sobject) const -> ConstPropertyIteratorT = 0;
+		virtual auto End(void* sobject) const -> PropertyIteratorT = 0;
+		virtual auto End(const void* sobject) const -> ConstPropertyIteratorT = 0;
 	};
 	/// @brief 타입을 가진 프로퍼티 추상 클래스
 	template<typename T>
@@ -338,44 +400,89 @@ namespace sh::core::reflection
 		/// @brief 해당 프로퍼티가 컨테이너라면 시작 반복자를 반환한다.
 		/// @param sobject 해당 프로퍼티를 가지고 있는 클래스 포인터
 		/// @return 컨테이너라면 유효한 반복자를, 아니라면 빈 반복자를 반환한다.
-		auto Begin(void* sobject) const -> PropertyIterator override
+		auto Begin(void* sobject) const -> PropertyIteratorT override
 		{
 			if constexpr (IsContainer<T>())
 			{
 				if constexpr (std::is_member_pointer_v<VariablePointer>)
 				{
 					T& container = static_cast<ThisType*>(sobject)->*ptr;
-					return PropertyIterator{ PropertyIteratorData<T>{ &container, container.begin() } };
+					return PropertyIteratorT{ PropertyIteratorData<T>{ &container, container.begin() } };
 				}
 				else
 				{
 					T& container = *ptr;
-					return PropertyIterator{ PropertyIteratorData<T>{ &container, container.begin() } };
+					return PropertyIteratorT{ PropertyIteratorData<T>{ &container, container.begin() } };
 				}
 			}
 			else
-				return PropertyIterator{};
+				return PropertyIteratorT{};
 		}
+		auto Begin(const void* sobject) const -> ConstPropertyIteratorT override
+		{
+			if constexpr (IsContainer<T>())
+			{
+				if constexpr (std::is_member_pointer_v<VariablePointer>)
+				{
+					const T& container = static_cast<const ThisType*>(sobject)->*ptr;
+					using ContainerType = std::remove_reference_t<decltype(container)>;
+					using ValueType = typename std::remove_reference_t<ContainerType>::value_type;
+					return ConstPropertyIteratorT{ PropertyIteratorData<const ContainerType, const ValueType, true>{ &container, container.begin() } };
+				}
+				else
+				{
+					const T& container = *ptr;
+					using ContainerType = std::remove_reference_t<decltype(container)>;
+					using ValueType = typename std::remove_reference_t<ContainerType>::value_type;
+					return ConstPropertyIteratorT{ PropertyIteratorData<const ContainerType, const ValueType, true>{ &container, container.begin() } };
+				}
+			}
+			else
+				return ConstPropertyIteratorT{};
+		}
+
 		/// @brief 해당 프로퍼티가 컨테이너라면 시작 반복자를 반환한다.
 		/// @param sobject 해당 프로퍼티를 가지고 있는 클래스 포인터
 		/// @return 컨테이너라면 유효한 반복자를, 아니라면 빈 반복자를 반환한다.
-		auto End(void* sobject) const -> PropertyIterator override
+		auto End(void* sobject) const -> PropertyIteratorT override
 		{
 			if constexpr (IsContainer<T>())
 			{
 				if constexpr (std::is_member_pointer_v<VariablePointer>)
 				{
 					T& container = static_cast<ThisType*>(sobject)->*ptr;
-					return PropertyIterator{ PropertyIteratorData<T>{ &container, container.end() } };
+					return PropertyIteratorT{ PropertyIteratorData<T>{ &container, container.end() } };
 				}
 				else
 				{
 					T& container = *ptr;
-					return PropertyIterator{ PropertyIteratorData<T>{ &container, container.end() } };
+					return PropertyIteratorT{ PropertyIteratorData<T>{ &container, container.end() } };
 				}
 			}
 			else
-				return PropertyIterator{};
+				return PropertyIteratorT{};
+		}
+		auto End(const void* sobject) const -> ConstPropertyIteratorT override
+		{
+			if constexpr (IsContainer<T>())
+			{
+				if constexpr (std::is_member_pointer_v<VariablePointer>)
+				{
+					const T& container = static_cast<const ThisType*>(sobject)->*ptr;
+					using ContainerType = std::remove_reference_t<decltype(container)>;
+					using ValueType = typename std::remove_reference_t<ContainerType>::value_type;
+					return ConstPropertyIteratorT{ PropertyIteratorData<const ContainerType, const ValueType, true>{ &container, container.end() } };
+				}
+				else
+				{
+					const T& container = *ptr;
+					using ContainerType = std::remove_reference_t<decltype(container)>;
+					using ValueType = typename std::remove_reference_t<ContainerType>::value_type;
+					return ConstPropertyIteratorT{ PropertyIteratorData<const ContainerType, const ValueType, true>{ &container, container.end() } };
+				}
+			}
+			else
+				return ConstPropertyIteratorT{};
 		}
 	};
 	/// @brief 프로퍼티를 만드는데 필요한 정보를 담고 있는 클래스
@@ -395,10 +502,10 @@ namespace sh::core::reflection
 
 		const std::string_view name;
 
-		static auto ParseOption(const std::initializer_list<std::string_view>& option) -> Option
+		static auto ParseOption(const std::initializer_list<std::string_view>& options) -> Option
 		{
 			Option retOption{};
-			for (auto& option : option)
+			for (auto& option : options)
 			{
 				if (option == "const")
 					retOption.bConst = true;
@@ -409,8 +516,8 @@ namespace sh::core::reflection
 			}
 			return retOption;
 		}
-		PropertyCreateInfo(std::string_view name, const std::initializer_list<std::string_view>& option) :
-			name(name), option(ParseOption(option))
+		PropertyCreateInfo(std::string_view name, const std::initializer_list<std::string_view>& options) :
+			name(name), option(ParseOption(options))
 		{
 		}
 	};
@@ -504,14 +611,13 @@ namespace sh::core::reflection
 		/// @brief 해당 프로퍼티가 컨테이너라면 시작 반복자를 반환한다.
 		/// @param SObject 프로퍼티 소유 객체
 		/// @return 컨테이너가 아니라면 빈 반복자를 반환한다.
-		SH_CORE_API auto Begin(SObject& SObject) -> PropertyIterator;
-		SH_CORE_API auto Begin(SObject& SObject) const -> PropertyIterator;
+		SH_CORE_API auto Begin(SObject& SObject) const -> PropertyIteratorT;
+		SH_CORE_API auto Begin(const SObject& SObject) const-> ConstPropertyIteratorT;
 		/// @brief 해당 프로퍼티가 컨테이너라면 시작 반복자를 반환한다.
 		/// @param SObject 프로퍼티 소유 객체
 		/// @return 컨테이너가 아니라면 빈 반복자를 반환한다.
-		SH_CORE_API auto End(SObject& SObject) -> PropertyIterator;
-		SH_CORE_API auto End(SObject& SObject) const -> PropertyIterator;
-
+		SH_CORE_API auto End(SObject& SObject) const -> PropertyIteratorT;
+		SH_CORE_API auto End(const SObject& SObject) const -> ConstPropertyIteratorT;
 		/// @brief 프로퍼티가 컨테이너라면 얼마나 중첩된 컨테이너인지 반환한다.
 		/// @return 1이면 단일 컨테이너, 컨테이너가 아니라면 0
 		SH_CORE_API auto GetContainerNestedLevel() const -> uint32_t;

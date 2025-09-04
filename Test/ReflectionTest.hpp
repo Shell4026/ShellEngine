@@ -123,9 +123,20 @@ TEST(ReflectionTest, TypeInfoTest)
     EXPECT_EQ(base.GetType().size, sizeof(Base));
     EXPECT_EQ(derived.GetType().size, sizeof(Derived));
 
-    auto& intType = reflection::GetType<const int>();
-    EXPECT_EQ(reflection::GetType<int>(), reflection::GetType<const int>());
-    EXPECT_TRUE(intType.isConst);
+    using namespace sh::core;
+    auto& type1 = reflection::GetType<int*>();
+    auto& type2 = reflection::GetType<int>();
+    auto& type3 = reflection::GetType<const int>();
+    auto& type4 = reflection::GetType<int&>();
+    auto& type5 = reflection::GetType<int*&>();
+    EXPECT_FALSE(type1 == type2);
+    EXPECT_FALSE(type2 == type3);
+    EXPECT_FALSE(type3 == type4);
+    EXPECT_FALSE(type4 == type5);
+    EXPECT_FALSE(type5 == type1);
+    // 해시는 다 같다.
+    EXPECT_TRUE(type1.hash == type2.hash && type2.hash == type3.hash && type3.hash == type4.hash && type4.hash == type5.hash);
+
 }
 TEST(ReflectionTest, TypeNameTest)
 {
@@ -244,7 +255,8 @@ TEST(ReflectionTest, PropertyTest)
         {
             EXPECT_TRUE(it.IsPair());
             EXPECT_TRUE(it.GetPairType()->first.isConst);
-            EXPECT_TRUE(it.GetPairType()->first == sh::core::reflection::GetType<std::string>());
+            EXPECT_TRUE(it.GetPairType()->first != sh::core::reflection::GetType<std::string>()); // map의 키값은 const기 때문에 다름
+            EXPECT_TRUE(it.GetPairType()->first.hash == sh::core::reflection::GetType<std::string>().hash); // 해시는 같음
             EXPECT_TRUE(it.GetPairType()->second == sh::core::reflection::GetType<int>());
             auto pair = it.Get<std::pair<const std::string, int>>();
             pair->second++;
@@ -284,7 +296,7 @@ TEST(ReflectionTest, NestedContainerPropertyTest)
     EXPECT_EQ(prop->GetContainerNestedLevel(), 2);
     int expected = 0;
 
-    sh::core::reflection::PropertyIterator savedIterator;
+    sh::core::reflection::PropertyIteratorT savedIterator;
     for (auto it = prop->Begin(nested0); it != prop->End(nested0); ++it)
     {
         for (auto it2 = it.GetNestedBegin(); it2 != it.GetNestedEnd(); ++it2)

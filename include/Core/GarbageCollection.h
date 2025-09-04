@@ -19,6 +19,7 @@
 namespace sh::core::reflection
 {
 	class Property;
+	template<bool Constant>
 	class PropertyIterator;
 }
 
@@ -228,7 +229,7 @@ namespace sh::core
 		/// @param depth 현재 깊이
 		/// @param maxDepth 최대 깊이
 		/// @param it 넘길 반복자
-		void ContainerMark(std::queue<SObject*>& bfs, SObject* parent, int depth, int maxDepth, sh::core::reflection::PropertyIterator& it);
+		void ContainerMark(std::queue<SObject*>& bfs, SObject* parent, int depth, int maxDepth, sh::core::reflection::PropertyIterator<false>& it);
 		void Mark(std::size_t start, std::size_t end);
 		void MarkWithMultiThread();
 		SH_CORE_API void MarkProperties(SObject* obj, std::queue<SObject*>& bfs);

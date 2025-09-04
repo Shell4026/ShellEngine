@@ -3,76 +3,6 @@
 
 namespace sh::core::reflection
 {
-	PropertyIterator::PropertyIterator()
-	{
-		std::memset(iteratorBuffer, 0, sizeof(iteratorBuffer));
-	}
-	PropertyIterator::PropertyIterator(const PropertyIterator& other)
-	{
-		other.iteratorDataPtr->Clone(iteratorBuffer);
-		iteratorDataPtr = reinterpret_cast<IPropertyIteratorBase*>(iteratorBuffer);
-	}
-	PropertyIterator::~PropertyIterator()
-	{
-		if (iteratorDataPtr != nullptr)
-			iteratorDataPtr->~IPropertyIteratorBase();
-	}
-
-	SH_CORE_API auto PropertyIterator::operator=(const PropertyIterator& other) -> PropertyIterator&
-	{
-		other.iteratorDataPtr->Clone(iteratorBuffer);
-		iteratorDataPtr = reinterpret_cast<IPropertyIteratorBase*>(iteratorBuffer);
-		return *this;
-	}
-	SH_CORE_API auto PropertyIterator::operator==(const PropertyIterator& other) -> bool
-	{
-		return *iteratorDataPtr == *other.iteratorDataPtr;
-	}
-
-	SH_CORE_API auto PropertyIterator::operator!=(const PropertyIterator& other) -> bool
-	{
-		return *iteratorDataPtr != *other.iteratorDataPtr;
-	}
-
-	SH_CORE_API auto PropertyIterator::operator++() -> PropertyIterator&
-	{
-		++(*iteratorDataPtr);
-		return *this;
-	}
-
-	SH_CORE_API auto PropertyIterator::GetType() const -> const TypeInfo&
-	{
-		return iteratorDataPtr->GetType();
-	}
-	SH_CORE_API auto PropertyIterator::GetPairType() const -> std::optional<std::pair<TypeInfo, TypeInfo>>
-	{
-		return iteratorDataPtr->GetPairType();
-	}
-
-	SH_CORE_API auto PropertyIterator::GetNestedBegin() -> PropertyIterator
-	{
-		return iteratorDataPtr->GetNestedBegin();
-	}
-
-	SH_CORE_API auto PropertyIterator::GetNestedEnd() -> PropertyIterator
-	{
-		return iteratorDataPtr->GetNestedEnd();
-	}
-
-	SH_CORE_API auto PropertyIterator::IsPair() const -> bool
-	{
-		return iteratorDataPtr->IsPair();
-	}
-	SH_CORE_API auto PropertyIterator::IsConst() const -> bool
-	{
-		return iteratorDataPtr->IsConst();
-	}
-
-	SH_CORE_API void PropertyIterator::Erase()
-	{
-		iteratorDataPtr->Erase();
-	}
-
 	Property::Property(const Property& other) noexcept :
 		data(other.data),
 		pureTypeName(other.pureTypeName),
@@ -112,20 +42,19 @@ namespace sh::core::reflection
 	{
 		return name;
 	}
-	SH_CORE_API auto Property::Begin(SObject& SObject) -> PropertyIterator
+	SH_CORE_API auto Property::Begin(SObject& SObject) const -> PropertyIteratorT
 	{
 		return data->Begin(&SObject);
 	}
-	SH_CORE_API auto Property::Begin(SObject& SObject) const -> PropertyIterator
+	SH_CORE_API auto Property::Begin(const SObject& SObject) const -> ConstPropertyIteratorT
 	{
 		return data->Begin(&SObject);
 	}
-
-	SH_CORE_API auto Property::End(SObject& SObject) -> PropertyIterator
+	SH_CORE_API auto Property::End(SObject& SObject) const -> PropertyIteratorT
 	{
 		return data->End(&SObject);
 	}
-	SH_CORE_API auto Property::End(SObject& SObject) const -> PropertyIterator
+	SH_CORE_API auto Property::End(const SObject& SObject) const -> ConstPropertyIteratorT
 	{
 		return data->End(&SObject);
 	}
