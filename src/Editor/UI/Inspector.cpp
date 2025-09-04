@@ -322,7 +322,9 @@ namespace sh::editor
 				if (gameObjTypeName == ImGui::GetDragDropPayload()->DataType)
 				{
 					game::GameObject* obj = *reinterpret_cast<game::GameObject**>(ImGui::GetDragDropPayload()->Data);
-					for (auto payloadComponent : obj->GetComponents())
+
+					std::vector<game::Component* const*> list{};
+					for (game::Component* const& payloadComponent : obj->GetComponents())
 					{
 						if (!core::IsValid(payloadComponent))
 							continue;
@@ -332,12 +334,31 @@ namespace sh::editor
 						{
 							if (componentType->type.name == typeName)
 							{
-								// 요구하는 컴포넌트가 맞다면 페이로드 재설정
-								ImGui::SetDragDropPayload(std::string{ componentType->type.name }.c_str(), &payloadComponent, sizeof(game::Component*));
+								// 부모가 해당 컴포넌트인 오브젝트는 여럿일 수 있으므로 후보 리스트에 넣는다.
+								list.push_back(&payloadComponent);
 								break;
 							}
 							componentType = componentType->GetSuper();
 						}
+					}
+					bool bFind = false;
+					for (game::Component* const* component : list)
+					{
+						const core::reflection::STypeInfo& componentType = (*component)->GetType();
+						// 정확히 같은 컴포넌트라면
+						if (componentType.type.name == typeName)
+						{
+							bFind = true;
+							// 페이로드 재설정
+							ImGui::SetDragDropPayload(std::string{ componentType.type.name }.c_str(), component, sizeof(game::Component*));
+							break;
+						}
+					}
+					// 정확히 같은 컴포넌트는 못 찾았으므로 제일 첫번째로 찾은 컴포넌트를 페이로드로 설정
+					if (!bFind)
+					{
+						const core::reflection::STypeInfo& componentType = (*list[0])->GetType();
+						ImGui::SetDragDropPayload(std::string{ componentType.type.name }.c_str(), list[0], sizeof(game::Component*));
 					}
 				}
 			}
@@ -391,7 +412,9 @@ namespace sh::editor
 							if (gameObjTypeName == ImGui::GetDragDropPayload()->DataType)
 							{
 								game::GameObject* obj = *reinterpret_cast<game::GameObject**>(ImGui::GetDragDropPayload()->Data);
-								for (auto payloadComponent : obj->GetComponents())
+
+								std::vector<game::Component* const*> list{};
+								for (game::Component* const& payloadComponent : obj->GetComponents())
 								{
 									if (!core::IsValid(payloadComponent))
 										continue;
@@ -401,12 +424,31 @@ namespace sh::editor
 									{
 										if (componentType->type.name == propTypeName)
 										{
-											// 요구하는 컴포넌트가 맞다면 페이로드 재설정
-											ImGui::SetDragDropPayload(std::string{ componentType->type.name }.c_str(), &payloadComponent, sizeof(game::Component*));
+											// 부모가 해당 컴포넌트인 오브젝트는 여럿일 수 있으므로 후보 리스트에 넣는다.
+											list.push_back(&payloadComponent);
 											break;
 										}
 										componentType = componentType->GetSuper();
 									}
+								}
+								bool bFind = false;
+								for (game::Component*const* component : list)
+								{
+									const core::reflection::STypeInfo& componentType = (*component)->GetType();
+									// 정확히 같은 컴포넌트라면
+									if (componentType.type.name == propTypeName)
+									{
+										bFind = true;
+										// 페이로드 재설정
+										ImGui::SetDragDropPayload(std::string{ componentType.type.name }.c_str(), component, sizeof(game::Component*));
+										break;
+									}
+								}
+								// 정확히 같은 컴포넌트는 못 찾았으므로 제일 첫번째로 찾은 컴포넌트를 페이로드로 설정
+								if (!bFind)
+								{
+									const core::reflection::STypeInfo& componentType = (*list[0])->GetType();
+									ImGui::SetDragDropPayload(std::string{ componentType.type.name }.c_str(), list[0], sizeof(game::Component*));
 								}
 							}
 						}
