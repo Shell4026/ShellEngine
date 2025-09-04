@@ -1,13 +1,14 @@
 ﻿#include "Component/RigidBody.h"
 
 #include "GameObject.h"
-#include "PhysWorld.h"
 
 #include "Core/Logger.h"
 
 #include "reactphysics3d/reactphysics3d.h"
 namespace sh::game
 {
+	std::unordered_map<RigidBody::RigidBodyHandle, RigidBody*> RigidBody::nativeMap{};
+
 	struct RigidBody::Impl
 	{
 		reactphysics3d::Collider* collider = nullptr;
@@ -31,6 +32,8 @@ namespace sh::game
 		impl->rigidbody->setType(reactphysics3d::BodyType::DYNAMIC);
 		impl->rigidbody->enableGravity(bGravity);
 
+		nativeMap.insert({ impl->rigidbody, this });
+
 		colliderDestroyListener.SetCallback(
 			[&](const core::SObject* obj)
 			{
@@ -43,6 +46,29 @@ namespace sh::game
 				}
 			}
 		);
+
+		physEventSubscriber.SetCallback(
+			[&](const phys::PhysWorld::PhysicsEvent& evt)
+			{
+				if (evt.rigidBody1Handle == impl->rigidbody || evt.rigidBody2Handle == impl->rigidbody)
+				{
+					RigidBodyHandle otherHandle = (evt.rigidBody1Handle == impl->rigidbody) ? evt.rigidBody2Handle : evt.rigidBody1Handle;
+					auto it = nativeMap.find(otherHandle);
+					if (it == nativeMap.end()) // 일어날 수가 있나?
+						return;
+					Collider* collider = it->second->GetCollider();
+					if (!core::IsValid(collider))
+						return;
+
+					if (evt.type == phys::PhysWorld::PhysicsEvent::Type::CollisionEnter)
+						gameObject.OnCollisionEnter(*collider);
+					else if (evt.type == phys::PhysWorld::PhysicsEvent::Type::CollisionExit)
+						gameObject.OnCollisionExit(*collider);
+				}
+			}
+		);
+
+		owner.world.GetPhysWorld()->bus.Subscribe(physEventSubscriber);
 	}
 	SH_GAME_API RigidBody::~RigidBody()
 	{
@@ -50,26 +76,12 @@ namespace sh::game
 	}
 	SH_GAME_API void RigidBody::Start()
 	{
-		const auto& objQuat = gameObject.transform->GetWorldQuat();
-		const Vec3& objPos = gameObject.transform->GetWorldPosition();
-		impl->rigidbody->setTransform(reactphysics3d::Transform{ {objPos.x, objPos.y, objPos.z}, reactphysics3d::Quaternion{objQuat.x, objQuat.y, objQuat.z, objQuat.w} });
-		if (&collision->gameObject != &gameObject)
-		{
-			if (core::IsValid(collision))
-			{
-				const auto& pos = collision->gameObject.transform->position;
-				const auto& quat = collision->gameObject.transform->GetQuat();
-				impl->collider->setLocalToBodyTransform(reactphysics3d::Transform{ {pos.x, pos.y, pos.z}, {quat.x, quat.y, quat.z, quat.w} });
-			}
-		}
-
-		prevPos = objPos;
-		prevRot = objQuat;
-		currPos = objPos;
-		currRot = objQuat;
+		ResetPhysicsTransform();
 	}
 	SH_GAME_API void RigidBody::OnDestroy()
 	{
+		nativeMap.erase(impl->rigidbody);
+
 		if (impl->collider != nullptr)
 			impl->rigidbody->removeCollider(impl->collider);
 
@@ -83,16 +95,6 @@ namespace sh::game
 	{
 		if (impl->collider != nullptr && !core::IsValid(collision))
 			SetCollider(nullptr);
-
-		if (&collision->gameObject != &gameObject)
-		{
-			if (core::IsValid(collision))
-			{
-				const auto& pos = collision->gameObject.transform->position;
-				const auto& quat = collision->gameObject.transform->GetQuat();
-				impl->collider->setLocalToBodyTransform(reactphysics3d::Transform{ {pos.x, pos.y, pos.z}, {quat.x, quat.y, quat.z, quat.w} });
-			}
-		}
 	}
 	SH_GAME_API void RigidBody::FixedUpdate()
 	{
@@ -106,23 +108,7 @@ namespace sh::game
 	}
 	SH_GAME_API void RigidBody::Update()
 	{
-		if (!bKinematic)
-		{
-			float alpha = std::clamp(gameObject.world.fixedDeltaTime / gameObject.world.FIXED_TIME, 0.f, 1.f);
-			glm::vec3 interpPos = glm::mix(prevPos, currPos, alpha);
-			glm::quat interpRot = glm::slerp(prevRot, currRot, alpha);
-			interpRot = glm::normalize(interpRot);
-
-			gameObject.transform->SetWorldPosition(interpPos);
-			gameObject.transform->SetWorldRotation(interpRot);
-			gameObject.transform->UpdateMatrix();
-		}
-		else
-		{
-			gameObject.transform->SetWorldPosition(currPos);
-			gameObject.transform->SetWorldRotation(currRot);
-			gameObject.transform->UpdateMatrix();
-		}
+		Interpolate();
 	}
 	SH_GAME_API void RigidBody::LateUpdate()
 	{
@@ -136,7 +122,7 @@ namespace sh::game
 		else
 			impl->rigidbody->setType(reactphysics3d::BodyType::DYNAMIC);
 	}
-	SH_GAME_API void RigidBody::SetGravity(bool use)
+	SH_GAME_API void RigidBody::SetUsingGravity(bool use)
 	{
 		bGravity = use;
 		impl->rigidbody->enableGravity(bGravity);
@@ -173,6 +159,11 @@ namespace sh::game
 			impl->collider->getMaterial().setBounciness(bouncy);
 			//impl->rigidbody->getCollider(0)->set
 		}
+	}
+
+	SH_GAME_API auto RigidBody::GetCollider() const -> Collider*
+	{
+		return collision;
 	}
 
 	SH_GAME_API void RigidBody::SetMass(float mass)
@@ -296,12 +287,34 @@ namespace sh::game
 		impl->rigidbody->setIsSleeping(true);
 	}
 
+	SH_GAME_API auto RigidBody::GetNativeHandle() const -> RigidBodyHandle
+	{
+		return impl->rigidbody;
+	}
+
 	SH_GAME_API void RigidBody::ResetPhysicsTransform()
 	{
-		const Vec3& objPos = gameObject.transform->position;
-		auto& objQuat = gameObject.transform->GetQuat();
+		const Vec3& objPos = gameObject.transform->GetWorldPosition();
+		const auto& objQuat = gameObject.transform->GetWorldQuat();
 		
+		if (&collision->gameObject != &gameObject)
+		{
+			if (core::IsValid(collision))
+			{
+				const auto& pos = collision->gameObject.transform->position;
+				const auto& quat = collision->gameObject.transform->GetQuat();
+				impl->collider->setLocalToBodyTransform(reactphysics3d::Transform{ {pos.x, pos.y, pos.z}, {quat.x, quat.y, quat.z, quat.w} });
+			}
+		}
 		impl->rigidbody->setTransform(reactphysics3d::Transform{ {objPos.x, objPos.y, objPos.z}, reactphysics3d::Quaternion{objQuat.x, objQuat.y, objQuat.z, objQuat.w} });
+
+		ResetInterpolationState();
+	}
+
+	SH_GAME_API void RigidBody::ResetInterpolationState()
+	{
+		const Vec3& objPos = gameObject.transform->GetWorldPosition();
+		const auto& objQuat = gameObject.transform->GetWorldQuat();
 
 		prevPos = objPos;
 		prevRot = objQuat;
@@ -317,7 +330,7 @@ namespace sh::game
 		}
 		else if (prop.GetName() == core::Util::ConstexprHash("bGravity"))
 		{
-			SetGravity(bGravity);
+			SetUsingGravity(bGravity);
 		}
 		else if (prop.GetName() == core::Util::ConstexprHash("bKinematic"))
 		{
@@ -343,5 +356,35 @@ namespace sh::game
 		{
 			SetBouncy(bouncy);
 		}
+	}
+	SH_GAME_API auto RigidBody::GetRigidBodyFromHandle(RigidBodyHandle handle) -> RigidBody*
+	{
+		auto it = nativeMap.find(handle);
+		if (it == nativeMap.end())
+			return nullptr;
+		return it->second;
+	}
+	void RigidBody::Interpolate()
+	{
+		// 바뀌지 않았으니 보간x
+		if (prevPos == currPos && prevRot == currRot)
+			return;
+
+		if (!bKinematic)
+		{
+			float alpha = std::clamp(gameObject.world.fixedDeltaTime / gameObject.world.FIXED_TIME, 0.f, 1.f);
+			glm::vec3 interpPos = glm::mix(prevPos, currPos, alpha);
+			glm::quat interpRot = glm::slerp(prevRot, currRot, alpha);
+			interpRot = glm::normalize(interpRot);
+
+			gameObject.transform->SetWorldPosition(interpPos);
+			gameObject.transform->SetWorldRotation(interpRot);
+		}
+		else
+		{
+			gameObject.transform->SetWorldPosition(currPos);
+			gameObject.transform->SetWorldRotation(currRot);
+		}
+		gameObject.transform->UpdateMatrix();
 	}
 }//namespace

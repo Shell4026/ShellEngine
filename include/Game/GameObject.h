@@ -9,6 +9,7 @@
 #include "Core/Reflection.hpp"
 #include "Core/Util.h"
 #include "Core/Observer.hpp"
+#include "Core/SContainer.hpp"
 
 #include <vector>
 
@@ -17,22 +18,6 @@ namespace sh::game
 	class GameObject : public core::SObject, public IObject
 	{
 		SCLASS(GameObject)
-	private:
-		core::SVector<Component*> components;
-		PROPERTY(bEnable)
-		bool bEnable;
-		bool bInit;
-	public:
-		World& world;
-		
-		PROPERTY(transform)
-		Transform* transform;
-
-		const bool& activeSelf;
-
-		PROPERTY(hideInspector, core::PropertyOption::invisible)
-		bool hideInspector = false;
-		bool bNotSave = false;
 	public:
 		SH_GAME_API GameObject(World& world, const std::string& name);
 		SH_GAME_API GameObject(const GameObject& other);
@@ -48,6 +33,11 @@ namespace sh::game
 		SH_GAME_API void BeginUpdate() override;
 		SH_GAME_API void Update() override;
 		SH_GAME_API void LateUpdate() override;
+		/// @brief FixedUpdate 다음에 호출 된다. OnCollision 함수들을 호출한다.
+		SH_GAME_API void ProcessCollisionFunctions();
+		SH_GAME_API void OnCollisionEnter(Collider& collider) override;
+		SH_GAME_API void OnCollisionStay(Collider& collider) override;
+		SH_GAME_API void OnCollisionExit(Collider& collider) override;
 
 		SH_GAME_API void SetActive(bool b);
 
@@ -57,6 +47,8 @@ namespace sh::game
 		/// 해당 컴포넌트의 gameObject가 이 gameObject와 다르면 추가 되지 않는다.
 		/// @param component 컴포넌트 포인터
 		SH_GAME_API void AddComponent(Component* component);
+		/// @brief 컴포넌트를 우선 순위에 따라 정렬하는 함수. 프레임이 시작 될 때 정렬된다.
+		SH_GAME_API void RequestSortComponents();
 
 		SH_GAME_API auto Clone() const -> GameObject&;
 
@@ -91,5 +83,27 @@ namespace sh::game
 			}
 			return nullptr;
 		}
+	private:
+		void SortComponents();
+	public:
+		World& world;
+
+		PROPERTY(transform)
+		Transform* transform;
+
+		const bool& activeSelf;
+
+		PROPERTY(hideInspector, core::PropertyOption::invisible)
+		bool hideInspector = false;
+		bool bNotSave = false;
+	private:
+		core::SVector<Component*> components;
+		core::SSet<Collider*> enterColliders;
+		core::SSet<Collider*> stayColliders;
+		core::SSet<Collider*> exitColliders;
+		PROPERTY(bEnable)
+		bool bEnable;
+		bool bInit;
+		bool bRequestSortComponent = false;
 	};
-}
+}//namespace

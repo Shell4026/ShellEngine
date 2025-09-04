@@ -12,6 +12,7 @@ namespace sh::phys
 		float hitFraction = 0.0f;
 		reactphysics3d::Vector3 worldPoint;
 		reactphysics3d::Vector3 worldNormal;
+		void* rigidBodyHandle = nullptr;
 
 		// 첫 번째 히트에서 바로 멈추도록 false 반환
 		virtual auto notifyRaycastHit(const reactphysics3d::RaycastInfo& info) -> reactphysics3d::decimal override
@@ -20,8 +21,39 @@ namespace sh::phys
 			hitFraction = info.hitFraction;
 			worldPoint = info.worldPoint;
 			worldNormal = info.worldNormal;
+			rigidBodyHandle = info.collider->getBody();
 			return 0.0f;
 		}
+	};
+	class CustomEventListener : public reactphysics3d::EventListener
+	{
+	public:
+		virtual void onContact(const CollisionCallback::CallbackData& callbackData) override
+		{
+			if (bus == nullptr)
+				return;
+
+			for (uint32_t i = 0; i < callbackData.getNbContactPairs(); i++)
+			{
+				const auto& pair = callbackData.getContactPair(i);
+				auto type = pair.getEventType();
+
+				PhysWorld::PhysicsEvent evt{};
+				evt.rigidBody1Handle = pair.getBody1();
+				evt.rigidBody2Handle = pair.getBody2();
+
+				if (type == reactphysics3d::CollisionCallback::ContactPair::EventType::ContactStart)
+					evt.type = PhysWorld::PhysicsEvent::Type::CollisionEnter;
+				else if (type == reactphysics3d::CollisionCallback::ContactPair::EventType::ContactStay)
+					evt.type = PhysWorld::PhysicsEvent::Type::CollisionStay;
+				else if (type == reactphysics3d::CollisionCallback::ContactPair::EventType::ContactExit)
+					evt.type = PhysWorld::PhysicsEvent::Type::CollisionExit;
+
+				bus->Publish(evt);
+			}
+		}
+	public:
+		core::EventBus* bus;
 	};
 
 	struct PhysWorld::Impl
@@ -34,6 +66,10 @@ namespace sh::phys
 		impl = std::make_unique<Impl>();
 
 		impl->world = impl->physicsCommon.createPhysicsWorld();
+
+		static CustomEventListener listener{};
+		listener.bus = &bus;
+		impl->world->setEventListener(&listener);
 	}
 	PhysWorld::PhysWorld(PhysWorld&& other) noexcept :
 		impl(std::move(other.impl))
@@ -79,14 +115,15 @@ namespace sh::phys
 		HitPoint hit{};
 		hit.hitPoint = { callback.worldPoint.x, callback.worldPoint.y, callback.worldPoint.z };
 		hit.hitNormal = { callback.worldNormal.x, callback.worldNormal.y, callback.worldNormal.z };
+		hit.rigidBodyHandle = callback.rigidBodyHandle;
 
 		return hit;
 	}
-	SH_PHYS_API auto PhysWorld::GetContext() const -> void*
+	SH_PHYS_API auto PhysWorld::GetContext() const -> ContextHandle
 	{
 		return &impl->physicsCommon;
 	}
-	SH_PHYS_API auto PhysWorld::GetNative() const -> void*
+	SH_PHYS_API auto PhysWorld::GetNative() const -> PhysicsWorldHandle
 	{
 		return impl->world;
 	}

@@ -8,5 +8,6 @@ namespace sh::phys
 	{
 		glm::vec3 hitPoint;
 		glm::vec3 hitNormal;
+		void* rigidBodyHandle;
 	};
 }//namespace

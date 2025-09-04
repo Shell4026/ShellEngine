@@ -242,6 +242,14 @@ namespace sh::game
 				continue;
 			if (!obj->activeSelf)
 				continue;
+			obj->ProcessCollisionFunctions();
+		}
+		for (auto& obj : objs)
+		{
+			if (!sh::core::IsValid(obj))
+				continue;
+			if (!obj->activeSelf)
+				continue;
 			obj->Update();
 		}
 		for (auto& obj : objs)

@@ -93,6 +93,17 @@ namespace sh::game
 		Super::OnDestroy();
 	}
 
+	SH_GAME_API void Component::SetPriority(int priority)
+	{
+		this->priority = priority;
+		gameObject.RequestSortComponents();
+	}
+
+	SH_GAME_API auto Component::GetPriority() const -> int
+	{
+		return priority;
+	}
+
 	SH_GAME_API auto Component::Serialize() const -> core::Json
 	{
 		core::Json mainJson{ Super::Serialize() };

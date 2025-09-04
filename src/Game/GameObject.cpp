@@ -1,6 +1,7 @@
 ﻿#include "GameObject.h"
 #include "ComponentModule.h"
 #include "Component/Component.h"
+#include "Component/Collider.h"
 
 #include "Core/SObjectManager.h"
 
@@ -138,6 +139,71 @@ namespace sh::game
 				if (world.IsPlaying() || component->canPlayInEditor)
 					component->LateUpdate();
 		}
+		if (bRequestSortComponent)
+		{
+			SortComponents();
+			bRequestSortComponent = false;
+		}
+	}
+
+	SH_GAME_API void GameObject::ProcessCollisionFunctions()
+	{
+		for (auto collider : enterColliders)
+		{
+			if (!core::IsValid(collider))
+				continue;
+
+			for (auto& component : components)
+			{
+				if (core::IsValid(component) && component->IsActive())
+					if (world.IsPlaying() || component->canPlayInEditor)
+						component->OnCollisionEnter(*collider);
+			}
+		}
+		for (auto collider : stayColliders)
+		{
+			if (!core::IsValid(collider))
+				continue;
+
+			for (auto& component : components)
+			{
+				if (core::IsValid(component) && component->IsActive())
+					if (world.IsPlaying() || component->canPlayInEditor)
+						component->OnCollisionStay(*collider);
+			}
+		}
+		for (auto collider : exitColliders)
+		{
+			if (!core::IsValid(collider))
+				continue;
+
+			stayColliders.erase(collider);
+
+			for (auto& component : components)
+			{
+				if (core::IsValid(component) && component->IsActive())
+					if (world.IsPlaying() || component->canPlayInEditor)
+						component->OnCollisionExit(*collider);
+			}
+		}
+		enterColliders.clear();
+		exitColliders.clear();
+	}
+
+	SH_GAME_API void GameObject::OnCollisionEnter(Collider& collider)
+	{
+		if (stayColliders.find(&collider) == stayColliders.end())
+			enterColliders.insert(&collider);
+	}
+
+	SH_GAME_API void GameObject::OnCollisionStay(Collider& collider)
+	{
+		stayColliders.insert(&collider);
+	}
+
+	SH_GAME_API void GameObject::OnCollisionExit(Collider& collider)
+	{
+		exitColliders.insert(&collider);
 	}
 
 	SH_GAME_API void GameObject::SetActive(bool b)
@@ -165,6 +231,11 @@ namespace sh::game
 		components.back()->SetActive(true);
 
 		world.PublishEvent(events::ComponentEvent{ *component, events::ComponentEvent::Type::Added });
+	}
+
+	SH_GAME_API void GameObject::RequestSortComponents()
+	{
+		bRequestSortComponent = true;
 	}
 
 	SH_GAME_API auto GameObject::Clone() const -> GameObject&
@@ -211,5 +282,27 @@ namespace sh::game
 				AddComponent(component);
 			}
 		}
+		SortComponents();
+	}
+	void GameObject::SortComponents()
+	{
+		// nullptr모두 제거
+		components.erase(std::remove_if(components.begin(), components.end(), 
+			[](const Component* component)
+			{
+				return !core::IsValid(component);
+			}
+		), components.end());
+		
+		std::sort(components.begin(), components.end(),
+			[](const Component* left, const Component* right)
+			{
+				if (!core::IsValid(left))
+					return false;
+				if (!core::IsValid(right))
+					return true;
+				return left->GetPriority() > right->GetPriority();
+			}
+		);
 	}
 }

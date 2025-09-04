@@ -43,15 +43,6 @@ namespace sh::game
 	class Component : public sh::core::SObject, public IObject
 	{
 		SCLASS(Component)
-	private:
-		bool bEnable;
-		bool bInit;
-	public:
-		GameObject& gameObject;
-		World& world;
-		PROPERTY(hideInspector, core::PropertyOption::invisible)
-		bool hideInspector = false;
-		bool canPlayInEditor = false;
 	public:
 		SH_GAME_API Component(GameObject& object);
 		SH_GAME_API virtual ~Component() = default;
@@ -74,13 +65,34 @@ namespace sh::game
 		SH_GAME_API void BeginUpdate() override;
 		SH_GAME_API void Update() override;
 		SH_GAME_API void LateUpdate() override;
+		SH_GAME_API void OnCollisionEnter(Collider& collider) override {};
+		SH_GAME_API void OnCollisionStay(Collider& collider) override {};
+		SH_GAME_API void OnCollisionExit(Collider& collider) override {};
+
+		/// @brief 우선 순위가 높을수록 다른 컴포넌트보다 우선 실행 된다.
+		/// @param priority 우선 순위
+		SH_GAME_API void SetPriority(int priority);
+		SH_GAME_API auto GetPriority() const -> int;
 
 		SH_GAME_API auto Serialize() const -> core::Json override;
 		SH_GAME_API void Deserialize(const core::Json& json) override;
+	public:
+		GameObject& gameObject;
+		World& world;
+
+		PROPERTY(hideInspector, core::PropertyOption::invisible)
+		bool hideInspector = false;
+		bool canPlayInEditor = false;
+	private:
+		PROPERTY(priority, core::PropertyOption::invisible)
+		int priority = 0;
+
+		bool bEnable;
+		bool bInit;
 	};
 
 	template<typename T>
 	struct IsComponent : std::bool_constant<std::is_base_of<Component, T>::value>
 	{
 	};
-}
+}//namespace

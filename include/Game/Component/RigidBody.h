@@ -5,13 +5,20 @@
 #include "../Vector.h"
 
 #include "Core/Observer.hpp"
+#include "Core/EventSubscriber.h"
+
+#include "Physics/PhysWorld.h"
 
 #include <glm/gtc/quaternion.hpp>
+
+#include <unordered_map>
 namespace sh::game
 {
 	class RigidBody : public Component
 	{
 		COMPONENT(RigidBody)
+	public:
+		using RigidBodyHandle = void*;
 	public:
 		SH_GAME_API RigidBody(GameObject& owner);
 		SH_GAME_API ~RigidBody();
@@ -26,8 +33,11 @@ namespace sh::game
 		/// @brief 물리 법칙에 따라 움직이지만 질량이 무한대인 상태로 설정할지
 		/// @param set true 또는 false
 		SH_GAME_API void SetKinematic(bool set);
-		SH_GAME_API void SetGravity(bool use);
+		SH_GAME_API void SetUsingGravity(bool use);
+
 		SH_GAME_API void SetCollider(Collider* colliderComponent);
+		SH_GAME_API auto GetCollider() const -> Collider*;
+
 		SH_GAME_API void SetMass(float mass);
 		SH_GAME_API void SetLinearVelocity(const game::Vec3& v);
 		SH_GAME_API void SetAngularVelocity(const game::Vec3& v);
@@ -56,10 +66,17 @@ namespace sh::game
 
 		SH_GAME_API void SetSleep();
 
+		SH_GAME_API auto GetNativeHandle() const -> RigidBodyHandle;
+
 		/// @brief 물리 객체의 transform을 현재 오브젝트의 transform으로 초기화 하는 코드
 		SH_GAME_API void ResetPhysicsTransform();
+		SH_GAME_API void ResetInterpolationState();
 
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
+
+		SH_GAME_API static auto GetRigidBodyFromHandle(RigidBodyHandle handle) -> RigidBody*;
+	private:
+		void Interpolate();
 	private:
 		struct Impl;
 
@@ -89,5 +106,8 @@ namespace sh::game
 		glm::quat currRot;
 
 		core::Observer<false, const SObject*>::Listener colliderDestroyListener;
+		core::EventSubscriber<phys::PhysWorld::PhysicsEvent> physEventSubscriber;
+
+		static std::unordered_map<RigidBodyHandle, RigidBody*> nativeMap;
 	};
 }//namespace
