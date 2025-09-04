@@ -24,12 +24,13 @@ namespace sh::editor
 
 		constexpr static const char* name = "Inspector";
 	private:
-		inline auto GetComponentGroupAndName(std::string_view fullname) -> std::pair<std::string, std::string>;
-		inline void RenderAddComponent(game::GameObject& gameObject);
-		inline void RenderProperties(const core::reflection::STypeInfo& type, core::SObject& obj, int idx);
-		inline void RenderSObjectPtrProperty(const core::reflection::Property& prop, core::SObject& propertyOwner, const std::string& name, 
+		auto GetComponentGroupAndName(std::string_view fullname) -> std::pair<std::string, std::string>;
+		void RenderAddComponent(game::GameObject& gameObject);
+		void RenderProperties(const core::reflection::STypeInfo& type, core::SObject& obj, int idx);
+		void RenderSObjectPtrProperty(const core::reflection::Property& prop, core::SObject& propertyOwner, const std::string& name, 
 			core::SObject** propertyPtr = nullptr, const core::reflection::TypeInfo* type = nullptr);
-		inline void RenderContainerProperty(const core::reflection::Property& prop, core::SObject& obj, const std::string& name);
+		void RenderSObjPtrContainerProperty(const core::reflection::Property& prop, core::SObject& propertyOwner);
+		void RenderContainerProperty(const core::reflection::Property& prop, core::SObject& obj, const std::string& name);
 ;	public:
 		SH_EDITOR_API Inspector(EditorWorld& world);
 

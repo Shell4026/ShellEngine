@@ -167,7 +167,7 @@ namespace sh::editor
 			AssetDatabase::GetInstance()->SaveAllAssets();
 		}
 	}
-	inline auto Inspector::GetComponentGroupAndName(std::string_view fullname) -> std::pair<std::string, std::string>
+	auto Inspector::GetComponentGroupAndName(std::string_view fullname) -> std::pair<std::string, std::string>
 	{
 		auto pos = fullname.find('/');
 		std::string group{}, name{};
@@ -181,7 +181,7 @@ namespace sh::editor
 
 		return { std::move(group), std::move(name)};
 	}
-	inline void Inspector::RenderAddComponent(game::GameObject& gameObject)
+	void Inspector::RenderAddComponent(game::GameObject& gameObject)
 	{
 		if (ImGui::Button("Add Component", { -FLT_MIN, 0.0f }))
 		{
@@ -229,7 +229,7 @@ namespace sh::editor
 				bAddComponent = false;
 		}
 	}
-	inline void Inspector::RenderProperties(const core::reflection::STypeInfo& type, core::SObject& obj, int idx)
+	void Inspector::RenderProperties(const core::reflection::STypeInfo& type, core::SObject& obj, int idx)
 	{
 		ICustomInspector* customInspector = customInspectorManager->GetCustomInspector(type);
 		if (customInspector)
@@ -253,7 +253,9 @@ namespace sh::editor
 				{
 					RenderSObjectPtrProperty(*prop, obj, propName);
 				}
-				if (prop->isContainer)
+				else if (prop->isSObjectPointerContainer)
+					RenderSObjPtrContainerProperty(*prop, obj);
+				else if (prop->isContainer)
 				{
 					RenderContainerProperty(*prop, obj, propName);
 				}
@@ -265,7 +267,7 @@ namespace sh::editor
 			currentType = const_cast<core::reflection::STypeInfo*>(currentType->GetSuper());
 		} while (currentType);
 	}
-	inline void Inspector::RenderSObjectPtrProperty(const core::reflection::Property& prop, core::SObject& propertyOwner, const std::string& name, 
+	void Inspector::RenderSObjectPtrProperty(const core::reflection::Property& prop, core::SObject& propertyOwner, const std::string& name, 
 		core::SObject** objPtr, const core::reflection::TypeInfo* type)
 	{
 		std::string typeName{ type == nullptr ? prop.pureTypeName : type->name };
@@ -347,7 +349,95 @@ namespace sh::editor
 			ImGui::Image(*icon, ImVec2{ iconSize, iconSize });
 		}
 	}
-	inline void Inspector::RenderContainerProperty(const core::reflection::Property& prop, core::SObject& obj, const std::string& name)
+	void Inspector::RenderSObjPtrContainerProperty(const core::reflection::Property& prop, core::SObject& propertyOwner)
+	{
+		float iconSize = 20;
+		float buttonWidth = ImGui::GetContentRegionAvail().x - iconSize;
+
+		if (buttonWidth < 0)
+			buttonWidth = 0;
+
+		if (ImGui::TreeNodeEx(prop.GetName().ToString().c_str(), ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_OpenOnArrow))
+		{
+			for (auto it = prop.Begin(propertyOwner); it != prop.End(propertyOwner); ++it)
+			{
+				if (!it.IsPair()) // pair인 경우는 map과 unordered_map
+				{
+					core::SObject** obj = it.Get<core::SObject*>();
+					const char* name = "None";
+					if (core::IsValid(*obj))
+						name = (*obj)->GetName().ToString().c_str();
+					auto& itType = it.GetType();
+					const std::string propTypeName{ it.GetType().name };
+					if (ImGui::Button(name, ImVec2{ buttonWidth, iconSize }))
+					{
+					}
+					if (ImGui::BeginDragDropTarget())
+					{
+						// 드래그로 받는 객체의 타입 == 드래그 중인 객체의 타입이면 받음
+						const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(propTypeName.c_str());
+						auto payloadt = ImGui::GetDragDropPayload();
+						if (payload)
+						{
+							*obj = *reinterpret_cast<core::SObject**>(payload->Data);
+							propertyOwner.OnPropertyChanged(prop);
+							AssetDatabase::GetInstance()->SetDirty(&propertyOwner);
+							AssetDatabase::GetInstance()->SaveAllAssets();
+						}
+						else
+						{
+							// 게임 오브젝트라면 컴포넌트 검사
+							std::string gameObjTypeName{ core::reflection::GetType<game::GameObject>().name };
+							if (gameObjTypeName == ImGui::GetDragDropPayload()->DataType)
+							{
+								game::GameObject* obj = *reinterpret_cast<game::GameObject**>(ImGui::GetDragDropPayload()->Data);
+								for (auto payloadComponent : obj->GetComponents())
+								{
+									if (!core::IsValid(payloadComponent))
+										continue;
+
+									const core::reflection::STypeInfo* componentType = &payloadComponent->GetType();
+									while (componentType)
+									{
+										if (componentType->type.name == propTypeName)
+										{
+											// 요구하는 컴포넌트가 맞다면 페이로드 재설정
+											ImGui::SetDragDropPayload(std::string{ componentType->type.name }.c_str(), &payloadComponent, sizeof(game::Component*));
+											break;
+										}
+										componentType = componentType->GetSuper();
+									}
+								}
+							}
+						}
+						ImGui::EndDragDropTarget();
+					}
+				}
+			}
+			if (ImGui::Button("+"))
+			{
+				// 더 좋은 방법 나중에 고민하기
+				if (prop.type.name.find("vector") != std::string_view::npos)
+				{
+					auto v = prop.Get<std::vector<core::SObject*>>(propertyOwner);
+					v->push_back(nullptr);
+				}
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("-"))
+			{
+				// 더 좋은 방법 나중에 고민하기
+				if (prop.type.name.find("vector") != std::string_view::npos)
+				{
+					auto v = prop.Get<std::vector<core::SObject*>>(propertyOwner);
+					v->pop_back();
+				}
+			}
+
+			ImGui::TreePop();
+		}
+	}
+	void Inspector::RenderContainerProperty(const core::reflection::Property& prop, core::SObject& obj, const std::string& name)
 	{
 		float itemWidth = ImGui::GetContentRegionAvail().x / 2.f - 1;
 		if (ImGui::TreeNodeEx(name.c_str(), ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_OpenOnArrow))
