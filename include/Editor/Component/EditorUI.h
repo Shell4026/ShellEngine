@@ -33,8 +33,8 @@ namespace sh::editor
 
 		SH_EDITOR_API void SetProject(Project& project);
 	private:
-		inline void SetDockNode();
-		inline void DrawMenu();
+		void SetDockNode();
+		void DrawMenu();
 	private:
 		float hierarchyWidth;
 		float hierarchyHeight;

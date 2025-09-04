@@ -105,6 +105,7 @@ namespace sh::editor
 					}
 					if (ImGui::MenuItem("Open project"))
 					{
+						explorer->SetLatestPath(Project::GetLatestProjectPath());
 						explorer->PushCallbackQueue([&](std::filesystem::path dir)
 							{
 								project->OpenProject(dir);

@@ -26,63 +26,8 @@ namespace sh::editor
 	class AssetDatabase;
 	class Project : public core::INonCopyable
 	{
-	private:
-		static constexpr const ImVec4 iconBackgroundColor{ 0, 0, 0, 0 };
-
-		std::filesystem::path rootPath;
-		std::filesystem::path assetPath;
-		std::filesystem::path binaryPath;
-		std::filesystem::path libraryPath;
-		std::filesystem::path currentPath;
-		std::filesystem::path tempPath;
-		std::filesystem::path selected;
-
-		AssetDatabase& assetDatabase;
-
-		ProjectSetting setting;
-
-		std::vector<std::filesystem::path> foldersPath;
-		std::vector<std::filesystem::path> filesPath;
-		std::vector<std::string> invisibleExtensions;
-
-		const game::GUITexture *folderIcon, *fileIcon, *meshIcon;
-		float iconSize = 50.0f;
-
-		core::Plugin userPlugin;
-		std::vector<std::pair<std::string, const core::reflection::STypeInfo*>> userComponents;
-
-		static bool bInitResource;
-		bool isOpen = false;
-		bool bSettingUI = false;
 	public:
 		static constexpr const char* name = "Project";
-		render::Renderer& renderer;
-		game::ImGUImpl& gui;
-
-		game::ResourceManager<core::SObject, core::UUID> loadedAssets;
-	private:
-		void InitResources();
-		void GetAllFiles(const std::filesystem::path& path);
-		/// @brief 경로의 파일의 이름의 폰트 크기가 maxSize가 넘어가면 잘라내는 함수
-		/// @param path 파일 경로
-		/// @param maxSize 최대 길이
-		/// @return 새로 만들어진 이름
-		auto GetElideFileName(const std::filesystem::path& path, float maxSize) const -> std::string;
-		void RenderParentFolder();
-		void SetDragItem(const std::filesystem::path& path);
-		auto GetIcon(const std::filesystem::path& path) const -> const game::GUITexture*;
-		bool RenderFile(const std::filesystem::path& path, float& cursorX, float spacing, float width);
-		void ShowRightClickPopup();
-		void RenderNameBar();
-
-		void LoadUserModule();
-
-		void SaveProjectSetting();
-		void LoadProjectSetting();
-
-		void CopyProjectTemplate(const std::filesystem::path& targetDir);
-
-		void RenderSettingUI();
 	public:
 		SH_EDITOR_API Project(render::Renderer& renderer, game::ImGUImpl& gui);
 		SH_EDITOR_API ~Project();
@@ -115,5 +60,66 @@ namespace sh::editor
 		SH_EDITOR_API void OpenSettingUI();
 		
 		SH_EDITOR_API void Build();
+
+		SH_EDITOR_API static auto GetLatestProjectPath() -> std::filesystem::path;
+	private:
+		void InitResources();
+		void GetAllFiles(const std::filesystem::path& path);
+		/// @brief 경로의 파일의 이름의 폰트 크기가 maxSize가 넘어가면 잘라내는 함수
+		/// @param path 파일 경로
+		/// @param maxSize 최대 길이
+		/// @return 새로 만들어진 이름
+		auto GetElideFileName(const std::filesystem::path& path, float maxSize) const->std::string;
+		void RenderParentFolder();
+		void SetDragItem(const std::filesystem::path& path);
+		auto GetIcon(const std::filesystem::path& path) const -> const game::GUITexture*;
+		bool RenderFile(const std::filesystem::path& path, float& cursorX, float spacing, float width);
+		void ShowRightClickPopup();
+		void RenderNameBar();
+
+		void LoadUserModule();
+
+		void SaveProjectSetting();
+		void LoadProjectSetting();
+
+		void CopyProjectTemplate(const std::filesystem::path& targetDir);
+
+		void RenderSettingUI();
+
+		static void SaveLatestProjectPath(const std::filesystem::path& path);
+		static auto LoadLatestProjectPath() -> std::filesystem::path;
+	public:
+		render::Renderer& renderer;
+		game::ImGUImpl& gui;
+
+		game::ResourceManager<core::SObject, core::UUID> loadedAssets;
+	private:
+		static constexpr const ImVec4 iconBackgroundColor{ 0, 0, 0, 0 };
+
+		std::filesystem::path rootPath;
+		std::filesystem::path assetPath;
+		std::filesystem::path binaryPath;
+		std::filesystem::path libraryPath;
+		std::filesystem::path currentPath;
+		std::filesystem::path tempPath;
+		std::filesystem::path selected;
+
+		AssetDatabase& assetDatabase;
+
+		ProjectSetting setting;
+
+		std::vector<std::filesystem::path> foldersPath;
+		std::vector<std::filesystem::path> filesPath;
+		std::vector<std::string> invisibleExtensions;
+
+		const game::GUITexture* folderIcon, * fileIcon, * meshIcon;
+		float iconSize = 50.0f;
+
+		core::Plugin userPlugin;
+		std::vector<std::pair<std::string, const core::reflection::STypeInfo*>> userComponents;
+
+		static bool bInitResource;
+		bool isOpen = false;
+		bool bSettingUI = false;
 	};
 }

@@ -13,7 +13,12 @@ namespace sh::editor
 	{
 	}
 
-	void ExplorerUI::UpdateDirectoryEntries()
+    SH_EDITOR_API void ExplorerUI::SetLatestPath(const std::filesystem::path& path)
+    {
+        latest = path;
+    }
+
+    void ExplorerUI::UpdateDirectoryEntries()
 	{
         auto a = {1, 2 ,3};
         folders.clear();
@@ -58,6 +63,20 @@ namespace sh::editor
             currentPath = core::FileSystem::GetHomeDirectory();
         if (ImGui::Selectable("Desktop"))
             currentPath = core::FileSystem::GetDesktopDirectory();
+
+        ImGui::Separator();
+
+        if (!latest.empty())
+        {
+            ImGui::Text("Lastest");
+            if (ImGui::Selectable(latest.filename().u8string().c_str()))
+            {
+                if (std::filesystem::exists(latest))
+                    currentPath = latest;
+                else
+                    SH_ERROR_FORMAT("{} is not exists!", latest.u8string());
+            }
+        }
         ImGui::EndChild();
     }
     inline void ExplorerUI::RenderRightSide()

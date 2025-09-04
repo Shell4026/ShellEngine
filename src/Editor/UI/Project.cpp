@@ -34,6 +34,8 @@ namespace sh::editor
 		InitResources();
 
 		GetAllFiles(currentPath);
+
+		LoadLatestProjectPath();
 	}
 
 	Project::~Project()
@@ -405,6 +407,23 @@ namespace sh::editor
 		ImGui::End();
 	}
 
+	void Project::SaveLatestProjectPath(const std::filesystem::path& path)
+	{
+		if (path.empty())
+			return;
+
+		core::FileSystem::SaveText(path.u8string(), "latestProjectPath");
+	}
+
+	auto Project::LoadLatestProjectPath() -> std::filesystem::path
+	{
+		auto opt = core::FileSystem::LoadText("latestProjectPath");
+		if (opt.has_value())
+			return std::filesystem::u8path(opt.value());
+		else
+			return {};
+	}
+
 	SH_EDITOR_API void Project::Update()
 	{
 	}
@@ -505,6 +524,8 @@ namespace sh::editor
 		assetDatabase.LoadAllAssets(assetPath, true);
 
 		LoadProjectSetting();
+		
+		SaveLatestProjectPath(dir);
 	}
 
 	SH_EDITOR_API void Project::NewWorld(const std::string& name)
@@ -669,6 +690,10 @@ namespace sh::editor
 	SH_EDITOR_API auto Project::GetLibraryPath() const -> const std::filesystem::path&
 	{
 		return libraryPath;
+	}
+	SH_EDITOR_API auto Project::GetLatestProjectPath() -> std::filesystem::path
+	{
+		return LoadLatestProjectPath();
 	}
 	SH_EDITOR_API auto Project::GetProjectSetting() const -> ProjectSetting&
 	{

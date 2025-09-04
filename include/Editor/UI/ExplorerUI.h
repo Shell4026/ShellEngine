@@ -49,6 +49,9 @@ namespace sh::editor
 		/// @brief 콜백 함수를 큐에 집어넣고 호출 시 제거한다.
 		/// @param func 콜백 함수
 		SH_EDITOR_API void PushCallbackQueue(const std::function<void(std::filesystem::path dir)>& func);
+		/// @brief 최근 선택 경로로 표기할 경로를 지정한다.
+		/// @param path 경로
+		SH_EDITOR_API void SetLatestPath(const std::filesystem::path& path);
 	private:
 		void UpdateDirectoryEntries();
 		void DrawFolderIcon();
@@ -65,11 +68,12 @@ namespace sh::editor
 		OpenMode mode = OpenMode::Select;
 
 		std::filesystem::path selected;
+		std::filesystem::path latest;
 
 		Flag flag = FlagEnum::None;
 
 		std::vector<std::string> extensionFilters;
-
+		
 		bool bOpen = false;
 	};
 }
