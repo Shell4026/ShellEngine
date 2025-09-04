@@ -325,7 +325,8 @@ namespace sh::render
 				if (ptr == nullptr)
 				{
 					auto& resolverFn = core::AssetResolverRegistry::GetResolver();
-					ptr = resolverFn(uuid);
+					if (resolverFn)
+						ptr = resolverFn(uuid);
 				}
 				if (!core::IsValid(ptr))
 					continue;
