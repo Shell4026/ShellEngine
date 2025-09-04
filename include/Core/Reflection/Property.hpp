@@ -363,6 +363,7 @@ namespace sh::core::reflection
 		virtual auto Begin(const void* sobject) const -> ConstPropertyIteratorT = 0;
 		virtual auto End(void* sobject) const -> PropertyIteratorT = 0;
 		virtual auto End(const void* sobject) const -> ConstPropertyIteratorT = 0;
+		virtual void ClearContainer(void* sobject) const = 0;
 	};
 	/// @brief 타입을 가진 프로퍼티 추상 클래스
 	template<typename T>
@@ -484,6 +485,25 @@ namespace sh::core::reflection
 			else
 				return ConstPropertyIteratorT{};
 		}
+
+		void ClearContainer(void* SObjectPtr) const override
+		{
+			if constexpr (IsContainer<T>())
+			{
+				if constexpr (std::is_member_pointer_v<VariablePointer>)
+				{
+					T& container = static_cast<ThisType*>(SObjectPtr)->*ptr;
+					if constexpr (HasClear<T>::value)
+						container.clear();
+				}
+				else
+				{
+					T& container = *ptr;
+					if constexpr (HasClear<T>::value)
+						container.clear();
+				}
+			}
+		}
 	};
 	/// @brief 프로퍼티를 만드는데 필요한 정보를 담고 있는 클래스
 	/// @tparam ThisType 프로퍼티를 가지고 있는 객체의 타입
@@ -525,25 +545,6 @@ namespace sh::core::reflection
 	/// @brief 프로퍼티 클래스
 	class Property
 	{
-	private:
-		PropertyDataBase* data;
-
-		core::Name name;
-
-		const uint32_t containerNestedLevel;
-	public:
-		const TypeInfo& type;
-		const std::string_view pureTypeName;
-		const bool bConstProperty;
-		const bool bVisibleProperty;
-		const bool bNoSaveProperty;
-		const bool isConst;
-		const bool isPointer;
-		const bool isContainer;
-		const bool isSObject;
-		const bool isSObjectPointer;
-		const bool isSObjectPointerContainer;
-		const bool isEnum;
 	public:
 		template<typename ThisType, typename T, typename VariablePointer, VariablePointer ptr>
 		Property(const PropertyCreateInfo<ThisType, T, VariablePointer, ptr>& createInfo) :
@@ -621,5 +622,27 @@ namespace sh::core::reflection
 		/// @brief 프로퍼티가 컨테이너라면 얼마나 중첩된 컨테이너인지 반환한다.
 		/// @return 1이면 단일 컨테이너, 컨테이너가 아니라면 0
 		SH_CORE_API auto GetContainerNestedLevel() const -> uint32_t;
+		/// @brief 프로퍼티가 컨테이너라면 컨테이너를 비운다.
+		/// @return 컨테이너라면 true, 아니라면 false
+		SH_CORE_API auto ClearContainer(SObject& SObject) const -> bool;
+	public:
+		const TypeInfo& type;
+		const std::string_view pureTypeName;
+		const bool bConstProperty;
+		const bool bVisibleProperty;
+		const bool bNoSaveProperty;
+		const bool isConst;
+		const bool isPointer;
+		const bool isContainer;
+		const bool isSObject;
+		const bool isSObjectPointer;
+		const bool isSObjectPointerContainer;
+		const bool isEnum;
+	private:
+		PropertyDataBase* data;
+
+		core::Name name;
+
+		const uint32_t containerNestedLevel;
 	};
 }//namespace

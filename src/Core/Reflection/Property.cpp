@@ -62,5 +62,13 @@ namespace sh::core::reflection
 	{
 		return containerNestedLevel;
 	}
+	SH_CORE_API auto Property::ClearContainer(SObject& SObject) const -> bool
+	{
+		if (type.isContainer)
+		{
+			data->ClearContainer(&SObject);
+		}
+		return false;
+	}
 
 }//namespace

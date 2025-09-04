@@ -147,9 +147,14 @@ namespace sh::core::reflection
 	};
 
 	template<typename T, typename = void>
-	struct HasErase : std::bool_constant<false> {};
+	struct HasErase : std::false_type {};
 	template<typename T>
-	struct HasErase<T, std::void_t<decltype(std::declval<T>().erase(std::declval<typename T::iterator>()))>> : std::bool_constant<true> {};
+	struct HasErase<T, std::void_t<decltype(std::declval<T>().erase(std::declval<typename T::iterator>()))>> : std::true_type {};
+
+	template<typename T, typename = void>
+	struct HasClear : std::false_type {};
+	template<typename T>
+	struct HasClear<T, std::void_t<decltype(std::declval<T>().clear())>> : std::true_type {};
 
 	class TypeTraits
 	{
