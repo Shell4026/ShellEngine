@@ -180,6 +180,20 @@ namespace sh::core
 					if (core::IsValid(*ptr))
 						core::SerializeProperty(json, name, *ptr);
 				}
+				else if (prop->isSObjectPointerContainer)
+				{
+					json[name] = core::Json::array();
+					for (auto it = prop->Begin(*this); it != prop->End(*this); ++it)
+					{
+						assert(!it.IsPair());
+						if (!it.IsPair()) // pair인 경우는 map, unordered_map
+						{
+							auto ptr = it.Get<core::SObject*>();
+							if (core::IsValid(*ptr))
+								json[name].push_back((*ptr)->GetUUID().ToString());
+						}
+					}
+				}
 			}
 			if (!json.empty())
 				mainJson[stypeInfo->name] = json;
@@ -269,6 +283,36 @@ namespace sh::core
 				{
 					if (core::DeserializeProperty(subJson, name, *prop->Get<char>(*this)))
 						OnPropertyChanged(*prop.get());
+				}
+				else if (prop->isSObjectPointerContainer)
+				{
+					if (subJson[name].is_array())
+					{
+						prop->ClearContainer(*this);
+						if (propType.name.find("vector") != std::string_view::npos)
+						{
+							auto v = prop->Get<std::vector<core::SObject*>>(*this);
+							
+							for (auto& uuidStr : subJson[name])
+								v->push_back(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuidStr.get<std::string>() }));
+						}
+						else if (propType.name.find("set") != std::string_view::npos)
+						{
+							if (propType.name.find("unordered") == std::string_view::npos)
+							{
+								auto set = prop->Get<std::set<core::SObject*>>(*this);
+								for (auto& uuidStr : subJson[name])
+									set->insert(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuidStr.get<std::string>() }));
+							}
+							else
+							{
+								auto set = prop->Get<std::unordered_set<core::SObject*>>(*this);
+								for (auto& uuidStr : subJson[name])
+									set->insert(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuidStr.get<std::string>() }));
+							}
+						}
+					}
+					OnPropertyChanged(*prop.get());
 				}
 			}
 			stypeInfo = stypeInfo->GetSuper();
