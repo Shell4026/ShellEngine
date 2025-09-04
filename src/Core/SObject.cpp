@@ -196,7 +196,7 @@ namespace sh::core
 				}
 			}
 			if (!json.empty())
-				mainJson[stypeInfo->name] = json;
+				mainJson[stypeInfo->name] = std::move(json);
 			stypeInfo = stypeInfo->GetSuper();
 		}
 		return mainJson;
@@ -286,33 +286,36 @@ namespace sh::core
 				}
 				else if (prop->isSObjectPointerContainer)
 				{
-					if (subJson[name].is_array())
+					if (subJson.contains(name))
 					{
-						prop->ClearContainer(*this);
-						if (propType.name.find("vector") != std::string_view::npos)
+						if (subJson[name].is_array())
 						{
-							auto v = prop->Get<std::vector<core::SObject*>>(*this);
-							
-							for (auto& uuidStr : subJson[name])
-								v->push_back(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuidStr.get<std::string>() }));
-						}
-						else if (propType.name.find("set") != std::string_view::npos)
-						{
-							if (propType.name.find("unordered") == std::string_view::npos)
+							prop->ClearContainer(*this);
+							if (propType.name.find("vector") != std::string_view::npos)
 							{
-								auto set = prop->Get<std::set<core::SObject*>>(*this);
+								auto v = prop->Get<std::vector<core::SObject*>>(*this);
+
 								for (auto& uuidStr : subJson[name])
-									set->insert(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuidStr.get<std::string>() }));
+									v->push_back(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuidStr.get<std::string>() }));
 							}
-							else
+							else if (propType.name.find("set") != std::string_view::npos)
 							{
-								auto set = prop->Get<std::unordered_set<core::SObject*>>(*this);
-								for (auto& uuidStr : subJson[name])
-									set->insert(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuidStr.get<std::string>() }));
+								if (propType.name.find("unordered") == std::string_view::npos)
+								{
+									auto set = prop->Get<std::set<core::SObject*>>(*this);
+									for (auto& uuidStr : subJson[name])
+										set->insert(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuidStr.get<std::string>() }));
+								}
+								else
+								{
+									auto set = prop->Get<std::unordered_set<core::SObject*>>(*this);
+									for (auto& uuidStr : subJson[name])
+										set->insert(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuidStr.get<std::string>() }));
+								}
 							}
+							OnPropertyChanged(*prop.get());
 						}
 					}
-					OnPropertyChanged(*prop.get());
 				}
 			}
 			stypeInfo = stypeInfo->GetSuper();
