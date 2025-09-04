@@ -120,44 +120,44 @@ namespace sh::editor
 					{
 						project->OpenSettingUI();
 					}
-					if (ImGui::MenuItem("Reload module"))
-					{
-						project->ReloadModule();
-					}
-					if (ImGui::MenuItem("Save world", "Ctrl+S"))
-					{
-						project->SaveWorld();
-					}
-					if (ImGui::MenuItem("Save As world", "Shift+S"))
-					{
-						explorer->SetCurrentPath(project->GetAssetPath());
-						explorer->PushCallbackQueue(
-							[&](const std::filesystem::path& path)
-							{
-								project->SaveAsWorld(path);
-							}
-						);
-						explorer->Open(ExplorerUI::OpenMode::Create);
-					}
-					if (ImGui::MenuItem("Load world", "Ctrl+O"))
-					{
-						explorer->SetCurrentPath(project->GetAssetPath());
-						explorer->SetExtensionFilter(".world");
-						explorer->PushCallbackQueue(
-							[&](const std::filesystem::path& path)
-							{
-								explorer->ClearExtensionFilter();
-								project->LoadWorld(path);
-							}
-						);
-						explorer->Open();
-					}
-					if (ImGui::MenuItem("Build"))
-					{
-						project->Build();
-					}
 					if (!bPlaying)
 					{
+						if (ImGui::MenuItem("Reload module"))
+						{
+							project->ReloadModule();
+						}
+						if (ImGui::MenuItem("Save world", "Ctrl+S"))
+						{
+							project->SaveWorld();
+						}
+						if (ImGui::MenuItem("Save As world", "Shift+S"))
+						{
+							explorer->SetCurrentPath(project->GetAssetPath());
+							explorer->PushCallbackQueue(
+								[&](const std::filesystem::path& path)
+								{
+									project->SaveAsWorld(path);
+								}
+							);
+							explorer->Open(ExplorerUI::OpenMode::Create);
+						}
+						if (ImGui::MenuItem("Load world", "Ctrl+O"))
+						{
+							explorer->SetCurrentPath(project->GetAssetPath());
+							explorer->SetExtensionFilter(".world");
+							explorer->PushCallbackQueue(
+								[&](const std::filesystem::path& path)
+								{
+									explorer->ClearExtensionFilter();
+									project->LoadWorld(path);
+								}
+							);
+							explorer->Open();
+						}
+						if (ImGui::MenuItem("Build"))
+						{
+							project->Build();
+						}
 						if (ImGui::MenuItem("Play"))
 						{
 							if (viewport->Play())
