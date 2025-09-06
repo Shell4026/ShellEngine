@@ -43,6 +43,9 @@ target_link_libraries(${EXE_NAME} PUBLIC ShellEngine::Physics)
 add_subdirectory(Game)
 target_link_libraries(${EXE_NAME} PUBLIC ShellEngine::Game)
 
+add_subdirectory(Network)
+target_link_libraries(${EXE_NAME} PUBLIC ShellEngine::Network)
+
 if(SH_EDITOR)
 target_compile_definitions(ShellEngineCore PUBLIC SH_EDITOR)
 add_subdirectory(Editor)

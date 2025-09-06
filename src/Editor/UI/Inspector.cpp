@@ -255,7 +255,7 @@ namespace sh::editor
 				}
 				else if (prop->isSObjectPointerContainer)
 					RenderSObjPtrContainerProperty(*prop, obj);
-				else if (prop->isContainer)
+				else if (prop->isContainer && prop->type != core::reflection::GetType<std::string>()) // string도 컨테이너 취급 받아서 예외처리
 				{
 					RenderContainerProperty(*prop, obj, propName);
 				}

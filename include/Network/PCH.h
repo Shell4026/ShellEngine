@@ -1,11 +1,4 @@
 ﻿#pragma once
-#if _WIN32
-#include <winsock2.h>
-#endif
-#include <glm/glm.hpp>
-
-#include "External/imgui/imgui.h"
-#include "External/imgui/imgui_internal.h"
 
 #include <iostream>
 #include <memory>
