@@ -220,7 +220,8 @@ namespace sh::render
 			if (last.value() != data && last.value() != nullptr)
 				last.value()->onBufferUpdate.UnRegister(onBufferUpdateListener);
 		}
-		data->onBufferUpdate.Register(onBufferUpdateListener);
+		if (core::IsValid(data))
+			data->onBufferUpdate.Register(onBufferUpdateListener);
 
 		propertyBlock->SetProperty(name, data);
 

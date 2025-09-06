@@ -35,9 +35,7 @@ namespace sh::render
 	private:
 		TextureFormat format;
 
-		PROPERTY(width)
 		uint32_t width;
-		PROPERTY(height)
 		uint32_t height;
 		PROPERTY(aniso)
 		uint32_t aniso;
