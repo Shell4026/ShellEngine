@@ -500,8 +500,9 @@ namespace sh::editor
 		const std::filesystem::path metaPath{ GetMetaDirectory(assetPath) };
 
 		Meta meta{};
+		// 메타 파일이 없는 경우에도 변경으로 친다.
 		if (!meta.Load(metaPath))
-			return false;
+			return true;
 
 		auto it = paths.find(meta.GetUUID());
 		if (it == paths.end())
