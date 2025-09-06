@@ -20,26 +20,7 @@ namespace sh::core
 	class SObject : public ISerializable
 	{
 		SCLASS(SObject)
-
 		friend GarbageCollection;
-	private:
-		UUID uuid;
-		Name name;
-		std::atomic_flag bMark;
-		std::atomic<bool> bPendingKill;
-	protected:
-		bool bPlacementNew = false;
-	public:
-		mutable Observer<false, const SObject*> onDestroy;
-	private:
-		SH_CORE_API static void RegisterToManager(SObject* ptr);
-	protected:
-		SH_CORE_API auto operator new(std::size_t count) -> void*;
-		SH_CORE_API auto operator new(std::size_t count, void* ptr) -> void*;
-		SH_CORE_API void operator delete(void* ptr);
-		SH_CORE_API void operator delete(void* ptr, std::size_t size);
-
-		SH_CORE_API SObject();
 	public:
 		/// @brief 복사 생성자. UUID는 복사하지 않는다.
 		/// @param other 다른 객체
@@ -93,6 +74,26 @@ namespace sh::core
 			ptr->bPlacementNew = true;
 			return static_cast<T*>(ptr);
 		}
+
+		SH_CORE_API static auto GetSObjectUsingResolver(const core::UUID& uuid) -> core::SObject*;
+	protected:
+		SH_CORE_API auto operator new(std::size_t count) -> void*;
+		SH_CORE_API auto operator new(std::size_t count, void* ptr) -> void*;
+		SH_CORE_API void operator delete(void* ptr);
+		SH_CORE_API void operator delete(void* ptr, std::size_t size);
+
+		SH_CORE_API SObject();
+	private:
+		SH_CORE_API static void RegisterToManager(SObject* ptr);
+	public:
+		mutable Observer<false, const SObject*> onDestroy;
+	protected:
+		bool bPlacementNew = false;
+	private:
+		UUID uuid;
+		Name name;
+		std::atomic_flag bMark;
+		std::atomic<bool> bPendingKill;
 	};
 
 	template<>

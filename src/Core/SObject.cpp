@@ -11,18 +11,10 @@ namespace sh::core
 	{
 		if (json.contains(key))
 		{
-			std::string uuid = json[key].get<std::string>();
-			auto objectManager = SObjectManager::GetInstance();
-			SObject* ptr = objectManager->GetSObject(UUID{ uuid });
-			if (ptr == nullptr)
-			{
-				auto& resolver = AssetResolverRegistry::GetResolver();
-				if (resolver)
-					ptr = resolver(UUID{ uuid });
-				else
-					return false;
-			}
-			value = ptr;
+			std::string uuidStr = json[key].get<std::string>();
+			value = SObject::GetSObjectUsingResolver(core::UUID{ uuidStr });
+			if (value == nullptr)
+				return false;
 			return true;
 		}
 		return false;
@@ -296,7 +288,7 @@ namespace sh::core
 								auto v = prop->Get<std::vector<core::SObject*>>(*this);
 
 								for (auto& uuidStr : subJson[name])
-									v->push_back(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuidStr.get<std::string>() }));
+									v->push_back(GetSObjectUsingResolver(core::UUID{ uuidStr.get<std::string>() }));
 							}
 							else if (propType.name.find("set") != std::string_view::npos)
 							{
@@ -304,13 +296,13 @@ namespace sh::core
 								{
 									auto set = prop->Get<std::set<core::SObject*>>(*this);
 									for (auto& uuidStr : subJson[name])
-										set->insert(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuidStr.get<std::string>() }));
+										set->insert(GetSObjectUsingResolver(core::UUID{ uuidStr.get<std::string>() }));
 								}
 								else
 								{
 									auto set = prop->Get<std::unordered_set<core::SObject*>>(*this);
 									for (auto& uuidStr : subJson[name])
-										set->insert(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuidStr.get<std::string>() }));
+										set->insert(GetSObjectUsingResolver(core::UUID{ uuidStr.get<std::string>() }));
 								}
 							}
 							OnPropertyChanged(*prop.get());
@@ -321,4 +313,19 @@ namespace sh::core
 			stypeInfo = stypeInfo->GetSuper();
 		}
 	}
-}
+	SH_CORE_API auto SObject::GetSObjectUsingResolver(const core::UUID& uuid) -> core::SObject*
+	{
+		static SObjectManager* objectManager = SObjectManager::GetInstance();
+
+		SObject* objPtr = objectManager->GetSObject(uuid);
+		if (objPtr == nullptr)
+		{
+			static auto& resolver = AssetResolverRegistry::GetResolver();
+			if (resolver)
+				objPtr = resolver(uuid);
+			else
+				return nullptr;
+		}
+		return objPtr;
+	}
+}//namespace
