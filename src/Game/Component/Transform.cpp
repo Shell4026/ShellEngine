@@ -81,6 +81,7 @@ namespace sh::game
 	SH_GAME_API void Transform::Awake()
 	{
 		Super::Awake();
+		UpdateMatrix();
 	}
 
 	SH_GAME_API void Transform::Start()

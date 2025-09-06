@@ -210,9 +210,12 @@ namespace sh::game
 	{
 		if (!bEnable && b == true)
 		{
-			if (!bInit)
-				Awake();
-			OnEnable();
+			if (world.IsStart())
+			{
+				if (!bInit)
+					Awake();
+				OnEnable();
+			}
 		}
 		bEnable = b;
 	}

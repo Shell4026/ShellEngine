@@ -119,8 +119,9 @@ namespace sh::game
 
 		SH_GAME_API void Play();
 		SH_GAME_API void Stop();
-		SH_GAME_API auto IsPlaying() const -> bool;
 
+		SH_GAME_API auto IsPlaying() const -> bool;
+		SH_GAME_API auto IsStart() const -> bool;
 		SH_GAME_API auto IsLoaded() const -> bool;
 
 		SH_GAME_API virtual void ReallocateUUIDS();
@@ -173,5 +174,6 @@ namespace sh::game
 		bool bStartLoop = false;
 		bool bPlaying = false;
 		bool bLoaded = false;
+		bool bOnStart = false;
 	};
 }

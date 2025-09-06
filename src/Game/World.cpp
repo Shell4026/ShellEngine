@@ -48,6 +48,11 @@ namespace sh::game
 		textures.Clean();
 
 		CleanObjs();
+
+		bool bStartLoop = false;
+		bool bPlaying = false;
+		bool bLoaded = false;
+		bool bOnStart = false;
 	}
 	SH_GAME_API void World::InitResource()
 	{
@@ -200,6 +205,8 @@ namespace sh::game
 				continue;
 			obj->Start();
 		}
+
+		bOnStart = true;
 	}
 	SH_GAME_API void World::Update(float deltaTime)
 	{
@@ -467,11 +474,16 @@ namespace sh::game
 			return;
 
 		bPlaying = false;
+		bOnStart = false;
 		eventBus.Publish(events::WorldEvent{ events::WorldEvent::Type::Stop });
 	}
 	SH_GAME_API auto World::IsPlaying() const -> bool
 	{
 		return bPlaying;
+	}
+	SH_GAME_API auto World::IsStart() const -> bool
+	{
+		return bOnStart;
 	}
 	SH_GAME_API auto World::IsLoaded() const -> bool
 	{

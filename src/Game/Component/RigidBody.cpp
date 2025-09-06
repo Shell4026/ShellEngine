@@ -306,6 +306,11 @@ namespace sh::game
 				impl->collider->setLocalToBodyTransform(reactphysics3d::Transform{ {pos.x, pos.y, pos.z}, {quat.x, quat.y, quat.z, quat.w} });
 			}
 		}
+		else
+		{
+			if (core::IsValid(collision))
+				impl->collider->setLocalToBodyTransform(reactphysics3d::Transform::identity());
+		}
 		impl->rigidbody->setTransform(reactphysics3d::Transform{ {objPos.x, objPos.y, objPos.z}, reactphysics3d::Quaternion{objQuat.x, objQuat.y, objQuat.z, objQuat.w} });
 
 		ResetInterpolationState();

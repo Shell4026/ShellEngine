@@ -45,16 +45,15 @@ namespace sh::game
 		bEnable = b;
 		if (bEnable)
 		{
-			if (!bInit)
+			if (world.IsStart())
 			{
 				if (world.IsPlaying() || canPlayInEditor)
 				{
-					Awake();
-					bInit = true;
+					if (!bInit)
+						Awake();
+					OnEnable();
 				}
 			}
-			if (world.IsPlaying() || canPlayInEditor)
-				OnEnable();
 		}
 	}
 
