@@ -72,8 +72,12 @@ namespace sh::editor
 
         for (const auto& uuid : uuids)
         {
-            if (world.GetUUID() == core::UUID{ uuid })
-                continue;
+            auto obj = core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuid });
+            if (obj != nullptr)
+            {
+                if (obj->GetType().IsChildOf(game::World::GetStaticType()))
+                    continue;
+            }
             auto asset = AssetDatabase::GetInstance()->GetAsset(core::UUID{ uuid });
             if (asset != nullptr)
                 bundle.AddAsset(*asset, true);
@@ -123,28 +127,48 @@ namespace sh::editor
 
     void BuildSystem::Build(Project& project, const std::filesystem::path& outputPath)
     {
-        currentProject = &project;
-
+        worldUUIDs.clear();
         uuids.clear();
 
+        currentProject = &project;
+
         core::AssetBundle bundle;
-        auto worldPtr = project.GetProjectSetting().startingWorld.Get();
 
-        core::Json worldJson{};
-        if (worldPtr->IsLoaded())
-            worldJson = worldPtr->Serialize();
-        else
-            worldJson = worldPtr->GetWorldPoint();
-
-        std::unordered_set<std::string> uuids;
-        ExtractUUIDs(uuids, worldJson);
-        for (const auto& uuidStr : uuids)
+        std::vector<game::World*> worldPtrs;
+        worldPtrs.push_back(project.GetProjectSetting().startingWorld.Get());
+        for (int i = 0; i < worldPtrs.size(); ++i)
         {
-            this->uuids.insert(uuidStr);
-            worldUUIDs[worldPtr->GetUUID().ToString()].push_back(uuidStr);
-        }
-        PackingAssets(bundle, *worldPtr);
+            auto worldPtr = worldPtrs[i];
 
+            core::Json worldJson{};
+            if (worldPtr->IsLoaded())
+                worldJson = worldPtr->Serialize();
+            else
+                worldJson = worldPtr->GetWorldPoint();
+
+            std::unordered_set<std::string> uuids;
+            ExtractUUIDs(uuids, worldJson);
+            for (const auto& uuidStr : uuids)
+            {
+                const core::UUID uuid{ uuidStr };
+                
+                this->uuids.insert(uuidStr);
+                worldUUIDs[worldPtr->GetUUID().ToString()].push_back(uuidStr);
+
+                auto obj = core::SObjectManager::GetInstance()->GetSObject(uuid);
+                if (obj != nullptr)
+                {
+                    if (obj->GetType().IsChildOf(game::World::GetStaticType()))
+                    {
+                        auto it = std::find(worldPtrs.begin(), worldPtrs.end(), static_cast<game::World*>(obj));
+                        if (it == worldPtrs.end())
+                            worldPtrs.push_back(static_cast<game::World*>(obj));
+                    }
+                }
+            }
+            PackingAssets(bundle, *worldPtr);
+        }
+       
         bundle.SaveBundle(outputPath / "assets.bundle");
 
         ExportGameManager(outputPath / "gameManager.bin");
