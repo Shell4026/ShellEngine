@@ -1,6 +1,7 @@
 ﻿#include "GameManager.h"
 #include "World.h"
 #include "ComponentModule.h"
+#include "ImGUImpl.h"
 
 #include "AssetLoaderFactory.h"
 #include "Asset/WorldAsset.h"
@@ -53,7 +54,31 @@ namespace sh::game
 	}
 	SH_GAME_API void GameManager::SetCurrentWorld(World& world)
 	{
-		currentWorld = &world;
+		if (currentWorld == &world || bChangingWorld)
+			return;
+
+		if (currentWorld == nullptr)
+			currentWorld = &world;
+		else
+		{
+			bChangingWorld = true;
+			currentWorld->AddAfterSyncTask(
+				[&]()
+				{
+					UnloadWorld(*currentWorld);
+					currentWorld->renderer.Clear();
+					currentWorld->GetUiContext().ClearDrawData();
+					currentWorld->GetUiContext().AddDrawCallToRenderer();
+
+					world.InitResource();
+					world.LoadWorldPoint();
+					world.Start();
+
+					currentWorld = &world;
+					bChangingWorld = false;
+				}
+			);
+		}
 	}
 	SH_GAME_API auto GameManager::GetCurrentWorld() const -> World*
 	{

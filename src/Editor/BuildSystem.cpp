@@ -128,23 +128,23 @@ namespace sh::editor
         uuids.clear();
 
         core::AssetBundle bundle;
-        for (const auto& [uuid, worldPtr] : game::GameManager::GetInstance()->GetWorlds())
-        {
-            core::Json worldJson{};
-            if (worldPtr->IsLoaded())
-                worldJson = worldPtr->Serialize();
-            else
-                worldJson = worldPtr->GetWorldPoint();
+        auto worldPtr = project.GetProjectSetting().startingWorld.Get();
 
-            std::unordered_set<std::string> uuids;
-            ExtractUUIDs(uuids, worldJson);
-            for (const auto& uuidStr : uuids)
-            {
-                this->uuids.insert(uuidStr);
-                worldUUIDs[worldPtr->GetUUID().ToString()].push_back(uuidStr);
-            }
-            PackingAssets(bundle, *worldPtr);
+        core::Json worldJson{};
+        if (worldPtr->IsLoaded())
+            worldJson = worldPtr->Serialize();
+        else
+            worldJson = worldPtr->GetWorldPoint();
+
+        std::unordered_set<std::string> uuids;
+        ExtractUUIDs(uuids, worldJson);
+        for (const auto& uuidStr : uuids)
+        {
+            this->uuids.insert(uuidStr);
+            worldUUIDs[worldPtr->GetUUID().ToString()].push_back(uuidStr);
         }
+        PackingAssets(bundle, *worldPtr);
+
         bundle.SaveBundle(outputPath / "assets.bundle");
 
         ExportGameManager(outputPath / "gameManager.bin");

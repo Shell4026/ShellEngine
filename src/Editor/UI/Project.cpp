@@ -159,7 +159,7 @@ namespace sh::editor
 		ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Button, iconBackgroundColor);
 		ImGui::ImageButton(path.u8string().c_str(), *icon, ImVec2{ iconSize, iconSize });
 		if (ImGui::IsItemHovered() && 
-			(ImGui::IsMouseClicked(ImGuiMouseButton_::ImGuiMouseButton_Left) || ImGui::IsMouseClicked(ImGuiMouseButton_::ImGuiMouseButton_Right)))
+			(ImGui::IsMouseReleased(ImGuiMouseButton_::ImGuiMouseButton_Left) || ImGui::IsMouseReleased(ImGuiMouseButton_::ImGuiMouseButton_Right)))
 		{
 			selected = path;
 			auto uuidStr = assetDatabase.GetAssetUUID(path);
@@ -491,28 +491,11 @@ namespace sh::editor
 	SH_EDITOR_API void Project::NewWorld(const std::string& name)
 	{
 		auto& gameManager = *game::GameManager::GetInstance();
-		game::World* currentWorld = gameManager.GetCurrentWorld();
-		currentWorld->AddAfterSyncTask(
-			[&]()
-			{
-				auto& gameManager = *game::GameManager::GetInstance();
-				game::World* currentWorld = gameManager.GetCurrentWorld();
 
-				if (currentWorld != nullptr)
-					gameManager.UnloadWorld(*currentWorld);
+		editor::EditorWorld* newWorld = core::SObject::Create<editor::EditorWorld>(*this);
 
-				renderer.Clear();
-				gui.ClearDrawData();
-				gui.AddDrawCallToRenderer();
-
-				editor::EditorWorld* newWorld = core::SObject::Create<editor::EditorWorld>(*this);
-				newWorld->InitResource();
-				newWorld->Start();
-
-				gameManager.AddWorld(*newWorld);
-				gameManager.SetCurrentWorld(*newWorld);
-			}
-		);
+		gameManager.AddWorld(*newWorld);
+		gameManager.SetCurrentWorld(*newWorld);
 	}
 
 	SH_EDITOR_API void Project::SaveWorld()
@@ -542,48 +525,21 @@ namespace sh::editor
 
 	SH_EDITOR_API void Project::LoadWorld(const std::filesystem::path& worldAssetPath)
 	{
+		auto uuidOpt = assetDatabase.GetAssetUUID(worldAssetPath);
+		if (!uuidOpt.has_value())
+			return;
+
+		core::SObject* obj = core::SObjectManager::GetInstance()->GetSObject(uuidOpt.value());
+		if (obj == nullptr)
+			return;
+
+		game::World* world = core::reflection::Cast<game::World>(obj);
+		if (world == nullptr)
+			return;
+
 		auto& gameManager = *game::GameManager::GetInstance();
-		game::World* currentWorld = gameManager.GetCurrentWorld();
-		currentWorld->AddAfterSyncTask(
-			[&, worldAssetPath]()
-			{
-				auto& gameManager = *game::GameManager::GetInstance();
-				game::World* currentWorld = gameManager.GetCurrentWorld();
-
-				auto uuidOpt = assetDatabase.GetAssetUUID(worldAssetPath);
-				if (uuidOpt.has_value())
-				{
-					core::SObject* obj = core::SObjectManager::GetInstance()->GetSObject(uuidOpt.value());
-					if (obj == nullptr)
-						return;
-
-					game::World* world = core::reflection::Cast<game::World>(obj);
-					if (world == nullptr)
-						return;
-
-					if (world == currentWorld)
-					{
-						world->LoadWorldPoint();
-						return;
-					}
-
-					if (currentWorld != nullptr)
-					{
-						gameManager.UnloadWorld(*currentWorld);
-					}
-
-					renderer.Clear();
-					gui.ClearDrawData();
-					gui.AddDrawCallToRenderer();
-
-					world->InitResource();
-					world->LoadWorldPoint();
-					world->Start();
-					
-					gameManager.SetCurrentWorld(*world);
-				}
-			}
-		);
+		gameManager.AddWorld(*world);
+		gameManager.SetCurrentWorld(*world);
 	}
 	SH_EDITOR_API void Project::ReloadCurrentWorld()
 	{
@@ -692,9 +648,11 @@ namespace sh::editor
 	SH_EDITOR_API void Project::Build()
 	{
 		BuildSystem builder{};
-		if (core::IsValid(setting.startingWorld))
+		if (setting.startingWorld.IsValid())
 		{
 			builder.Build(*this, binaryPath);
 		}
+		else
+			SH_ERROR("Set the starting world first!");
 	}
 }

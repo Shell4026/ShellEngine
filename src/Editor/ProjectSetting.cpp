@@ -22,7 +22,7 @@ namespace sh::editor
 	{
 		core::Json json;
 		json["version"] = version;
-		if (core::IsValid(startingWorld))
+		if (startingWorld.IsValid())
 			json["startingWorld"] = startingWorld->GetUUID().ToString();
 		return json;
 	}
@@ -58,7 +58,7 @@ namespace sh::editor
 			else
 			{
 				Deserialize(core::Json::parse(stringOpt.value()));
-				if (core::IsValid(startingWorld))
+				if (startingWorld.IsValid())
 				{
 					auto gameManager = game::GameManager::GetInstance();
 					gameManager->SetStartingWorld(*startingWorld);

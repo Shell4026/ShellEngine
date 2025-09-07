@@ -25,8 +25,7 @@ namespace sh::editor
 
 		SH_EDITOR_API void RenderUI(bool& bOpen, const std::filesystem::path& rootPath);
 	public:
-		game::World* startingWorld = nullptr;
-		std::vector<core::SObjWeakPtr<game::World>> includedWorlds;
+		core::SObjWeakPtr<game::World> startingWorld = nullptr;
 	private:
 		int version;
 	};

@@ -61,5 +61,7 @@ namespace sh::game
 		std::unordered_map<core::UUID, std::vector<core::UUID>> worldUUIDs;
 
 		std::unique_ptr<core::Plugin> userPlugin;
+
+		bool bChangingWorld = false;
 	};
 }//namespace

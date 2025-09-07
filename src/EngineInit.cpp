@@ -250,9 +250,13 @@ namespace sh
 
 			gameManager->UpdateWorld(window->GetDeltaTime());
 
-			gameManager->GetCurrentWorld()->BeforeSync();
-			core::ThreadSyncManager::Sync();
-			gameManager->GetCurrentWorld()->AfterSync();
+			auto currentWorld = gameManager->GetCurrentWorld();
+			if (core::IsValid(currentWorld))
+			{
+				gameManager->GetCurrentWorld()->BeforeSync();
+				core::ThreadSyncManager::Sync();
+				gameManager->GetCurrentWorld()->AfterSync();
+			}
 			gc->Update();
 
 			core::ThreadSyncManager::AwakeThread();
