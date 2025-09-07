@@ -1,5 +1,5 @@
-﻿#include "ModelLoader.h"
-#include "ModelAsset.h"
+﻿#include "Asset/ModelLoader.h"
+#include "Asset/ModelAsset.h"
 
 #include "Core/SObject.h"
 #include "Core/Logger.h"

@@ -1,6 +1,6 @@
 ﻿#define STB_IMAGE_IMPLEMENTATION
 #define STB_IMAGE_RESIZE_IMPLEMENTATION
-#include "TextureLoader.h"
+#include "Asset/TextureLoader.h"
 
 #include "Core/SObject.h"
 

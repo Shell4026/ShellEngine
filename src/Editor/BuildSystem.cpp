@@ -10,10 +10,10 @@
 #include "Game/World.h"
 #include "Game/GameManager.h"
 
-#include "Game/WorldAsset.h"
-#include "Game/ShaderAsset.h"
-#include "Game/MaterialAsset.h"
-#include "Game/MeshAsset.h"
+#include "Game/Asset/WorldAsset.h"
+#include "Game/Asset/ShaderAsset.h"
+#include "Game/Asset/MaterialAsset.h"
+#include "Game/Asset/MeshAsset.h"
 
 #include <fstream>
 namespace sh::editor

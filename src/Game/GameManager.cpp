@@ -1,10 +1,11 @@
 ﻿#include "GameManager.h"
 #include "World.h"
-#include "WorldAsset.h"
-#include "AssetLoaderFactory.h"
-#include "ShaderAsset.h"
-#include "MaterialAsset.h"
 #include "ComponentModule.h"
+
+#include "AssetLoaderFactory.h"
+#include "Asset/WorldAsset.h"
+#include "Asset/ShaderAsset.h"
+#include "Asset/MaterialAsset.h"
 
 #include "Core/Logger.h"
 #include "Core/UUID.h"

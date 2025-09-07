@@ -1,5 +1,5 @@
-﻿#include "MaterialLoader.h"
-#include "MaterialAsset.h"
+﻿#include "Asset/MaterialLoader.h"
+#include "Asset/MaterialAsset.h"
 
 #include "Core/FileSystem.h"
 #include "Core/ISerializable.h"

@@ -1,4 +1,4 @@
-﻿#include "TextureAsset.h"
+﻿#include "Asset/TextureAsset.h"
 namespace sh::game
 {
 	void TextureAsset::SetHeader(TextureHeader& header) const

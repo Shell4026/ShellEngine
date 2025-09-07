@@ -8,11 +8,11 @@
 #include "Render/Material.h"
 #include "Render/RenderTexture.h"
 
-#include "Game/TextureLoader.h"
-#include "Game/ShaderLoader.h"
-#include "Game/ModelLoader.h"
-#include "Game/ShaderAsset.h"
-#include "Game/TextureAsset.h"
+#include "Game/Asset/TextureLoader.h"
+#include "Game/Asset/ShaderLoader.h"
+#include "Game/Asset/ModelLoader.h"
+#include "Game/Asset/ShaderAsset.h"
+#include "Game/Asset/TextureAsset.h"
 
 #include <filesystem>
 namespace sh::editor

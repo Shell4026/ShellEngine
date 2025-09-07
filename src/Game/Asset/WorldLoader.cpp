@@ -1,6 +1,6 @@
-﻿#include "WorldLoader.h"
+﻿#include "Asset/WorldLoader.h"
+#include "Asset/WorldAsset.h"
 #include "World.h"
-#include "WorldAsset.h"
 #include "ComponentModule.h"
 
 #include "Core/FileSystem.h"
