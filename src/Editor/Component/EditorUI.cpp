@@ -126,6 +126,10 @@ namespace sh::editor
 						{
 							project->ReloadModule();
 						}
+						if (ImGui::MenuItem("New world", "Ctrl+N"))
+						{
+							project->NewWorld("New world");
+						}
 						if (ImGui::MenuItem("Save world", "Ctrl+S"))
 						{
 							project->SaveWorld();

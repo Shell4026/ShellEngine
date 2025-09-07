@@ -29,7 +29,7 @@ namespace sh::game
 	}
 	SH_GAME_API World::~World()
 	{
-		SH_INFO("~World");
+		SH_INFO_FORMAT("~World {}", GetUUID().ToString());
 		Clean();
 		physWorld.Clean();
 	}
@@ -48,6 +48,16 @@ namespace sh::game
 		textures.Clean();
 
 		CleanObjs();
+		cameras.clear();
+
+		lightOctree.Clear();
+
+		while (!deallocatedObjs.empty())
+		{
+			objPool.DeAllocate(deallocatedObjs.front());
+			deallocatedObjs.pop();
+		}
+		mainCamera = nullptr;
 
 		bool bStartLoop = false;
 		bool bPlaying = false;
@@ -68,22 +78,6 @@ namespace sh::game
 	{
 		renderer.AddRenderPipeline<render::RenderPipeline>();
 		renderer.AddRenderPipeline<render::TransparentPipeline>();
-	}
-	SH_GAME_API auto World::LoadAssetBundle(const std::filesystem::path& path) -> bool
-	{
-		return assetBundle.LoadBundle(path);
-	}
-	SH_GAME_API auto World::LoadObjectFromBundle(const core::UUID& uuid) -> core::SObject*
-	{
-		auto asset = assetBundle.LoadAsset(uuid);
-		if (asset == nullptr)
-			return nullptr;
-
-		AssetLoaderFactory& factory = *AssetLoaderFactory::GetInstance();
-		auto loader = factory.GetLoader(asset->GetType());
-		if (loader == nullptr)
-			return nullptr;
-		return loader->Load(*asset);
 	}
 	auto World::AllocateGameObject() -> GameObject*
 	{

@@ -11,7 +11,7 @@
 #include "Core/Observer.hpp"
 #include "Core/Memory/MemoryPool.hpp"
 #include "Core/EventBus.h"
-#include "Core/AssetBundle.h"
+#include "Core/Factory.hpp"
 
 #include "Render/Shader.h"
 #include "Render/Material.h"
@@ -48,6 +48,7 @@ namespace sh::game
 		SCLASS(World)
 	public:
 		static constexpr float FIXED_TIME = 0.0166f; // 60hz
+		using Factory = core::Factory<game::World, game::World*>;
 	public:
 		SH_GAME_API World(render::Renderer& renderer, ImGUImpl& guiContext);
 		SH_GAME_API World(World&& other) = delete;
@@ -60,9 +61,6 @@ namespace sh::game
 		/// @brief 기본 리소스를 로드한다.
 		SH_GAME_API virtual void InitResource();
 		SH_GAME_API virtual void SetRenderPass();
-
-		SH_GAME_API auto LoadAssetBundle(const std::filesystem::path& path) -> bool;
-		SH_GAME_API auto LoadObjectFromBundle(const core::UUID& uuid) -> core::SObject*;
 
 		/// @brief 게임 오브젝트를 추가한다.
 		/// @param name 오브젝트 이름
@@ -166,8 +164,6 @@ namespace sh::game
 		std::queue<std::function<void()>> beforeSyncTasks;
 		std::queue<std::function<void()>> afterSyncTasks;
 		std::queue<GameObject*> deallocatedObjs;
-
-		core::AssetBundle assetBundle;
 
 		core::Json lateSerializedData;
 

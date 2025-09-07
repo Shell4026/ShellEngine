@@ -79,12 +79,7 @@ namespace sh::editor
 
 		void LoadUserModule();
 
-		void SaveProjectSetting();
-		void LoadProjectSetting();
-
 		void CopyProjectTemplate(const std::filesystem::path& targetDir);
-
-		void RenderSettingUI();
 
 		static void SaveLatestProjectPath(const std::filesystem::path& path);
 		static auto LoadLatestProjectPath() -> std::filesystem::path;

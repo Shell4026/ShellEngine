@@ -27,7 +27,7 @@ namespace sh::game
 		core::GarbageCollection& gc;
 		render::Renderer& renderer;
 
-		std::unordered_map<KeyType, T*> resources;
+		core::SHashMap<KeyType, T*> resources;
 	public:
 		core::Observer<false, T*> onResourceDestroy;
 	public:

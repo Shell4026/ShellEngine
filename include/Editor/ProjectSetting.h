@@ -2,26 +2,32 @@
 #include "Export.h"
 
 #include "Core/ISerializable.h"
+#include "Core/SContainer.hpp"
 
 #include <filesystem>
 #include <string>
 
-namespace sh::game
-{
-	class World;
-}
+#include "Game/World.h"
+
 namespace sh::editor
 {
 	class ProjectSetting : public core::ISerializable
 	{
-	private:
-		int version;
-	public:
-		game::World* startingWorld = nullptr;
 	public:
 		SH_EDITOR_API ProjectSetting();
+		SH_EDITOR_API ~ProjectSetting();
 
 		SH_EDITOR_API auto Serialize() const -> core::Json override;
 		SH_EDITOR_API void Deserialize(const core::Json& json) override;
+
+		SH_EDITOR_API void Save(const std::filesystem::path& path);
+		SH_EDITOR_API void Load(const std::filesystem::path& path);
+
+		SH_EDITOR_API void RenderUI(bool& bOpen, const std::filesystem::path& rootPath);
+	public:
+		game::World* startingWorld = nullptr;
+		std::vector<core::SObjWeakPtr<game::World>> includedWorlds;
+	private:
+		int version;
 	};
 }//namespace

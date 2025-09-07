@@ -23,6 +23,12 @@ namespace sh::game
 
 	}
 
+	SH_GAME_API void Octree::Clear()
+	{
+		for (auto& child : childs)
+			child.reset();
+	}
+
 	void Octree::Subdivide()
 	{
 		if (childs[0])

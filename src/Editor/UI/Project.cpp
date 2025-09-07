@@ -41,7 +41,7 @@ namespace sh::editor
 
 	Project::~Project()
 	{
-		SaveProjectSetting();
+		setting.Save(rootPath / "ProjectSetting.json");
 		assetDatabase.SaveDatabase(libraryPath / "AssetDB.json");
 
 		loadedAssets.Clean();
@@ -335,38 +335,6 @@ namespace sh::editor
 		}
 	}
 
-	void Project::SaveProjectSetting()
-	{
-		std::filesystem::path settingPath = rootPath / "ProjectSetting.json";
-		SH_INFO_FORMAT("Save project setting: {}", settingPath.u8string());
-		std::ofstream os{ settingPath };
-		os << std::setw(4) << setting.Serialize();
-		os.close();
-	}
-
-	void Project::LoadProjectSetting()
-	{
-		std::filesystem::path settingPath = rootPath / "ProjectSetting.json";
-		auto stringOpt = core::FileSystem::LoadText(settingPath);
-		if (stringOpt.has_value())
-		{
-			if (stringOpt.value().empty())
-				SaveProjectSetting();
-			else
-			{
-				setting.Deserialize(core::Json::parse(stringOpt.value()));
-				if (setting.startingWorld != nullptr)
-				{
-					auto gameManager = game::GameManager::GetInstance();
-					gameManager->SetStartingWorld(*setting.startingWorld);
-					gameManager->AddWorld(*setting.startingWorld);
-				}
-			}
-		}
-		else
-			SaveProjectSetting();
-	}
-
 	void Project::CopyProjectTemplate(const std::filesystem::path& targetDir)
 	{
 		std::filesystem::path projectTemplate{ std::filesystem::current_path() / "ProjectTemplate" };
@@ -381,50 +349,6 @@ namespace sh::editor
 			cmakeStr = cmakeStr.replace(it, directoryStr.length(), std::filesystem::current_path().u8string());
 			core::FileSystem::SaveText(cmakeStr, targetDir / "CMakeLists.txt");
 		}
-	}
-
-	void Project::RenderSettingUI()
-	{
-		ImGui::SetNextWindowSize(ImVec2{ 512, 512 }, ImGuiCond_::ImGuiCond_Appearing);
-		ImGui::Begin("Project Setting", &bSettingUI);
-		ImGui::Text("Starting world");
-		std::string startingWorldStr = setting.startingWorld == nullptr ? "None" : setting.startingWorld->GetName().ToString();
-		ImGui::Button(startingWorldStr.c_str(), ImVec2{-1, 20});
-		if (ImGui::BeginDragDropTarget())
-		{
-			const std::string worldType{ core::reflection::TypeTraits::GetTypeName<game::World>() };
-
-			const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(worldType.c_str());
-			if (payload != nullptr)
-			{
-				core::SObject* sobjPtr = *reinterpret_cast<core::SObject**>(payload->Data);
-				auto pathOpt = assetDatabase.GetAssetOriginalPath(sobjPtr->GetUUID());
-				if (pathOpt.has_value())
-				{
-					setting.startingWorld = static_cast<game::World*>(sobjPtr);
-					SaveProjectSetting();
-				}
-			}
-			else
-			{
-				const ImGuiPayload* currentPayload = ImGui::GetDragDropPayload();
-				core::SObject* sobjPtr = *reinterpret_cast<core::SObject**>(currentPayload->Data);
-				if (sobjPtr->GetType().IsChildOf(game::World::GetStaticType()))
-				{
-					payload = ImGui::AcceptDragDropPayload(currentPayload->DataType);
-					if (payload != nullptr)
-					{
-						auto pathOpt = assetDatabase.GetAssetOriginalPath(sobjPtr->GetUUID());
-						if (pathOpt.has_value())
-						{
-							setting.startingWorld = static_cast<game::World*>(sobjPtr);
-							SaveProjectSetting();
-						}
-					}
-				}
-			}
-		}
-		ImGui::End();
 	}
 
 	void Project::SaveLatestProjectPath(const std::filesystem::path& path)
@@ -523,7 +447,7 @@ namespace sh::editor
 		ImGui::End();
 
 		if (bSettingUI)
-			RenderSettingUI();
+			setting.RenderUI(bSettingUI, rootPath);
 	}
 
 	SH_EDITOR_API void Project::CreateNewProject(const std::filesystem::path& dir)
@@ -559,14 +483,36 @@ namespace sh::editor
 		assetDatabase.SetProjectDirectory(rootPath);
 		assetDatabase.LoadAllAssets(assetPath, true);
 
-		LoadProjectSetting();
+		setting.Load(rootPath / "ProjectSetting.json");
 		
 		SaveLatestProjectPath(dir);
 	}
 
 	SH_EDITOR_API void Project::NewWorld(const std::string& name)
 	{
-		
+		auto& gameManager = *game::GameManager::GetInstance();
+		game::World* currentWorld = gameManager.GetCurrentWorld();
+		currentWorld->AddAfterSyncTask(
+			[&]()
+			{
+				auto& gameManager = *game::GameManager::GetInstance();
+				game::World* currentWorld = gameManager.GetCurrentWorld();
+
+				if (currentWorld != nullptr)
+					gameManager.UnloadWorld(*currentWorld);
+
+				renderer.Clear();
+				gui.ClearDrawData();
+				gui.AddDrawCallToRenderer();
+
+				editor::EditorWorld* newWorld = core::SObject::Create<editor::EditorWorld>(*this);
+				newWorld->InitResource();
+				newWorld->Start();
+
+				gameManager.AddWorld(*newWorld);
+				gameManager.SetCurrentWorld(*newWorld);
+			}
+		);
 	}
 
 	SH_EDITOR_API void Project::SaveWorld()
@@ -610,9 +556,16 @@ namespace sh::editor
 					core::SObject* obj = core::SObjectManager::GetInstance()->GetSObject(uuidOpt.value());
 					if (obj == nullptr)
 						return;
+
 					game::World* world = core::reflection::Cast<game::World>(obj);
 					if (world == nullptr)
 						return;
+
+					if (world == currentWorld)
+					{
+						world->LoadWorldPoint();
+						return;
+					}
 
 					if (currentWorld != nullptr)
 					{
@@ -622,9 +575,6 @@ namespace sh::editor
 					renderer.Clear();
 					gui.ClearDrawData();
 					gui.AddDrawCallToRenderer();
-
-					core::GarbageCollection::GetInstance()->Collect();
-					core::GarbageCollection::GetInstance()->DestroyPendingKillObjs();
 
 					world->InitResource();
 					world->LoadWorldPoint();

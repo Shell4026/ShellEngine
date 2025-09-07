@@ -13,7 +13,6 @@
 #include "Core/SObjectManager.h"
 #include "Core/FileSystem.h"
 #include "Core/ModuleLoader.h"
-#include "Core/Plugin.h"
 namespace sh::game
 {
 	SH_GAME_API void GameManager::Clean()
@@ -31,7 +30,6 @@ namespace sh::game
 	}
 	SH_GAME_API void GameManager::AddWorld(World& world)
 	{
-		core::GarbageCollection::GetInstance()->SetRootSet(&world);
 		worlds.insert_or_assign(world.GetUUID(), &world);
 	}
 	SH_GAME_API void GameManager::RemoveWorld(const core::UUID& uuid)
@@ -39,8 +37,8 @@ namespace sh::game
 		auto it = worlds.find(uuid);
 		if (it == worlds.end())
 			return;
-		core::GarbageCollection::GetInstance()->RemoveRootSet(it->second);
 		worlds.erase(it);
+		worldUUIDs.erase(uuid);
 	}
 	SH_GAME_API auto GameManager::GetWorld(const core::UUID& uuid) -> World*
 	{
@@ -55,23 +53,20 @@ namespace sh::game
 	}
 	SH_GAME_API void GameManager::SetCurrentWorld(World& world)
 	{
-		if (currentWorld != nullptr)
-			core::GarbageCollection::GetInstance()->RemoveRootSet(currentWorld);
-
 		currentWorld = &world;
-		core::GarbageCollection::GetInstance()->SetRootSet(&world);
 	}
 	SH_GAME_API auto GameManager::GetCurrentWorld() const -> World*
 	{
-		return currentWorld;
+		return currentWorld.Get();
 	}
 	SH_GAME_API void GameManager::SetStartingWorld(World& world)
 	{
+		worlds.insert_or_assign(world.GetUUID(), &world);
 		startingWorld = &world;
 	}
 	SH_GAME_API auto GameManager::GetStartingWorld() const -> World*
 	{
-		return startingWorld;
+		return startingWorld.Get();
 	}
 	SH_GAME_API auto GameManager::Serialize() const -> core::Json
 	{
@@ -118,6 +113,9 @@ namespace sh::game
 	}
 	SH_GAME_API void GameManager::UnloadWorld(World& world)
 	{
+		auto it = worlds.find(world.GetUUID());
+		if (it != worlds.end())
+			worlds.erase(it);
 		world.Clean();
 	}
 	SH_GAME_API auto GameManager::LoadGame(const std::filesystem::path& managerPath, core::AssetBundle& bundle) -> bool

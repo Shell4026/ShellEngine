@@ -25,7 +25,7 @@ namespace sh::editor
 	class EditorUI;
 	class EditorControl : public game::Component
 	{
-		COMPONENT(EditorControl)
+		COMPONENT(EditorControl, "Editor")
 	private:
 		inline void MoveControl();
 		inline void ScaleControl();

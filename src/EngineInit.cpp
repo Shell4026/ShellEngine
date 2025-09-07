@@ -179,6 +179,7 @@ namespace sh
 			}
 		);
 		auto defaultWorld = core::SObject::Create<editor::EditorWorld>(*project); // 기본 월드
+		gameManager->AddWorld(*defaultWorld);
 		gameManager->SetCurrentWorld(*defaultWorld);
 #else
 		static render::vk::VulkanShaderPassBuilder vkShaderPassBuilder{ static_cast<render::vk::VulkanContext&>(*renderer->GetContext()) };

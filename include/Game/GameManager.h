@@ -5,20 +5,19 @@
 #include "Core/ISerializable.h"
 #include "Core/UUID.h"
 #include "Core/AssetBundle.h"
+#include "Core/Plugin.h"
+#include "Core/SContainer.hpp"
+
+#include "Game/World.h"
 
 #include <unordered_map>
 #include <filesystem>
-namespace sh::core
-{
-	struct Plugin;
-}
 namespace sh::render
 {
 	class Renderer;
 }
 namespace sh::game
 {
-	class World;
 	class ImGUImpl;
 
 	class GameManager : public core::Singleton<GameManager>, core::ISerializable
@@ -55,10 +54,10 @@ namespace sh::game
 		void LoadDefaultAsset(core::AssetBundle& bundle);
 		void LoadUserModule();
 	private:
-		World* startingWorld = nullptr;
-		World* currentWorld = nullptr;
+		core::SObjWeakPtr<World> startingWorld = nullptr;
+		core::SObjWeakPtr<World> currentWorld = nullptr;
 
-		std::unordered_map<core::UUID, World*> worlds;
+		core::SHashMap<core::UUID, World*> worlds;
 		std::unordered_map<core::UUID, std::vector<core::UUID>> worldUUIDs;
 
 		std::unique_ptr<core::Plugin> userPlugin;
