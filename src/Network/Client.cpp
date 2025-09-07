@@ -1,36 +1,55 @@
 ﻿#include "Client.h"
 #include "Packet.h"
 
+#include <asio.hpp>
+
 #include "Core/Logger.h"
 namespace sh::network
 {
+	struct Client::Impl
+	{
+		asio::io_context ioContext;
+		std::unique_ptr<asio::ip::udp::socket> socket;
+		asio::ip::udp::endpoint serverEndpoint;
+	};
+
+	Client::Client()
+	{
+		impl = std::make_unique<Impl>();
+
+		std::memset(buffer.data(), 0, buffer.size());
+	}
+	Client::~Client()
+	{
+		Disconnect();
+	}
 	SH_NET_API void Client::Connect(const std::string& ip, uint16_t port)
 	{
-		socket = std::make_unique<asio::ip::udp::socket>(ioContext);
+		impl->serverEndpoint = asio::ip::udp::endpoint{ asio::ip::make_address(ip), port };
 
-		serverEndpoint = asio::ip::udp::endpoint{ asio::ip::make_address(ip), port };
+		impl->socket = std::make_unique<asio::ip::udp::socket>(impl->ioContext);
+		impl->socket->open(asio::ip::udp::v4());
 
-		socket->open(asio::ip::udp::v4());
 		Receive();
 	}
 	SH_NET_API void Client::Disconnect()
 	{
-		ioContext.stop();
-		if (socket != nullptr)
+		impl->ioContext.stop();
+		if (impl->socket != nullptr)
 		{
-			socket->close();
-			socket.reset();
+			impl->socket->close();
+			impl->socket.reset();
 		}
 	}
 	SH_NET_API void Client::Update()
 	{
-		ioContext.run();
+		impl->ioContext.run();
 	}
 	SH_NET_API void Client::Send(const Packet& packet)
 	{
 		if (socket != nullptr)
 		{
-			socket->send_to(asio::buffer(core::Json::to_bson(packet.Serialize())), serverEndpoint); // async_send_to로 나중에 비동기 생각
+			impl->socket->send_to(asio::buffer(core::Json::to_bson(packet.Serialize())), impl->serverEndpoint); // async_send_to로 나중에 비동기 생각
 		}
 	}
 	SH_NET_API auto Client::GetReceivedPacket() -> std::unique_ptr<Packet>
@@ -44,9 +63,9 @@ namespace sh::network
 	}
 	void Client::Receive()
 	{
-		socket->async_receive_from
+		impl->socket->async_receive_from
 		(
-			asio::buffer(buffer), serverEndpoint,
+			asio::buffer(buffer), impl->serverEndpoint,
 			[this](std::error_code ec, std::size_t receivedBytes)
 			{
 				if (!ec && receivedBytes > 0)

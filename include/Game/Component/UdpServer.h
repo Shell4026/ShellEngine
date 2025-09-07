@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "Export.h"
-#include "Component/NetworkComponent.h"
+#include "NetworkComponent.h"
 
 #include "Network/Server.h"
 
@@ -21,9 +21,9 @@ namespace sh::game
 		SH_GAME_API void Update() override;
 
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
-	private:
+	protected:
 		network::Server server;
-
+	private:
 		PROPERTY(port)
 		int port = 4026;
 

@@ -56,11 +56,11 @@ namespace sh::game
 				if (message.packet->GetId() == 0)
 				{
 					std::string str = static_cast<network::StringPacket*>(message.packet.get())->GetString();
-					SH_INFO_FORMAT("Received packet (id: 0, {}) from {}", str, message.sender.address().to_string());
+					SH_INFO_FORMAT("Received packet (id: 0, {}) from {}", str, message.senderIp);
 
 					network::StringPacket packet{};
 					packet.SetString(std::move(str));
-					server.Send(packet, message.sender);
+					server.Send(packet, message.senderIp, message.senderPort);
 				}
 				opt = server.GetReceivedMessage();
 			}

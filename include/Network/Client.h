@@ -2,18 +2,20 @@
 #include "Export.h"
 #include "Packet.h"
 
-#include <asio.hpp>
-
 #include <memory>
 #include <array>
 #include <queue>
 #include <mutex>
 #include <optional>
+#include <cstdint>
 namespace sh::network
 {
 	class Client
 	{
 	public:
+		SH_NET_API Client();
+		SH_NET_API ~Client();
+
 		SH_NET_API void Connect(const std::string& ip, uint16_t port);
 		SH_NET_API void Disconnect();
 		SH_NET_API void Update();
@@ -23,12 +25,10 @@ namespace sh::network
 	private:
 		void Receive();
 	private:
-		asio::io_context ioContext;
-		std::unique_ptr<asio::ip::udp::socket> socket;
-		asio::ip::udp::endpoint serverEndpoint;
+		struct Impl;
+		std::unique_ptr<Impl> impl;
 
 		std::array<uint8_t, Packet::MAX_PACKET_SIZE> buffer;
-
 		std::queue<std::unique_ptr<Packet>> receivedPacket;
 
 		std::mutex mu;

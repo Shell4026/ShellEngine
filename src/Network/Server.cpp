@@ -2,17 +2,32 @@
 
 #include "Core/Logger.h"
 
+#include <asio.hpp>
+
 namespace sh::network
 {
+	struct Server::Impl
+	{
+		asio::io_context ioContext;
+		std::unique_ptr<asio::ip::udp::socket> socket;
+		asio::ip::udp::endpoint remoteEndpoint;
+	};
+
 	Server::Server()
 	{
+		impl = std::make_unique<Impl>();
+
 		std::memset(buffer.data(), 0, buffer.size());
+	}
+	Server::~Server()
+	{
+		Stop();
 	}
 	SH_NET_API void Server::Start()
 	{
 		try
 		{
-			socket = std::make_unique<asio::ip::udp::socket>(ioContext, asio::ip::udp::endpoint{ asio::ip::udp::v4(), port });
+			impl->socket = std::make_unique<asio::ip::udp::socket>(impl->ioContext, asio::ip::udp::endpoint{ asio::ip::udp::v4(), port });
 			SH_INFO_FORMAT("Server starting on port {}", port);
 			Receive();
 		}
@@ -23,17 +38,17 @@ namespace sh::network
 	}
 	SH_NET_API void Server::Stop()
 	{
-		ioContext.stop();
-		if (socket != nullptr)
+		impl->ioContext.stop();
+		if (impl->socket != nullptr)
 		{
-			socket->close();
-			socket.reset();
+			impl->socket->close();
+			impl->socket.reset();
 		}
 	}
 	SH_NET_API void Server::Run()
 	{
 		assert(socket != nullptr);
-		ioContext.run();
+		impl->ioContext.run();
 	}
 	SH_NET_API void Server::SetPort(uint16_t port)
 	{
@@ -52,26 +67,27 @@ namespace sh::network
 		receivedMessage.pop();
 		return msg;
 	}
-	SH_NET_API void Server::Send(const Packet& packet, const asio::ip::udp::endpoint& to)
+	SH_NET_API void Server::Send(const Packet& packet, const std::string& ip, uint16_t port)
 	{
-		if (socket != nullptr)
+		if (impl->socket != nullptr)
 		{
-			socket->send_to(asio::buffer(core::Json::to_bson(packet.Serialize())), to); // async_send_to로 나중에 비동기 생각
+			asio::ip::udp::endpoint endPoint{ asio::ip::make_address(ip), port };
+			impl->socket->send_to(asio::buffer(core::Json::to_bson(packet.Serialize())), endPoint); // async_send_to로 나중에 비동기 생각
 		}
 	}
 	SH_NET_API auto Server::IsOpen() const -> bool
 	{
-		if (socket == nullptr)
+		if (impl->socket == nullptr)
 			return false;
 		return true;
 	}
 	void Server::Receive()
 	{
-		if (socket != nullptr)
+		if (impl->socket != nullptr)
 		{
-			socket->async_receive_from
+			impl->socket->async_receive_from
 			(
-				asio::buffer(buffer), remoteEndpoint,
+				asio::buffer(buffer), impl->remoteEndpoint,
 				[this](std::error_code ec, std::size_t receivedBytes)
 				{
 					if (!ec && receivedBytes > 0)
@@ -85,7 +101,13 @@ namespace sh::network
 							{
 								packet->Deserialize(json);
 								std::lock_guard<std::mutex> lock{ mu };
-								receivedMessage.push({ remoteEndpoint, std::move(packet) });
+
+								Message message{};
+								message.senderIp = impl->remoteEndpoint.address().to_string();
+								message.senderPort = static_cast<uint16_t>(impl->remoteEndpoint.port());
+								message.packet = std::move(packet);
+
+								receivedMessage.push(std::move(message));
 							}
 							else
 								SH_ERROR_FORMAT("An unregistered packet has been received!");

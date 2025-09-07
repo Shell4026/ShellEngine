@@ -39,6 +39,7 @@ target_link_libraries(ShellEngineUser PRIVATE ShellEngineRender)
 target_link_libraries(ShellEngineUser PRIVATE ShellEngineGame)
 target_link_libraries(ShellEngineUser PRIVATE ShellEnginePhysics)
 target_link_libraries(ShellEngineUser PRIVATE ShellEngineWindow)
+target_link_libraries(ShellEngineUser PRIVATE ShellEngineNetwork)
 
 include(FetchContent)
 

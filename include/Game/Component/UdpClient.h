@@ -19,9 +19,9 @@ namespace sh::game
 		SH_GAME_API void Start() override;
 		SH_GAME_API void BeginUpdate() override;
 		SH_GAME_API void Update() override;
-	private:
+	protected:
 		network::Client client;
-
+	private:
 		PROPERTY(serverIp)
 		std::string serverIp = "127.0.0.1";
 		PROPERTY(serverPort)
