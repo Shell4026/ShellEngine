@@ -52,10 +52,12 @@ namespace sh::network
 		receivedMessage.pop();
 		return msg;
 	}
-	SH_NET_API void Server::Send(const std::string& message, const asio::ip::udp::endpoint& to)
+	SH_NET_API void Server::Send(const Packet& packet, const asio::ip::udp::endpoint& to)
 	{
 		if (socket != nullptr)
-			socket->send_to(asio::buffer(message), to); // async_send_to로 나중에 비동기 생각
+		{
+			socket->send_to(asio::buffer(core::Json::to_bson(packet.Serialize())), to); // async_send_to로 나중에 비동기 생각
+		}
 	}
 	SH_NET_API auto Server::IsOpen() const -> bool
 	{
@@ -74,9 +76,22 @@ namespace sh::network
 				{
 					if (!ec && receivedBytes > 0)
 					{
-						std::string msg(buffer.data(), receivedBytes);
-						std::lock_guard<std::mutex> lock{ mu };
-						receivedMessage.push({ remoteEndpoint, std::move(msg) });
+						core::Json json = core::Json::from_bson(buffer.data(), receivedBytes, true, true);
+						if (json.contains("id"))
+						{
+							static auto conatinerFactory = Packet::Factory::GetInstance();
+							auto packet = conatinerFactory->Create(json["id"]);
+							if (packet != nullptr)
+							{
+								packet->Deserialize(json);
+								std::lock_guard<std::mutex> lock{ mu };
+								receivedMessage.push({ remoteEndpoint, std::move(packet) });
+							}
+							else
+								SH_ERROR_FORMAT("An unregistered packet has been received!");
+						}
+						else
+							SH_ERROR("Error packet has been received! (No ID.)");
 					}
 					Receive();
 				}

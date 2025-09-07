@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Export.h"
+#include "Packet.h"
 
 #include <asio.hpp>
 
@@ -13,17 +14,12 @@ namespace sh::network
 	class Client
 	{
 	public:
-		struct Message
-		{
-			std::string message;
-		};
-	public:
 		SH_NET_API void Connect(const std::string& ip, uint16_t port);
 		SH_NET_API void Disconnect();
 		SH_NET_API void Update();
-		SH_NET_API void Send(const std::string& str);
+		SH_NET_API void Send(const Packet& packet);
 
-		SH_NET_API auto GetReceivedMessage() -> std::optional<Message>;
+		SH_NET_API auto GetReceivedPacket() -> std::unique_ptr<Packet>;
 	private:
 		void Receive();
 	private:
@@ -31,9 +27,9 @@ namespace sh::network
 		std::unique_ptr<asio::ip::udp::socket> socket;
 		asio::ip::udp::endpoint serverEndpoint;
 
-		std::array<char, 1024> buffer;
+		std::array<uint8_t, Packet::MAX_PACKET_SIZE> buffer;
 
-		std::queue<Message> receivedMessage;
+		std::queue<std::unique_ptr<Packet>> receivedPacket;
 
 		std::mutex mu;
 	};

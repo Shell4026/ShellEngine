@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "Export.h"
 #include "PlayerInfo.h"
+#include "Packet.h"
 
 #include <asio.hpp>
 
@@ -20,7 +21,7 @@ namespace sh::network
 		struct Message
 		{
 			asio::ip::udp::endpoint sender;
-			std::string message;
+			std::unique_ptr<Packet> packet;
 		};
 	public:
 		SH_NET_API Server();
@@ -34,7 +35,7 @@ namespace sh::network
 
 		SH_NET_API auto GetReceivedMessage() -> std::optional<Message>;
 
-		SH_NET_API void Send(const std::string& message, const asio::ip::udp::endpoint& to);
+		SH_NET_API void Send(const Packet& packet, const asio::ip::udp::endpoint& to);
 
 		SH_NET_API auto IsOpen() const -> bool;
 	private:
@@ -44,7 +45,7 @@ namespace sh::network
 		std::unique_ptr<asio::ip::udp::socket> socket;
 		asio::ip::udp::endpoint remoteEndpoint;
 
-		std::array<char, 1024> buffer;
+		std::array<uint8_t, Packet::MAX_PACKET_SIZE> buffer;
 
 		uint16_t port = 4026;
 

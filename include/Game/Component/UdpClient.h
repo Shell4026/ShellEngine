@@ -9,11 +9,11 @@
 namespace sh::game
 {
 	/// @brief 에코 클라이언트 컴포넌트
-	class Client : public NetworkComponent
+	class UdpClient : public NetworkComponent
 	{
-		COMPONENT(Client, "network")
+		COMPONENT(UdpClient, "network")
 	public:
-		SH_GAME_API Client(GameObject& owner);
+		SH_GAME_API UdpClient(GameObject& owner);
 
 		SH_GAME_API void OnDestroy() override;
 		SH_GAME_API void Start() override;
@@ -25,7 +25,7 @@ namespace sh::game
 		PROPERTY(serverIp)
 		std::string serverIp = "127.0.0.1";
 		PROPERTY(serverPort)
-		int serverPort = 40426;
+		int serverPort = 4026;
 
 		std::future<void> runFuture;
 	};

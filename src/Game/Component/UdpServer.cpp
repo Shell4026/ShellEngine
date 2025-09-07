@@ -1,25 +1,27 @@
-﻿#include "Component/Server.h"
+﻿#include "Component/UdpServer.h"
 
 #include "Core/ThreadPool.h"
+
+#include "Network/StringPacket.h"
 namespace sh::game
 {
-	Server::Server(GameObject& owner) :
+	UdpServer::UdpServer(GameObject& owner) :
 		NetworkComponent(owner)
 	{
 
 	}
-	SH_GAME_API void Server::OnDestroy()
+	SH_GAME_API void UdpServer::OnDestroy()
 	{
 		server.Stop();
 		if (runFuture.valid())
 			runFuture.get();
 		Super::OnDestroy();
 	}
-	SH_GAME_API void Server::Start()
+	SH_GAME_API void UdpServer::Start()
 	{
 		server.Start();
 	}
-	SH_GAME_API void Server::BeginUpdate()
+	SH_GAME_API void UdpServer::BeginUpdate()
 	{
 		if (server.IsOpen())
 		{
@@ -43,7 +45,7 @@ namespace sh::game
 			}
 		}
 	}
-	SH_GAME_API void Server::Update()
+	SH_GAME_API void UdpServer::Update()
 	{
 		if (server.IsOpen())
 		{
@@ -51,15 +53,20 @@ namespace sh::game
 			while (opt.has_value())
 			{
 				auto& message = opt.value();
-				SH_INFO_FORMAT("Received message ({}) from {}", message.message, message.sender.address().to_string());
+				if (message.packet->GetId() == 0)
+				{
+					std::string str = static_cast<network::StringPacket*>(message.packet.get())->GetString();
+					SH_INFO_FORMAT("Received packet (id: 0, {}) from {}", str, message.sender.address().to_string());
 
-				server.Send(message.message, message.sender);
-
+					network::StringPacket packet{};
+					packet.SetString(std::move(str));
+					server.Send(packet, message.sender);
+				}
 				opt = server.GetReceivedMessage();
 			}
 		}
 	}
-	SH_GAME_API void Server::OnPropertyChanged(const core::reflection::Property& prop)
+	SH_GAME_API void UdpServer::OnPropertyChanged(const core::reflection::Property& prop)
 	{
 		if (prop.GetName() == core::Util::ConstexprHash("port"))
 			server.SetPort(port);

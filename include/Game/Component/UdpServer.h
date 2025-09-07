@@ -9,11 +9,11 @@
 namespace sh::game
 {
 	/// @brief UDP 에코 서버 컴포넌트
-	class Server : public NetworkComponent
+	class UdpServer : public NetworkComponent
 	{
-		COMPONENT(Server, "network")
+		COMPONENT(UdpServer, "network")
 	public:
-		SH_GAME_API Server(GameObject& owner);
+		SH_GAME_API UdpServer(GameObject& owner);
 
 		SH_GAME_API void OnDestroy() override;
 		SH_GAME_API void Start() override;

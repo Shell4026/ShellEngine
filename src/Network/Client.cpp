@@ -1,5 +1,7 @@
 ﻿#include "Client.h"
+#include "Packet.h"
 
+#include "Core/Logger.h"
 namespace sh::network
 {
 	SH_NET_API void Client::Connect(const std::string& ip, uint16_t port)
@@ -24,19 +26,21 @@ namespace sh::network
 	{
 		ioContext.run();
 	}
-	SH_NET_API void Client::Send(const std::string& str)
+	SH_NET_API void Client::Send(const Packet& packet)
 	{
 		if (socket != nullptr)
-			socket->send_to(asio::buffer(str), serverEndpoint); // async_send_to로 나중에 비동기 생각
+		{
+			socket->send_to(asio::buffer(core::Json::to_bson(packet.Serialize())), serverEndpoint); // async_send_to로 나중에 비동기 생각
+		}
 	}
-	SH_NET_API auto Client::GetReceivedMessage() -> std::optional<Message>
+	SH_NET_API auto Client::GetReceivedPacket() -> std::unique_ptr<Packet>
 	{
 		std::lock_guard<std::mutex> lock{ mu };
-		if (receivedMessage.empty())
+		if (receivedPacket.empty())
 			return {};
-		Message msg = std::move(receivedMessage.front());
-		receivedMessage.pop();
-		return msg;
+		std::unique_ptr<Packet> packet = std::move(receivedPacket.front());
+		receivedPacket.pop();
+		return packet;
 	}
 	void Client::Receive()
 	{
@@ -47,9 +51,22 @@ namespace sh::network
 			{
 				if (!ec && receivedBytes > 0)
 				{
-					std::string msg(buffer.data(), receivedBytes);
-					std::lock_guard<std::mutex> lock{ mu };
-					receivedMessage.push({ std::move(msg) });
+					core::Json json = core::Json::from_bson(buffer.data(), receivedBytes, true, true);
+					if (json.contains("id"))
+					{
+						static auto conatinerFactory = Packet::Factory::GetInstance();
+						auto packet = conatinerFactory->Create(json["id"]);
+						if (packet != nullptr)
+						{
+							packet->Deserialize(json);
+							std::lock_guard<std::mutex> lock{ mu };
+							receivedPacket.push(std::move(packet));
+						}
+						else
+							SH_ERROR_FORMAT("An unregistered packet has been received!");
+					}
+					else
+						SH_ERROR("Error packet has been received! (No ID.)");
 				}
 				Receive();
 			}
