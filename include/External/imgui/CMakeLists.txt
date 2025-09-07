@@ -5,6 +5,16 @@ set(SRC "imgui.cpp" "imgui_demo.cpp" "imgui_draw.cpp" "imgui_tables.cpp" "imgui_
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 add_library(IMGUI STATIC ${SRC})
 
+if(WIN32)
+set_target_properties(IMGUI PROPERTIES 
+	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/lib"
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+elseif(UNIX)
+set_target_properties(IMGUI PROPERTIES 
+	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/lib"
+	LIBRARY_OUTPUT_DIRECTORY  "${CMAKE_BINARY_DIR}/bin")
+endif()
+
 find_package(Vulkan)
 target_link_libraries(IMGUI PRIVATE ShellEngine::Render)
 
