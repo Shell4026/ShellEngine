@@ -15,7 +15,8 @@ namespace sh::editor
 			Texture,
 			Material,
 			World,
-			Shader
+			Shader,
+			Prefab
 		};
 	private:
 		static std::unordered_map<std::string, Type> extensions;

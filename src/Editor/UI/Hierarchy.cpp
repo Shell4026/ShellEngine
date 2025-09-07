@@ -29,7 +29,7 @@ namespace sh::editor
 			objList.push_back(obj);
 		}
 
-		RegisterDragItemFunction("GameObject", 
+		RegisterDragItemFunction(std::string{ core::reflection::GetType<game::GameObject>().name },
 			[&](const ImGuiPayload& payload)
 			{
 				IM_ASSERT(payload.DataSize == sizeof(game::GameObject*));

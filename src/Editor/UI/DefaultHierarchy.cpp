@@ -39,4 +39,9 @@ namespace sh::editor
 				nodeQ.push({ child.get(), meshObj });
 		}
 	}
+	SH_EDITOR_API void PrefabHierarchy::OnHierarchyDraged(EditorWorld& world, const ImGuiPayload& payload)
+	{
+		game::Prefab* prefabPtr = *reinterpret_cast<game::Prefab**>(payload.Data);
+		prefabPtr->AddToWorld(world);
+	}
 }//namespace

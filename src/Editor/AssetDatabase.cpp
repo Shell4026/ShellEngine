@@ -16,6 +16,7 @@
 
 #include "Game/GameManager.h"
 #include "Game/World.h"
+#include "Game/Prefab.h"
 
 #include "Game/AssetLoaderFactory.h"
 #include "Game/Asset/TextureLoader.h"
@@ -30,6 +31,8 @@
 #include "Game/Asset/MaterialAsset.h"
 #include "Game/Asset/ShaderAsset.h"
 #include "Game/Asset/WorldAsset.h"
+#include "Game/Asset/PrefabAsset.h"
+#include "Game/Asset/PrefabLoader.h"
 
 #include <random>
 #include <istream>
@@ -41,7 +44,7 @@
 #include <chrono>
 namespace sh::editor
 {
-	auto AssetDatabase::GetMetaDirectory(const std::filesystem::path& assetPath) -> std::filesystem::path
+	SH_EDITOR_API auto AssetDatabase::GetMetaDirectory(const std::filesystem::path& assetPath) -> std::filesystem::path
 	{
 		std::filesystem::path metaPath{ assetPath.parent_path() / assetPath.filename() };
 		metaPath += ".meta";
@@ -142,6 +145,14 @@ namespace sh::editor
 			if (worldPtr != nullptr)
 				project->loadedAssets.AddResource(worldPtr->GetUUID(), worldPtr);
 			return worldPtr;
+		}
+		if (type == AssetExtensions::Type::Prefab)
+		{
+			static game::PrefabLoader loader{};
+			game::Prefab* prefabPtr = static_cast<game::Prefab*>(LoadAsset(dir, loader, false));
+			if (prefabPtr != nullptr)
+				project->loadedAssets.AddResource(prefabPtr->GetUUID(), prefabPtr);
+			return prefabPtr;
 		}
 		return nullptr;
 	}
@@ -381,7 +392,9 @@ namespace sh::editor
 		os.close();
 
 		Meta meta{};
-		meta.Save(obj, dir);
+		meta.Save(obj, GetMetaDirectory(dir));
+
+		project->loadedAssets.AddResource(obj.GetUUID(), const_cast<core::SObject*>(&obj));
 
 		return true;
 	}
@@ -398,6 +411,20 @@ namespace sh::editor
 		uuids.insert_or_assign(relativePath, uuid);
 
 		it->second.originalPath = relativePath;
+
+		SaveDatabase(project->GetLibraryPath() / "AssetDB.json");
+	}
+
+	SH_EDITOR_API void AssetDatabase::DeleteAsset(const core::UUID& uuid)
+	{
+		auto it = paths.find(uuid);
+		if (it == paths.end())
+			return;
+
+		uuids.erase(it->second.originalPath);
+		paths.erase(it);
+
+		project->loadedAssets.DestroyResource(uuid);
 
 		SaveDatabase(project->GetLibraryPath() / "AssetDB.json");
 	}
@@ -464,6 +491,8 @@ namespace sh::editor
 			assetType = game::MeshAsset::ASSET_NAME;
 		else if (obj.GetType() == render::Shader::GetStaticType())
 			assetType = game::ShaderAsset::ASSET_NAME;
+		else if (obj.GetType() == game::Prefab::GetStaticType())
+			assetType = game::PrefabAsset::ASSET_NAME;
 		else
 			return false;
 

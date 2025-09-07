@@ -17,6 +17,7 @@
 #include "Game/ComponentModule.h"
 #include "Game/GameObject.h"
 #include "Game/GameManager.h"
+#include "Game/Prefab.h"
 namespace sh::editor
 {
 	bool Project::bInitResource = false;
@@ -115,9 +116,11 @@ namespace sh::editor
 			else
 				item = core::SObjectManager::GetInstance()->GetSObject(uuidOpt.value());
 
-			assert(item != nullptr);
 			if (item == nullptr)
+			{
+				ImGui::EndDragDropSource();
 				return;
+			}
 
 			payloadName = reinterpret_cast<core::SObject*>(item)->GetType().type.name;
 			ImGui::SetDragDropPayload(payloadName.c_str(), &item, sizeof(void*));
@@ -125,7 +128,6 @@ namespace sh::editor
 			ImGui::Text("%s", path.filename().u8string().c_str());
 			ImGui::EndDragDropSource();
 		}
-
 	}
 
 	auto Project::GetIcon(const std::filesystem::path& path) const -> const game::GUITexture*
@@ -155,7 +157,9 @@ namespace sh::editor
 		ImGui::BeginGroup();
 		const game::GUITexture* icon = GetIcon(path);
 		ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Button, iconBackgroundColor);
-		if (ImGui::ImageButton(path.u8string().c_str(), *icon, ImVec2{ iconSize, iconSize }))
+		ImGui::ImageButton(path.u8string().c_str(), *icon, ImVec2{ iconSize, iconSize });
+		if (ImGui::IsItemHovered() && 
+			(ImGui::IsMouseClicked(ImGuiMouseButton_::ImGuiMouseButton_Left) || ImGui::IsMouseClicked(ImGuiMouseButton_::ImGuiMouseButton_Right)))
 		{
 			selected = path;
 			auto uuidStr = assetDatabase.GetAssetUUID(path);
@@ -170,9 +174,8 @@ namespace sh::editor
 				}
 			}
 		}
-		SetDragItem(path);
-
 		ImGui::PopStyleColor();
+		SetDragItem(path);
 		// 폴더면 더블 클릭 시 경로 변경
 		if (std::filesystem::is_directory(path))
 		{
@@ -251,6 +254,23 @@ namespace sh::editor
 						}
 					}
 					ImGui::EndMenu();
+				}
+				if (ImGui::MenuItem("Delete"))
+				{
+					auto uuidOpt = assetDatabase.GetAssetUUID(selected);
+					if (uuidOpt.has_value())
+					{
+						const std::filesystem::path metaPath = assetDatabase.GetMetaDirectory(selected);
+						std::filesystem::remove(selected);
+						if (std::filesystem::exists(metaPath))
+							std::filesystem::remove(metaPath);
+
+						assetDatabase.DeleteAsset(uuidOpt.value());
+
+						selected.clear();
+
+						GetAllFiles(currentPath);
+					}
 				}
 			}
 			if (ImGui::MenuItem("Refresh"))
@@ -429,6 +449,8 @@ namespace sh::editor
 	}
 	SH_EDITOR_API void Project::Render()
 	{
+		auto& world = static_cast<EditorWorld&>(*game::GameManager::GetInstance()->GetCurrentWorld());
+
 		static ImGuiWindowFlags style =
 			ImGuiWindowFlags_::ImGuiWindowFlags_NoBringToFrontOnFocus;
 
@@ -437,16 +459,43 @@ namespace sh::editor
 		float h = ImGui::GetWindowContentRegionMax().y - 50;
 		ImGui::BeginChild("Explorer", ImVec2{ 0.f, h }, ImGuiChildFlags_::ImGuiChildFlags_None, ImGuiWindowFlags_::ImGuiWindowFlags_AlwaysVerticalScrollbar);
 
-		ImVec2 contentMin = ImGui::GetWindowContentRegionMin();
-		ImVec2 contentMax = ImGui::GetWindowContentRegionMax();
-		ImVec2 windowPos = ImGui::GetWindowPos(); // 스크린 좌표
+		const ImVec2 contentMin = ImGui::GetWindowContentRegionMin();
+		const ImVec2 contentMax = ImGui::GetWindowContentRegionMax();
+		const ImVec2 windowPos = ImGui::GetWindowPos(); // 스크린 좌표
 
-		ImVec2 spaceMin = ImVec2(windowPos.x + contentMin.x, windowPos.y + contentMin.y);
-		ImVec2 spaceMax = ImVec2(windowPos.x + contentMax.x, windowPos.y + contentMax.y);
-		float availableWidth = ImGui::GetContentRegionAvail().x;
+		const ImVec2 spaceMin = ImVec2(windowPos.x + contentMin.x, windowPos.y + contentMin.y);
+		const ImVec2 spaceMax = ImVec2(windowPos.x + contentMax.x, windowPos.y + contentMax.y);
+		const float availableWidth = ImGui::GetContentRegionAvail().x;
 		float cursorX = ImGui::GetCursorPosX();
-		float spacing = ImGui::GetStyle().ItemSpacing.x;
+		const float spacing = ImGui::GetStyle().ItemSpacing.x;
 
+		const ImVec2 emptySize = ImVec2(spaceMax.x - spaceMin.x, spaceMax.y - spaceMin.y);
+
+		const ImVec2 cursorPos = ImGui::GetCursorPos();
+		ImGui::SetNextItemAllowOverlap();
+		if (ImGui::InvisibleButton("ProjectEmptySpace", emptySize))
+		{
+			selected.clear();
+			world.ClearSelectedObjects();
+		}
+		// 프리팹 드래그
+		if (ImGui::BeginDragDropTarget())
+		{
+			const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(std::string{ core::reflection::GetType<game::GameObject>().name }.c_str());
+			if (payload != nullptr && payload->Data != nullptr)
+			{
+				game::GameObject* objPtr = *reinterpret_cast<game::GameObject**>(payload->Data);
+				if (core::IsValid(objPtr))
+				{
+					auto prefab = game::Prefab::CreatePrefab(*objPtr);
+					assetDatabase.CreateAsset(currentPath / fmt::format("{}.prefab", prefab->GetName().ToString()), *prefab);
+					GetAllFiles(currentPath);
+				}
+			}
+			ImGui::EndDragDropTarget();
+		}
+
+		ImGui::SetCursorPos(cursorPos);
 		if (currentPath != rootPath)
 		{
 			RenderParentFolder();
@@ -457,6 +506,7 @@ namespace sh::editor
 			if (!RenderFile(path, cursorX, spacing, availableWidth))
 				break;
 		}
+		int idx = 0;
 		for (auto& path : filesPath)
 		{
 			if (std::find(invisibleExtensions.begin(), invisibleExtensions.end(), path.extension().string()) != invisibleExtensions.end())
@@ -464,20 +514,6 @@ namespace sh::editor
 			if (!RenderFile(path, cursorX, spacing, availableWidth))
 				break;
 		}
-
-		if (ImGui::IsMouseHoveringRect(spaceMin, spaceMax))
-		{
-			if (ImGui::IsMouseClicked(ImGuiMouseButton_::ImGuiMouseButton_Left))
-			{
-				if (!ImGui::IsAnyItemHovered())
-				{
-					selected.clear();
-					auto& world = static_cast<EditorWorld&>(*game::GameManager::GetInstance()->GetCurrentWorld());
-					world.ClearSelectedObjects();
-				}
-			}
-		}
-
 		ShowRightClickPopup();
 
 		ImGui::EndChild();

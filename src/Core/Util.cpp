@@ -1,11 +1,11 @@
-﻿#include "PCH.h"
-#include "Util.h"
+﻿#include "Util.h"
 #include "SObject.h"
 
 #include <random>
 #include <limits>
 #include <sstream>
 #include <iomanip>
+#include <regex>
 
 #ifdef max
 #undef max
@@ -167,5 +167,36 @@ namespace sh::core {
 			mat[1][0], mat[1][1], mat[1][2],
 			mat[2][0], mat[2][1], mat[2][2]
 		};
+	}
+	SH_CORE_API auto Util::ExtractUUIDs(const core::Json& json) -> std::vector<std::string>
+	{
+		std::unordered_set<std::string> uuids;
+		ExtractUUIDsHelper(uuids, json);
+
+		return std::vector<std::string>{ uuids.begin(), uuids.end() };
+	}
+	void Util::ExtractUUIDsHelper(std::unordered_set<std::string>& uuids, const core::Json& json)
+	{
+		static std::regex uuidRegex{ "^[0-9a-f]{32}$", std::regex::optimize };
+		if (json.is_object())
+		{
+			for (auto const& [key, val] : json.items())
+			{
+				ExtractUUIDsHelper(uuids, val);
+			}
+		}
+		else if (json.is_array())
+		{
+			for (const auto& item : json)
+			{
+				ExtractUUIDsHelper(uuids, item);
+			}
+		}
+		else if (json.is_string())
+		{
+			const std::string& value = json.get<std::string>();
+			if (std::regex_match(value, uuidRegex))
+				uuids.insert(value);
+		}
 	}
 }

@@ -60,6 +60,7 @@ namespace sh::editor
 		/// @param uuid UUID
 		/// @param newPath 새 경로
 		SH_EDITOR_API void AssetWasMoved(const core::UUID& uuid, const std::filesystem::path& newPath);
+		SH_EDITOR_API void DeleteAsset(const core::UUID& uuid);
 
 		SH_EDITOR_API auto GetAsset(const core::UUID& uuid) -> std::unique_ptr<core::Asset>;
 		SH_EDITOR_API auto GetAssetOriginalPath(const core::UUID& uuid) const -> std::optional<std::filesystem::path>;
@@ -80,10 +81,11 @@ namespace sh::editor
 		SH_EDITOR_API auto ExportAsset(const core::SObject& obj, const std::filesystem::path& path, int64_t writeTime = 0) const -> bool;
 
 		SH_EDITOR_API auto IsAssetChanged(const std::filesystem::path& assetPath) -> bool;
+
+		SH_EDITOR_API auto GetMetaDirectory(const std::filesystem::path& assetPath) -> std::filesystem::path;
 	protected:
 		SH_EDITOR_API AssetDatabase();
 	private:
-		auto GetMetaDirectory(const std::filesystem::path& assetPath) -> std::filesystem::path;
 		/// @brief 파일의 메타 파일이 존재 하는지?
 		/// @param dir 파일 경로
 		/// @return 있다면 메타 파일의 경로를 반환, 없다면 nullopt 반환

@@ -1,6 +1,6 @@
 ﻿#pragma once
-
 #include "Export.h"
+#include "ISerializable.h"
 
 #include <glm/mat2x2.hpp>
 #include <glm/mat4x4.hpp>
@@ -10,16 +10,13 @@
 #include <functional>
 #include <random>
 #include <cstdint>
-
+#include <unordered_set>
 namespace sh::core 
 {
 	class SObject;
 
 	class Util
 	{
-	private:
-		inline static std::random_device seed{};
-		inline static std::mt19937 gen{ seed() };
 	public:
 		enum class Platform {
 			Windows,
@@ -125,6 +122,13 @@ namespace sh::core
 		SH_CORE_API static auto ConvertMat4ToMat2(const glm::mat4& mat) -> glm::mat2;
 		SH_CORE_API static auto ConvertMat3ToMat4(const glm::mat3& mat) -> glm::mat4;
 		SH_CORE_API static auto ConvertMat4ToMat3(const glm::mat4& mat) -> glm::mat3;
+
+		SH_CORE_API static auto ExtractUUIDs(const core::Json& json) -> std::vector<std::string>;
+	private:
+		static void ExtractUUIDsHelper(std::unordered_set<std::string>& uuids, const core::Json& json);
+	private:
+		inline static std::random_device seed{};
+		inline static std::mt19937 gen{ seed() };
 	};
 
 	/// @brief 해당 SObject가 nullptr이거나 앞으로 지워질 객체인지 검증 하는 함수.
