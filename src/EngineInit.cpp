@@ -29,19 +29,21 @@
 
 #include "Game/World.h"
 #include "Game/AssetLoaderFactory.h"
-#include "Game/TextureLoader.h"
-#include "Game/ModelLoader.h"
-#include "Game/MeshLoader.h"
-#include "Game/MaterialLoader.h"
-#include "Game/ShaderLoader.h"
-#include "Game/WorldLoader.h"
+#include "Game/Asset/TextureLoader.h"
+#include "Game/Asset/ModelLoader.h"
+#include "Game/Asset/MeshLoader.h"
+#include "Game/Asset/MaterialLoader.h"
+#include "Game/Asset/ShaderLoader.h"
+#include "Game/Asset/WorldLoader.h"
+#include "Game/Asset/PrefabLoader.h"
 
-#include "Game/TextureAsset.h"
-#include "Game/MaterialAsset.h"
-#include "Game/ShaderAsset.h"
-#include "Game/ModelAsset.h"
-#include "Game/MeshAsset.h"
-#include "Game/WorldAsset.h"
+#include "Game/Asset/TextureAsset.h"
+#include "Game/Asset/MaterialAsset.h"
+#include "Game/Asset/ShaderAsset.h"
+#include "Game/Asset/ModelAsset.h"
+#include "Game/Asset/MeshAsset.h"
+#include "Game/Asset/WorldAsset.h"
+#include "Game/Asset/PrefabAsset.h"
 #endif
 
 namespace sh
@@ -191,6 +193,7 @@ namespace sh
 		assetLoaderFactory->RegisterLoader(game::MaterialAsset::ASSET_NAME, std::make_unique<game::MaterialLoader>(*renderer->GetContext()));
 		assetLoaderFactory->RegisterLoader(game::ShaderAsset::ASSET_NAME, std::make_unique<game::ShaderLoader>(&vkShaderPassBuilder));
 		assetLoaderFactory->RegisterLoader(game::WorldAsset::ASSET_NAME, std::make_unique<game::WorldLoader>(*renderer, *gui));
+		assetLoaderFactory->RegisterLoader(game::PrefabAsset::ASSET_NAME, std::make_unique<game::PrefabLoader>());
 		
 		core::AssetResolverRegistry::SetResolver(
 			[this](const core::UUID& uuid) -> core::SObject*
