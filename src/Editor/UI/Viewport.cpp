@@ -106,7 +106,7 @@ namespace sh::editor
 			bMouseRightDown = game::Input::GetMouseDown(game::Input::MouseType::Right);
 
 		if (world.IsPlaying() && !bPlaying)
-			Play();
+			Play(false);
 	}
 
 	void Viewport::ChangeViewportSize()
@@ -278,7 +278,7 @@ namespace sh::editor
 
 		bDirty = true;
 	}
-	SH_EDITOR_API auto Viewport::Play() -> bool
+	SH_EDITOR_API auto Viewport::Play(bool bStartWorld) -> bool
 	{
 		if (bPlaying)
 			return false;
@@ -315,7 +315,8 @@ namespace sh::editor
 
 		world.ClearSelectedObjects();
 
-		gameManager.StartWorlds();
+		if (bStartWorld)
+			gameManager.StartWorlds();
 
 		editorCamera->SetActive(false);
 		BlockLeftClick(true);

@@ -84,7 +84,7 @@ namespace sh::editor
 
 		SH_EDITOR_API void SyncDirty() override;
 
-		SH_EDITOR_API auto Play() -> bool;
+		SH_EDITOR_API auto Play(bool bStartWorld = true) -> bool;
 		SH_EDITOR_API void Stop();
 
 		SH_EDITOR_API auto IsPlaying() const -> bool;
