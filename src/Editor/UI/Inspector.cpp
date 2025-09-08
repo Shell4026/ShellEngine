@@ -418,7 +418,7 @@ namespace sh::editor
 					{
 						// 드래그로 받는 객체의 타입 == 드래그 중인 객체의 타입이면 받음
 						const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(propTypeName.c_str());
-						auto payloadt = ImGui::GetDragDropPayload();
+						auto currentPayload = ImGui::GetDragDropPayload();
 						if (payload)
 						{
 							*obj = *reinterpret_cast<core::SObject**>(payload->Data);
@@ -470,6 +470,27 @@ namespace sh::editor
 								{
 									const core::reflection::STypeInfo& componentType = (*list[0])->GetType();
 									ImGui::SetDragDropPayload(std::string{ componentType.type.name }.c_str(), list[0], sizeof(game::Component*));
+								}
+							}
+							else
+							{
+								// 부모 타입하고도 일치 하는지 검사
+								core::SObject** dataPtr = reinterpret_cast<core::SObject**>(currentPayload->Data);
+								if (dataPtr != nullptr)
+								{
+									auto type = &(*dataPtr)->GetType();
+									while (type != nullptr)
+									{
+										const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(std::string{ type->type.name }.c_str());
+										if (payload != nullptr)
+										{
+											*obj = *reinterpret_cast<core::SObject**>(payload->Data);
+											propertyOwner.OnPropertyChanged(prop);
+											AssetDatabase::GetInstance()->SetDirty(&propertyOwner);
+											AssetDatabase::GetInstance()->SaveAllAssets();
+										}
+										type = type->GetSuper();
+									}
 								}
 							}
 						}
