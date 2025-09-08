@@ -355,7 +355,7 @@ namespace sh::editor
 						}
 					}
 					// 정확히 같은 컴포넌트는 못 찾았으므로 제일 첫번째로 찾은 컴포넌트를 페이로드로 설정
-					if (!bFind)
+					if (!bFind && list.size() > 0)
 					{
 						const core::reflection::STypeInfo& componentType = (*list[0])->GetType();
 						ImGui::SetDragDropPayload(std::string{ componentType.type.name }.c_str(), list[0], sizeof(game::Component*));
@@ -466,7 +466,7 @@ namespace sh::editor
 									}
 								}
 								// 정확히 같은 컴포넌트는 못 찾았으므로 제일 첫번째로 찾은 컴포넌트를 페이로드로 설정
-								if (!bFind)
+								if (!bFind && list.size() > 0)
 								{
 									const core::reflection::STypeInfo& componentType = (*list[0])->GetType();
 									ImGui::SetDragDropPayload(std::string{ componentType.type.name }.c_str(), list[0], sizeof(game::Component*));

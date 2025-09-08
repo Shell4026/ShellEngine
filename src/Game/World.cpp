@@ -59,10 +59,10 @@ namespace sh::game
 		}
 		mainCamera = nullptr;
 
-		bool bStartLoop = false;
-		bool bPlaying = false;
-		bool bLoaded = false;
-		bool bOnStart = false;
+		bStartLoop = false;
+		bPlaying = false;
+		bLoaded = false;
+		bOnStart = false;
 	}
 	SH_GAME_API void World::InitResource()
 	{
