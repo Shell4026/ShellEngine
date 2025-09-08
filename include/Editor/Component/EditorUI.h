@@ -49,6 +49,5 @@ namespace sh::editor
 		std::unique_ptr<BundleViewer> bundleViewer;
 
 		bool bDirty;
-		bool bPlaying = false;
 	};
 }

@@ -120,7 +120,7 @@ namespace sh::editor
 					{
 						project->OpenSettingUI();
 					}
-					if (!bPlaying)
+					if (!viewport->IsPlaying())
 					{
 						if (ImGui::MenuItem("Reload module"))
 						{
@@ -164,15 +164,13 @@ namespace sh::editor
 						}
 						if (ImGui::MenuItem("Play"))
 						{
-							if (viewport->Play())
-								bPlaying = true;
+							viewport->Play();
 						}
 					}
 					else
 					{
 						if (ImGui::MenuItem("Stop"))
 						{
-							bPlaying = false;
 							viewport->Stop();
 						}
 					}

@@ -104,6 +104,9 @@ namespace sh::editor
 		}
 		else
 			bMouseRightDown = game::Input::GetMouseDown(game::Input::MouseType::Right);
+
+		if (world.IsPlaying() && !bPlaying)
+			Play();
 	}
 
 	void Viewport::ChangeViewportSize()
@@ -277,6 +280,8 @@ namespace sh::editor
 	}
 	SH_EDITOR_API auto Viewport::Play() -> bool
 	{
+		if (bPlaying)
+			return false;
 		game::Camera* mainCam = world.GetMainCamera();
 		if (!core::IsValid(mainCam))
 		{
@@ -318,10 +323,13 @@ namespace sh::editor
 
 		SyncDirty();
 
+		bPlaying = true;
 		return true;
 	}
 	SH_EDITOR_API void Viewport::Stop()
 	{
+		if (!bPlaying)
+			return;
 		game::Camera* cam = world.GetMainCamera();
 		cam->SetRenderTexture(nullptr);
 		cam->SetActive(false);
@@ -337,6 +345,12 @@ namespace sh::editor
 		gameManager.StopWorlds();
 		for (auto& [uuid, worldPtr] : gameManager.GetWorlds())
 			worldPtr->LoadWorldPoint();
+
+		bPlaying = false;
+	}
+	SH_EDITOR_API auto Viewport::IsPlaying() const -> bool
+	{
+		return bPlaying;
 	}
 	SH_EDITOR_API void Viewport::Sync()
 	{

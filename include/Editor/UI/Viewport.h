@@ -52,6 +52,7 @@ namespace sh::editor
 		bool bOverlay = true;
 		bool bBlockRightClick = false;
 		bool bBlockLeftClick = false;
+		bool bPlaying = false;
 	protected:
 		EditorWorld& world;
 	public:
@@ -85,5 +86,7 @@ namespace sh::editor
 
 		SH_EDITOR_API auto Play() -> bool;
 		SH_EDITOR_API void Stop();
+
+		SH_EDITOR_API auto IsPlaying() const -> bool;
 	};
 }//namespace
