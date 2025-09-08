@@ -77,6 +77,7 @@ namespace sh::game
 		core::SHashMap<core::UUID, World*> worlds;
 		std::unordered_map<core::UUID, std::vector<core::UUID>> worldUUIDs;
 
+		std::filesystem::path originalPluginPath;
 		std::unique_ptr<core::Plugin> userPlugin;
 		std::vector<std::pair<std::string, const core::reflection::STypeInfo*>> userComponents;
 

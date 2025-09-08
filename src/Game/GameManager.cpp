@@ -93,7 +93,7 @@ namespace sh::game
 		if (!bLoadingWorld)
 		{
 			afterUpdateTaskQueue.push(
-				[&]()
+				[&, bPlayWorld]()
 				{
 					// 불러올 월드가 있다면 불러옴
 					if (core::IsValid(loadingSingleWorld))
@@ -251,6 +251,7 @@ namespace sh::game
 			std::filesystem::copy_file(dllPath, pluginPath, std::filesystem::copy_options::overwrite_existing);
 
 			dllPath = std::move(pluginPath);
+			originalPluginPath = path;
 		}
 #elif __linux__
 		if (path.has_extension())
@@ -272,6 +273,7 @@ namespace sh::game
 			std::filesystem::copy_file(dllPath, pluginPath, std::filesystem::copy_options::overwrite_existing);
 
 			dllPath = std::move(pluginPath);
+			originalPluginPath = path;
 		}
 #endif
 		core::ModuleLoader loader{};
@@ -302,7 +304,7 @@ namespace sh::game
 					std::filesystem::path pluginPath = "ShellEngineUser";
 					if (userPlugin != nullptr && userPlugin->handle != nullptr)
 					{
-						pluginPath = userPlugin->path;
+						pluginPath = originalPluginPath.empty() ? userPlugin->path : originalPluginPath;
 						for (auto& [uuid, worldPtr] : worlds)
 						{
 							// 1. 월드 현재 상태 저장
@@ -331,7 +333,7 @@ namespace sh::game
 						userPlugin.reset();
 					}
 					// 4. 다시 불러오고 월드 복원
-					LoadUserModule(pluginPath);
+					LoadUserModule(pluginPath, originalPluginPath.empty() ? false : true);
 					for (auto& [uuid, worldPtr] : worlds)
 						worldPtr->LoadWorldPoint();
 
