@@ -63,4 +63,8 @@ namespace sh::game
 			packet = client.GetReceivedPacket();
 		}
 	}
+	SH_GAME_API void UdpClient::SendPacket(const network::Packet& packet)
+	{
+		client.Send(packet);
+	}
 }//namespace

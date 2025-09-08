@@ -19,6 +19,8 @@ namespace sh::game
 		SH_GAME_API void Start() override;
 		SH_GAME_API void BeginUpdate() override;
 		SH_GAME_API void Update() override;
+
+		SH_GAME_API void SendPacket(const network::Packet& packet);
 	protected:
 		network::Client client;
 	private:
