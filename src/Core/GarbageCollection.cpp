@@ -490,6 +490,7 @@ namespace sh::core
 				}
 			}
 		}
+
 		CheckPtrs();
 		bPendingKill = true;
 
@@ -543,6 +544,7 @@ namespace sh::core
 				delete objPtr;
 			else
 				std::destroy_at(objPtr);
+			objPtr = nullptr;
 		}
 		pendingKillObjs.clear();
 		bPendingKill = false;

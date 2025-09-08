@@ -344,7 +344,7 @@ namespace sh::game
 		core::Json objsJson = core::Json::array();
 		for (auto obj : objs)
 		{
-			if (obj->bNotSave)
+			if (obj->bNotSave || !core::IsValid(obj))
 				continue;
 			objsJson.push_back(obj->Serialize());
 		}
@@ -399,7 +399,19 @@ namespace sh::game
 				if (type == "Transform") // 트랜스폼은 게임오브젝트 생성 시 이미 만들어져있다.
 				{
 					if (gameObj->transform->GetUUID() != uuid)
-						gameObj->transform->SetUUID(uuid);
+					{
+						// 실패 했다면 이미 해당 트랜스폼이 존재하는 상태
+						if (!gameObj->transform->SetUUID(uuid))
+						{
+							auto obj = core::SObjectManager::GetInstance()->GetSObject(uuid);
+							// 보류 상태라면 UUID 변경
+							if (obj != nullptr && obj->IsPendingKill())
+							{
+								obj->SetUUID(core::UUID::Generate());
+								gameObj->transform->SetUUID(uuid);
+							}
+						}
+					}
 					continue;
 				}
 
@@ -410,7 +422,17 @@ namespace sh::game
 					continue;
 				}
 				Component* component = compType->Create(*gameObj);
-				component->SetUUID(core::UUID{ uuid });
+				// 실패 했다면 이미 해당 컴포넌트가 존재하는 상태 (PendingKill상태 일 수도 있음)
+				if (!component->SetUUID(core::UUID{ uuid }))
+				{
+					auto obj = core::SObjectManager::GetInstance()->GetSObject(uuid);
+					// 보류 상태라면 UUID 변경
+					if (obj != nullptr && obj->IsPendingKill())
+					{
+						obj->SetUUID(core::UUID::Generate());
+						component->SetUUID(core::UUID{ uuid });
+					}
+				}
 				gameObj->AddComponent(component);
 			}
 		}
