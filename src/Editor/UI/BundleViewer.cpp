@@ -53,6 +53,11 @@ namespace sh::editor
         bShow = true;
     }
 
+    SH_EDITOR_API auto BundleViewer::GetExplorer() const -> ExplorerUI*
+    {
+        return explorer.get();
+    }
+
     void BundleViewer::ShowBundleContent()
     {
         ImGui::Text("Version: %u", bundle.GetVersion());

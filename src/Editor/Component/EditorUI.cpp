@@ -183,6 +183,8 @@ namespace sh::editor
 			{
 				if (ImGui::MenuItem("Bundle Viewer"))
 				{
+					if (project->IsProjectOpen())
+						bundleViewer->GetExplorer()->SetCurrentPath(project->GetBinPath());
 					bundleViewer->Open();
 				}
 				ImGui::Separator();

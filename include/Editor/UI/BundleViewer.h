@@ -17,6 +17,8 @@ namespace sh::editor
 
         SH_EDITOR_API void Render();
         SH_EDITOR_API void Open();
+
+        SH_EDITOR_API auto GetExplorer() const -> ExplorerUI*;
     private:
         void ShowBundleContent();
     private:
