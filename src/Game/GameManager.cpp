@@ -219,11 +219,11 @@ namespace sh::game
 		materialLoader->Load(*errorMateralAsset);
 	}
 
-	SH_GAME_API void GameManager::LoadUserModule(const std::filesystem::path& path)
+	SH_GAME_API void GameManager::LoadUserModule(const std::filesystem::path& path, bool bCopy)
 	{
 		game::ComponentModule* componentModule = game::ComponentModule::GetInstance();
-#if _WIN32
 		std::filesystem::path dllPath = path;
+#if _WIN32
 		if (path.has_extension())
 		{
 			if (path.extension() != ".dll")
@@ -237,8 +237,17 @@ namespace sh::game
 			SH_INFO_FORMAT("{} not found", dllPath.u8string());
 			return;
 		}
+		if (bCopy)
+		{
+			auto pdbPath = path.parent_path() / std::filesystem::path(path.stem().u8string() + ".pdb");
+			if (std::filesystem::exists(pdbPath))
+				std::filesystem::remove(pdbPath);
+			std::filesystem::path pluginPath = path.parent_path() / "temp.dll";
+			std::filesystem::copy_file(dllPath, pluginPath, std::filesystem::copy_options::overwrite_existing);
+
+			dllPath = std::move(pluginPath);
+		}
 #elif __linux__
-		std::filesystem::path dllPath = path;
 		if (path.has_extension())
 		{
 			if (path.extension() != ".so")
@@ -251,6 +260,13 @@ namespace sh::game
 		{
 			SH_INFO_FORMAT("{} not found", dllPath.u8string());
 			return;
+		}
+		if (bCopy)
+		{
+			std::filesystem::path pluginPath = path.parent_path() / "temp.so";
+			std::filesystem::copy_file(dllPath, pluginPath, std::filesystem::copy_options::overwrite_existing);
+
+			dllPath = std::move(pluginPath);
 		}
 #endif
 		core::ModuleLoader loader{};

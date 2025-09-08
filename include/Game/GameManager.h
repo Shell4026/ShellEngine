@@ -55,7 +55,7 @@ namespace sh::game
 		/// @param uuid 월드 UUID
 		SH_GAME_API void UnloadWorld(const core::UUID& uuid);
 
-		SH_GAME_API void LoadUserModule(const std::filesystem::path& path);
+		SH_GAME_API void LoadUserModule(const std::filesystem::path& path, bool bCopy = false);
 		SH_GAME_API void ReloadUserModule();
 
 		SH_GAME_API void StartWorlds();

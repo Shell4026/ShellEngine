@@ -450,7 +450,7 @@ namespace sh::editor
 		SaveLatestProjectPath(dir);
 
 		auto& gameManager = *game::GameManager::GetInstance();
-		gameManager.LoadUserModule(binaryPath / "ShellEngineUser");
+		gameManager.LoadUserModule(binaryPath / "ShellEngineUser", true);
 
 		NewWorld("New World");
 	}
