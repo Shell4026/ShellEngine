@@ -98,6 +98,8 @@ namespace sh::core
 		Observer(Observer&& other) noexcept;
 		~Observer();
 
+		auto operator=(Observer&& other) noexcept -> Observer&;
+
 		/// @brief 리스너를 등록하는 함수.
 		/// @param listener 리스너
 		void Register(Listener& listener);
@@ -147,6 +149,21 @@ namespace sh::core
 				listener->observers.erase(this);
 		}
 	}
+	template<bool OneTimeListener, typename ...Args>
+	auto Observer<OneTimeListener, Args...>::operator=(Observer&& other) noexcept -> Observer&
+	{
+		listeners = std::move(other.listeners);
+		for (Listener* listener : listeners)
+		{
+			if (listener)
+			{
+				listener->observers.erase(&other);
+				listener->observers.insert(this);
+			}
+		}
+		return *this;
+	}
+
 	template<bool OneTimeListener, typename ...Args>
 	void Observer<OneTimeListener, Args...>::Register(Listener& event)
 	{

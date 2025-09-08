@@ -27,6 +27,9 @@ namespace sh::core
 		SH_CORE_API SObject(const SObject& other);
 		SH_CORE_API SObject(SObject&& other) noexcept;
 		SH_CORE_API virtual ~SObject();
+
+		SH_CORE_API auto operator=(SObject&& other) noexcept -> SObject&;
+
 		SH_CORE_API auto IsPendingKill() const -> bool;
 
 		/// @brief GC에게 제거를 맡긴다.

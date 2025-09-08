@@ -24,7 +24,9 @@ namespace sh::game
 		SH_GAME_API GameObject(GameObject&& other) noexcept;
 		SH_GAME_API ~GameObject();
 
-		SH_GAME_API void Destroy() override;
+		SH_GAME_API auto operator=(GameObject&& other) noexcept -> GameObject&;
+
+		SH_GAME_API void OnDestroy() override;
 
 		SH_GAME_API void Awake() override;
 		SH_GAME_API void Start() override;

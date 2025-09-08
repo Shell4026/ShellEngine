@@ -44,8 +44,9 @@ namespace sh::game
 	SH_GAME_API GameObject::GameObject(GameObject&& other) noexcept :
 		SObject(std::move(other)),
 		world(other.world), transform(other.transform),
-		
-		bInit(other.bInit), bEnable(other.bEnable), activeSelf(bEnable),
+		activeSelf(bEnable),
+
+		bInit(other.bInit), bEnable(other.bEnable), hideInspector(other.hideInspector), bNotSave(other.bNotSave),
 		components(std::move(other.components))
 	{
 		other.transform = nullptr;
@@ -56,6 +57,26 @@ namespace sh::game
 		if (bPlacementNew)
 			world.PushDeAllocatedGameObject(this);
 		SH_INFO_FORMAT("~GameObject: {}", GetName().ToString());
+	}
+
+	SH_GAME_API auto GameObject::operator=(GameObject&& other) noexcept -> GameObject&
+	{
+		Super::operator=(std::move(other));
+
+		components = std::move(other.components);
+		enterColliders = std::move(other.enterColliders);
+		stayColliders = std::move(other.stayColliders);
+		exitColliders = std::move(other.exitColliders);
+
+		other.transform = nullptr;
+
+		bInit = other.bInit;
+		bEnable = other.bEnable;
+		hideInspector = other.hideInspector;
+		bNotSave = other.bNotSave;
+		bRequestSortComponent = other.bRequestSortComponent;
+
+		return *this;
 	}
 
 	SH_GAME_API void GameObject::Awake()
@@ -93,7 +114,7 @@ namespace sh::game
 					component->OnEnable();
 		}
 	}
-	SH_GAME_API void GameObject::Destroy()
+	SH_GAME_API void GameObject::OnDestroy()
 	{
 		for (auto component : components)
 		{
@@ -101,7 +122,7 @@ namespace sh::game
 				component->Destroy();
 		}
 		components.clear();
-		Super::Destroy();
+		Super::OnDestroy();
 	}
 
 	SH_GAME_API void GameObject::BeginUpdate()

@@ -44,6 +44,17 @@ namespace sh::core
 	{
 		SObjectManager::GetInstance()->UnRegisterSObject(this);
 	}
+	SH_CORE_API auto SObject::operator=(SObject&& other) noexcept -> SObject&
+	{
+		uuid = std::move(other.uuid);
+		name = std::move(other.name);
+		onDestroy = std::move(other.onDestroy);
+		bPendingKill.store(other.bPendingKill.load(std::memory_order::memory_order_relaxed));
+
+		other.SetUUID(core::UUID::Generate());
+
+		return *this;
+	}
 
 	SH_CORE_API void SObject::RegisterToManager(SObject* ptr)
 	{
