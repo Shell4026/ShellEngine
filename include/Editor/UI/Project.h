@@ -44,7 +44,6 @@ namespace sh::editor
 		SH_EDITOR_API void SaveWorld();
 		SH_EDITOR_API void SaveAsWorld(const std::filesystem::path& worldAssetPath);
 		SH_EDITOR_API void LoadWorld(const std::filesystem::path& worldAssetPath);
-		SH_EDITOR_API void ReloadCurrentWorld();
 
 		SH_EDITOR_API auto IsProjectOpen() const -> bool;
 
@@ -77,8 +76,6 @@ namespace sh::editor
 		void ShowRightClickPopup();
 		void RenderNameBar();
 
-		void LoadUserModule();
-
 		void CopyProjectTemplate(const std::filesystem::path& targetDir);
 
 		static void SaveLatestProjectPath(const std::filesystem::path& path);
@@ -109,9 +106,6 @@ namespace sh::editor
 
 		const game::GUITexture* folderIcon, * fileIcon, * meshIcon;
 		float iconSize = 50.0f;
-
-		core::Plugin userPlugin;
-		std::vector<std::pair<std::string, const core::reflection::STypeInfo*>> userComponents;
 
 		static bool bInitResource;
 		bool isOpen = false;

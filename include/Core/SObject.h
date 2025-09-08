@@ -75,6 +75,9 @@ namespace sh::core
 			return static_cast<T*>(ptr);
 		}
 
+		/// @brief SObject를 SObjectManager에서 가져온다. 없다면 AssetResolverRegistry를 사용하여 가져온다.
+		/// @param uuid UUID
+		/// @return 가져오는데 실패 했다면 nullptr
 		SH_CORE_API static auto GetSObjectUsingResolver(const core::UUID& uuid) -> core::SObject*;
 	protected:
 		SH_CORE_API auto operator new(std::size_t count) -> void*;

@@ -93,11 +93,9 @@ namespace sh::editor
         game::GameManager& manager = *game::GameManager::GetInstance();
         ProjectSetting& projectSetting = currentProject->GetProjectSetting();
 
-        manager.SetStartingWorld(*projectSetting.startingWorld);
-
         core::Json mainJson{};
-
-        mainJson["manager"] = manager.Serialize();
+        if (projectSetting.startingWorld != nullptr)
+            mainJson["starting"] = projectSetting.startingWorld->GetUUID().ToString();
         for (const auto& [worldUUIDStr, uuids] : worldUUIDs)
         {
             core::Json worldUUIDs{};

@@ -60,6 +60,7 @@ namespace sh::phys
 	{
 		reactphysics3d::PhysicsCommon physicsCommon;
 		reactphysics3d::PhysicsWorld* world = nullptr;
+		CustomEventListener eventListener;
 	};
 	SH_PHYS_API PhysWorld::PhysWorld()
 	{
@@ -67,9 +68,8 @@ namespace sh::phys
 
 		impl->world = impl->physicsCommon.createPhysicsWorld();
 
-		static CustomEventListener listener{};
-		listener.bus = &bus;
-		impl->world->setEventListener(&listener);
+		impl->eventListener.bus = &bus;
+		impl->world->setEventListener(&impl->eventListener);
 	}
 	PhysWorld::PhysWorld(PhysWorld&& other) noexcept :
 		impl(std::move(other.impl))

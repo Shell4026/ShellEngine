@@ -9,6 +9,7 @@
 #include "Game/GameObject.h"
 #include "Game/Component/EditorCamera.h"
 #include "Game/Component/PickingRenderer.h"
+#include "Game/GameManager.h"
 
 #include "Render/RenderTexture.h"
 #include "Render/VulkanImpl/VulkanTextureBuffer.h"
@@ -298,7 +299,9 @@ namespace sh::editor
 			SH_ERROR("There are no cameras.");
 			return false;
 		}
-		world.SaveWorldPoint(world.Serialize());
+		auto& gameManager = *game::GameManager::GetInstance();
+		for (auto& [uuid, worldPtr] : gameManager.GetWorlds())
+			worldPtr->SaveWorldPoint(worldPtr->Serialize());
 
 		renderTex = static_cast<render::RenderTexture*>(world.textures.GetResource("GameView"));
 		mainCam->SetRenderTexture(renderTex);
@@ -306,13 +309,8 @@ namespace sh::editor
 		ChangeViewportSize();
 
 		world.ClearSelectedObjects();
-		world.AddAfterSyncTask(
-			[&]
-			{ 
-				world.Play(); 
-				world.Start();
-			}
-		);
+
+		gameManager.StartWorlds();
 
 		editorCamera->SetActive(false);
 		BlockLeftClick(true);
@@ -335,23 +333,10 @@ namespace sh::editor
 		BlockLeftClick(false);
 		BlockRightClick(false);
 
-		world.AddAfterSyncTask(
-			[&]
-			{ 
-				auto& renderer = static_cast<render::vk::VulkanRenderer&>(world.renderer);
-				auto context = static_cast<render::vk::VulkanContext*>(renderer.GetContext());
-
-				world.GetUiContext().ClearDrawData();
-				for (auto& pipeline : world.renderer.GetRenderPipelines())
-					pipeline->ClearDrawable();
-
-				SH_INFO("Stop");
-				world.Stop();
-				world.LoadWorldPoint();
-
-				core::ThreadSyncManager::Sync();
-			}
-		);
+		auto& gameManager = *game::GameManager::GetInstance();
+		gameManager.StopWorlds();
+		for (auto& [uuid, worldPtr] : gameManager.GetWorlds())
+			worldPtr->LoadWorldPoint();
 	}
 	SH_EDITOR_API void Viewport::Sync()
 	{

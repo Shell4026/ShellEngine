@@ -56,15 +56,7 @@ namespace sh::editor
 			if (stringOpt.value().empty())
 				Save(path);
 			else
-			{
 				Deserialize(core::Json::parse(stringOpt.value()));
-				if (startingWorld.IsValid())
-				{
-					auto gameManager = game::GameManager::GetInstance();
-					gameManager->SetStartingWorld(*startingWorld);
-					gameManager->AddWorld(*startingWorld);
-				}
-			}
 		}
 		else
 			Save(path);

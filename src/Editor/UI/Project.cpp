@@ -168,9 +168,13 @@ namespace sh::editor
 				auto objPtr = core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuidStr.value() });
 				if (core::IsValid(objPtr))
 				{
-					auto& world = static_cast<EditorWorld&>(*game::GameManager::GetInstance()->GetCurrentWorld());
-					world.ClearSelectedObjects();
-					world.AddSelectedObject(objPtr);
+					auto& gameManager = *game::GameManager::GetInstance();
+					for (auto& [uuid, worldPtr] : gameManager.GetWorlds())
+					{
+						auto& world = static_cast<EditorWorld&>(*worldPtr);
+						world.ClearSelectedObjects();
+						world.AddSelectedObject(objPtr);
+					}
 				}
 			}
 		}
@@ -215,14 +219,13 @@ namespace sh::editor
 				}
 				if (ImGui::MenuItem("Material"))
 				{
-					auto& world = static_cast<EditorWorld&>(*game::GameManager::GetInstance()->GetCurrentWorld());
-
 					static render::Shader* defaultShader = EditorResource::GetInstance()->GetShader("ErrorShader");
 					assert(defaultShader);
 					std::string name{ core::FileSystem::CreateUniqueFileName(currentPath, "NewMaterial.mat") };
-					auto mat = world.materials.AddResource(name, render::Material{ defaultShader });
+					
+					auto mat = core::SObject::Create<render::Material>(defaultShader);
 					mat->SetName(name);
-					mat->Build(*world.renderer.GetContext());
+					mat->Build(*game::GameManager::GetInstance()->GetRenderer().GetContext());
 					assetDatabase.CreateAsset(currentPath / name, *mat);
 
 					GetAllFiles(currentPath);
@@ -293,48 +296,6 @@ namespace sh::editor
 		ImGui::PopStyleColor();
 	}
 
-	void Project::LoadUserModule()
-	{
-		game::ComponentModule* componentModule = game::ComponentModule::GetInstance();
-#if _WIN32
-		auto dllPath = binaryPath / "ShellEngineUser.dll";
-		auto pdbPath = binaryPath / "ShellEngineUser.pdb";
-		if (!std::filesystem::exists(dllPath))
-		{
-			SH_INFO("ShellEngineUser.dll not found");
-			return;
-		}
-		auto pluginPath = binaryPath / "temp.dll";
-
-		std::filesystem::copy_file(dllPath, pluginPath, std::filesystem::copy_options::overwrite_existing);
-		if (std::filesystem::exists(pdbPath))
-			std::filesystem::remove(pdbPath);
-#elif __linux__
-		auto dllPath = binaryPath / "libShellEngineUser.so";
-		if (!std::filesystem::exists(dllPath))
-		{
-			SH_INFO("libShellEngineUser.so not found");
-			return;
-		}
-		auto pluginPath = binaryPath / "temp.so";
-		std::filesystem::copy_file(dllPath, pluginPath, std::filesystem::copy_options::overwrite_existing);
-#endif
-		core::ModuleLoader loader{};
-		auto plugin = loader.Load(pluginPath);
-		assert(plugin.has_value());
-		if (!plugin.has_value())
-			SH_ERROR_FORMAT("Can't load module: {}", pluginPath.u8string());
-		else
-		{
-			userPlugin = std::move(plugin.value());
-
-			for (const auto& componentInfo : componentModule->GetWaitingComponents())
-				userComponents.push_back({ componentInfo.name, &componentInfo.type });
-
-			componentModule->RegisterWaitingComponents();
-		}
-	}
-
 	void Project::CopyProjectTemplate(const std::filesystem::path& targetDir)
 	{
 		std::filesystem::path projectTemplate{ std::filesystem::current_path() / "ProjectTemplate" };
@@ -373,8 +334,6 @@ namespace sh::editor
 	}
 	SH_EDITOR_API void Project::Render()
 	{
-		auto& world = static_cast<EditorWorld&>(*game::GameManager::GetInstance()->GetCurrentWorld());
-
 		static ImGuiWindowFlags style =
 			ImGuiWindowFlags_::ImGuiWindowFlags_NoBringToFrontOnFocus;
 
@@ -400,7 +359,12 @@ namespace sh::editor
 		if (ImGui::InvisibleButton("ProjectEmptySpace", emptySize))
 		{
 			selected.clear();
-			world.ClearSelectedObjects();
+
+			for (auto& [uuid, worldPtr] : game::GameManager::GetInstance()->GetWorlds())
+			{
+				auto& world = static_cast<EditorWorld&>(*worldPtr);
+				world.ClearSelectedObjects();
+			}
 		}
 		// 프리팹 드래그
 		if (ImGui::BeginDragDropTarget())
@@ -476,8 +440,6 @@ namespace sh::editor
 		currentPath = dir;
 		GetAllFiles(currentPath);
 
-		LoadUserModule();
-
 		assetDatabase.SetProject(*this);
 		assetDatabase.LoadDatabase(libraryPath / "AssetDB.json");
 		assetDatabase.SetProjectDirectory(rootPath);
@@ -486,6 +448,11 @@ namespace sh::editor
 		setting.Load(rootPath / "ProjectSetting.json");
 		
 		SaveLatestProjectPath(dir);
+
+		auto& gameManager = *game::GameManager::GetInstance();
+		gameManager.LoadUserModule(binaryPath / "ShellEngineUser");
+
+		NewWorld("New World");
 	}
 
 	SH_EDITOR_API void Project::NewWorld(const std::string& name)
@@ -494,25 +461,22 @@ namespace sh::editor
 
 		editor::EditorWorld* newWorld = core::SObject::Create<editor::EditorWorld>(*this);
 
-		gameManager.AddWorld(*newWorld);
-		gameManager.SetCurrentWorld(*newWorld);
+		gameManager.LoadWorld(newWorld->GetUUID());
 	}
 
 	SH_EDITOR_API void Project::SaveWorld()
 	{
-		game::World* currentWorld = game::GameManager::GetInstance()->GetCurrentWorld();
-		if (!core::IsValid(currentWorld))
-			return;
-
-		currentWorld->SaveWorldPoint(currentWorld->Serialize());
-
-		assetDatabase.SetDirty(currentWorld);
+		for (auto& [uuid, worldPtr] : game::GameManager::GetInstance()->GetWorlds())
+		{
+			worldPtr->SaveWorldPoint(worldPtr->Serialize());
+			assetDatabase.SetDirty(worldPtr);
+		}
 		assetDatabase.SaveAllAssets();
 	}
 
 	SH_EDITOR_API void Project::SaveAsWorld(const std::filesystem::path& worldAssetPath)
 	{
-		game::World* currentWorld = game::GameManager::GetInstance()->GetCurrentWorld();
+		game::World* currentWorld = game::GameManager::GetInstance()->GetMainWorld();
 		if (!core::IsValid(currentWorld))
 			return;
 
@@ -538,34 +502,7 @@ namespace sh::editor
 			return;
 
 		auto& gameManager = *game::GameManager::GetInstance();
-		gameManager.AddWorld(*world);
-		gameManager.SetCurrentWorld(*world);
-	}
-	SH_EDITOR_API void Project::ReloadCurrentWorld()
-	{
-		auto& gameManager = *game::GameManager::GetInstance();
-		game::World* currentWorld = gameManager.GetCurrentWorld();
-
-		currentWorld->AddAfterSyncTask(
-			[&, currentWorld]()
-			{
-				currentWorld->Clean();
-
-				renderer.Clear();
-				gui.ClearDrawData();
-				gui.AddDrawCallToRenderer();
-
-				core::GarbageCollection::GetInstance()->Collect();
-				core::GarbageCollection::GetInstance()->DestroyPendingKillObjs();
-
-				currentWorld->InitResource();
-				currentWorld->LoadWorldPoint();
-				currentWorld->Start();
-
-				core::GarbageCollection::GetInstance()->Collect();
-				core::GarbageCollection::GetInstance()->DestroyPendingKillObjs();
-			}
-		);
+		gameManager.LoadWorld(world->GetUUID());
 	}
 	SH_EDITOR_API auto Project::IsProjectOpen() const -> bool
 	{
@@ -573,49 +510,7 @@ namespace sh::editor
 	}
 	SH_EDITOR_API void Project::ReloadModule()
 	{
-		auto& gameManager = *game::GameManager::GetInstance();
-		game::World* currentWorld = gameManager.GetCurrentWorld();
-		currentWorld->AddAfterSyncTask(
-			[&, currentWorld]()
-			{
-				bool bSave = false;
-				if (userPlugin.handle != nullptr)
-				{
-					currentWorld->SaveWorldPoint(currentWorld->Serialize());
-
-					for (auto obj : currentWorld->GetGameObjects())
-					{
-						for (auto component : obj->GetComponents())
-						{
-							if (component == nullptr)
-								continue;
-							for (auto& userComponent : userComponents)
-							{
-								if (component->GetType() == *userComponent.second)
-								{
-									component->Destroy();
-								}
-							}
-						}
-					}
-					core::GarbageCollection::GetInstance()->Collect();
-					core::GarbageCollection::GetInstance()->DestroyPendingKillObjs();
-
-					userComponents.clear();
-					core::ModuleLoader loader{};
-					loader.Clean(userPlugin);
-
-					bSave = true;
-				}
-
-				LoadUserModule();
-
-				if (bSave)
-				{
-					ReloadCurrentWorld();
-				}
-			}
-		);
+		game::GameManager::GetInstance()->ReloadUserModule();
 	}
 	SH_EDITOR_API auto Project::GetProjectPath() const -> const std::filesystem::path&
 	{

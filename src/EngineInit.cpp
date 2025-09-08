@@ -86,7 +86,6 @@ namespace sh
 #if SH_EDITOR
 		editor::EditorResource::GetInstance()->LoadAllAssets(*project);
 #endif
-		gameManager->GetCurrentWorld()->InitResource();
 	}
 
 	void EngineInit::ProcessInput()
@@ -159,6 +158,7 @@ namespace sh
 
 		SH_INFO("GameManager initialization");
 		gameManager = game::GameManager::GetInstance();
+		gameManager->Init(*renderer, *gui);
 
 		auto& worldFactory = *core::Factory<game::World, game::World*>::GetInstance();
 		worldFactory.Register(game::World::GetStaticType().name.ToString(),
@@ -181,8 +181,7 @@ namespace sh
 			}
 		);
 		auto defaultWorld = core::SObject::Create<editor::EditorWorld>(*project); // 기본 월드
-		gameManager->AddWorld(*defaultWorld);
-		gameManager->SetCurrentWorld(*defaultWorld);
+		gameManager->LoadWorld(defaultWorld->GetUUID());
 #else
 		static render::vk::VulkanShaderPassBuilder vkShaderPassBuilder{ static_cast<render::vk::VulkanContext&>(*renderer->GetContext()) };
 
@@ -222,8 +221,6 @@ namespace sh
 
 		InitResource();
 
-		SH_INFO("Start world");
-		gameManager->GetCurrentWorld()->Start();
 		renderThread->Run();
 
 		SH_INFO("Start loop");
@@ -248,15 +245,7 @@ namespace sh
 			if (bStop)
 				return;
 
-			gameManager->UpdateWorld(window->GetDeltaTime());
-
-			auto currentWorld = gameManager->GetCurrentWorld();
-			if (core::IsValid(currentWorld))
-			{
-				gameManager->GetCurrentWorld()->BeforeSync();
-				core::ThreadSyncManager::Sync();
-				gameManager->GetCurrentWorld()->AfterSync();
-			}
+			gameManager->UpdateWorlds(window->GetDeltaTime()); // 스레드간 Sync도 여기서 이뤄짐
 			gc->Update();
 
 			core::ThreadSyncManager::AwakeThread();
