@@ -3,6 +3,9 @@
 
 #include "Core/ISerializable.h"
 #include "Core/Factory.hpp"
+#include "Core/UUID.h"
+
+#include <cstdint>
 
 #define SPACKET(PacketClass, id)\
 struct PacketRegister##PacketClass\
@@ -38,7 +41,13 @@ namespace sh::network
 		static constexpr uint32_t MAX_PACKET_SIZE = 1024;
 	public:
 		virtual auto GetId() const -> uint32_t = 0;
+		SH_NET_API Packet();
+
+		SH_NET_API auto GetPacketUUID() const -> const core::UUID&;
 
 		SH_NET_API auto Serialize() const->core::Json override;
+		SH_NET_API void Deserialize(const core::Json& json) override;
+	private:
+		core::UUID packetUUID;
 	};
 }//namespace

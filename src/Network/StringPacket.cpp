@@ -14,6 +14,7 @@ namespace sh::network
 	}
 	SH_NET_API void StringPacket::Deserialize(const core::Json& json)
 	{
+		Packet::Deserialize(json);
 		if (json.contains("str"))
 			str = json["str"];
 	}
