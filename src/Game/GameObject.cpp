@@ -1,4 +1,5 @@
 ﻿#include "GameObject.h"
+#include "GameManager.h"
 #include "ComponentModule.h"
 #include "Component/Component.h"
 #include "Component/Collider.h"
@@ -41,17 +42,6 @@ namespace sh::game
 		}
 	}
 
-	SH_GAME_API GameObject::GameObject(GameObject&& other) noexcept :
-		SObject(std::move(other)),
-		world(other.world), transform(other.transform),
-		activeSelf(bEnable),
-
-		bInit(other.bInit), bEnable(other.bEnable), hideInspector(other.hideInspector), bNotSave(other.bNotSave),
-		components(std::move(other.components))
-	{
-		other.transform = nullptr;
-	}
-
 	SH_GAME_API GameObject::~GameObject()
 	{
 		if (bPlacementNew)
@@ -59,22 +49,25 @@ namespace sh::game
 		SH_INFO_FORMAT("~GameObject: {}", GetName().ToString());
 	}
 
-	SH_GAME_API auto GameObject::operator=(GameObject&& other) noexcept -> GameObject&
+	SH_GAME_API auto GameObject::operator=(const GameObject& other) -> GameObject&
 	{
-		Super::operator=(std::move(other));
+		*transform = *other.transform;
+		for (int i = 1; i < other.components.size(); ++i)
+		{
+			Component* component = other.components[i];
+			if (!core::IsValid(component))
+				continue;
 
-		components = std::move(other.components);
-		enterColliders = std::move(other.enterColliders);
-		stayColliders = std::move(other.stayColliders);
-		exitColliders = std::move(other.exitColliders);
-
-		other.transform = nullptr;
-
-		bInit = other.bInit;
-		bEnable = other.bEnable;
-		hideInspector = other.hideInspector;
-		bNotSave = other.bNotSave;
-		bRequestSortComponent = other.bRequestSortComponent;
+			IComponentType* componentType = ComponentModule::GetInstance()->GetComponent(component->GetName().ToString());
+			if (componentType == nullptr)
+			{
+				SH_ERROR_FORMAT("Not found component: {}", component->GetName().ToString());
+				continue;
+			}
+			Component* copyComponent = componentType->Clone(*this, *component);
+			if (copyComponent != nullptr)
+				AddComponent(copyComponent);
+		}
 
 		return *this;
 	}
@@ -121,7 +114,6 @@ namespace sh::game
 			if (core::IsValid(component))
 				component->Destroy();
 		}
-		components.clear();
 		Super::OnDestroy();
 	}
 

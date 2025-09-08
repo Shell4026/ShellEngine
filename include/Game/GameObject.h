@@ -21,10 +21,9 @@ namespace sh::game
 	public:
 		SH_GAME_API GameObject(World& world, const std::string& name);
 		SH_GAME_API GameObject(const GameObject& other);
-		SH_GAME_API GameObject(GameObject&& other) noexcept;
 		SH_GAME_API ~GameObject();
 
-		SH_GAME_API auto operator=(GameObject&& other) noexcept -> GameObject&;
+		SH_GAME_API auto operator=(const GameObject& other) -> GameObject&;
 
 		SH_GAME_API void OnDestroy() override;
 

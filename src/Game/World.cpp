@@ -105,8 +105,6 @@ namespace sh::game
 		GameObject* obj = CreateAt<GameObject>(ptr, *this, std::string{ name });
 		objs.insert(obj);
 
-		gc->SetRootSet(obj);
-
 		eventBus.Publish(events::GameObjectEvent{ *obj, events::GameObjectEvent::Type::Added });
 
 		return obj;
@@ -211,7 +209,6 @@ namespace sh::game
 
 		addedObjs.clear();
 
-		imgui->Begin();
 		for (auto& obj : objs)
 		{
 			if (!sh::core::IsValid(obj))
@@ -259,7 +256,6 @@ namespace sh::game
 				continue;
 			obj->LateUpdate();
 		}
-		imgui->End();
 	}
 
 	SH_GAME_API void World::BeforeSync()

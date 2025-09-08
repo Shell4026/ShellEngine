@@ -344,6 +344,7 @@ namespace sh::editor
 
 		auto& gameManager = *game::GameManager::GetInstance();
 		gameManager.StopWorlds();
+		gameManager.ClearImmortalObjects();
 		for (auto& [uuid, worldPtr] : gameManager.GetWorlds())
 			worldPtr->LoadWorldPoint();
 

@@ -16,12 +16,17 @@
 #include "Core/FileSystem.h"
 #include "Core/ModuleLoader.h"
 #include "Core/ThreadSyncManager.h"
+
+#include <algorithm>
 namespace sh::game
 {
 	SH_GAME_API void GameManager::Init(render::Renderer& renderer, ImGUImpl& gui)
 	{
 		this->renderer = &renderer;
 		this->gui = &gui;
+
+		immortalWorld = core::SObject::Create<World>(renderer, gui);
+		core::GarbageCollection::GetInstance()->SetRootSet(immortalWorld);
 	}
 	SH_GAME_API auto GameManager::GetRenderer() const -> render::Renderer&
 	{
@@ -35,10 +40,21 @@ namespace sh::game
 	}
 	SH_GAME_API void GameManager::Clean()
 	{
+		auto gc = core::GarbageCollection::GetInstance();
+
 		for (auto& [uuid, world] : worlds)
-		{
 			world->Destroy();
-		}
+
+		immortalWorld->Destroy();
+		immortalWorld = nullptr;
+
+		core::GarbageCollection::GetInstance()->Collect();
+		core::GarbageCollection::GetInstance()->DestroyPendingKillObjs();
+
+		core::ModuleLoader loader{};
+		loader.Clean(*userPlugin.get());
+		userPlugin.reset();
+
 		worlds.clear();
 		mainWorld.Reset();
 	}
@@ -59,8 +75,12 @@ namespace sh::game
 	}
 	SH_GAME_API void GameManager::UpdateWorlds(float dt)
 	{
+		gui->Begin();
 		for (auto& [uuid, worldPtr] : worlds)
 			worldPtr->Update(dt);
+		immortalWorld->Update(dt);
+		gui->End();
+
 		for (auto& [uuid, worldPtr] : worlds)
 			worldPtr->BeforeSync();
 
@@ -202,8 +222,23 @@ namespace sh::game
 			world->Play();
 			world->Start();
 		}
+		immortalWorld->Play();
+		immortalWorld->Start();
 
 		return true;
+	}
+	SH_GAME_API void GameManager::SetImmortalObject(GameObject& obj)
+	{
+		if (&obj.world != immortalWorld)
+		{
+			auto objPtr = immortalWorld->AddGameObject(obj.GetName().ToString());
+			(*objPtr) = obj;
+			obj.Destroy();
+		}
+	}
+	SH_GAME_API void GameManager::ClearImmortalObjects()
+	{
+		immortalWorld->Clean();
 	}
 	GameManager::~GameManager()
 	{
@@ -353,10 +388,13 @@ namespace sh::game
 			worldPtr->Play();
 			worldPtr->Start();
 		}
+		immortalWorld->Play();
+		immortalWorld->Start();
 	}
 	SH_GAME_API void GameManager::StopWorlds()
 	{
 		for (auto& [uuid, worldPtr] : worlds)
 			worldPtr->Stop();
+		immortalWorld->Stop();
 	}
 }//namespace

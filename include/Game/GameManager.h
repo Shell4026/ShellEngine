@@ -63,6 +63,9 @@ namespace sh::game
 		SH_GAME_API void StopWorlds();
 
 		SH_GAME_API auto LoadGame(const std::filesystem::path& managerPath, core::AssetBundle& bundle) -> bool;
+
+		SH_GAME_API void SetImmortalObject(GameObject& obj);
+		SH_GAME_API void ClearImmortalObjects();
 	protected:
 		SH_GAME_API GameManager() = default;
 		SH_GAME_API ~GameManager();
@@ -84,6 +87,8 @@ namespace sh::game
 		World* loadingSingleWorld = nullptr;
 		std::queue<World*> loadingWorldQueue; // Mode = additive인 월드
 		std::queue<std::function<void()>> afterUpdateTaskQueue;
+
+		World* immortalWorld = nullptr;
 
 		bool bLoadingWorld = false;
 	};
