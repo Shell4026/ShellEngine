@@ -112,9 +112,10 @@ namespace sh::game
 						if (bPlayWorld)
 							loadingSingleWorld->Play();
 						loadingSingleWorld->Start();
+						
+						mainWorld = loadingSingleWorld;
 
 						worlds[loadingSingleWorld->GetUUID()] = loadingSingleWorld;
-						mainWorld = loadingSingleWorld;
 						loadingSingleWorld = nullptr;
 					}
 					// additive모드로 불러온 월드들
@@ -131,6 +132,8 @@ namespace sh::game
 
 						worlds[world->GetUUID()] = world;
 					}
+					core::GarbageCollection::GetInstance()->Collect();
+					core::GarbageCollection::GetInstance()->DestroyPendingKillObjs();
 					bLoadingWorld = false;
 				}
 			);
