@@ -7,6 +7,10 @@
 #include <queue>
 namespace sh::game
 {
+	Prefab::Prefab() :
+		rootObjUUID(core::UUID::GenerateEmptyUUID())
+	{
+	}
 	SH_GAME_API auto Prefab::AddToWorld(World& world) -> GameObject*
 	{
 		if (prefabJson.is_discarded())
@@ -27,13 +31,12 @@ namespace sh::game
 			changedUUID[std::move(uuidStr)] = core::UUID::Generate().ToString();
 		uuidStrs.clear();
 
-		// 역순서로 순회해서 말단부터 벡터에 넣기
-		for (auto it = prefabJson.rbegin(); it != prefabJson.rend(); ++it)
+		// UUID 변경후 벡터에 넣기
+		for (auto& objJson : prefabJson)
 		{
-			// UUID 모두 변경후 넣기
-			core::Json objJson = it.value();
-			ChangeUUIDS(changedUUID, objJson);
-			objJsons.push_back(std::move(objJson));
+			core::Json changedJson = objJson;
+			ChangeUUIDS(changedUUID, changedJson);
+			objJsons.push_back(std::move(changedJson));
 		}
 
 		// 생성만 하는 과정
@@ -70,18 +73,22 @@ namespace sh::game
 			GameObject* obj = static_cast<GameObject*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ objJson["uuid"].get<std::string>() }));
 			obj->Deserialize(objJson);
 		}
-		auto resultObj = static_cast<GameObject*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ objJsons.back()["uuid"].get<std::string>()}));
+		const std::string& changedRootUUIDStr = changedUUID[rootObjUUID.ToString()];
+		auto resultObj = static_cast<GameObject*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ changedRootUUIDStr }));
 		return resultObj;
 	}
 	SH_GAME_API auto Prefab::Serialize() const -> core::Json
 	{
 		core::Json mainJson = Super::Serialize();
+		mainJson["rootObj"] = rootObjUUID.ToString();
 		mainJson["Prefab"] = prefabJson;
 		return mainJson;
 	}
 	SH_GAME_API void Prefab::Deserialize(const core::Json& json)
 	{
 		Super::Deserialize(json);
+		if (json.contains("rootObj"))
+			rootObjUUID = core::UUID{ json["rootObj"].get<std::string>() };
 		if (json.contains("Prefab"))
 			prefabJson = json["Prefab"];
 	}
@@ -110,6 +117,7 @@ namespace sh::game
 		for (auto obj : gameObjects)
 			prefabJson[obj->GetUUID().ToString()] = obj->Serialize();
 
+		prefab->rootObjUUID = obj.GetUUID();
 		prefab->prefabJson = std::move(prefabJson);
 		prefab->SetName(name);
 

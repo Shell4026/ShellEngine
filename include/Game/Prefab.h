@@ -13,6 +13,8 @@ namespace sh::game
 	{
 		SCLASS(Prefab)
 	public:
+		SH_GAME_API Prefab();
+
 		SH_GAME_API auto AddToWorld(World& world) -> GameObject*;
 
 		SH_GAME_API auto Serialize() const->core::Json override;
@@ -22,6 +24,7 @@ namespace sh::game
 	private:
 		void ChangeUUIDS(const std::unordered_map<std::string, std::string>& changed, core::Json& json);
 	private:
+		core::UUID rootObjUUID;
 		core::Json prefabJson;
 	};
 }//namespace
