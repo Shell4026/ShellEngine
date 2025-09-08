@@ -49,8 +49,9 @@ namespace sh::game
 
 		/// @brief 월드를 불러온다. 현재 루프가 끝난 후에 작동된다.
 		/// @param mode 월드를 불러오는 동작 방식
+		/// @param bPlayWorld 월드를 불러오고 난 후 Play()를 작동 시킬 것인지
 		/// @param uuid 월드 UUID
-		SH_GAME_API void LoadWorld(const core::UUID& uuid, LoadMode mode = LoadMode::Single);
+		SH_GAME_API void LoadWorld(const core::UUID& uuid, LoadMode mode = LoadMode::Single, bool bPlayWorld = false);
 		/// @brief 불러온 월드라면 메모리에서 해제하는 함수
 		/// @param uuid 월드 UUID
 		SH_GAME_API void UnloadWorld(const core::UUID& uuid);

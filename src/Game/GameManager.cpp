@@ -76,7 +76,7 @@ namespace sh::game
 			afterUpdateTaskQueue.pop();
 		}
 	}
-	SH_GAME_API void GameManager::LoadWorld(const core::UUID& uuid, LoadMode mode)
+	SH_GAME_API void GameManager::LoadWorld(const core::UUID& uuid, LoadMode mode, bool bPlayWorld)
 	{
 		auto sobjPtr = core::SObject::GetSObjectUsingResolver(uuid);
 		if (!core::IsValid(sobjPtr))
@@ -109,6 +109,8 @@ namespace sh::game
 						loadingSingleWorld->SetRenderPass();
 						loadingSingleWorld->InitResource();
 						loadingSingleWorld->LoadWorldPoint();
+						if (bPlayWorld)
+							loadingSingleWorld->Play();
 						loadingSingleWorld->Start();
 
 						worlds[loadingSingleWorld->GetUUID()] = loadingSingleWorld;
@@ -123,6 +125,8 @@ namespace sh::game
 
 						world->InitResource();
 						world->LoadWorldPoint();
+						if (bPlayWorld)
+							world->Play();
 						world->Start();
 
 						worlds[world->GetUUID()] = world;
@@ -193,6 +197,7 @@ namespace sh::game
 			world->InitResource();
 			world->LoadWorldPoint();
 			world->Play();
+			world->Start();
 		}
 
 		return true;
