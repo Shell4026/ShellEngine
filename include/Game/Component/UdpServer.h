@@ -3,6 +3,7 @@
 #include "NetworkComponent.h"
 
 #include "Network/Server.h"
+#include "Network/Packet.h"
 
 #include <vector>
 #include <future>
@@ -14,6 +15,8 @@ namespace sh::game
 		COMPONENT(UdpServer, "network")
 	public:
 		SH_GAME_API UdpServer(GameObject& owner);
+
+		SH_GAME_API void Send(const network::Packet& packet, const std::string& ip, uint16_t port);
 
 		SH_GAME_API void OnDestroy() override;
 		SH_GAME_API void Start() override;

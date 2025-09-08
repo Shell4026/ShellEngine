@@ -10,6 +10,10 @@ namespace sh::game
 	{
 
 	}
+	SH_GAME_API void UdpServer::Send(const network::Packet& packet, const std::string& ip, uint16_t port)
+	{
+		server.Send(packet, ip, port);
+	}
 	SH_GAME_API void UdpServer::OnDestroy()
 	{
 		server.Stop();
