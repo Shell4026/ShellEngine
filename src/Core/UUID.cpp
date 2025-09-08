@@ -122,7 +122,10 @@ namespace sh::core
 		uuids.pop();
 		return uuid;
 	}
-
+	SH_CORE_API auto UUID::GenerateEmptyUUID() -> UUID
+	{
+		return UUID{ "00000000000000000000000000000000" };
+	}
 	SH_CORE_API auto UUID::ToString() const -> const std::string&
 	{
 		return uuidStr;
@@ -130,5 +133,14 @@ namespace sh::core
 	SH_CORE_API auto UUID::GetRawData() const -> const std::array<uint32_t, 4>&
 	{
 		return uuid;
+	}
+	SH_CORE_API auto UUID::IsEmpty() const -> bool
+	{
+		for (uint32_t i : uuid)
+		{
+			if (i != 0)
+				return false;
+		}
+		return true;
 	}
 }//namespace

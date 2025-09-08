@@ -36,9 +36,12 @@ namespace sh::core
 		/// @return 16진수로 표기된 길이가 32인 문자열
 		SH_CORE_API auto ToString() const -> const std::string&;
 		SH_CORE_API auto GetRawData() const -> const std::array<uint32_t, 4>&;
+		SH_CORE_API auto IsEmpty() const -> bool;
 
 		/// @brief 새로운 UUID를 생성한다. 스레드 안전하다.
 		SH_CORE_API static auto Generate() -> UUID;
+		/// @brief 0으로 초기화 된 UUID를 생성한다.
+		SH_CORE_API static auto GenerateEmptyUUID() -> UUID;
 	};
 }//namespace
 
