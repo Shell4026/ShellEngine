@@ -10,6 +10,7 @@
 
 #include "Game/World.h"
 #include "Game/ImGUImpl.h"
+#include "Game/ResourceManager.hpp"
 
 #include <unordered_map>
 #include <filesystem>
@@ -89,6 +90,8 @@ namespace sh::game
 		std::queue<std::function<void()>> afterUpdateTaskQueue;
 
 		World* immortalWorld = nullptr;
+
+		core::SVector<core::SObject*> defaultAssets;
 
 		bool bLoadingWorld = false;
 	};

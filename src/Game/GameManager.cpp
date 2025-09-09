@@ -254,12 +254,16 @@ namespace sh::game
 		auto errorShaderAsset = bundle.LoadAsset(core::UUID{ "bbc4ef7ec45dce223297a224f8093f0f" });
 		if (errorShaderAsset == nullptr)
 			return;
-		shaderLoader->Load(*errorShaderAsset);
+		auto errorShaderPtr = shaderLoader->Load(*errorShaderAsset);
+		if (errorShaderPtr != nullptr)
+			defaultAssets.push_back(errorShaderPtr);
 
 		auto errorMateralAsset = bundle.LoadAsset(core::UUID{ "bbc4ef7ec45dce223297a224f8093f10" });
 		if (errorMateralAsset == nullptr)
 			return;
-		materialLoader->Load(*errorMateralAsset);
+		auto errorMatPtr = materialLoader->Load(*errorMateralAsset);
+		if (errorMatPtr != nullptr)
+			defaultAssets.push_back(errorMatPtr);
 	}
 
 	SH_GAME_API void GameManager::LoadUserModule(const std::filesystem::path& path, bool bCopy)
