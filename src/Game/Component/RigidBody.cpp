@@ -287,6 +287,16 @@ namespace sh::game
 		impl->rigidbody->setIsSleeping(true);
 	}
 
+	SH_GAME_API void RigidBody::SetInterpolation(bool bUse)
+	{
+		this->bInterpolation = bUse;
+	}
+
+	SH_GAME_API auto RigidBody::GetInterpolation() const -> bool
+	{
+		return bInterpolation;
+	}
+
 	SH_GAME_API auto RigidBody::GetNativeHandle() const -> RigidBodyHandle
 	{
 		return impl->rigidbody;
@@ -375,7 +385,7 @@ namespace sh::game
 		if (prevPos == currPos && prevRot == currRot)
 			return;
 
-		if (!bKinematic)
+		if (!bKinematic && bInterpolation)
 		{
 			float alpha = std::clamp(gameObject.world.fixedDeltaTime / gameObject.world.FIXED_TIME, 0.f, 1.f);
 			glm::vec3 interpPos = glm::mix(prevPos, currPos, alpha);
