@@ -88,22 +88,29 @@ namespace sh::window {
 
 	void Window::ProcessFrame()
 	{
-		startTime = std::chrono::high_resolution_clock::now();
-
-		auto frameDuration = std::chrono::duration_cast<std::chrono::milliseconds>(startTime - endTime);
+		auto now = std::chrono::high_resolution_clock::now();
+		auto frameDuration = std::chrono::duration_cast<std::chrono::milliseconds>(now - endTime);
 		uint64_t deltaTimeMs = frameDuration.count();
 
-		int64_t freeTimeMs = maxFrameMs - deltaTimeMs;
-		if (freeTimeMs > 0)
+		int free = maxFrameMs - deltaTimeMs;
+		if (free > 0)
 		{
-			winImpl->StopTimer(freeTimeMs);
+			if (bUsingSysTimer)
+			{
+				winImpl->StopTimer(free);
+			}
+			else
+			{
+				while (std::chrono::high_resolution_clock::now() < endTime + std::chrono::milliseconds(free))
+					std::this_thread::yield();
+			}
+			now = std::chrono::high_resolution_clock::now();
+			frameDuration = std::chrono::duration_cast<std::chrono::milliseconds>(now - endTime);
 		}
-		endTime = std::chrono::high_resolution_clock::now();
 		
-
-		auto sleepTimeMs = std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime);
-		frameDuration += sleepTimeMs;
 		deltaTime = frameDuration.count() / 1000.f;
+
+		endTime = now;
 	}
 
 	auto Window::GetNativeHandle() const -> WinHandle
@@ -128,5 +135,13 @@ namespace sh::window {
 	SH_WINDOW_API auto Window::GetHeight() const -> uint32_t
 	{
 		return winImpl->GetHeight();
+	}
+	SH_WINDOW_API void Window::UseSystemTimer(bool bUse)
+	{
+		bUsingSysTimer = bUse;
+	}
+	SH_WINDOW_API auto Window::IsUseingSystemTimer() const -> bool
+	{
+		return bUsingSysTimer;
 	}
 }

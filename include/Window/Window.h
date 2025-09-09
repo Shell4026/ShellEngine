@@ -48,6 +48,12 @@ namespace sh::window
 
 		SH_WINDOW_API auto GetWidth() const -> uint32_t;
 		SH_WINDOW_API auto GetHeight() const -> uint32_t;
+
+		/// @brief 프레임을 맞출 때 시스템 타이머를 사용한다.
+		/// @brief 주의) 백그라운드 상태에서 프레임이 느려질 수 있음
+		/// @param bUse true면 시스템 타이머를, false면 바쁜 대기를 사용
+		SH_WINDOW_API void UseSystemTimer(bool bUse);
+		SH_WINDOW_API auto IsUseingSystemTimer() const -> bool;
 	public:
 		const uint32_t& width;
 		const uint32_t& height;
@@ -67,6 +73,7 @@ namespace sh::window
 		uint32_t wsize;
 		uint32_t hsize;
 
-		bool isOpen : 1;
+		bool isOpen;
+		bool bUsingSysTimer = true;
 	};
 }//namespace
