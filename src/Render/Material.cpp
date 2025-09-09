@@ -14,32 +14,40 @@ namespace sh::render
 	{
 		materialData = std::make_unique<MaterialData>();
 
-		propertyBlock = core::SObject::Create<MaterialPropertyBlock>();
-
 		UpdateListener();
 	}
 	SH_RENDER_API Material::Material(Shader* shader) :
 		shader(shader)
 	{
 		materialData = std::make_unique<MaterialData>();
-		propertyBlock = core::SObject::Create<MaterialPropertyBlock>();
 
 		UpdateListener();
 		SetDefaultProperties();
 	}
+	Material::Material(const Material& other) :
+		core::SObject(other),
+		context(other.context),
+		shader(other.shader),
+		propertyBlock(other.propertyBlock)
+	{
+		materialData = std::make_unique<MaterialData>();
 
+		Deserialize(Serialize());
+
+		Build(*context);
+	}
 	SH_RENDER_API Material::Material(Material&& other) noexcept :
+		core::SObject(std::move(other)),
 		context(other.context),
 		shader(other.shader),
 		bPropertyDirty(other.bPropertyDirty),
 		dirtyProps(std::move(other.dirtyProps)),
 		materialData(std::move(other.materialData)),
-		propertyBlock(other.propertyBlock),
+		propertyBlock(std::move(other.propertyBlock)),
 		onBufferUpdateListener(std::move(other.onBufferUpdateListener))
 	{
 		other.context = nullptr;
 		other.shader = nullptr;
-		other.propertyBlock = nullptr;
 
 		other.bPropertyDirty = false;
 
@@ -48,8 +56,7 @@ namespace sh::render
 
 	void Material::Clear()
 	{
-		if (propertyBlock)
-			propertyBlock->Clear();
+		propertyBlock.Clear();
 		materialData->Clear();
 	}
 
@@ -59,18 +66,18 @@ namespace sh::render
 		for (auto& [name, propInfo] : shader->GetProperties())
 		{
 			if (*propInfo.type == core::reflection::GetType<int>() || *propInfo.type == core::reflection::GetType<float>())
-				propertyBlock->SetProperty(name, 0.0f);
+				propertyBlock.SetProperty(name, 0.0f);
 			else if (*propInfo.type == core::reflection::GetType<glm::vec2>() || *propInfo.type == core::reflection::GetType<glm::vec3>() || *propInfo.type == core::reflection::GetType<glm::vec4>())
-				propertyBlock->SetProperty(name, glm::vec4{ 0.f });
+				propertyBlock.SetProperty(name, glm::vec4{ 0.f });
 			else if (*propInfo.type == core::reflection::GetType<glm::mat2>() || *propInfo.type == core::reflection::GetType<glm::mat3>() || *propInfo.type == core::reflection::GetType<glm::mat4>())
-				propertyBlock->SetProperty(name, glm::mat4{ 1.f });
+				propertyBlock.SetProperty(name, glm::mat4{ 1.f });
 		}
 	}
 	void Material::UpdateListener()
 	{
 		onBufferUpdateListener.SetCallback([&](const Texture* updated)
 			{
-				for (auto& [name, tex] : propertyBlock->GetTextureProperties())
+				for (auto& [name, tex] : propertyBlock.GetTextureProperties())
 				{
 					if (tex != updated)
 						continue;
@@ -127,7 +134,7 @@ namespace sh::render
 			{
 				if (member.typeHash == core::reflection::GetType<int>().hash)
 				{
-					auto var = propertyBlock->GetScalarProperty(member.name);
+					auto var = propertyBlock.GetScalarProperty(member.name);
 					if (var.has_value())
 						SetData(static_cast<int>(var.value()), data, member.offset);
 					else
@@ -135,7 +142,7 @@ namespace sh::render
 				}
 				else if (member.typeHash == core::reflection::GetType<float>().hash)
 				{
-					auto var = propertyBlock->GetScalarProperty(member.name);
+					auto var = propertyBlock.GetScalarProperty(member.name);
 					if (var.has_value())
 						SetData(var.value(), data, member.offset);
 					else
@@ -143,7 +150,7 @@ namespace sh::render
 				}
 				else if (member.typeHash == core::reflection::GetType<glm::vec2>().hash)
 				{
-					auto var = propertyBlock->GetVectorProperty(member.name);
+					auto var = propertyBlock.GetVectorProperty(member.name);
 					if (var)
 						SetData(glm::vec2{ var->x, var->y }, data, member.offset);
 					else
@@ -151,7 +158,7 @@ namespace sh::render
 				}
 				else if (member.typeHash == core::reflection::GetType<glm::vec3>().hash)
 				{
-					auto var = propertyBlock->GetVectorProperty(member.name);
+					auto var = propertyBlock.GetVectorProperty(member.name);
 					if (var)
 						SetData(glm::vec3{ var->x, var->y, var->z }, data, member.offset);
 					else
@@ -159,7 +166,7 @@ namespace sh::render
 				}
 				else if (member.typeHash == core::reflection::GetType<glm::vec4>().hash)
 				{
-					auto var = propertyBlock->GetVectorProperty(member.name);
+					auto var = propertyBlock.GetVectorProperty(member.name);
 					if (var)
 						SetData(*var, data, member.offset);
 					else
@@ -167,7 +174,7 @@ namespace sh::render
 				}
 				else if (member.typeHash == core::reflection::GetType<glm::mat2>().hash)
 				{
-					auto var = propertyBlock->GetMatrixProperty(member.name);
+					auto var = propertyBlock.GetMatrixProperty(member.name);
 					if (var)
 						SetData(core::Util::ConvertMat4ToMat2(*var), data, member.offset);
 					else
@@ -175,7 +182,7 @@ namespace sh::render
 				}
 				else if (member.typeHash == core::reflection::GetType<glm::mat3>().hash)
 				{
-					auto var = propertyBlock->GetMatrixProperty(member.name);
+					auto var = propertyBlock.GetMatrixProperty(member.name);
 					if (var)
 						SetData(core::Util::ConvertMat4ToMat3(*var), data, member.offset);
 					else
@@ -183,7 +190,7 @@ namespace sh::render
 				}
 				else if (member.typeHash == core::reflection::GetType<glm::mat4>().hash)
 				{
-					auto var = propertyBlock->GetMatrixProperty(member.name);
+					auto var = propertyBlock.GetMatrixProperty(member.name);
 					if (var)
 						SetData(*var, data, member.offset);
 					else
@@ -191,7 +198,7 @@ namespace sh::render
 				}
 				else if (member.typeHash == core::reflection::GetType<Texture>().hash)
 				{
-					auto var = propertyBlock->GetTextureProperty(member.name);
+					auto var = propertyBlock.GetTextureProperty(member.name);
 					if (var)
 						materialData->SetTextureData(*pass, uniformLayout->type, uniformLayout->binding, var);
 
@@ -223,7 +230,7 @@ namespace sh::render
 		if (core::IsValid(data))
 			data->onBufferUpdate.Register(onBufferUpdateListener);
 
-		propertyBlock->SetProperty(name, data);
+		propertyBlock.SetProperty(name, data);
 
 		for (auto& location : propInfo->locations)
 		{
@@ -283,14 +290,15 @@ namespace sh::render
 	SH_RENDER_API auto Material::Serialize() const -> core::Json
 	{
 		core::Json mainJson = Super::Serialize();
-		mainJson["MaterialPropertyBlock"] = propertyBlock->Serialize();
+		mainJson["MaterialPropertyBlock"] = propertyBlock.Serialize();
 		return mainJson;
 	}
 	SH_RENDER_API void Material::Deserialize(const core::Json& json)
 	{
+		// SetProperty에서 다른 역할도 수행하기 때문에 PropertyBlock을 직접적으로 Deserialize하지 않는다.
 		Clear();
 		Super::Deserialize(json);
-		auto& propertyJson = json["MaterialPropertyBlock"];
+		const auto& propertyJson = json["MaterialPropertyBlock"];
 		if (propertyJson.contains("scalar"))
 		{
 			const auto& intJson = propertyJson["scalar"];
@@ -322,13 +330,7 @@ namespace sh::render
 			for (const auto& [name, value] : texJson.items())
 			{
 				const core::UUID uuid{ value.get<std::string>() };
-				auto ptr = core::SObjectManager::GetInstance()->GetSObject(uuid);
-				if (ptr == nullptr)
-				{
-					auto& resolverFn = core::AssetResolverRegistry::GetResolver();
-					if (resolverFn)
-						ptr = resolverFn(uuid);
-				}
+				auto ptr = core::SObject::GetSObjectUsingResolver(uuid);
 				if (!core::IsValid(ptr))
 					continue;
 				if (ptr->GetType() == Texture::GetStaticType())

@@ -28,7 +28,7 @@ namespace sh::game
 		assert(mat);
 		Super::SetMaterial(mat);
 
-		SetMaterialPropertyBlock(SObject::Create<render::MaterialPropertyBlock>());
+		SetMaterialPropertyBlock(std::make_unique<render::MaterialPropertyBlock>());
 	}
 
 	SH_GAME_API void LineRenderer::Awake()

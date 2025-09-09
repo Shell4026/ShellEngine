@@ -65,8 +65,8 @@ namespace sh::game
 		else
 			drawable->SetMaterial(*this->mat);
 
-		if (propertyBlock != nullptr) 
-			SetMaterialPropertyBlock(propertyBlock); // 로컬 프로퍼티 처리를 위해 다시 호출
+		if (propertyBlock != nullptr)
+			SearchLocalProperties();
 
 		auto shader = this->mat->GetShader();
 		if (core::IsValid(shader))
@@ -92,6 +92,28 @@ namespace sh::game
 	auto MeshRenderer::GetMaterial() const -> sh::render::Material*
 	{
 		return mat;
+	}
+
+	void MeshRenderer::SearchLocalProperties()
+	{
+		// 로컬 프로퍼티 위치 파악
+		localUniformLocations.clear();
+
+		render::Shader* shader = mat->GetShader();
+		if (!core::IsValid(shader))
+			return;
+
+		for (auto& [propName, propInfo] : shader->GetProperties())
+		{
+			for (auto& location : propInfo.locations)
+			{
+				if (location.layoutPtr->type != render::UniformStructLayout::Type::Object)
+					continue;
+				auto it = std::find(localUniformLocations.begin(), localUniformLocations.end(), std::pair{ location.passPtr.Get(), location.layoutPtr });
+				if (it == localUniformLocations.end())
+					localUniformLocations.push_back({ location.passPtr.Get(), location.layoutPtr });
+			}
+		}
 	}
 
 	void MeshRenderer::UpdateMaterialData()
@@ -288,33 +310,16 @@ namespace sh::game
 		gameObject.world.renderer.PushDrawAble(drawable);
 	}
 
-	SH_GAME_API void MeshRenderer::SetMaterialPropertyBlock(render::MaterialPropertyBlock* block)
+	SH_GAME_API void MeshRenderer::SetMaterialPropertyBlock(std::unique_ptr<render::MaterialPropertyBlock>&& block)
 	{
-		propertyBlock = block;
+		propertyBlock = std::move(block);
 
-		// 로컬 프로퍼티 위치 파악
-		localUniformLocations.clear();
-
-		render::Shader* shader = mat->GetShader();
-		if (core::IsValid(shader))
-		{
-			for (auto& [propName, propInfo] : shader->GetProperties())
-			{
-				for (auto& location : propInfo.locations)
-				{
-					if (location.layoutPtr->type != render::UniformStructLayout::Type::Object)
-						continue;
-					auto it = std::find(localUniformLocations.begin(), localUniformLocations.end(), std::pair{ location.passPtr.Get(), location.layoutPtr});
-					if (it == localUniformLocations.end())
-						localUniformLocations.push_back({ location.passPtr.Get(), location.layoutPtr});
-				}
-			}
-		}
+		SearchLocalProperties();
 	}
 
 	SH_GAME_API auto MeshRenderer::GetMaterialPropertyBlock() const -> render::MaterialPropertyBlock*
 	{
-		return propertyBlock;
+		return propertyBlock.get();
 	}
 
 	SH_GAME_API void MeshRenderer::SetRenderTagId(uint32_t tagId)

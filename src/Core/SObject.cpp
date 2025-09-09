@@ -27,7 +27,6 @@ namespace sh::core
 		
 	}
 	SH_CORE_API SObject::SObject(const SObject& other) :
-		bPendingKill(other.bPendingKill.load(std::memory_order::memory_order_relaxed)),
 		uuid(UUID::Generate()), name(other.name)
 	{
 	}

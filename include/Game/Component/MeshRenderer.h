@@ -39,7 +39,7 @@ namespace sh::game
 		SH_GAME_API void Start() override;
 		SH_GAME_API void LateUpdate() override;
 
-		SH_GAME_API void SetMaterialPropertyBlock(render::MaterialPropertyBlock* block);
+		SH_GAME_API void SetMaterialPropertyBlock(std::unique_ptr<render::MaterialPropertyBlock>&& block);
 		SH_GAME_API auto GetMaterialPropertyBlock() const -> render::MaterialPropertyBlock*;
 
 		SH_GAME_API void SetRenderTagId(uint32_t tagId);
@@ -52,6 +52,7 @@ namespace sh::game
 		/// @brief Update()마다 호출 되는 Drawable 설정 함수
 		SH_GAME_API virtual void UpdateDrawable();
 	private:
+		void SearchLocalProperties();
 		void UpdateMaterialData();
 
 		template<typename T>
@@ -76,8 +77,7 @@ namespace sh::game
 	private:
 		render::AABB worldAABB;
 
-		PROPERTY(propertyBlock, core::PropertyOption::invisible)
-		render::MaterialPropertyBlock* propertyBlock = nullptr;
+		std::unique_ptr<render::MaterialPropertyBlock> propertyBlock;
 
 		std::vector<std::pair<const render::ShaderPass*, const render::UniformStructLayout*>> localUniformLocations;
 

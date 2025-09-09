@@ -1,7 +1,8 @@
 ﻿#pragma once
 #include "Export.h"
 
-#include "Core/SObject.h"
+#include "Core/ISerializable.h"
+#include "Core/SContainer.hpp"
 
 #include "glm/mat4x4.hpp"
 
@@ -14,15 +15,8 @@ namespace sh::render
 	class Texture;
 
 	/// @brief 메테리얼에서 프로퍼티 값을 보관하는 객체
-	class MaterialPropertyBlock : public core::SObject
+	class MaterialPropertyBlock : public core::ISerializable
 	{
-		SCLASS(MaterialPropertyBlock)
-	private:
-		std::unordered_map<std::string, float> scalarProperties;
-		std::unordered_map<std::string, glm::vec4> vecProperties;
-		std::unordered_map<std::string, glm::mat4> matProperties;
-		PROPERTY(textureProperties)
-		std::unordered_map<std::string, const Texture*> textureProperties;
 	public:
 		SH_RENDER_API void Clear();
 
@@ -38,6 +32,11 @@ namespace sh::render
 
 		SH_RENDER_API auto Serialize() const -> core::Json override;
 		SH_RENDER_API void Deserialize(const core::Json& json) override;
+	private:
+		std::unordered_map<std::string, float> scalarProperties;
+		std::unordered_map<std::string, glm::vec4> vecProperties;
+		std::unordered_map<std::string, glm::mat4> matProperties;
+		core::SHashMap<std::string, const Texture*> textureProperties;
 	};
 
 	template<typename T>
