@@ -16,6 +16,7 @@ namespace sh::game
 		client.Disconnect();
 		if (runFuture.valid())
 			runFuture.get();
+
 		Super::OnDestroy();
 	}
 	SH_GAME_API void UdpClient::Start()

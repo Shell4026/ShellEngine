@@ -47,7 +47,7 @@ namespace sh::network
 	}
 	SH_NET_API void Client::Send(const Packet& packet)
 	{
-		if (socket != nullptr)
+		if (impl->socket != nullptr)
 		{
 			impl->socket->send_to(asio::buffer(core::Json::to_bson(packet.Serialize())), impl->serverEndpoint); // async_send_to로 나중에 비동기 생각
 		}

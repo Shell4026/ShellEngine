@@ -122,6 +122,17 @@ namespace sh::render
 		return shaderNode;
 	}
 
+	SH_RENDER_API void Shader::OnDestroy()
+	{
+		for (auto& lightPassData : passes)
+		{
+			for (auto& pass : lightPassData.passes)
+			{
+				pass->Destroy();
+			}
+		}
+		Super::OnDestroy();
+	}
 	SH_RENDER_API auto Shader::Serialize() const -> core::Json
 	{
 		core::Json mainJson = Super::Serialize();

@@ -57,6 +57,7 @@ namespace sh::render
 
 		SH_RENDER_API auto GetShaderAST() const -> const ShaderAST::ShaderNode&;
 
+		SH_RENDER_API void OnDestroy() override;
 		/// @brief AST와 셰이더 패스를 직렬화 한다.
 		/// @return 직렬화 된 json
 		SH_RENDER_API auto Serialize() const -> core::Json override;
