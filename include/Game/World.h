@@ -8,7 +8,6 @@
 #include "Core/SObject.h"
 #include "Core/Reflection.hpp"
 #include "Core/SContainer.hpp"
-#include "Core/Observer.hpp"
 #include "Core/Memory/MemoryPool.hpp"
 #include "Core/EventBus.h"
 #include "Core/Factory.hpp"
@@ -40,6 +39,7 @@ namespace sh::render
 namespace sh::game
 {
 	class GameObject;
+	class Component;
 	class Camera;
 	class ImGUImpl;
 
@@ -149,7 +149,7 @@ namespace sh::game
 		core::SHashSet<GameObject*> objs;
 		core::SHashSet<Camera*> cameras;
 
-		std::vector<GameObject*> addedObjs; // 루프 도중 추가 된 객체
+		std::vector<core::SObjWeakPtr<GameObject, void>> addedObjs; // 루프 도중 추가 된 객체
 
 		float _deltaTime = 0.f;
 		float _fixedDeltaTime = 0.f;

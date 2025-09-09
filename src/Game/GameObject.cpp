@@ -10,7 +10,7 @@ namespace sh::game
 {
 	SH_GAME_API GameObject::GameObject(World& world, const std::string& name) :
 		world(world),
-		bInit(false), bEnable(true), activeSelf(bEnable)
+		bEnable(true), activeSelf(bEnable)
 	{
 		transform = AddComponent<Transform>();
 		SetName(name);
@@ -19,7 +19,7 @@ namespace sh::game
 	GameObject::GameObject(const GameObject& other) :
 		SObject(other),
 		world(other.world), activeSelf(bEnable),
-		bInit(other.bInit), bEnable(other.bEnable), hideInspector(other.hideInspector), bNotSave(other.bNotSave)
+		bEnable(other.bEnable), hideInspector(other.hideInspector), bNotSave(other.bNotSave)
 	{
 		transform = AddComponent<Transform>();
 		*transform = *other.transform;
@@ -74,9 +74,6 @@ namespace sh::game
 
 	SH_GAME_API void GameObject::Awake()
 	{
-		if (bInit)
-			return;
-
 		for (auto& component : components)
 		{
 			if (core::IsValid(component) && !component->IsInit())
@@ -88,9 +85,7 @@ namespace sh::game
 				}
 			}
 		}
-		bInit = true;
 	}
-
 	SH_GAME_API void GameObject::Start()
 	{
 		for (auto& component : components)
@@ -231,8 +226,6 @@ namespace sh::game
 		{
 			if (world.IsStart())
 			{
-				if (!bInit)
-					Awake();
 				OnEnable();
 			}
 		}

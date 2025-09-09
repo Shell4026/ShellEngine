@@ -49,11 +49,7 @@ namespace sh::game
 			if (world.IsStart())
 			{
 				if (world.IsPlaying() || canPlayInEditor)
-				{
-					if (!bInit)
-						Awake();
 					OnEnable();
-				}
 			}
 		}
 	}

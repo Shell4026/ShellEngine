@@ -124,15 +124,14 @@ namespace sh::game
 
 	SH_GAME_API auto World::GetGameObject(std::string_view name) const -> GameObject*
 	{
-		std::string nameStr{ name };
 		if (!addedObjs.empty())
 		{
-			for (auto obj : addedObjs)
+			for (auto& obj : addedObjs)
 			{
-				if (!core::IsValid(obj))
+				if (!obj.IsValid())
 					continue;
 				if (obj->GetName() == name)
-					return obj;
+					return obj.Get();
 			}
 		}
 
@@ -177,19 +176,6 @@ namespace sh::game
 
 	SH_GAME_API void World::Start()
 	{
-		for (auto& obj : objs)
-		{
-			if (!obj->activeSelf)
-				continue;
-			obj->Awake();
-		}
-		for (auto& obj : objs)
-		{
-			if (!obj->activeSelf)
-				continue;
-			obj->OnEnable();
-		}
-
 		bOnStart = true;
 	}
 	SH_GAME_API void World::Update(float deltaTime)
@@ -198,11 +184,16 @@ namespace sh::game
 		if (!bStartLoop)
 			bStartLoop = true;
 
-		for (auto addedObj : addedObjs)
-			objs.insert(addedObj);
+		for (auto& addedObj : addedObjs)
+		{
+			if (addedObj.IsValid())
+				objs.insert(addedObj.Get());
+		}
 
 		addedObjs.clear();
 
+		for (auto& obj : objs)
+			obj->Awake();
 		for (auto& obj : objs)
 		{
 			if (!obj->activeSelf)
@@ -515,9 +506,10 @@ namespace sh::game
 		{
 			changeObjUUIDfn(obj);
 		}
-		for (auto obj : addedObjs)
+		for (auto& obj : addedObjs)
 		{
-			changeObjUUIDfn(obj);
+			if (obj.IsValid())
+				changeObjUUIDfn(obj.Get());
 		}
 		SetUUID(core::UUID::Generate());
 	}

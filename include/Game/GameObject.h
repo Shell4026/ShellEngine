@@ -104,7 +104,6 @@ namespace sh::game
 		core::SSet<Collider*> exitColliders;
 		PROPERTY(bEnable)
 		bool bEnable;
-		bool bInit;
 		bool bRequestSortComponent = false;
 	};
 }//namespace
