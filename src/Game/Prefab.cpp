@@ -42,12 +42,12 @@ namespace sh::game
 		// 생성만 하는 과정
 		for (auto& objJson : objJsons)
 		{
-			GameObject* obj = world.AddGameObject(objJson["name"]);
+			GameObject* obj = world.AddGameObject(objJson["name"].get<std::string>());
 			obj->SetUUID(core::UUID{ objJson["uuid"].get<std::string>() });
 			for (auto& compJson : objJson["Components"])
 			{
-				const std::string& name{ compJson["name"].get<std::string>() };
-				const std::string& type{ compJson["type"].get<std::string>() };
+				const std::string& name{ compJson["name"].get_ref<const std::string&>() };
+				const std::string& type{ compJson["type"].get_ref<const std::string&>() };
 				core::UUID uuid{ compJson["uuid"].get<std::string>() };
 				if (type == "Transform") // 트랜스폼은 게임오브젝트 생성 시 이미 만들어져있다.
 				{
@@ -142,7 +142,7 @@ namespace sh::game
 		}
 		else if (json.is_string())
 		{
-			std::string& value = json.get<std::string>();
+			const std::string& value = json.get_ref<const std::string&>();
 			if (std::regex_match(value, uuidRegex))
 			{
 				auto it = changed.find(value);

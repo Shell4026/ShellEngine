@@ -91,7 +91,7 @@ namespace sh::core::reflection
 		PropertyIterator(const PropertyIterator& other)
 		{
 			other.iteratorDataPtr->Clone(iteratorBuffer);
-			iteratorDataPtr = reinterpret_cast<IPropertyIteratorBase*>(iteratorBuffer);
+			iteratorDataPtr = reinterpret_cast<IPropertyIteratorBase<Constant>*>(iteratorBuffer);
 		}
 		~PropertyIterator()
 		{

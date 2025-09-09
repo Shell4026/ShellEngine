@@ -51,9 +51,12 @@ namespace sh::game
 		core::GarbageCollection::GetInstance()->Collect();
 		core::GarbageCollection::GetInstance()->DestroyPendingKillObjs();
 
-		core::ModuleLoader loader{};
-		loader.Clean(*userPlugin.get());
-		userPlugin.reset();
+		if (userPlugin != nullptr)
+		{
+			core::ModuleLoader loader{};
+			loader.Clean(*userPlugin.get());
+			userPlugin.reset();
+		}
 
 		worlds.clear();
 		mainWorld.Reset();

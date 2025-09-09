@@ -110,7 +110,7 @@ namespace sh::network
 								receivedMessage.push(std::move(message));
 							}
 							else
-								SH_ERROR_FORMAT("An unregistered packet has been received!");
+								SH_ERROR("An unregistered packet has been received!");
 						}
 						else
 							SH_ERROR("Error packet has been received! (No ID.)");
