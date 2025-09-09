@@ -189,12 +189,6 @@ namespace sh::game
 				continue;
 			obj->OnEnable();
 		}
-		for (auto& obj : objs)
-		{
-			if (!obj->activeSelf)
-				continue;
-			obj->Start();
-		}
 
 		bOnStart = true;
 	}
@@ -209,6 +203,12 @@ namespace sh::game
 
 		addedObjs.clear();
 
+		for (auto& obj : objs)
+		{
+			if (!obj->activeSelf)
+				continue;
+			obj->Start();
+		}
 		for (auto& obj : objs)
 		{
 			if (!sh::core::IsValid(obj))

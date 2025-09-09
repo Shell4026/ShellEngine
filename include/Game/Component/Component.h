@@ -43,6 +43,7 @@ namespace sh::game
 	class Component : public sh::core::SObject, public IObject
 	{
 		SCLASS(Component)
+		friend class GameObject;
 	public:
 		SH_GAME_API Component(GameObject& object);
 		SH_GAME_API virtual ~Component() = default;
@@ -55,19 +56,20 @@ namespace sh::game
 		SH_GAME_API virtual void SetActive(bool b);
 
 		SH_GAME_API auto IsInit() const -> bool;
+		SH_GAME_API auto IsStart() const -> bool;
 
 		SH_GAME_API void OnDestroy() override;
 
-		SH_GAME_API void Awake() override;
-		SH_GAME_API void Start() override;
-		SH_GAME_API void OnEnable() override;
-		SH_GAME_API void FixedUpdate() override;
-		SH_GAME_API void BeginUpdate() override;
-		SH_GAME_API void Update() override;
-		SH_GAME_API void LateUpdate() override;
-		SH_GAME_API void OnCollisionEnter(Collider& collider) override {};
-		SH_GAME_API void OnCollisionStay(Collider& collider) override {};
-		SH_GAME_API void OnCollisionExit(Collider& collider) override {};
+		SH_GAME_API void Awake() override {}
+		SH_GAME_API void Start() override {}
+		SH_GAME_API void OnEnable() override {}
+		SH_GAME_API void FixedUpdate() override {}
+		SH_GAME_API void BeginUpdate() override {}
+		SH_GAME_API void Update() override {}
+		SH_GAME_API void LateUpdate() override {}
+		SH_GAME_API void OnCollisionEnter(Collider& collider) override {}
+		SH_GAME_API void OnCollisionStay(Collider& collider) override {}
+		SH_GAME_API void OnCollisionExit(Collider& collider) override {}
 
 		/// @brief 우선 순위가 높을수록 다른 컴포넌트보다 우선 실행 된다.
 		/// @param priority 우선 순위
@@ -89,6 +91,7 @@ namespace sh::game
 
 		bool bEnable;
 		bool bInit;
+		bool bStart = false;
 	};
 
 	template<typename T>

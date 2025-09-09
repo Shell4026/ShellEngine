@@ -14,17 +14,18 @@ namespace sh::game
 		SObject(other),
 		gameObject(other.gameObject), world(other.world),
 
-		bInit(other.bInit), bEnable(other.bEnable)
+		bInit(other.bInit), bEnable(other.bEnable), bStart(other.bStart)
 	{
 	}
 	SH_GAME_API Component::Component(Component&& other) noexcept :
 		SObject(std::move(other)),
 		gameObject(other.gameObject), world(other.world),
 
-		bInit(other.bInit), bEnable(other.bEnable)
+		bInit(other.bInit), bEnable(other.bEnable), bStart(other.bStart)
 	{
 		other.bEnable = false;
 		other.bInit = false;
+		other.bStart = false;
 	}
 
 	SH_GAME_API auto Component::operator=(const Component& other) -> Component&
@@ -62,31 +63,11 @@ namespace sh::game
 		return bInit;
 	}
 
-	SH_GAME_API void Component::Awake()
+	SH_GAME_API auto Component::IsStart() const -> bool
 	{
-		bInit = true;
+		return bStart;
 	}
-	SH_GAME_API void Component::Start()
-	{
 
-	}
-	SH_GAME_API void Component::OnEnable()
-	{
-
-	}
-	SH_GAME_API void Component::FixedUpdate()
-	{
-	}
-	SH_GAME_API void Component::BeginUpdate()
-	{
-	}
-	SH_GAME_API void Component::Update()
-	{
-	}
-	SH_GAME_API void Component::LateUpdate()
-	{
-	}
-	
 	SH_GAME_API void Component::OnDestroy()
 	{
 		Super::OnDestroy();

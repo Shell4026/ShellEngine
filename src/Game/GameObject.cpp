@@ -79,10 +79,13 @@ namespace sh::game
 
 		for (auto& component : components)
 		{
-			if (core::IsValid(component) && component->IsActive() && !component->IsInit())
+			if (core::IsValid(component) && !component->IsInit())
 			{
 				if (world.IsPlaying() || component->canPlayInEditor)
+				{
 					component->Awake();
+					component->bInit = true;
+				}
 			}
 		}
 		bInit = true;
@@ -92,9 +95,12 @@ namespace sh::game
 	{
 		for (auto& component : components)
 		{
-			if (core::IsValid(component) && component->IsActive())
+			if (core::IsValid(component) && component->IsActive() && !component->IsStart())
 				if (world.IsPlaying() || component->canPlayInEditor)
+				{
 					component->Start();
+					component->bStart = true;
+				}
 		}
 	}
 
