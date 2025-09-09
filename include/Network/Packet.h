@@ -37,7 +37,7 @@ namespace sh::network
 	class Packet : public core::ISerializable
 	{
 	public:
-		using Factory = core::Factory<Packet, std::unique_ptr<Packet>, int32_t>;
+		using Factory = core::Factory<Packet, std::unique_ptr<Packet>, uint32_t>;
 		static constexpr uint32_t MAX_PACKET_SIZE = 1024;
 	public:
 		virtual auto GetId() const -> uint32_t = 0;
