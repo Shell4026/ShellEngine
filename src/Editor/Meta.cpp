@@ -58,7 +58,7 @@ namespace sh::editor
 				bChanged = hash != objHash;
 			}
 		}
-		uuid = core::UUID{ json["uuid"].get<std::string>() };
+		uuid = core::UUID{ json["uuid"].get_ref<const std::string&>() };
 		typeHash = json["typeHash"];
 		name = json["name"];
 		return true;
@@ -66,6 +66,8 @@ namespace sh::editor
 	SH_EDITOR_API auto Meta::DeserializeSObject(core::SObject& obj) const -> bool
 	{
 		assert(IsLoad());
+		if (json.contains("uuid"))
+			obj.SetUUID(core::UUID{ json["uuid"].get_ref<const std::string&>() });
 		if (!json.contains("obj"))
 			return false;
 		obj.Deserialize(json["obj"]);

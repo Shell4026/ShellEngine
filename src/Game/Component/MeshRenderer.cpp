@@ -58,7 +58,7 @@ namespace sh::game
 		if (core::IsValid(mat))
 			this->mat = mat;
 		else
-			this->mat = gameObject.world.materials.GetResource("ErrorMaterial");
+			this->mat = static_cast<render::Material*>(core::SObject::GetSObjectUsingResolver(core::UUID{ "bbc4ef7ec45dce223297a224f8093f10" })); // errorMat
 
 		if (drawable == nullptr)
 			CreateDrawable();

@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "Export.h"
+#include "../Export.h"
 #include "../UI/ExplorerUI.h"
 #include "../UI/Viewport.h"
 #include "../UI/Hierarchy.h"

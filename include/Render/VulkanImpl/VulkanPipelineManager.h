@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "Export.h"
+#include "../Export.h"
 #include "VulkanPipeline.h"
 #include "VulkanConfig.h"
 #include "Render/Mesh.h"

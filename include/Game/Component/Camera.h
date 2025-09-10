@@ -1,5 +1,4 @@
 ﻿#pragma once
-
 #include "Component.h"
 #include "Game/Export.h"
 #include "Game/Vector.h"

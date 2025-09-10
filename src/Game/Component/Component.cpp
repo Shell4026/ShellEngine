@@ -82,15 +82,15 @@ namespace sh::game
 
 	SH_GAME_API auto Component::Serialize() const -> core::Json
 	{
-		core::Json mainJson{ Super::Serialize() };
+		core::Json mainJson = Super::Serialize();
 		const core::reflection::STypeInfo* type = &GetType();
 
 		while (type != nullptr)
 		{
 			core::Json* json = nullptr;
-			if (!mainJson.contains(type->name))
-				mainJson[type->name] = core::Json::object();
-			json = &mainJson[type->name];
+			if (!mainJson.contains(type->name.ToString()))
+				mainJson[type->name.ToString()] = core::Json::object();
+			json = &mainJson[type->name.ToString()];
 
 			for (auto& prop : type->GetProperties())
 			{

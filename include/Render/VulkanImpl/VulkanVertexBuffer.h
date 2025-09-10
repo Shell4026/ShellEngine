@@ -1,6 +1,6 @@
 ﻿#pragma once
-#include "Export.h"
-#include "IVertexBuffer.h"
+#include "../Export.h"
+#include "../IVertexBuffer.h"
 #include "VulkanBuffer.h"
 
 #include <cstdint>

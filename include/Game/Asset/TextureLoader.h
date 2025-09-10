@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "Export.h"
+#include "../Export.h"
 #include "TextureAsset.h"
 
 #include "Core/UUID.h"

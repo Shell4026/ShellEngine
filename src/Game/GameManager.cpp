@@ -305,7 +305,7 @@ namespace sh::game
 				dllPath = path.parent_path() / std::filesystem::u8path("lib" + path.stem().u8string() + ".so");
 	}
 		else
-			dllPath = path.parent_path() / std::filesystem::u8path("lib" + path.stem().u8string() + ".so");
+			dllPath = std::filesystem::current_path() / path.parent_path() / std::filesystem::u8path("lib" + path.stem().u8string() + ".so");
 
 		if (!std::filesystem::exists(dllPath))
 		{

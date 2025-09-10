@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "Export.h"
+#include "../Export.h"
 #include "Render/RenderPipeline.h"
 #include "Render/Mesh.h"
 

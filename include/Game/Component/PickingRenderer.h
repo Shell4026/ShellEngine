@@ -1,5 +1,4 @@
 ﻿#pragma once
-
 #include "MeshRenderer.h"
 #include "PickingCamera.h"
 

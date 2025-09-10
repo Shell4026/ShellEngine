@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "Export.h"
+#include "../Export.h"
 #include "MeshAsset.h"
 
 #include "Core/IAssetLoader.h"

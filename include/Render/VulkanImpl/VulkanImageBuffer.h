@@ -1,5 +1,4 @@
 ﻿#pragma once
-
 #include "VulkanCommandBuffer.h"
 #include "Render/Export.h"
 

@@ -1,6 +1,5 @@
 ﻿#pragma once
-
-#include "Export.h"
+#include "../Export.h"
 #include "Core/NonCopyable.h"
 
 #include "VulkanConfig.h"

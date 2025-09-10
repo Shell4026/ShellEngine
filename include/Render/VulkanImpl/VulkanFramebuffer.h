@@ -1,6 +1,5 @@
 ﻿#pragma once
-
-#include "Export.h"
+#include "../Export.h"
 #include "VulkanConfig.h"
 #include "VulkanRenderPass.h"
 #include "VulkanImageBuffer.h"
