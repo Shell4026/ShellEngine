@@ -16,7 +16,7 @@ namespace sh::game
 {
 	class RigidBody : public Component
 	{
-		COMPONENT(RigidBody)
+		COMPONENT(RigidBody, "physics")
 	public:
 		using RigidBodyHandle = void*;
 	public:

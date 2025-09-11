@@ -89,5 +89,7 @@ namespace sh::render
 
 		SH_RENDER_API auto GetBoundingBox() const -> const AABB&;
 		SH_RENDER_API auto GetBoundingBox() -> AABB&;
+
+		SH_RENDER_API void CalculateTangents();
 	};
 }

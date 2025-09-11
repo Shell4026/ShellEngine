@@ -13,7 +13,7 @@ namespace sh::game
 	class DebugRenderer;
 	class ShpereCollider : public Collider
 	{
-		COMPONENT(ShpereCollider)
+		COMPONENT(ShpereCollider, "physics")
 		friend RigidBody;
 	public:
 		SH_GAME_API ShpereCollider(GameObject& owner);

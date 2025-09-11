@@ -5,23 +5,29 @@
 #include "Game/Vector.h"
 
 #include "Core/SContainer.hpp"
+
+#include <memory>
 namespace sh::game
 {
 	class RigidBody;
 	class DebugRenderer;
-	class BoxCollider : public Collider
+	class CapsuleCollider : public Collider
 	{
-		COMPONENT(BoxCollider, "physics")
+		COMPONENT(CapsuleCollider, "physics")
+			friend RigidBody;
 	public:
-		SH_GAME_API BoxCollider(GameObject& owner);
-		SH_GAME_API ~BoxCollider();
+		SH_GAME_API CapsuleCollider(GameObject& owner);
+		SH_GAME_API ~CapsuleCollider();
 
 		SH_GAME_API void OnDestroy() override;
+		SH_GAME_API void Awake() override;
 
 		SH_GAME_API auto GetNative() const -> void* override;
 
-		SH_GAME_API void SetSize(const Vec3& size);
-		SH_GAME_API auto GetSize() const -> const Vec3&;
+		SH_GAME_API void SetRadius(float r);
+		SH_GAME_API auto GetRadius() const -> float;
+		SH_GAME_API void SetHeight(float h);
+		SH_GAME_API auto GetHeight() const -> float;
 
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 
@@ -36,7 +42,9 @@ namespace sh::game
 		PROPERTY(bDisplayArea)
 		bool bDisplayArea = false;
 
-		PROPERTY(size)
-		Vec3 size;
+		PROPERTY(radius)
+		float radius = 0.5f;
+		PROPERTY(height)
+		float height = 1.f;
 	};
 }//namespace
