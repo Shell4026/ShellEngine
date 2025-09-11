@@ -24,6 +24,7 @@ namespace sh::phys
 			rigidBodyHandle = info.collider->getBody();
 			return 0.0f;
 		}
+		
 	};
 	class CustomEventListener : public reactphysics3d::EventListener
 	{

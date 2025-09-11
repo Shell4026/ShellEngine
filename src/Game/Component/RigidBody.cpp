@@ -5,6 +5,8 @@
 #include "Core/Logger.h"
 
 #include "reactphysics3d/reactphysics3d.h"
+
+#include <cstdint>
 namespace sh::game
 {
 	std::unordered_map<RigidBody::RigidBodyHandle, RigidBody*> RigidBody::nativeMap{};
@@ -93,6 +95,7 @@ namespace sh::game
 	}
 	SH_GAME_API void RigidBody::BeginUpdate()
 	{
+		// collision이 유효하지 않게 되면 콜라이더 재설정
 		if (impl->collider != nullptr && !core::IsValid(collision))
 			SetCollider(nullptr);
 	}
@@ -149,7 +152,7 @@ namespace sh::game
 		if (core::IsValid(collision))
 		{
 			auto shape = reinterpret_cast<reactphysics3d::CollisionShape*>(collision->GetNative());
-			const auto& quat = colliderComponent->gameObject.transform->GetQuat();
+			const glm::quat& quat = colliderComponent->gameObject.transform->GetQuat();
 			const Vec3& pos = colliderComponent->gameObject.transform->position;
 			reactphysics3d::Transform transform{};
 			// 리지드 바디랑 콜라이더랑 같은 오브젝트에 있으면 transform은 identity
@@ -157,7 +160,9 @@ namespace sh::game
 				transform = reactphysics3d::Transform{ { pos.x, pos.y, pos.z }, { quat.x,quat.y,quat.z,quat.w } };
 			impl->collider = impl->rigidbody->addCollider(shape, transform);
 			impl->collider->getMaterial().setBounciness(bouncy);
-			//impl->rigidbody->getCollider(0)->set
+			impl->collider->setCollisionCategoryBits(static_cast<uint16_t>(collision->GetCollisionTag()));
+			impl->collider->setCollideWithMaskBits(collision->GetAllowCollisions());
+			collision->handles.push_back({ this, impl->collider });
 		}
 	}
 

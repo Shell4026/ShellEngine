@@ -14,7 +14,7 @@ namespace sh::game
 	class CapsuleCollider : public Collider
 	{
 		COMPONENT(CapsuleCollider, "physics")
-			friend RigidBody;
+		friend RigidBody;
 	public:
 		SH_GAME_API CapsuleCollider(GameObject& owner);
 		SH_GAME_API ~CapsuleCollider();
