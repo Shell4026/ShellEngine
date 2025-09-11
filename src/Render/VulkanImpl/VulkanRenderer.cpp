@@ -162,15 +162,15 @@ namespace sh::render::vk
 		{
 			if (IsPause())
 				return;
-			if (result == VkResult::VK_ERROR_OUT_OF_DATE_KHR)
-			{
-				SH_INFO("Resizing");
-				Resizing();
-			}
+			SH_INFO("Resizing");
+			Resizing();
 			return;
 		}
 		if (result == VkResult::VK_ERROR_SURFACE_LOST_KHR)
+		{
+			SH_ERROR_FORMAT("Error vkAcquireNextImageKHR - {}", string_VkResult(result));
 			return;
+		}
 		assert(result == VkResult::VK_SUCCESS);
 
 		// UI 커맨드 버퍼 설정
