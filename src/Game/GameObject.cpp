@@ -222,14 +222,37 @@ namespace sh::game
 
 	SH_GAME_API void GameObject::SetActive(bool b)
 	{
-		if (!bEnable && b == true)
+		if (!bEnable && b)
+			OnEnable();
+		bEnable = b;
+
+		if (bParentEnable)
 		{
-			if (world.IsStart())
+			std::queue<Transform*> bfs;
+			for (auto child : transform->GetChildren())
+				bfs.push(child);
+
+			while (!bfs.empty())
 			{
-				OnEnable();
+				Transform* transform = bfs.front();
+				bfs.pop();
+
+				if (!transform->gameObject.bParentEnable && bEnable && activeSelf)
+					OnEnable();
+				transform->gameObject.bParentEnable = bEnable;
+
+				if (!transform->gameObject.activeSelf)
+					continue;
+
+				for (auto child : transform->GetChildren())
+					bfs.push(child);
 			}
 		}
-		bEnable = b;
+	}
+
+	SH_GAME_API auto GameObject::IsParentActive() const -> bool
+	{
+		return bParentEnable;
 	}
 
 	SH_GAME_API auto GameObject::GetComponents() const -> const std::vector<Component*>&
@@ -298,6 +321,13 @@ namespace sh::game
 			}
 		}
 		SortComponents();
+	}
+	SH_GAME_API void GameObject::OnPropertyChanged(const core::reflection::Property& prop)
+	{
+		if (prop.GetName() == core::Util::ConstexprHash("bEnable"))
+		{
+			SetActive(bEnable);
+		}
 	}
 	void GameObject::SortComponents()
 	{

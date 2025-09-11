@@ -26,7 +26,6 @@ namespace sh::game
 		SH_GAME_API auto operator=(const GameObject& other) -> GameObject&;
 
 		SH_GAME_API void OnDestroy() override;
-
 		SH_GAME_API void Awake() override;
 		SH_GAME_API void Start() override;
 		SH_GAME_API void OnEnable() override;
@@ -41,6 +40,7 @@ namespace sh::game
 		SH_GAME_API void OnCollisionExit(Collider& collider) override;
 
 		SH_GAME_API void SetActive(bool b);
+		SH_GAME_API auto IsParentActive() const -> bool;
 
 		SH_GAME_API auto GetComponents() const -> const std::vector<Component*>&;
 
@@ -55,6 +55,7 @@ namespace sh::game
 
 		SH_GAME_API auto Serialize() const -> core::Json override;
 		SH_GAME_API void Deserialize(const core::Json& json) override;
+		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 	public:
 		/// @brief 새 컴포넌트를 추가하는 함수
 		/// @tparam T 컴포넌트 타입
@@ -104,6 +105,7 @@ namespace sh::game
 		core::SSet<Collider*> exitColliders;
 		PROPERTY(bEnable)
 		bool bEnable;
+		bool bParentEnable = true;
 		bool bRequestSortComponent = false;
 	};
 }//namespace
