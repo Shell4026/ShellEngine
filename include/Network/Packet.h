@@ -24,6 +24,11 @@ struct PacketRegister##PacketClass\
 			); \
 		}\
 	}\
+	~PacketRegister##PacketClass()\
+	{\
+		auto factory = Packet::Factory::GetInstance(); \
+		factory->UnRegister(id);\
+	}\
 	static auto Get() -> PacketRegister##PacketClass*\
 	{\
 		static PacketRegister##PacketClass registry{};\
