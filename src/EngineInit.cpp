@@ -12,7 +12,7 @@
 #include "Game/ImGUImpl.h"
 #include "Game/RenderThread.h"
 #include "Game/Input.h"
-
+#include "Game/Component/Component.h"
 #include "Game/ComponentModule.h"
 #include "Game/GameManager.h"
 
@@ -120,12 +120,10 @@ namespace sh
 				}
 				break;
 			case sh::window::Event::EventType::WindowFocus:
-				window->SetFps(limitFps);
-				std::cout << "FocusIn\n";
+				SH_INFO("FocusIn");
 				break;
 			case sh::window::Event::EventType::WindowFocusOut:
-				window->SetFps(30);
-				std::cout << "FocusOut\n";
+				SH_INFO("FocusOut");
 				break;
 			}
 		}
@@ -172,6 +170,8 @@ namespace sh
 		core::ThreadPool::GetInstance()->Init(std::max(2u, std::thread::hardware_concurrency() / 2));
 		core::ThreadSyncManager::Init();
 #if SH_EDITOR
+		game::Component::SetEditor(true);
+
 		project = std::make_unique<editor::Project>(*renderer, *gui);
 
 		worldFactory.Register(editor::EditorWorld::GetStaticType().name.ToString(),

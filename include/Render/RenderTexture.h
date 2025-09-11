@@ -46,8 +46,6 @@ namespace sh::render
 		SH_RENDER_API auto IsMSAA() const -> bool;
 
 		SH_RENDER_API void Sync() override;
-#if SH_EDITOR
 		SH_RENDER_API void OnPropertyChanged(const core::reflection::Property& property) override;
-#endif
 	};
 }

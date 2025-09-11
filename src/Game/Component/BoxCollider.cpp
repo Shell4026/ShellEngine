@@ -21,12 +21,14 @@ namespace sh::game
 		auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld()->GetContext());
 		Vec3 halfSize = size / 2.0f;
 		impl->shape = ctx->createBoxShape(reactphysics3d::Vector3{ halfSize.x, halfSize.y, halfSize.z });
-#if SH_EDITOR
-		debugRenderer = gameObject.AddComponent<DebugRenderer>();
-		render::Model* cubeModel = static_cast<render::Model*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ "bbc4ef7ec45dce223297a224f8093f16" })); // Cube Model
-		debugRenderer->SetMesh(cubeModel->GetMeshes()[0]);
-		debugRenderer->hideInspector = true;
-#endif
+
+		if (IsEditor())
+		{
+			debugRenderer = gameObject.AddComponent<DebugRenderer>();
+			render::Model* cubeModel = static_cast<render::Model*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ "bbc4ef7ec45dce223297a224f8093f16" })); // Cube Model
+			debugRenderer->SetMesh(cubeModel->GetMeshes()[0]);
+			debugRenderer->hideInspector = true;
+		}
 	}
 	SH_GAME_API BoxCollider::~BoxCollider()
 	{

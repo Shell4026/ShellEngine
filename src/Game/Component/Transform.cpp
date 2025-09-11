@@ -112,16 +112,16 @@ namespace sh::game
 			worldPosition = matModel[3];
 			worldQuat = parent->worldQuat * quat;
 			worldScale = parent->worldScale * vScale;
-#if SH_EDITOR
-			worldRotation = glm::degrees(glm::eulerAngles(worldQuat));
-#endif
+			if (IsEditor())
+				worldRotation = glm::degrees(glm::eulerAngles(worldQuat));
 		}
 		else
 		{
 			worldPosition = vPosition;
 			worldQuat = quat;
 			worldScale = vScale;
-			worldRotation = vRotation;
+			if (IsEditor())
+				worldRotation = vRotation;
 		}
 
 		for (auto it = childs.begin(); it != childs.end();)
@@ -213,9 +213,8 @@ namespace sh::game
 	}
 	SH_GAME_API void Transform::SetRotation(const glm::quat& rot)
 	{
-#if SH_EDITOR
-		vRotation = glm::degrees(glm::eulerAngles(quat));
-#endif
+		if (IsEditor())
+			vRotation = glm::degrees(glm::eulerAngles(quat));
 		quat = rot;
 		bUpdateMatrix = true;
 	}
@@ -303,9 +302,8 @@ namespace sh::game
 				vPosition = parent->GetWorldToLocalMatrix() * glm::vec4{ glm::vec3{ worldPosition }, 1.f };
 				quat = glm::inverse(parent->worldQuat) * worldQuat;
 				vScale = (1.f / parent->worldScale) * worldScale;
-#if SH_EDITOR
-				vRotation = glm::degrees(glm::eulerAngles(glm::inverse(parent->worldQuat) * worldQuat));
-#endif
+				if (IsEditor())
+					vRotation = glm::degrees(glm::eulerAngles(glm::inverse(parent->worldQuat) * worldQuat));
 			}
 			else
 			{
@@ -325,9 +323,8 @@ namespace sh::game
 				vPosition = parent->GetWorldToLocalMatrix() * glm::vec4{ glm::vec3{ worldPosition }, 1.f };
 				quat = glm::inverse(parent->worldQuat) * quat;
 				vScale = (1.f / glm::vec3{ parent->worldScale }) * glm::vec3{ worldScale };
-#if SH_EDITOR
-				vRotation = glm::degrees(glm::eulerAngles(glm::inverse(parent->worldQuat) * quat));
-#endif
+				if (IsEditor())
+					vRotation = glm::degrees(glm::eulerAngles(glm::inverse(parent->worldQuat) * quat));
 			}
 			else
 				return;
@@ -399,12 +396,13 @@ namespace sh::game
 
 	void Transform::OnPropertyChanged(const core::reflection::Property& property)
 	{
-#if SH_EDITOR
-		if (property.GetName() == "vRotation")
+		if (IsEditor())
 		{
-			quat = glm::quat{ glm::radians(glm::vec3{ vRotation }) };
+			if (property.GetName() == core::Util::ConstexprHash("vRotation"))
+			{
+				quat = glm::quat{ glm::radians(glm::vec3{ vRotation }) };
+			}
 		}
-#endif
 		bUpdateMatrix = true;
 	}
 }

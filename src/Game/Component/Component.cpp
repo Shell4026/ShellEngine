@@ -3,6 +3,8 @@
 
 namespace sh::game
 {
+	bool Component::bEditor = false;
+
 	SH_GAME_API Component::Component(GameObject& object) :
 		gameObject(object), world(object.world),
 		
@@ -148,5 +150,13 @@ namespace sh::game
 			}
 			type = type->GetSuper();
 		}
+	}
+	SH_GAME_API void Component::SetEditor(bool bEditor)
+	{
+		Component::bEditor = bEditor;
+	}
+	SH_GAME_API auto Component::IsEditor() -> bool
+	{
+		return bEditor;
 	}
 }

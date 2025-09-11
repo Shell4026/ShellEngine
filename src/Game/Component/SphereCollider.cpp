@@ -20,12 +20,13 @@ namespace sh::game
 
 		auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld()->GetContext());
 		impl->shape = ctx->createSphereShape(radius);
-#if SH_EDITOR
-		debugRenderer = gameObject.AddComponent<DebugRenderer>();
-		render::Model* sphereModel = static_cast<render::Model*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ "bbc4ef7ec45dce223297a224f8093f15" })); // Sphere Model
-		debugRenderer->SetMesh(sphereModel->GetMeshes()[0]);
-		debugRenderer->hideInspector = true;
-#endif
+		if (IsEditor())
+		{
+			debugRenderer = gameObject.AddComponent<DebugRenderer>();
+			render::Model* sphereModel = static_cast<render::Model*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ "bbc4ef7ec45dce223297a224f8093f15" })); // Sphere Model
+			debugRenderer->SetMesh(sphereModel->GetMeshes()[0]);
+			debugRenderer->hideInspector = true;
+		}
 	}
 	SH_GAME_API ShpereCollider::~ShpereCollider()
 	{

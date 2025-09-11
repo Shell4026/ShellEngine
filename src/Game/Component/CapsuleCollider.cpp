@@ -23,13 +23,14 @@ namespace sh::game
 		auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld()->GetContext());
 		impl->shape = ctx->createCapsuleShape(radius, height);
 
-#if SH_EDITOR
-		debugRenderer = gameObject.AddComponent<DebugRenderer>();
-		render::Mesh* capsuleMesh = static_cast<render::Mesh*>(core::SObject::Create<render::CapsuleMesh>(radius, height));
-		capsuleMesh->Build(*world.renderer.GetContext());
-		debugRenderer->SetMesh(capsuleMesh);
-		debugRenderer->hideInspector = true;
-#endif
+		if(IsEditor())
+		{
+			debugRenderer = gameObject.AddComponent<DebugRenderer>();
+			render::Mesh* capsuleMesh = static_cast<render::Mesh*>(core::SObject::Create<render::CapsuleMesh>(radius, height));
+			capsuleMesh->Build(*world.renderer.GetContext());
+			debugRenderer->SetMesh(capsuleMesh);
+			debugRenderer->hideInspector = true;
+		}
 	}
 	SH_GAME_API CapsuleCollider::~CapsuleCollider()
 	{
@@ -64,9 +65,13 @@ namespace sh::game
 		radius = r;
 		impl->shape->setRadius(radius);
 
-		render::Mesh* capsuleMesh = static_cast<render::Mesh*>(core::SObject::Create<render::CapsuleMesh>(radius, height));
-		capsuleMesh->Build(*world.renderer.GetContext());
-		debugRenderer->SetMesh(capsuleMesh);
+		if (debugRenderer != nullptr)
+		{
+			render::Mesh* capsuleMesh = static_cast<render::Mesh*>(core::SObject::Create<render::CapsuleMesh>(radius, height));
+			capsuleMesh->Build(*world.renderer.GetContext());
+
+			debugRenderer->SetMesh(capsuleMesh);
+		}
 	}
 	SH_GAME_API auto CapsuleCollider::GetRadius() const -> float
 	{
@@ -79,9 +84,12 @@ namespace sh::game
 		height = h;
 		impl->shape->setHeight(height);
 
-		render::Mesh* capsuleMesh = static_cast<render::Mesh*>(core::SObject::Create<render::CapsuleMesh>(radius, height));
-		capsuleMesh->Build(*world.renderer.GetContext());
-		debugRenderer->SetMesh(capsuleMesh);
+		if (debugRenderer != nullptr)
+		{
+			render::Mesh* capsuleMesh = static_cast<render::Mesh*>(core::SObject::Create<render::CapsuleMesh>(radius, height));
+			capsuleMesh->Build(*world.renderer.GetContext());
+			debugRenderer->SetMesh(capsuleMesh);
+		}
 	}
 	SH_GAME_API auto CapsuleCollider::GetHeight() const -> float
 	{

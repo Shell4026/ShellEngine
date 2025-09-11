@@ -114,15 +114,13 @@ namespace sh::render
 			bChangeSize = false;
 		}
 	}
-#if SH_EDITOR
 	SH_RENDER_API void RenderTexture::OnPropertyChanged(const core::reflection::Property& property)
 	{
 		if (context == nullptr)
 			return;
-		if (property.GetName() == "width" || property.GetName() == "height")
+		if (property.GetName() == core::Util::ConstexprHash("width") || property.GetName() == core::Util::ConstexprHash("height"))
 		{
 			Build(*context);
 		}
 	}
-#endif
 }
