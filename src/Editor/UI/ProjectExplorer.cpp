@@ -242,15 +242,16 @@ namespace sh::editor
 					auto uuidOpt = AssetDatabase::GetInstance()->GetAssetUUID(selected);
 					if (uuidOpt.has_value())
 					{
-						const std::filesystem::path metaPath = AssetDatabase::GetInstance()->GetMetaDirectory(selected);
-						std::filesystem::remove(selected);
-						if (std::filesystem::exists(metaPath))
-							std::filesystem::remove(metaPath);
-
 						AssetDatabase::GetInstance()->DeleteAsset(uuidOpt.value());
 
 						selected.clear();
 
+						Refresh();
+					}
+					else
+					{
+						std::filesystem::remove(selected);
+						selected.clear();
 						Refresh();
 					}
 				}

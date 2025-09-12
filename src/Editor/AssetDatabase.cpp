@@ -14,14 +14,11 @@
 #include "Render/VulkanImpl/VulkanShaderPassBuilder.h"
 #include "Render/VulkanImpl/VulkanContext.h"
 
-#include "Game/GameManager.h"
 #include "Game/World.h"
 #include "Game/Prefab.h"
 
-#include "Game/AssetLoaderFactory.h"
 #include "Game/Asset/TextureLoader.h"
 #include "Game/Asset/ModelLoader.h"
-#include "Game/Asset/MeshLoader.h"
 #include "Game/Asset/MaterialLoader.h"
 #include "Game/Asset/ShaderLoader.h"
 #include "Game/Asset/WorldLoader.h"
@@ -34,7 +31,6 @@
 #include "Game/Asset/PrefabAsset.h"
 #include "Game/Asset/PrefabLoader.h"
 
-#include <random>
 #include <istream>
 #include <ostream>
 #include <cassert>
@@ -349,6 +345,7 @@ namespace sh::editor
 			info.cachePath = std::filesystem::u8path(uuidJson["1"].get<std::string>());
 
 			paths.insert_or_assign(uuid, std::move(info));
+			uuids[info.originalPath] = uuid;
 		}
 		return true;
 	}
@@ -421,6 +418,16 @@ namespace sh::editor
 		if (it == paths.end())
 			return;
 
+		const auto& filePath = projectPath / it->second.originalPath;
+		const auto& cachePath = projectPath / it->second.originalPath;
+		if(std::filesystem::exists(filePath))
+			std::filesystem::remove(filePath);
+		if (std::filesystem::exists(cachePath))
+			std::filesystem::remove(cachePath);
+		const auto metaPath = GetMetaDirectory(projectPath / it->second.originalPath);
+		if (std::filesystem::exists(metaPath))
+			std::filesystem::remove(metaPath);
+
 		uuids.erase(it->second.originalPath);
 		paths.erase(it);
 
@@ -449,7 +456,12 @@ namespace sh::editor
 			newPath = directoryPath / it->second.originalPath.filename();
 		}
 
-		std::filesystem::rename(projectPath / it->second.originalPath, newPath);
+		const auto& filePath = projectPath / it->second.originalPath;
+
+		std::filesystem::rename(filePath, newPath);
+		const auto metaPath = GetMetaDirectory(filePath);
+		if (std::filesystem::exists(metaPath))
+			std::filesystem::rename(metaPath, GetMetaDirectory(newPath));
 
 		AssetWasMoved(uuid, newPath);
 	}
