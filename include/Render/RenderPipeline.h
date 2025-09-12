@@ -27,7 +27,7 @@ namespace sh::render
 	public:
 		virtual ~IRenderPipelineImpl() = default;
 
-		virtual void RecordCommand(const core::Name& lightingPassName, const std::vector<const Camera*>& cameras, const std::vector<RenderGroup>& renderData, uint32_t imgIdx) = 0;
+		virtual void RecordCommand(const core::Name& lightingPassName, const Camera& camera, const std::vector<RenderGroup>& renderData, uint32_t imgIdx) = 0;
 		
 		/// @brief 렌더링 시 이전에 그려진 프레임 버퍼를 지울지 설정
 		/// @param bClear 지운다면 true 아니면 false

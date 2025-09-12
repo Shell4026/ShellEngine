@@ -21,7 +21,7 @@ namespace sh::render::vk
 		SH_RENDER_API VulkanRenderPipelineImpl(VulkanContext& context);
 		SH_RENDER_API ~VulkanRenderPipelineImpl();
 
-		SH_RENDER_API void RecordCommand(const core::Name& lightingPassName, const std::vector<const Camera*>& cameras, const std::vector<RenderGroup>& renderData, uint32_t imgIdx) override;
+		SH_RENDER_API void RecordCommand(const core::Name& lightingPassName, const Camera& cameras, const std::vector<RenderGroup>& renderData, uint32_t imgIdx) override;
 
 		/// @brief 렌더링 시 이전에 그려진 프레임 버퍼를 지울지 설정
 		/// @param bClear 지운다면 true 아니면 false

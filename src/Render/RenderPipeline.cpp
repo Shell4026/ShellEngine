@@ -76,13 +76,16 @@ namespace sh::render
 		camVector.reserve(cameras.size());
 		for (auto cam : cameras)
 		{
+			if (cam == nullptr)
+				continue;
 			if (auto it = std::find(ignoreCameras.begin(), ignoreCameras.end(), cam); it == ignoreCameras.end())
 				camVector.push_back(cam);
 		}
 		if (camVector.size() == 0)
 			return;
 
-		impl->RecordCommand(passName, camVector, renderGroups, imgIdx);
+		for (auto cam : camVector)
+			impl->RecordCommand(passName, *cam, renderGroups, imgIdx);
 	}
 	SH_RENDER_API void RenderPipeline::SetReplacementMaterial(const Material* mat)
 	{
