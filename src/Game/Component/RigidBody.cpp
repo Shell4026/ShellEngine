@@ -358,6 +358,12 @@ namespace sh::game
 		currRot = objQuat;
 	}
 
+	SH_GAME_API auto RigidBody::GetPhysicsPosition() const -> game::Vec3
+	{
+		const auto& p = impl->rigidbody->getTransform().getPosition();
+		return { p.x, p.y, p.z };
+	}
+
 	SH_GAME_API void RigidBody::OnPropertyChanged(const core::reflection::Property& prop)
 	{
 		if (prop.GetName() == core::Util::ConstexprHash("collision"))

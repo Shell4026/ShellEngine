@@ -79,6 +79,10 @@ namespace sh::game
 		SH_GAME_API void ResetPhysicsTransform();
 		SH_GAME_API void ResetInterpolationState();
 
+		/// @brief 물리 엔진에서 연산에 사용하는 월드 좌표를 가져오는 함수
+		/// @return 월드 좌표
+		SH_GAME_API auto GetPhysicsPosition() const -> game::Vec3;
+
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 
 		SH_GAME_API static auto GetRigidBodyFromHandle(RigidBodyHandle handle) -> RigidBody*;

@@ -8,23 +8,40 @@ namespace sh::phys
 	class GroundRaycastCallback : public reactphysics3d::RaycastCallback
 	{
 	public:
+		struct HitInfo
+		{
+			float hitFraction = 0.0f;
+			reactphysics3d::Vector3 worldPoint;
+			reactphysics3d::Vector3 worldNormal;
+			void* rigidBodyHandle = nullptr;
+		};
 		bool hit = false;
-		float hitFraction = 0.0f;
-		reactphysics3d::Vector3 worldPoint;
-		reactphysics3d::Vector3 worldNormal;
-		void* rigidBodyHandle = nullptr;
+		std::vector<HitPoint> infos;
 
-		// 첫 번째 히트에서 바로 멈추도록 false 반환
+		// 모든 히트 수집
 		virtual auto notifyRaycastHit(const reactphysics3d::RaycastInfo& info) -> reactphysics3d::decimal override
 		{
 			hit = true;
-			hitFraction = info.hitFraction;
-			worldPoint = info.worldPoint;
-			worldNormal = info.worldNormal;
-			rigidBodyHandle = info.collider->getBody();
-			return 0.0f;
+			HitPoint hit{};
+			hit.fraction = info.hitFraction;
+			hit.hitNormal = { info.worldNormal.x, info.worldNormal.y, info.worldNormal.z };
+			hit.hitPoint = { info.worldPoint.x, info.worldPoint.y, info.worldPoint.z };
+			hit.rigidBodyHandle = info.collider->getBody();
+			infos.push_back(hit);
+			return 1.0f;
 		}
 		
+	};
+	class GroundRaycastCallbackOnce : public reactphysics3d::RaycastCallback
+	{
+	public:
+		bool hit = false;
+		// 첫 히트 시 종료
+		virtual auto notifyRaycastHit(const reactphysics3d::RaycastInfo& info) -> reactphysics3d::decimal override
+		{
+			hit = true;
+			return 0.0f;
+		}
 	};
 	class CustomEventListener : public reactphysics3d::EventListener
 	{
@@ -96,12 +113,12 @@ namespace sh::phys
 		reactphysics3d::Vector3 dir{ ray.direction.x, ray.direction.y, ray.direction.z };
 		dir.normalize();
 		reactphysics3d::Ray reactPhysRay{ start , start + dir * ray.distance };
-		GroundRaycastCallback callback;
+		GroundRaycastCallbackOnce callback;
 		impl->world->raycast(reactPhysRay, &callback, allowedTag);
 
 		return callback.hit;
 	}
-	SH_PHYS_API auto PhysWorld::RayCast(const Ray& ray, Tagbit allowedTag) const -> std::optional<HitPoint>
+	SH_PHYS_API auto PhysWorld::RayCast(const Ray& ray, Tagbit allowedTag) const -> std::vector<HitPoint>
 	{
 		reactphysics3d::Vector3 start{ ray.origin.x, ray.origin.y, ray.origin.z };
 		reactphysics3d::Vector3 dir{ ray.direction.x, ray.direction.y, ray.direction.z };
@@ -113,12 +130,14 @@ namespace sh::phys
 		if (!callback.hit)
 			return {};
 
-		HitPoint hit{};
-		hit.hitPoint = { callback.worldPoint.x, callback.worldPoint.y, callback.worldPoint.z };
-		hit.hitNormal = { callback.worldNormal.x, callback.worldNormal.y, callback.worldNormal.z };
-		hit.rigidBodyHandle = callback.rigidBodyHandle;
-
-		return hit;
+		std::vector<HitPoint> hits = std::move(callback.infos);
+		std::sort(hits.begin(), hits.end(),
+			[](const HitPoint& left, const HitPoint& right)
+			{
+				return left.fraction < right.fraction;
+			}
+		);
+		return hits;
 	}
 	SH_PHYS_API auto PhysWorld::GetContext() const -> ContextHandle
 	{

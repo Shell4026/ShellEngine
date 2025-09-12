@@ -47,7 +47,7 @@ namespace sh::phys
 		SH_PHYS_API void Update(float deltaTime);
 
 		SH_PHYS_API auto RayCastHit(const Ray& ray, Tagbit allowedTag = 0xffff) const -> bool;
-		SH_PHYS_API auto RayCast(const Ray& ray, Tagbit allowedTag = 0xffff) const -> std::optional<HitPoint>;
+		SH_PHYS_API auto RayCast(const Ray& ray, Tagbit allowedTag = 0xffff) const -> std::vector<HitPoint>;
 
 		SH_PHYS_API auto GetContext() const -> ContextHandle;
 		SH_PHYS_API auto GetNative() const -> PhysicsWorldHandle;
