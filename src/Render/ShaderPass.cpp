@@ -1,5 +1,4 @@
-﻿
-#include "ShaderPass.h"
+﻿#include "ShaderPass.h"
 
 namespace sh::render
 {

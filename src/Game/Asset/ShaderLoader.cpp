@@ -52,8 +52,15 @@ namespace sh::game
 		render::ShaderParser parser{};
 
 		render::ShaderCreateInfo shaderCI{};
-		shaderCI.shaderNode = parser.Parse(lexer.Lex(src.value()));
-
+		try
+		{
+			shaderCI.shaderNode = parser.Parse(lexer.Lex(src.value()));
+		}
+		catch (const render::ShaderParserException& e)
+		{
+			SH_ERROR_FORMAT("Shader parsing error: {}", e.what());
+			return nullptr;
+		}
 		for (auto& passNode : shaderCI.shaderNode.passes)
 		{
 			auto shaderPaths = render::ShaderGenerator::GenerateShaderFile(shaderCI.shaderNode.shaderName, passNode, cachePath);
