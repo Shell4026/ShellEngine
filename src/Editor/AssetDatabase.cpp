@@ -345,7 +345,7 @@ namespace sh::editor
 			info.cachePath = std::filesystem::u8path(uuidJson["1"].get<std::string>());
 
 			paths.insert_or_assign(uuid, std::move(info));
-			uuids[info.originalPath] = uuid;
+			uuids.insert_or_assign(info.originalPath, uuid);
 		}
 		return true;
 	}
@@ -565,6 +565,10 @@ namespace sh::editor
 	SH_EDITOR_API auto AssetDatabase::IsAssetChanged(const std::filesystem::path& assetPath) -> bool
 	{
 		const std::filesystem::path metaPath{ GetMetaDirectory(assetPath) };
+
+		// 처음 보는 경로의 에셋인 경우에도 변경으로 간주한다.
+		if (uuids.find(std::filesystem::relative(assetPath, projectPath)) == uuids.end())
+			return true;
 
 		Meta meta{};
 		// 메타 파일이 없는 경우에도 변경으로 친다.
