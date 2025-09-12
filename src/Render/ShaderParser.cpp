@@ -379,7 +379,7 @@ namespace sh::render
 		else if (ident == "Back" || ident == "back")
 			passNode.cullMode = CullMode::Back;
 		else
-			throw ShaderParserException{"Allowed identifiers: Off, Front, Back"};
+			throw ShaderParserException{"Allowed Cull identifiers: Off, Front, Back"};
 		ConsumeToken(ShaderLexer::TokenType::Semicolon);
 	}
 	void ShaderParser::ParseZWrite(ShaderAST::PassNode& passNode)

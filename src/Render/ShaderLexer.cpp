@@ -296,7 +296,7 @@ namespace sh::render
 					{"sampler2D", TokenType::Sampler2D},
 					{"Stencil", TokenType::Stencil},
 					{"Cull", TokenType::Cull},
-					{"ZWrite", TokenType::Cull},
+					{"ZWrite", TokenType::ZWrite},
 					{"ColorMask", TokenType::ColorMask},
 					{"LightingPass", TokenType::LightingPass},
 					{"Property", TokenType::Property},
