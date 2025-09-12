@@ -37,8 +37,8 @@ namespace sh::editor
 	public:
 		struct AssetInfo
 		{
-			std::filesystem::path originalPath;
-			std::filesystem::path cachePath;
+			std::filesystem::path originalPath; // ProjectPath의 상대 경로로 저장해야함!
+			std::filesystem::path cachePath; // ProjectPath의 상대 경로로 저장해야함!
 		};
 	public:
 		SH_EDITOR_API void SetProject(Project& project);
@@ -58,9 +58,10 @@ namespace sh::editor
 		SH_EDITOR_API bool CreateAsset(const std::filesystem::path& dir, const core::SObject& obj);
 		/// @brief 해당 에셋의 경로가 바뀌었음을 알리는 함수.
 		/// @param uuid UUID
-		/// @param newPath 새 경로
+		/// @param newPath 새로운 절대 경로
 		SH_EDITOR_API void AssetWasMoved(const core::UUID& uuid, const std::filesystem::path& newPath);
 		SH_EDITOR_API void DeleteAsset(const core::UUID& uuid);
+		SH_EDITOR_API void MoveAssetToDirectory(const core::UUID& uuid, const std::filesystem::path& directoryPath);
 
 		SH_EDITOR_API auto GetAsset(const core::UUID& uuid) -> std::unique_ptr<core::Asset>;
 		SH_EDITOR_API auto GetAssetOriginalPath(const core::UUID& uuid) const -> std::optional<std::filesystem::path>;
@@ -131,8 +132,8 @@ namespace sh::editor
 		std::filesystem::path projectPath;
 		std::filesystem::path libPath;
 
-		std::unordered_map<std::filesystem::path, core::UUID> uuids{};
-		std::unordered_map<core::UUID, AssetInfo> paths{};
+		std::unordered_map<std::filesystem::path, core::UUID> uuids{}; // ProjectPath의 상대 경로로 저장해야함!
+		std::unordered_map<core::UUID, AssetInfo> paths{}; // ProjectPath의 상대 경로로 저장해야함!
 		core::SVector<core::SObject*> dirtyObjs{};
 		std::priority_queue<AssetLoadData> loadingAssetsQueue{};
 

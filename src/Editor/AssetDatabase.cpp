@@ -407,7 +407,7 @@ namespace sh::editor
 
 		std::filesystem::path relativePath = std::filesystem::relative(newPath, projectPath);
 
-		uuids.erase(it->second.originalPath);
+		uuids.erase(std::filesystem::relative(it->second.originalPath));
 		uuids.insert_or_assign(relativePath, uuid);
 
 		it->second.originalPath = relativePath;
@@ -427,6 +427,31 @@ namespace sh::editor
 		project->loadedAssets.DestroyResource(uuid);
 
 		SaveDatabase(project->GetLibraryPath() / "AssetDB.json");
+	}
+
+	SH_EDITOR_API void AssetDatabase::MoveAssetToDirectory(const core::UUID& uuid, const std::filesystem::path& directoryPath)
+	{
+		auto it = paths.find(uuid);
+		if (it == paths.end())
+			return;
+
+		std::filesystem::path newPath;
+		if (directoryPath.is_relative())
+		{
+			if (!std::filesystem::exists(projectPath / directoryPath) || !std::filesystem::is_directory(projectPath / directoryPath))
+				return;
+			newPath = projectPath / "Assets" / directoryPath / it->second.originalPath.filename();
+		}
+		else
+		{
+			if (!std::filesystem::exists(directoryPath) || !std::filesystem::is_directory(directoryPath))
+				return;
+			newPath = directoryPath / it->second.originalPath.filename();
+		}
+
+		std::filesystem::rename(projectPath / it->second.originalPath, newPath);
+
+		AssetWasMoved(uuid, newPath);
 	}
 
 	SH_EDITOR_API auto AssetDatabase::GetAsset(const core::UUID& uuid) -> std::unique_ptr<core::Asset>

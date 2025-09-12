@@ -1,14 +1,11 @@
 ﻿#pragma once
 #include "Export.h"
 #include "ProjectSetting.h"
-#include "ExplorerUI.h"
+#include "ProjectExplorer.h"
 
-#include "Core/Reflection.hpp"
 #include "Core/SContainer.hpp"
-#include "Core/Plugin.h"
 #include "Core/NonCopyable.h"
 
-#include "Game/GUITexture.h"
 #include "Game/ResourceManager.hpp"
 
 #include <string>
@@ -62,18 +59,6 @@ namespace sh::editor
 
 		SH_EDITOR_API static auto GetLatestProjectPath() -> std::filesystem::path;
 	private:
-		void InitResources();
-		void GetAllFiles(const std::filesystem::path& path);
-		/// @brief 경로의 파일의 이름의 폰트 크기가 maxSize가 넘어가면 잘라내는 함수
-		/// @param path 파일 경로
-		/// @param maxSize 최대 길이
-		/// @return 새로 만들어진 이름
-		auto GetElideFileName(const std::filesystem::path& path, float maxSize) const->std::string;
-		void RenderParentFolder();
-		void SetDragItem(const std::filesystem::path& path);
-		auto GetIcon(const std::filesystem::path& path) const -> const game::GUITexture*;
-		bool RenderFile(const std::filesystem::path& path, float& cursorX, float spacing, float width);
-		void ShowRightClickPopup();
 		void RenderNameBar();
 
 		void CopyProjectTemplate(const std::filesystem::path& targetDir);
@@ -86,28 +71,17 @@ namespace sh::editor
 
 		game::ResourceManager<core::SObject, core::UUID> loadedAssets;
 	private:
-		static constexpr const ImVec4 iconBackgroundColor{ 0, 0, 0, 0 };
-
 		std::filesystem::path rootPath;
 		std::filesystem::path assetPath;
 		std::filesystem::path binaryPath;
 		std::filesystem::path libraryPath;
-		std::filesystem::path currentPath;
 		std::filesystem::path tempPath;
-		std::filesystem::path selected;
 
+		ProjectExplorer projectExplorer;
 		AssetDatabase& assetDatabase;
 
 		ProjectSetting setting;
 
-		std::vector<std::filesystem::path> foldersPath;
-		std::vector<std::filesystem::path> filesPath;
-		std::vector<std::string> invisibleExtensions;
-
-		const game::GUITexture* folderIcon, * fileIcon, * meshIcon;
-		float iconSize = 50.0f;
-
-		static bool bInitResource;
 		bool isOpen = false;
 		bool bSettingUI = false;
 	};
