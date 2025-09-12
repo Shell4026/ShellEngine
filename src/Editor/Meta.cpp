@@ -44,9 +44,7 @@ namespace sh::editor
 			json.clear();
 			return false;
 		}
-		if (!json.contains("metaHash"))
-			SH_WARN_FORMAT("Not found metaHash key from {}", path.u8string());
-		else
+		if (json.contains("metaHash"))
 		{
 			hash = json["metaHash"];
 			if (json.contains("obj"))
