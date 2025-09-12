@@ -47,9 +47,13 @@ namespace sh::game
 		SH_GAME_API void AddWorldForce(const game::Vec3& force);
 		SH_GAME_API void AddTorque(const game::Vec3& torque);
 		SH_GAME_API void AddForce(const game::Vec3& force);
+		/// @brief 특정 축의 회전 움직임을 제한한다.
+		/// @param dir 1이면 해당 축의 움직임을 제한, 0이면 허용
+		SH_GAME_API void SetAngularLock(const game::Vec3& dir);
+		SH_GAME_API auto GetAngularLock() const -> const game::Vec3&;
 		/// @brief 특정 축의 움직임을 제한한다.
 		/// @param dir 1이면 해당 축의 움직임을 제한, 0이면 허용
-		SH_GAME_API void SetAxisLock(const game::Vec3& dir);
+		SH_GAME_API void SetAxisLock(const game::Vec3& axis);
 		SH_GAME_API auto GetAxisLock() const -> const game::Vec3&;
 		SH_GAME_API void SetBouncy(float bouncy);
 		SH_GAME_API auto GetBouncy() const -> float;
@@ -88,6 +92,8 @@ namespace sh::game
 
 		std::unique_ptr<Impl> impl;
 
+		PROPERTY(angularLock)
+		game::Vec3 angularLock{ 0.f, 0.f, 0.f };
 		PROPERTY(axisLock)
 		game::Vec3 axisLock{ 0.f, 0.f, 0.f };
 		PROPERTY(mass)

@@ -216,6 +216,23 @@ namespace sh::game
 		impl->rigidbody->applyLocalForceAtCenterOfMass({ force.x, force.y, force.z });
 	}
 
+	SH_GAME_API void RigidBody::SetAngularLock(const game::Vec3& dir)
+	{
+		angularLock = dir;
+		angularLock.x = std::clamp(std::roundf(angularLock.x), 0.f, 1.f);
+		angularLock.y = std::clamp(std::roundf(angularLock.y), 0.f, 1.f);
+		angularLock.z = std::clamp(std::roundf(angularLock.z), 0.f, 1.f);
+
+		// reactPhysics에선 0이 허용, 1이 잠금이기 때문에 반전 시켜야함.
+		bool x = !static_cast<bool>(angularLock.x);
+		bool y = !static_cast<bool>(angularLock.y);
+		bool z = !static_cast<bool>(angularLock.z);
+		impl->rigidbody->setAngularLockAxisFactor({ static_cast<float>(x), static_cast<float>(y), static_cast<float>(z) });
+	}
+	SH_GAME_API auto RigidBody::GetAngularLock() const -> const game::Vec3&
+	{
+		return angularLock;
+	}
 	SH_GAME_API void RigidBody::SetAxisLock(const game::Vec3& dir)
 	{
 		axisLock = dir;
@@ -224,12 +241,11 @@ namespace sh::game
 		axisLock.z = std::clamp(std::roundf(axisLock.z), 0.f, 1.f);
 
 		// reactPhysics에선 0이 허용, 1이 잠금이기 때문에 반전 시켜야함.
-		bool x = !static_cast<bool>(dir.x);
-		bool y = !static_cast<bool>(dir.y);
-		bool z = !static_cast<bool>(dir.z);
-		impl->rigidbody->setAngularLockAxisFactor({ static_cast<float>(x), static_cast<float>(y), static_cast<float>(z) });
+		bool x = !static_cast<bool>(axisLock.x);
+		bool y = !static_cast<bool>(axisLock.y);
+		bool z = !static_cast<bool>(axisLock.z);
+		impl->rigidbody->setLinearLockAxisFactor({ static_cast<float>(x), static_cast<float>(y), static_cast<float>(z) });
 	}
-
 	SH_GAME_API auto RigidBody::GetAxisLock() const -> const game::Vec3&
 	{
 		return axisLock;
@@ -367,6 +383,10 @@ namespace sh::game
 		else if (prop.GetName() == core::Util::ConstexprHash("angularDamping"))
 		{
 			SetAngularDamping(angularDamping);
+		}
+		else if (prop.GetName() == core::Util::ConstexprHash("angularLock"))
+		{
+			SetAngularLock(angularLock);
 		}
 		else if (prop.GetName() == core::Util::ConstexprHash("axisLock"))
 		{
