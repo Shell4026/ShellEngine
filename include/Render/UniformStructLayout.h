@@ -87,22 +87,30 @@ namespace sh::render
 	{
 		if constexpr (std::is_same_v<T, float>)
 			return { 4, 4 };
-		else if (std::is_same_v<T, int>)
+		else if constexpr (std::is_same_v<T, int>)
 			return { 4, 4 };
-		else if (std::is_same_v<T, glm::vec2>)
+		else if constexpr (std::is_same_v<T, glm::vec2>)
 			return { 8, 8 };
-		else if (std::is_same_v<T, glm::vec3>)
+		else if constexpr (std::is_same_v<T, glm::vec3>)
 			return { 16, 16 };
-		else if (std::is_same_v<T, glm::vec4>)
+		else if constexpr (std::is_same_v<T, glm::vec4>)
 			return { 16, 16 };
-		else if (std::is_same_v<T, glm::mat2>)
+		else if constexpr (std::is_same_v<T, glm::mat2>)
 			return { 16, 32 };
-		else if (std::is_same_v<T, glm::mat3>)
+		else if constexpr (std::is_same_v<T, glm::mat3>)
 			return { 16, 48 };
-		else if (std::is_same_v<T, glm::mat4>)
+		else if constexpr (std::is_same_v<T, glm::mat4>)
 			return { 16, 64 };
+#if defined(_MSC_VER)
 		else
-			static_assert(true, "Unknown type");
+			static_assert(std::_Always_false<T>, "Unknown type for GetSTD140Layout: " __FUNCSIG__);
+#elif defined(__GNUC__) || defined(__clang__)
+		else
+			static_assert(std::_Always_false<T>, "Unknown type for GetSTD140Layout: " __PRETTY_FUNCTION__);
+# else
+		else
+			static_assert(always_false<T>, "Unknown type for GetSTD140Layout: Unknown compiler");
+#endif
 	}
 	template<typename T>
 	inline void UniformStructLayout::AddMember(const std::string& name)
