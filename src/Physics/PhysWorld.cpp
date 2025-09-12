@@ -90,25 +90,25 @@ namespace sh::phys
 	{
 		impl->world->update(deltaTime);
 	}
-	SH_PHYS_API auto PhysWorld::RayCastHit(const Ray& ray) const -> bool
+	SH_PHYS_API auto PhysWorld::RayCastHit(const Ray& ray, Tagbit allowedTag) const -> bool
 	{
 		reactphysics3d::Vector3 start{ ray.origin.x, ray.origin.y, ray.origin.z };
 		reactphysics3d::Vector3 dir{ ray.direction.x, ray.direction.y, ray.direction.z };
 		dir.normalize();
 		reactphysics3d::Ray reactPhysRay{ start , start + dir * ray.distance };
 		GroundRaycastCallback callback;
-		impl->world->raycast(reactPhysRay, &callback);
+		impl->world->raycast(reactPhysRay, &callback, allowedTag);
 
 		return callback.hit;
 	}
-	SH_PHYS_API auto PhysWorld::RayCast(const Ray& ray) const -> std::optional<HitPoint>
+	SH_PHYS_API auto PhysWorld::RayCast(const Ray& ray, Tagbit allowedTag) const -> std::optional<HitPoint>
 	{
 		reactphysics3d::Vector3 start{ ray.origin.x, ray.origin.y, ray.origin.z };
 		reactphysics3d::Vector3 dir{ ray.direction.x, ray.direction.y, ray.direction.z };
 		dir.normalize();
 		reactphysics3d::Ray reactPhysRay{ start , start + dir * ray.distance };
 		GroundRaycastCallback callback;
-		impl->world->raycast(reactPhysRay, &callback);
+		impl->world->raycast(reactPhysRay, &callback, allowedTag);
 
 		if (!callback.hit)
 			return {};
