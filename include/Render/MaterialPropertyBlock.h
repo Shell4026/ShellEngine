@@ -20,7 +20,7 @@ namespace sh::render
 	public:
 		SH_RENDER_API void Clear();
 
-		              template<typename T>
+		              template<typename T, typename = std::enable_if_t<!std::is_pointer_v<T>>>
 		              void SetProperty(const std::string& name, const T& data);
 		SH_RENDER_API void SetProperty(const std::string& name, const Texture* data);
 
@@ -39,7 +39,7 @@ namespace sh::render
 		core::SHashMap<std::string, const Texture*> textureProperties;
 	};
 
-	template<typename T>
+	template<typename T, typename>
 	inline void MaterialPropertyBlock::SetProperty(const std::string& name, const T& data)
 	{
 		if constexpr (std::is_arithmetic_v<T>)

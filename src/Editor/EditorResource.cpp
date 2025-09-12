@@ -69,6 +69,10 @@ namespace sh::editor
 		auto outlinePreShader = shaders.insert_or_assign("OutlinePreShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/EditorOutlinePre.shader"))).first->second;
 		auto outlinePostShader = shaders.insert_or_assign("OutlinePostShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/EditorOutlinePost.shader"))).first->second;
 
+		auto blackTex = textures.insert_or_assign("BlackTexture", static_cast<render::Texture*>(texLoader.Load("textures/black.png"))).first->second;
+		blackTex->Build(*renderer.GetContext());
+		blackTex->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f18" });
+
 		auto errorMat = materials.insert_or_assign("ErrorMaterial", core::SObject::Create<render::Material>(errorShader)).first->second;
 		auto lineMat = materials.insert_or_assign("LineMaterial", core::SObject::Create<render::Material>(lineShader)).first->second;
 		auto gridMat = materials.insert_or_assign("GridMaterial", core::SObject::Create<render::Material>(gridShader)).first->second;

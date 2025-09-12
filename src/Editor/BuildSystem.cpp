@@ -14,6 +14,7 @@
 #include "Game/Asset/ShaderAsset.h"
 #include "Game/Asset/MaterialAsset.h"
 #include "Game/Asset/MeshAsset.h"
+#include "Game/Asset/TextureAsset.h"
 
 #include <fstream>
 namespace sh::editor
@@ -69,6 +70,8 @@ namespace sh::editor
         bundle.AddAsset(sphereMesh, true);
         game::MeshAsset planeMesh{ *editorResource->GetModel("PlaneModel")->GetMeshes()[0] };
         bundle.AddAsset(planeMesh, true);
+        game::TextureAsset blackTex{ *editorResource->GetTexture("BlackTexture") };
+        bundle.AddAsset(blackTex, true);
 
         for (const auto& uuid : uuids)
         {

@@ -149,6 +149,8 @@ namespace sh::render
 		else if constexpr (std::is_same_v<T, glm::vec4>)
 		{
 			auto ptr = propertyBlock.GetVectorProperty(name);
+			if (!ptr)
+				return {};
 			return *ptr;
 		}
 		else if constexpr (std::is_same_v<T, glm::mat2>)

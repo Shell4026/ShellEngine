@@ -216,11 +216,14 @@ namespace sh::render
 					varNode.attribute = ShaderAST::VariableAttribute::Local;
 				else
 					throw ShaderParserException(fmt::format("Unknown attribute: {} {}", attribute, GetCurrentTokenPosString()).c_str());
-				ConsumeToken(ShaderLexer::TokenType::Identifier); // type
-				varNode.type = IdentifierToVaraibleType(PreviousToken());
+				ConsumeToken({ ShaderLexer::TokenType::Identifier, ShaderLexer::TokenType::Sampler2D }); // 타입
+				if (PreviousToken().type == ShaderLexer::TokenType::Identifier)
+					varNode.type = IdentifierToVaraibleType(PreviousToken());
+				else
+					varNode.type = ShaderAST::VariableType::Sampler;
 			}
 
-			ConsumeToken(ShaderLexer::TokenType::Identifier);
+			ConsumeToken(ShaderLexer::TokenType::Identifier); // 변수 이름
 			varNode.name = PreviousToken().text;
 			ConsumeToken({ ShaderLexer::TokenType::Semicolon, ShaderLexer::TokenType::LSquareBracket });
 			// 배열
@@ -932,8 +935,9 @@ namespace sh::render
 			ShaderAST::UBONode uboNode{};
 			uboNode.bSampler = true;
 			uboNode.name = varNode.name;
-			uboNode.set = static_cast<uint32_t>(UniformStructLayout::Type::Material);
-			uboNode.binding = lastMaterialUniformBinding++;
+			uboNode.set = set;
+			uboNode.binding = (set == static_cast<uint32_t>(ShaderAST::VariableAttribute::Local)) ? 
+				lastObjectUniformBinding++ : lastMaterialUniformBinding++;
 			stageNode.uniforms.push_back(std::move(uboNode));
 		}
 	}

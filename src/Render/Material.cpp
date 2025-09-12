@@ -71,6 +71,12 @@ namespace sh::render
 				propertyBlock.SetProperty(name, glm::vec4{ 0.f });
 			else if (*propInfo.type == core::reflection::GetType<glm::mat2>() || *propInfo.type == core::reflection::GetType<glm::mat3>() || *propInfo.type == core::reflection::GetType<glm::mat4>())
 				propertyBlock.SetProperty(name, glm::mat4{ 1.f });
+			else if (*propInfo.type == core::reflection::GetType<Texture>())
+			{
+				static core::UUID blackTexUUID{ "bbc4ef7ec45dce223297a224f8093f18" };
+				auto texPtr = static_cast<Texture*>(core::SObject::GetSObjectUsingResolver(blackTexUUID));
+;				propertyBlock.SetProperty(name, texPtr);
+			}
 		}
 	}
 	void Material::UpdateListener()
@@ -128,6 +134,9 @@ namespace sh::render
 
 		for (auto& [pass, uniformLayout] : dirtyProps)
 		{
+			if (uniformLayout->type == UniformStructLayout::Type::Object)
+				continue;
+
 			std::vector<uint8_t> data(uniformLayout->GetSize(), 0);
 			bool isSampler = false;
 			for (auto& member : uniformLayout->GetMembers())
@@ -199,7 +208,7 @@ namespace sh::render
 				else if (member.typeHash == core::reflection::GetType<Texture>().hash)
 				{
 					auto var = propertyBlock.GetTextureProperty(member.name);
-					if (var)
+					if (core::IsValid(var))
 						materialData->SetTextureData(*pass, uniformLayout->type, uniformLayout->binding, var);
 
 					isSampler = true;

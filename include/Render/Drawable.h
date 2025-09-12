@@ -66,9 +66,9 @@ namespace sh::render
 		const IRenderContext* context = nullptr;
 
 		PROPERTY(mat)
-			const Material* mat = nullptr;
+		const Material* mat = nullptr;
 		PROPERTY(mesh)
-			const Mesh* mesh = nullptr;
+		const Mesh* mesh = nullptr;
 
 		MaterialData materialData;
 		core::SyncArray<Light> light;

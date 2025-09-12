@@ -23,8 +23,8 @@ namespace sh::render
 				PassData passData{};
 				uint32_t maxSet = 0;
 				std::vector<uint32_t> sets;
-				// 유니폼 데이터 버퍼
-				auto layouts = { shaderPass->GetVertexUniforms(), shaderPass->GetFragmentUniforms() };
+				// 유니폼 데이터 버퍼 (텍스쳐외 모든 GPU에 저장할 데이터)
+				auto layouts = { shaderPass->GetVertexUniforms(), shaderPass->GetFragmentUniforms()};
 				for (auto& layout : layouts)
 				{
 					for (auto& uniformLayout : layout)
@@ -49,15 +49,26 @@ namespace sh::render
 						passData.uniformData[set][uniformLayout.binding] = BufferFactory::Create(context, uniformLayout.GetSize());
 					}
 				}
-				// 유니폼 버퍼
+				for (auto& layout : shaderPass->GetSamplerUniforms())
+				{
+					uint32_t set = static_cast<uint32_t>(layout.type);
+					maxSet = (maxSet < set) ? set : maxSet;
+					if (std::find(sets.begin(), sets.end(), set) == sets.end())
+						sets.push_back(set);
+					if (passData.uniformData.size() <= set)
+						passData.uniformData.resize(set + 1);
+				}
+				// 유니폼 버퍼 (GPU로 데이터 전송 역할)
 				passData.uniformBuffer.resize(maxSet + 1);
 				for (auto set : sets)
 				{
 					passData.uniformBuffer[set] = BufferFactory::CreateUniformBuffer(context, *shaderPass, static_cast<UniformStructLayout::Type>(set));
 					for (uint32_t binding = 0; binding < passData.uniformData[set].size(); ++binding)
 					{
-						if (set != 0)
+						if (set != 0) // 카메라 데이터는 다른 곳에서 관리한다.
 						{
+							if (passData.uniformData[set].size() <= binding)
+								continue;
 							auto& buffer = passData.uniformData[set][binding];
 							if (buffer == nullptr)
 								continue;
@@ -65,6 +76,7 @@ namespace sh::render
 						}
 						else
 						{
+							// 카메라 데이터
 							if (context.GetRenderAPIType() == RenderAPI::Vulkan)
 							{
 								passData.uniformBuffer[set]->Link(binding, vk::VulkanCameraBuffers::GetInstance()->GetCameraBuffer(), 128);

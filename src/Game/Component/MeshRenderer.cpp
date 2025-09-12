@@ -126,6 +126,9 @@ namespace sh::game
 		
 		for (auto& [passPtr, layoutPtr] : localUniformLocations)
 		{
+			if (layoutPtr->type == render::UniformStructLayout::Type::Material)
+				continue;
+
 			std::vector<uint8_t> data(layoutPtr->GetSize());
 			bool isSampler = false;
 			for (auto& member : layoutPtr->GetMembers())
@@ -197,7 +200,7 @@ namespace sh::game
 				else if (member.typeHash == core::reflection::GetType<render::Texture>().hash)
 				{
 					auto var = propertyBlock->GetTextureProperty(member.name);
-					if (var)
+					if (core::IsValid(var))
 						drawable->GetMaterialData().SetTextureData(*passPtr, layoutPtr->type, layoutPtr->binding, var);
 
 					isSampler = true;
@@ -315,6 +318,9 @@ namespace sh::game
 		propertyBlock = std::move(block);
 
 		SearchLocalProperties();
+
+		//if (core::IsValid(drawable) && core::IsValid(mat) && core::IsValid(mat->GetShader()))
+		//	drawable->GetMaterialData().Create(*world.renderer.GetContext(), *mat->GetShader(), true);
 	}
 
 	SH_GAME_API auto MeshRenderer::GetMaterialPropertyBlock() const -> render::MaterialPropertyBlock*
