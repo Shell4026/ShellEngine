@@ -167,6 +167,7 @@ namespace sh::editor
 		ImGui::ImageButton("../", *EditorResource::GetInstance()->GetIcon(EditorResource::Icon::Folder), ImVec2{ iconSize, iconSize }, ImVec2{ 0,0 }, ImVec2{ 1,1 }, iconBackgroundColor);
 		if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 		{
+			ImGui::EndGroup();
 			SetCurrentPath(currentPath.parent_path());
 			bChangeFolderState = true;
 			return;
