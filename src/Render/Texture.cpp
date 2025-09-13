@@ -135,9 +135,12 @@ namespace sh::render
 
 		format = target;
 		bSRGB = CheckSRGB();
-		bSetDataDirty = true;
+		if (textureBuffer != nullptr)
+		{
+			bSetDataDirty = true;
 
-		SyncDirty();
+			SyncDirty();
+		}
 	}
 	SH_RENDER_API auto Texture::IsSRGB() const -> bool
 	{
@@ -207,8 +210,11 @@ namespace sh::render
 	SH_RENDER_API void Texture::SetFiltering(Filtering filter)
 	{
 		filtering = filter;
-		bSetDataDirty = true;
-		SyncDirty();
+		if (textureBuffer != nullptr)
+		{
+			bSetDataDirty = true;
+			SyncDirty();
+		}
 	}
 	SH_RENDER_API auto Texture::GetFiltering() const -> Filtering
 	{
@@ -227,6 +233,10 @@ namespace sh::render
 		else if (prop.GetName() == core::Util::ConstexprHash("bGenerateMipmap"))
 		{
 			SetGenerateMipmap(bGenerateMipmap);
+		}
+		else if (prop.GetName() == core::Util::ConstexprHash("filtering"))
+		{
+			SetFiltering(filtering);
 		}
 	}
 }

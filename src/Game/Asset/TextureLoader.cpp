@@ -79,6 +79,8 @@ namespace sh::game
 		const auto pixelData = texAsset.GetPixelData();
 
 		render::Texture* texture = core::SObject::Create<render::Texture>(header.format, header.width, header.height, header.bMipmap);
+		texture->SetFiltering(static_cast<render::Texture::Filtering>(header.filter));
+		texture->SetAnisoLevel(header.aniso);
 		texture->SetUUID(asset.GetAssetUUID());
 
 		std::size_t offset = 0;
@@ -88,8 +90,6 @@ namespace sh::game
 			texture->SetPixelData(pixelData.pixelDataPtr + offset, size, mip);
 			offset += size;
 		}
-
-		texture->SetAnisoLevel(header.aniso);
 		texture->Build(context);
 
 		return texture;

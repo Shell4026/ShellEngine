@@ -11,6 +11,7 @@ namespace sh::game
 
 		header.format = texturePtr->GetTextureFormat();
 		header.aniso = texturePtr->GetAnisoLevel();
+		header.filter = static_cast<uint32_t>(texturePtr->GetFiltering());
 		header.bMipmap = texturePtr->GetMipLevel() > 1;
 	}
 	SH_GAME_API void TextureAsset::SetAssetData() const

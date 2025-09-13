@@ -20,6 +20,7 @@ namespace sh::game
 			uint32_t height;
 			render::Texture::TextureFormat format;
 			uint32_t aniso;
+			uint32_t filter;
 			bool bMipmap;
 		};
 		struct PixelData
