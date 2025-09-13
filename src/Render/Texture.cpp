@@ -20,6 +20,7 @@ namespace sh::render
 			ci.height = height;
 			ci.format = format;
 			ci.aniso = aniso;
+			ci.filtering = static_cast<uint32_t>(filtering);
 			ci.bGenerateMipmap = bGenerateMipmap;
 			textureBuffer->Create(*context, ci);
 
@@ -202,6 +203,16 @@ namespace sh::render
 			else if (format == Texture::TextureFormat::SRGBA32)
 				ChangeTextureFormat(Texture::TextureFormat::RGBA32);
 		}
+	}
+	SH_RENDER_API void Texture::SetFiltering(Filtering filter)
+	{
+		filtering = filter;
+		bSetDataDirty = true;
+		SyncDirty();
+	}
+	SH_RENDER_API auto Texture::GetFiltering() const -> Filtering
+	{
+		return filtering;
 	}
 	SH_RENDER_API void Texture::OnPropertyChanged(const core::reflection::Property& prop)
 	{

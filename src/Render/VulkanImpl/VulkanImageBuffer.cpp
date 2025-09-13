@@ -75,10 +75,15 @@ namespace sh::render::vk
 		}
 		bOtherImg = false;
 	}
-
-	SH_RENDER_API void VulkanImageBuffer::SetAnisotropy(uint32_t aniso)
+	SH_RENDER_API auto VulkanImageBuffer::SetFilter(VkFilter filter) -> VulkanImageBuffer&
+	{
+		this->filter = filter;
+		return *this;
+	}
+	SH_RENDER_API auto VulkanImageBuffer::SetAnisotropy(uint32_t aniso) -> VulkanImageBuffer&
 	{
 		this->aniso = aniso;
+		return *this;
 	}
 
 	SH_RENDER_API auto VulkanImageBuffer::Create(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, VkImageAspectFlags aspectFlag, VkSampleCountFlagBits sampleCount, uint32_t mipLevels) -> VkResult
@@ -128,8 +133,8 @@ namespace sh::render::vk
 
 		VkSamplerCreateInfo samplerInfo{};
 		samplerInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-		samplerInfo.magFilter = VkFilter::VK_FILTER_LINEAR;
-		samplerInfo.minFilter = VkFilter::VK_FILTER_LINEAR;
+		samplerInfo.magFilter = filter;
+		samplerInfo.minFilter = filter;
 		samplerInfo.addressModeU = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		samplerInfo.addressModeV = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		samplerInfo.addressModeW = VkSamplerAddressMode::VK_SAMPLER_ADDRESS_MODE_REPEAT;

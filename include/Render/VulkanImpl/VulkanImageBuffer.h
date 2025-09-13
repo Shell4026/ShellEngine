@@ -19,7 +19,8 @@ namespace sh::render::vk
 
 		SH_RENDER_API auto operator=(VulkanImageBuffer&& other) noexcept -> VulkanImageBuffer&;
 
-		SH_RENDER_API void SetAnisotropy(uint32_t aniso);
+		SH_RENDER_API auto SetAnisotropy(uint32_t aniso) -> VulkanImageBuffer&;
+		SH_RENDER_API auto SetFilter(VkFilter filter) -> VulkanImageBuffer&;
 
 		SH_RENDER_API auto Create(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, 
 			VkImageAspectFlags aspectFlag = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT, 
@@ -54,6 +55,8 @@ namespace sh::render::vk
 
 		uint32_t aniso = 0;
 		uint32_t mipLevels = 1;
+
+		VkFilter filter = VkFilter::VK_FILTER_LINEAR;
 
 		bool bOtherImg = false;
 	};

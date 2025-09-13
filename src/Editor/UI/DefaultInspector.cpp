@@ -190,6 +190,18 @@ namespace sh::editor
 			AssetDatabase::GetInstance()->SetDirty(texture);
 			AssetDatabase::GetInstance()->SaveAllAssets();
 		}
+		ImGui::Text("Filtering");
+		{
+			const char* filters[] = { "Linear", "Box" };
+			static int current = 0;
+			current = static_cast<int>(texture->GetFiltering());
+			if (ImGui::ListBox(fmt::format("##filtering{}", idx).c_str(), &current, filters, IM_ARRAYSIZE(filters), 4))
+			{
+				texture->SetFiltering(static_cast<render::Texture::Filtering>(current));
+				AssetDatabase::GetInstance()->SetDirty(texture);
+				AssetDatabase::GetInstance()->SaveAllAssets();
+			}
+		}
 	}
 	SH_EDITOR_API void CameraInspector::RenderUI(void* obj, int idx)
 	{

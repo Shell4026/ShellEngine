@@ -30,17 +30,25 @@ namespace sh::render
 			RGB24,
 			RGBA32
 		};
+		enum class Filtering
+		{
+			Linear,
+			Box
+		};
 
 		using Byte = unsigned char;
 	private:
 		TextureFormat format;
 
+		std::atomic_flag bDirty;
+
 		uint32_t width;
 		uint32_t height;
 		PROPERTY(aniso)
 		uint32_t aniso;
-
-		std::atomic_flag bDirty;
+		PROPERTY(filtering)
+		Filtering filtering = Filtering::Linear;
+		
 		PROPERTY(bSRGB)
 		bool bSRGB = false;
 		PROPERTY(bGenerateMipmap)
@@ -103,6 +111,8 @@ namespace sh::render
 		SH_RENDER_API void Sync() override;
 
 		SH_RENDER_API void SetSRGB(bool bSRGB);
+		SH_RENDER_API void SetFiltering(Filtering filter);
+		SH_RENDER_API auto GetFiltering() const-> Filtering;
 
 		SH_RENDER_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 	};

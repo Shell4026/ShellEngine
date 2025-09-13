@@ -82,7 +82,8 @@ namespace sh::render::vk
 		}
 		if (imgBuffer == nullptr)
 			imgBuffer = std::make_unique<VulkanImageBuffer>(*this->context);
-		imgBuffer->SetAnisotropy(info.aniso);
+		imgBuffer->SetAnisotropy(info.aniso).
+			SetFilter(info.filtering == 0 ? VkFilter::VK_FILTER_LINEAR : VkFilter::VK_FILTER_NEAREST);
 		imgBuffer->Create(width, height, format,
 			VkImageUsageFlagBits::VK_IMAGE_USAGE_TRANSFER_DST_BIT |
 			VkImageUsageFlagBits::VK_IMAGE_USAGE_SAMPLED_BIT,

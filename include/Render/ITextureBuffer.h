@@ -19,6 +19,7 @@ namespace sh::render
 			uint32_t height;
 			Texture::TextureFormat format;
 			uint32_t aniso = 1;
+			uint32_t filtering = 0;
 			bool bGenerateMipmap = true;
 		};
 	public:
