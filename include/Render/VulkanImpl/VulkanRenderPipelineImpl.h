@@ -35,6 +35,10 @@ namespace sh::render::vk
 		SH_RENDER_API virtual void RenderDrawable(const core::Name& lightingPassName, const Camera& camera, const std::vector<RenderGroup>& renderGroups, const VulkanRenderPass& renderPass);
 	private:
 		void SetClearSetting(VkRenderPassBeginInfo& beginInfo, bool bMSAA);
+		void BindCameraSet(VkPipelineLayout layout, const ShaderPass& pass, const Material& mat, uint32_t cameraOffset);
+		void BindMaterialSet(VkPipelineLayout layout, const ShaderPass& pass, const Material& mat);
+		void BindObjectSet(VkPipelineLayout layout, const ShaderPass& pass, Drawable& drawable);
+		void DrawMesh(const ShaderPass& pass, const Mesh& mesh);
 	private:
 		VulkanContext& context;
 		VulkanCommandBuffer* cmd = nullptr;

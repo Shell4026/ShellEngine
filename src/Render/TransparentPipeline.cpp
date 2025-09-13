@@ -16,7 +16,6 @@ namespace sh::render
 	SH_RENDER_API void TransparentPipeline::PushDrawable(Drawable* drawable)
 	{
 		RenderPipeline::PushDrawable(drawable);
-		bAddedDrawable = true;
 	}
 	SH_RENDER_API void TransparentPipeline::RecordCommand(const std::vector<const Camera*>& cameras, uint32_t imgIdx)
 	{
