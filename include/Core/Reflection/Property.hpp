@@ -364,6 +364,7 @@ namespace sh::core::reflection
 		virtual auto End(void* sobject) const -> PropertyIteratorT = 0;
 		virtual auto End(const void* sobject) const -> ConstPropertyIteratorT = 0;
 		virtual void ClearContainer(void* sobject) const = 0;
+		virtual void InsertToContainer(void* sobject, const void* value) = 0;
 	};
 	/// @brief 타입을 가진 프로퍼티 추상 클래스
 	template<typename T>
@@ -504,6 +505,39 @@ namespace sh::core::reflection
 				}
 			}
 		}
+		void InsertToContainer(void* obj, const void* value)
+		{
+			if constexpr (IsContainer<T>() && !std::is_const_v<T>)
+			{
+				if constexpr (std::is_same_v<T, std::string>)
+				{
+					std::string& str = static_cast<ThisType*>(obj)->*ptr;
+					str.push_back(*reinterpret_cast<const char*>(value));
+				}
+				else if constexpr (IsVector<T>())
+				{
+					T& vector = static_cast<ThisType*>(obj)->*ptr;
+					using ValueType = typename GetContainerElementType<T>::type;
+
+					vector.push_back(*reinterpret_cast<const ValueType*>(value));
+				}
+				else if constexpr (IsSet<T>() || IsHashSet<T>())
+				{
+					T& set = static_cast<ThisType*>(obj)->*ptr;
+					using ValueType = typename GetContainerElementType<T>::type;
+
+					set.insert(*reinterpret_cast<const ValueType*>(value));
+				}
+				else if constexpr (IsMap<T>() || IsHashMap<T>())
+				{
+					T& map = static_cast<ThisType*>(obj)->*ptr;
+					using PairType = typename GetContainerElementType<T>::type;
+
+					auto pairPtr = reinterpret_cast<const PairType*>(value);
+					map.insert_or_assign(pairPtr->first, pairPtr->second);
+				}
+			}
+		}
 	};
 	/// @brief 프로퍼티를 만드는데 필요한 정보를 담고 있는 클래스
 	/// @tparam ThisType 프로퍼티를 가지고 있는 객체의 타입
@@ -552,6 +586,7 @@ namespace sh::core::reflection
 			pureTypeName(TypeTraits::GetTypeName<std::remove_const_t<std::remove_pointer_t<std::remove_reference_t<T>>>>()),
 			name(createInfo.name),
 			containerNestedLevel(GetContainerNestedCount<T>::value),
+			containerElementType(IsContainer<T>::value ? &GetType<typename GetContainerElementType<T>::type>() : nullptr),
 			bConstProperty(createInfo.option.bConst),
 			bVisibleProperty(createInfo.option.bVisible),
 			bNoSaveProperty(createInfo.option.bNoSave),
@@ -625,8 +660,21 @@ namespace sh::core::reflection
 		/// @brief 프로퍼티가 컨테이너라면 컨테이너를 비운다.
 		/// @return 컨테이너라면 true, 아니라면 false
 		SH_CORE_API auto ClearContainer(SObject& SObject) const -> bool;
+		/// @brief 프로퍼티가 컨테이너라면 값을 넣는다. 아니라면 아무 동작도 일어나지 않는다. 
+		/// @brief map의 경우 pair를 넣으면 된다. 
+		/// @brief 컨테이너 원소의 타입으로 자동 형변환이 되지 않으므로 정확한 타입의 데이터를 넣어야 한다.
+		/// @brief [주의] 타입 검사를 하지 않는다.
+		/// @tparam T 타입
+		/// @param value 값
+		/// @param SObject SObject 프로퍼티 소유 객체
+		template<typename T>
+		void InsertToContainer(SObject& SObject, const T& value)
+		{
+			data->InsertToContainer(&SObject, &value);
+		}
 	public:
 		const TypeInfo& type;
+		const TypeInfo* const containerElementType;
 		const std::string_view pureTypeName;
 		const bool bConstProperty;
 		const bool bVisibleProperty;

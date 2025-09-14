@@ -198,6 +198,10 @@ TEST(ReflectionTest, PropertyTest)
 
     EXPECT_EQ(*numberProperty->Get<int>(derived), 42);
     EXPECT_EQ(numbersProperty->type.name, sh::core::reflection::TypeTraits::GetTypeName<std::vector<int>>());
+    EXPECT_TRUE(numbersProperty->isContainer);
+    EXPECT_TRUE(numbersProperty->containerElementType != nullptr);
+    EXPECT_EQ(*numbersProperty->containerElementType, sh::core::reflection::GetType<int>());
+    numbersProperty->InsertToContainer(derived, 4);
 
     // enum
     auto* enumProp = derived.GetType().GetProperty("enumv");
@@ -209,7 +213,7 @@ TEST(ReflectionTest, PropertyTest)
     auto begin = numbersProperty->Begin(derived);
     auto end = numbersProperty->End(derived);
 
-    std::vector<int> expected = { 1, 2, 3 };
+    std::vector<int> expected = { 1, 2, 3, 4 };
     for (size_t i = 0; begin != end; ++begin, ++i) 
     {
         EXPECT_FALSE(begin.IsConst());
@@ -217,19 +221,26 @@ TEST(ReflectionTest, PropertyTest)
     }
 
     // set테스트
-    for(int i = 0; i < 3; ++i)
-        derived.set.insert(i);
-    
-    auto setProp = derived.GetType().GetProperty("set");
-    EXPECT_TRUE(setProp->isContainer);
-    auto setIterator = setProp->Begin(derived);
-    EXPECT_TRUE(setIterator.IsConst());
+    {
+        for (int i = 0; i < 3; ++i)
+            derived.set.insert(i);
 
-    const int* ptr = setIterator.Get<const int>();
-    EXPECT_EQ(*ptr, 0);
-    ++setIterator;
-    ptr = setIterator.Get<const int>();
-    EXPECT_EQ(*ptr, 1);
+        auto setProp = derived.GetType().GetProperty("set");
+        EXPECT_TRUE(setProp->isContainer);
+        //EXPECT_EQ(*setProp->containerElementType, sh::core::reflection::GetType<int>());
+        //sh::core::reflection::GetContainerElementType<sh::core::SHashSet<int>>::type;
+        auto setIterator = setProp->Begin(derived);
+        EXPECT_TRUE(setIterator.IsConst());
+
+        const int* ptr = setIterator.Get<const int>();
+        EXPECT_EQ(*ptr, 0);
+        ++setIterator;
+        ptr = setIterator.Get<const int>();
+        EXPECT_EQ(*ptr, 1);
+
+        setProp->InsertToContainer(derived, 4);
+        EXPECT_TRUE(derived.set.find(4) != derived.set.end());
+    }
 
     // 포인터 테스트
     auto ptrProp = derived.GetType().GetProperty("ptr");
@@ -263,6 +274,9 @@ TEST(ReflectionTest, PropertyTest)
         }
         EXPECT_EQ(derived.map["test0"], 1);
         EXPECT_EQ(derived.map["test1"], 2);
+
+        prop->InsertToContainer(derived, std::make_pair(std::string{ "test2" }, 3));
+        EXPECT_EQ(derived.map["test2"], 3);
     }
 }
 TEST(ReflectionTest, ConstTest)

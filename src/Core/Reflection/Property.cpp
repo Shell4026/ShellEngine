@@ -9,6 +9,7 @@ namespace sh::core::reflection
 		type(other.type),
 		name(other.name),
 		containerNestedLevel(other.containerNestedLevel),
+		containerElementType(other.containerElementType),
 		bConstProperty(other.bConstProperty),
 		bVisibleProperty(other.bVisibleProperty),
 		bNoSaveProperty(other.bNoSaveProperty),
@@ -64,7 +65,7 @@ namespace sh::core::reflection
 	}
 	SH_CORE_API auto Property::ClearContainer(SObject& SObject) const -> bool
 	{
-		if (type.isContainer)
+		if (isContainer)
 		{
 			data->ClearContainer(&SObject);
 		}
