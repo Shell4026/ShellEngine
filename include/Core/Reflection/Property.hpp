@@ -32,6 +32,7 @@ namespace sh::core
 		static constexpr const char* invisible = "invisible";
 		static constexpr const char* constant = "const";
 		static constexpr const char* noSave = "noSave";
+		static constexpr const char* sync = "sync";
 	};
 }//namespace
 
@@ -364,7 +365,7 @@ namespace sh::core::reflection
 		virtual auto End(void* sobject) const -> PropertyIteratorT = 0;
 		virtual auto End(const void* sobject) const -> ConstPropertyIteratorT = 0;
 		virtual void ClearContainer(void* sobject) const = 0;
-		virtual void InsertToContainer(void* sobject, const void* value) = 0;
+		virtual void InsertToContainer(void* sobject, const void* value) const = 0;
 	};
 	/// @brief 타입을 가진 프로퍼티 추상 클래스
 	template<typename T>
@@ -505,7 +506,7 @@ namespace sh::core::reflection
 				}
 			}
 		}
-		void InsertToContainer(void* obj, const void* value)
+		void InsertToContainer(void* obj, const void* value) const
 		{
 			if constexpr (IsContainer<T>() && !std::is_const_v<T>)
 			{
@@ -668,7 +669,7 @@ namespace sh::core::reflection
 		/// @param value 값
 		/// @param SObject SObject 프로퍼티 소유 객체
 		template<typename T>
-		void InsertToContainer(SObject& SObject, const T& value)
+		void InsertToContainer(SObject& SObject, const T& value) const
 		{
 			data->InsertToContainer(&SObject, &value);
 		}
