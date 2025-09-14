@@ -391,11 +391,12 @@ namespace sh::game
 			quat.w = json["Transform"]["quat"][3].get<float>();
 		}
 
-		bUpdateMatrix = true;
+		UpdateMatrix();
 	}
 
 	void Transform::OnPropertyChanged(const core::reflection::Property& property)
 	{
+		Super::OnPropertyChanged(property);
 		if (IsEditor())
 		{
 			if (property.GetName() == core::Util::ConstexprHash("vRotation"))

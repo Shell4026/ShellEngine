@@ -182,6 +182,13 @@ namespace sh::game
 		if (!bStartLoop)
 			bStartLoop = true;
 
+		if (bWaitPlaying)
+		{
+			bPlaying = true;
+			bWaitPlaying = false;
+			eventBus.Publish(events::WorldEvent{ events::WorldEvent::Type::Play });
+		}
+
 		for (auto& addedObj : addedObjs)
 		{
 			if (addedObj.IsValid())
@@ -216,7 +223,9 @@ namespace sh::game
 		while (_fixedDeltaTime >= FIXED_TIME)
 		{
 			if (bPlaying)
+			{
 				physWorld.Update(FIXED_TIME);
+			}
 			for (auto& obj : objs)
 			{
 				if (!sh::core::IsValid(obj))
@@ -353,10 +362,10 @@ namespace sh::game
 		core::SObjectManager* objManager = core::SObjectManager::GetInstance();
 		// 유효한 참조를 위해 두번 로드하는 과정을 거친다.
 		// 생성만 하는 과정
-		for (auto& objJson : json["objs"])
+		for (const auto& objJson : json["objs"])
 		{
-			std::string name = objJson["name"].get<std::string>();
-			core::UUID objuuid{ objJson["uuid"].get<std::string>() };
+			const std::string& name = objJson["name"].get_ref<const std::string&>();
+			core::UUID objuuid{ objJson["uuid"].get_ref<const std::string&>() };
 
 			auto sobj = objManager->GetSObject(objuuid);
 			GameObject* gameObj = nullptr;
@@ -470,11 +479,10 @@ namespace sh::game
 	}
 	SH_GAME_API void World::Play()
 	{
-		if (bPlaying)
+		if (bPlaying || bWaitPlaying)
 			return;
 
-		bPlaying = true;
-		eventBus.Publish(events::WorldEvent{ events::WorldEvent::Type::Play });
+		bWaitPlaying = true;
 	}
 	SH_GAME_API void World::Stop()
 	{

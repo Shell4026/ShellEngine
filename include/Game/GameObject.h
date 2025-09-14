@@ -102,6 +102,7 @@ namespace sh::game
 		bool bEditorOnly = false;
 	private:
 		core::SVector<Component*> components;
+
 		core::SSet<Collider*> enterColliders;
 		core::SSet<Collider*> stayColliders;
 		core::SSet<Collider*> exitColliders;

@@ -324,6 +324,7 @@ namespace sh::game
 	}
 	SH_GAME_API void GameObject::OnPropertyChanged(const core::reflection::Property& prop)
 	{
+		Super::OnPropertyChanged(prop);
 		if (prop.GetName() == core::Util::ConstexprHash("bEnable"))
 		{
 			SetActive(bEnable);

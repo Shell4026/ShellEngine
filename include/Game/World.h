@@ -165,6 +165,7 @@ namespace sh::game
 		core::Json lateSerializedData;
 
 		bool bStartLoop = false;
+		bool bWaitPlaying = false;
 		bool bPlaying = false;
 		bool bLoaded = false;
 		bool bOnStart = false;
