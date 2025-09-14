@@ -8,6 +8,116 @@
 #include <algorithm>
 namespace sh::editor
 {
+	SH_EDITOR_API void GameObjectInspector::RenderUI(void* obj, int idx)
+	{
+		auto gameObjPtr = static_cast<game::GameObject*>(obj);
+		if (!core::IsValid(gameObjPtr))
+			return;
+
+		bool bActive = gameObjPtr->activeSelf;
+		if (ImGui::Checkbox("##active", &bActive))
+			gameObjPtr->SetActive(bActive);
+		ImGui::SameLine();
+		ImGui::Text("Active");
+		
+		ImGui::Checkbox("##editorOnly", &gameObjPtr->bEditorOnly);
+		ImGui::SameLine();
+		ImGui::Text("EditorOnly");
+
+		ImGui::Separator();
+
+		ImGui::Text("Components");
+		// 드래그 드랍으로 도중에 컴포넌트가 추가 되는 일이 발생한다.
+		// 그로인해 반복자가 깨지므로 컴포넌트 배열을 복사 해둬야 한다.
+		std::vector<game::Component*> components = gameObjPtr->GetComponents();
+
+		int componentsIdx = 0;
+		for (auto component : components)
+		{
+			if (!core::IsValid(component))
+				continue;
+			if (component->hideInspector)
+				continue;
+			const std::string componentName = component->GetType().name.ToString();
+			bool bOpenComponent = ImGui::CollapsingHeader((componentName.c_str() + ("##" + std::to_string(componentsIdx))).data());
+			if (ImGui::BeginPopupContextItem((component->GetUUID().ToString() + "RightClickPopup").c_str()))
+			{
+				if (component->GetType() != game::Transform::GetStaticType())
+				{
+					if (ImGui::Selectable("Delete"))
+						component->Destroy();
+				}
+				ImGui::EndPopup();
+			}
+			if (bOpenComponent && core::IsValid(component))
+				Inspector::RenderProperties(component->GetType(), *component, componentsIdx);
+			++componentsIdx;
+		}//for auto& component
+		ImGui::Separator();
+
+		RenderAddComponent(*gameObjPtr);
+	}
+	void GameObjectInspector::RenderAddComponent(game::GameObject& gameObject)
+	{
+		if (ImGui::Button("Add Component", { -FLT_MIN, 0.0f }))
+		{
+			componentItems.clear();
+			auto& components = gameObject.world.componentModule.GetComponents();
+			for (auto& [fullname, _] : components)
+			{
+				auto [group, name] = GetComponentGroupAndName(fullname);
+				auto it = componentItems.find(group);
+				if (it == componentItems.end())
+					componentItems.insert({ group, std::vector<std::string>{std::move(name)} });
+				else
+					it->second.push_back(std::move(name));
+			}
+
+			bAddComponent = !bAddComponent;
+		}
+
+		if (bAddComponent)
+		{
+			ImGui::SetNextItemWidth(-FLT_MIN);
+			ImGui::BeginChild("ComponentsList", ImVec2(0, 200), ImGuiChildFlags_::ImGuiChildFlags_Border);
+			for (auto& [group, vector] : componentItems)
+			{
+				const char* groupName = group.c_str();
+				if (group.empty())
+					groupName = "Default";
+				if (ImGui::CollapsingHeader(groupName))
+				{
+					for (auto& name : vector)
+					{
+						if (ImGui::Selectable(name.c_str()))
+						{
+							std::string searchName = name;
+							if (!group.empty())
+								searchName = group + "/" + name;
+							gameObject.AddComponent(gameObject.world.componentModule.GetComponents().at(searchName)->Create(gameObject));
+							bAddComponent = false;
+						}
+					}
+				}
+			}
+			ImGui::EndChild();
+			if (ImGui::Button("Close"))
+				bAddComponent = false;
+		}
+	}
+	auto GameObjectInspector::GetComponentGroupAndName(std::string_view fullname) -> std::pair<std::string, std::string>
+	{
+		auto pos = fullname.find('/');
+		std::string group{}, name{};
+		if (pos == fullname.npos)
+			name = fullname;
+		else
+		{
+			group = fullname.substr(0, pos);
+			name = fullname.substr(pos + 1);
+		}
+		return { std::move(group), std::move(name) };
+	}
 	SH_EDITOR_API void MaterialInspector::RenderUI(void* obj, int idx)
 	{
 		ImGui::Separator();

@@ -27,6 +27,31 @@ namespace sh::editor
 		}
 		return nullptr;
 	}
+	SH_EDITOR_API void Inspector::RenderProperties(const core::reflection::STypeInfo& type, core::SObject& obj, int idx)
+	{
+		auto currentType = &type;
+		do
+		{
+			auto& props = currentType->GetProperties();
+			for (auto& prop : props)
+			{
+				if (prop->bVisibleProperty == false)
+					continue;
+
+				const std::string& propName = prop->GetName().ToString();
+				// SObject 포인터 형식, 드래그 앤 드랍 기능
+				if (prop->isSObjectPointer)
+					RenderSObjectPtrProperty(*prop, obj, propName);
+				else if (prop->isSObjectPointerContainer)
+					RenderSObjPtrContainerProperty(*prop, obj);
+				else if (prop->isContainer && prop->type != core::reflection::GetType<std::string>()) // string도 컨테이너 취급 받아서 예외처리
+					RenderContainerProperty(*prop, obj, propName);
+				else
+					RenderProperty(*prop, obj, idx);
+			}
+			currentType = const_cast<core::reflection::STypeInfo*>(currentType->GetSuper());
+		} while (currentType);
+	}
 	SH_EDITOR_API void Inspector::RenderProperty(const core::reflection::Property& prop, core::SObject& owner, int idx)
 	{
 		if (!prop.bVisibleProperty)
@@ -150,107 +175,7 @@ namespace sh::editor
 			AssetDatabase::GetInstance()->SaveAllAssets();
 		}
 	}
-	auto Inspector::GetComponentGroupAndName(std::string_view fullname) -> std::pair<std::string, std::string>
-	{
-		auto pos = fullname.find('/');
-		std::string group{}, name{};
-		if (pos == fullname.npos)
-			name = fullname;
-		else
-		{
-			group = fullname.substr(0, pos);
-			name = fullname.substr(pos + 1);
-		}
-
-		return { std::move(group), std::move(name)};
-	}
-	void Inspector::RenderAddComponent(game::GameObject& gameObject)
-	{
-		if (ImGui::Button("Add Component", { -FLT_MIN, 0.0f }))
-		{
-			componentItems.clear();
-			auto& components = world.componentModule.GetComponents();
-			for (auto& [fullname, _] : components)
-			{
-				auto [group, name] = GetComponentGroupAndName(fullname);
-				auto it = componentItems.find(group);
-				if (it == componentItems.end())
-					componentItems.insert({ group, std::vector<std::string>{std::move(name)} });
-				else
-					it->second.push_back(std::move(name));
-			}
-
-			bAddComponent = !bAddComponent;
-		}
-
-		if (bAddComponent)
-		{
-			ImGui::SetNextItemWidth(-FLT_MIN);
-			ImGui::BeginChild("ComponentsList", ImVec2(0, 200), ImGuiChildFlags_::ImGuiChildFlags_Border);
-			for (auto& [group, vector] : componentItems)
-			{
-				const char* groupName = group.c_str();
-				if (group.empty())
-					groupName = "Default";
-				if (ImGui::CollapsingHeader(groupName))
-				{
-					for (auto& name : vector)
-					{
-						if (ImGui::Selectable(name.c_str()))
-						{
-							std::string searchName = name;
-							if(!group.empty())
-								searchName = group + "/" + name;
-							gameObject.AddComponent(world.componentModule.GetComponents().at(searchName)->Create(gameObject));
-							bAddComponent = false;
-						}
-					}
-				}
-			}
-			ImGui::EndChild();
-			if (ImGui::Button("Close"))
-				bAddComponent = false;
-		}
-	}
-	void Inspector::RenderProperties(const core::reflection::STypeInfo& type, core::SObject& obj, int idx)
-	{
-		ICustomInspector* customInspector = customInspectorManager->GetCustomInspector(type);
-		if (customInspector)
-		{
-			customInspector->RenderUI(&obj, idx);
-			return;
-		}
-
-		auto currentType = &type;
-		do
-		{
-			auto& props = currentType->GetProperties();
-			for (auto& prop : props)
-			{
-				if (prop->bVisibleProperty == false)
-					continue;
-
-				const std::string& propName = prop->GetName().ToString();
-				// SObject 포인터 형식, 드래그 앤 드랍 기능
-				if (prop->isSObjectPointer)
-				{
-					RenderSObjectPtrProperty(*prop, obj, propName);
-				}
-				else if (prop->isSObjectPointerContainer)
-					RenderSObjPtrContainerProperty(*prop, obj);
-				else if (prop->isContainer && prop->type != core::reflection::GetType<std::string>()) // string도 컨테이너 취급 받아서 예외처리
-				{
-					RenderContainerProperty(*prop, obj, propName);
-				}
-				else
-				{
-					RenderProperty(*prop, obj, idx);
-				}
-			}
-			currentType = const_cast<core::reflection::STypeInfo*>(currentType->GetSuper());
-		} while (currentType);
-	}
-	void Inspector::RenderSObjectPtrProperty(const core::reflection::Property& prop, core::SObject& propertyOwner, const std::string& name, 
+	SH_EDITOR_API void Inspector::RenderSObjectPtrProperty(const core::reflection::Property& prop, core::SObject& propertyOwner, const std::string& name,
 		core::SObject** objPtr, const core::reflection::TypeInfo* type)
 	{
 		std::string typeName{ type == nullptr ? prop.pureTypeName : type->name };
@@ -374,7 +299,7 @@ namespace sh::editor
 			ImGui::Image(*icon, ImVec2{ iconSize, iconSize });
 		}
 	}
-	void Inspector::RenderSObjPtrContainerProperty(const core::reflection::Property& prop, core::SObject& propertyOwner)
+	SH_EDITOR_API void Inspector::RenderSObjPtrContainerProperty(const core::reflection::Property& prop, core::SObject& propertyOwner)
 	{
 		float iconSize = 20;
 		float buttonWidth = ImGui::GetContentRegionAvail().x - iconSize;
@@ -483,12 +408,7 @@ namespace sh::editor
 			}
 			if (ImGui::Button("+"))
 			{
-				// 더 좋은 방법 나중에 고민하기
-				if (prop.type.name.find("vector") != std::string_view::npos)
-				{
-					auto v = prop.Get<std::vector<core::SObject*>>(propertyOwner);
-					v->push_back(nullptr);
-				}
+				prop.InsertToContainer(propertyOwner, nullptr);
 			}
 			ImGui::SameLine();
 			if (ImGui::Button("-"))
@@ -504,7 +424,7 @@ namespace sh::editor
 			ImGui::TreePop();
 		}
 	}
-	void Inspector::RenderContainerProperty(const core::reflection::Property& prop, core::SObject& obj, const std::string& name)
+	SH_EDITOR_API void Inspector::RenderContainerProperty(const core::reflection::Property& prop, core::SObject& obj, const std::string& name)
 	{
 		float itemWidth = ImGui::GetContentRegionAvail().x / 2.f - 1;
 		if (ImGui::TreeNodeEx(name.c_str(), ImGuiTreeNodeFlags_::ImGuiTreeNodeFlags_OpenOnArrow))
@@ -805,57 +725,15 @@ namespace sh::editor
 				static std::string name;
 				name = obj->GetName().ToString();
 
-				if (obj->GetType() == game::GameObject::GetStaticType())
-				{
-					auto gameObj = static_cast<game::GameObject*>(obj);
-					bool bActive = gameObj->activeSelf;
-					if (ImGui::Checkbox("##active", &bActive))
-						gameObj->SetActive(bActive);
-
-					ImGui::SameLine();
-				}
 				ImGui::SetNextItemWidth(100);
 				if (ImGui::InputText("Name", &name))
 					obj->SetName(name);
 
 				ImGui::Separator();
 
-				if (obj->GetType() == game::GameObject::GetStaticType())
-				{
-					ImGui::LabelText("##ComponentsLabel", "Components");
-					int idx = 0;
-					// 드래그 드랍으로 도중에 컴포넌트가 추가 되는 일이 발생한다.
-					// 그로인해 반복자가 깨지므로 컴포넌트 배열을 복사 해둬야 한다.
-					std::vector<game::Component*> components = static_cast<game::GameObject*>(obj)->GetComponents();
-					for (auto component : components)
-					{
-						if (!core::IsValid(component))
-							continue;
-						if (component->hideInspector)
-							continue;
-						std::string componentName = component->GetType().name.ToString();
-						bool bOpenComponent = ImGui::CollapsingHeader((componentName.c_str() + ("##" + std::to_string(idx))).data());
-						if (ImGui::BeginPopupContextItem((component->GetUUID().ToString() + "RightClickPopup").c_str()))
-						{
-							if (component->GetType() != game::Transform::GetStaticType())
-							{
-								if (ImGui::Selectable("Delete"))
-								{
-									component->Destroy();
-								}
-							}
-							ImGui::EndPopup();
-						}
-						if (bOpenComponent && core::IsValid(component))
-						{
-							RenderProperties(component->GetType(), *component, idx);
-						}
-						++idx;
-					}//for auto& component
-					ImGui::Separator();
-
-					RenderAddComponent(*static_cast<game::GameObject*>(obj));
-				}
+				ICustomInspector* customInspector = customInspectorManager->GetCustomInspector(obj->GetType());
+				if (customInspector)
+					customInspector->RenderUI(obj, 0);
 				else
 					RenderProperties(obj->GetType(), *obj, 0);
 			}
