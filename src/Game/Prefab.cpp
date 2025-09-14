@@ -42,6 +42,15 @@ namespace sh::game
 		// 생성만 하는 과정
 		for (auto& objJson : objJsons)
 		{
+			if (objJson.contains("GameObject"))
+			{
+				const auto& gameObjJson = objJson["GameObject"];
+				if (gameObjJson.contains("bEditorOnly"))
+				{
+					if (gameObjJson["bEditorOnly"].get<bool>() == true && world.GetType() == game::World::GetStaticType())
+						continue;
+				}
+			}
 			GameObject* obj = world.AddGameObject(objJson["name"].get<std::string>());
 			obj->SetUUID(core::UUID{ objJson["uuid"].get<std::string>() });
 			for (auto& compJson : objJson["Components"])
@@ -71,7 +80,8 @@ namespace sh::game
 		for (auto& objJson : objJsons)
 		{
 			GameObject* obj = static_cast<GameObject*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ objJson["uuid"].get<std::string>() }));
-			obj->Deserialize(objJson);
+			if (obj != nullptr)
+				obj->Deserialize(objJson);
 		}
 		const std::string& changedRootUUIDStr = changedUUID[rootObjUUID.ToString()];
 		auto resultObj = static_cast<GameObject*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ changedRootUUIDStr }));
