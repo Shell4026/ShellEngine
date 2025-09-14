@@ -4,6 +4,7 @@
 #include "Util.h"
 #include "AssetResolver.h"
 
+#include <tuple>
 namespace sh::core
 {
 	template<>
@@ -210,6 +211,40 @@ namespace sh::core
 						}
 					}
 				}
+				else if (prop->isContainer)
+				{
+					json[name] = core::Json::array();
+					if (*prop->containerElementType == core::reflection::GetType<int>() || *prop->containerElementType == core::reflection::GetType<uint32_t>())
+					{
+						for (auto it = prop->Begin(*this); it != prop->End(*this); ++it)
+							json[name].push_back(*it.Get<int>());
+					}
+					else if (*prop->containerElementType == core::reflection::GetType<int16_t>() || *prop->containerElementType == core::reflection::GetType<uint16_t>())
+					{
+						for (auto it = prop->Begin(*this); it != prop->End(*this); ++it)
+							json[name].push_back(*it.Get<int16_t>());
+					}
+					else if (*prop->containerElementType == core::reflection::GetType<float>())
+					{
+						for (auto it = prop->Begin(*this); it != prop->End(*this); ++it)
+							json[name].push_back(*it.Get<float>());
+					}
+					else if (*prop->containerElementType == core::reflection::GetType<double>())
+					{
+						for (auto it = prop->Begin(*this); it != prop->End(*this); ++it)
+							json[name].push_back(*it.Get<double>());
+					}
+					else if (*prop->containerElementType == core::reflection::GetType<bool>())
+					{
+						for (auto it = prop->Begin(*this); it != prop->End(*this); ++it)
+							json[name].push_back(*it.Get<bool>());
+					}
+					else if (*prop->containerElementType == core::reflection::GetType<std::string>())
+					{
+						for (auto it = prop->Begin(*this); it != prop->End(*this); ++it)
+							json[name].push_back(*it.Get<std::string>());
+					}
+				}
 			}
 			if (!json.empty())
 				mainJson[stypeInfo->name] = std::move(json);
@@ -250,44 +285,33 @@ namespace sh::core
 				const reflection::TypeInfo& propType = prop->type;
 				const core::Name& name = prop->GetName();
 
-				if (propType == core::reflection::GetType<int>() || prop->isEnum)
+				// 해당 타입들에 대해 if문으로 검사 후 역직렬화
+				// 코드에서 똥 냄새 난다
+				using Types = std::tuple<int, uint32_t, int64_t, uint64_t, int16_t, uint16_t, float, double, bool, char, std::string>;
+				bool bDone = false;
+				std::apply(
+					[&](auto&&... args) 
+					{
+						(
+							[&](auto t)
+							{
+								using Type = std::decay_t<decltype(t)>;
+								if (!bDone && propType == core::reflection::GetType<Type>())
+								{
+									if (core::DeserializeProperty(subJson, name, *prop->Get<Type>(*this)))
+										OnPropertyChanged(*prop.get());
+									bDone = true;
+								}
+							}(std::forward<decltype(args)>(args)), ...
+						);
+					}, Types{}
+				);
+				if (bDone)
+					continue;
+
+				if (prop->isEnum)
 				{
 					if (core::DeserializeProperty(subJson, name, *prop->Get<int>(*this)))
-						OnPropertyChanged(*prop.get());
-				}
-				else if (propType == core::reflection::GetType<uint32_t>())
-				{
-					if (core::DeserializeProperty(subJson, name, *prop->Get<uint32_t>(*this)))
-						OnPropertyChanged(*prop.get());
-				}
-				else if (propType == core::reflection::GetType<int64_t>())
-				{
-					if (core::DeserializeProperty(subJson, name, *prop->Get<int64_t>(*this)))
-						OnPropertyChanged(*prop.get());
-				}
-				else if (propType == core::reflection::GetType<uint64_t>())
-				{
-					if (core::DeserializeProperty(subJson, name, *prop->Get<uint64_t>(*this)))
-						OnPropertyChanged(*prop.get());
-				}
-				else if (propType == core::reflection::GetType<float>())
-				{
-					if (core::DeserializeProperty(subJson, name, *prop->Get<float>(*this)))
-						OnPropertyChanged(*prop.get());
-				}
-				else if (propType == core::reflection::GetType<double>())
-				{
-					if (core::DeserializeProperty(subJson, name, *prop->Get<double>(*this)))
-						OnPropertyChanged(*prop.get());
-				}
-				else if (propType == core::reflection::GetType<std::string>())
-				{
-					if (core::DeserializeProperty(subJson, name, *prop->Get<std::string>(*this)))
-						OnPropertyChanged(*prop.get());
-				}
-				else if (propType == core::reflection::GetType<bool>())
-				{
-					if (core::DeserializeProperty(subJson, name, *prop->Get<bool>(*this)))
 						OnPropertyChanged(*prop.get());
 				}
 				else if (prop->isSObjectPointer)
@@ -295,45 +319,44 @@ namespace sh::core
 					if (core::DeserializeProperty(subJson, name, *prop->Get<SObject*>(*this)))
 						OnPropertyChanged(*prop.get());
 				}
-				else if (propType == core::reflection::GetType<char>())
-				{
-					if (core::DeserializeProperty(subJson, name, *prop->Get<char>(*this)))
-						OnPropertyChanged(*prop.get());
-				}
 				else if (prop->isSObjectPointerContainer)
 				{
-					if (subJson.contains(name))
+					if (subJson.contains(name) && subJson[name].is_array())
 					{
-						if (subJson[name].is_array())
-						{
-							prop->ClearContainer(*this);
-							if (propType.name.find("vector") != std::string_view::npos)
-							{
-								auto v = prop->Get<std::vector<core::SObject*>>(*this);
-
-								for (auto& uuidStr : subJson[name])
-									v->push_back(GetSObjectUsingResolver(core::UUID{ uuidStr.get<std::string>() }));
-							}
-							else if (propType.name.find("set") != std::string_view::npos)
-							{
-								if (propType.name.find("unordered") == std::string_view::npos)
-								{
-									auto set = prop->Get<std::set<core::SObject*>>(*this);
-									for (auto& uuidStr : subJson[name])
-										set->insert(GetSObjectUsingResolver(core::UUID{ uuidStr.get<std::string>() }));
-								}
-								else
-								{
-									auto set = prop->Get<std::unordered_set<core::SObject*>>(*this);
-									for (auto& uuidStr : subJson[name])
-										set->insert(GetSObjectUsingResolver(core::UUID{ uuidStr.get<std::string>() }));
-								}
-							}
-							OnPropertyChanged(*prop.get());
-						}
+						prop->ClearContainer(*this);
+						for (auto& uuidStr : subJson[name])
+							prop->InsertToContainer(*this, GetSObjectUsingResolver(core::UUID{ uuidStr.get<std::string>() }));
+						OnPropertyChanged(*prop.get());
 					}
 				}
-			}
+				else if (prop->isContainer)
+				{
+					if (!subJson.contains(name) || !subJson[name].is_array())
+						continue;
+					prop->ClearContainer(*this);
+					
+					// c++20이면 람다식에도 템플릿이 된다던데..
+					auto insertFn =
+						[&](auto type)
+						{
+							for (auto& arr : subJson[name])
+								prop->InsertToContainer(*this, arr.get<decltype(type)>());
+						}; 
+					if (*prop->containerElementType == core::reflection::GetType<int>() || *prop->containerElementType == core::reflection::GetType<uint32_t>())
+						insertFn(0);
+					else if (*prop->containerElementType == core::reflection::GetType<int16_t>() || *prop->containerElementType == core::reflection::GetType<uint16_t>())
+						insertFn((int16_t)0);
+					else if (*prop->containerElementType == core::reflection::GetType<float>())
+						insertFn(0.f);
+					else if (*prop->containerElementType == core::reflection::GetType<double>())
+						insertFn(0.0);
+					else if (*prop->containerElementType == core::reflection::GetType<bool>())
+						insertFn(false);
+					else if (*prop->containerElementType == core::reflection::GetType<std::string>())
+						insertFn(std::string{});
+					OnPropertyChanged(*prop.get());
+				}
+			}//for
 			stypeInfo = stypeInfo->GetSuper();
 		}
 	}

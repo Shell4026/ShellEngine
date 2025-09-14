@@ -108,6 +108,45 @@ namespace sh::game
 					core::SerializeProperty(*json, name, *prop->Get<Vec3>(*this));
 				else if (propType == core::reflection::GetType<Vec2>())
 					core::SerializeProperty(*json, name, *prop->Get<Vec2>(*this));
+				else if (prop->isContainer)
+				{
+					auto arrJson = core::Json::array();
+					if (*prop->containerElementType == core::reflection::GetType<Vec4>())
+					{
+						core::Json vecJson;
+						for (auto it = prop->Begin(*this); it != prop->End(*this); ++it)
+						{
+							vecJson.push_back(it.Get<Vec4>()->x);
+							vecJson.push_back(it.Get<Vec4>()->y);
+							vecJson.push_back(it.Get<Vec4>()->z);
+							vecJson.push_back(it.Get<Vec4>()->w);
+						}
+						arrJson.push_back(std::move(vecJson));
+					}
+					else if (*prop->containerElementType == core::reflection::GetType<Vec3>())
+					{
+						core::Json vecJson;
+						for (auto it = prop->Begin(*this); it != prop->End(*this); ++it)
+						{
+							vecJson.push_back(it.Get<Vec3>()->x);
+							vecJson.push_back(it.Get<Vec3>()->y);
+							vecJson.push_back(it.Get<Vec3>()->z);
+						}
+						arrJson.push_back(std::move(vecJson));
+					}
+					else if (*prop->containerElementType == core::reflection::GetType<Vec2>())
+					{
+						core::Json vecJson;
+						for (auto it = prop->Begin(*this); it != prop->End(*this); ++it)
+						{
+							vecJson.push_back(it.Get<Vec2>()->x);
+							vecJson.push_back(it.Get<Vec2>()->y);
+						}
+						arrJson.push_back(std::move(vecJson));
+					}
+					if (!arrJson.empty())
+						json->operator[](name) = std::move(arrJson);
+				}
 			}
 			type = type->GetSuper();
 		}
@@ -147,6 +186,14 @@ namespace sh::game
 					if (core::DeserializeProperty(compJson, name, *prop->Get<Vec2>(*this)))
 						OnPropertyChanged(*prop.get());
 				}
+				// TODO
+				//else if (prop->isContainer)
+				//{
+				//	auto& containerJson = compJson[name];
+				//	if (*prop->containerElementType == core::reflection::GetType<Vec4>())
+				//	{
+				//	}
+				//}
 			}
 			type = type->GetSuper();
 		}

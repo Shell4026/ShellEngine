@@ -37,6 +37,7 @@ namespace sh::editor
 
 		auto inputFlag = constant ? ImGuiInputTextFlags_::ImGuiInputTextFlags_ReadOnly : ImGuiInputTextFlags_::ImGuiInputTextFlags_None;
 
+		bool bChanged = false;
 		if (type == core::reflection::GetType<game::Vec4>())
 		{
 			game::Vec4* parameter = prop.Get<game::Vec4>(owner);
@@ -54,9 +55,7 @@ namespace sh::editor
 					parameter->y = v[1];
 					parameter->z = v[2];
 					parameter->w = v[3];
-					owner.OnPropertyChanged(prop);
-					AssetDatabase::GetInstance()->SetDirty(&owner);
-					AssetDatabase::GetInstance()->SaveAllAssets();
+					bChanged = true;
 				}
 			}
 		}
@@ -76,9 +75,7 @@ namespace sh::editor
 					parameter->x = v[0];
 					parameter->y = v[1];
 					parameter->z = v[2];
-					owner.OnPropertyChanged(prop);
-					AssetDatabase::GetInstance()->SetDirty(&owner);
-					AssetDatabase::GetInstance()->SaveAllAssets();
+					bChanged = true;
 				}
 			}
 		}
@@ -95,9 +92,7 @@ namespace sh::editor
 				{
 					parameter->x = v[0];
 					parameter->y = v[1];
-					owner.OnPropertyChanged(prop);
-					AssetDatabase::GetInstance()->SetDirty(&owner);
-					AssetDatabase::GetInstance()->SaveAllAssets();
+					bChanged = true;
 				}
 			}
 		}
@@ -109,11 +104,7 @@ namespace sh::editor
 				ImGui::InputFloat(("##input_" + name + std::to_string(idx)).c_str(), parameter, 0.f, 0.f, "%.3f", inputFlag);
 			else
 				if (ImGui::InputFloat(("##input_" + name + std::to_string(idx)).c_str(), parameter))
-				{
-					owner.OnPropertyChanged(prop);
-					AssetDatabase::GetInstance()->SetDirty(&owner);
-					AssetDatabase::GetInstance()->SaveAllAssets();
-				}
+					bChanged = true;
 		}
 		else if (type == core::reflection::GetType<int>())
 		{
@@ -123,11 +114,7 @@ namespace sh::editor
 				ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), parameter, 0, 0, inputFlag);
 			else
 				if (ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), parameter))
-				{
-					owner.OnPropertyChanged(prop);
-					AssetDatabase::GetInstance()->SetDirty(&owner);
-					AssetDatabase::GetInstance()->SaveAllAssets();
-				}
+					bChanged = true;
 		}
 		else if (type == core::reflection::GetType<uint32_t>())
 		{
@@ -137,11 +124,7 @@ namespace sh::editor
 				ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), reinterpret_cast<int*>(parameter), 0, 0, inputFlag);
 			else
 				if (ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), reinterpret_cast<int*>(parameter)))
-				{
-					owner.OnPropertyChanged(prop);
-					AssetDatabase::GetInstance()->SetDirty(&owner);
-					AssetDatabase::GetInstance()->SaveAllAssets();
-				}
+					bChanged = true;
 		}
 		else if (type == core::reflection::GetType<std::string>())
 		{
@@ -151,17 +134,17 @@ namespace sh::editor
 				ImGui::InputText(("##Input_" + name + std::to_string(idx)).c_str(), parameter, inputFlag);
 			else
 				if (ImGui::InputText(("##Input_" + name + std::to_string(idx)).c_str(), parameter, inputFlag))
-				{
-					owner.OnPropertyChanged(prop);
-					AssetDatabase::GetInstance()->SetDirty(&owner);
-					AssetDatabase::GetInstance()->SaveAllAssets();
-				}
+					bChanged = true;
 		}
 		else if (type == core::reflection::GetType<bool>())
 		{
 			bool* parameter = prop.Get<bool>(owner);
 			if (!constant)
-				ImGui::Checkbox(name.c_str(), parameter);
+				if (ImGui::Checkbox(name.c_str(), parameter))
+					bChanged = true;
+		}
+		if (bChanged)
+		{
 			owner.OnPropertyChanged(prop);
 			AssetDatabase::GetInstance()->SetDirty(&owner);
 			AssetDatabase::GetInstance()->SaveAllAssets();
@@ -605,7 +588,199 @@ namespace sh::editor
 						}
 					}
 				}
+				else
+				{
+					bool bChanged = false;
+					if (it.GetType() == core::reflection::GetType<int>() || it.GetType() == core::reflection::GetType<uint32_t>())
+					{
+						int* parameter = it.Get<int>();
+						if (ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), parameter))
+							bChanged = true;
+					}
+					if (it.GetType() == core::reflection::GetType<int16_t>() || it.GetType() == core::reflection::GetType<uint16_t>())
+					{
+						int parameter = *it.Get<int16_t>();
+						if (ImGui::InputInt(("##Input_" + name + std::to_string(idx)).c_str(), &parameter))
+						{
+							if (parameter > 0xffff)
+								parameter = 0xffff;
+							*it.Get<int16_t>() = static_cast<int16_t>(parameter);
+							bChanged = true;
+						}
+					}
+					else if (it.GetType() == core::reflection::GetType<float>())
+					{
+						float* parameter = it.Get<float>();
+						if (ImGui::InputFloat(("##Input_" + name + std::to_string(idx)).c_str(), parameter))
+							bChanged = true;
+					}
+					else if (it.GetType() == core::reflection::GetType<double>())
+					{
+						double* parameter = it.Get<double>();
+						if (ImGui::InputFloat(("##Input_" + name + std::to_string(idx)).c_str(), reinterpret_cast<float*>(parameter)))
+							bChanged = true;
+					}
+					else if (it.GetType() == core::reflection::GetType<bool>())
+					{
+						bool* parameter = it.Get<bool>();
+						if (ImGui::Checkbox(("##Input_" + name + std::to_string(idx)).c_str(), parameter))
+							bChanged = true;
+					}
+					else if (it.GetType() == core::reflection::GetType<game::Vec2>())
+					{
+						game::Vec2* parameter = it.Get<game::Vec2>();
+						float v[2] = { parameter->x, parameter->y };
+						if (ImGui::InputFloat2(("##input_" + name + std::to_string(idx)).c_str(), v))
+						{
+							parameter->x = v[0];
+							parameter->y = v[1];
+							bChanged = true;
+						}
+					}
+					else if (it.GetType() == core::reflection::GetType<game::Vec3>())
+					{
+						game::Vec3* parameter = it.Get<game::Vec3>();
+						float v[3] = { parameter->x, parameter->y, parameter->z };
+						if (ImGui::InputFloat3(("##input_" + name + std::to_string(idx)).c_str(), v))
+						{
+							parameter->x = v[0];
+							parameter->y = v[1];
+							parameter->z = v[2];
+							bChanged = true;
+						}
+					}
+					else if (it.GetType() == core::reflection::GetType<game::Vec4>())
+					{
+						game::Vec4* parameter = it.Get<game::Vec4>();
+						float v[4] = { parameter->x, parameter->y, parameter->z };
+						if (ImGui::InputFloat4(("##input_" + name + std::to_string(idx)).c_str(), v))
+						{
+							parameter->x = v[0];
+							parameter->y = v[1];
+							parameter->z = v[2];
+							parameter->w = v[3];
+							bChanged = true;
+						}
+					}
+					else if (it.GetType() == core::reflection::GetType<std::string>())
+					{
+						std::string* parameter = it.Get<std::string>();
+						if (ImGui::InputText(("##input_" + name + std::to_string(idx)).c_str(), parameter))
+							bChanged = true;
+					}
+					if (bChanged)
+					{
+						obj.OnPropertyChanged(prop);
+						AssetDatabase::GetInstance()->SetDirty(&obj);
+						AssetDatabase::GetInstance()->SaveAllAssets();
+					}
+				}
 				++idx;
+			}
+			if (ImGui::Button("+"))
+			{
+				// 더 좋은 방법 나중에 고민하기
+				if (prop.type.name.find("vector") != std::string_view::npos)
+				{
+					if (*prop.containerElementType == core::reflection::GetType<int>() || *prop.containerElementType == core::reflection::GetType<uint32_t>())
+					{
+						auto v = prop.Get<std::vector<int>>(obj);
+						v->push_back(0);
+					}
+					else if (*prop.containerElementType == core::reflection::GetType<float>())
+					{
+						auto v = prop.Get<std::vector<float>>(obj);
+						v->push_back(0.0f);
+					}
+					else if (*prop.containerElementType == core::reflection::GetType<double>())
+					{
+						auto v = prop.Get<std::vector<double>>(obj);
+						v->push_back(0.0);
+					}
+					else if (*prop.containerElementType == core::reflection::GetType<bool>())
+					{
+						auto v = prop.Get<std::vector<bool>>(obj);
+						v->push_back(false);
+					}
+					else if (*prop.containerElementType == core::reflection::GetType<std::string>())
+					{
+						auto v = prop.Get<std::vector<std::string>>(obj);
+						v->push_back("");
+					}
+					else if (*prop.containerElementType == core::reflection::GetType<game::Vec2>())
+					{
+						auto v = prop.Get<std::vector<game::Vec2>>(obj);
+						v->push_back({ 0.f, 0.f });
+					}
+					else if (*prop.containerElementType == core::reflection::GetType<game::Vec3>())
+					{
+						auto v = prop.Get<std::vector<game::Vec3>>(obj);
+						v->push_back({ 0.f, 0.f, 0.f });
+					}
+					else if (*prop.containerElementType == core::reflection::GetType<game::Vec4>())
+					{
+						auto v = prop.Get<std::vector<game::Vec4>>(obj);
+						v->push_back({ 0.f, 0.f, 0.f, 0.f });
+					}
+					else if (*prop.containerElementType == core::reflection::GetType<int16_t>() || *prop.containerElementType == core::reflection::GetType<uint16_t>())
+					{
+						auto v = prop.Get<std::vector<int16_t>>(obj);
+						v->push_back(0);
+					}
+				}
+			}
+			ImGui::SameLine();
+			if (ImGui::Button("-"))
+			{
+				// 더 좋은 방법 나중에 고민하기
+				if (prop.type.name.find("vector") != std::string_view::npos)
+				{
+					if (*prop.containerElementType == core::reflection::GetType<int>() || *prop.containerElementType == core::reflection::GetType<uint32_t>())
+					{
+						auto v = prop.Get<std::vector<int>>(obj);
+						v->pop_back();
+					}
+					else if (*prop.containerElementType == core::reflection::GetType<float>())
+					{
+						auto v = prop.Get<std::vector<float>>(obj);
+						v->pop_back();
+					}
+					else if (*prop.containerElementType == core::reflection::GetType<double>())
+					{
+						auto v = prop.Get<std::vector<double>>(obj);
+						v->pop_back();
+					}
+					else if (*prop.containerElementType == core::reflection::GetType<bool>())
+					{
+						auto v = prop.Get<std::vector<bool>>(obj);
+						v->pop_back();
+					}
+					else if (*prop.containerElementType == core::reflection::GetType<std::string>())
+					{
+						auto v = prop.Get<std::vector<std::string>>(obj);
+						v->pop_back();
+					}
+					else if (*prop.containerElementType == core::reflection::GetType<game::Vec2>())
+					{
+						auto v = prop.Get<std::vector<game::Vec2>>(obj);
+						v->pop_back();
+					}
+					else if (*prop.containerElementType == core::reflection::GetType<game::Vec3>())
+					{
+						auto v = prop.Get<std::vector<game::Vec3>>(obj);
+						v->pop_back();
+					}
+					else if (*prop.containerElementType == core::reflection::GetType<game::Vec4>())
+					{
+						auto v = prop.Get<std::vector<game::Vec4>>(obj);
+						v->pop_back();
+					}
+					else if (*prop.containerElementType == core::reflection::GetType<int16_t>() || *prop.containerElementType == core::reflection::GetType<uint16_t>())
+					{
+						auto v = prop.Get<std::vector<int16_t>>(obj);
+						v->pop_back();
+					}
+				}
 			}
 			ImGui::TreePop();
 		}
