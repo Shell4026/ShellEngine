@@ -33,6 +33,8 @@ namespace sh::editor
 
 		core::SVector<core::SObject*> selectedObjs;
 
+		PROPERTY(viewportTexture, core::PropertyOption::noSave)
+		render::RenderTexture* viewportTexture = nullptr;
 		PROPERTY(editorCamera)
 		game::EditorCamera* editorCamera = nullptr;
 		game::PickingCamera* pickingCamera = nullptr;
@@ -71,6 +73,7 @@ namespace sh::editor
 		SH_EDITOR_API auto AddGameObject(std::string_view name) -> game::GameObject* override;
 		SH_EDITOR_API auto DuplicateGameObject(const game::GameObject& obj) -> game::GameObject& override;
 		SH_EDITOR_API auto GetEditorUI() const -> EditorUI&;
+		SH_EDITOR_API auto GetViewportTexture() const-> render::RenderTexture&;
 
 		SH_EDITOR_API void Start() override;
 

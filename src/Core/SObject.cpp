@@ -263,6 +263,9 @@ namespace sh::core
 			UUID newUUID{ json["uuid"].get<std::string>() };
 			if (uuid != newUUID)
 			{
+				auto objPtr = core::SObjectManager::GetInstance()->GetSObject(newUUID);
+				if (objPtr != nullptr && objPtr->IsPendingKill())
+					objPtr->SetUUID(core::UUID::Generate());
 				bool success = SetUUID(std::move(newUUID));
 				assert(success);
 			}

@@ -90,7 +90,7 @@ namespace sh::game
 	public:
 		World& world;
 
-		PROPERTY(transform)
+		PROPERTY(transform, core::PropertyOption::invisible)
 		Transform* transform;
 
 		const bool& activeSelf;
@@ -98,6 +98,8 @@ namespace sh::game
 		PROPERTY(hideInspector, core::PropertyOption::invisible)
 		bool hideInspector = false;
 		bool bNotSave = false;
+		PROPERTY(bEditorOnly, core::PropertyOption::invisible)
+		bool bEditorOnly = false;
 	private:
 		core::SVector<Component*> components;
 		core::SSet<Collider*> enterColliders;

@@ -31,7 +31,6 @@ namespace sh::editor
 		bDirty(false), bMouseLeftDown(false), bMouseRightDown(false), bFocus(false)
 	{
 		renderTex = world.GetGameObject("EditorCamera")->GetComponent<game::EditorCamera>()->GetRenderTexture();
-		outlineTex = static_cast<render::RenderTexture*>(world.textures.GetResource("OutlineTexture"));
 
 		auto vkTexBuffer = static_cast<render::vk::VulkanTextureBuffer*>(renderTex->GetTextureBuffer());
 		auto imgBuffer = vkTexBuffer->GetImageBuffer();
@@ -308,7 +307,7 @@ namespace sh::editor
 		for (auto& [uuid, worldPtr] : gameManager.GetWorlds())
 			worldPtr->SaveWorldPoint(worldPtr->Serialize());
 
-		renderTex = static_cast<render::RenderTexture*>(world.textures.GetResource("GameView"));
+		renderTex = &world.GetGameViewTexture();
 		mainCam->SetRenderTexture(renderTex);
 		mainCam->SetActive(true);
 		ChangeViewportSize();

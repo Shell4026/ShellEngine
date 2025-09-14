@@ -288,7 +288,7 @@ namespace sh::game
 		Super::Awake();
 
 		if (!core::IsValid(mat))
-			mat = gameObject.world.materials.GetResource("ErrorMaterial");
+			mat = static_cast<render::Material*>(core::SObject::GetSObjectUsingResolver(core::UUID{"bbc4ef7ec45dce223297a224f8093f10"})); // Error mat
 	}
 
 	void MeshRenderer::Start()

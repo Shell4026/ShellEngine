@@ -2,6 +2,7 @@
 #include "Export.h"
 
 #include "Core/ISerializable.h"
+#include "Core/UUID.h"
 
 #include <string>
 #include <vector>
@@ -15,6 +16,7 @@ namespace sh::core
 namespace sh::game
 {
 	class World;
+	class GameObject;
 }
 namespace sh::editor
 {

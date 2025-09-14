@@ -111,6 +111,7 @@ namespace sh::game
 		SH_GAME_API auto GetWorldPoint() const -> const core::Json&;
 
 		SH_GAME_API auto GetUiContext() const -> ImGUImpl&;
+		SH_GAME_API auto GetGameViewTexture() const -> render::RenderTexture&;
 
 		SH_GAME_API void PublishEvent(const core::IEvent& event);
 		SH_GAME_API void SubscribeEvent(core::ISubscriber& subscriber);
@@ -131,23 +132,17 @@ namespace sh::game
 		render::Renderer& renderer;
 		const float& deltaTime = _deltaTime;
 		const float& fixedDeltaTime = _fixedDeltaTime;
-
-		ResourceManager<render::Shader> shaders;
-		ResourceManager<render::Material> materials;
-		ResourceManager<render::Model> models;
-		ResourceManager<render::Texture> textures;
 	public:
 		const ComponentModule& componentModule;
 	protected:
 		core::EventBus eventBus;
+		core::SHashSet<GameObject*> objs;
+		core::SHashSet<Camera*> cameras;
 	private:
 		core::GarbageCollection* gc;
 		ImGUImpl* imgui = nullptr;
 
 		core::memory::MemoryPool<GameObject> objPool;
-
-		core::SHashSet<GameObject*> objs;
-		core::SHashSet<Camera*> cameras;
 
 		std::vector<core::SObjWeakPtr<GameObject, void>> addedObjs; // 루프 도중 추가 된 객체
 
@@ -155,7 +150,9 @@ namespace sh::game
 		float _fixedDeltaTime = 0.f;
 
 		PROPERTY(mainCamera)
-		Camera* mainCamera;
+		Camera* mainCamera = nullptr;
+		PROPERTY(gameViewTexture, core::PropertyOption::noSave)
+		render::RenderTexture* gameViewTexture = nullptr;
 
 		phys::PhysWorld physWorld;
 

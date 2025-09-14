@@ -121,6 +121,16 @@ namespace sh::editor
 		Super::Clean();
 		editorUI = nullptr;
 		selectedObjs.clear();
+		if (viewportTexture != nullptr)
+		{
+			viewportTexture->Destroy();
+			viewportTexture = nullptr;
+		}
+		if (editorCamera != nullptr)
+		{
+			editorCamera->Destroy();
+			editorCamera = nullptr;
+		}
 	}
 
 	SH_EDITOR_API void EditorWorld::SetRenderPass()
@@ -135,45 +145,48 @@ namespace sh::editor
 	{
 		Super::InitResource();
 
-		render::RenderTexture* viewportTexture = core::SObject::Create<render::RenderTexture>(render::Texture::TextureFormat::SRGBA32);
-		viewportTexture->SetUUID(core::UUID{ "180635b4e4d1a98ebb0064ab47dc452a" });
+		viewportTexture = core::SObject::Create<render::RenderTexture>(render::Texture::TextureFormat::SRGBA32);
+		if (!viewportTexture->SetUUID(core::UUID{ "180635b4e4d1a98ebb0064ab47dc452a" }))
+		{
+			auto objPtr = core::SObjectManager::GetInstance()->GetSObject(core::UUID{ "180635b4e4d1a98ebb0064ab47dc452a" });
+			if (objPtr != nullptr && objPtr->IsPendingKill())
+				objPtr->SetUUID(core::UUID::Generate());
+			bool success = viewportTexture->SetUUID(core::UUID{ "180635b4e4d1a98ebb0064ab47dc452a" });
+			assert(success);
+		}
 		viewportTexture->Build(*renderer.GetContext());
-		textures.AddResource("Viewport", viewportTexture);
 
 		game::GameObject* camObj = AddGameObject("EditorCamera");
-		camObj->SetUUID(core::UUID{ "e071c2f9898d000823c56389418e8147" });
 		camObj->transform->SetPosition({ 2.f, 2.f, 2.f });
 		camObj->hideInspector = true;
-		camObj->bNotSave = true;
+		camObj->bNotSave= true;
 		editorCamera = camObj->AddComponent<game::EditorCamera>();
-		editorCamera->SetUUID(core::UUID{ "61b7bc9f9fd2ca27dcbad8106745f62a" });
 		editorCamera->SetRenderTexture(viewportTexture);
 		editorCamera->GetNative().SetActive(true);
 
+		outlinePass->SetCamera(*editorCamera);
+		postOutlinePass->SetCamera(*editorCamera);
+
 		auto PickingCamObj = AddGameObject("PickingCamera");
 		PickingCamObj->bNotSave = true;
-		PickingCamObj->SetUUID(core::UUID{ "94702dba2122b976d2941638731507fa" });
 		PickingCamObj->transform->SetParent(camObj->transform);
 		PickingCamObj->transform->SetPosition({ 0.f, 0.f, 0.f });
 		pickingCamera = PickingCamObj->AddComponent<game::PickingCamera>();
-		pickingCamera->SetUUID(core::UUID{ "af9cac824334bcaccd86aad8a18e3cba" });
 		pickingCamera->SetFollowCamera(editorCamera);
 		pickingCamera->GetNative().SetActive(true);
 
 		pickingPass->SetCamera(*pickingCamera);
-		outlinePass->SetCamera(*editorCamera);
+		transParentPass->IgnoreCamera(pickingCamera->GetNative());
+		renderer.GetRenderPipeline(core::Name{ "Forward" })->IgnoreCamera(pickingCamera->GetNative());
 
 		auto outlineTexture = EditorResource::GetInstance()->GetTexture("OutlineTexture");
 		assert(outlineTexture);
 		outlinePass->SetOutTexture(static_cast<render::RenderTexture&>(*outlineTexture));
 
-		postOutlinePass->SetCamera(*editorCamera);
 		auto outlinePostMat = EditorResource::GetInstance()->GetMaterial("OutlinePostMaterial");
 		assert(outlinePostMat);
 		postOutlinePass->SetOutlineMaterial(*outlinePostMat);
 
-		renderer.GetRenderPipeline(core::Name{ "Forward" })->IgnoreCamera(pickingCamera->GetNative());
-		transParentPass->IgnoreCamera(pickingCamera->GetNative());
 		// 렌더 테스트용 객체
 		//auto prop = core::SObject::Create<render::MaterialPropertyBlock>();
 		//prop->SetProperty("offset", glm::vec2{ 0.5f, 0.f });
@@ -294,6 +307,11 @@ namespace sh::editor
 		return *editorUI;
 	}
 
+	SH_EDITOR_API auto EditorWorld::GetViewportTexture() const -> render::RenderTexture&
+	{
+		return *viewportTexture;
+	}
+
 	SH_EDITOR_API void EditorWorld::Start()
 	{
 		//auto tri = this->AddGameObject("Triangle");
@@ -309,10 +327,49 @@ namespace sh::editor
 
 	SH_EDITOR_API auto EditorWorld::Serialize() const -> core::Json
 	{
-		return Super::Serialize();
+		core::Json mainJson = Super::Serialize();
+
+		core::Json objsJson = core::Json::array();
+		core::Json editorObjsJson = core::Json::array();
+		for (auto obj : objs)
+		{
+			if (obj->bNotSave || !core::IsValid(obj))
+				continue;
+			if (obj->bEditorOnly)
+				editorObjsJson.push_back(obj->Serialize());
+			else
+				objsJson.push_back(obj->Serialize());
+		}
+		mainJson["objs"] = std::move(objsJson);
+		mainJson["editorObjs"] = std::move(editorObjsJson);
+		if (core::IsValid(editorCamera))
+		{
+			const game::Vec3& camPos = editorCamera->gameObject.transform->GetWorldPosition();
+			mainJson["camPos"] = { camPos.x ,camPos.y, camPos.z };
+			mainJson["cam"] = editorCamera->Serialize();
+		}
+		return mainJson;
 	}
 	SH_EDITOR_API void EditorWorld::Deserialize(const core::Json& json)
 	{
-		Super::Deserialize(json);
+		if (json.contains("camPos") && json["camPos"].is_array())
+		{
+			const auto& camPosJson = json["camPos"];
+			editorCamera->gameObject.transform->SetWorldPosition(camPosJson[0], camPosJson[1], camPosJson[2]);
+			editorCamera->gameObject.transform->UpdateMatrix();
+		}
+		if (json.contains("cam"))
+			editorCamera->Deserialize(json["cam"]);
+
+		if (!json.contains("editorObjs"))
+		{
+			Super::Deserialize(json);
+			return;
+		}
+		core::Json copyJson = json;
+		for (core::Json& editorObjJson : copyJson["editorObjs"])
+			copyJson["objs"].push_back(std::move(editorObjJson));
+
+		Super::Deserialize(copyJson);
 	}
 }

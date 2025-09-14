@@ -25,6 +25,7 @@ namespace sh::game
 		void ClampAngles();
 		void UpdateCameraPosition();
 	private:
+		PROPERTY(distance)
 		float distance;
 
 		float xdir;

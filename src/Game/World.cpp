@@ -20,7 +20,6 @@ namespace sh::game
 	SH_GAME_API World::World(sh::render::Renderer& renderer, ImGUImpl& guiContext) :
 		renderer(renderer), componentModule(*game::ComponentModule::GetInstance()), imgui(&guiContext),
 		
-		shaders(renderer), materials(renderer), textures(renderer), models(renderer),
 		mainCamera(nullptr),
 		lightOctree(render::AABB{-1000, -1000, -1000, 1000, 1000, 1000})
 	{
@@ -42,11 +41,11 @@ namespace sh::game
 
 	SH_GAME_API void World::Clean()
 	{
-		models.Clean();
-		materials.Clean();
-		shaders.Clean();
-		textures.Clean();
-
+		if (gameViewTexture != nullptr)
+		{
+			gameViewTexture->Destroy();
+			gameViewTexture = nullptr;
+		}
 		CleanObjs();
 		cameras.clear();
 
@@ -68,9 +67,8 @@ namespace sh::game
 	{
 		SH_INFO("Init resource");
 
-		render::RenderTexture* gameViewTexture = core::SObject::Create<render::RenderTexture>(render::Texture::TextureFormat::SRGBA32);
+		gameViewTexture = core::SObject::Create<render::RenderTexture>(render::Texture::TextureFormat::SRGBA32);
 		gameViewTexture->Build(*renderer.GetContext());
-		textures.AddResource("GameView", gameViewTexture);
 	}
 	SH_GAME_API void World::SetRenderPass()
 	{
@@ -342,7 +340,6 @@ namespace sh::game
 			objsJson.push_back(obj->Serialize());
 		}
 		mainJson["objs"] = std::move(objsJson);
-
 		return mainJson;
 	}
 	SH_GAME_API void World::Deserialize(const core::Json& json)
@@ -458,6 +455,10 @@ namespace sh::game
 	SH_GAME_API auto World::GetUiContext() const -> ImGUImpl&
 	{
 		return *imgui;
+	}
+	SH_GAME_API auto World::GetGameViewTexture() const -> render::RenderTexture&
+	{
+		return *gameViewTexture;
 	}
 	SH_GAME_API void World::PublishEvent(const core::IEvent& event)
 	{

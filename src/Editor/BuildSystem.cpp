@@ -8,6 +8,7 @@
 #include "Core/FileSystem.h"
 
 #include "Game/World.h"
+#include "Game/GameObject.h"
 #include "Game/GameManager.h"
 
 #include "Game/Asset/WorldAsset.h"
@@ -19,6 +20,59 @@
 #include <fstream>
 namespace sh::editor
 {
+    BuildSystem::BuildSystem() :
+        uuidRegex("^[0-9a-f]{32}$", std::regex::optimize)
+    {
+    }
+
+    SH_EDITOR_API void BuildSystem::Build(Project& project, const std::filesystem::path& outputPath)
+    {
+        worldUUIDs.clear();
+        uuids.clear();
+
+        currentProject = &project;
+
+        core::AssetBundle bundle;
+
+        std::vector<game::World*> worldPtrs;
+        worldPtrs.push_back(project.GetProjectSetting().startingWorld.Get());
+        for (int i = 0; i < worldPtrs.size(); ++i)
+        {
+            auto worldPtr = worldPtrs[i];
+
+            core::Json worldJson{};
+            if (worldPtr->IsLoaded())
+                worldJson = worldPtr->Serialize();
+            else
+                worldJson = worldPtr->GetWorldPoint();
+
+            std::unordered_set<std::string> uuids;
+            ExtractUUIDs(uuids, worldJson);
+            for (const auto& uuidStr : uuids)
+            {
+                const core::UUID uuid{ uuidStr };
+
+                this->uuids.insert(uuidStr);
+                worldUUIDs[worldPtr->GetUUID().ToString()].push_back(uuidStr);
+
+                auto obj = core::SObjectManager::GetInstance()->GetSObject(uuid);
+                if (obj != nullptr)
+                {
+                    if (obj->GetType().IsChildOf(game::World::GetStaticType()))
+                    {
+                        auto it = std::find(worldPtrs.begin(), worldPtrs.end(), static_cast<game::World*>(obj));
+                        if (it == worldPtrs.end())
+                            worldPtrs.push_back(static_cast<game::World*>(obj));
+                    }
+                }
+            }
+            PackingAssets(bundle, *worldPtr);
+        }
+
+        bundle.SaveBundle(outputPath / "assets.bundle");
+
+        ExportGameManager(outputPath / "gameManager.bin");
+    }
     void BuildSystem::ExtractUUIDs(std::unordered_set<std::string>& set, const core::Json& worldJson)
     {
         if (worldJson.is_object())
@@ -119,59 +173,5 @@ namespace sh::editor
         }
         of.write(reinterpret_cast<const char*>(data.data()), data.size());
         of.close();
-    }
-
-    BuildSystem::BuildSystem() :
-        uuidRegex("^[0-9a-f]{32}$", std::regex::optimize)
-    {
-    }
-
-    void BuildSystem::Build(Project& project, const std::filesystem::path& outputPath)
-    {
-        worldUUIDs.clear();
-        uuids.clear();
-
-        currentProject = &project;
-
-        core::AssetBundle bundle;
-
-        std::vector<game::World*> worldPtrs;
-        worldPtrs.push_back(project.GetProjectSetting().startingWorld.Get());
-        for (int i = 0; i < worldPtrs.size(); ++i)
-        {
-            auto worldPtr = worldPtrs[i];
-
-            core::Json worldJson{};
-            if (worldPtr->IsLoaded())
-                worldJson = worldPtr->Serialize();
-            else
-                worldJson = worldPtr->GetWorldPoint();
-
-            std::unordered_set<std::string> uuids;
-            ExtractUUIDs(uuids, worldJson);
-            for (const auto& uuidStr : uuids)
-            {
-                const core::UUID uuid{ uuidStr };
-                
-                this->uuids.insert(uuidStr);
-                worldUUIDs[worldPtr->GetUUID().ToString()].push_back(uuidStr);
-
-                auto obj = core::SObjectManager::GetInstance()->GetSObject(uuid);
-                if (obj != nullptr)
-                {
-                    if (obj->GetType().IsChildOf(game::World::GetStaticType()))
-                    {
-                        auto it = std::find(worldPtrs.begin(), worldPtrs.end(), static_cast<game::World*>(obj));
-                        if (it == worldPtrs.end())
-                            worldPtrs.push_back(static_cast<game::World*>(obj));
-                    }
-                }
-            }
-            PackingAssets(bundle, *worldPtr);
-        }
-       
-        bundle.SaveBundle(outputPath / "assets.bundle");
-
-        ExportGameManager(outputPath / "gameManager.bin");
     }
 }//namespace
