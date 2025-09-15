@@ -108,6 +108,15 @@ namespace sh::game
 					component->OnEnable();
 		}
 	}
+	SH_GAME_API void GameObject::OnDisable()
+	{
+		for (auto& component : components)
+		{
+			if (core::IsValid(component) && component->IsActive())
+				if (world.IsPlaying() || component->canPlayInEditor)
+					component->OnDisable();
+		}
+	}
 	SH_GAME_API void GameObject::OnDestroy()
 	{
 		for (auto component : components)
@@ -222,37 +231,50 @@ namespace sh::game
 
 	SH_GAME_API void GameObject::SetActive(bool b)
 	{
-		if (!bEnable && b)
-			OnEnable();
+		bool bWasActiveInHierarchy = IsActive();
+
+		if (bEnable == b)
+			return;
+
 		bEnable = b;
+		bool bIsActiveInHierarchy = IsActive();
 
-		if (bParentEnable)
+		if (bWasActiveInHierarchy == bIsActiveInHierarchy)
+			return;
+
+		if (bIsActiveInHierarchy)
+			OnEnable();
+		else
+			OnDisable();
+
+		std::queue<std::pair<Transform*, bool>> bfs;
+		// 현재 계층 활성 상태를 넘겨줌
+		for (auto child : transform->GetChildren())
+			bfs.push({ child, bIsActiveInHierarchy });
+
+		while (!bfs.empty())
 		{
-			std::queue<Transform*> bfs;
-			for (auto child : transform->GetChildren())
-				bfs.push(child);
+			auto [transform, bParentActiveInHierarchy] = bfs.front();
+			bfs.pop();
 
-			while (!bfs.empty())
-			{
-				Transform* transform = bfs.front();
-				bfs.pop();
+			GameObject& childObj = transform->gameObject;
 
-				if (!transform->gameObject.bParentEnable && bEnable && activeSelf)
-					OnEnable();
-				transform->gameObject.bParentEnable = bEnable;
+			bool bWasChildActiveInHierarchy = childObj.IsActive();
+			childObj.bParentEnable = bParentActiveInHierarchy;
+			bool bNowChildActiveInHierarchy = childObj.IsActive();
 
-				if (!transform->gameObject.activeSelf)
-					continue;
+			if (!bWasChildActiveInHierarchy && bNowChildActiveInHierarchy)
+				childObj.OnEnable();
+			else if (bWasChildActiveInHierarchy && !bNowChildActiveInHierarchy)
+				childObj.OnDisable();
 
-				for (auto child : transform->GetChildren())
-					bfs.push(child);
-			}
+			for (auto grandChild : transform->GetChildren())
+				bfs.push({ grandChild, bNowChildActiveInHierarchy });
 		}
 	}
-
-	SH_GAME_API auto GameObject::IsParentActive() const -> bool
+	SH_GAME_API auto GameObject::IsActive() const -> bool
 	{
-		return bParentEnable;
+		return bParentEnable && bEnable;
 	}
 
 	SH_GAME_API auto GameObject::GetComponents() const -> const std::vector<Component*>&

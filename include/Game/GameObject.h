@@ -29,6 +29,7 @@ namespace sh::game
 		SH_GAME_API void Awake() override;
 		SH_GAME_API void Start() override;
 		SH_GAME_API void OnEnable() override;
+		SH_GAME_API void OnDisable() override;
 		SH_GAME_API void FixedUpdate() override;
 		SH_GAME_API void BeginUpdate() override;
 		SH_GAME_API void Update() override;
@@ -40,7 +41,7 @@ namespace sh::game
 		SH_GAME_API void OnCollisionExit(Collider& collider) override;
 
 		SH_GAME_API void SetActive(bool b);
-		SH_GAME_API auto IsParentActive() const -> bool;
+		SH_GAME_API auto IsActive() const -> bool;
 
 		SH_GAME_API auto GetComponents() const -> const std::vector<Component*>&;
 

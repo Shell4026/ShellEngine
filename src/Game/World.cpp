@@ -207,7 +207,7 @@ namespace sh::game
 		{
 			if (!core::IsValid(obj))
 				continue;
-			if (!obj->activeSelf || !obj->IsParentActive())
+			if (!obj->IsActive())
 				continue;
 			obj->Start();
 		}
@@ -215,7 +215,7 @@ namespace sh::game
 		{
 			if (!sh::core::IsValid(obj))
 				continue;
-			if (!obj->activeSelf || !obj->IsParentActive())
+			if (!obj->IsActive())
 				continue;
 			obj->BeginUpdate();
 		}
@@ -230,7 +230,7 @@ namespace sh::game
 			{
 				if (!sh::core::IsValid(obj))
 					continue;
-				if (!obj->activeSelf || !obj->IsParentActive())
+				if (!obj->IsActive())
 					continue;
 				obj->FixedUpdate();
 			}
@@ -240,7 +240,7 @@ namespace sh::game
 		{
 			if (!sh::core::IsValid(obj))
 				continue;
-			if (!obj->activeSelf || !obj->IsParentActive())
+			if (!obj->IsActive())
 				continue;
 			obj->ProcessCollisionFunctions();
 		}
@@ -248,7 +248,7 @@ namespace sh::game
 		{
 			if (!sh::core::IsValid(obj))
 				continue;
-			if (!obj->activeSelf || !obj->IsParentActive())
+			if (!obj->IsActive())
 				continue;
 			obj->Update();
 		}
@@ -256,7 +256,7 @@ namespace sh::game
 		{
 			if (!sh::core::IsValid(obj))
 				continue;
-			if (!obj->activeSelf || !obj->IsParentActive())
+			if (!obj->IsActive())
 				continue;
 			obj->LateUpdate();
 		}

@@ -1,5 +1,4 @@
-﻿#include "PCH.h"
-#include "Vector.h"
+﻿#include "Vector.h"
 
 namespace sh::game
 {

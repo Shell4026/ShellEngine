@@ -103,7 +103,7 @@ namespace sh::editor
 		bool isSelected = world.IsSelected(obj);
 		bool nodeOpen = false;
 		bool hasChildren = !obj->transform->GetChildren().empty();
-		bool bActive = obj->activeSelf;
+		bool bActive = obj->IsActive();
 
 		DrawInvisibleSpace(obj);
 		if (hasChildren) 
