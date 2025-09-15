@@ -3,7 +3,12 @@
 
 Unity엔진의 ShaderLab + GLSL의 문법을 합친 것이 특징 입니다.
 
-# 예시 코드
+# 상세 원리
+1. ShaderLexer클래스로 코드를 토큰 단위로 나눕니다
+2. ShaderParser클래스로 토큰을 하나하나 읽어 문법을 검사하고 파싱 트리 구조를 완성해나갑니다.
+3. ShaderParse내 Generate함수로 파싱 트리를 기반으로 GLSL문법으로 변환한 후 셰이더를 컴파일 합니다.
+
+## 예시 코드
 
 ```glsl
 #version 430 core
@@ -161,6 +166,52 @@ Shader "Outline Shader"
 			void main() 
 			{
 				outColor = color;
+			}
+		}
+	}
+}
+```
+### 로컬 키워드를 사용해 오브젝트별 텍스쳐 설정 가능한 반투명 셰이더 예시
+로컬 키워드로 된 유니폼 변수는 MeshRenderer MaterialPropertyBlock을 지정해준 후 값을 넣어주면 됩니다.
+
+```glsl
+#version 430 core
+Shader "Unlit Transparent Shader2"
+{
+	Property
+	{
+		vec3 color;
+		[Local] sampler2D tex;
+	}
+	
+	Pass
+	{
+		LightingPass "Transparent"
+		
+		Cull Off;
+		ZWrite Off;
+		Stage Vertex
+		{
+			layout(location = 0) out vec2 fragUvs;
+			
+			void main()
+			{
+				gl_Position = MATRIX_PROJ * MATRIX_VIEW * MATRIX_MODEL * vec4(VERTEX, 1.0f);
+				fragUvs = UV;
+			}
+		}
+		Stage Fragment
+		{
+			layout(location = 0) out vec4 outColor;
+
+			layout(location = 0) in vec2 uvs;
+			uniform vec3 color;
+			uniform sampler2D tex;
+
+			void main() 
+			{
+				outColor = texture(tex, uvs);
+				outColor.xyz *= color.xyz;
 			}
 		}
 	}

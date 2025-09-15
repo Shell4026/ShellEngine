@@ -1,7 +1,9 @@
 # ShellEngine
 ![image](https://github.com/user-attachments/assets/c5aa3796-8969-4b63-aee8-8c236fbe6820)
 
-Vulkan 기반으로 개발중인 크로스 플랫폼 3D 게임 엔진입니다.</br>
+<img width="1913" height="1029" alt="스크린샷 2025-09-15 152351" src="https://github.com/user-attachments/assets/f7e137c6-86a9-4391-ab8c-9b2adc18f6b8" />
+
+Vulkan 기반으로 개발중인 크로스 플랫폼 3D/2D 게임 엔진입니다.</br>
 저수준 그래픽 API를 직접 다루면서, 현대 게임 엔진에 필요한 다양한 시스템을 설계하고 구현하는 것을 목표로 했습니다.
 
 ## 특징
@@ -29,6 +31,7 @@ Vulkan 기반으로 개발중인 크로스 플랫폼 3D 게임 엔진입니다.<
   - 런타임 리플렉션을 활용한 오브젝트 계층 구조(Hierarchy) 및 속성 편집(Inspector) 구현
   - Unity 스타일의 편집 환경 제공
   - 객체 조작 방식은 Blender와 유사
+  - 빌드 시스템을 통해 에셋을 내보낼 수 있음
 
 - **컴포넌트 기반 아키텍처** [상세](https://github.com/Shell4026/ShellEngine/blob/main/Component.md)
   - Unity와 유사한 컴포넌트-엔티티 구조
@@ -56,7 +59,8 @@ https://github.com/user-attachments/assets/50c5cc05-7eba-45cf-9a92-ca2046e119d2
 > 각 스레드는 작업이 끝난 후 Sync타이밍에 버퍼를 교환하며 가비지 컬렉터가 작동합니다.
 > 자세한 사항은 '특징'의 멀티 스레딩 아키텍쳐를 참조 하세요.
 
-![생명주기 drawio](https://github.com/user-attachments/assets/ffee5ba7-44ab-4733-bbaf-6d486e343fe0)
+<img width="379" height="731" alt="생명주기 drawio" src="https://github.com/user-attachments/assets/5bf4d552-2ee7-44bf-9cd1-92d051f8fee2" />
+
 
 게임 스레드내의 모든 객체는 해당 생명 주기를 따릅니다.
 

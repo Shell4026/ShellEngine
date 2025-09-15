@@ -56,3 +56,33 @@ SH_RENDER_API void Renderer::Sync()
 }
 ```
 swap방식은 메모리를 더 먹지만 매우 빠르니 필요한 곳에 쓰면 됩니다.
+
+# 스레드 풀
+core모듈의 ThreadPool클래스를 이용하여 작업을 할당하고 future로 값을 받아올 수 있습니다.
+
+### 예시
+```c++
+// 파이프라인 커맨드 기록
+std::vector<std::future<Command>> futureCommands;
+futureCommands.reserve(renderPipelines.size());
+for (auto& renderPipeline : renderPipelines)
+{
+  futureCommands.push_back(core::ThreadPool::GetInstance()->AddTask(
+    [&, pipeline = renderPipeline.get()]() -> Command
+    {
+      std::thread::id tid{ std::this_thread::get_id() };
+      auto pipelineImpl = static_cast<VulkanRenderPipelineImpl*>(pipeline->GetImpl());
+      // 스레드 별로 할당된 커맨드 버퍼풀에서 커맨드 버퍼를 할당 받아온다.
+      auto pipelineCmd = context->GetCommandBufferPool().AllocateCommandBuffer(tid, VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
+      pipelineImpl->SetCommandBuffer(*pipelineCmd);
+
+      // 커맨드 버퍼에 파이프라인 명령을 기록한다.
+      pipelineCmd->Build([&] { pipeline->RecordCommand(cams, imgIdx); }, true);
+      return { pipeline, pipelineCmd };
+    }
+  ));
+}
+// 스레드풀에 할당된 작업이 다 끝나면 넘어간다.
+for (auto& futureCommand : futureCommands)
+  recordedCommands.push_back(futureCommand.get());
+```

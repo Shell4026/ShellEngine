@@ -88,3 +88,17 @@ for (auto it = prop->Begin(&nested); it != prop->End(&nested); ++it)
 }
 assert(*savedIterator.Get<int>() == 4); // 반복자 저장 가능
 ```
+
+컨테이너의 종류에 상관없이 값을 넣을 수도 있습니다.
+```c++
+// std::vector<int> numbers{ 1, 2, 3 };
+auto* numbersProperty = Derived::GetStaticType().GetProperty("numbers");
+assert(numbersProperty->isContainer);
+assert(*numbersProperty->containerElementType == sh::core::reflection::GetType<int>());
+numbersProperty->InsertToContainer(derived, 4);
+assert(numbers[3] == 4);
+
+// std::map<std::string, int> map{};
+auto mapProp = derived.GetType().GetProperty("map");
+mapProp->InsertToContainer(derived, std::make_pair(std::string{ "test2" }, 3)); // "test2"로 넣으면 에러
+```
