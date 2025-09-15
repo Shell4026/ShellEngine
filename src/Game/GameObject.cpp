@@ -173,30 +173,47 @@ namespace sh::game
 	{
 		for (auto collider : enterColliders)
 		{
+			bool bTrigger = collider->IsTrigger();
 			if (!core::IsValid(collider))
 				continue;
 
 			for (auto& component : components)
 			{
 				if (core::IsValid(component) && component->IsActive())
+				{
 					if (world.IsPlaying() || component->canPlayInEditor)
-						component->OnCollisionEnter(*collider);
+					{
+						if (!bTrigger)
+							component->OnCollisionEnter(*collider);
+						else
+							component->OnTriggerEnter(*collider);
+					}
+				}
 			}
 		}
 		for (auto collider : stayColliders)
 		{
+			bool bTrigger = collider->IsTrigger();
 			if (!core::IsValid(collider))
 				continue;
 
 			for (auto& component : components)
 			{
 				if (core::IsValid(component) && component->IsActive())
+				{
 					if (world.IsPlaying() || component->canPlayInEditor)
-						component->OnCollisionStay(*collider);
+					{
+						if (!bTrigger)
+							component->OnCollisionStay(*collider);
+						else
+							component->OnTriggerStay(*collider);
+					}
+				}
 			}
 		}
 		for (auto collider : exitColliders)
 		{
+			bool bTrigger = collider->IsTrigger();
 			if (!core::IsValid(collider))
 				continue;
 
@@ -205,8 +222,15 @@ namespace sh::game
 			for (auto& component : components)
 			{
 				if (core::IsValid(component) && component->IsActive())
+				{
 					if (world.IsPlaying() || component->canPlayInEditor)
-						component->OnCollisionExit(*collider);
+					{
+						if (!bTrigger)
+							component->OnCollisionExit(*collider);
+						else
+							component->OnTriggerExit(*collider);
+					}
+				}
 			}
 		}
 		enterColliders.clear();
@@ -216,12 +240,10 @@ namespace sh::game
 	SH_GAME_API void GameObject::OnCollisionEnter(Collider& collider)
 	{
 		if (stayColliders.find(&collider) == stayColliders.end())
+		{
 			enterColliders.insert(&collider);
-	}
-
-	SH_GAME_API void GameObject::OnCollisionStay(Collider& collider)
-	{
-		stayColliders.insert(&collider);
+			stayColliders.insert(&collider);
+		}
 	}
 
 	SH_GAME_API void GameObject::OnCollisionExit(Collider& collider)

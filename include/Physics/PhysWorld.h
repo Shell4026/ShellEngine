@@ -34,7 +34,10 @@ namespace sh::phys
 			{
 				CollisionEnter,
 				CollisionStay,
-				CollisionExit
+				CollisionExit,
+				TriggerEnter,
+				TriggerStay,
+				TriggerExit
 			} type;
 		};
 	public:

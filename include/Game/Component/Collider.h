@@ -19,10 +19,16 @@ namespace sh::game
 
 		SH_GAME_API virtual auto GetNative() const -> void* = 0;
 
+		SH_GAME_API void SetTrigger(bool bTrigger);
+		SH_GAME_API auto IsTrigger() const -> bool;
 		SH_GAME_API void SetCollisionTag(phys::Tag tag);
 		SH_GAME_API auto GetCollisionTag() const -> phys::Tag;
 		SH_GAME_API void SetAllowCollisions(phys::Tagbit tags);
 		SH_GAME_API auto GetAllowCollisions() const -> phys::Tagbit;
+		/// @brief 연결된 유효한 리지드 바디들을 반환한다.
+		SH_GAME_API auto GetRigidbodies() const -> std::vector<RigidBody*>;
+
+		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 	private:
 		phys::Tag tag = phys::Tag::Tag1;
 		phys::Tagbit allowed = 0xffff;
@@ -35,5 +41,7 @@ namespace sh::game
 		};
 		std::vector<Handle> handles;
 
+		PROPERTY(bTrigger)
+		bool bTrigger = false;
 	};
 }//namespace

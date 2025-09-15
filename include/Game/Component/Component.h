@@ -71,7 +71,9 @@ namespace sh::game
 		SH_GAME_API void OnCollisionEnter(Collider& collider) override {}
 		SH_GAME_API void OnCollisionStay(Collider& collider) override {}
 		SH_GAME_API void OnCollisionExit(Collider& collider) override {}
-
+		SH_GAME_API virtual void OnTriggerEnter(Collider& collider) {};
+		SH_GAME_API virtual void OnTriggerStay(Collider& collider) {};
+		SH_GAME_API virtual void OnTriggerExit(Collider& collider) {};
 		/// @brief 우선 순위가 높을수록 다른 컴포넌트보다 우선 실행 된다.
 		/// @param priority 우선 순위
 		SH_GAME_API void SetPriority(int priority);

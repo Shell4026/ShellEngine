@@ -67,6 +67,7 @@ namespace sh::game
 	}
 	SH_GAME_API void ShpereCollider::OnPropertyChanged(const core::reflection::Property& prop)
 	{
+		Super::OnPropertyChanged(prop);
 		if (prop.GetName() == core::Util::ConstexprHash("radius"))
 			SetRadius(radius);
 	}

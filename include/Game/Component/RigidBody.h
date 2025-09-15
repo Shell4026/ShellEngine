@@ -4,6 +4,7 @@
 #include "Collider.h"
 #include "../Vector.h"
 
+#include "Core/SContainer.hpp"
 #include "Core/Observer.hpp"
 #include "Core/EventSubscriber.h"
 
@@ -22,8 +23,11 @@ namespace sh::game
 	public:
 		SH_GAME_API RigidBody(GameObject& owner);
 		SH_GAME_API ~RigidBody();
-
+		
+		SH_GAME_API void Awake() override;
 		SH_GAME_API void Start() override;
+		SH_GAME_API void OnEnable() override;
+		SH_GAME_API void OnDisable() override;
 		SH_GAME_API void OnDestroy() override;
 		SH_GAME_API void BeginUpdate() override;
 		SH_GAME_API void FixedUpdate() override;
@@ -122,6 +126,8 @@ namespace sh::game
 
 		core::Observer<false, const SObject*>::Listener colliderDestroyListener;
 		core::EventSubscriber<phys::PhysWorld::PhysicsEvent> physEventSubscriber;
+
+		core::SSet<Collider*> hitCollidersCache;
 
 		static std::unordered_map<RigidBodyHandle, RigidBody*> nativeMap;
 	};

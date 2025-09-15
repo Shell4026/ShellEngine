@@ -62,10 +62,16 @@ namespace sh::game
 					if (!core::IsValid(collider))
 						return;
 
-					if (evt.type == phys::PhysWorld::PhysicsEvent::Type::CollisionEnter)
+					if (evt.type == phys::PhysWorld::PhysicsEvent::Type::CollisionEnter || evt.type == phys::PhysWorld::PhysicsEvent::Type::TriggerEnter)
+					{
 						gameObject.OnCollisionEnter(*collider);
-					else if (evt.type == phys::PhysWorld::PhysicsEvent::Type::CollisionExit)
+						hitCollidersCache.insert(collider);
+					}
+					else if (evt.type == phys::PhysWorld::PhysicsEvent::Type::CollisionExit || evt.type == phys::PhysWorld::PhysicsEvent::Type::TriggerExit)
+					{
 						gameObject.OnCollisionExit(*collider);
+						hitCollidersCache.erase(collider);
+					}
 				}
 			}
 		);
@@ -76,9 +82,37 @@ namespace sh::game
 	{
 		SH_INFO("~RigidBody");
 	}
+	SH_GAME_API void RigidBody::Awake()
+	{
+		impl->rigidbody->setTransform(reactphysics3d::Transform::identity());
+		impl->rigidbody->setLinearVelocity({ 0.f, 0.f, 0.f });
+	}
 	SH_GAME_API void RigidBody::Start()
 	{
 		ResetPhysicsTransform();
+	}
+	SH_GAME_API void RigidBody::OnEnable()
+	{
+		impl->rigidbody->setIsActive(true);
+	}
+	SH_GAME_API void RigidBody::OnDisable()
+	{
+		impl->rigidbody->setIsActive(false);
+		for (auto hitCollider : hitCollidersCache)
+		{
+			if (!core::IsValid(hitCollider))
+				continue;
+			gameObject.OnCollisionExit(*hitCollider);
+			for (auto rb : hitCollider->GetRigidbodies())
+			{
+				auto it = rb->hitCollidersCache.find(collision);
+				if (it != rb->hitCollidersCache.end())
+				{
+					rb->hitCollidersCache.erase(it);
+					rb->gameObject.OnCollisionExit(*collision);
+				}
+			}
+		}
 	}
 	SH_GAME_API void RigidBody::OnDestroy()
 	{
@@ -154,14 +188,15 @@ namespace sh::game
 			auto shape = reinterpret_cast<reactphysics3d::CollisionShape*>(collision->GetNative());
 			const glm::quat& quat = colliderComponent->gameObject.transform->GetQuat();
 			const Vec3& pos = colliderComponent->gameObject.transform->position;
-			reactphysics3d::Transform transform{};
+			reactphysics3d::Transform transform{ reactphysics3d::Transform::identity() };
 			// 리지드 바디랑 콜라이더랑 같은 오브젝트에 있으면 transform은 identity
 			if (&colliderComponent->gameObject != &gameObject)
-				transform = reactphysics3d::Transform{ { pos.x, pos.y, pos.z }, { quat.x,quat.y,quat.z,quat.w } };
+				transform = reactphysics3d::Transform{ { pos.x, pos.y, pos.z }, { quat.x, quat.y, quat.z, quat.w } };
 			impl->collider = impl->rigidbody->addCollider(shape, transform);
 			impl->collider->getMaterial().setBounciness(bouncy);
 			impl->collider->setCollisionCategoryBits(static_cast<uint16_t>(collision->GetCollisionTag()));
 			impl->collider->setCollideWithMaskBits(collision->GetAllowCollisions());
+			impl->collider->setIsTrigger(collision->IsTrigger());
 			collision->handles.push_back({ this, impl->collider });
 		}
 	}
@@ -224,10 +259,7 @@ namespace sh::game
 		angularLock.z = std::clamp(std::roundf(angularLock.z), 0.f, 1.f);
 
 		// reactPhysics에선 0이 허용, 1이 잠금이기 때문에 반전 시켜야함.
-		bool x = !static_cast<bool>(angularLock.x);
-		bool y = !static_cast<bool>(angularLock.y);
-		bool z = !static_cast<bool>(angularLock.z);
-		impl->rigidbody->setAngularLockAxisFactor({ static_cast<float>(x), static_cast<float>(y), static_cast<float>(z) });
+		impl->rigidbody->setAngularLockAxisFactor({ 1.0f - angularLock.x , 1.0f - angularLock.y, 1.0f - angularLock.z });
 	}
 	SH_GAME_API auto RigidBody::GetAngularLock() const -> const game::Vec3&
 	{
@@ -241,10 +273,7 @@ namespace sh::game
 		axisLock.z = std::clamp(std::roundf(axisLock.z), 0.f, 1.f);
 
 		// reactPhysics에선 0이 허용, 1이 잠금이기 때문에 반전 시켜야함.
-		bool x = !static_cast<bool>(axisLock.x);
-		bool y = !static_cast<bool>(axisLock.y);
-		bool z = !static_cast<bool>(axisLock.z);
-		impl->rigidbody->setLinearLockAxisFactor({ static_cast<float>(x), static_cast<float>(y), static_cast<float>(z) });
+		impl->rigidbody->setLinearLockAxisFactor({ 1.0f - axisLock.x, 1.0f - axisLock.y, 1.0f - axisLock.z });
 	}
 	SH_GAME_API auto RigidBody::GetAxisLock() const -> const game::Vec3&
 	{
@@ -325,25 +354,24 @@ namespace sh::game
 
 	SH_GAME_API void RigidBody::ResetPhysicsTransform()
 	{
+		gameObject.transform->UpdateMatrix();
 		const Vec3& objPos = gameObject.transform->GetWorldPosition();
 		const auto& objQuat = gameObject.transform->GetWorldQuat();
 		
-		if (&collision->gameObject != &gameObject)
+		if (core::IsValid(collision))
 		{
-			if (core::IsValid(collision))
+			if (&collision->gameObject != &gameObject)
 			{
 				const auto& pos = collision->gameObject.transform->position;
 				const auto& quat = collision->gameObject.transform->GetQuat();
 				impl->collider->setLocalToBodyTransform(reactphysics3d::Transform{ {pos.x, pos.y, pos.z}, {quat.x, quat.y, quat.z, quat.w} });
 			}
-		}
-		else
-		{
-			if (core::IsValid(collision))
+			else
+			{
 				impl->collider->setLocalToBodyTransform(reactphysics3d::Transform::identity());
+			}
 		}
-		impl->rigidbody->setTransform(reactphysics3d::Transform{ {objPos.x, objPos.y, objPos.z}, reactphysics3d::Quaternion{objQuat.x, objQuat.y, objQuat.z, objQuat.w} });
-
+		impl->rigidbody->setTransform(reactphysics3d::Transform{ reactphysics3d::Vector3{objPos.x, objPos.y, objPos.z}, reactphysics3d::Quaternion{objQuat.x, objQuat.y, objQuat.z, objQuat.w} });
 		ResetInterpolationState();
 	}
 
@@ -366,6 +394,7 @@ namespace sh::game
 
 	SH_GAME_API void RigidBody::OnPropertyChanged(const core::reflection::Property& prop)
 	{
+		Super::OnPropertyChanged(prop);
 		if (prop.GetName() == core::Util::ConstexprHash("collision"))
 		{
 			SetCollider(collision);

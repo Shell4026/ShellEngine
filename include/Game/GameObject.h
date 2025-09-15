@@ -37,7 +37,7 @@ namespace sh::game
 		/// @brief FixedUpdate 다음에 호출 된다. OnCollision 함수들을 호출한다.
 		SH_GAME_API void ProcessCollisionFunctions();
 		SH_GAME_API void OnCollisionEnter(Collider& collider) override;
-		SH_GAME_API void OnCollisionStay(Collider& collider) override;
+		SH_GAME_API void OnCollisionStay(Collider& collider) override {};
 		SH_GAME_API void OnCollisionExit(Collider& collider) override;
 
 		SH_GAME_API void SetActive(bool b);

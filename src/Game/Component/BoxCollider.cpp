@@ -68,7 +68,8 @@ namespace sh::game
 	}
 	SH_GAME_API void BoxCollider::OnPropertyChanged(const core::reflection::Property& prop)
 	{
-		if (prop.GetName() == "size")
+		Super::OnPropertyChanged(prop);
+		if (prop.GetName() == core::Util::ConstexprHash("size"))
 			SetSize(size);
 	}
 	SH_GAME_API void BoxCollider::Update()

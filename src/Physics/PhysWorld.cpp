@@ -46,7 +46,7 @@ namespace sh::phys
 	class CustomEventListener : public reactphysics3d::EventListener
 	{
 	public:
-		virtual void onContact(const CollisionCallback::CallbackData& callbackData) override
+		virtual void onContact(const reactphysics3d::CollisionCallback::CallbackData& callbackData) override
 		{
 			if (bus == nullptr)
 				return;
@@ -65,6 +65,31 @@ namespace sh::phys
 				else if (type == reactphysics3d::CollisionCallback::ContactPair::EventType::ContactStay)
 					evt.type = PhysWorld::PhysicsEvent::Type::CollisionStay;
 				else if (type == reactphysics3d::CollisionCallback::ContactPair::EventType::ContactExit)
+					evt.type = PhysWorld::PhysicsEvent::Type::CollisionExit;
+
+				bus->Publish(evt);
+			}
+		}
+
+		virtual void onTrigger(const reactphysics3d::OverlapCallback::CallbackData& callbackData) override
+		{
+			if (bus == nullptr)
+				return;
+
+			for (uint32_t i = 0; i < callbackData.getNbOverlappingPairs(); i++)
+			{
+				const auto& pair = callbackData.getOverlappingPair(i);
+				auto type = pair.getEventType();
+
+				PhysWorld::PhysicsEvent evt{};
+				evt.rigidBody1Handle = pair.getBody1();
+				evt.rigidBody2Handle = pair.getBody2();
+
+				if (type == reactphysics3d::OverlapCallback::OverlapPair::EventType::OverlapStart)
+					evt.type = PhysWorld::PhysicsEvent::Type::CollisionEnter;
+				else if (type == reactphysics3d::OverlapCallback::OverlapPair::EventType::OverlapStay)
+					evt.type = PhysWorld::PhysicsEvent::Type::CollisionStay;
+				else if (type == reactphysics3d::OverlapCallback::OverlapPair::EventType::OverlapExit)
 					evt.type = PhysWorld::PhysicsEvent::Type::CollisionExit;
 
 				bus->Publish(evt);

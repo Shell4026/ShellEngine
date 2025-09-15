@@ -101,6 +101,7 @@ namespace sh::game
 	}
 	SH_GAME_API void CapsuleCollider::OnPropertyChanged(const core::reflection::Property& prop)
 	{
+		Super::OnPropertyChanged(prop);
 		if (prop.GetName() == core::Util::ConstexprHash("radius"))
 			SetRadius(radius);
 		else if (prop.GetName() == core::Util::ConstexprHash("height"))
