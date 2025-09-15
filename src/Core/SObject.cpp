@@ -239,6 +239,11 @@ namespace sh::core
 						for (auto it = prop->Begin(*this); it != prop->End(*this); ++it)
 							json[name].push_back(*it.Get<bool>());
 					}
+					else if (*prop->containerElementType == core::reflection::GetType<char>())
+					{
+						for (auto it = prop->Begin(*this); it != prop->End(*this); ++it)
+							json[name].push_back(*it.Get<char>());
+					}
 					else if (*prop->containerElementType == core::reflection::GetType<std::string>())
 					{
 						for (auto it = prop->Begin(*this); it != prop->End(*this); ++it)
@@ -355,6 +360,8 @@ namespace sh::core
 						insertFn(0.0);
 					else if (*prop->containerElementType == core::reflection::GetType<bool>())
 						insertFn(false);
+					else if (*prop->containerElementType == core::reflection::GetType<char>())
+						insertFn('\0');
 					else if (*prop->containerElementType == core::reflection::GetType<std::string>())
 						insertFn(std::string{});
 					OnPropertyChanged(*prop.get());

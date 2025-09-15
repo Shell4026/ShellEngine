@@ -546,6 +546,16 @@ namespace sh::editor
 						if (ImGui::Checkbox(("##Input_" + name + std::to_string(idx)).c_str(), parameter))
 							bChanged = true;
 					}
+					else if (it.GetType() == core::reflection::GetType<char>())
+					{
+						char buffer[2] = { ' ', '\0' };
+						buffer[0] = *it.Get<char>();
+						if (ImGui::InputText(("##Input_" + name + std::to_string(idx)).c_str(), buffer, sizeof(buffer)))
+						{
+							*it.Get<char>() = buffer[0];
+							bChanged = true;
+						}
+					}
 					else if (it.GetType() == core::reflection::GetType<game::Vec2>())
 					{
 						game::Vec2* parameter = it.Get<game::Vec2>();
@@ -599,55 +609,26 @@ namespace sh::editor
 			}
 			if (ImGui::Button("+"))
 			{
-				// 더 좋은 방법 나중에 고민하기
-				if (prop.type.name.find("vector") != std::string_view::npos)
-				{
-					if (*prop.containerElementType == core::reflection::GetType<int>() || *prop.containerElementType == core::reflection::GetType<uint32_t>())
-					{
-						auto v = prop.Get<std::vector<int>>(obj);
-						v->push_back(0);
-					}
-					else if (*prop.containerElementType == core::reflection::GetType<float>())
-					{
-						auto v = prop.Get<std::vector<float>>(obj);
-						v->push_back(0.0f);
-					}
-					else if (*prop.containerElementType == core::reflection::GetType<double>())
-					{
-						auto v = prop.Get<std::vector<double>>(obj);
-						v->push_back(0.0);
-					}
-					else if (*prop.containerElementType == core::reflection::GetType<bool>())
-					{
-						auto v = prop.Get<std::vector<bool>>(obj);
-						v->push_back(false);
-					}
-					else if (*prop.containerElementType == core::reflection::GetType<std::string>())
-					{
-						auto v = prop.Get<std::vector<std::string>>(obj);
-						v->push_back("");
-					}
-					else if (*prop.containerElementType == core::reflection::GetType<game::Vec2>())
-					{
-						auto v = prop.Get<std::vector<game::Vec2>>(obj);
-						v->push_back({ 0.f, 0.f });
-					}
-					else if (*prop.containerElementType == core::reflection::GetType<game::Vec3>())
-					{
-						auto v = prop.Get<std::vector<game::Vec3>>(obj);
-						v->push_back({ 0.f, 0.f, 0.f });
-					}
-					else if (*prop.containerElementType == core::reflection::GetType<game::Vec4>())
-					{
-						auto v = prop.Get<std::vector<game::Vec4>>(obj);
-						v->push_back({ 0.f, 0.f, 0.f, 0.f });
-					}
-					else if (*prop.containerElementType == core::reflection::GetType<int16_t>() || *prop.containerElementType == core::reflection::GetType<uint16_t>())
-					{
-						auto v = prop.Get<std::vector<int16_t>>(obj);
-						v->push_back(0);
-					}
-				}
+				if (*prop.containerElementType == core::reflection::GetType<int>() || *prop.containerElementType == core::reflection::GetType<uint32_t>())
+					prop.InsertToContainer(obj, 0);
+				else if (*prop.containerElementType == core::reflection::GetType<float>())
+					prop.InsertToContainer(obj, 0.0f);
+				else if (*prop.containerElementType == core::reflection::GetType<double>())
+					prop.InsertToContainer(obj, 0.0);
+				else if (*prop.containerElementType == core::reflection::GetType<bool>())
+					prop.InsertToContainer(obj, false);
+				else if (*prop.containerElementType == core::reflection::GetType<char>())
+					prop.InsertToContainer(obj, '\0');
+				else if (*prop.containerElementType == core::reflection::GetType<std::string>())
+					prop.InsertToContainer(obj, std::string{});
+				else if (*prop.containerElementType == core::reflection::GetType<game::Vec2>())
+					prop.InsertToContainer(obj, game::Vec2{ 0.f, 0.f });
+				else if (*prop.containerElementType == core::reflection::GetType<game::Vec3>())
+					prop.InsertToContainer(obj, game::Vec3{ 0.f, 0.f, 0.f });
+				else if (*prop.containerElementType == core::reflection::GetType<game::Vec4>())
+					prop.InsertToContainer(obj, game::Vec4{ 0.f, 0.f, 0.f, 0.f });
+				else if (*prop.containerElementType == core::reflection::GetType<int16_t>() || *prop.containerElementType == core::reflection::GetType<uint16_t>())
+					prop.InsertToContainer(obj, (int16_t)0);
 			}
 			ImGui::SameLine();
 			if (ImGui::Button("-"))
@@ -673,6 +654,11 @@ namespace sh::editor
 					else if (*prop.containerElementType == core::reflection::GetType<bool>())
 					{
 						auto v = prop.Get<std::vector<bool>>(obj);
+						v->pop_back();
+					}
+					else if (*prop.containerElementType == core::reflection::GetType<char>())
+					{
+						auto v = prop.Get<std::vector<char>>(obj);
 						v->pop_back();
 					}
 					else if (*prop.containerElementType == core::reflection::GetType<std::string>())
