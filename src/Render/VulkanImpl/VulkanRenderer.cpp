@@ -314,7 +314,7 @@ namespace sh::render::vk
 		{
 			// 카메라가 없는 경우는 UI 커맨드 혼자뿐.
 			cmd->SetWaitSemaphore(SemaphoreInfo{ imageAvailableSemaphore });
-			cmd->SetWaitStage({ VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT });
+			cmd->SetWaitStage({ VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT });
 		}
 		context->GetQueueManager().SubmitCommand(graphicsQueue, *cmd, inFlightFence);
 
