@@ -175,7 +175,7 @@ namespace sh::render::vk
 		{
 			if (td.id == ad.tid)
 			{
-				ad.ptr->Reset();
+				ad.ptr->ResetCommand();
 				ad.ptr->ResetSyncObjects();
 				auto& command = td.commands[ad.type];
 				command.cmds.push(std::move(ad.ptr));

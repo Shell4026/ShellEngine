@@ -186,7 +186,7 @@ namespace sh::render::vk
 		return VkResult::VK_SUCCESS;
 	}
 
-	SH_RENDER_API auto VulkanCommandBuffer::Reset() -> VkResult
+	SH_RENDER_API auto VulkanCommandBuffer::ResetCommand() -> VkResult
 	{
 		if (buffer != nullptr)
 		{

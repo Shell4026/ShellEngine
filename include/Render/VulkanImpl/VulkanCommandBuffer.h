@@ -44,7 +44,7 @@ namespace sh::render::vk
 		SH_RENDER_API auto Create(VkCommandPool cmdPool, const VkCommandBufferAllocateInfo* info = nullptr) -> VkResult;
 		SH_RENDER_API auto GetFence() const -> VkFence;
 		/// @brief 커맨드에 기록된 내용을 지우는 함수.
-		SH_RENDER_API auto Reset() -> VkResult;
+		SH_RENDER_API auto ResetCommand() -> VkResult;
 		/// @brief 세마포어와 waitStage를 초기화 하는 함수.
 		SH_RENDER_API void ResetSyncObjects();
 		/// @brief 커맨드 버퍼와 동기화 객체들을 모두 삭제하는 함수.

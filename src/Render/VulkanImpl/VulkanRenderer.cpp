@@ -179,12 +179,13 @@ namespace sh::render::vk
 			cmd = context->GetCommandBufferPool().AllocateCommandBuffer(std::this_thread::get_id(), VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
 			cmd->SetSignalSemaphore(SemaphoreInfo{ renderFinishedSemaphore });
 		}
-		cmd->Reset();
+		cmd->ResetCommand();
 
 		const VkQueue graphicsQueue = context->GetQueueManager().GetGraphicsQueue();
 
 		// UI 커맨드 빌드
-		cmd->Build([&]
+		cmd->Build(
+			[&]
 			{
 				const VulkanFramebuffer* mainFramebuffer = static_cast<const VulkanFramebuffer*>(context->GetMainFramebuffer(imgIdx));
 				auto& uiRenderPass = context->GetUIRenderPass();
@@ -282,10 +283,8 @@ namespace sh::render::vk
 			}
 			for (auto& futureCommand : futureCommands)
 				recordedCommands.push_back(futureCommand.get());
-
+			
 			// 타임라인 세마포어를 사용하여 순서대로 커맨드 제출
-			VkPipelineStageFlagBits waitStage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-
 			for (const auto& recordedCmd : recordedCommands)
 			{
 				// 첫번째 파이프라인은 스왑체인 이미지를 기다리고 완료 시 세마포어 신호를 1로 바꾼다.
@@ -296,16 +295,14 @@ namespace sh::render::vk
 
 					recordedCmd.cmdBuffer->SetWaitSemaphore(SemaphoreInfo{ imageAvailableSemaphore });
 					recordedCmd.cmdBuffer->SetSignalSemaphore(SemaphoreInfo{ timelineSemaphore, ++timelineValue, true });
-					recordedCmd.cmdBuffer->SetWaitStage({ waitStage });
-
-					// 첫번째 파이프라인 이후에는 이전 파이프라인의 프래그먼트 셰이더가 끝난 후 실행
-					waitStage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+					// 스왑체인 이미지가 준비 되기전까지 COLOR_ATTACHMENT단계에서 대기해야 함
+					recordedCmd.cmdBuffer->SetWaitStage({ VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT });
 				}
 				else
 				{
 					recordedCmd.cmdBuffer->SetWaitSemaphore(SemaphoreInfo{ timelineSemaphore, timelineValue++, true });
 					recordedCmd.cmdBuffer->SetSignalSemaphore(SemaphoreInfo{ timelineSemaphore, timelineValue, true });
-					recordedCmd.cmdBuffer->SetWaitStage({ waitStage });
+					recordedCmd.cmdBuffer->SetWaitStage({ VkPipelineStageFlagBits::VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT });
 				}
 				
 				context->GetQueueManager().SubmitCommand(graphicsQueue, *recordedCmd.cmdBuffer, nullptr);
@@ -339,7 +336,10 @@ namespace sh::render::vk
 		vkQueuePresentKHR(context->GetQueueManager().GetSurfaceQueue(), &presentInfo);
 		
 		result = vkWaitForFences(context->GetDevice(), 1, &inFlightFence, true, std::numeric_limits<uint64_t>::max());
-		assert(result == VkResult::VK_SUCCESS);
+		if (result != VkResult::VK_SUCCESS)
+		{
+			SH_ERROR_FORMAT("Error vkWaitForFences: {}", string_VkResult(result));
+		}
 		vkResetFences(context->GetDevice(), 1, &inFlightFence);
 		for (auto& cmd : recordedCommands)
 			context->GetCommandBufferPool().DeallocateCommandBuffer(*cmd.cmdBuffer);
