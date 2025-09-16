@@ -56,7 +56,7 @@ namespace sh::game
 
 		SH_GAME_API void OnDestroy() override;
 
-		SH_GAME_API virtual void Clean();
+		SH_GAME_API virtual void Clear();
 
 		/// @brief 기본 리소스를 로드한다.
 		SH_GAME_API virtual void InitResource();
@@ -105,10 +105,19 @@ namespace sh::game
 		SH_GAME_API auto Serialize() const->core::Json override;
 		SH_GAME_API void Deserialize(const core::Json& json) override;
 
-		SH_GAME_API void SaveWorldPoint(const core::Json& json);
-		SH_GAME_API void SaveWorldPoint(core::Json&& json);
+		SH_GAME_API void SaveWorldPoint(const core::Json& json, std::string_view name = "default");
+		SH_GAME_API void SaveWorldPoint(core::Json&& json, std::string_view name = "default");
+		
 		SH_GAME_API void LoadWorldPoint();
-		SH_GAME_API auto GetWorldPoint() const -> const core::Json&;
+		SH_GAME_API void LoadWorldPoint(const std::string& name);
+
+		SH_GAME_API auto GetWorldPoint() const -> const core::Json*;
+		SH_GAME_API auto GetWorldPoint(const std::string& name) const -> const core::Json*;
+		SH_GAME_API auto GetWorldPoint() -> core::Json*;
+		SH_GAME_API auto GetWorldPoint(const std::string& name) -> core::Json*;
+
+		SH_GAME_API void ClearWorldPoints();
+		SH_GAME_API void ClearWorldPoint(const std::string& name = "default");
 
 		SH_GAME_API auto GetUiContext() const -> ImGUImpl&;
 		SH_GAME_API auto GetGameViewTexture() const -> render::RenderTexture&;
@@ -162,7 +171,7 @@ namespace sh::game
 		std::queue<std::function<void()>> afterSyncTasks;
 		std::queue<GameObject*> deallocatedObjs;
 
-		core::Json lateSerializedData;
+		std::unordered_map<std::string, core::Json> savePoints;
 
 		bool bStartLoop = false;
 		bool bWaitPlaying = false;

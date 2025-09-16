@@ -46,9 +46,11 @@ namespace sh::game
 		}
 		else
 		{
-			core::Json worldPoint = worldPtr->GetWorldPoint();
-			if (worldPoint.empty() || worldPoint.is_discarded())
+			const core::Json* worldPointPtr = worldPtr->GetWorldPoint();
+			if (worldPointPtr == nullptr || worldPointPtr->empty() || worldPointPtr->is_discarded())
 				return;
+
+			core::Json worldPoint = *worldPointPtr;
 
 			if (bConvertWorldType)
 				worldPoint["type"] = game::World::GetStaticType().name.ToString();

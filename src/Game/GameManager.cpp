@@ -122,7 +122,7 @@ namespace sh::game
 					if (core::IsValid(loadingSingleWorld))
 					{
 						for (auto& [uuid, worldPtr] : worlds)
-							worldPtr->Clean();
+							worldPtr->Clear();
 						worlds.clear();
 
 						renderer->Clear();
@@ -156,6 +156,7 @@ namespace sh::game
 						worlds[world->GetUUID()] = world;
 					}
 					core::GarbageCollection::GetInstance()->Collect();
+					core::ThreadSyncManager::Sync();
 					core::GarbageCollection::GetInstance()->DestroyPendingKillObjs();
 					bLoadingWorld = false;
 				}
@@ -241,7 +242,7 @@ namespace sh::game
 	}
 	SH_GAME_API void GameManager::ClearImmortalObjects()
 	{
-		immortalWorld->Clean();
+		immortalWorld->Clear();
 	}
 	GameManager::~GameManager()
 	{

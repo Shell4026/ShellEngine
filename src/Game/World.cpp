@@ -29,17 +29,17 @@ namespace sh::game
 	SH_GAME_API World::~World()
 	{
 		SH_INFO_FORMAT("~World {}", GetUUID().ToString());
-		Clean();
+		Clear();
 		physWorld.Clean();
 	}
 
 	SH_GAME_API void World::OnDestroy()
 	{
-		Clean();
+		Clear();
 		Super::OnDestroy();
 	}
 
-	SH_GAME_API void World::Clean()
+	SH_GAME_API void World::Clear()
 	{
 		if (gameViewTexture != nullptr)
 		{
@@ -47,16 +47,12 @@ namespace sh::game
 			gameViewTexture = nullptr;
 		}
 		CleanObjs();
-		cameras.clear();
-
-		lightOctree.Clear();
 
 		while (!deallocatedObjs.empty())
 		{
 			objPool.DeAllocate(deallocatedObjs.front());
 			deallocatedObjs.pop();
 		}
-		mainCamera = nullptr;
 
 		bStartLoop = false;
 		bPlaying = false;
@@ -92,6 +88,10 @@ namespace sh::game
 				obj->Destroy();
 		}
 		objs.clear();
+		cameras.clear();
+		lightOctree.Clear();
+
+		mainCamera = nullptr;
 	}
 
 	SH_GAME_API auto World::AddGameObject(std::string_view name) -> GameObject*
@@ -354,10 +354,17 @@ namespace sh::game
 	SH_GAME_API void World::Deserialize(const core::Json& json)
 	{
 		bLoaded = true;
+
 		Super::Deserialize(json);
 
 		if (!json.contains("objs"))
+		{
+			bLoaded = false;
 			return;
+		}
+
+		CleanObjs();
+		InitResource();
 
 		core::SObjectManager* objManager = core::SObjectManager::GetInstance();
 		// 유효한 참조를 위해 두번 로드하는 과정을 거친다.
@@ -442,24 +449,60 @@ namespace sh::game
 			obj->Deserialize(objJson);
 		}
 	}
-	SH_GAME_API void World::SaveWorldPoint(const core::Json& json)
+	SH_GAME_API void World::SaveWorldPoint(const core::Json& json, std::string_view name)
 	{
-		lateSerializedData = json;
+		savePoints[std::string{ name }] = json;
 	}
-	SH_GAME_API void World::SaveWorldPoint(core::Json&& json)
+	SH_GAME_API void World::SaveWorldPoint(core::Json&& json, std::string_view name)
 	{
-		lateSerializedData = std::move(json);
+		savePoints[std::string{ name }] = std::move(json);
 	}
 	SH_GAME_API void World::LoadWorldPoint()
 	{
-		if (lateSerializedData.empty())
-			return;
-		
-		Deserialize(lateSerializedData);
+		LoadWorldPoint("default");
 	}
-	SH_GAME_API auto World::GetWorldPoint() const -> const core::Json&
+	SH_GAME_API void World::LoadWorldPoint(const std::string& name)
 	{
-		return lateSerializedData;
+		auto it = savePoints.find(name);
+		if (it == savePoints.end())
+			return;
+
+		AddAfterSyncTask(
+			[this, savePoint = it->second]()
+			{
+				Deserialize(savePoint);
+			}
+		);
+	}
+	SH_GAME_API auto World::GetWorldPoint() const -> const core::Json*
+	{
+		return GetWorldPoint("default");
+	}
+	SH_GAME_API auto World::GetWorldPoint(const std::string& name) const -> const core::Json*
+	{
+		auto it = savePoints.find(name);
+		if (it == savePoints.end())
+			return nullptr;
+		return &it->second;
+	}
+	SH_GAME_API auto World::GetWorldPoint() -> core::Json*
+	{
+		return GetWorldPoint("default");
+	}
+	SH_GAME_API auto World::GetWorldPoint(const std::string& name) -> core::Json*
+	{
+		auto it = savePoints.find(name);
+		if (it == savePoints.end())
+			return nullptr;
+		return &it->second;
+	}
+	SH_GAME_API void World::ClearWorldPoints()
+	{
+		savePoints.clear();
+	}
+	SH_GAME_API void World::ClearWorldPoint(const std::string& name)
+	{
+		savePoints.erase(name);
 	}
 	SH_GAME_API auto World::GetUiContext() const -> ImGUImpl&
 	{

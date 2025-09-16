@@ -44,7 +44,15 @@ namespace sh::editor
             if (worldPtr->IsLoaded())
                 worldJson = worldPtr->Serialize();
             else
-                worldJson = worldPtr->GetWorldPoint();
+            {
+                core::Json* worldPointPtr = worldPtr->GetWorldPoint();
+                if (worldPointPtr == nullptr)
+                {
+                    SH_WARN_FORMAT("World({}) is empty!", worldPtr->GetUUID().ToString());
+                    continue;
+                }
+                worldJson = *worldPointPtr;
+            }
 
             std::unordered_set<std::string> uuids;
             ExtractUUIDs(uuids, worldJson);

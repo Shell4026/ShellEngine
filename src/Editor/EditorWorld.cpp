@@ -116,9 +116,9 @@ namespace sh::editor
 		Super::OnDestroy();
 	}
 
-	SH_EDITOR_API void EditorWorld::Clean()
+	SH_EDITOR_API void EditorWorld::Clear()
 	{
-		Super::Clean();
+		Super::Clear();
 		editorUI = nullptr;
 		selectedObjs.clear();
 		if (viewportTexture != nullptr)
@@ -145,16 +145,17 @@ namespace sh::editor
 	{
 		Super::InitResource();
 
-		viewportTexture = core::SObject::Create<render::RenderTexture>(render::Texture::TextureFormat::SRGBA32);
-		if (!viewportTexture->SetUUID(core::UUID{ "180635b4e4d1a98ebb0064ab47dc452a" }))
+		auto viewportPtr = static_cast<render::RenderTexture*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{"180635b4e4d1a98ebb0064ab47dc452a"}));
+		if (!core::IsValid(viewportPtr))
 		{
-			auto objPtr = core::SObjectManager::GetInstance()->GetSObject(core::UUID{ "180635b4e4d1a98ebb0064ab47dc452a" });
-			if (objPtr != nullptr && objPtr->IsPendingKill())
-				objPtr->SetUUID(core::UUID::Generate());
-			bool success = viewportTexture->SetUUID(core::UUID{ "180635b4e4d1a98ebb0064ab47dc452a" });
-			assert(success);
+			if (viewportPtr != nullptr && viewportPtr->IsPendingKill())
+				viewportPtr->SetUUID(core::UUID::Generate());
+			viewportTexture = core::SObject::Create<render::RenderTexture>(render::Texture::TextureFormat::SRGBA32);
+			viewportTexture->SetUUID(core::UUID{ "180635b4e4d1a98ebb0064ab47dc452a" });
+			viewportTexture->Build(*renderer.GetContext());
 		}
-		viewportTexture->Build(*renderer.GetContext());
+		else
+			viewportTexture = viewportPtr;
 
 		game::GameObject* camObj = AddGameObject("EditorCamera");
 		camObj->transform->SetPosition({ 2.f, 2.f, 2.f });
@@ -352,6 +353,13 @@ namespace sh::editor
 	}
 	SH_EDITOR_API void EditorWorld::Deserialize(const core::Json& json)
 	{
+		// 에디터Only 오브젝트들을 objs로 옮겨서 에디터상에선 역직렬화 되게
+		core::Json copyJson = json;
+		for (core::Json& editorObjJson : copyJson["editorObjs"])
+			copyJson["objs"].push_back(std::move(editorObjJson));
+
+		Super::Deserialize(copyJson);
+
 		if (json.contains("camPos") && json["camPos"].is_array())
 		{
 			const auto& camPosJson = json["camPos"];
@@ -360,16 +368,5 @@ namespace sh::editor
 		}
 		if (json.contains("cam"))
 			editorCamera->Deserialize(json["cam"]);
-
-		if (!json.contains("editorObjs"))
-		{
-			Super::Deserialize(json);
-			return;
-		}
-		core::Json copyJson = json;
-		for (core::Json& editorObjJson : copyJson["editorObjs"])
-			copyJson["objs"].push_back(std::move(editorObjJson));
-
-		Super::Deserialize(copyJson);
 	}
 }
