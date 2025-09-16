@@ -441,12 +441,12 @@ namespace sh::core
 			{
 				if (emptyRootSetCount >= DEFRAGMENT_ROOTSET_CAP)
 					DefragmentRootSet();
+				Collect();
 				return;
 			}
 			if (tick == updatePeriodTick)
 			{
 				tick = 0;
-				Collect();
 				DestroyPendingKillObjs();
 				return;
 			}
@@ -485,8 +485,8 @@ namespace sh::core
 			{
 				if (!objPtr->bPendingKill.load(std::memory_order::memory_order_relaxed))
 				{
+					// AddToPendingKillList함수도 OnDestroy()에서 실행됨
 					objPtr->OnDestroy();
-					objPtr->bPendingKill.store(true, std::memory_order::memory_order_relaxed);
 				}
 			}
 		}
@@ -531,6 +531,7 @@ namespace sh::core
 	SH_CORE_API void GarbageCollection::AddToPendingKillList(SObject* obj)
 	{
 		pendingKillObjs.push_back(obj);
+		obj->bPendingKill.store(true, std::memory_order::memory_order_release);
 	}
 
 	SH_CORE_API void GarbageCollection::DestroyPendingKillObjs()
