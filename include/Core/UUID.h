@@ -3,7 +3,7 @@
 #include "Util.h"
 
 #include <array>
-
+#include <string_view>
 namespace sh::core
 {
 	/// @brief 객체 식별을 위한 UUID 클래스.
@@ -30,8 +30,10 @@ namespace sh::core
 
 		SH_CORE_API auto operator=(const UUID& other) noexcept -> UUID&;
 		SH_CORE_API auto operator=(UUID&& other) noexcept -> UUID&;
-		SH_CORE_API bool operator==(const UUID& other) const noexcept;
-		SH_CORE_API bool operator!=(const UUID& other) const noexcept;
+		SH_CORE_API auto operator==(const UUID& other) const noexcept -> bool;
+		SH_CORE_API auto operator==(std::string_view str) const noexcept -> bool;
+		SH_CORE_API auto operator!=(const UUID& other) const noexcept -> bool;
+		SH_CORE_API auto operator!=(std::string_view str) const noexcept -> bool;
 		/// @brief 문자열로 변환하는 함수
 		/// @return 16진수로 표기된 길이가 32인 문자열
 		SH_CORE_API auto ToString() const -> const std::string&;

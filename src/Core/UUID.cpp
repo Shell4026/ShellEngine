@@ -73,7 +73,7 @@ namespace sh::core
 		return *this;
 	}
 
-	SH_CORE_API bool UUID::operator==(const UUID& other) const noexcept
+	SH_CORE_API auto UUID::operator==(const UUID& other) const noexcept -> bool
 	{
 		for (int i = 0; i < uuid.size(); ++i)
 		{
@@ -82,7 +82,13 @@ namespace sh::core
 		}
 		return true;
 	}
-	SH_CORE_API bool UUID::operator!=(const UUID& other) const noexcept
+	SH_CORE_API auto UUID::operator==(std::string_view str) const noexcept -> bool
+	{
+		if (str.size() != 32)
+			return false;
+		return uuidStr == str;
+	}
+	SH_CORE_API auto UUID::operator!=(const UUID& other) const noexcept -> bool
 	{
 		for (int i = 0; i < uuid.size(); ++i)
 		{
@@ -91,7 +97,10 @@ namespace sh::core
 		}
 		return false;
 	}
-
+	SH_CORE_API auto UUID::operator!=(std::string_view str) const noexcept -> bool
+	{
+		return !operator==(str);
+	}
 	SH_CORE_API auto UUID::Generate() -> UUID
 	{
 		static std::stack<UUID> uuids;
@@ -118,7 +127,7 @@ namespace sh::core
 				uuids.push(std::move(uuid));
 			}
 		}
-		UUID uuid = uuids.top();
+		UUID uuid{ std::move(uuids.top()) };
 		uuids.pop();
 		return uuid;
 	}
