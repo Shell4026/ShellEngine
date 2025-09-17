@@ -10,6 +10,7 @@
 #include <cstdint>
 #include <stack>
 #include <memory>
+#include <optional>
 namespace sh::render::vk
 {
 	class VulkanCameraBuffers : public core::Singleton<VulkanCameraBuffers>
@@ -35,7 +36,7 @@ namespace sh::render::vk
 		SH_RENDER_API void RemoveCamera(const Camera& camera);
 		SH_RENDER_API void UploadDataToGPU(const Camera& camera);
 
-		SH_RENDER_API auto GetDynamicOffset(const Camera& camera) const -> uint32_t;
+		SH_RENDER_API auto GetDynamicOffset(const Camera& camera) const -> std::optional<uint32_t>;
 		SH_RENDER_API auto GetCameraBuffer() const -> const VulkanBuffer&;
 	};
 }//namespace

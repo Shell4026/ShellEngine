@@ -31,7 +31,9 @@ namespace sh::render::vk
 	}
 	SH_RENDER_API void VulkanRenderPipelineImpl::RenderDrawable(const core::Name& lightingPassName, const Camera& camera, const std::vector<RenderGroup>& renderGroups, const VulkanRenderPass& renderPass)
 	{
-		uint32_t cameraOffset = cameraManager->GetDynamicOffset(camera);
+		auto cameraOffsetOpt = cameraManager->GetDynamicOffset(camera);
+		if (!cameraOffsetOpt.has_value())
+			return;
 
 		// 렌더 그룹은 메테리얼별로 나눠져있음
 		for (const RenderGroup& renderGroup : renderGroups)
@@ -57,7 +59,7 @@ namespace sh::render::vk
 				// set = 1 객체 고유
 				// set = 2 메테리얼
 				if (setSize > 0)
-					BindCameraSet(layout, pass, *mat, cameraOffset);
+					BindCameraSet(layout, pass, *mat, cameraOffsetOpt.value());
 				if (setSize > 2)
 					BindMaterialSet(layout, pass, *mat);
 

@@ -53,16 +53,24 @@ namespace sh::render::vk
 		auto it = std::find(cams.begin(), cams.end(), &camera);
 		if (it == cams.end())
 			return;
-		std::size_t offset = GetDynamicOffset(camera);
-		Camera::BufferData* data = reinterpret_cast<Camera::BufferData*>((std::size_t)cameraData->GetData() + offset);
-		data->matView = camera.GetViewMatrix(core::ThreadType::Render);
-		data->matProj = camera.GetProjMatrix(core::ThreadType::Render);
+		auto offsetOpt = GetDynamicOffset(camera);
+		if (offsetOpt.has_value())
+		{
+			Camera::BufferData* data = reinterpret_cast<Camera::BufferData*>((std::size_t)cameraData->GetData() + offsetOpt.value());
+			data->matView = camera.GetViewMatrix(core::ThreadType::Render);
+			data->matProj = camera.GetProjMatrix(core::ThreadType::Render);
+		}
 	}
-	auto VulkanCameraBuffers::GetDynamicOffset(const Camera& camera) const -> uint32_t
+	auto VulkanCameraBuffers::GetDynamicOffset(const Camera& camera) const -> std::optional<uint32_t>
 	{
-		auto it = std::find(cams.begin(), cams.end(), &camera);
+		auto it = std::find_if(cams.begin(), cams.end(), 
+			[&](const Camera* other)
+			{
+				return (other->id == camera.id);
+			}
+		);
 		if (it == cams.end())
-			return 0;
+			return {};
 		uint32_t idx = std::distance(cams.begin(), it);
 		return idx * dynamicAlignment;
 	}
