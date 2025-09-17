@@ -71,7 +71,6 @@ namespace sh::editor
 		SH_EDITOR_API auto IsSelected(core::SObject* obj) const -> bool;
 
 		SH_EDITOR_API auto AddGameObject(std::string_view name) -> game::GameObject* override;
-		SH_EDITOR_API auto DuplicateGameObject(const game::GameObject& obj) -> game::GameObject& override;
 		SH_EDITOR_API auto GetEditorUI() const -> EditorUI&;
 		SH_EDITOR_API auto GetViewportTexture() const-> render::RenderTexture&;
 

@@ -1,5 +1,5 @@
 ﻿#include "GameObject.h"
-#include "GameManager.h"
+#include "Prefab.h"
 #include "ComponentModule.h"
 #include "Component/Component.h"
 #include "Component/Collider.h"
@@ -322,7 +322,10 @@ namespace sh::game
 
 	SH_GAME_API auto GameObject::Clone() const -> GameObject&
 	{
-		return world.DuplicateGameObject(*this);
+		Prefab* prefab = Prefab::CreatePrefab(*this);
+		auto objPtr = prefab->AddToWorld(world);
+
+		return *objPtr;
 	}
 
 	SH_GAME_API auto GameObject::Serialize() const -> core::Json

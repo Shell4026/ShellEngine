@@ -159,19 +159,6 @@ namespace sh::game
 		deallocatedObjs.push(ptr);
 	}
 
-	SH_GAME_API auto World::DuplicateGameObject(const GameObject& obj) -> GameObject&
-	{
-		GameObject* ptr = AllocateGameObject();
-		GameObject* duplicatedObj = CreateAt<GameObject>(ptr, obj);
-
-		objs.insert(duplicatedObj);
-
-		gc->SetRootSet(duplicatedObj);
-		eventBus.Publish(events::GameObjectEvent{ *duplicatedObj, events::GameObjectEvent::Type::Added });
-
-		return *duplicatedObj;
-	}
-
 	SH_GAME_API void World::Start()
 	{
 		bOnStart = true;

@@ -276,33 +276,6 @@ namespace sh::editor
 		return obj;
 	}
 
-	SH_EDITOR_API auto EditorWorld::DuplicateGameObject(const game::GameObject& obj) -> game::GameObject&
-	{
-		game::GameObject& dup = Super::DuplicateGameObject(obj);
-
-		std::queue<game::GameObject*> bfs{};
-		bfs.push(&dup);
-		while (!bfs.empty())
-		{
-			auto obj = bfs.front();
-			bfs.pop();
-			if (!core::IsValid(obj))
-				continue;
-			auto meshRenderer = obj->GetComponent<game::MeshRenderer>();
-			if (meshRenderer != nullptr)
-			{
-				auto pickingRenderer = obj->AddComponent<game::PickingRenderer>();
-				pickingRenderer->hideInspector = true;
-				pickingRenderer->SetCamera(*pickingCamera);
-				pickingRenderer->SetMeshRenderer(*meshRenderer);
-			}
-			for (auto child : obj->transform->GetChildren())
-				bfs.push(&child->gameObject);
-		}
-
-		return dup;
-	}
-
 	SH_EDITOR_API auto EditorWorld::GetEditorUI() const -> EditorUI&
 	{
 		return *editorUI;

@@ -53,14 +53,6 @@ namespace sh::game
 		
 		bUpdateMatrix = true;
 
-		for (auto child : other.childs)
-		{
-			auto& obj = world.DuplicateGameObject(child->gameObject);
-			obj.transform->parent = this;
-
-			childs.push_back(obj.transform);
-		}
-
 		return *this;
 	}
 

@@ -76,10 +76,6 @@ namespace sh::game
 		/// @brief 게임 오브젝트가 할당된 메모리를 반환 큐에 넣는 함수.
 		/// @param ptr 오브젝트 포인터
 		SH_GAME_API void PushDeAllocatedGameObject(GameObject* ptr);
-		/// @brief 게임 오브젝트를 복제한다.
-		/// @param obj 게임 오브젝트
-		/// @return 복제된 게임 오브젝트
-		SH_GAME_API virtual auto DuplicateGameObject(const GameObject& obj) -> GameObject&;
 
 		SH_GAME_API void RegisterCamera(Camera* cam);
 		SH_GAME_API void UnRegisterCamera(Camera* cam);

@@ -6,6 +6,7 @@
 #include "Game/GameObject.h"
 #include "Game/Input.h"
 
+#include <type_traits>
 namespace sh::editor
 {
 	Hierarchy::Hierarchy(EditorWorld& world) :
@@ -210,15 +211,21 @@ namespace sh::editor
 	void Hierarchy::CopyGameobject()
 	{
 		auto& selectedObjs = world.GetSelectedObjects();
+		std::vector<std::reference_wrapper<game::GameObject>> clones{};
+		clones.reserve(selectedObjs.size());
+
 		for (auto selectedObj : selectedObjs)
 		{
-			if (!core::IsValid(selectedObj))
+			if (!core::IsValid(selectedObj) || !selectedObj->GetType().IsChildOf(game::GameObject::GetStaticType()))
 				continue;
 
 			game::GameObject& gameObj = *static_cast<game::GameObject*>(selectedObj);
 
-			gameObj.Clone();
+			clones.push_back(gameObj.Clone());
 		}
+		world.ClearSelectedObjects();
+		for (auto& clone : clones)
+			world.AddSelectedObject(&clone.get());
 	}
 
 	SH_EDITOR_API void Hierarchy::Update()
