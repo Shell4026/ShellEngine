@@ -22,11 +22,9 @@ namespace sh::render
 			std::size_t index = syncData.changed.index();
 			if (index == 0)
 				continue;
-			else if (index == 1)
+			else if (index == 1) // 메테리얼이 변경됨
 			{
 				this->mat = std::get<1>(syncData.changed);
-				if (core::IsValid(mat->GetShader()))
-					materialData.Create(*context, *mat->GetShader(), true);
 			}
 			else if (index == 2)
 			{
@@ -44,10 +42,7 @@ namespace sh::render
 		}
 		if (bMatrixDirty)
 			std::swap(modelMatrix[core::ThreadType::Game], modelMatrix[core::ThreadType::Render]);
-		if (bLightDirty)
-			std::swap(light[core::ThreadType::Game], light[core::ThreadType::Render]);
 		bMatrixDirty = false;
-		bLightDirty = false;
 		bDirty = false;
 	}
 
@@ -68,7 +63,6 @@ namespace sh::render
 	Drawable::Drawable(Drawable&& other) noexcept :
 		mat(other.mat), mesh(other.mesh), modelMatrix(other.modelMatrix),
 		materialData(std::move(other.materialData)),
-		light(other.light),
 		renderTag(other.renderTag),
 		priority(other.priority)
 	{
@@ -95,6 +89,8 @@ namespace sh::render
 
 	SH_RENDER_API void Drawable::SetMesh(const Mesh& mesh)
 	{
+		if (this->mesh == &mesh)
+			return;
 		SyncData data{};
 		data.changed = &mesh;
 		syncDatas[1] = data;
@@ -103,11 +99,15 @@ namespace sh::render
 	}
 	SH_RENDER_API void Drawable::SetMaterial(const Material& mat)
 	{
+		if (this->mat == &mat)
+			return;
 		SyncData data{};
 		data.changed = &mat;
 		syncDatas[0]= data;
 
 		SyncDirty();
+		if (core::IsValid(mat.GetShader()))
+			materialData.Create(*context, *mat.GetShader(), true); // 얘도 sync타이밍에 이뤄짐
 	}
 
 	SH_RENDER_API auto Drawable::GetMaterial() const -> const Material*
@@ -136,17 +136,6 @@ namespace sh::render
 	SH_RENDER_API auto Drawable::GetModelMatrix(core::ThreadType thr) const -> const glm::mat4&
 	{
 		return modelMatrix[thr];
-	}
-
-	SH_RENDER_API void Drawable::SetLightData(const Light& lightData)
-	{
-		light[core::ThreadType::Game] = lightData;
-		bLightDirty = true;
-		SyncDirty();
-	}
-	SH_RENDER_API auto Drawable::GetLightData(core::ThreadType thr) const -> const Light&
-	{
-		return light[thr];
 	}
 
 	SH_RENDER_API auto Drawable::CheckAssetValid() const -> bool

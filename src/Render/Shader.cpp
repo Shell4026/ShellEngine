@@ -5,56 +5,6 @@
 
 namespace sh::render
 {
-	void Shader::Clear()
-	{
-		properties.clear();
-		passes.clear();
-	}
-
-	void Shader::AddShaderPass(ShaderPass* pass)
-	{
-		auto& lightingPassName = pass->GetLightingPassName();
-
-		LightingPassData* lightingPassData = GetLightingPass(lightingPassName);
-		if (lightingPassData == nullptr)
-		{
-			std::vector<ShaderPass*> v{};
-			v.push_back(pass);
-
-			LightingPassData passData{ lightingPassName };
-			passData.passes = std::move(v);
-			passes.push_back(std::move(passData));
-		}
-		else
-			lightingPassData->passes.push_back(std::move(pass));
-	}
-	auto Shader::GetLightingPass(const core::Name& name) -> LightingPassData*
-	{
-		LightingPassData* passData = nullptr;
-		for (auto& _passData : passes)
-		{
-			if (_passData.name == name)
-			{
-				passData = &_passData;
-				break;
-			}
-		}
-		return passData;
-	}
-	auto Shader::GetLightingPass(const core::Name& name) const -> const LightingPassData*
-	{
-		const LightingPassData* passData = nullptr;
-		for (auto& _passData : passes)
-		{
-			if (_passData.name == name)
-			{
-				passData = &_passData;
-				break;
-			}
-		}
-		return passData;
-	}
-
 	Shader::Shader(ShaderCreateInfo&& shaderCreateInfo)
 	{
 		SetName(shaderCreateInfo.shaderNode.shaderName);
@@ -64,17 +14,18 @@ namespace sh::render
 
 		for (auto& prop : shaderCreateInfo.shaderNode.properties)
 		{
+			const bool bLocal = prop.attribute == ShaderAST::VariableAttribute::Local ? true : false;
 			switch (prop.type)
 			{
-			case ShaderAST::VariableType::Int:     AddProperty<      int>(prop.name); break;
-			case ShaderAST::VariableType::Float:   AddProperty<    float>(prop.name); break;
-			case ShaderAST::VariableType::Vec2:    AddProperty<glm::vec2>(prop.name); break;
-			case ShaderAST::VariableType::Vec3:    AddProperty<glm::vec3>(prop.name); break;
-			case ShaderAST::VariableType::Vec4:    AddProperty<glm::vec4>(prop.name); break;
-			case ShaderAST::VariableType::Mat2:    AddProperty<glm::mat2>(prop.name); break;
-			case ShaderAST::VariableType::Mat3:    AddProperty<glm::mat3>(prop.name); break;
-			case ShaderAST::VariableType::Mat4:    AddProperty<glm::mat4>(prop.name); break;
-			case ShaderAST::VariableType::Sampler: AddProperty<  Texture>(prop.name); break;
+			case ShaderAST::VariableType::Int:     AddProperty<      int>(prop.name, bLocal); break;
+			case ShaderAST::VariableType::Float:   AddProperty<    float>(prop.name, bLocal); break;
+			case ShaderAST::VariableType::Vec2:    AddProperty<glm::vec2>(prop.name, bLocal); break;
+			case ShaderAST::VariableType::Vec3:    AddProperty<glm::vec3>(prop.name, bLocal); break;
+			case ShaderAST::VariableType::Vec4:    AddProperty<glm::vec4>(prop.name, bLocal); break;
+			case ShaderAST::VariableType::Mat2:    AddProperty<glm::mat2>(prop.name, bLocal); break;
+			case ShaderAST::VariableType::Mat3:    AddProperty<glm::mat3>(prop.name, bLocal); break;
+			case ShaderAST::VariableType::Mat4:    AddProperty<glm::mat4>(prop.name, bLocal); break;
+			case ShaderAST::VariableType::Sampler: AddProperty<  Texture>(prop.name, bLocal); break;
 			}
 		}
 
@@ -94,7 +45,7 @@ namespace sh::render
 	Shader::~Shader()
 	{
 	}
-	SH_RENDER_API auto Shader::GetShaderPasses(const core::Name& lightingPassName) const -> const std::vector<ShaderPass*>*
+	SH_RENDER_API auto Shader::GetShaderPasses(const core::Name& lightingPassName) const -> const std::vector<std::reference_wrapper<ShaderPass>>*
 	{
 		const LightingPassData* lightingPassData = GetLightingPass(lightingPassName);
 		if (lightingPassData == nullptr)
@@ -103,7 +54,7 @@ namespace sh::render
 	}
 	SH_RENDER_API auto Shader::GetAllShaderPass() const -> const std::vector<LightingPassData>&
 	{
-		return passes;
+		return passDatas;
 	}
 	SH_RENDER_API auto Shader::GetProperties() const -> const std::unordered_map<std::string, PropertyInfo>&
 	{
@@ -121,16 +72,14 @@ namespace sh::render
 	{
 		return shaderNode;
 	}
-
+	SH_RENDER_API auto Shader::IsUsingLight() const -> bool
+	{
+		return bUsingLight;
+	}
 	SH_RENDER_API void Shader::OnDestroy()
 	{
-		for (auto& lightPassData : passes)
-		{
-			for (auto& pass : lightPassData.passes)
-			{
-				pass->Destroy();
-			}
-		}
+		for (ShaderPass* shaderPass : passes)
+			shaderPass->Destroy();
 		Super::OnDestroy();
 	}
 	SH_RENDER_API auto Shader::Serialize() const -> core::Json
@@ -143,10 +92,10 @@ namespace sh::render
 		json["AST"] = shaderNode.Serialize();
 
 		std::set<ShaderPass*> uniquePass;
-		for (const auto& [name, passVec] : passes)
+		for (const auto& [name, passVec] : passDatas)
 		{
-			for (ShaderPass* pass : passVec)
-				uniquePass.insert(pass);
+			for (ShaderPass& pass : passVec)
+				uniquePass.insert(&pass);
 		}
 		for (const ShaderPass* pass : uniquePass)
 			json["passes"].push_back(pass->Serialize());
@@ -165,4 +114,60 @@ namespace sh::render
 		if (shaderJson.contains("AST"))
 			shaderNode.Deserialize(shaderJson["AST"]);
 	}
+
+	void Shader::Clear()
+	{
+		properties.clear();
+		passes.clear();
+	}
+
+	void Shader::AddShaderPass(ShaderPass* pass)
+	{
+		if (pass->IsUsingLight())
+			bUsingLight = true;
+
+		passes.push_back(pass);
+
+		const core::Name& lightingPassName = passes.back()->GetLightingPassName();
+
+		LightingPassData* lightingPassData = GetLightingPass(lightingPassName);
+		if (lightingPassData == nullptr)
+		{
+			std::vector<std::reference_wrapper<ShaderPass>> v{};
+			v.push_back(*passes.back());
+
+			LightingPassData passData{ lightingPassName };
+			passData.passes = std::move(v);
+			passDatas.push_back(std::move(passData));
+		}
+		else
+			lightingPassData->passes.push_back(*passes.back());
+	}
+	auto Shader::GetLightingPass(const core::Name& name) -> LightingPassData*
+	{
+		LightingPassData* passDataPtr = nullptr;
+		for (auto& passData : passDatas)
+		{
+			if (passData.name == name)
+			{
+				passDataPtr = &passData;
+				break;
+			}
+		}
+		return passDataPtr;
+	}
+	auto Shader::GetLightingPass(const core::Name& name) const -> const LightingPassData*
+	{
+		const LightingPassData* passDataPtr = nullptr;
+		for (auto& passData : passDatas)
+		{
+			if (passData.name == name)
+			{
+				passDataPtr = &passData;
+				break;
+			}
+		}
+		return passDataPtr;
+	}
+
 }//namepsace

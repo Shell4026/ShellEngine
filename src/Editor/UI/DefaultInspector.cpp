@@ -155,7 +155,7 @@ namespace sh::editor
 			for (auto& [name, propInfo] : shader->GetProperties())
 			{
 				ImGui::Text(name.c_str());
-				if (*propInfo.type == core::reflection::GetType<float>())
+				if (propInfo.type == core::reflection::GetType<float>())
 				{
 					float parameter = mat->GetProperty<float>(name).value_or(0.f);
 					if (ImGui::InputFloat(("##input_" + name).c_str(), &parameter))
@@ -165,7 +165,7 @@ namespace sh::editor
 						AssetDatabase::GetInstance()->SaveAllAssets();
 					}
 				}
-				else if (*propInfo.type == core::reflection::GetType<glm::vec2>())
+				else if (propInfo.type == core::reflection::GetType<glm::vec2>())
 				{
 					glm::vec2 v = mat->GetProperty<glm::vec2>(name).value_or(glm::vec2{ 0.f, 0.f });
 					if (ImGui::InputFloat2(("##input_" + name).c_str(), &v[0]))
@@ -175,7 +175,7 @@ namespace sh::editor
 						AssetDatabase::GetInstance()->SaveAllAssets();
 					}
 				}
-				else if (*propInfo.type == core::reflection::GetType<glm::vec3>())
+				else if (propInfo.type == core::reflection::GetType<glm::vec3>())
 				{
 					glm::vec3 v = mat->GetProperty<glm::vec3>(name).value_or(glm::vec3{ 0.f });
 					if (ImGui::InputFloat3(("##input_" + name).c_str(), &v[0]))
@@ -185,7 +185,7 @@ namespace sh::editor
 						AssetDatabase::GetInstance()->SaveAllAssets();
 					}
 				}
-				else if (*propInfo.type == core::reflection::GetType<glm::vec4>())
+				else if (propInfo.type == core::reflection::GetType<glm::vec4>())
 				{
 					glm::vec4 v = mat->GetProperty<glm::vec4>(name).value_or(glm::vec4{ 0.f });
 					if (ImGui::InputFloat4(("##input_" + name).c_str(), &v[0]))
@@ -195,7 +195,7 @@ namespace sh::editor
 						AssetDatabase::GetInstance()->SaveAllAssets();
 					}
 				}
-				else if (*propInfo.type == core::reflection::GetType<render::Texture>())
+				else if (propInfo.type == core::reflection::GetType<render::Texture>())
 				{
 					float iconSize = 20;
 					float buttonWidth = ImGui::GetContentRegionAvail().x - iconSize;

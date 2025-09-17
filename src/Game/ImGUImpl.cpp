@@ -522,7 +522,7 @@ namespace sh::game
 		if (bDirty)
 			return;
 
-		core::ThreadSyncManager::PushSyncable(*this, SYNC_PRIORITY);
+		core::ThreadSyncManager::PushSyncable(*this, render::Renderer::SYNC_PRIORITY + 1);
 
 		bDirty = true;
 	}

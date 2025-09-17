@@ -82,7 +82,7 @@ namespace sh::render
 		if (bDirty)
 			return;
 
-		core::ThreadSyncManager::PushSyncable(*this);
+		core::ThreadSyncManager::PushSyncable(*this, SYNC_PRIORITY);
 		bDirty = true;
 	}
 	SH_RENDER_API void Renderer::Sync()

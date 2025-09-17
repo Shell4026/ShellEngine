@@ -34,7 +34,7 @@ namespace sh::game
 	{
 	}
 
-	void MeshRenderer::SetMesh(const render::Mesh* mesh)
+	SH_GAME_API void MeshRenderer::SetMesh(const render::Mesh* mesh)
 	{
 		this->mesh = mesh;
 		if (core::IsValid(mesh))
@@ -53,7 +53,7 @@ namespace sh::game
 		return mesh;
 	}
 
-	void MeshRenderer::SetMaterial(sh::render::Material* mat)
+	SH_GAME_API void MeshRenderer::SetMaterial(sh::render::Material* mat)
 	{
 		if (core::IsValid(mat))
 			this->mat = mat;
@@ -65,65 +65,74 @@ namespace sh::game
 		else
 			drawable->SetMaterial(*this->mat);
 
+		if (mat->GetShader()->IsUsingLight())
+			FillLightStruct(*drawable, *mat->GetShader());
+
 		if (propertyBlock != nullptr)
 			SearchLocalProperties();
 
 		auto shader = this->mat->GetShader();
-		if (core::IsValid(shader))
-		{
-			for (auto& lightingPass : shader->GetAllShaderPass())
-			{
-				bool exit = false;
-				for (auto& pass : lightingPass.passes)
-				{
-					if (pass->IsUsingLight())
-					{
-						bShaderHasLight = true;
-						exit = true;
-						break;
-					}
-				}
-				if (exit)
-					break;
-			}
-		}
-	}
 
-	auto MeshRenderer::GetMaterial() const -> sh::render::Material*
+	}
+	SH_GAME_API auto MeshRenderer::GetMaterial() const -> sh::render::Material*
 	{
 		return mat;
 	}
-
-	void MeshRenderer::SearchLocalProperties()
+	SH_GAME_API void MeshRenderer::OnDestroy()
 	{
-		// 로컬 프로퍼티 위치 파악
-		localUniformLocations.clear();
+		if (drawable != nullptr)
+		{
+			drawable->Destroy();
+			drawable = nullptr;
+		}
+		Super::OnDestroy();
+	}
+	SH_GAME_API void MeshRenderer::Awake()
+	{
+		Super::Awake();
 
-		render::Shader* shader = mat->GetShader();
-		if (!core::IsValid(shader))
+		if (!core::IsValid(mat))
+			mat = static_cast<render::Material*>(core::SObject::GetSObjectUsingResolver(core::UUID{"bbc4ef7ec45dce223297a224f8093f10"})); // Error mat
+	}
+	SH_GAME_API void MeshRenderer::Start()
+	{
+		if (drawable == nullptr)
+			CreateDrawable();
+	}
+	SH_GAME_API void MeshRenderer::LateUpdate()
+	{
+		if (!sh::core::IsValid(mesh) || !sh::core::IsValid(mat) || !sh::core::IsValid(mat->GetShader()) || drawable == nullptr)
 			return;
 
-		for (auto& [propName, propInfo] : shader->GetProperties())
-		{
-			for (auto& location : propInfo.locations)
-			{
-				if (location.layoutPtr->type != render::UniformStructLayout::Type::Object)
-					continue;
-				auto it = std::find(localUniformLocations.begin(), localUniformLocations.end(), std::pair{ location.passPtr.Get(), location.layoutPtr });
-				if (it == localUniformLocations.end())
-					localUniformLocations.push_back({ location.passPtr.Get(), location.layoutPtr });
-			}
-		}
+		sh::render::Renderer* renderer = &gameObject.world.renderer;
+		if (renderer->IsPause())
+			return;
+
+		mat->UpdateUniformBuffers();
+		UpdateDrawable();
+
+		gameObject.world.renderer.PushDrawAble(drawable);
 	}
 
-	void MeshRenderer::UpdateMaterialData()
+	SH_GAME_API void MeshRenderer::SetMaterialPropertyBlock(std::unique_ptr<render::MaterialPropertyBlock>&& block)
+	{
+		propertyBlock = std::move(block);
+
+		SearchLocalProperties();
+	}
+
+	SH_GAME_API auto MeshRenderer::GetMaterialPropertyBlock() const -> render::MaterialPropertyBlock*
+	{
+		return propertyBlock.get();
+	}
+	SH_GAME_API void MeshRenderer::UpdatePropertyBlockData()
 	{
 		if (drawable == nullptr || propertyBlock == nullptr || !core::IsValid(mat))
 			return;
 		render::Shader* shader = mat->GetShader();
 		if (!core::IsValid(shader))
 			return;
-		
+
 		for (auto& [passPtr, layoutPtr] : localUniformLocations)
 		{
 			if (layoutPtr->type == render::UniformStructLayout::Type::Material)
@@ -201,19 +210,98 @@ namespace sh::game
 				{
 					auto var = propertyBlock->GetTextureProperty(member.name);
 					if (core::IsValid(var))
-						drawable->GetMaterialData().SetTextureData(*passPtr, layoutPtr->type, layoutPtr->binding, var);
-
+						drawable->GetMaterialData().SetTextureData(*passPtr, layoutPtr->type, layoutPtr->binding, *var);
+					else
+					{
+						static core::UUID blackTexUUID{ "bbc4ef7ec45dce223297a224f8093f18" };
+						auto texPtr = static_cast<render::Texture*>(core::SObject::GetSObjectUsingResolver(blackTexUUID));
+						if (texPtr != nullptr)
+							drawable->GetMaterialData().SetTextureData(*passPtr, layoutPtr->type, layoutPtr->binding, *var);
+						else
+							SH_ERROR("Can't get default texture!");
+					}
 					isSampler = true;
 				}
 			}
 			if (!isSampler)
-				drawable->GetMaterialData().SetUniformData(*passPtr, layoutPtr->type, layoutPtr->binding, data.data());
+				drawable->GetMaterialData().SetUniformData(*passPtr, layoutPtr->type, layoutPtr->binding, std::move(data));
+		}
+	}
+	SH_GAME_API void MeshRenderer::SetRenderTagId(uint32_t tagId)
+	{
+		renderTag = tagId;
+	}
+
+	SH_GAME_API auto MeshRenderer::GetRenderTagId() const -> uint32_t
+	{
+		return renderTag;
+	}
+
+	SH_GAME_API void MeshRenderer::OnPropertyChanged(const core::reflection::Property& prop)
+	{
+		if (prop.GetName() == core::Util::ConstexprHash("mesh"))
+		{
+			SetMesh(mesh);
+		}
+		else if (prop.GetName() == core::Util::ConstexprHash("mat"))
+		{
+			SetMaterial(mat);
+		}
+		else if (prop.GetName() == core::Util::ConstexprHash("renderTag"))
+		{
+			if (drawable != nullptr)
+				drawable->SetRenderTagId(renderTag);
+		}
+	}
+	SH_GAME_API void MeshRenderer::CreateDrawable()
+	{
+		if (!core::IsValid(mesh))
+		{
+			mesh = nullptr;
+			return;
+		}
+		if (!core::IsValid(mat))
+			mat = static_cast<render::Material*>(core::SObject::GetSObjectUsingResolver(core::UUID{ "bbc4ef7ec45dce223297a224f8093f10" }));
+		if (!core::IsValid(mat->GetShader()))
+			return;
+
+		drawable = core::SObject::Create<render::Drawable>(*mat, *mesh);
+		drawable->SetRenderTagId(renderTag);
+		drawable->SetTopology(mesh->GetTopology());
+		drawable->Build(*world.renderer.GetContext());
+	}
+	SH_GAME_API void MeshRenderer::UpdateDrawable()
+	{
+		if (mat->GetShader()->IsUsingLight())
+			FillLightStruct(*drawable, *mat->GetShader());
+
+		drawable->SetModelMatrix(gameObject.transform->localToWorldMatrix);
+	}
+	void MeshRenderer::SearchLocalProperties()
+	{
+		// 로컬 프로퍼티 위치 파악
+		localUniformLocations.clear();
+
+		render::Shader* shader = mat->GetShader();
+		if (!core::IsValid(shader))
+			return;
+
+		for (auto& [propName, propInfo] : shader->GetProperties())
+		{
+			for (auto& location : propInfo.locations)
+			{
+				if (location.layoutPtr->type != render::UniformStructLayout::Type::Object)
+					continue;
+				auto it = std::find(localUniformLocations.begin(), localUniformLocations.end(), std::pair{ location.passPtr.Get(), location.layoutPtr });
+				if (it == localUniformLocations.end())
+					localUniformLocations.push_back({ location.passPtr.Get(), location.layoutPtr });
+			}
 		}
 	}
 
-	void MeshRenderer::FillLightStruct(render::Drawable& drawable) const
+	void MeshRenderer::FillLightStruct(render::Drawable& drawable, render::Shader& shader) const
 	{
-		render::Drawable::Light lightStruct{};
+		Light lightStruct{};
 		auto lights = world.GetLightOctree().Query(worldAABB);
 		if (lights.size() < 10)
 		{
@@ -244,114 +332,14 @@ namespace sh::game
 			}
 			lightStruct.lightCount = idx;
 		}
-		drawable.SetLightData(lightStruct);
-	}
-
-	void MeshRenderer::CreateDrawable()
-	{
-		if (!core::IsValid(mesh))
+		for (auto& lightingPass : shader.GetAllShaderPass())
 		{
-			mesh = nullptr;
-			return;
-		}
-		if (!core::IsValid(mat))
-			mat = static_cast<render::Material*>(core::SObject::GetSObjectUsingResolver(core::UUID{"bbc4ef7ec45dce223297a224f8093f10"}));
-		if (!core::IsValid(mat->GetShader()))
-			return;
-
-		drawable = core::SObject::Create<render::Drawable>(*mat, *mesh);
-		drawable->SetRenderTagId(renderTag);
-		drawable->SetTopology(mesh->GetTopology());
-		drawable->Build(*world.renderer.GetContext());
-	}
-
-	SH_GAME_API void MeshRenderer::UpdateDrawable()
-	{
-		if (bShaderHasLight)
-			FillLightStruct(*drawable);
-
-		drawable->SetModelMatrix(gameObject.transform->localToWorldMatrix);
-	}
-
-	SH_GAME_API void MeshRenderer::OnDestroy()
-	{
-		if (drawable != nullptr)
-		{
-			drawable->Destroy();
-			drawable = nullptr;
-		}
-		Super::OnDestroy();
-	}
-
-	void MeshRenderer::Awake()
-	{
-		Super::Awake();
-
-		if (!core::IsValid(mat))
-			mat = static_cast<render::Material*>(core::SObject::GetSObjectUsingResolver(core::UUID{"bbc4ef7ec45dce223297a224f8093f10"})); // Error mat
-	}
-
-	void MeshRenderer::Start()
-	{
-		if (drawable == nullptr)
-			CreateDrawable();
-	}
-
-	void MeshRenderer::LateUpdate()
-	{
-		if (!sh::core::IsValid(mesh) || !sh::core::IsValid(mat) || !sh::core::IsValid(mat->GetShader()) || drawable == nullptr)
-			return;
-
-		sh::render::Renderer* renderer = &gameObject.world.renderer;
-		if (renderer->IsPause())
-			return;
-
-		mat->UpdateUniformBuffers();
-		UpdateMaterialData();
-		UpdateDrawable();
-
-		gameObject.world.renderer.PushDrawAble(drawable);
-	}
-
-	SH_GAME_API void MeshRenderer::SetMaterialPropertyBlock(std::unique_ptr<render::MaterialPropertyBlock>&& block)
-	{
-		propertyBlock = std::move(block);
-
-		SearchLocalProperties();
-
-		//if (core::IsValid(drawable) && core::IsValid(mat) && core::IsValid(mat->GetShader()))
-		//	drawable->GetMaterialData().Create(*world.renderer.GetContext(), *mat->GetShader(), true);
-	}
-
-	SH_GAME_API auto MeshRenderer::GetMaterialPropertyBlock() const -> render::MaterialPropertyBlock*
-	{
-		return propertyBlock.get();
-	}
-
-	SH_GAME_API void MeshRenderer::SetRenderTagId(uint32_t tagId)
-	{
-		renderTag = tagId;
-	}
-
-	SH_GAME_API auto MeshRenderer::GetRenderTagId() const -> uint32_t
-	{
-		return renderTag;
-	}
-
-	SH_GAME_API void MeshRenderer::OnPropertyChanged(const core::reflection::Property& prop)
-	{
-		if (prop.GetName() == "mesh")
-		{
-			SetMesh(mesh);
-		}
-		else if (prop.GetName() == "mat")
-		{
-			SetMaterial(mat);
-		}
-		else if (prop.GetName() == "renderTag")
-		{
-			if (drawable != nullptr)
-				drawable->SetRenderTagId(renderTag);
+			for (render::ShaderPass& pass : lightingPass.passes)
+			{
+				if (pass.IsPendingKill() || !pass.IsUsingLight())
+					continue;
+				drawable.GetMaterialData().SetUniformData(pass, render::UniformStructLayout::Type::Object, 0, &lightStruct, sizeof(Light));
+			}
 		}
 	}
 }//namespace

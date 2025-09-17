@@ -42,6 +42,7 @@ namespace sh::game
 		propertyBlock->SetProperty("start", glm::vec3{ start });
 		propertyBlock->SetProperty("end", glm::vec3{ end });
 		propertyBlock->SetProperty("color", glm::vec4{ color });
+		UpdatePropertyBlockData();
 		Super::Update();
 	}
 	SH_GAME_API void LineRenderer::SetStart(const Vec3& start)

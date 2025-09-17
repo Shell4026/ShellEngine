@@ -32,6 +32,8 @@ namespace sh::render
 	{
 		SCLASS(Renderer)
 	public:
+		static constexpr int SYNC_PRIORITY = -10000;
+	public:
 		SH_RENDER_API Renderer();
 		SH_RENDER_API virtual ~Renderer();
 

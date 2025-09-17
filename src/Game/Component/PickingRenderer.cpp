@@ -47,6 +47,7 @@ namespace sh::game
 
 			auto propertyBlock = GetMaterialPropertyBlock();
 			propertyBlock->SetProperty("id", glm::vec4{ r, g, b, a });
+			UpdatePropertyBlockData();
 		}
 	}
 

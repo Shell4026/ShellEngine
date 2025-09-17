@@ -5,6 +5,7 @@
 #include <queue>
 #include <thread>
 #include <vector>
+#include <deque>
 namespace sh::core
 {
 	/// @brief 스레드간 동기화를 관리하는 전역 객체.
@@ -18,7 +19,7 @@ namespace sh::core
 			struct SyncData
 			{
 				ISyncable* ptr;
-				uint32_t priority = 0;
+				int priority = 0;
 
 				auto operator<(const SyncData& other) const -> bool
 				{
@@ -31,7 +32,7 @@ namespace sh::core
 		/// @brief 초기화 함수. 반드시 메인 스레드에서 호출 할 것.
 		SH_CORE_API static void Init();
 		SH_CORE_API static void Clear();
-		SH_CORE_API static void PushSyncable(ISyncable& syncable, uint32_t priority = 0);
+		SH_CORE_API static void PushSyncable(ISyncable& syncable, int priority = 0);
 		SH_CORE_API static void AddThread(EngineThread& thread);
 		/// @brief 동기화 객체들을 동기화 하는 함수. 모든 스레드가 작업을 마칠 때 까지 대기한다.
 		SH_CORE_API static void Sync();
@@ -47,7 +48,7 @@ namespace sh::core
 	private:
 		SH_CORE_API static std::vector<ThreadData> threads;
 		thread_local static int currentThreadIdx;
-		SH_CORE_API static std::priority_queue<ThreadData::SyncData> syncables;
+		SH_CORE_API static std::deque<ThreadData::SyncData> syncables;
 		SH_CORE_API static bool bOnSync;
 	};
 }//namespace

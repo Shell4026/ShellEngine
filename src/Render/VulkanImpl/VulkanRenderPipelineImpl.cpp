@@ -42,24 +42,24 @@ namespace sh::render::vk
 			auto passVectorPtr = renderGroup.material->GetShader()->GetShaderPasses(lightingPassName);
 			if (passVectorPtr == nullptr)
 				continue;
-			for (ShaderPass* pass : *passVectorPtr)
+			for (ShaderPass& pass : *passVectorPtr)
 			{
-				if (!core::IsValid(pass))
+				if (pass.IsPendingKill())
 					continue;
 
 				auto pipelineHandle = context.GetPipelineManager().
-					GetOrCreatePipelineHandle(renderPass, static_cast<VulkanShaderPass&>(*pass), renderGroup.topology);
+					GetOrCreatePipelineHandle(renderPass, static_cast<VulkanShaderPass&>(pass), renderGroup.topology);
 				context.GetPipelineManager().BindPipeline(cmd->GetCommandBuffer(), pipelineHandle);
-				VkPipelineLayout layout = static_cast<VulkanShaderPass&>(*pass).GetPipelineLayout();
-				uint32_t setSize = static_cast<VulkanShaderPass*>(pass)->GetSetCount();
+				VkPipelineLayout layout = static_cast<VulkanShaderPass&>(pass).GetPipelineLayout();
+				uint32_t setSize = static_cast<VulkanShaderPass&>(pass).GetSetCount();
 
 				// set = 0 카메라
 				// set = 1 객체 고유
 				// set = 2 메테리얼
 				if (setSize > 0)
-					BindCameraSet(layout, *pass, *mat, cameraOffset);
+					BindCameraSet(layout, pass, *mat, cameraOffset);
 				if (setSize > 2)
-					BindMaterialSet(layout, *pass, *mat);
+					BindMaterialSet(layout, pass, *mat);
 
 				for (auto drawable : renderGroup.drawables)
 				{
@@ -70,15 +70,15 @@ namespace sh::render::vk
 						continue;
 
 					if (setSize > 1)
-						BindObjectSet(layout, *pass, *drawable);
+						BindObjectSet(layout, pass, *drawable);
 
-					if (pass->HasConstantUniform())
+					if (pass.HasConstantUniform())
 						vkCmdPushConstants(cmd->GetCommandBuffer(), layout,
 							VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT,
 							0, sizeof(glm::mat4),
 							&drawable->GetModelMatrix(core::ThreadType::Render));
 
-					DrawMesh(*pass, *mesh);
+					DrawMesh(pass, *mesh);
 					++drawCall;
 				}
 			}
@@ -232,9 +232,6 @@ namespace sh::render::vk
 	{
 		auto objectUniformBuffer = static_cast<VulkanUniformBuffer*>(
 			drawable.GetMaterialData().GetUniformBuffer(pass, UniformStructLayout::Type::Object));
-
-		if (pass.IsUsingLight())
-			drawable.GetMaterialData().SetUniformData(pass, UniformStructLayout::Type::Object, 0, &drawable.GetLightData(core::ThreadType::Render));
 
 		VkDescriptorSet objectDescriptorSet = objectUniformBuffer ? objectUniformBuffer->GetVkDescriptorSet() : context.GetEmptyDescriptorSet();
 

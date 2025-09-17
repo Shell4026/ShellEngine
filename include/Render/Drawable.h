@@ -20,13 +20,6 @@ namespace sh::render
 	{
 		SCLASS(Drawable)
 	public:
-		struct Light
-		{
-			alignas(16) int lightCount = 0;
-			alignas(16) glm::vec4 lightPos[10];
-			alignas(16) glm::vec4 other[10];
-		};
-	public:
 		SH_RENDER_API Drawable(const Material& material, const Mesh& mesh);
 		SH_RENDER_API Drawable(Drawable&& other) noexcept;
 		SH_RENDER_API virtual ~Drawable();
@@ -45,9 +38,6 @@ namespace sh::render
 
 		SH_RENDER_API void SetModelMatrix(const glm::mat4& mat);
 		SH_RENDER_API auto GetModelMatrix(core::ThreadType thr) const -> const glm::mat4&;
-
-		SH_RENDER_API void SetLightData(const Light& lightData);
-		SH_RENDER_API auto GetLightData(core::ThreadType thr) const -> const Light&;
 
 		SH_RENDER_API auto CheckAssetValid() const -> bool;
 
@@ -71,7 +61,6 @@ namespace sh::render
 		const Mesh* mesh = nullptr;
 
 		MaterialData materialData;
-		core::SyncArray<Light> light;
 
 		core::SyncArray<glm::mat4> modelMatrix;
 		uint32_t renderTag = 1;
@@ -86,6 +75,5 @@ namespace sh::render
 
 		bool bDirty = false;
 		bool bMatrixDirty = false;
-		bool bLightDirty = false;
 	};
 }

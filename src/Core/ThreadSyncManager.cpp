@@ -6,7 +6,7 @@ namespace sh::core
 {
 	std::vector<ThreadSyncManager::ThreadData> ThreadSyncManager::threads{};
 	thread_local int ThreadSyncManager::currentThreadIdx = -1;
-	std::priority_queue<ThreadSyncManager::ThreadData::SyncData> ThreadSyncManager::syncables{};
+	std::deque<ThreadSyncManager::ThreadData::SyncData> ThreadSyncManager::syncables{};
 	bool ThreadSyncManager::bOnSync = false;
 
 	SH_CORE_API auto ThreadSyncManager::GetThreadIndex() -> int
@@ -29,9 +29,9 @@ namespace sh::core
 	}
 	SH_CORE_API void ThreadSyncManager::Clear()
 	{
-		syncables = std::priority_queue<ThreadData::SyncData>{};
+		syncables.clear();
 	}
-	SH_CORE_API void ThreadSyncManager::PushSyncable(ISyncable& syncable, uint32_t priority)
+	SH_CORE_API void ThreadSyncManager::PushSyncable(ISyncable& syncable, int priority)
 	{
 		if (!bOnSync)
 		{
@@ -41,7 +41,8 @@ namespace sh::core
 		}
 		else
 		{
-			syncables.push({ &syncable, priority });
+			syncables.push_back({ &syncable, priority });
+			std::stable_sort(syncables.begin(), syncables.end());
 		}
 	}
 
@@ -70,16 +71,17 @@ namespace sh::core
 		{
 			while (!threadData.syncableQueue.empty())
 			{
-				syncables.push(threadData.syncableQueue.front());
+				syncables.push_back(threadData.syncableQueue.front());
 				threadData.syncableQueue.pop();
 			}
 		}
+		std::stable_sort(syncables.begin(), syncables.end());
 
 		bOnSync = true;
 		while (!syncables.empty())
 		{
-			auto [syncable, priority] = syncables.top();
-			syncables.pop();
+			auto [syncable, priority] = syncables.front();
+			syncables.pop_front();
 			if (syncable)
 				syncable->Sync();
 		}

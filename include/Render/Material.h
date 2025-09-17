@@ -107,8 +107,8 @@ namespace sh::render
 		if (propInfo == nullptr)
 			return;
 
-		assert(*propInfo->type == core::reflection::GetType<T>());
-		if (*propInfo->type != core::reflection::GetType<T>())
+		assert(propInfo->type == core::reflection::GetType<T>());
+		if (propInfo->type != core::reflection::GetType<T>())
 			return;
 
 		propertyBlock.SetProperty(name, data);

@@ -63,19 +63,25 @@ namespace sh::render
 	void Material::SetDefaultProperties()
 	{
 		assert(shader != nullptr);
-		for (auto& [name, propInfo] : shader->GetProperties())
+		for (const auto& [name, propInfo] : shader->GetProperties())
 		{
-			if (*propInfo.type == core::reflection::GetType<int>() || *propInfo.type == core::reflection::GetType<float>())
-				propertyBlock.SetProperty(name, 0.0f);
-			else if (*propInfo.type == core::reflection::GetType<glm::vec2>() || *propInfo.type == core::reflection::GetType<glm::vec3>() || *propInfo.type == core::reflection::GetType<glm::vec4>())
-				propertyBlock.SetProperty(name, glm::vec4{ 0.f });
-			else if (*propInfo.type == core::reflection::GetType<glm::mat2>() || *propInfo.type == core::reflection::GetType<glm::mat3>() || *propInfo.type == core::reflection::GetType<glm::mat4>())
-				propertyBlock.SetProperty(name, glm::mat4{ 1.f });
-			else if (*propInfo.type == core::reflection::GetType<Texture>())
+			if (propInfo.bLocalProperty == true)
+				continue;
+
+			if (propInfo.type == core::reflection::GetType<int>() || propInfo.type == core::reflection::GetType<float>())
+				SetProperty(name, 0.0f);
+			else if (propInfo.type == core::reflection::GetType<glm::vec2>() || propInfo.type == core::reflection::GetType<glm::vec3>() || propInfo.type == core::reflection::GetType<glm::vec4>())
+				SetProperty(name, glm::vec4{ 0.f });
+			else if (propInfo.type == core::reflection::GetType<glm::mat2>() || propInfo.type == core::reflection::GetType<glm::mat3>() || propInfo.type == core::reflection::GetType<glm::mat4>())
+				SetProperty(name, glm::mat4{ 1.f });
+			else if (propInfo.type == core::reflection::GetType<Texture>())
 			{
 				static core::UUID blackTexUUID{ "bbc4ef7ec45dce223297a224f8093f18" };
 				auto texPtr = static_cast<Texture*>(core::SObject::GetSObjectUsingResolver(blackTexUUID));
-;				propertyBlock.SetProperty(name, texPtr);
+				if (texPtr != nullptr)
+					SetProperty(name, texPtr);
+				else
+					SH_ERROR("Can't get default texture!");
 			}
 		}
 	}
@@ -98,15 +104,11 @@ namespace sh::render
 	SH_RENDER_API void Material::SetShader(Shader* shader)
 	{
 		this->shader = shader;
-		if (!core::IsValid(this->shader))
-			return;
-		if (context == nullptr)
+		if (!core::IsValid(this->shader) || context == nullptr)
 			return;
 
 		Clear();
-
 		SetDefaultProperties();
-
 		Build(*context);
 	}
 	
@@ -139,7 +141,7 @@ namespace sh::render
 
 			std::vector<uint8_t> data(uniformLayout->GetSize(), 0);
 			bool isSampler = false;
-			for (auto& member : uniformLayout->GetMembers())
+			for (const UniformStructLayout::UniformMember& member : uniformLayout->GetMembers())
 			{
 				if (member.typeHash == core::reflection::GetType<int>().hash)
 				{
@@ -209,13 +211,13 @@ namespace sh::render
 				{
 					auto var = propertyBlock.GetTextureProperty(member.name);
 					if (core::IsValid(var))
-						materialData->SetTextureData(*pass, uniformLayout->type, uniformLayout->binding, var);
+						materialData->SetTextureData(*pass, uniformLayout->type, uniformLayout->binding, *var);
 
 					isSampler = true;
 				}
 			}
 			if (!isSampler)
-				materialData->SetUniformData(*pass, uniformLayout->type, uniformLayout->binding, data.data());
+				materialData->SetUniformData(*pass, uniformLayout->type, uniformLayout->binding, std::move(data));
 		}
 		dirtyProps.clear();
 		bPropertyDirty = false;
@@ -258,16 +260,16 @@ namespace sh::render
 		if (propInfo == nullptr)
 			return;
 
-		if (*propInfo->type == core::reflection::GetType<glm::vec4>())
+		if (propInfo->type == core::reflection::GetType<glm::vec4>())
 		{
 			SetProperty<glm::vec4>(name, data);
 		}
-		else if (*propInfo->type == core::reflection::GetType<glm::vec3>())
+		else if (propInfo->type == core::reflection::GetType<glm::vec3>())
 		{
 			glm::vec3 dataVec3{ data };
 			SetProperty(name, dataVec3);
 		}
-		else if (*propInfo->type == core::reflection::GetType<glm::vec2>())
+		else if (propInfo->type == core::reflection::GetType<glm::vec2>())
 		{
 			glm::vec2 dataVec2{ data };
 			SetProperty(name, dataVec2);
@@ -293,6 +295,10 @@ namespace sh::render
 
 	SH_RENDER_API void Material::OnPropertyChanged(const core::reflection::Property& prop)
 	{
+		if (prop.GetName() == core::Util::ConstexprHash("shader"))
+		{
+			SetShader(shader);
+		}
 		bPropertyDirty = true;
 	}
 

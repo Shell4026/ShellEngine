@@ -41,6 +41,8 @@ namespace sh::game
 
 		SH_GAME_API void SetMaterialPropertyBlock(std::unique_ptr<render::MaterialPropertyBlock>&& block);
 		SH_GAME_API auto GetMaterialPropertyBlock() const -> render::MaterialPropertyBlock*;
+		/// @brief PropertyBlock의 데이터를 GPU에 업로드 하는 함수
+		SH_GAME_API void UpdatePropertyBlockData();
 
 		SH_GAME_API void SetRenderTagId(uint32_t tagId);
 		SH_GAME_API auto GetRenderTagId() const -> uint32_t;
@@ -53,7 +55,6 @@ namespace sh::game
 		SH_GAME_API virtual void UpdateDrawable();
 	private:
 		void SearchLocalProperties();
-		void UpdateMaterialData();
 
 		template<typename T>
 		void SetData(const T& data, std::vector<uint8_t>& uniformData, std::size_t offset, std::size_t size)
@@ -66,7 +67,7 @@ namespace sh::game
 			std::memcpy(uniformData.data() + offset, &data, sizeof(T));
 		}
 
-		void FillLightStruct(render::Drawable& drawable) const;
+		void FillLightStruct(render::Drawable& drawable, render::Shader& shader) const;
 	protected:
 		PROPERTY(mesh)
 		const render::Mesh* mesh;
@@ -75,6 +76,12 @@ namespace sh::game
 		PROPERTY(drawable, core::PropertyOption::invisible, core::PropertyOption::noSave)
 		render::Drawable* drawable;
 	private:
+		struct Light
+		{
+			alignas(16) int lightCount = 0;
+			alignas(16) glm::vec4 lightPos[10];
+			alignas(16) glm::vec4 other[10];
+		};
 		render::AABB worldAABB;
 
 		std::unique_ptr<render::MaterialPropertyBlock> propertyBlock;
@@ -85,7 +92,5 @@ namespace sh::game
 
 		PROPERTY(renderTag)
 		uint32_t renderTag = 1;
-
-		bool bShaderHasLight = false;
 	};
 }//namespace
