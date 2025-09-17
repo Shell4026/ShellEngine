@@ -178,7 +178,7 @@ namespace sh::editor
 	SH_EDITOR_API void Inspector::RenderSObjectPtrProperty(const core::reflection::Property& prop, core::SObject& propertyOwner, const std::string& name,
 		core::SObject** objPtr, const core::reflection::TypeInfo* type)
 	{
-		std::string typeName{ type == nullptr ? prop.pureTypeName : type->name };
+		const std::string propertyTypeName{ type == nullptr ? prop.pureTypeName : type->name };
 		if (type == nullptr)
 			type = &prop.type;
 
@@ -188,7 +188,7 @@ namespace sh::editor
 		if (objPtr == nullptr)
 			parameter = prop.Get<core::SObject*>(propertyOwner);
 
-		auto icon = GetIcon(typeName);
+		auto icon = GetIcon(propertyTypeName);
 
 		float iconSize = 20;
 		float buttonWidth = ImGui::GetContentRegionAvail().x - iconSize;
@@ -197,7 +197,7 @@ namespace sh::editor
 			buttonWidth = 0;
 
 		const char* objName = "None";
-		if (*parameter)
+		if (core::IsValid(*parameter))
 		{
 			if ((*parameter)->GetName().ToString().empty())
 				objName = "Unknown";
@@ -214,7 +214,7 @@ namespace sh::editor
 		if (ImGui::BeginDragDropTarget())
 		{
 			// 드래그로 받는 객체의 타입 이름 == 드래그 중인 객체의 타입 이름이면 받음
-			const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(typeName.c_str());
+			const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(propertyTypeName.c_str());
 			auto currentPayload = ImGui::GetDragDropPayload();
 			if (payload)
 			{
@@ -240,7 +240,7 @@ namespace sh::editor
 						const core::reflection::STypeInfo* componentType = &payloadComponent->GetType();
 						while (componentType)
 						{
-							if (componentType->type.name == typeName)
+							if (componentType->type.name == propertyTypeName)
 							{
 								// 부모가 해당 컴포넌트인 오브젝트는 여럿일 수 있으므로 후보 리스트에 넣는다.
 								list.push_back(&payloadComponent);
@@ -254,7 +254,7 @@ namespace sh::editor
 					{
 						const core::reflection::STypeInfo& componentType = (*component)->GetType();
 						// 정확히 같은 컴포넌트라면
-						if (componentType.type.name == typeName)
+						if (componentType.type.name == propertyTypeName)
 						{
 							bFind = true;
 							// 페이로드 재설정
@@ -271,20 +271,23 @@ namespace sh::editor
 				}
 				else
 				{
-					// 부모 타입하고도 일치 하는지 검사
+					// 부모 타입하고는 일치 하는지 검사
 					core::SObject** dataPtr = reinterpret_cast<core::SObject**>(currentPayload->Data);
 					if (dataPtr != nullptr)
 					{
 						auto type = &(*dataPtr)->GetType();
 						while (type != nullptr)
 						{
-							const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(std::string{ type->type.name }.c_str());
-							if (payload != nullptr)
+							if (type->type.name == propertyTypeName) // 맞으면 페이로드 허용
 							{
-								*parameter = *reinterpret_cast<core::SObject**>(payload->Data);
-								propertyOwner.OnPropertyChanged(prop);
-								AssetDatabase::GetInstance()->SetDirty(&propertyOwner);
-								AssetDatabase::GetInstance()->SaveAllAssets();
+								const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(currentPayload->DataType);
+								if (payload != nullptr)
+								{
+									*parameter = *reinterpret_cast<core::SObject**>(payload->Data);
+									propertyOwner.OnPropertyChanged(prop);
+									AssetDatabase::GetInstance()->SetDirty(&propertyOwner);
+									AssetDatabase::GetInstance()->SaveAllAssets();
+								}
 							}
 							type = type->GetSuper();
 						}
