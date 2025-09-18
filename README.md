@@ -49,8 +49,9 @@ Vulkan 기반으로 개발중인 크로스 플랫폼 3D/2D 게임 엔진입니�
   - 플랫폼 독립적인 창 생성 및 이벤트 처리 모듈화
   - Windows: win32 api, Linux: x11 lib
 
-## 간단한 데모
-https://github.com/user-attachments/assets/50c5cc05-7eba-45cf-9a92-ca2046e119d2
+## 간단한 에디터 데모 영상
+[![Video Label](http://img.youtube.com/vi/SEiktv0WtOM/0.jpg)](https://youtu.be/SEiktv0WtOM)</br>
+https://youtu.be/SEiktv0WtOM
 
 ## 프로젝트 구조 흐름
 

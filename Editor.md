@@ -28,6 +28,9 @@ OnEnable과 OnDisable은 객체가 활성화/비활성화 되는 즉시 실행 �
 
 Tools - Bundle Viewer를 통해 에셋 번들에 어떤 에셋이 들어갔는지 확인 할 수도 있습니다.
 
+# 조작 가이드 영상
+[![Video Label](http://img.youtube.com/vi/SEiktv0WtOM/0.jpg)](https://youtu.be/SEiktv0WtOM)</br>
+https://youtu.be/SEiktv0WtOM
 # 조작 영상(구)
 [![Video Label](http://img.youtube.com/vi/D48w8sa7JFQ/0.jpg)](https://youtu.be/D48w8sa7JFQ?si=d-AvSkDpJbcnExlB)
 
