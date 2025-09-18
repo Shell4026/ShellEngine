@@ -40,9 +40,15 @@ namespace sh::render
 	SH_RENDER_API void MaterialData::Sync()
 	{
 		if (bClearDirty)
+		{
 			perPassData.clear();
+			bClearDirty = false;
+		}
 		if (bCreateDirty && context != nullptr && core::IsValid(shader))
+		{
 			CreateBuffers(*this->context, *shader, bPerObject);
+			bCreateDirty = false;
+		}
 
 		if (perPassData.empty())
 		{
@@ -66,8 +72,6 @@ namespace sh::render
 		syncDatas.clear();
 
 		bDirty = false;
-		bClearDirty = false;
-		bCreateDirty = false;
 	}
 	SH_RENDER_API void MaterialData::SetUniformData(const ShaderPass& shaderPass, UniformStructLayout::Type type, uint32_t binding, const void* data, std::size_t dataSize)
 	{
