@@ -12,20 +12,29 @@ class Derived : public Base
 ```
 일반 변수에 대한 타입도 가져올 수 있으나 SCLASS보단 정보가 한정적입니다.
 ```c++
-auto& type = sh::core::reflection::GetType<int>();
-assert(type.size == sizeof(int));
+using namespace sh::core; // sh::core::reflection...
+
+const reflection::TypeInfo& intType = reflection::GetType<int>();
+assert(intType.size == sizeof(int));
 ```
 해당 클래스에 대한 정보는 GetStaticType()으로 가져올 수 있습니다.
 ```c++
-assert(Derived::GetStaticType().name == "Derived");
-assert(Derived::GetStaticType().isPointer == false);
+reflection::STypeInfo& derivedType = Derived::GetStaticType();
+
+assert(derivedType.name == "Derived");
+assert(derivedType.type.isPointer == false);
+
+// GetType으로 얻은 타입도 SCLASS라면 SType을 가져올 수 있다.
+assert(reflection::GetType<Derived>().GetSType() == &derivedType);
+// int는 SCLASS가 아님
+assert(reflection::GetType<int>().GetSType() == nullptr);
 ```
 인스턴스화 된 객체의 정보는 GetType()으로도 가져올 수 있습니다.
 ```c++
 Derived derived;
 assert(derived.GetType() == Derived::GetStaticType());
 assert(derived.GetType().IsChildOf(Base::GetStaticType())); // Base의 자식 객체다.
-assert(*derived.GetType().GetSuper() == Base::GetStaticType()); // derived인스턴스의 부모 클래스는 Base다.
+assert(*derived.GetType().super == Base::GetStaticType()); // derived인스턴스의 부모 클래스는 Base다.
 ```
 클래스 내 변수를 리플렉션에 노출 시키려면 PROPERTY()매크로를 통해 알려줘야합니다.
 ```c++
