@@ -3,12 +3,15 @@
 
 namespace sh::core::reflection
 {
-	std::unordered_map<std::size_t, STypeInfo*> STypes::types{};
+	std::unordered_map<STypes::Info, STypeInfo*, STypes::InfoHasher> STypes::types{};
 
 	STypeInfo::~STypeInfo()
 	{
+		STypes::Info info{};
+		info.hash = hash;
+		info.size = type.size;
 		// DLL 핫스왑용
-		STypes::types.erase(hash);
+		STypes::types.erase(info);
 	}
 
 	SH_CORE_API auto STypeInfo::AddProperty(std::unique_ptr<Property>&& prop) -> Property*
@@ -47,22 +50,17 @@ namespace sh::core::reflection
 		return !operator==(other);
 	}
 
-	SH_CORE_API auto STypeInfo::GetSuper() const -> STypeInfo*
-	{
-		return super;
-	}
-
 	SH_CORE_API auto STypeInfo::IsChildOf(const STypeInfo& other) const -> bool
 	{
 		if (operator==(other))
 			return true;
 
-		const STypeInfo* super = GetSuper();
-		while (super != nullptr)
+		const STypeInfo* superType = super;
+		while (superType != nullptr)
 		{
-			if (super->operator==(other))
+			if (superType->operator==(other))
 				return true;
-			super = super->GetSuper();
+			superType = superType->super;
 		}
 		return false;
 	}

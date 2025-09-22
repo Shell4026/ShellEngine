@@ -118,10 +118,10 @@ TEST(ReflectionTest, TypeInfoTest)
 
     EXPECT_TRUE(derived.GetType() == Derived::GetStaticType());
     EXPECT_TRUE(derived.GetType().IsChildOf(Base::GetStaticType()));
-    EXPECT_TRUE(*derived.GetType().GetSuper() == Base::GetStaticType());
+    EXPECT_TRUE(*derived.GetType().super == Base::GetStaticType());
 
-    EXPECT_EQ(base.GetType().size, sizeof(Base));
-    EXPECT_EQ(derived.GetType().size, sizeof(Derived));
+    EXPECT_EQ(base.GetType().type.size, sizeof(Base));
+    EXPECT_EQ(derived.GetType().type.size, sizeof(Derived));
 
     using namespace sh::core;
     auto& type1 = reflection::GetType<int*>();
@@ -137,6 +137,10 @@ TEST(ReflectionTest, TypeInfoTest)
     // 해시는 다 같다.
     EXPECT_TRUE(type1.hash == type2.hash && type2.hash == type3.hash && type3.hash == type4.hash && type4.hash == type5.hash);
 
+    // GetType으로 얻은 타입도 SCLASS라면 SType을 가져올 수 있다.
+    EXPECT_TRUE(reflection::GetType<Base>().GetSType() == &Base::GetStaticType());
+    // int는 SCLASS가 아님
+    EXPECT_TRUE(reflection::GetType<int>().GetSType() == nullptr);
 }
 TEST(ReflectionTest, TypeNameTest)
 {

@@ -316,7 +316,7 @@ namespace sh::editor
 	SH_EDITOR_API void CameraInspector::RenderUI(void* obj, int idx)
 	{
 		game::Component* component = reinterpret_cast<game::Component*>(obj);
-		auto currentType = &component->GetType();
+		const core::reflection::STypeInfo* currentType = &component->GetType();
 		do
 		{
 			for (auto& prop : currentType->GetProperties())
@@ -337,7 +337,7 @@ namespace sh::editor
 				}
 				Inspector::RenderProperty(*prop, *component, idx);
 			}
-			currentType = currentType->GetSuper();
+			currentType = currentType->super;
 		} 
 		while (currentType != nullptr);
 	}

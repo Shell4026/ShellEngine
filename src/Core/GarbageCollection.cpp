@@ -141,7 +141,7 @@ namespace sh::core
 					}
 				}
 			}
-			type = type->GetSuper(); // 부모 클래스의 프로퍼티들도 검사
+			type = type->super; // 부모 클래스의 프로퍼티들도 검사
 		}
 	}
 	void GarbageCollection::MarkContainers(TrackingContainerIt start, TrackingContainerIt end)

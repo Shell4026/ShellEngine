@@ -10,6 +10,7 @@
 #include <set>
 #include <unordered_set>
 #include <string_view>
+#include <list>
 namespace sh::core
 {
 	class SObject;
@@ -18,23 +19,23 @@ namespace sh::core::reflection
 {
 	//기본 HasSuper 구조체
 	template<typename T, typename U = void>
-	struct HasSuper :
-		std::bool_constant<false> {};
+	struct HasSuper : std::false_type {};
 	//T가 Super을 가지고 있다면 오버로딩 된다(SFINAE).
 	template<typename T>
 	struct HasSuper<T, std::void_t<typename T::Super>> :
 		std::bool_constant<!std::is_same_v<typename T::Super, void>> {};
 
 	template<typename T, typename CheckThis = void>
-	struct HasThis :
-		std::bool_constant<false> {};
+	struct HasThis : std::false_type {};
 
 	template<typename T>
 	struct HasThis<T, std::void_t<typename T::This>> :
 		std::bool_constant<!std::is_same_v<typename T::This, void>> {};
 
+	template<typename T, typename = void>
+	struct IsSClass : std::false_type {};
 	template<typename T>
-	struct IsSClass : std::bool_constant<HasThis<T>::value> {};
+	struct IsSClass<T, std::void_t<decltype(T::GetStaticType()), decltype(std::declval<T>().GetType())>> : std::true_type {};
 
 	template<typename T>
 	struct IsSObject : std::bool_constant<std::is_base_of_v<SObject, std::remove_reference_t<T>>> {};
@@ -93,6 +94,13 @@ namespace sh::core::reflection
 	struct IsArray<T[size]> : std::true_type {};
 
 	template<typename T>
+	struct IsList : std::bool_constant<false> {};
+	template<typename T>
+	struct IsList<std::list<T>> : std::bool_constant<true> {};
+	template<typename T>
+	struct IsList<SList<T>> : std::bool_constant<true> {};
+
+	template<typename T>
 	struct IsUniquePtr : std::false_type {};
 	template<typename T>
 	struct IsUniquePtr<std::unique_ptr<T>> : std::true_type {};
@@ -102,19 +110,28 @@ namespace sh::core::reflection
 	struct GetContainerNestedCount : std::integral_constant<uint32_t, 0> {};
 	template<typename T>
 	struct GetContainerNestedCount<std::vector<T>> : std::integral_constant<uint32_t, GetContainerNestedCount<T>::value + 1> {};
+	template<typename T>
+	struct GetContainerNestedCount<SVector<T>> : std::integral_constant<uint32_t, GetContainerNestedCount<T>::value + 1> {};
 	template<typename T, std::size_t N>
 	struct GetContainerNestedCount<std::array<T, N>> : std::integral_constant<uint32_t, GetContainerNestedCount<T>::value + 1> {};
 	template<typename T, std::size_t N>
 	struct GetContainerNestedCount<T[N]> : std::integral_constant<uint32_t, GetContainerNestedCount<T>::value + 1> {};
 	template<typename T, typename U, typename _Pr, typename _Alloc>
 	struct GetContainerNestedCount<std::map<T, U, _Pr, _Alloc>> : std::integral_constant<uint32_t, GetContainerNestedCount<U>::value + 1> {};
+	template<typename T, typename U>
+	struct GetContainerNestedCount<SMap<T, U>> : std::integral_constant<uint32_t, GetContainerNestedCount<U>::value + 1> {};
 	template<typename T, typename U, typename _Hasher, typename _Keyeq, typename _Alloc>
 	struct GetContainerNestedCount<std::unordered_map<T, U, _Hasher, _Keyeq, _Alloc>> : std::integral_constant<uint32_t, GetContainerNestedCount<U>::value + 1> {};
+	template<typename T, typename U>
+	struct GetContainerNestedCount<SHashMap<T, U>> : std::integral_constant<uint32_t, GetContainerNestedCount<U>::value + 1> {};
 	template<typename T, typename _Pr, typename _Alloc>
 	struct GetContainerNestedCount<std::set<T, _Pr, _Alloc>> : std::integral_constant<uint32_t, GetContainerNestedCount<T>::value + 1> {};
+	template<typename T>
+	struct GetContainerNestedCount<SSet<T>> : std::integral_constant<uint32_t, GetContainerNestedCount<T>::value + 1> {};
 	template<typename T, typename _Hasher, typename _Keyeq, typename _Alloc>
 	struct GetContainerNestedCount<std::unordered_set<T, _Hasher, _Keyeq, _Alloc>> : std::integral_constant<uint32_t, GetContainerNestedCount<T>::value + 1> {};
-
+	template<typename T>
+	struct GetContainerNestedCount<SHashSet<T>> : std::integral_constant<uint32_t, GetContainerNestedCount<T>::value + 1> {};
 	template<typename T>
 	struct GetContainerElementType
 	{
@@ -122,6 +139,11 @@ namespace sh::core::reflection
 	};
 	template<typename T>
 	struct GetContainerElementType<std::vector<T>>
+	{
+		using type = T;
+	};
+	template<typename T>
+	struct GetContainerElementType<SVector<T>>
 	{
 		using type = T;
 	};
@@ -175,6 +197,16 @@ namespace sh::core::reflection
 	{
 		using type = T;
 	};
+	template<typename T>
+	struct GetContainerElementType<std::list<T>>
+	{
+		using type = T;
+	};
+	template<typename T>
+	struct GetContainerElementType<SList<T>>
+	{
+		using type = T;
+	};
 
 	// 중첩된 컨테이너의 마지막 자료형 구하기
 	template<typename T>
@@ -184,6 +216,11 @@ namespace sh::core::reflection
 	};
 	template<typename T>
 	struct GetContainerLastType<std::vector<T>>
+	{
+		using type = typename GetContainerLastType<T>::type;
+	};
+	template<typename T>
+	struct GetContainerLastType<SVector<T>>
 	{
 		using type = typename GetContainerLastType<T>::type;
 	};
@@ -202,8 +239,18 @@ namespace sh::core::reflection
 	{
 		using type = typename GetContainerLastType<U>::type;
 	};
+	template<typename T, typename U>
+	struct GetContainerLastType<SMap<T, U>>
+	{
+		using type = typename GetContainerLastType<U>::type;
+	};
 	template<typename T, typename U, typename _Hasher, typename _Keyeq, typename _Alloc>
 	struct GetContainerLastType<std::unordered_map<T, U, _Hasher, _Keyeq, _Alloc>>
+	{
+		using type = typename GetContainerLastType<U>::type;
+	};
+	template<typename T, typename U>
+	struct GetContainerLastType<SHashMap<T, U>>
 	{
 		using type = typename GetContainerLastType<U>::type;
 	};
@@ -212,8 +259,18 @@ namespace sh::core::reflection
 	{
 		using type = typename GetContainerLastType<T>::type;
 	};
+	template<typename T>
+	struct GetContainerLastType<SSet<T>>
+	{
+		using type = typename GetContainerLastType<T>::type;
+	};
 	template<typename T, typename _Hasher, typename _Keyeq, typename _Alloc>
 	struct GetContainerLastType<std::unordered_set<T, _Hasher, _Keyeq, _Alloc>>
+	{
+		using type = typename GetContainerLastType<T>::type;
+	};
+	template<typename T>
+	struct GetContainerLastType<SHashSet<T>>
 	{
 		using type = typename GetContainerLastType<T>::type;
 	};

@@ -21,11 +21,15 @@ public:\
 		if(stypeInfo == nullptr)\
 		{\
 			constexpr std::size_t hash = sh::core::reflection::TypeTraits::GetTypeHash<class_name>();\
-			auto it = sh::core::reflection::STypes::types.find(hash);\
+			sh::core::reflection::STypes::Info keyInfo{};\
+			keyInfo.hash = hash;\
+			keyInfo.size = sizeof(class_name);\
+			\
+			auto it = sh::core::reflection::STypes::types.find(keyInfo);\
 			if (it == sh::core::reflection::STypes::types.end())\
 			{\
 				static sh::core::reflection::STypeInfo info{ sh::core::reflection::STypeCreateInfo<class_name>{ #class_name, hash } }; \
-				sh::core::reflection::STypes::types.insert({ hash, &info });\
+				sh::core::reflection::STypes::types.insert({ keyInfo, &info });\
 				stypeInfo = &info;\
 				return info;\
 			}\
@@ -38,7 +42,7 @@ public:\
 		else\
 			return *stypeInfo;\
 	}\
-	virtual auto GetType() const -> sh::core::reflection::STypeInfo&\
+	virtual auto GetType() const -> const sh::core::reflection::STypeInfo&\
 	{\
 		if (stypeInfo == nullptr)\
 			stypeInfo = &GetStaticType();\
@@ -82,23 +86,11 @@ namespace sh::core::reflection
 	/// @brief SClass의 타입 정보 객체
 	class STypeInfo
 	{
-	private:
-		const size_t hash;
-		STypeInfo* super;
-
-		std::vector<std::unique_ptr<Property>> properties;
-		std::vector<Property*> sobjPtrs;
-		std::vector<Property*> sobjPtrContainers;
-	public:
-		const core::Name name;
-		const TypeInfo& type;
-		const size_t size;
-		const bool isPointer;
 	public:
 		template<typename T>
 		explicit STypeInfo(STypeCreateInfo<T> data) :
 			hash(data.hash), super(data.super),
-			name(data.name), type(GetType<T>()), size(sizeof(T)), isPointer(std::is_pointer_v<T>)
+			name(data.name), type(GetType<T>())
 		{
 		}
 		STypeInfo(const STypeInfo& other) = delete;
@@ -109,8 +101,6 @@ namespace sh::core::reflection
 
 		SH_CORE_API auto operator==(const STypeInfo& other) const -> bool;
 		SH_CORE_API auto operator!=(const STypeInfo& other) const -> bool;
-
-		SH_CORE_API auto GetSuper() const -> STypeInfo*;
 		/// @brief 현재 타입이 other의 자식인지
 		/// @return 자식이면 true 아니면 false
 		SH_CORE_API auto IsChildOf(const STypeInfo& other) const -> bool;
@@ -120,11 +110,37 @@ namespace sh::core::reflection
 		SH_CORE_API auto GetProperties() const -> const std::vector<std::unique_ptr<Property>>&;
 		SH_CORE_API auto GetSObjectPtrProperties() const -> const std::vector<Property*>&;
 		SH_CORE_API auto GetSObjectPtrContainerProperties() const -> const std::vector<Property*>&;
+	public:
+		const core::Name name;
+		const TypeInfo& type;
+		const STypeInfo* const super;
+	private:
+		const size_t hash;
+
+		std::vector<std::unique_ptr<Property>> properties;
+		std::vector<Property*> sobjPtrs;
+		std::vector<Property*> sobjPtrContainers;
 	};//STypeInfo
 
 	/// @brief 리플렉션 데이터의 DLL간 공유를 위한 구조체
 	struct STypes
 	{
-		SH_CORE_API static std::unordered_map<std::size_t, STypeInfo*> types; // 해쉬, 타입 포인터
+		struct Info
+		{
+			std::size_t hash;
+			std::size_t size;
+			auto operator==(const Info& other) const -> bool
+			{
+				return hash == other.hash && size == other.size;
+			}
+		};
+		struct InfoHasher
+		{
+			auto operator()(const Info& info) const -> std::size_t
+			{
+				return core::Util::CombineHash(info.hash, info.size);
+			}
+		};
+		SH_CORE_API static std::unordered_map<Info, STypeInfo*, InfoHasher> types; // 해쉬, 타입 포인터
 	};
 }//namespace

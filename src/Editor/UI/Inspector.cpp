@@ -49,7 +49,7 @@ namespace sh::editor
 				else
 					RenderProperty(*prop, obj, idx);
 			}
-			currentType = const_cast<core::reflection::STypeInfo*>(currentType->GetSuper());
+			currentType = const_cast<core::reflection::STypeInfo*>(currentType->super);
 		} while (currentType);
 	}
 	SH_EDITOR_API void Inspector::RenderProperty(const core::reflection::Property& prop, core::SObject& owner, int idx)
@@ -246,7 +246,7 @@ namespace sh::editor
 								list.push_back(&payloadComponent);
 								break;
 							}
-							componentType = componentType->GetSuper();
+							componentType = componentType->super;
 						}
 					}
 					bool bFind = false;
@@ -289,7 +289,7 @@ namespace sh::editor
 									AssetDatabase::GetInstance()->SaveAllAssets();
 								}
 							}
-							type = type->GetSuper();
+							type = type->super;
 						}
 					}
 				}
@@ -360,7 +360,7 @@ namespace sh::editor
 											list.push_back(&payloadComponent);
 											break;
 										}
-										componentType = componentType->GetSuper();
+										componentType = componentType->super;
 									}
 								}
 								bool bFind = false;
@@ -400,7 +400,7 @@ namespace sh::editor
 											AssetDatabase::GetInstance()->SetDirty(&propertyOwner);
 											AssetDatabase::GetInstance()->SaveAllAssets();
 										}
-										type = type->GetSuper();
+										type = type->super;
 									}
 								}
 							}

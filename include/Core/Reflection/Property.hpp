@@ -537,6 +537,13 @@ namespace sh::core::reflection
 					auto pairPtr = reinterpret_cast<const PairType*>(value);
 					map.insert_or_assign(pairPtr->first, pairPtr->second);
 				}
+				else if constexpr (IsList<T>())
+				{
+					T& list = static_cast<ThisType*>(obj)->*ptr;
+					using ValueType = typename GetContainerElementType<T>::type;
+
+					list.push_back(*reinterpret_cast<const ValueType*>(value));
+				}
 			}
 		}
 	};

@@ -253,7 +253,7 @@ namespace sh::core
 			}
 			if (!json.empty())
 				mainJson[stypeInfo->name] = std::move(json);
-			stypeInfo = stypeInfo->GetSuper();
+			stypeInfo = stypeInfo->super;
 		}
 		return mainJson;
 	}
@@ -282,7 +282,7 @@ namespace sh::core
 		{
 			if (!json.contains(stypeInfo->name))
 			{
-				stypeInfo = stypeInfo->GetSuper();
+				stypeInfo = stypeInfo->super;
 				continue;
 			}
 			const core::Json& subJson = json[stypeInfo->name];
@@ -367,7 +367,7 @@ namespace sh::core
 					OnPropertyChanged(*prop.get());
 				}
 			}//for
-			stypeInfo = stypeInfo->GetSuper();
+			stypeInfo = stypeInfo->super;
 		}
 	}
 	SH_CORE_API auto SObject::GetSObjectUsingResolver(const core::UUID& uuid) -> core::SObject*

@@ -148,7 +148,7 @@ namespace sh::game
 						json->operator[](name) = std::move(arrJson);
 				}
 			}
-			type = type->GetSuper();
+			type = type->super;
 		}
 		return mainJson;
 	}
@@ -160,7 +160,7 @@ namespace sh::game
 		{
 			if (!json.contains(type->name))
 			{
-				type = type->GetSuper();
+				type = type->super;
 				continue;
 			}
 			const core::Json& compJson = json[type->name.ToString()];
@@ -195,7 +195,7 @@ namespace sh::game
 				//	}
 				//}
 			}
-			type = type->GetSuper();
+			type = type->super;
 		}
 	}
 	SH_GAME_API void Component::SetEditor(bool bEditor)
