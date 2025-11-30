@@ -31,10 +31,11 @@ namespace sh::render::vk
 			const VkRenderPass pass;
 			const VulkanShaderPass* shader;
 			Mesh::Topology topology;
+			std::size_t constantHash = 0;
 
 			bool operator==(const PipelineInfo& other) const
 			{
-				return pass == other.pass && shader == other.shader && topology == other.topology;
+				return pass == other.pass && shader == other.shader && topology == other.topology && constantHash == other.constantHash;
 			}
 		};
 		struct PipelineInfoHasher
@@ -48,6 +49,7 @@ namespace sh::render::vk
 				std::size_t hash = hasher(info.pass);
 				hash = Util::CombineHash(hash, hasher(info.shader));
 				hash = Util::CombineHash(hash, intHasher(static_cast<int>(info.topology)));
+				hash = Util::CombineHash(hash, intHasher(info.constantHash));
 				return hash;
 			}
 		};
@@ -64,7 +66,11 @@ namespace sh::render::vk
 
 		core::Observer<false, const core::SObject*>::Listener shaderDestroyedListener;
 	private:
-		auto BuildPipeline(const VulkanRenderPass& renderPass, const VulkanShaderPass& shader, Mesh::Topology topology) -> std::unique_ptr<VulkanPipeline>;
+		auto BuildPipeline(
+			const VulkanRenderPass& renderPass,
+			const VulkanShaderPass& shader, 
+			Mesh::Topology topology, 
+			const std::vector<uint8_t>* constDataPtr) -> std::unique_ptr<VulkanPipeline>;
 		auto ConvertStencilState(const StencilState& stencilState) const -> VkStencilOpState;
 	public:
 		SH_RENDER_API VulkanPipelineManager(const VulkanContext& context);
@@ -73,8 +79,13 @@ namespace sh::render::vk
 		/// @param pass 렌더 패스
 		/// @param shader 셰이더
 		/// @param topology 메쉬 토폴로지
+		/// @param constPtr 상수 데이터 포인터
 		/// @return 파이프라인 핸들
-		SH_RENDER_API auto GetOrCreatePipelineHandle(const VulkanRenderPass& renderPass, const VulkanShaderPass& shader, Mesh::Topology topology) -> uint64_t;
+		SH_RENDER_API auto GetOrCreatePipelineHandle(
+			const VulkanRenderPass& renderPass, 
+			const VulkanShaderPass& shader, 
+			Mesh::Topology topology, 
+			const std::vector<uint8_t>* constDataPtr = nullptr) -> uint64_t;
 
 		/// @brief vkCmdBindPipeline()의 래퍼 함수. 스레드 안전하다.
 		/// @param cmd 커맨드 버퍼

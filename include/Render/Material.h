@@ -60,6 +60,9 @@ namespace sh::render
 					  auto GetProperty(const std::string& name) const -> std::optional<T>;
 
 		SH_RENDER_API auto GetMaterialData() const -> const MaterialData&;
+		              template<typename T>
+		              void SetConstant(const std::string& name, const T& value);
+		SH_RENDER_API auto GetConstantData(const ShaderPass& pass) const -> const std::vector<uint8_t>*;
 
 		SH_RENDER_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 
@@ -90,6 +93,7 @@ namespace sh::render
 		std::unique_ptr<MaterialData> materialData;
 
 		std::vector<std::pair<const ShaderPass*, const UniformStructLayout*>> dirtyProps;
+		std::vector<std::vector<uint8_t>> cachedConstantData;
 
 		core::Observer<false, const Texture*>::Listener onBufferUpdateListener;
 
@@ -121,6 +125,40 @@ namespace sh::render
 		}
 
 		bPropertyDirty = true;
+	}
+	template<typename T>
+	inline void Material::SetConstant(const std::string& name, const T& value)
+	{
+		if (shader == nullptr)
+			return;
+		if (cachedConstantData.empty())
+			return;
+
+		const auto& passDatas = shader->GetAllShaderPass();
+
+		for (auto& lightingPass : passDatas)
+		{
+			int passIdx = 0;
+			for (ShaderPass& pass : lightingPass.passes)
+			{
+				const auto* info = pass.GetConstantsInfo(name);
+				if (info == nullptr)
+					continue;
+
+				std::size_t expected = sizeof(T);
+				if constexpr (std::is_same_v<T, bool>)
+					expected = 4;
+				if (expected != info->size)
+				{
+					SH_ERROR_FORMAT("{} size mismatch!", name);
+					continue;
+				}
+				std::vector<uint8_t>& buffer = cachedConstantData[passIdx];
+				if (buffer.size() < info->offset + info->size) 
+					buffer.resize(pass.GetConstantSize());
+				std::memcpy(buffer.data() + info->offset, &value, sizeof(T));
+			}
+		}
 	}
 	template<typename T>
 	inline auto Material::GetProperty(const std::string& name) const -> std::optional<T>

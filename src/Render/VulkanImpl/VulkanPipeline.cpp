@@ -25,6 +25,7 @@ namespace sh::render::vk
 		shaderStages(std::move(other.shaderStages)),
 		bindingDescriptions(std::move(other.bindingDescriptions)),
 		attributeDescriptions(std::move(other.attributeDescriptions)),
+		specializationData(other.specializationData),
 		cullMode(other.cullMode),
 		topology(other.topology),
 		stencilState(other.stencilState),
@@ -240,6 +241,17 @@ namespace sh::render::vk
 		depthStencil.stencilTestEnable = bUseStencil;
 		depthStencil.front = stencilState;
 		depthStencil.back = stencilState;
+
+		if (specializationData != nullptr)
+		{
+			VkSpecializationInfo specializationInfo{};
+			specializationInfo.mapEntryCount = shader->GetSpecializationMapEntry().size();
+			specializationInfo.pMapEntries = shader->GetSpecializationMapEntry().data();
+			specializationInfo.dataSize = shader->GetSpecializationMapEntry().back().offset + shader->GetSpecializationMapEntry().back().size;
+			specializationInfo.pData = specializationData;
+			for (auto& stageCreateInfo : shaderStages)
+				stageCreateInfo.pSpecializationInfo = &specializationInfo;
+		}
 		
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
@@ -325,5 +337,9 @@ namespace sh::render::vk
 	SH_RENDER_API auto VulkanPipeline::GetSampleCount() const -> VkSampleCountFlagBits
 	{
 		return sampleCount;
+	}
+	SH_RENDER_API void VulkanPipeline::SetSpecializationConstant(const uint8_t* dataPtr)
+	{
+		specializationData = dataPtr;
 	}
 }

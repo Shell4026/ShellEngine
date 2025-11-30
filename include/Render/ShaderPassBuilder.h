@@ -17,13 +17,6 @@ namespace sh::render
 			Vertex,
 			Fragment
 		};
-	private:
-		SH_RENDER_API inline static int idCount = 0;
-	protected:
-		std::vector<uint8_t> vertShaderData;
-		std::vector<uint8_t> fragShaderData;
-	protected:
-		SH_RENDER_API static auto GetNextId() -> int;
 	public:
 		SH_RENDER_API ShaderPassBuilder();
 		SH_RENDER_API ShaderPassBuilder(const ShaderPassBuilder& other);
@@ -34,5 +27,13 @@ namespace sh::render
 
 		SH_RENDER_API virtual auto Build(const ShaderAST::PassNode& passNode) -> render::ShaderPass* = 0;
 		SH_RENDER_API virtual void Clear();
+	protected:
+		SH_RENDER_API static auto GetNextId() -> int;
+	protected:
+		std::vector<uint8_t> vertShaderData;
+		std::vector<uint8_t> fragShaderData;
+	private:
+		SH_RENDER_API inline static int idCount = 0;
+
 	};
 }

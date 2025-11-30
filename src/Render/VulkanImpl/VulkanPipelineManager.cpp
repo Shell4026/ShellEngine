@@ -47,7 +47,11 @@ namespace sh::render::vk
 	{
 	}
 
-	auto VulkanPipelineManager::BuildPipeline(const VulkanRenderPass& renderPass, const VulkanShaderPass& shader, Mesh::Topology topology) -> std::unique_ptr<VulkanPipeline>
+	auto VulkanPipelineManager::BuildPipeline(
+		const VulkanRenderPass& renderPass, 
+		const VulkanShaderPass& shader, 
+		Mesh::Topology topology,
+		const std::vector<uint8_t>* constDataPtr) -> std::unique_ptr<VulkanPipeline>
 	{
 		auto pipeline = std::make_unique<VulkanPipeline>(device, renderPass.GetVkRenderPass());
 
@@ -70,10 +74,11 @@ namespace sh::render::vk
 			SetTopology(topol).
 			SetShader(&shader).
 			SetZWrite(shader.GetZWrite()).
-			SetSampleCount(renderPass.GetConfig().sampleCount);
-		pipeline->
+			SetSampleCount(renderPass.GetConfig().sampleCount).
 			AddShaderStage(VulkanPipeline::ShaderStage::Vertex).
 			AddShaderStage(VulkanPipeline::ShaderStage::Fragment);
+		if (constDataPtr != nullptr)
+			pipeline->SetSpecializationConstant(constDataPtr->data());
 
 		pipeline->AddBindingDescription(VulkanVertexBuffer::GetBindingDescription());
 		for (auto& attrDesc : VulkanVertexBuffer::GetAttributeDescriptions())
@@ -142,9 +147,20 @@ namespace sh::render::vk
 		return state;
 	}
 
-	SH_RENDER_API auto VulkanPipelineManager::GetOrCreatePipelineHandle(const VulkanRenderPass& renderPass, const VulkanShaderPass& shader, Mesh::Topology topology) -> uint64_t
+	SH_RENDER_API auto VulkanPipelineManager::GetOrCreatePipelineHandle(
+		const VulkanRenderPass& renderPass, 
+		const VulkanShaderPass& shader, 
+		Mesh::Topology topology,
+		const std::vector<uint8_t>* constDataPtr) -> uint64_t
 	{
-		PipelineInfo info{ renderPass.GetVkRenderPass(), &shader, topology };
+		std::size_t constantHash = 0;
+		if (constDataPtr != nullptr)
+		{
+			std::hash<uint8_t> hasher;
+			for (uint8_t data : *constDataPtr)
+				constantHash = core::Util::CombineHash(constantHash, hasher(data));
+		}
+		PipelineInfo info{ renderPass.GetVkRenderPass(), &shader, topology, constantHash };
 		{
 			std::shared_lock<std::shared_mutex> readLock{ mu };
 			auto it = infoIdx.find(info);
@@ -156,7 +172,7 @@ namespace sh::render::vk
 					readLock.unlock();
 					std::unique_lock<std::shared_mutex> writeLock{ mu };
 					if (pipelines[it->second].get() == nullptr)
-						pipelines[it->second] = BuildPipeline(renderPass, shader, topology);
+						pipelines[it->second] = BuildPipeline(renderPass, shader, topology, constDataPtr);
 				}
 				return it->second;
 			}
@@ -169,7 +185,7 @@ namespace sh::render::vk
 
 			shader.onDestroy.Register(shaderDestroyedListener);
 
-			pipelines.push_back(BuildPipeline(renderPass, shader, topology));
+			pipelines.push_back(BuildPipeline(renderPass, shader, topology, constDataPtr));
 			pipelinesInfo.push_back(info);
 
 			std::size_t idx = pipelines.size() - 1;

@@ -7,10 +7,6 @@
 
 namespace sh::render
 {
-	auto ShaderLexer::IsIdentifierChar(char c) -> bool
-	{
-		return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
-	}
 	SH_RENDER_API auto ShaderLexer::Lex(const std::string& source) -> std::vector<Token>
 	{
 		std::vector<Token> tokens;
@@ -294,6 +290,7 @@ namespace sh::render
 					{"out", TokenType::Out},
 					{"uniform", TokenType::Uniform},
 					{"sampler2D", TokenType::Sampler2D},
+					{"constexpr", TokenType::Constexpr},
 					{"Stencil", TokenType::Stencil},
 					{"Cull", TokenType::Cull},
 					{"ZWrite", TokenType::ZWrite},
@@ -335,5 +332,9 @@ namespace sh::render
 
 		AddToken(TokenType::EndOfFile, "");
 		return tokens;
+	}
+	auto ShaderLexer::IsIdentifierChar(char c) -> bool
+	{
+		return std::isalnum(static_cast<unsigned char>(c)) || c == '_';
 	}
 }//namespace

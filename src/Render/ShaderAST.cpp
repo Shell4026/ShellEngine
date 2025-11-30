@@ -8,6 +8,7 @@ namespace sh::render
 		json["type"] = static_cast<int>(type);
 		json["size"] = size;
 		json["name"] = name;
+		json["default"] = defaultValue;
 		json["attribute"] = static_cast<int>(attribute);
 		return json;
 	}
@@ -17,6 +18,8 @@ namespace sh::render
 		type = static_cast<VariableType>(json.at("type").get<int>());
 		size = json.at("size").get<int>();
 		name = json.at("name").get<std::string>();
+		if (json.contains("default"))
+			defaultValue = json["default"].get<std::string>();
 		attribute = static_cast<VariableAttribute>(json.at("attribute").get<int>());
 	}
 
@@ -155,6 +158,12 @@ namespace sh::render
 		// stencil
 		json["stencil"] = stencil.Serialize();
 
+		// constants
+		core::Json constantArray = core::Json::array();
+		for (const auto& u : constants)
+			constantArray.push_back(u.Serialize());
+		json["constants"] = std::move(constantArray);
+
 		// stages
 		core::Json stagesArray = core::Json::array();
 		for (const auto& s : stages)
@@ -174,6 +183,18 @@ namespace sh::render
 
 		// stencil
 		stencil.Deserialize(json.at("stencil"));
+
+		// constants
+		constants.clear();
+		if (json.contains("constants"))
+		{
+			for (const auto& u : json.at("constants"))
+			{
+				VariableNode var;
+				var.Deserialize(u);
+				constants.push_back(std::move(var));
+			}
+		}
 
 		// stages
 		stages.clear();

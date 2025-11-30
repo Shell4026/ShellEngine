@@ -1,4 +1,5 @@
 ﻿#include "VulkanShaderPass.h"
+#include "VulkanShaderPass.h"
 #include "VulkanContext.h"
 
 namespace sh::render::vk
@@ -9,6 +10,31 @@ namespace sh::render::vk
 		vertShader(shaderModules.vert), fragShader(shaderModules.frag),
 		descriptorSetLayout(1), pipelineLayout(nullptr)
 	{
+		// Specialization constant (컴파일 상수)
+		if (!passNode.constants.empty())
+		{
+			specializationEntry.reserve(passNode.constants.size());
+
+			std::size_t cursor = 0;
+			for (int i = 0; i < passNode.constants.size(); ++i)
+			{
+				const auto& varNode = passNode.constants[i];
+
+				VkSpecializationMapEntry entry{};
+				entry.constantID = i;
+				switch (varNode.type)
+				{
+				case ShaderAST::VariableType::Boolean: [[fallthrough]];
+				case ShaderAST::VariableType::Int: [[fallthrough]];
+				case ShaderAST::VariableType::Float:
+					entry.size = 4;
+					break;
+				}
+				entry.offset = cursor;
+				cursor += entry.size;
+				specializationEntry.push_back(entry);
+			}
+		}
 		for (auto& stage : passNode.stages)
 		{
 			for (auto& uniform : stage.uniforms)
@@ -16,9 +42,11 @@ namespace sh::render::vk
 				if (uniform.bConstant)
 				{
 					bUseMatrixModel = true;
-					return;
+					break;
 				}
 			}
+			if (bUseMatrixModel)
+				break;
 		}
 	}
 
@@ -29,6 +57,7 @@ namespace sh::render::vk
 		descriptorBindings(std::move(other.descriptorBindings)),
 		descriptorSetLayout(std::move(other.descriptorSetLayout)),
 		pipelineLayout(other.pipelineLayout),
+		specializationEntry(std::move(other.specializationEntry)),
 		bUseMatrixModel(other.bUseMatrixModel)
 	{
 		other.vertShader = nullptr;
@@ -42,6 +71,8 @@ namespace sh::render::vk
 	}
 	SH_RENDER_API void VulkanShaderPass::Clear()
 	{
+		specializationEntry.clear();
+
 		CleanDescriptors();
 
 		if (vertShader)
@@ -198,5 +229,9 @@ namespace sh::render::vk
 	SH_RENDER_API auto VulkanShaderPass::GetPipelineLayout() const -> VkPipelineLayout
 	{
 		return pipelineLayout;
+	}
+	SH_RENDER_API auto sh::render::vk::VulkanShaderPass::GetSpecializationMapEntry() const -> const std::vector<VkSpecializationMapEntry>&
+	{
+		return specializationEntry;
 	}
 }

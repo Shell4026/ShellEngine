@@ -14,14 +14,8 @@ namespace sh::render
 {
 	class ShaderParser
 	{
-	private:
-		const std::vector<ShaderLexer::Token>* tokens;
-
-		std::size_t pos; // 현재 토큰 위치
-
-		uint32_t lastObjectUniformBinding = 0;
-		uint32_t lastMaterialUniformBinding = 0;
-		uint32_t passCount = 1;
+	public:
+		SH_RENDER_API auto Parse(const std::vector<ShaderLexer::Token>& tokens) -> ShaderAST::ShaderNode;
 	protected:
 		/// @brief 현재 토큰을 반환하는 함수.
 		/// @return 토큰
@@ -59,19 +53,26 @@ namespace sh::render
 		void ParseCull(ShaderAST::PassNode& passNode);
 		void ParseZWrite(ShaderAST::PassNode& passNode);
 		void ParseColorMask(ShaderAST::PassNode& passNode);
-		auto ParseStage(const ShaderAST::ShaderNode& shaderNode) -> ShaderAST::StageNode;
-		void ParseStageBody(const ShaderAST::ShaderNode& shaderNode, ShaderAST::StageNode& stageNode);
+		auto ParseStage(const ShaderAST::ShaderNode& shaderNode, ShaderAST::PassNode& passNode) -> ShaderAST::StageNode;
+		void ParseStageBody(const ShaderAST::ShaderNode& shaderNode, ShaderAST::StageNode& stageNode, ShaderAST::PassNode& passNode);
 		void ParseDeclaration(ShaderAST::StageNode& stageNode, const std::string& qualifer = "");
 		auto ParseFunctionBody(ShaderAST::StageNode& stageNode) -> std::string;
 		void ParseLayout(ShaderAST::StageNode& stageNode);
 		void ParseUniform(const ShaderAST::ShaderNode& shaderNode, ShaderAST::StageNode& stageNode);
 		void ParseUniformBody(ShaderAST::UBONode& uboNode);
+		void ParseConstexpr(ShaderAST::PassNode& passNode);
 
 		void Optimize(ShaderAST::ShaderNode& shaderNode);
-		void GenerateStageCode(int stageIdx, const ShaderAST::ShaderNode& shaderNode, ShaderAST::StageNode& stageNode);
+		void GenerateStageCode(int stageIdx, const ShaderAST::ShaderNode& shaderNode, const ShaderAST::PassNode& passNode, ShaderAST::StageNode& stageNode);
 		auto SubstitutionFunctionToken(const ShaderLexer::Token& token) const -> std::string;
-	public:
-		SH_RENDER_API auto Parse(const std::vector<ShaderLexer::Token>& tokens) -> ShaderAST::ShaderNode;
+	private:
+		const std::vector<ShaderLexer::Token>* tokens;
+
+		std::size_t pos; // 현재 토큰 위치
+
+		uint32_t lastObjectUniformBinding = 0;
+		uint32_t lastMaterialUniformBinding = 0;
+		uint32_t passCount = 1;
 	};
 
 	class ShaderParserException : public std::runtime_error

@@ -49,8 +49,11 @@ namespace sh::render::vk
 				if (pass.IsPendingKill())
 					continue;
 
+				const std::vector<uint8_t>* constantData = mat->GetConstantData(pass);
+
 				auto pipelineHandle = context.GetPipelineManager().
-					GetOrCreatePipelineHandle(renderPass, static_cast<VulkanShaderPass&>(pass), renderGroup.topology);
+					GetOrCreatePipelineHandle(renderPass, static_cast<VulkanShaderPass&>(pass), renderGroup.topology, constantData);
+
 				context.GetPipelineManager().BindPipeline(cmd->GetCommandBuffer(), pipelineHandle);
 				VkPipelineLayout layout = static_cast<VulkanShaderPass&>(pass).GetPipelineLayout();
 				uint32_t setSize = static_cast<VulkanShaderPass&>(pass).GetSetCount();

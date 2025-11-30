@@ -72,6 +72,8 @@ namespace sh::render
 			return ShaderAST::VariableType::Int;
 		if (type == "float")
 			return ShaderAST::VariableType::Float;
+		if (type == "bool")
+			return ShaderAST::VariableType::Boolean;
 		throw ShaderParserException{ GetTokenErrorString("Not found valid variable token").c_str() };
 	}
 	auto ShaderParser::VariableTypeToString(ShaderAST::VariableType type) const -> std::string
@@ -96,6 +98,8 @@ namespace sh::render
 			return "int";
 		case ShaderAST::VariableType::Sampler:
 			return "sampler2D";
+		case ShaderAST::VariableType::Boolean:
+			return "bool";
 		default:
 			return "unknown";
 		}
@@ -268,7 +272,7 @@ namespace sh::render
 			else if (CheckToken(ShaderLexer::TokenType::ColorMask))
 				ParseColorMask(passNode);
 			else
-				passNode.stages.push_back(ParseStage(shaderNode));
+				passNode.stages.push_back(ParseStage(shaderNode, passNode));
 		}
 
 		ConsumeToken(ShaderLexer::TokenType::RBrace);
@@ -432,7 +436,7 @@ namespace sh::render
 		}
 		ConsumeToken(ShaderLexer::TokenType::Semicolon);
 	}
-	auto ShaderParser::ParseStage(const ShaderAST::ShaderNode& shaderNode) -> ShaderAST::StageNode
+	auto ShaderParser::ParseStage(const ShaderAST::ShaderNode& shaderNode, ShaderAST::PassNode& passNode) -> ShaderAST::StageNode
 	{
 		ShaderAST::StageNode stage;
 		ConsumeToken(ShaderLexer::TokenType::Stage);
@@ -455,12 +459,12 @@ namespace sh::render
 		}
 
 		ConsumeToken(ShaderLexer::TokenType::LBrace);
-		ParseStageBody(shaderNode, stage);
+		ParseStageBody(shaderNode, stage, passNode);
 		ConsumeToken(ShaderLexer::TokenType::RBrace);
 
 		return stage;
 	}
-	void ShaderParser::ParseStageBody(const ShaderAST::ShaderNode& shaderNode, ShaderAST::StageNode& stageNode)
+	void ShaderParser::ParseStageBody(const ShaderAST::ShaderNode& shaderNode, ShaderAST::StageNode& stageNode, ShaderAST::PassNode& passNode)
 	{
 		// 이미 '{'는 읽은 뒤라 nesting = 1 로 시작
 		int nesting = 1;
@@ -488,6 +492,8 @@ namespace sh::render
 				NextToken();
 				ParseDeclaration(stageNode, "const");
 			}
+			else if (CheckToken(ShaderLexer::TokenType::Constexpr))
+				ParseConstexpr(passNode);
 			else if (CheckToken(ShaderLexer::TokenType::Identifier))
 			{
 				ParseDeclaration(stageNode);
@@ -966,6 +972,33 @@ namespace sh::render
 
 		ConsumeToken(ShaderLexer::TokenType::RBrace); // }
 	}
+	void ShaderParser::ParseConstexpr(ShaderAST::PassNode& passNode)
+	{
+		// constexpr idt idt;
+		ConsumeToken(ShaderLexer::TokenType::Constexpr);
+		ConsumeToken(ShaderLexer::TokenType::Identifier);
+
+		ShaderAST::VariableNode varNode;
+		varNode.type = IdentifierToVaraibleType(PreviousToken());
+
+		ConsumeToken(ShaderLexer::TokenType::Identifier);
+		varNode.name = PreviousToken().text;
+		ConsumeToken({ ShaderLexer::TokenType::Semicolon, ShaderLexer::TokenType::Operator });
+		// constexpr idt idt = number | idt;
+		if (PreviousToken().type == ShaderLexer::TokenType::Operator && PreviousToken().text == "=")
+		{
+			ConsumeToken({ ShaderLexer::TokenType::Number, ShaderLexer::TokenType::Identifier });
+			varNode.defaultValue = PreviousToken().text;
+			ConsumeToken(ShaderLexer::TokenType::Semicolon);
+		}
+		// 중복 검사
+		for (auto& constant : passNode.constants)
+		{
+			if (constant.name == varNode.name)
+				return;
+		}
+		passNode.constants.push_back(std::move(varNode));
+	}
 
 	void ShaderParser::Optimize(ShaderAST::ShaderNode& shaderNode)
 	{
@@ -1001,7 +1034,7 @@ namespace sh::render
 		}
 	}
 
-	void ShaderParser::GenerateStageCode(int stageIdx, const ShaderAST::ShaderNode& shaderNode, ShaderAST::StageNode& stageNode)
+	void ShaderParser::GenerateStageCode(int stageIdx, const ShaderAST::ShaderNode& shaderNode, const ShaderAST::PassNode& passNode, ShaderAST::StageNode& stageNode)
 	{
 		std::string code = fmt::format("#version {} {}\n", shaderNode.version.versionNumber, shaderNode.version.profile);
 		for (auto& in : stageNode.in)
@@ -1030,6 +1063,14 @@ namespace sh::render
 				continue;
 			}
 			code += fmt::format("layout(set = {}, binding = {}) uniform {} {{\n {} }} {};\n", uniform.set, uniform.binding, "UNIFORM_" + uniform.name, uniformMembers, uniform.name);
+		}
+		for (int i = 0; i < passNode.constants.size(); ++i)
+		{
+			const auto& varNode = passNode.constants[i];
+			if (varNode.defaultValue.empty())
+				code += fmt::format("layout (constant_id = {}) const {} {};", i, VariableTypeToString(varNode.type), varNode.name);
+			else
+				code += fmt::format("layout (constant_id = {}) const {} {} = {};", i, VariableTypeToString(varNode.type), varNode.name, varNode.defaultValue);
 		}
 		for (auto& decl : stageNode.declaration)
 			code += decl + '\n';
@@ -1065,7 +1106,7 @@ namespace sh::render
 		{
 			for (auto& stageNode : passNode.stages)
 			{
-				GenerateStageCode(idx++, shaderNode, stageNode);
+				GenerateStageCode(idx++, shaderNode, passNode, stageNode);
 			}
 		}
 		return shaderNode;

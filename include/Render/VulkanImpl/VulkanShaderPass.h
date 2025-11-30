@@ -17,24 +17,6 @@ namespace sh::render::vk
 	class VulkanShaderPass : public ShaderPass
 	{
 		SCLASS(VulkanShaderPass)
-	private:
-		const VulkanContext& context;
-
-		VkShaderModule vertShader;
-		VkShaderModule fragShader;
-
-		std::vector<std::vector<VkDescriptorSetLayoutBinding>> descriptorBindings; // set, binding
-		std::vector<VkDescriptorSetLayout> descriptorSetLayout;
-
-		VkPipelineLayout pipelineLayout;
-
-		bool bUseMatrixModel = false;
-	private:
-		void AddDescriptorBinding(uint32_t set, uint32_t binding, VkDescriptorType type, VkShaderStageFlagBits stage);
-		auto CreateDescriptorLayout() -> VkResult;
-		auto CreatePipelineLayout() -> VkResult;
-
-		void CleanDescriptors();
 	public:
 		struct ShaderModules
 		{
@@ -64,5 +46,26 @@ namespace sh::render::vk
 		SH_RENDER_API auto GetDescriptorSetLayout(uint32_t set) const -> DescryptorSetLayoutInfo;
 		SH_RENDER_API auto GetSetCount() const -> uint32_t;
 		SH_RENDER_API auto GetPipelineLayout() const -> VkPipelineLayout;
+		SH_RENDER_API auto GetSpecializationMapEntry() const -> const std::vector<VkSpecializationMapEntry>&;
+	private:
+		void AddDescriptorBinding(uint32_t set, uint32_t binding, VkDescriptorType type, VkShaderStageFlagBits stage);
+		auto CreateDescriptorLayout() -> VkResult;
+		auto CreatePipelineLayout() -> VkResult;
+
+		void CleanDescriptors();
+	private:
+		const VulkanContext& context;
+
+		VkShaderModule vertShader;
+		VkShaderModule fragShader;
+
+		std::vector<std::vector<VkDescriptorSetLayoutBinding>> descriptorBindings; // set, binding
+		std::vector<VkDescriptorSetLayout> descriptorSetLayout;
+
+		VkPipelineLayout pipelineLayout;
+
+		std::vector<VkSpecializationMapEntry> specializationEntry;
+
+		bool bUseMatrixModel = false;
 	};
 }

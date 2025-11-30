@@ -3,9 +3,7 @@
 #include "RenderTexture.h"
 
 #include "Core/Util.h"
-#include "Core/SObjectManager.h"
 #include "Core/SContainer.hpp"
-#include "Core/AssetResolver.h"
 
 namespace sh::render
 {
@@ -44,7 +42,8 @@ namespace sh::render
 		dirtyProps(std::move(other.dirtyProps)),
 		materialData(std::move(other.materialData)),
 		propertyBlock(std::move(other.propertyBlock)),
-		onBufferUpdateListener(std::move(other.onBufferUpdateListener))
+		onBufferUpdateListener(std::move(other.onBufferUpdateListener)),
+		cachedConstantData(std::move(other.cachedConstantData))
 	{
 		other.context = nullptr;
 		other.shader = nullptr;
@@ -56,6 +55,7 @@ namespace sh::render
 
 	void Material::Clear()
 	{
+		cachedConstantData.clear();
 		propertyBlock.Clear();
 		materialData->Clear();
 	}
@@ -104,12 +104,19 @@ namespace sh::render
 	SH_RENDER_API void Material::SetShader(Shader* shader)
 	{
 		this->shader = shader;
-		if (!core::IsValid(this->shader) || context == nullptr)
+		if (!core::IsValid(this->shader))
 			return;
-
 		Clear();
 		SetDefaultProperties();
-		Build(*context);
+		std::size_t passCount = 0;
+		for (const auto& lightingPass : shader->GetAllShaderPass())
+		{
+			for (const ShaderPass& pass : lightingPass.passes)
+				++passCount;
+		}
+		cachedConstantData.resize(passCount);
+		if(context != nullptr)
+			Build(*context);
 	}
 	
 	SH_RENDER_API auto Material::GetShader() const -> Shader*
@@ -292,7 +299,25 @@ namespace sh::render
 	{
 		return *materialData.get();
 	}
+	SH_RENDER_API auto Material::GetConstantData(const ShaderPass& pass) const -> const std::vector<uint8_t>*
+	{
+		if (!core::IsValid(shader))
+			return nullptr;
+		if (cachedConstantData.empty())
+			return nullptr;
 
+		int idx = 0;
+		for (auto& lightingPass : shader->GetAllShaderPass())
+		{
+			for (const ShaderPass& shaderPass : lightingPass.passes)
+			{
+				if (&shaderPass == &pass)
+					return &cachedConstantData[idx];
+				++idx;
+			}
+		}
+		return nullptr;
+	}
 	SH_RENDER_API void Material::OnPropertyChanged(const core::reflection::Property& prop)
 	{
 		if (prop.GetName() == core::Util::ConstexprHash("shader"))

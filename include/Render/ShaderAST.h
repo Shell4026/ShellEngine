@@ -29,7 +29,8 @@ namespace sh::render
 			Vec2,
 			Float,
 			Int,
-			Sampler
+			Sampler,
+			Boolean
 		};
 		enum class VariableAttribute
 		{
@@ -39,10 +40,11 @@ namespace sh::render
 
 		struct VariableNode : core::ISerializable
 		{
-			VariableType type;
+			VariableType type = VariableType::Int;
 			int size = 1;
 			std::string name;
-			VariableAttribute attribute;
+			std::string defaultValue;
+			VariableAttribute attribute = VariableAttribute::None;
 
 			VariableNode() = default;
 			VariableNode(VariableType type, int size, std::string name) :
@@ -109,6 +111,7 @@ namespace sh::render
 			StencilState stencil;
 			CullMode cullMode;
 			uint8_t colorMask = 15;
+			std::vector<VariableNode> constants;
 			std::vector<StageNode> stages;
 			bool zwrite = true;
 

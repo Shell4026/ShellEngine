@@ -24,14 +24,6 @@ namespace sh::render
 	class ShaderPass : public core::SObject, public core::INonCopyable
 	{
 		SCLASS(ShaderPass)
-	private:
-		StencilState stencilState{};
-		CullMode cull = CullMode::Back;
-		core::Name lightingPassName;
-		uint8_t colorMask = 7; //0b111
-		bool bZWrite = true;
-		bool bHasConstant = false;
-		bool bUseLighting = false;
 	public:
 		struct AttributeData
 		{
@@ -45,31 +37,12 @@ namespace sh::render
 			std::vector<uint8_t> vert;
 			std::vector<uint8_t> frag;
 		};
-	protected:
-		std::vector<AttributeData> attrs;
-		std::unordered_map<std::string, uint32_t> attridx;
-
-		std::vector<UniformStructLayout> vertexUniforms;
-		std::vector<UniformStructLayout> fragmentUniforms;
-		std::vector<UniformStructLayout> samplerUniforms;
-
-		ShaderCode shaderCode;
-
-		ShaderType type;
-	private:
-		void AddUniformLayout(ShaderStage stage, const UniformStructLayout& layout);
-		void AddUniformLayout(ShaderStage stage, UniformStructLayout&& layout);
-		void SetStencilState(StencilState stencilState);
-		void FillAttributes(const render::ShaderAST::PassNode& passNode);
-
-		template<typename T>
-		bool AddAttribute(const std::string& name, uint32_t loc);
-
-		auto IsSamplerLayout(const UniformStructLayout& layout) const -> bool;
-	protected:
-		ShaderPass(const ShaderAST::PassNode& pass, ShaderType type);
-		ShaderPass(const ShaderPass& other);
-		ShaderPass(ShaderPass&& other) noexcept;
+		struct ConstantInfo
+		{
+			uint32_t offset;
+			uint32_t size;
+			uint32_t constantID;
+		};
 	public:
 		SH_RENDER_API virtual ~ShaderPass();
 		SH_RENDER_API void operator=(ShaderPass&& other) noexcept;
@@ -94,6 +67,8 @@ namespace sh::render
 		SH_RENDER_API auto GetSamplerUniforms() const -> const std::vector<UniformStructLayout>&;
 		SH_RENDER_API auto HasConstantUniform() const -> bool;
 		SH_RENDER_API auto IsUsingLight() const -> bool;
+		SH_RENDER_API auto GetConstantsInfo(const std::string& name) const -> const ConstantInfo*;
+		SH_RENDER_API auto GetConstantSize() const -> std::size_t;
 
 		SH_RENDER_API bool HasAttribute(const std::string& name) const;
 		SH_RENDER_API auto GetAttribute(const std::string& name) const -> std::optional<AttributeData>;
@@ -106,6 +81,41 @@ namespace sh::render
 		/// @brief 셰이더 바이너리 데이터를 역직렬화 한다.
 		/// @param json 직렬화 된 json
 		SH_RENDER_API void Deserialize(const core::Json& json) override;
+	protected:
+		ShaderPass(const ShaderAST::PassNode& passNode, ShaderType type);
+		ShaderPass(const ShaderPass& other);
+		ShaderPass(ShaderPass&& other) noexcept;
+	private:
+		void AddUniformLayout(ShaderStage stage, const UniformStructLayout& layout);
+		void AddUniformLayout(ShaderStage stage, UniformStructLayout&& layout);
+		void SetStencilState(StencilState stencilState);
+		void FillAttributes(const render::ShaderAST::PassNode& passNode);
+
+		template<typename T>
+		bool AddAttribute(const std::string& name, uint32_t loc);
+
+		auto IsSamplerLayout(const UniformStructLayout& layout) const -> bool;
+	protected:
+		std::vector<AttributeData> attrs;
+		std::unordered_map<std::string, uint32_t> attridx;
+
+		std::vector<UniformStructLayout> vertexUniforms;
+		std::vector<UniformStructLayout> fragmentUniforms;
+		std::vector<UniformStructLayout> samplerUniforms;
+		std::unordered_map<std::string, ConstantInfo> constantNameMap;
+
+		ShaderCode shaderCode;
+
+		ShaderType type;
+	private:
+		StencilState stencilState{};
+		CullMode cull = CullMode::Back;
+		core::Name lightingPassName;
+		uint8_t colorMask = 7; //0b111
+		std::size_t constantSize = 0;
+		bool bZWrite = true;
+		bool bHasConstant = false;
+		bool bUseLighting = false;
 	};
 
 	template<typename T>

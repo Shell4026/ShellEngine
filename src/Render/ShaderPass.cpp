@@ -67,21 +67,50 @@ namespace sh::render
 		return false;
 	}
 
-	ShaderPass::ShaderPass(const ShaderAST::PassNode& pass, ShaderType type) :
-		type(type), lightingPassName(pass.lightingPass)
+	ShaderPass::ShaderPass(const ShaderAST::PassNode& passNode, ShaderType type) :
+		type(type), lightingPassName(passNode.lightingPass)
 	{
-		SetStencilState(pass.stencil);
-		cull = pass.cullMode;
-		bZWrite = pass.zwrite;
-		colorMask = pass.colorMask;
-		FillAttributes(pass);
-		for (auto& stage : pass.stages)
+		SetStencilState(passNode.stencil);
+		cull = passNode.cullMode;
+		bZWrite = passNode.zwrite;
+		colorMask = passNode.colorMask;
+		FillAttributes(passNode);
+		for (auto& stage : passNode.stages)
 		{
 			if (stage.bUseLighting)
 			{
 				bUseLighting = true;
 				break;
 			}
+		}
+		if (!passNode.constants.empty())
+		{
+			std::size_t cursor = 0;
+
+			for (int i = 0; i < passNode.constants.size(); ++i)
+			{
+				const auto& varNode = passNode.constants[i];
+
+				uint32_t offset = cursor;
+				uint32_t size = 0;
+				switch (varNode.type)
+				{
+				case ShaderAST::VariableType::Boolean: [[fallthrough]];
+				case ShaderAST::VariableType::Int: [[fallthrough]];
+				case ShaderAST::VariableType::Float:
+					size = 4;
+					break;
+				}
+				constantNameMap[varNode.name] = 
+				{
+					offset,
+					size,
+					static_cast<uint32_t>(i)
+				};
+
+				cursor += size;
+			}
+			constantSize = cursor;
 		}
 	}
 
@@ -91,6 +120,7 @@ namespace sh::render
 		vertexUniforms(std::move(other.vertexUniforms)),
 		fragmentUniforms(std::move(other.fragmentUniforms)),
 		samplerUniforms(std::move(other.samplerUniforms)),
+		constantNameMap(std::move(other.constantNameMap)),
 		cull(other.cull), colorMask(other.colorMask),
 		bZWrite(other.bZWrite),
 		bHasConstant(other.bHasConstant),
@@ -114,6 +144,7 @@ namespace sh::render
 		vertexUniforms = std::move(other.vertexUniforms);
 		fragmentUniforms = std::move(other.fragmentUniforms);
 		samplerUniforms = std::move(other.samplerUniforms);
+		constantNameMap = std::move(other.constantNameMap);
 	}
 
 	void ShaderPass::AddUniformLayout(ShaderStage stage, const UniformStructLayout& layout)
@@ -231,6 +262,17 @@ namespace sh::render
 	SH_RENDER_API auto ShaderPass::IsUsingLight() const -> bool
 	{
 		return bUseLighting;
+	}
+	SH_RENDER_API auto ShaderPass::GetConstantsInfo(const std::string& name) const -> const ConstantInfo*
+	{
+		auto it = constantNameMap.find(name);
+		if (it == constantNameMap.end())
+			return nullptr;
+		return &it->second;
+	}
+	SH_RENDER_API auto ShaderPass::GetConstantSize() const -> std::size_t
+	{
+		return constantSize;
 	}
 	SH_RENDER_API void ShaderPass::StoreShaderCode(ShaderCode&& shaderCode)
 	{

@@ -38,6 +38,7 @@ namespace sh::render::vk
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 		std::vector<VkVertexInputBindingDescription> bindingDescriptions;
 		std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
+		const uint8_t* specializationData = nullptr;
 
 		CullMode cullMode;
 		Topology topology;
@@ -87,5 +88,7 @@ namespace sh::render::vk
 
 		SH_RENDER_API auto SetSampleCount(VkSampleCountFlagBits sampleCount) -> VulkanPipeline&;
 		SH_RENDER_API auto GetSampleCount() const -> VkSampleCountFlagBits;
+
+		SH_RENDER_API void SetSpecializationConstant(const uint8_t* dataPtr);
 	};
 }
