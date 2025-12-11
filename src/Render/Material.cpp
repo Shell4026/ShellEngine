@@ -108,13 +108,17 @@ namespace sh::render
 			return;
 		Clear();
 		SetDefaultProperties();
-		std::size_t passCount = 0;
 		for (const auto& lightingPass : shader->GetAllShaderPass())
 		{
 			for (const ShaderPass& pass : lightingPass.passes)
-				++passCount;
+			{
+				std::size_t size = 0;
+				for (auto& [name, info] : pass.GetConstants())
+					size += info.size;
+				std::vector<uint8_t> data(size, 0);
+				cachedConstantData.push_back(std::move(data));
+			}
 		}
-		cachedConstantData.resize(passCount);
 		if(context != nullptr)
 			Build(*context);
 	}
@@ -331,6 +335,9 @@ namespace sh::render
 	{
 		core::Json mainJson = Super::Serialize();
 		mainJson["MaterialPropertyBlock"] = propertyBlock.Serialize();
+		for (auto& data : cachedConstantData)
+			mainJson["Constant"].push_back(data);
+
 		return mainJson;
 	}
 	SH_RENDER_API void Material::Deserialize(const core::Json& json)
@@ -338,43 +345,60 @@ namespace sh::render
 		// SetProperty에서 다른 역할도 수행하기 때문에 PropertyBlock을 직접적으로 Deserialize하지 않는다.
 		Clear();
 		Super::Deserialize(json);
-		const auto& propertyJson = json["MaterialPropertyBlock"];
-		if (propertyJson.contains("scalar"))
+		if (json.contains("MaterialPropertyBlock"))
 		{
-			const auto& intJson = propertyJson["scalar"];
-			for (const auto& [name, value] : intJson.items())
+			const auto& propertyJson = json["MaterialPropertyBlock"];
+			if (propertyJson.contains("scalar"))
 			{
-				SetProperty(name, value.get<float>());
-			}
-		}
-		if (propertyJson.contains("vector"))
-		{
-			const auto& vectorJson = propertyJson["vector"];
-			for (const auto& [name, value] : vectorJson.items())
-			{
-				if (value.is_array() && value.size() == 4)
+				const auto& intJson = propertyJson["scalar"];
+				for (const auto& [name, value] : intJson.items())
 				{
-					glm::vec4 vecValue(
-						value[0].get<float>(),
-						value[1].get<float>(),
-						value[2].get<float>(),
-						value[3].get<float>()
-					);
-					SetProperty(name, vecValue);
+					SetProperty(name, value.get<float>());
+				}
+			}
+			if (propertyJson.contains("vector"))
+			{
+				const auto& vectorJson = propertyJson["vector"];
+				for (const auto& [name, value] : vectorJson.items())
+				{
+					if (value.is_array() && value.size() == 4)
+					{
+						glm::vec4 vecValue(
+							value[0].get<float>(),
+							value[1].get<float>(),
+							value[2].get<float>(),
+							value[3].get<float>()
+						);
+						SetProperty(name, vecValue);
+					}
+				}
+			}
+			if (propertyJson.contains("textures"))
+			{
+				const auto& texJson = propertyJson["textures"];
+				for (const auto& [name, value] : texJson.items())
+				{
+					const core::UUID uuid{ value.get<std::string>() };
+					auto ptr = core::SObject::GetSObjectUsingResolver(uuid);
+					if (!core::IsValid(ptr))
+						continue;
+					if (ptr->GetType() == Texture::GetStaticType())
+						SetProperty(name, reinterpret_cast<const Texture*>(ptr));
 				}
 			}
 		}
-		if (propertyJson.contains("textures"))
+		if (json.contains("Constant"))
 		{
-			const auto& texJson = propertyJson["textures"];
-			for (const auto& [name, value] : texJson.items())
+			const auto& constantJson = json["Constant"];
+			if (constantJson.size() == cachedConstantData.size())
 			{
-				const core::UUID uuid{ value.get<std::string>() };
-				auto ptr = core::SObject::GetSObjectUsingResolver(uuid);
-				if (!core::IsValid(ptr))
-					continue;
-				if (ptr->GetType() == Texture::GetStaticType())
-					SetProperty(name, reinterpret_cast<const Texture*>(ptr));
+				int idx = 0;
+				for (auto& arrJson : constantJson)
+				{
+					if (arrJson.size() == cachedConstantData[idx].size())
+						cachedConstantData[idx] = arrJson.get<std::vector<uint8_t>>();
+					++idx;
+				}
 			}
 		}
 	}

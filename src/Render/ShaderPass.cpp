@@ -263,6 +263,10 @@ namespace sh::render
 	{
 		return bUseLighting;
 	}
+	SH_RENDER_API auto ShaderPass::GetConstants() const -> const std::unordered_map<std::string, ConstantInfo>&
+	{
+		return constantNameMap;
+	}
 	SH_RENDER_API auto ShaderPass::GetConstantsInfo(const std::string& name) const -> const ConstantInfo*
 	{
 		auto it = constantNameMap.find(name);

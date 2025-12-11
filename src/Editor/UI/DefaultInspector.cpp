@@ -225,6 +225,32 @@ namespace sh::editor
 					}
 				}
 			}
+			if (ImGui::TreeNode("Constant value"))
+			{
+				for (auto& lightingPass : shader->GetAllShaderPass())
+				{
+					for (render::ShaderPass& pass : lightingPass.passes)
+					{
+						const auto& data = mat->GetConstantData(pass);
+
+						for (auto& [name, info] : pass.GetConstants())
+						{
+							const int* dataPtr = reinterpret_cast<const int*>(data->data() + info.offset);
+							int dataValue = *dataPtr;
+							ImGui::Text("%s", name.c_str());
+							if (ImGui::InputInt(("##constant_" + name).c_str(), &dataValue, 0, 0))
+							{
+								mat->SetConstant(name, dataValue);
+								AssetDatabase::GetInstance()->SetDirty(mat);
+								AssetDatabase::GetInstance()->SaveAllAssets();
+							}
+						}
+
+					}
+				}
+				ImGui::TreePop();
+			}
+			
 		}
 		ImGui::Separator();
 	}

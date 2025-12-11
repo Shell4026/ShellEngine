@@ -67,6 +67,7 @@ namespace sh::render
 		SH_RENDER_API auto GetSamplerUniforms() const -> const std::vector<UniformStructLayout>&;
 		SH_RENDER_API auto HasConstantUniform() const -> bool;
 		SH_RENDER_API auto IsUsingLight() const -> bool;
+		SH_RENDER_API auto GetConstants() const -> const std::unordered_map<std::string, ConstantInfo>&;
 		SH_RENDER_API auto GetConstantsInfo(const std::string& name) const -> const ConstantInfo*;
 		SH_RENDER_API auto GetConstantSize() const -> std::size_t;
 
