@@ -301,7 +301,7 @@ namespace sh::render::vk
 
 		vkCreateDescriptorSetLayout(device, &info, nullptr, &emptyDescLayout);
 
-		emptyDescSet = descPool->AllocateDescriptorSet(emptyDescLayout, 1);
+		emptyDescSet = descPool->AllocateDescriptorSet(emptyDescLayout);
 	}
 	VulkanContext::VulkanContext(const sh::window::Window& window) :
 		window(window),

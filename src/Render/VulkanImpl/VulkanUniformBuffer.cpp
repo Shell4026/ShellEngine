@@ -39,7 +39,7 @@ namespace sh::render::vk
 		bDynamic = layoutInfo.bDynamic;
 
 		if (layout != VK_NULL_HANDLE)
-			descSet = this->context->GetDescriptorPool().AllocateDescriptorSet(layout, 1);
+			descSet = this->context->GetDescriptorPool().AllocateDescriptorSet(layout);
 	}
 	void VulkanUniformBuffer::Clear()
 	{

@@ -1174,7 +1174,7 @@ VkDescriptorSet ImGui_ImplVulkan_AddTexture(VkSampler sampler, VkImageView image
         VkResult err = vkAllocateDescriptorSets(v->Device, &alloc_info, &descriptor_set);
         check_vk_result(err);*/
 
-        descriptor_set = v->DescriptorPool->AllocateDescriptorSet(bd->DescriptorSetLayout, 1);
+        descriptor_set = v->DescriptorPool->AllocateDescriptorSet(bd->DescriptorSetLayout);
     }
 
     // Update the Descriptor Set:

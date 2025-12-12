@@ -6,117 +6,192 @@
 
 namespace sh::render::vk
 {
-	VulkanDescriptorPool::VulkanDescriptorPool(VkDevice device, size_t size) :
+	VulkanDescriptorPool::VulkanDescriptorPool(VkDevice device, uint32_t initialSets, uint32_t maxSets) :
 		device(device),
-
-		initialSize(size), size(size)
+		initialSize(initialSets),
+		nextSize(initialSets),
+		maxSize(maxSets)
 	{
+		assert(device != VK_NULL_HANDLE);
+		assert(initialSize > 0);
+		assert(maxSize >= initialSize);
 	}
 	VulkanDescriptorPool::VulkanDescriptorPool(VulkanDescriptorPool&& other) noexcept :
 		device(other.device),
-
-		initialSize(other.initialSize), size(other.size),
-		readyPool(std::move(other.readyPool)), fullPool(std::move(other.fullPool))
+		initialSize(other.initialSize), 
+		nextSize(other.nextSize),
+		maxSize(other.maxSize),
+		readyPools(std::move(other.readyPools)),
+		fullPools(std::move(other.fullPools)),
+		setToPool(std::move(other.setToPool))
 	{
 		other.device = VK_NULL_HANDLE;
-		other.size = 0;
 		other.initialSize = 0;
+		other.nextSize = 0;
+		other.maxSize = 0;
 	}
 	VulkanDescriptorPool::~VulkanDescriptorPool()
 	{
-		Clean();
+		Clear();
 	}
-
-	auto VulkanDescriptorPool::GetPool() -> Pool&
+	SH_RENDER_API auto VulkanDescriptorPool::operator=(VulkanDescriptorPool&& other) noexcept -> VulkanDescriptorPool&
 	{
-		if (readyPool.empty())
-		{
-			std::array<VkDescriptorPoolSize, 3> poolSizes{};
-			poolSizes[0].type = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			poolSizes[0].descriptorCount = size;
-			poolSizes[1].type = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-			poolSizes[1].descriptorCount = size;
-			poolSizes[2].type = VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-			poolSizes[2].descriptorCount = size;
+		if (this == &other) 
+			return *this;
 
-			VkDescriptorPoolCreateInfo poolInfo{};
-			poolInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-			poolInfo.poolSizeCount = poolSizes.size();
-			poolInfo.pPoolSizes = poolSizes.data();
-			poolInfo.maxSets = size;
-			poolInfo.flags = VkDescriptorPoolCreateFlagBits::VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+		Clear();
 
-			VkDescriptorPool descPool;
-			auto result = vkCreateDescriptorPool(device, &poolInfo, nullptr, &descPool);
-			assert(result == VK_SUCCESS);
-			readyPool.push(Pool{ descPool, false });
+		device = other.device;
+		initialSize = other.initialSize;
+		nextSize = other.nextSize;
+		maxSize = other.maxSize;
 
-			size = static_cast<std::size_t>(size * 1.5f);
-			if (size > 4096) 
-				size = 4096;
+		readyPools = std::move(other.readyPools);
+		fullPools = std::move(other.fullPools);
+		setToPool = std::move(other.setToPool);
 
-			return readyPool.top();
-		}
-		return readyPool.top();
+		other.device = VK_NULL_HANDLE;
+		other.initialSize = other.nextSize = other.maxSize = 0;
+
+		return *this;
 	}
-
-	auto VulkanDescriptorPool::AllocateDescriptorSet(VkDescriptorSetLayout layouts, uint32_t count) -> VkDescriptorSet
+	SH_RENDER_API auto VulkanDescriptorPool::AllocateDescriptorSet(VkDescriptorSetLayout layout) -> VkDescriptorSet
 	{
-		Pool pool = GetPool();
+		auto sets = AllocateDescriptorSets(layout, 1);
+
+		return sets[0];
+	}
+	SH_RENDER_API auto VulkanDescriptorPool::AllocateDescriptorSets(VkDescriptorSetLayout layout, uint32_t count) -> std::vector<VkDescriptorSet>
+	{
+		if (count == 0)
+			return {};
+
+		std::vector<VkDescriptorSetLayout> layouts(count, layout);
+		std::vector<VkDescriptorSet> sets(count, VK_NULL_HANDLE);
+
 		VkDescriptorSetAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-		allocInfo.descriptorPool = pool.pool;
+		allocInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
 		allocInfo.descriptorSetCount = count;
-		allocInfo.pSetLayouts = &layouts;
+		allocInfo.pSetLayouts = layouts.data();
 
-		VkDescriptorSet descriptorSet;
-		auto result = vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet);
-		if (result == VK_ERROR_OUT_OF_POOL_MEMORY || result == VK_ERROR_FRAGMENTED_POOL)
+		while (true)
 		{
-			pool.full = true;
-			readyPool.pop();
-			fullPool.insert(pool);
+			VkDescriptorPool pool = AcquirePool();
+			allocInfo.descriptorPool = pool;
 
-			pool = GetPool();
-			allocInfo.descriptorPool = pool.pool;
-			result = vkAllocateDescriptorSets(device, &allocInfo, &descriptorSet);
-			if (result != VkResult::VK_SUCCESS)
+			VkResult result = vkAllocateDescriptorSets(device, &allocInfo, sets.data());
+			if (result == VkResult::VK_SUCCESS)
 			{
-				throw std::runtime_error("Failed to create descriptor pool.");
+				for (auto s : sets)
+					setToPool.emplace(s, pool);
+				return sets;
 			}
-		}
 
-		allocated.insert({ descriptorSet, pool });
+			if (result == VkResult::VK_ERROR_OUT_OF_POOL_MEMORY || result == VkResult::VK_ERROR_FRAGMENTED_POOL)
+			{
+				// 현재 top 풀에서 실패했으니 full로 마킹 후 다음 풀로 시도
+				if (!readyPools.empty() && readyPools.top() == pool)
+					readyPools.pop();
+				fullPools.insert(pool);
 
-		return descriptorSet;
-	}
+				// 다음 풀에서 반복
+				continue;
+			}
 
-	void VulkanDescriptorPool::Clean()
-	{
-		allocated.clear();
-		size = initialSize;
-		for (auto& pool : fullPool)
-			vkDestroyDescriptorPool(device, pool.pool, nullptr);
-		fullPool.clear();
-
-		while (!readyPool.empty())
-		{
-			vkDestroyDescriptorPool(device, readyPool.top().pool, nullptr);
-			readyPool.pop();
+			throw std::runtime_error("vkAllocateDescriptorSets failed (unexpected error).");
 		}
 	}
-	void VulkanDescriptorPool::FreeDescriptorSet(VkDescriptorSet descSet)
+	SH_RENDER_API void VulkanDescriptorPool::FreeDescriptorSet(VkDescriptorSet descSet)
 	{
-		auto it = allocated.find(descSet);
-		if (it == allocated.end())
+		if (descSet == VK_NULL_HANDLE || device == VK_NULL_HANDLE)
 			return;
 
-		vkFreeDescriptorSets(device, it->second.pool, 1, &it->first);
-		if (it->second.full)
+		auto it = setToPool.find(descSet);
+		if (it == setToPool.end())
+			return;
+
+		VkDescriptorPool pool = it->second;
+
+		vkFreeDescriptorSets(device, pool, 1, &descSet);
+		setToPool.erase(it);
+
+		auto fit = fullPools.find(pool);
+		if (fit != fullPools.end())
 		{
-			it->second.full = false;
-			readyPool.push(it->second);
-			fullPool.erase(it->second);
+			fullPools.erase(fit);
+			readyPools.push(pool);
 		}
+	}
+	SH_RENDER_API void VulkanDescriptorPool::Clear()
+	{
+		if (device == VK_NULL_HANDLE)
+		{
+			readyPools = {};
+			fullPools.clear();
+			setToPool.clear();
+			initialSize = nextSize = maxSize = 0;
+			return;
+		}
+
+		vkDeviceWaitIdle(device);
+
+		setToPool.clear();
+		DestroyAllPools();
+
+		nextSize = initialSize;
+	}
+	auto VulkanDescriptorPool::AcquirePool() -> VkDescriptorPool
+	{
+		if (!readyPools.empty())
+			return readyPools.top();
+
+		VkDescriptorPool pool = CreatePool(nextSize);
+		readyPools.push(pool);
+
+		uint32_t grown = static_cast<uint32_t>(static_cast<float>(nextSize) * 1.5f);
+		if (grown < nextSize) 
+			grown = nextSize;
+		nextSize = (grown > maxSize) ? maxSize : grown;
+
+		return pool;
+	}
+	auto VulkanDescriptorPool::CreatePool(uint32_t setCapacity) -> VkDescriptorPool
+	{
+		std::array<VkDescriptorPoolSize, 3> poolSizes{};
+		poolSizes[0] = { VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, setCapacity };
+		poolSizes[1] = { VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, setCapacity };
+		poolSizes[2] = { VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, setCapacity };
+
+		VkDescriptorPoolCreateInfo info{};
+		info.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		info.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+		info.pPoolSizes = poolSizes.data();
+		info.maxSets = setCapacity;
+		info.flags = VkDescriptorPoolCreateFlagBits::VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+
+		VkDescriptorPool pool = VK_NULL_HANDLE;
+		VkResult result = vkCreateDescriptorPool(device, &info, nullptr, &pool);
+		if (result != VkResult::VK_SUCCESS)
+			throw std::runtime_error("vkCreateDescriptorPool failed.");
+
+		return pool;
+	}
+	void VulkanDescriptorPool::DestroyAllPools()
+	{
+		while (!readyPools.empty())
+		{
+			VkDescriptorPool p = readyPools.top();
+			readyPools.pop();
+			if (p != VK_NULL_HANDLE)
+				vkDestroyDescriptorPool(device, p, nullptr);
+		}
+
+		// full 파괴
+		for (auto p : fullPools)
+		{
+			if (p != VK_NULL_HANDLE)
+				vkDestroyDescriptorPool(device, p, nullptr);
+		}
+		fullPools.clear();
 	}
 }
