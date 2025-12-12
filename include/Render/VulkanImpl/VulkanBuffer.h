@@ -9,20 +9,6 @@ namespace sh::render::vk
 	class VulkanContext;
 	class VulkanBuffer : public IBuffer
 	{
-	private:
-		const VulkanContext& context;
-
-		VkBuffer buffer;
-		VmaAllocation bufferMem;
-		VkBufferCreateInfo bufferInfo;
-		VkMemoryPropertyFlags memProperty;
-
-		size_t size;
-
-		void* data;
-		bool persistentMapping; // 즉시 맵핑
-	private:
-		auto FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) -> uint32_t;
 	public:
 		SH_RENDER_API VulkanBuffer(const VulkanContext& context);
 		SH_RENDER_API VulkanBuffer(const VulkanBuffer& other);
@@ -40,5 +26,19 @@ namespace sh::render::vk
 		SH_RENDER_API auto GetBufferInfo() const -> const VkBufferCreateInfo&;
 		SH_RENDER_API auto GetBufferMemory() const->VmaAllocation;
 		SH_RENDER_API auto GetSize() const->size_t;
+	private:
+		auto FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) -> uint32_t;
+	private:
+		const VulkanContext& context;
+
+		VkBuffer buffer;
+		VmaAllocation bufferMem;
+		VkBufferCreateInfo bufferInfo;
+		VkMemoryPropertyFlags memProperty;
+
+		size_t size;
+
+		void* dataPtr;
+		bool persistentMapping; // 즉시 맵핑
 	};
 }

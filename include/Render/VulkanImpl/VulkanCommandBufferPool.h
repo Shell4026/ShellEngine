@@ -5,8 +5,11 @@
 #include <vector>
 #include <thread>
 #include <stack>
-#include <shared_mutex>
 #include <map>
+#include <array>
+#include <memory>
+#include <mutex>
+#include <unordered_map>
 namespace sh::render::vk
 {
 	class VulkanCommandBuffer;
@@ -34,7 +37,7 @@ namespace sh::render::vk
 
 		enum QueueType
 		{
-			Grahpics = 0,
+			Graphics = 0,
 			Transfer = 1
 		};
 
@@ -53,7 +56,7 @@ namespace sh::render::vk
 				Command(Command&& other) noexcept :
 					cmdPool(other.cmdPool), cmds(std::move(other.cmds))
 				{}
-				auto operator=(Command&& other) -> Command&
+				auto operator=(Command&& other) noexcept -> Command&
 				{
 					cmdPool = other.cmdPool;
 					cmds = std::move(other.cmds);
@@ -75,8 +78,8 @@ namespace sh::render::vk
 			QueueType type;
 		};
 		std::vector<PerThreadData> threadDatas;
-		std::map<VulkanCommandBuffer*, AllocData> allocated;
-		std::shared_mutex mu;
+		std::unordered_map<VulkanCommandBuffer*, AllocData> allocated;
+		std::mutex mu;
 
 		int cap = 8;
 	};
