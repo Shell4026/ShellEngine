@@ -16,25 +16,6 @@ namespace sh::render::vk
 
 	class VulkanFramebuffer : public Framebuffer
 	{
-	private:
-		const VulkanContext& context;
-
-		VkDevice device;
-		VkPhysicalDevice gpu;
-		VmaAllocator alloc;
-
-		VkFramebuffer framebuffer;
-		VkImageView img;
-		
-		const VulkanRenderPass* renderPass = nullptr;
-
-		std::unique_ptr<VulkanImageBuffer> colorImg; //Only Offscreen
-		std::unique_ptr<VulkanImageBuffer> colorImgMSAA; // Offscreen, MSAA
-		std::unique_ptr<VulkanImageBuffer> depthImg;
-
-		uint32_t width, height;
-	private:
-		void CreateDepthBuffer();
 	public:
 		SH_RENDER_API VulkanFramebuffer(const VulkanContext& context);
 		SH_RENDER_API VulkanFramebuffer(VulkanFramebuffer&& other) noexcept;
@@ -44,7 +25,7 @@ namespace sh::render::vk
 
 		SH_RENDER_API auto Create(const VulkanRenderPass& renderPass, uint32_t width, uint32_t height, VkImageView img) -> VkResult;
 		SH_RENDER_API auto CreateOffScreen(const VulkanRenderPass& renderPass, uint32_t width, uint32_t height) -> VkResult;
-		SH_RENDER_API void Clean();
+		SH_RENDER_API void Clear();
 		SH_RENDER_API void TransferImageToBuffer(VkBuffer buffer, int x, int y);
 
 		SH_RENDER_API auto GetRenderPass() const -> const VulkanRenderPass*;
@@ -55,5 +36,22 @@ namespace sh::render::vk
 
 		SH_RENDER_API auto GetWidth() const -> uint32_t override;
 		SH_RENDER_API auto GetHeight() const->uint32_t override;
+	private:
+		void CreateDepthBuffer();
+	private:
+		const VulkanContext& context;
+
+		VmaAllocator alloc;
+
+		VkFramebuffer framebuffer;
+		VkImageView img;
+
+		const VulkanRenderPass* renderPass = nullptr;
+
+		std::unique_ptr<VulkanImageBuffer> colorImg; //Only Offscreen
+		std::unique_ptr<VulkanImageBuffer> colorImgMSAA; // Offscreen, MSAA
+		std::unique_ptr<VulkanImageBuffer> depthImg;
+
+		uint32_t width, height;
 	};
 }

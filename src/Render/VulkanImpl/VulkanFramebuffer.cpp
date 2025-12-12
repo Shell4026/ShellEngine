@@ -12,16 +12,13 @@ namespace sh::render::vk
 {
 	SH_RENDER_API VulkanFramebuffer::VulkanFramebuffer(const VulkanContext& context) :
 		context(context),
-		device(context.GetDevice()), gpu(context.GetGPU()), alloc(context.GetAllocator()),
 		framebuffer(nullptr), img(nullptr),
 		colorImg(nullptr), depthImg(nullptr),
 		width(0), height(0)
 	{
 	}
-
 	SH_RENDER_API VulkanFramebuffer::VulkanFramebuffer(VulkanFramebuffer&& other) noexcept :
 		context(other.context),
-		device(other.device), gpu(other.gpu), alloc(other.alloc),
 		framebuffer(other.framebuffer), img(other.img), renderPass(other.renderPass),
 		colorImg(std::move(other.colorImg)), colorImgMSAA(std::move(other.colorImgMSAA)), depthImg(std::move(other.depthImg)),
 		width(other.width), height(other.height)
@@ -30,19 +27,13 @@ namespace sh::render::vk
 		other.framebuffer = nullptr;
 		other.img = nullptr;
 	}
-
 	SH_RENDER_API VulkanFramebuffer::~VulkanFramebuffer()
 	{
-		Clean();
+		Clear();
 	}
-
 	SH_RENDER_API auto VulkanFramebuffer::operator=(VulkanFramebuffer&& other) noexcept -> VulkanFramebuffer&
 	{
-		Clean();
-
-		device = other.device;
-		gpu = other.gpu;
-		alloc = other.alloc;
+		Clear();
 
 		framebuffer = other.framebuffer;
 		renderPass = other.renderPass;
@@ -59,11 +50,10 @@ namespace sh::render::vk
 
 		return *this;
 	}
-
 	SH_RENDER_API auto VulkanFramebuffer::Create(const VulkanRenderPass& renderPass, uint32_t width, uint32_t height, VkImageView img) -> VkResult
 	{
 		assert(width != 0 && height != 0);
-		Clean();
+		Clear();
 
 		this->img = img;
 		this->width = width;
@@ -105,16 +95,15 @@ namespace sh::render::vk
 		framebufferInfo.height = height;
 		framebufferInfo.layers = 1;
 
-		VkResult result = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffer);
+		VkResult result = vkCreateFramebuffer(context.GetDevice(), &framebufferInfo, nullptr, &framebuffer);
 		assert(result == VkResult::VK_SUCCESS);
 		return result;
 	}
-
 	SH_RENDER_API auto VulkanFramebuffer::CreateOffScreen(const VulkanRenderPass& renderPass, uint32_t width, uint32_t height) -> VkResult
 	{
 		assert(width != 0 && height != 0);
 
-		Clean();
+		Clear();
 
 		this->width = width;
 		this->height = height;
@@ -172,42 +161,20 @@ namespace sh::render::vk
 		framebufferInfo.height = height;
 		framebufferInfo.layers = 1;
 
-		result = vkCreateFramebuffer(device, &framebufferInfo, nullptr, &framebuffer);
+		result = vkCreateFramebuffer(context.GetDevice(), &framebufferInfo, nullptr, &framebuffer);
 		assert(result == VkResult::VK_SUCCESS);
 		return result;
 	}
-
-	void VulkanFramebuffer::CreateDepthBuffer()
+	SH_RENDER_API void VulkanFramebuffer::Clear()
 	{
-		VkFormat depthFormat = context.FindSupportedDepthFormat(renderPass->GetConfig().bUseStencil);
-		depthImg = std::make_unique<VulkanImageBuffer>(context);
-		if(width == 0 || height == 0)
-			return;
-
-		VkImageAspectFlags aspect = VkImageAspectFlagBits::VK_IMAGE_ASPECT_DEPTH_BIT;
-		if (renderPass->GetConfig().bUseStencil)
-			aspect |= VkImageAspectFlagBits::VK_IMAGE_ASPECT_STENCIL_BIT;
-
-		VkSampleCountFlagBits sampleCount = renderPass->GetConfig().sampleCount;
-
-		auto result = depthImg->Create(width, height, depthFormat,
-			VkImageUsageFlagBits::VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
-			aspect, sampleCount);
-
-		assert(result == VkResult::VK_SUCCESS);
-	}
-
-	SH_RENDER_API void VulkanFramebuffer::Clean()
-	{
+		if (framebuffer)
+		{
+			vkDestroyFramebuffer(context.GetDevice(), framebuffer, nullptr);
+			framebuffer = VK_NULL_HANDLE;
+		}
 		depthImg.reset();
 		colorImgMSAA.reset();
 		colorImg.reset();
-
-		if (framebuffer)
-		{
-			vkDestroyFramebuffer(device, framebuffer, nullptr);
-			framebuffer = nullptr;
-		}
 	}
 	SH_RENDER_API void VulkanFramebuffer::TransferImageToBuffer(VkBuffer buffer, int x, int y)
 	{
@@ -301,17 +268,14 @@ namespace sh::render::vk
 
 		context.GetCommandBufferPool().DeallocateCommandBuffer(*cmd);
 	}
-
 	SH_RENDER_API auto VulkanFramebuffer::GetRenderPass() const -> const VulkanRenderPass*
 	{
 		return renderPass;
 	}
-
 	SH_RENDER_API auto VulkanFramebuffer::GetVkFramebuffer() const -> VkFramebuffer
 	{
 		return framebuffer;
 	}
-
 	SH_RENDER_API auto VulkanFramebuffer::GetColorImg() const -> VulkanImageBuffer*
 	{
 		if (colorImg == nullptr && colorImgMSAA != nullptr)
@@ -329,5 +293,26 @@ namespace sh::render::vk
 	SH_RENDER_API auto VulkanFramebuffer::GetHeight() const -> uint32_t
 	{
 		return height;
+	}
+
+	void VulkanFramebuffer::CreateDepthBuffer()
+	{
+		if (width == 0 || height == 0)
+			return;
+
+		VkFormat depthFormat = context.FindSupportedDepthFormat(renderPass->GetConfig().bUseStencil);
+		depthImg = std::make_unique<VulkanImageBuffer>(context);
+
+		VkImageAspectFlags aspect = VkImageAspectFlagBits::VK_IMAGE_ASPECT_DEPTH_BIT;
+		if (renderPass->GetConfig().bUseStencil)
+			aspect |= VkImageAspectFlagBits::VK_IMAGE_ASPECT_STENCIL_BIT;
+
+		VkSampleCountFlagBits sampleCount = renderPass->GetConfig().sampleCount;
+
+		auto result = depthImg->Create(width, height, depthFormat,
+			VkImageUsageFlagBits::VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
+			aspect, sampleCount);
+
+		assert(result == VkResult::VK_SUCCESS);
 	}
 }
