@@ -118,8 +118,8 @@ namespace sh::game
 			initInfo.Instance = vkContext.GetInstance();
 			initInfo.PhysicalDevice = vkContext.GetGPU();
 			initInfo.Device = vkContext.GetDevice();
-			initInfo.QueueFamily = vkContext.GetQueueManager().GetGraphicsQueueFamily().idx;
-			initInfo.Queue = vkContext.GetQueueManager().GetGraphicsQueue();
+			initInfo.QueueFamily = vkContext.GetQueueManager().GetFamilyIndex(render::vk::VulkanQueueManager::Role::Graphics);
+			initInfo.Queue = vkContext.GetQueueManager().GetQueue(render::vk::VulkanQueueManager::Role::Graphics);
 			initInfo.DescriptorPool = &vkContext.GetDescriptorPool();
 			initInfo.RenderPass = static_cast<const render::vk::VulkanFramebuffer*>(vkContext.GetMainFramebuffer())->GetRenderPass()->GetVkRenderPass();
 			initInfo.MinImageCount = 2;

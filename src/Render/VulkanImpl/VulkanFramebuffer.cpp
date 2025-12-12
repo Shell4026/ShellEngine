@@ -216,7 +216,7 @@ namespace sh::render::vk
 		toColorAttachmentBarrier.subresourceRange.baseArrayLayer = 0;
 		toColorAttachmentBarrier.subresourceRange.layerCount = 1;
 
-		VulkanCommandBuffer* cmd = context.GetCommandBufferPool().AllocateCommandBuffer(std::this_thread::get_id(), VkQueueFlagBits::VK_QUEUE_TRANSFER_BIT);
+		VulkanCommandBuffer* cmd = context.GetCommandBufferPool().AllocateCommandBuffer(std::this_thread::get_id(), VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
 		assert(cmd != nullptr);
 		cmd->Build(
 			[&]()
@@ -258,10 +258,9 @@ namespace sh::render::vk
 			true
 		);
 
-		VkFence fence = cmd->GetFence();
+		VkFence fence = cmd->GetOrCreateFence();
 
-		VkQueue transferQueue = context.GetQueueManager().GetTransferQueue();
-		context.GetQueueManager().SubmitCommand(transferQueue, *cmd, fence);
+		context.GetQueueManager().Submit(VulkanQueueManager::Role::Graphics, *cmd, fence);
 		auto result = vkWaitForFences(context.GetDevice(), 1, &fence, true, std::numeric_limits<uint64_t>::max());
 		assert(result == VkResult::VK_SUCCESS);
 		vkResetFences(context.GetDevice(), 1, &fence);

@@ -35,30 +35,16 @@ namespace sh::render
 		{
 			std::array<uint32_t, 3> vertexIdx;
 		};
-
 		enum class Topology
 		{
 			Point,
 			Line,
 			Face
 		};
-
 		static constexpr uint8_t VERTEX_ID = 0;
 		static constexpr uint8_t UV_ID = 1;
 		static constexpr uint8_t NORMAL_ID = 2;
 		static constexpr uint8_t TANGENT_ID = 3;
-	private:
-		std::vector<Vertex> verts;
-		std::vector<uint32_t> indices;
-		std::vector<Face> faces;
-
-		std::unique_ptr<IVertexBuffer> buffer;
-
-		AABB bounding;
-
-		Topology topology;
-	public:
-		float lineWidth = 1.f;
 	public:
 		SH_RENDER_API Mesh();
 		SH_RENDER_API Mesh(const Mesh& other);
@@ -91,5 +77,17 @@ namespace sh::render
 		SH_RENDER_API auto GetBoundingBox() -> AABB&;
 
 		SH_RENDER_API void CalculateTangents();
+	public:
+		float lineWidth = 1.f;
+	private:
+		std::vector<Vertex> verts;
+		std::vector<uint32_t> indices;
+		std::vector<Face> faces;
+
+		std::unique_ptr<IVertexBuffer> buffer;
+
+		AABB bounding;
+
+		Topology topology;
 	};
 }

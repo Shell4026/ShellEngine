@@ -1,69 +1,92 @@
 ﻿#pragma once
 #include "../Export.h"
 #include "VulkanConfig.h"
-
-#include "Core/ISyncable.h"
 #include "Core/NonCopyable.h"
-#include "Core/SpinLock.h"
 
-#include <utility>
-#include <optional>
 #include <vector>
+#include <optional>
 #include <mutex>
+
 namespace sh::render::vk
 {
-	class VulkanContext;
-	class VulkanCommandBuffer;
+    class VulkanContext;
+    class VulkanCommandBuffer;
 
-	/// @brief 스레드 안전한 Vulkan 큐 매니저
-	class VulkanQueueManager : public core::INonCopyable
-	{
-	public:
-		struct QueueFamily
-		{
-			uint32_t idx = 0;
-			uint32_t queueCount = 0;
-		};
-	public:
-		SH_RENDER_API VulkanQueueManager(const VulkanContext& ctx);
-		SH_RENDER_API VulkanQueueManager(VulkanQueueManager&& other) noexcept;
-		SH_RENDER_API ~VulkanQueueManager();
+    class VulkanQueueManager : public core::INonCopyable
+    {
+    public:
+        enum class Role { Graphics, Present, Transfer };
 
-		SH_RENDER_API void QueryQueueFamily(VkSurfaceKHR surface);
-		SH_RENDER_API auto GetGraphicsQueueFamily() const -> QueueFamily;
-		SH_RENDER_API auto GetTransferQueueFamily() const -> QueueFamily;
-		SH_RENDER_API auto GetSurfaceQueueFamily() const -> QueueFamily;
+        struct Family
+        {
+            uint32_t index = UINT32_MAX;
+            uint32_t availableCount = 0; // VkQueueFamilyProperties::queueCount
+            uint32_t requestedCount = 0; // vkCreateDevice에 요청할 개수
+        };
 
-		SH_RENDER_API void CreateGraphicsQueue();
-		SH_RENDER_API void CreateTransferQueue();
-		SH_RENDER_API void CreateSurfaceQueue(VkSurfaceKHR surface);
+        struct Selection
+        {
+            Family graphics;
+            Family present;
+            Family transfer;
 
-		SH_RENDER_API auto GetGraphicsQueue() const -> VkQueue;
-		SH_RENDER_API auto GetTransferQueue() const -> VkQueue;
-		SH_RENDER_API auto GetSurfaceQueue() const -> VkQueue;
+            // 역할별 queue index(패밀리 내부 인덱스)
+            uint32_t graphicsQIndex = 0;
+            uint32_t presentQIndex = 0;
+            uint32_t transferQIndex = 0;
+        };
 
-		/// @brief 큐에 커맨드를 제출한다.
-		/// @param queue 큐
-		/// @param cmd 커맨드 버퍼
-		/// @param fence 펜스
-		SH_RENDER_API void SubmitCommand(VkQueue queue, const VulkanCommandBuffer& cmd, VkFence fence = nullptr);
-	private:
-		void GetQueueFamilyProperties();
-		auto SelectQueueFamily(VkQueueFlagBits queueType) const -> std::optional<QueueFamily>;
-		auto GetSurfaceQueueFamily(VkSurfaceKHR surface) const -> std::optional<QueueFamily>;
-	private:
-		const VulkanContext& ctx;
+    public:
+        SH_RENDER_API VulkanQueueManager(const VulkanContext& ctx);
+        SH_RENDER_API VulkanQueueManager(VulkanQueueManager&& other) noexcept;
+        SH_RENDER_API ~VulkanQueueManager() = default;
 
-		std::vector<VkQueueFamilyProperties> queueFamilyProps;
+        SH_RENDER_API void QueryFamilies(VkSurfaceKHR surface);
+        SH_RENDER_API auto BuildQueueCreateInfos() -> std::vector<VkDeviceQueueCreateInfo>;
+        SH_RENDER_API void FetchQueues();
 
-		QueueFamily graphicsQueueFamily;
-		QueueFamily surfaceQueueFamily;
-		QueueFamily transferQueueFamily;
+        SH_RENDER_API auto GetQueue(Role role) const -> VkQueue;
+        SH_RENDER_API auto GetFamilyIndex(Role role) const -> uint32_t;
 
-		VkQueue graphicsQueue = nullptr;
-		VkQueue surfaceQueue = nullptr;
-		VkQueue transferQueue = nullptr;
+        // 스레드 안전 제출
+        SH_RENDER_API void Submit(Role role, const VulkanCommandBuffer& cmd, VkFence fence = VK_NULL_HANDLE);
 
-		core::SpinLock spinLock;
-	};
+    private:
+        void LoadFamilyProps();
+        auto PickGraphicsFamily() const -> std::optional<Family>;
+        auto PickPresentFamily(VkSurfaceKHR surface, uint32_t preferFamily) const -> std::optional<Family>;
+        auto PickTransferFamily(uint32_t avoidFamily) const -> std::optional<Family>;
+
+        void ComputeRequestedCountsAndIndices();
+        auto ClampRequested(uint32_t want, uint32_t avail) const ->uint32_t;
+
+        auto GetMutexForRole(Role role) const -> std::mutex*;
+
+    private:
+        const VulkanContext& ctx;
+
+        std::vector<VkQueueFamilyProperties> props;
+        Selection selection;
+
+        VkQueue graphicsQueue = VK_NULL_HANDLE;
+        VkQueue presentQueue = VK_NULL_HANDLE;
+        VkQueue transferQueue = VK_NULL_HANDLE;
+
+        // 동일 VkQueue를 공유하면 동일 mutex를 공유하도록 포인터로 묶는다
+        mutable std::mutex graphicsMtx;
+        mutable std::mutex presentMtx;
+        mutable std::mutex transferMtx;
+
+        mutable std::mutex* graphicsLock = &graphicsMtx;
+        mutable std::mutex* presentLock = &presentMtx;
+        mutable std::mutex* transferLock = &transferMtx;
+
+        // BuildQueueCreateInfos에서 사용하는 우선순위 배열 (가변 길이)
+        std::vector<float> graphicsPriorities;
+        std::vector<float> presentPriorities;
+        std::vector<float> transferPriorities;
+
+        bool bFamiliesReady = false;
+        bool bQueuesReady = false;
+    };
 }//namespace

@@ -1,68 +1,76 @@
 ﻿#pragma once
 #include "../Export.h"
+#include "VulkanConfig.h"
 #include "Core/NonCopyable.h"
 
-#include "VulkanConfig.h"
-
+#include <vector>
 #include <functional>
-#include <initializer_list>
 
-namespace sh::render::vk 
+namespace sh::render::vk
 {
-	class VulkanContext;
-	class VulkanCommandBuffer : public core::INonCopyable
-	{
-	public:
-		struct SemaphoreInfo
-		{
-			VkSemaphore semaphore = VK_NULL_HANDLE;
-			uint64_t semaphoreValue = 0;
-			bool bTimelineSemaphore = false;
-		};
-	public:
-		SH_RENDER_API VulkanCommandBuffer(const VulkanContext& context);
-		SH_RENDER_API VulkanCommandBuffer(VulkanCommandBuffer&& other) noexcept;
-		SH_RENDER_API ~VulkanCommandBuffer();
+    class VulkanContext;
 
-		SH_RENDER_API void SetWaitStage(const std::initializer_list<VkPipelineStageFlagBits> stages);
-		SH_RENDER_API auto GetWaitStage() const -> VkPipelineStageFlags;
+    class VulkanCommandBuffer : public core::INonCopyable
+    {
+    public:
+        struct WaitSemaphore
+        {
+            VkSemaphore semaphore = VK_NULL_HANDLE;
+            VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_NONE;
+            bool isTimeline = false;
+            uint64_t value = 0;
+        };
 
-		SH_RENDER_API void SetWaitSemaphore(const SemaphoreInfo& semaphore);
-		SH_RENDER_API void SetWaitSemaphore(const std::initializer_list<SemaphoreInfo>& s);
-		SH_RENDER_API void SetWaitSemaphore(const std::vector<SemaphoreInfo>& semaphores);
-		SH_RENDER_API void SetWaitSemaphore(std::vector<SemaphoreInfo>&& semaphores);
-		SH_RENDER_API auto GetWaitSemaphores() const -> const std::vector<SemaphoreInfo>&;
+        struct SignalSemaphore
+        {
+            VkSemaphore semaphore = VK_NULL_HANDLE;
+            bool isTimeline = false;
+            uint64_t value = 0;
+        };
 
-		SH_RENDER_API void SetSignalSemaphore(const SemaphoreInfo& semaphore);
-		SH_RENDER_API void SetSignalSemaphore(const std::initializer_list<SemaphoreInfo>& s);
-		SH_RENDER_API void SetSignalSemaphore(const std::vector<SemaphoreInfo>& semaphores);
-		SH_RENDER_API void SetSignalSemaphore(std::vector<SemaphoreInfo>&& semaphores);
-		SH_RENDER_API auto GetSignalSemaphores() const -> const std::vector<SemaphoreInfo>&;
+    public:
+        SH_RENDER_API VulkanCommandBuffer(const VulkanContext& context);
+        SH_RENDER_API VulkanCommandBuffer(VulkanCommandBuffer&& other) noexcept;
+        SH_RENDER_API ~VulkanCommandBuffer();
 
-		SH_RENDER_API auto Build(const std::function<void()>& commands, bool bUsingOnce = false) -> VkResult;
+        SH_RENDER_API auto operator=(VulkanCommandBuffer&& other) ->VulkanCommandBuffer& = delete;
 
-		SH_RENDER_API auto Create(VkCommandPool cmdPool, const VkCommandBufferAllocateInfo* info = nullptr) -> VkResult;
-		SH_RENDER_API auto GetFence() const -> VkFence;
-		/// @brief 커맨드에 기록된 내용을 지우는 함수.
-		SH_RENDER_API auto ResetCommand() -> VkResult;
-		/// @brief 세마포어와 waitStage를 초기화 하는 함수.
-		SH_RENDER_API void ResetSyncObjects();
-		/// @brief 커맨드 버퍼와 동기화 객체들을 모두 삭제하는 함수.
-		SH_RENDER_API void Clear();
+        SH_RENDER_API auto Create(VkCommandPool pool, VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY) -> VkResult;
 
-		SH_RENDER_API auto GetCommandBuffer() const-> VkCommandBuffer;
-	private:
-		auto Begin(bool bOnce) -> VkResult;
-		auto End() -> VkResult;
-	private:
-		const VulkanContext& context;
-		VkCommandBuffer buffer = nullptr;
-		VkCommandPool cmdPool = nullptr;
+        SH_RENDER_API auto Build(const std::function<void()>& recordFn, bool bOneTimeSubmit = true) -> VkResult;
 
-		VkPipelineStageFlags waitStage;
-		std::vector<SemaphoreInfo> waitSemaphores;
-		std::vector<SemaphoreInfo> signalSemaphores;
+        SH_RENDER_API auto ResetCommand(VkCommandBufferResetFlags flags = 0) -> VkResult;
 
-		mutable VkFence fence = nullptr;
-	};
-}
+        SH_RENDER_API auto GetOrCreateFence() -> VkFence;
+        SH_RENDER_API void DestroyFence();
+
+        SH_RENDER_API void ResetSyncObjects();
+
+        SH_RENDER_API void SetWaitSemaphores(const std::vector<WaitSemaphore>& waits);
+        SH_RENDER_API void SetSignalSemaphores(const std::vector<SignalSemaphore>& signals);
+
+        SH_RENDER_API void AddWaitSemaphore(const WaitSemaphore& w);
+        SH_RENDER_API void AddSignalSemaphore(const SignalSemaphore& s);
+
+        SH_RENDER_API auto GetWaitSemaphores() const -> const std::vector<WaitSemaphore>&;
+        SH_RENDER_API auto GetSignalSemaphores() const -> const std::vector<SignalSemaphore>&;
+
+        SH_RENDER_API auto GetCommandBuffer() const -> VkCommandBuffer;
+        SH_RENDER_API auto GetCommandPool() const -> VkCommandPool;
+
+        SH_RENDER_API void Clear();
+
+    private:
+        auto Begin(bool bOneTime) -> VkResult;
+        auto End() -> VkResult;
+    private:
+        const VulkanContext& context;
+        VkCommandBuffer buffer = VK_NULL_HANDLE;
+        VkCommandPool cmdPool = VK_NULL_HANDLE;
+
+        std::vector<WaitSemaphore>   waitSemaphores;
+        std::vector<SignalSemaphore> signalSemaphores;
+
+        VkFence fence = VK_NULL_HANDLE;
+    };
+}//namespace

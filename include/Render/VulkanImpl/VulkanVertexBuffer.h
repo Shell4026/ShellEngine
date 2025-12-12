@@ -12,15 +12,6 @@ namespace sh::render::vk
 
 	class VulkanVertexBuffer : public IVertexBuffer
 	{
-	private:
-		const VulkanContext& context;
-
-		VulkanBuffer vertexBuffer;
-		VulkanBuffer indexBuffer;
-
-		SH_RENDER_API static inline std::vector<VkVertexInputAttributeDescription> attribDescriptions;
-	private:
-		inline void CreateVertexBuffer(const Mesh& mesh);
 	public:
 		SH_RENDER_API VulkanVertexBuffer(const VulkanContext& context);
 		SH_RENDER_API VulkanVertexBuffer(const VulkanVertexBuffer& other);
@@ -31,7 +22,7 @@ namespace sh::render::vk
 		SH_RENDER_API auto operator=(VulkanVertexBuffer&& other) noexcept -> VulkanVertexBuffer&;
 
 		SH_RENDER_API void Create(const Mesh& mesh) override;
-		SH_RENDER_API void Clean() override;
+		SH_RENDER_API void Clear() override;
 
 		SH_RENDER_API auto Clone() const -> std::unique_ptr<IVertexBuffer> override;
 
@@ -40,5 +31,14 @@ namespace sh::render::vk
 
 		SH_RENDER_API auto GetVertexBuffer() const -> const VulkanBuffer&;
 		SH_RENDER_API auto GetIndexBuffer() const -> const VulkanBuffer&;
+	private:
+		void CreateVertexBuffer(const Mesh& mesh);
+	private:
+		const VulkanContext& context;
+
+		VulkanBuffer vertexBuffer;
+		VulkanBuffer indexBuffer;
+
+		SH_RENDER_API static inline std::vector<VkVertexInputAttributeDescription> attribDescriptions;
 	};
 }

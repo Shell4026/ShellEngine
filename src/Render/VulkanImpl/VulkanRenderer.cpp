@@ -131,7 +131,7 @@ namespace sh::render::vk
 		if (cmd == nullptr)
 			cmd = context->GetCommandBufferPool().AllocateCommandBuffer(std::this_thread::get_id(), VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
 		cmd->ResetSyncObjects();
-		cmd->SetSignalSemaphore(VulkanCommandBuffer::SemaphoreInfo{ renderFinishedSemaphore });
+		cmd->SetSignalSemaphores({ VulkanCommandBuffer::SignalSemaphore{ renderFinishedSemaphore } });
 
 		return context->ReSizing();
 	}
@@ -148,8 +148,8 @@ namespace sh::render::vk
 
 	SH_RENDER_API void VulkanRenderer::Render()
 	{
-		using SemaphoreInfo = VulkanCommandBuffer::SemaphoreInfo;
-
+		using SignalSemaphore = VulkanCommandBuffer::SignalSemaphore;
+		using WaitSemaphore = VulkanCommandBuffer::WaitSemaphore;
 		Renderer::Render();
 
 		if (!isInit || bPause.load(std::memory_order::memory_order_acquire))
@@ -177,11 +177,9 @@ namespace sh::render::vk
 		if (cmd == nullptr)
 		{
 			cmd = context->GetCommandBufferPool().AllocateCommandBuffer(std::this_thread::get_id(), VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
-			cmd->SetSignalSemaphore(SemaphoreInfo{ renderFinishedSemaphore });
+			cmd->SetSignalSemaphores({ SignalSemaphore{ renderFinishedSemaphore } });
 		}
 		cmd->ResetCommand();
-
-		const VkQueue graphicsQueue = context->GetQueueManager().GetGraphicsQueue();
 
 		// UI 커맨드 빌드
 		cmd->Build(
@@ -293,30 +291,48 @@ namespace sh::render::vk
 					uint64_t signalValue = timelineValue + 1; // 미리 계산
 					timelineValueAtomic.store(signalValue, std::memory_order::memory_order_release);
 
-					recordedCmd.cmdBuffer->SetWaitSemaphore(SemaphoreInfo{ imageAvailableSemaphore });
-					recordedCmd.cmdBuffer->SetSignalSemaphore(SemaphoreInfo{ timelineSemaphore, ++timelineValue, true });
 					// 스왑체인 이미지가 준비 되기전까지 COLOR_ATTACHMENT단계에서 대기해야 함
-					recordedCmd.cmdBuffer->SetWaitStage({ VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT });
+					recordedCmd.cmdBuffer->SetWaitSemaphores({ 
+						WaitSemaphore
+						{ 
+							imageAvailableSemaphore, 
+							VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT 
+						} 
+					});
+					recordedCmd.cmdBuffer->SetSignalSemaphores({ SignalSemaphore{ timelineSemaphore, true, ++timelineValue } });
 				}
 				else
 				{
-					recordedCmd.cmdBuffer->SetWaitSemaphore(SemaphoreInfo{ timelineSemaphore, timelineValue++, true });
-					recordedCmd.cmdBuffer->SetSignalSemaphore(SemaphoreInfo{ timelineSemaphore, timelineValue, true });
-					recordedCmd.cmdBuffer->SetWaitStage({ VkPipelineStageFlagBits::VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT });
+					recordedCmd.cmdBuffer->SetWaitSemaphores({ 
+						WaitSemaphore
+						{ 
+							timelineSemaphore, 
+							VkPipelineStageFlagBits::VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+							true, 
+							timelineValue++
+						} 
+					});
+					recordedCmd.cmdBuffer->SetSignalSemaphores({ SignalSemaphore{ timelineSemaphore, true, timelineValue } });
 				}
 				
-				context->GetQueueManager().SubmitCommand(graphicsQueue, *recordedCmd.cmdBuffer, nullptr);
+				context->GetQueueManager().Submit(VulkanQueueManager::Role::Graphics, *recordedCmd.cmdBuffer, nullptr);
 			}
-			cmd->SetWaitSemaphore(SemaphoreInfo{ timelineSemaphore, timelineValue, true });
-			cmd->SetWaitStage({ VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT });
+			cmd->SetWaitSemaphores({ 
+				WaitSemaphore
+				{ 
+					timelineSemaphore, 
+					VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 
+					true, 
+					timelineValue 
+				} 
+			});
 		}
 		else
 		{
 			// 카메라가 없는 경우는 UI 커맨드 혼자뿐.
-			cmd->SetWaitSemaphore(SemaphoreInfo{ imageAvailableSemaphore });
-			cmd->SetWaitStage({ VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT });
+			cmd->SetWaitSemaphores({ WaitSemaphore{ imageAvailableSemaphore, VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT } });
 		}
-		context->GetQueueManager().SubmitCommand(graphicsQueue, *cmd, inFlightFence);
+		context->GetQueueManager().Submit(VulkanQueueManager::Role::Graphics, *cmd, inFlightFence);
 
 		uint32_t drawCallCount = 0;
 		for (auto& renderPipeline : renderPipelines)
@@ -333,7 +349,7 @@ namespace sh::render::vk
 		presentInfo.pImageIndices = &imgIdx;
 		presentInfo.pResults = nullptr;
 
-		vkQueuePresentKHR(context->GetQueueManager().GetSurfaceQueue(), &presentInfo);
+		vkQueuePresentKHR(context->GetQueueManager().GetQueue(VulkanQueueManager::Role::Present), &presentInfo);
 		
 		result = vkWaitForFences(context->GetDevice(), 1, &inFlightFence, true, std::numeric_limits<uint64_t>::max());
 		if (result != VkResult::VK_SUCCESS)

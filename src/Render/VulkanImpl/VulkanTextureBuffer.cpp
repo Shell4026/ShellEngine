@@ -116,7 +116,7 @@ namespace sh::render::vk
 			VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
 		stagingBuffer.SetData(data);
 		
-		VulkanCommandBuffer* cmd = context->GetCommandBufferPool().AllocateCommandBuffer(std::this_thread::get_id(), VkQueueFlagBits::VK_QUEUE_TRANSFER_BIT);
+		VulkanCommandBuffer* cmd = context->GetCommandBufferPool().AllocateCommandBuffer(std::this_thread::get_id(), VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
 		cmd->Build([&]
 			{
 				imgBuffer->ChangeLayoutCommand(cmd->GetCommandBuffer(), VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -128,8 +128,8 @@ namespace sh::render::vk
 			true
 		);
 
-		VkFence fence = cmd->GetFence();
-		queueManager->SubmitCommand(queueManager->GetTransferQueue(), *cmd, fence);
+		VkFence fence = cmd->GetOrCreateFence();
+		queueManager->Submit(VulkanQueueManager::Role::Graphics, *cmd, fence);
 		vkWaitForFences(context->GetDevice(), 1, &fence, true, std::numeric_limits<uint64_t>::max());
 		vkResetFences(context->GetDevice(), 1, &fence);
 

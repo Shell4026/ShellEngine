@@ -183,25 +183,7 @@ namespace sh::render::vk
 		VkPhysicalDeviceFeatures deviceFeatures{};
 		deviceFeatures.samplerAnisotropy = true;
 
-		auto graphicsFamily = queueManager->GetGraphicsQueueFamily();
-		auto transferFamily = queueManager->GetTransferQueueFamily();
-		auto surfaceFamily = queueManager->GetSurfaceQueueFamily();
-
-		std::vector<float> defaultPriorities(3, 0.f);
-		std::vector<VkDeviceQueueCreateInfo> queueInfos;
-		assert(graphicsFamily.idx == transferFamily.idx && transferFamily.idx == surfaceFamily.idx);
-		if (graphicsFamily.idx == transferFamily.idx && transferFamily.idx == surfaceFamily.idx)
-		{
-			const uint32_t queueCount = graphicsFamily.queueCount >= 3 ? 3 : 1;
-
-			VkDeviceQueueCreateInfo queueInfo = {};
-			queueInfo.queueFamilyIndex = graphicsFamily.idx;
-			queueInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-			queueInfo.pNext = nullptr;
-			queueInfo.queueCount = queueCount;
-			queueInfo.pQueuePriorities = defaultPriorities.data();
-			queueInfos.push_back(queueInfo);
-		}
+		std::vector<VkDeviceQueueCreateInfo> queueInfos = queueManager->BuildQueueCreateInfos();
 
 		VkPhysicalDeviceTimelineSemaphoreFeatures timelineFeatures{};
 		timelineFeatures.sType = VkStructureType::VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
@@ -287,7 +269,10 @@ namespace sh::render::vk
 	}
 	void VulkanContext::CreateCommandPool()
 	{
-		cmdPool = std::make_unique<VulkanCommandBufferPool>(*this, queueManager->GetGraphicsQueueFamily().idx, queueManager->GetTransferQueueFamily().idx);
+		cmdPool = std::make_unique<VulkanCommandBufferPool>(
+			*this, 
+			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Graphics), 
+			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Transfer));
 	}
 	void VulkanContext::DestroyCommandPool()
 	{
@@ -350,16 +335,18 @@ namespace sh::render::vk
 		vkGetPhysicalDeviceProperties(gpu, &gpuProp);
 
 		queueManager = std::make_unique<VulkanQueueManager>(*this);
-		queueManager->QueryQueueFamily(swapChain->GetSurface());
+		queueManager->QueryFamilies(swapChain->GetSurface());
 
 		CreateDevice(gpu);
 		
-		queueManager->CreateGraphicsQueue();
-		queueManager->CreateTransferQueue();
-		queueManager->CreateSurfaceQueue(swapChain->GetSurface());
+		queueManager->FetchQueues();
+
 		CreateAllocator();
 
-		swapChain->CreateSwapChain(queueManager->GetGraphicsQueueFamily().idx, queueManager->GetSurfaceQueueFamily().idx, false);
+		swapChain->CreateSwapChain(
+			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Graphics), 
+			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Present), 
+			false);
 
 		CreateRenderPass();
 		CreateFrameBuffer();
@@ -405,7 +392,10 @@ namespace sh::render::vk
 	{
 		framebuffers.clear();
 		//swapChain->DestroySwapChain();
-		swapChain->CreateSwapChain(queueManager->GetGraphicsQueueFamily().idx, queueManager->GetSurfaceQueueFamily().idx, false);
+		swapChain->CreateSwapChain(
+			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Graphics), 
+			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Present), 
+			false);
 
 		framebuffers.reserve(swapChain->GetSwapChainImageCount());
 
