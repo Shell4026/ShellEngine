@@ -5,6 +5,7 @@
 #include "Core/NonCopyable.h"
 
 #include <vector>
+#include <array>
 namespace sh::render::vk
 {
 	class VulkanContext;
@@ -42,7 +43,7 @@ namespace sh::render::vk
 		SH_RENDER_API auto GetInitialColorLayout() const -> VkImageLayout;
 		SH_RENDER_API auto GetFinalColorLayout() const -> VkImageLayout;
 		SH_RENDER_API auto GetInitialDepthLayout() const-> VkImageLayout;
-		SH_RENDER_API auto GetFInalDepthLayout() const -> VkImageLayout;
+		SH_RENDER_API auto GetFinalDepthLayout() const -> VkImageLayout;
 	private:
 		auto GetOffScreenSubPassDependency() const->std::array<VkSubpassDependency, 2>;
 		auto GetOnScreenSubPassDependency() const->std::array<VkSubpassDependency, 2>;

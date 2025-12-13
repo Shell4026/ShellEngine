@@ -237,7 +237,7 @@ namespace sh::render::vk
 				vkCmdEndRenderPass(cmd->GetCommandBuffer());
 
 				swapchainImageBuffer.LayoutChangedByRenderPass(uiRenderPass.GetFinalColorLayout());
-				mainFramebuffer->GetDepthImg()->LayoutChangedByRenderPass(uiRenderPass.GetFInalDepthLayout());
+				mainFramebuffer->GetDepthImg()->LayoutChangedByRenderPass(uiRenderPass.GetFinalDepthLayout());
 			},
 			true
 		);

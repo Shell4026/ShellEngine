@@ -141,6 +141,9 @@ namespace sh::render::vk
 	}
 	auto VulkanRenderPass::operator=(VulkanRenderPass&& other) noexcept -> VulkanRenderPass&
 	{
+		assert(&context == &other.context);
+		Clear();
+
 		renderPass = other.renderPass;
 		config = other.config;
 
@@ -155,6 +158,8 @@ namespace sh::render::vk
 	}
 	void VulkanRenderPass::Create(const Config& _config)
 	{
+		Clear();
+
 		config = _config;
 		if (_config.bUseStencil)
 			config.bUseDepth = true;
@@ -241,7 +246,7 @@ namespace sh::render::vk
 	{
 		return initialDepthLayout;
 	}
-	SH_RENDER_API auto VulkanRenderPass::GetFInalDepthLayout() const -> VkImageLayout
+	SH_RENDER_API auto VulkanRenderPass::GetFinalDepthLayout() const -> VkImageLayout
 	{
 		return finalDepthLayout;
 	}
