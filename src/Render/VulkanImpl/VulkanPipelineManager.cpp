@@ -7,53 +7,137 @@
 namespace sh::render::vk
 {
 	VulkanPipelineManager::VulkanPipelineManager(const VulkanContext& context) :
-		context(context), device(context.GetDevice())
+		context(context)
 	{
-		// TODO: pipelines에 nullptr가 많아지면 어떻게 할지 생각해두기
 		shaderDestroyedListener.SetCallback(
 			[&](const core::SObject* obj)
 			{
 				auto shaderPassPtr = static_cast<const VulkanShaderPass*>(obj);
-				std::shared_lock<std::shared_mutex> readLock{ mu };
+
+				std::unique_lock writeLock{ mu };
+
 				auto it = shaderIdxs.find(shaderPassPtr);
-				if (it != shaderIdxs.end())
+				if (it == shaderIdxs.end())
+					return;
+
+				for (auto idx : it->second)
 				{
-					auto& idxs = it->second;
-					readLock.unlock();
-
-					std::unique_lock<std::shared_mutex> writeLock{ mu };
-
-					for (std::size_t idx : idxs)
-						pipelines[idx] = nullptr;
-					shaderIdxs.erase(it);
-
-					for (auto it = infoIdx.begin(); it != infoIdx.end();)
+					if (idx < pipelines.size())
 					{
-						auto& info = it->first;
-						if (info.shader == shaderPassPtr)
-							it = infoIdx.erase(it);
-						else
-							++it;
+						pipelines[idx].pipelinePtr.reset();
+						emptyIdx.push(idx);
 					}
+				}
+
+				shaderIdxs.erase(it);
+
+				for (auto it = infoIdx.begin(); it != infoIdx.end(); )
+				{
+					if (it->first.shader == shaderPassPtr)
+						it = infoIdx.erase(it);
+					else
+						++it;
 				}
 			}
 		);
 	}
-
-	VulkanPipelineManager::VulkanPipelineManager(VulkanPipelineManager&& other) noexcept :
-		context(other.context), device(other.device),
-		pipelines(std::move(other.pipelines)), pipelinesInfo(std::move(other.pipelinesInfo)),
-		infoIdx(std::move(other.infoIdx)), renderpassIdxs(std::move(other.renderpassIdxs)), shaderIdxs(std::move(other.shaderIdxs))
-	{
-	}
-
-	auto VulkanPipelineManager::BuildPipeline(
+	SH_RENDER_API auto VulkanPipelineManager::GetOrCreatePipelineHandle(
 		const VulkanRenderPass& renderPass, 
 		const VulkanShaderPass& shader, 
 		Mesh::Topology topology,
+		const std::vector<uint8_t>* constDataPtr) -> PipelineHandle
+	{
+		std::size_t constantHash = 0;
+		if (constDataPtr != nullptr)
+		{
+			std::hash<uint8_t> hasher;
+			for (uint8_t data : *constDataPtr)
+				constantHash = core::Util::CombineHash(constantHash, hasher(data));
+		}
+
+		PipelineInfo info{ renderPass.GetVkRenderPass(), &shader, topology, constantHash };
+		{
+			std::shared_lock<std::shared_mutex> readLock{ mu };
+			auto it = infoIdx.find(info);
+			if (it != infoIdx.end())
+			{
+				VulkanPipeline* pipeline = pipelines[it->second].pipelinePtr.get();
+				uint32_t gen = pipelines[it->second].generation;
+				if (pipeline == nullptr)
+				{
+					readLock.unlock();
+					std::unique_lock<std::shared_mutex> writeLock{ mu };
+					if (pipelines[it->second].pipelinePtr.get() == nullptr)
+					{
+						pipelines[it->second].pipelinePtr = BuildPipeline(renderPass, shader, topology, constDataPtr);
+						gen = ++pipelines[it->second].generation;
+					}
+				}
+				return PipelineHandle{ it->second, gen };
+			}
+		}
+		{
+			std::unique_lock<std::shared_mutex> writeLock{ mu };
+			auto it = infoIdx.find(info);
+			if (it != infoIdx.end())
+				return PipelineHandle{ it->second, pipelines[it->second].generation };
+
+			shader.onDestroy.Register(shaderDestroyedListener);
+
+			uint32_t idx = 0;
+			uint32_t gen = 0;
+			if (emptyIdx.empty())
+			{
+				pipelines.push_back(Pipeline{ BuildPipeline(renderPass, shader, topology, constDataPtr), 0 });
+				pipelinesInfo.push_back(info);
+
+				idx = static_cast<uint32_t>(pipelines.size()) - 1;
+			}
+			else
+			{
+				idx = emptyIdx.front();
+				emptyIdx.pop();
+
+				pipelines[idx].pipelinePtr = BuildPipeline(renderPass, shader, topology, constDataPtr);
+				gen = ++pipelines[idx].generation;
+			}
+			infoIdx.insert({ info, idx });
+
+			if (auto it = shaderIdxs.find(&shader); it == shaderIdxs.end())
+				shaderIdxs.insert({ &shader, std::vector<std::size_t>{idx} });
+			else
+				it->second.push_back(idx);
+
+			return PipelineHandle{ idx, gen };
+		}
+	}
+	SH_RENDER_API bool VulkanPipelineManager::BindPipeline(VkCommandBuffer cmd, PipelineHandle handle)
+	{
+		VkPipeline vkPipeline = VK_NULL_HANDLE;
+		{
+			std::shared_lock readLock{ mu };
+			if (handle.index >= pipelines.size())
+				return false;
+
+			auto& slot = pipelines[handle.index];
+			if (slot.generation != handle.generation) 
+				return false;
+			if (!slot.pipelinePtr) 
+				return false;
+
+			vkPipeline = slot.pipelinePtr->GetPipeline();
+		}
+		vkCmdBindPipeline(cmd, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, vkPipeline);
+		return true;
+	}
+
+	auto VulkanPipelineManager::BuildPipeline(
+		const VulkanRenderPass& renderPass,
+		const VulkanShaderPass& shader,
+		Mesh::Topology topology,
 		const std::vector<uint8_t>* constDataPtr) -> std::unique_ptr<VulkanPipeline>
 	{
-		auto pipeline = std::make_unique<VulkanPipeline>(device, renderPass.GetVkRenderPass());
+		auto pipeline = std::make_unique<VulkanPipeline>(context.GetDevice(), renderPass.GetVkRenderPass());
 
 		VulkanPipeline::Topology topol = VulkanPipeline::Topology::Triangle;
 		switch (topology)
@@ -117,7 +201,7 @@ namespace sh::render::vk
 		case StencilState::CompareOp::NotEqual:
 			state.compareOp = VkCompareOp::VK_COMPARE_OP_NOT_EQUAL; break;
 		}
-		auto fn = 
+		auto fn =
 			[&](StencilState::StencilOp stencilOp) -> VkStencilOp
 			{
 				switch (stencilOp)
@@ -145,74 +229,5 @@ namespace sh::render::vk
 		state.failOp = fn(stencilState.failOp);
 		state.depthFailOp = fn(stencilState.depthFailOp);
 		return state;
-	}
-
-	SH_RENDER_API auto VulkanPipelineManager::GetOrCreatePipelineHandle(
-		const VulkanRenderPass& renderPass, 
-		const VulkanShaderPass& shader, 
-		Mesh::Topology topology,
-		const std::vector<uint8_t>* constDataPtr) -> uint64_t
-	{
-		std::size_t constantHash = 0;
-		if (constDataPtr != nullptr)
-		{
-			std::hash<uint8_t> hasher;
-			for (uint8_t data : *constDataPtr)
-				constantHash = core::Util::CombineHash(constantHash, hasher(data));
-		}
-		PipelineInfo info{ renderPass.GetVkRenderPass(), &shader, topology, constantHash };
-		{
-			std::shared_lock<std::shared_mutex> readLock{ mu };
-			auto it = infoIdx.find(info);
-			if (it != infoIdx.end())
-			{
-				VulkanPipeline* pipeline = pipelines[it->second].get();
-				if (pipeline == nullptr)
-				{
-					readLock.unlock();
-					std::unique_lock<std::shared_mutex> writeLock{ mu };
-					if (pipelines[it->second].get() == nullptr)
-						pipelines[it->second] = BuildPipeline(renderPass, shader, topology, constDataPtr);
-				}
-				return it->second;
-			}
-		}
-		{
-			std::unique_lock<std::shared_mutex> writeLock{ mu };
-			auto it = infoIdx.find(info);
-			if (it != infoIdx.end())
-				return it->second;
-
-			shader.onDestroy.Register(shaderDestroyedListener);
-
-			pipelines.push_back(BuildPipeline(renderPass, shader, topology, constDataPtr));
-			pipelinesInfo.push_back(info);
-
-			std::size_t idx = pipelines.size() - 1;
-			infoIdx.insert({ info, idx });
-
-			if (auto it = renderpassIdxs.find(renderPass.GetVkRenderPass()); it == renderpassIdxs.end())
-				renderpassIdxs.insert({ renderPass.GetVkRenderPass(), std::vector<std::size_t>{idx} });
-			else
-				it->second.push_back(idx);
-
-			if (auto it = shaderIdxs.find(&shader); it == shaderIdxs.end())
-				shaderIdxs.insert({ &shader, std::vector<std::size_t>{idx} });
-			else
-				it->second.push_back(idx);
-
-			return idx;
-		}
-	}
-	SH_RENDER_API bool VulkanPipelineManager::BindPipeline(VkCommandBuffer cmd, uint64_t handle)
-	{
-		std::shared_lock<std::shared_mutex> readLock{ mu };
-		VulkanPipeline* pipeline = pipelines[handle].get();
-		if (pipeline == nullptr)
-			return false;
-
-		readLock.unlock();
-		vkCmdBindPipeline(cmd, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, pipeline->GetPipeline());
-		return true;
 	}
 }//namespace
