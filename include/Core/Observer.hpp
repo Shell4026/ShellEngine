@@ -6,12 +6,11 @@
 #include "NonCopyable.h"
 #include "Logger.h"
 
-#include <string_view>
 #include <functional>
 #include <set>
 #include <memory>
 #include <stdint.h>
-
+#include <vector>
 namespace sh::core
 {
 	/// @brief 리스너를 등록하면 특정 시점에 그 리스너의 함수를 호출하는 클래스.
@@ -75,7 +74,7 @@ namespace sh::core
 				return priority > other.priority;
 			}
 
-			void Execute(Args... args)
+			void Execute(const Args&... args)
 			{
 				if (func)
 					func(args...);
@@ -87,7 +86,7 @@ namespace sh::core
 			bool operator()(const Listener* left, const Listener* right) const 
 			{
 				if (left->priority == right->priority)
-					return left < right;
+					return std::less<const Listener*>{}(left, right);
 				return left->priority > right->priority; // 높은 우선순위가 먼저 오도록 설정 (내림차)
 			}
 		};
@@ -117,7 +116,7 @@ namespace sh::core
 
 		/// @brief 리스너가 없는지 반환 하는 함수
 		/// @return 없으면 true, 있으면 false
-		bool Empty();
+		bool Empty() const;
 	};//class
 
 
@@ -152,6 +151,11 @@ namespace sh::core
 	template<bool OneTimeListener, typename ...Args>
 	auto Observer<OneTimeListener, Args...>::operator=(Observer&& other) noexcept -> Observer&
 	{
+		if (this == &other) 
+			return *this;
+
+		Clear();
+
 		listeners = std::move(other.listeners);
 		for (Listener* listener : listeners)
 		{
@@ -185,12 +189,21 @@ namespace sh::core
 	template<bool OneTimeListener, typename ...Args>
 	void Observer<OneTimeListener, Args...>::Notify(const Args&... args)
 	{
-		for (auto& event : listeners)
+		std::vector<Listener*> snapshot;
+		snapshot.reserve(listeners.size());
+		for (auto* listener : listeners)
+			snapshot.push_back(listener);
+
+		for (auto* listener : snapshot)
 		{
-			event->Execute(args...);
+			if (listeners.find(listener) == listeners.end())
+				continue;
+
+			listener->Execute(args...);
+
+			if constexpr (OneTimeListener)
+				UnRegister(*listener);
 		}
-		if constexpr (OneTimeListener)
-			Clear();
 	}
 
 	template<bool OneTimeListener, typename ...Args>
@@ -204,7 +217,7 @@ namespace sh::core
 	}
 
 	template<bool OneTimeListener, typename ...Args>
-	inline bool Observer<OneTimeListener, Args...>::Empty()
+	inline bool Observer<OneTimeListener, Args...>::Empty() const
 	{
 		return listeners.empty();
 	}
