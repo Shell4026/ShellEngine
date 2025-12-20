@@ -12,6 +12,7 @@
 #include <mutex>
 #include <thread>
 #include <shared_mutex>
+#include <queue>
 namespace sh::window
 {
 	class Window;
@@ -24,12 +25,10 @@ namespace sh::render::vk
 	class VulkanPipeline;
 	class VulkanCommandBufferPool;
 	class VulkanCommandBuffer;
-	class VulkanFramebuffer;
 	class VulkanDescriptorPool;
 	class VulkanPipelineManager;
 	class VulkanQueueManager;
-	class VulkanRenderPass;
-	class VulkanRenderPassManager;
+	class VulkanRenderImpl;
 
 	class VulkanContext : public IRenderContext
 	{
@@ -38,8 +37,18 @@ namespace sh::render::vk
 		SH_RENDER_API ~VulkanContext();
 
 		SH_RENDER_API void Init() override;
-		SH_RENDER_API void Clean() override;
-		SH_RENDER_API auto GetRenderAPIType() const -> RenderAPI override;
+		SH_RENDER_API void Clear() override;
+
+		SH_RENDER_API auto GetRenderAPIType() const -> RenderAPI override { return RenderAPI::Vulkan; }
+
+		SH_RENDER_API auto AllocateCommandBuffer() -> CommandBuffer* override;
+		SH_RENDER_API void DeallocateCommandBuffer(CommandBuffer& cmd) override;
+
+		SH_RENDER_API void SetViewport(const glm::vec2& start, const glm::vec2& end) override;
+		SH_RENDER_API auto GetViewportStart() const -> const glm::vec2 & override;
+		SH_RENDER_API auto GetViewportEnd() const -> const glm::vec2 & override;
+
+		SH_RENDER_API auto GetRenderImpl() const -> IRenderImpl& override;
 
 		SH_RENDER_API auto ReSizing() -> bool;
 
@@ -50,30 +59,22 @@ namespace sh::render::vk
 		/// @brief 멀티 샘플링의 샘플을 지정한다. 기기에서 지원하지 않는다면 최대 지원하는 샘플 수로 지정된다.
 		/// @param sample 샘플 수
 		SH_RENDER_API void SetSampleCount(VkSampleCountFlagBits sample);
-		SH_RENDER_API auto GetSampleCount() const -> VkSampleCountFlagBits;
+		SH_RENDER_API auto GetSampleCount() const -> VkSampleCountFlagBits { return sample; }
 
-		SH_RENDER_API auto GetInstance() const -> VkInstance;
-		SH_RENDER_API auto GetGPU() const -> VkPhysicalDevice;
-		SH_RENDER_API auto GetGPUName() const->std::string_view;
-		SH_RENDER_API auto GetGPUProperty() const -> const VkPhysicalDeviceProperties&;
+		SH_RENDER_API auto GetInstance() const -> VkInstance { return instance; }
+		SH_RENDER_API auto GetGPU() const -> VkPhysicalDevice { return gpu; }
+		SH_RENDER_API auto GetGPUName() const -> std::string_view { return gpuProp.deviceName; }
+		SH_RENDER_API auto GetGPUProperty() const -> const VkPhysicalDeviceProperties& { return gpuProp; }
+		SH_RENDER_API auto GetDevice() const -> VkDevice { return device; }
+		SH_RENDER_API auto GetSwapChain() const -> VulkanSwapChain& { return *swapChain; }
+		SH_RENDER_API auto GetCommandBufferPool() const -> VulkanCommandBufferPool& { return *cmdPool; }
+		SH_RENDER_API auto GetQueueManager() const -> VulkanQueueManager& { return *queueManager; }
+		SH_RENDER_API auto GetDescriptorPool() const -> VulkanDescriptorPool& { return *descPool; }
+		SH_RENDER_API auto GetAllocator() const -> VmaAllocator { return allocator; }
+		SH_RENDER_API auto GetPipelineManager() const -> VulkanPipelineManager& { return *pipelineManager; }
+		SH_RENDER_API auto GetEmptyDescriptorSetLayout() const -> VkDescriptorSetLayout { return emptyDescLayout; }
+		SH_RENDER_API auto GetEmptyDescriptorSet() const -> VkDescriptorSet { return emptyDescSet; }
 		SH_RENDER_API auto GetMaxSampleCount() const ->VkSampleCountFlagBits;
-		SH_RENDER_API auto GetDevice() const -> VkDevice;
-		SH_RENDER_API auto GetSwapChain() const -> VulkanSwapChain&;
-		SH_RENDER_API auto GetCommandBufferPool() const -> VulkanCommandBufferPool&;
-		SH_RENDER_API auto GetQueueManager() const -> VulkanQueueManager&;
-		SH_RENDER_API auto GetMainRenderPass() const -> VulkanRenderPass&;
-		SH_RENDER_API auto GetUIRenderPass() const -> VulkanRenderPass&;
-		SH_RENDER_API auto GetMainFramebuffer(uint32_t idx = 0) const -> const VulkanFramebuffer*;
-		SH_RENDER_API auto GetDescriptorPool() const -> VulkanDescriptorPool&;
-		SH_RENDER_API auto GetAllocator() const -> VmaAllocator;
-		SH_RENDER_API auto GetPipelineManager() const -> VulkanPipelineManager&;
-		SH_RENDER_API auto GetRenderPassManager() const -> VulkanRenderPassManager&;
-		SH_RENDER_API auto GetEmptyDescriptorSetLayout() const -> VkDescriptorSetLayout;
-		SH_RENDER_API auto GetEmptyDescriptorSet() const->VkDescriptorSet;
-
-		SH_RENDER_API void SetViewport(const glm::vec2& start, const glm::vec2& end) override;
-		SH_RENDER_API auto GetViewportStart() const -> const glm::vec2& override;
-		SH_RENDER_API auto GetViewportEnd() const -> const glm::vec2& override;
 	private:
 		void PrepareValidationLayer();
 		void CreateDebugInfo();
@@ -88,8 +89,6 @@ namespace sh::render::vk
 		void DestroyDevice();
 		void CreateAllocator();
 		void DestroyAllocator();
-		void CreateRenderPass();
-		void CreateFrameBuffer();
 		void CreateCommandPool();
 		void DestroyCommandPool();
 		void CreateEmptyDescriptor();
@@ -120,16 +119,12 @@ namespace sh::render::vk
 
 		VmaAllocator allocator = VK_NULL_HANDLE;
 
-		VulkanRenderPass* mainRenderPass = nullptr;
-		VulkanRenderPass* uiRenderPass = nullptr;
-		std::vector<VulkanFramebuffer> framebuffers;
-
 		std::unique_ptr<VulkanQueueManager> queueManager;
 		std::unique_ptr<VulkanSwapChain> swapChain;
 		std::unique_ptr<VulkanCommandBufferPool> cmdPool;
 		std::unique_ptr<VulkanDescriptorPool> descPool;
 		std::unique_ptr<VulkanPipelineManager> pipelineManager;
-		std::unique_ptr<VulkanRenderPassManager> renderPassManager;
+		std::unique_ptr<VulkanRenderImpl> renderImpl;
 
 		VkDescriptorSetLayout emptyDescLayout;
 		VkDescriptorSet emptyDescSet;

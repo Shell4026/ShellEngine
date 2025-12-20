@@ -2,7 +2,7 @@
 
 #include "Render/IRenderContext.h"
 #include "Render/Texture.h"
-#include "Render/VulkanImpl/VulkanTextureBuffer.h"
+#include "Render/VulkanImpl/VulkanImageBuffer.h"
 
 #include "External/imgui/backends/imgui_impl_vulkan.h"
 
@@ -23,7 +23,7 @@ namespace sh::game
 				if (context->GetRenderAPIType() == render::RenderAPI::Vulkan)
 				{
 					ImGui_ImplVulkan_RemoveTexture(reinterpret_cast<VkDescriptorSet>(tex));
-					auto buffer = static_cast<render::vk::VulkanTextureBuffer*>(texture->GetTextureBuffer())->GetImageBuffer();
+					auto buffer = static_cast<render::vk::VulkanImageBuffer*>(texture->GetTextureBuffer());
 					tex = ImGui_ImplVulkan_AddTexture(buffer->GetSampler(), buffer->GetImageView(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 				}
 			}
@@ -45,7 +45,7 @@ namespace sh::game
 		texture.onBufferUpdate.Register(onBufferUpdateListener);
 		if (context.GetRenderAPIType() == render::RenderAPI::Vulkan)
 		{
-			auto buffer = static_cast<render::vk::VulkanTextureBuffer*>(texture.GetTextureBuffer())->GetImageBuffer();
+			auto buffer = static_cast<render::vk::VulkanImageBuffer*>(texture.GetTextureBuffer());
 			tex = ImGui_ImplVulkan_AddTexture(buffer->GetSampler(), buffer->GetImageView(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 		}
 	}

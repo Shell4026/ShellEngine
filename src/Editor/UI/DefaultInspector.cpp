@@ -258,24 +258,24 @@ namespace sh::editor
 	{
 		using namespace render;
 		Texture* texture = reinterpret_cast<Texture*>(obj);
-		Texture::TextureFormat format = texture->GetTextureFormat();
+		TextureFormat format = texture->GetTextureFormat();
 
 		std::string formatText = "";
 		switch (format)
 		{
-		case Texture::TextureFormat::RGB24:
+		case TextureFormat::RGB24:
 			formatText = "RGB24";
 			break;
-		case Texture::TextureFormat::RGBA32:
+		case TextureFormat::RGBA32:
 			formatText = "RGBA32";
 			break;
-		case Texture::TextureFormat::SRGB24:
+		case TextureFormat::SRGB24:
 			formatText = "SRGB24";
 			break;
-		case Texture::TextureFormat::SRGBA32:
+		case TextureFormat::SRGBA32:
 			formatText = "SRGBA32";
 			break;
-		case Texture::TextureFormat::R8:
+		case TextureFormat::R8:
 			formatText = "R8";
 			break;
 		}
@@ -292,17 +292,17 @@ namespace sh::editor
 		{
 			if (bSRGB)
 			{
-				if (format == Texture::TextureFormat::RGB24)
-					texture->ChangeTextureFormat(Texture::TextureFormat::SRGB24);
-				else if(format == Texture::TextureFormat::RGBA32)
-					texture->ChangeTextureFormat(Texture::TextureFormat::SRGBA32);
+				if (format == TextureFormat::RGB24)
+					texture->ChangeTextureFormat(TextureFormat::SRGB24);
+				else if(format == TextureFormat::RGBA32)
+					texture->ChangeTextureFormat(TextureFormat::SRGBA32);
 			}
 			else
 			{
-				if (format == Texture::TextureFormat::SRGB24)
-					texture->ChangeTextureFormat(Texture::TextureFormat::RGB24);
-				else if (format == Texture::TextureFormat::SRGBA32)
-					texture->ChangeTextureFormat(Texture::TextureFormat::RGBA32);
+				if (format == TextureFormat::SRGB24)
+					texture->ChangeTextureFormat(TextureFormat::RGB24);
+				else if (format == TextureFormat::SRGBA32)
+					texture->ChangeTextureFormat(TextureFormat::RGBA32);
 			}
 
 			AssetDatabase::GetInstance()->SetDirty(texture);

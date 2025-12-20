@@ -13,46 +13,14 @@ namespace sh::game
 	class EditorCamera;
 	class PickingCamera;
 }
-namespace sh::render
-{
-	class TransparentPipeline;
-}
 namespace sh::editor
 {
 	class Project;
 	class EditorUI;
-	class EditorPickingPass;
-	class EditorOutlinePass;
-	class EditorPostOutlinePass;
 	/// @brief 에디터용 월드 클래스
 	class EditorWorld : public game::World
 	{
 		SCLASS(EditorWorld)
-	private:
-		Project& project;
-
-		core::SVector<core::SObject*> selectedObjs;
-
-		PROPERTY(viewportTexture, core::PropertyOption::noSave)
-		render::RenderTexture* viewportTexture = nullptr;
-		PROPERTY(editorCamera)
-		game::EditorCamera* editorCamera = nullptr;
-		game::PickingCamera* pickingCamera = nullptr;
-		game::GameObject* grid = nullptr;
-		game::GameObject* axis = nullptr;
-
-		EditorUI* editorUI = nullptr;
-
-		EditorPickingPass* pickingPass = nullptr;
-		EditorOutlinePass* outlinePass = nullptr;
-		EditorPostOutlinePass* postOutlinePass = nullptr;
-		render::TransparentPipeline* transParentPass = nullptr;
-
-		core::EventSubscriber<game::events::ComponentEvent> componentSubscriber;
-	private:
-		void AddEditorControlsToSelected(core::SObject& obj);
-		void RemoveEditorControls(core::SObject& obj);
-		void AddOrDestroyOutlineComponent(game::GameObject& obj, bool bAdd);
 	public:
 		SH_EDITOR_API EditorWorld(Project& project);
 		SH_EDITOR_API ~EditorWorld();
@@ -61,7 +29,7 @@ namespace sh::editor
 
 		SH_EDITOR_API void Clear() override;
 
-		SH_EDITOR_API void SetRenderPass() override;
+		SH_EDITOR_API void SetupRenderer() override;
 		SH_EDITOR_API void InitResource() override;
 
 		SH_EDITOR_API void AddSelectedObject(core::SObject* obj);
@@ -78,5 +46,25 @@ namespace sh::editor
 
 		SH_EDITOR_API auto Serialize() const -> core::Json override;
 		SH_EDITOR_API void Deserialize(const core::Json& json) override;
+	private:
+		void AddEditorControlsToSelected(core::SObject& obj);
+		void RemoveEditorControls(core::SObject& obj);
+		void AddOrDestroyOutlineComponent(game::GameObject& obj, bool bAdd);
+	private:
+		Project& project;
+
+		core::SVector<core::SObject*> selectedObjs;
+
+		PROPERTY(viewportTexture, core::PropertyOption::noSave)
+		render::RenderTexture* viewportTexture = nullptr;
+		PROPERTY(editorCamera)
+		game::EditorCamera* editorCamera = nullptr;
+		game::PickingCamera* pickingCamera = nullptr;
+		game::GameObject* grid = nullptr;
+		game::GameObject* axis = nullptr;
+
+		EditorUI* editorUI = nullptr;
+
+		core::EventSubscriber<game::events::ComponentEvent> componentSubscriber;
 	};
 }

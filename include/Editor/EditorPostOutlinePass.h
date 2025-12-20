@@ -1,9 +1,7 @@
 ﻿#pragma once
 #include "Export.h"
 
-#include "Render/RenderPipeline.h"
-
-#include "Game/Component/Camera.h"
+#include "Render/ScriptableRenderPass.h"
 
 namespace sh::render
 {
@@ -14,26 +12,21 @@ namespace sh::render
 
 namespace sh::editor
 {
-	class EditorPostOutlinePass : public render::RenderPipeline
+	class EditorPostOutlinePass : public render::ScriptableRenderPass
 	{
+	public:
+		SH_EDITOR_API EditorPostOutlinePass(const render::IRenderContext& ctx);
+		SH_EDITOR_API ~EditorPostOutlinePass();
+		SH_EDITOR_API void SetOutlineMaterial(render::Material& mat);
+	protected:
+		SH_EDITOR_API void Configure(const render::RenderTarget& renderData) override;
+		SH_EDITOR_API auto BuildDrawList(const render::RenderTarget& renderData) -> render::DrawList override;
 	private:
-		render::IRenderContext* context = nullptr;
-
-		game::Camera* camera = nullptr;
+		const render::IRenderContext& ctx;
 
 		render::Mesh* plane = nullptr;
 		render::Material* mat = nullptr;
 
 		render::Drawable* drawable = nullptr;
-	public:
-		SH_EDITOR_API EditorPostOutlinePass();
-		SH_EDITOR_API ~EditorPostOutlinePass();
-
-		SH_EDITOR_API void Create(render::IRenderContext& context) override;
-		SH_EDITOR_API void RecordCommand(const std::vector<const render::Camera*>& cameras, uint32_t imgIdx) override;
-		SH_EDITOR_API void ClearDrawable() override;
-
-		SH_EDITOR_API void SetCamera(game::Camera& camera);
-		SH_EDITOR_API void SetOutlineMaterial(render::Material& mat);
 	};
 }//namespace

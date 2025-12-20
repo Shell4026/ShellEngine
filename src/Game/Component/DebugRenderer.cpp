@@ -3,6 +3,7 @@
 #include "Game/World.h"
 
 #include "Render/Mesh.h"
+#include "Render/Drawable.h"
 
 #include "glm/ext/matrix_transform.hpp"
 #include "glm/gtc/quaternion.hpp"

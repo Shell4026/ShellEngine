@@ -88,7 +88,12 @@ namespace sh::editor
 		auto planeModel = models.insert_or_assign("PlaneModel", static_cast<render::Model*>(modelLoader.Load("model/Plane.glb"))).first->second;
 		planeModel->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f17" });
 
-		render::RenderTexture* outlineTexture = core::SObject::Create<render::RenderTexture>(render::Texture::TextureFormat::R8);
+		render::RenderTargetLayout rt{};
+		rt.format = render::TextureFormat::R8;
+		rt.depthFormat = render::TextureFormat::D24S8;
+		rt.bUseMSAA = false;
+
+		render::RenderTexture* outlineTexture = core::SObject::Create<render::RenderTexture>(rt);
 		outlineTexture->SetSize(1024, 1024);
 		outlineTexture->Build(*renderer.GetContext());
 		textures.insert_or_assign("OutlineTexture", outlineTexture);

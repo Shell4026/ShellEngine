@@ -522,6 +522,11 @@ namespace sh::core
 		auto it = objs.find(obj->GetUUID());
 		if (it != objs.end())
 		{
+			for (auto& pendingObj : pendingKillObjs)
+			{
+				if (pendingObj == obj)
+					pendingObj = nullptr;
+			}
 			RemoveRootSet(obj);
 			objs.erase(it);
 			delete obj;
@@ -541,6 +546,8 @@ namespace sh::core
 
 		for (auto& objPtr : pendingKillObjs)
 		{
+			if (objPtr == nullptr)
+				continue;
 			if (!objPtr->bPlacementNew)
 				delete objPtr;
 			else

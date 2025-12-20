@@ -2,13 +2,11 @@
 #include "VulkanLayer.h"
 #include "VulkanSwapChain.h"
 #include "VulkanQueueManager.h"
-#include "VulkanFramebuffer.h"
 #include "VulkanCommandBufferPool.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanDescriptorPool.h"
 #include "VulkanPipelineManager.h"
-#include "VulkanRenderPass.h"
-#include "VulkanRenderPassManager.h"
+#include "VulkanRenderImpl.h"
 
 #include "Core/Util.h"
 #include "Core/Logger.h"
@@ -188,10 +186,15 @@ namespace sh::render::vk
 		VkPhysicalDeviceTimelineSemaphoreFeatures timelineFeatures{};
 		timelineFeatures.sType = VkStructureType::VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_TIMELINE_SEMAPHORE_FEATURES;
 		timelineFeatures.timelineSemaphore = VK_TRUE;
+		timelineFeatures.pNext = nullptr;
+
+		VkPhysicalDeviceDynamicRenderingFeaturesKHR dynamicFeatures{};
+		dynamicFeatures.sType = VkStructureType::VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_DYNAMIC_RENDERING_FEATURES_KHR;
+		dynamicFeatures.dynamicRendering = true;
+		dynamicFeatures.pNext = &timelineFeatures;
 
 		VkDeviceCreateInfo deviceInfo = {};
 		deviceInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-		deviceInfo.pNext = &timelineFeatures;
 		deviceInfo.queueCreateInfoCount = queueInfos.size();
 		deviceInfo.pQueueCreateInfos = queueInfos.data();
 		deviceInfo.enabledLayerCount = 0;
@@ -199,6 +202,8 @@ namespace sh::render::vk
 		deviceInfo.enabledExtensionCount = requestedDeviceExtension.size();
 		deviceInfo.ppEnabledExtensionNames = requestedDeviceExtension.data();
 		deviceInfo.pEnabledFeatures = &deviceFeatures;
+		deviceInfo.pNext = &dynamicFeatures;
+
 		result = vkCreateDevice(gpu, &deviceInfo, nullptr, &device);
 		assert(result == VkResult::VK_SUCCESS);
 		if (result != VkResult::VK_SUCCESS)
@@ -233,40 +238,6 @@ namespace sh::render::vk
 
 		vmaDestroyAllocator(allocator);
 	}
-	void VulkanContext::CreateRenderPass()
-	{
-		renderPassManager = std::make_unique<VulkanRenderPassManager>(*this);
-
-		VulkanRenderPass::Config config{};
-		config.format = swapChain->GetSwapChainImageFormat();
-		config.depthFormat = FindSupportedDepthFormat(true);
-		config.bOffScreen = false;
-		config.bTransferSrc = false;
-		config.bUseDepth = true;
-		config.bUseStencil = true;
-		config.sampleCount = sample;
-
-		mainRenderPass = &renderPassManager->GetOrCreateRenderPass(config);
-
-		config.bClear = false;
-		uiRenderPass = &renderPassManager->GetOrCreateRenderPass(config);
-	}
-	void VulkanContext::CreateFrameBuffer()
-	{
-		framebuffers.clear();
-
-		auto& imgs = swapChain->GetSwapChainImages();
-		framebuffers.reserve(imgs.size());
-		for (size_t i = 0; i < imgs.size(); ++i)
-		{
-			framebuffers.push_back(VulkanFramebuffer{ *this });
-
-			VkResult result = framebuffers[i].Create(*mainRenderPass, swapChain->GetSwapChainSize().width, swapChain->GetSwapChainSize().height, imgs[i].GetImageView());
-			assert(result == VkResult::VK_SUCCESS);
-			if (result != VkResult::VK_SUCCESS)
-				throw std::runtime_error(std::string{ "Can't create framebuffer: " } + string_VkResult(result));
-		}
-	}
 	void VulkanContext::CreateCommandPool()
 	{
 		cmdPool = std::make_unique<VulkanCommandBufferPool>(
@@ -297,6 +268,7 @@ namespace sh::render::vk
 		requestedDeviceExtension = 
 		{ 
 			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+			VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME
 		};
 	}
 	VulkanContext::~VulkanContext()
@@ -348,17 +320,16 @@ namespace sh::render::vk
 			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Present), 
 			false);
 
-		CreateRenderPass();
-		CreateFrameBuffer();
-
 		CreateCommandPool();
 
 		descPool = std::make_unique<VulkanDescriptorPool>(device);
 		CreateEmptyDescriptor();
 
 		pipelineManager = std::make_unique<VulkanPipelineManager>(*this);
+
+		renderImpl = std::make_unique<VulkanRenderImpl>(*this);
 	}
-	SH_RENDER_API void VulkanContext::Clean()
+	SH_RENDER_API void VulkanContext::Clear()
 	{
 		bInit = false;
 
@@ -372,8 +343,6 @@ namespace sh::render::vk
 		}
 		descPool.reset();
 		DestroyCommandPool();
-		framebuffers.clear();
-		renderPassManager.reset();
 		swapChain.reset();
 		queueManager.reset();
 		DestroyAllocator();
@@ -384,22 +353,42 @@ namespace sh::render::vk
 		gpus.clear();
 		DestroyInstance();
 	}
-	SH_RENDER_API auto VulkanContext::GetRenderAPIType() const -> RenderAPI
+	SH_RENDER_API auto VulkanContext::AllocateCommandBuffer() -> CommandBuffer*
 	{
-		return RenderAPI::Vulkan;
+		auto cmd = GetCommandBufferPool().AllocateCommandBuffer(std::this_thread::get_id(), VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
+		return cmd;
 	}
+	SH_RENDER_API void VulkanContext::DeallocateCommandBuffer(CommandBuffer& cmd)
+	{
+		GetCommandBufferPool().DeallocateCommandBuffer(static_cast<VulkanCommandBuffer&>(cmd));
+	}
+	SH_RENDER_API void VulkanContext::SetViewport(const glm::vec2& start, const glm::vec2& end)
+	{
+		viewportStart = start;
+		viewportEnd = end;
+	}
+
+	SH_RENDER_API auto VulkanContext::GetViewportStart() const -> const glm::vec2&
+	{
+		return viewportStart;
+	}
+	SH_RENDER_API auto VulkanContext::GetViewportEnd() const -> const glm::vec2&
+	{
+		return viewportEnd;
+	}
+
+	SH_RENDER_API auto VulkanContext::GetRenderImpl() const -> IRenderImpl&
+	{
+		return *renderImpl;
+	}
+
 	SH_RENDER_API auto VulkanContext::ReSizing() -> bool
 	{
-		framebuffers.clear();
 		//swapChain->DestroySwapChain();
 		swapChain->CreateSwapChain(
 			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Graphics), 
 			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Present), 
 			false);
-
-		framebuffers.reserve(swapChain->GetSwapChainImageCount());
-
-		CreateFrameBuffer();
 		return true;
 	}
 	SH_RENDER_API void VulkanContext::PrintLayers()
@@ -449,18 +438,6 @@ namespace sh::render::vk
 
 		this->sample = sample;
 	}
-	SH_RENDER_API auto VulkanContext::GetSampleCount() const -> VkSampleCountFlagBits
-	{
-		return sample;
-	}
-	SH_RENDER_API auto sh::render::vk::VulkanContext::GetGPUName() const -> std::string_view
-	{
-		return gpuProp.deviceName;
-	}
-	SH_RENDER_API auto VulkanContext::GetGPUProperty() const -> const VkPhysicalDeviceProperties&
-	{
-		return gpuProp;
-	}
 	SH_RENDER_API auto VulkanContext::GetMaxSampleCount() const -> VkSampleCountFlagBits
 	{
 		VkSampleCountFlags supportedSampleCount = 
@@ -474,81 +451,5 @@ namespace sh::render::vk
 		if (supportedSampleCount & VkSampleCountFlagBits::VK_SAMPLE_COUNT_2_BIT) return VkSampleCountFlagBits::VK_SAMPLE_COUNT_2_BIT;
 		
 		return VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
-	}
-	SH_RENDER_API auto VulkanContext::GetInstance() const -> VkInstance
-	{
-		return instance;
-	}
-	SH_RENDER_API auto VulkanContext::GetGPU() const -> VkPhysicalDevice
-	{
-		return gpu;
-	}
-	SH_RENDER_API auto VulkanContext::GetDevice() const -> VkDevice
-	{
-		return device;
-	}
-	SH_RENDER_API auto VulkanContext::GetSwapChain() const -> VulkanSwapChain&
-	{
-		return *swapChain.get();
-	}
-	SH_RENDER_API auto VulkanContext::GetCommandBufferPool() const -> VulkanCommandBufferPool&
-	{
-		return *cmdPool;
-	}
-	SH_RENDER_API auto VulkanContext::GetQueueManager() const -> VulkanQueueManager&
-	{
-		return *queueManager.get();
-	}
-	SH_RENDER_API auto VulkanContext::GetMainRenderPass() const -> VulkanRenderPass&
-	{
-		return *mainRenderPass;
-	}
-	SH_RENDER_API auto VulkanContext::GetUIRenderPass() const -> VulkanRenderPass&
-	{
-		return *uiRenderPass;
-	}
-	SH_RENDER_API auto VulkanContext::GetMainFramebuffer(uint32_t idx) const -> const VulkanFramebuffer*
-	{
-		if (idx >= framebuffers.size())
-			return nullptr;
-		return &framebuffers[idx];
-	}
-	SH_RENDER_API auto VulkanContext::GetDescriptorPool() const -> VulkanDescriptorPool&
-	{
-		return *descPool.get();
-	}
-	SH_RENDER_API auto VulkanContext::GetAllocator() const -> VmaAllocator
-	{
-		return allocator;
-	}
-	SH_RENDER_API auto VulkanContext::GetPipelineManager() const -> VulkanPipelineManager&
-	{
-		return *pipelineManager.get();
-	}
-	SH_RENDER_API auto VulkanContext::GetRenderPassManager() const -> VulkanRenderPassManager&
-	{
-		return *renderPassManager.get();
-	}
-	SH_RENDER_API auto VulkanContext::GetEmptyDescriptorSetLayout() const -> VkDescriptorSetLayout
-	{
-		return emptyDescLayout;
-	}
-	SH_RENDER_API auto VulkanContext::GetEmptyDescriptorSet() const -> VkDescriptorSet
-	{
-		return emptyDescSet;
-	}
-
-	SH_RENDER_API void VulkanContext::SetViewport(const glm::vec2& start, const glm::vec2& end)
-	{
-		viewportStart = start;
-		viewportEnd = end;
-	}
-	SH_RENDER_API auto VulkanContext::GetViewportStart() const -> const glm::vec2&
-	{
-		return viewportStart;
-	}
-	SH_RENDER_API auto VulkanContext::GetViewportEnd() const -> const glm::vec2&
-	{
-		return viewportEnd;
 	}
 }//namespace

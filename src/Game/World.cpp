@@ -4,13 +4,12 @@
 #include "WorldEvents.hpp"
 #include "Component/Camera.h"
 #include "AssetLoaderFactory.h"
+#include "GameRenderer.h"
 
 #include "Core/GarbageCollection.h"
 #include "Core/Util.h"
 #include "Core/SObjectManager.h"
 #include "Core/Asset.h"
-
-#include "Render/TransparentPipeline.h"
 
 #include <utility>
 #include <cstdint>
@@ -41,11 +40,6 @@ namespace sh::game
 
 	SH_GAME_API void World::Clear()
 	{
-		if (gameViewTexture != nullptr)
-		{
-			gameViewTexture->Destroy();
-			gameViewTexture = nullptr;
-		}
 		CleanObjs();
 
 		while (!deallocatedObjs.empty())
@@ -59,17 +53,26 @@ namespace sh::game
 		bLoaded = false;
 		bOnStart = false;
 	}
+	SH_GAME_API void World::SetupRenderer()
+	{
+		if (customRenderer == nullptr)
+		{
+			customRenderer = std::make_unique<GameRenderer>(*renderer.GetContext(), GetUiContext());
+			renderer.SetScriptableRenderer(*customRenderer);
+		}
+
+		game::GameObject* uicamObj = AddGameObject("UICamera");
+		uicamObj->transform->SetPosition({ 2.f, 2.f, 2.f });
+		uicamObj->hideInspector = true;
+		uicamObj->bNotSave = true;
+		game::Camera* cam = uicamObj->AddComponent<game::Camera>();
+		cam->SetDepth(1000);
+
+		static_cast<GameRenderer*>(customRenderer.get())->SetUICamera(*cam);
+	}
 	SH_GAME_API void World::InitResource()
 	{
 		SH_INFO("Init resource");
-
-		gameViewTexture = core::SObject::Create<render::RenderTexture>(render::Texture::TextureFormat::SRGBA32);
-		gameViewTexture->Build(*renderer.GetContext());
-	}
-	SH_GAME_API void World::SetRenderPass()
-	{
-		renderer.AddRenderPipeline<render::RenderPipeline>();
-		renderer.AddRenderPipeline<render::TransparentPipeline>();
 	}
 	auto World::AllocateGameObject() -> GameObject*
 	{
@@ -351,6 +354,7 @@ namespace sh::game
 		}
 
 		CleanObjs();
+		SetupRenderer();
 		InitResource();
 
 		core::SObjectManager* objManager = core::SObjectManager::GetInstance();
@@ -494,10 +498,6 @@ namespace sh::game
 	SH_GAME_API auto World::GetUiContext() const -> ImGUImpl&
 	{
 		return *imgui;
-	}
-	SH_GAME_API auto World::GetGameViewTexture() const -> render::RenderTexture&
-	{
-		return *gameViewTexture;
 	}
 	SH_GAME_API void World::PublishEvent(const core::IEvent& event)
 	{

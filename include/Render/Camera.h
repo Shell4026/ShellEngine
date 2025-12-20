@@ -22,13 +22,6 @@ namespace sh::render
 	class Camera : public core::ISyncable
 	{
 	public:
-		struct alignas(16) BufferData
-		{
-			glm::mat4 matView;
-			glm::mat4 matProj;
-		};
-		const uint32_t id;
-	public:
 		SH_RENDER_API Camera();
 
 		SH_RENDER_API void SetRenderTexture(RenderTexture* framebuffer);
@@ -76,6 +69,13 @@ namespace sh::render
 	protected:
 		SH_RENDER_API void SyncDirty() override;
 		SH_RENDER_API void Sync() override;
+	public:
+		struct alignas(16) BufferData
+		{
+			glm::mat4 matView;
+			glm::mat4 matProj;
+		};
+		const uint32_t id;
 	private:
 		SH_RENDER_API static uint32_t nextId;
 		RenderTexture* renderTexture;

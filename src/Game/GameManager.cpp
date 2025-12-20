@@ -127,9 +127,8 @@ namespace sh::game
 
 						renderer->Clear();
 						gui->ClearDrawData();
-						gui->AddDrawCallToRenderer();
 
-						loadingSingleWorld->SetRenderPass();
+						loadingSingleWorld->SetupRenderer();
 						loadingSingleWorld->InitResource();
 						loadingSingleWorld->LoadWorldPoint();
 						if (bPlayWorld)
@@ -220,7 +219,7 @@ namespace sh::game
 
 			worlds[world->GetUUID()] = world;
 
-			world->SetRenderPass();
+			world->SetupRenderer();
 			world->InitResource();
 			world->LoadWorldPoint();
 			world->Play();

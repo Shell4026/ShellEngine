@@ -49,8 +49,6 @@ namespace sh::render::vk
 
 		SH_RENDER_API auto GetContext() const -> IRenderContext* override;
 
-		SH_RENDER_API auto GetCommandBuffer() const -> VulkanCommandBuffer*;
-
 		SH_RENDER_API void Sync() override;
 	protected:
 		void OnCameraAdded(const Camera* camera) override;
@@ -60,8 +58,6 @@ namespace sh::render::vk
 		void DestroySyncObjects();
 	private:
 		std::unique_ptr<VulkanContext> context;
-
-		VulkanCommandBuffer* cmd = nullptr;
 
 		VkSemaphore imageAvailableSemaphore = VK_NULL_HANDLE;
 		VkSemaphore renderFinishedSemaphore = VK_NULL_HANDLE;

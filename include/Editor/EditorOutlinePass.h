@@ -3,7 +3,7 @@
 
 #include "Core/SContainer.hpp"
 
-#include "Render/RenderPipeline.h"
+#include "Render/ScriptableRenderPass.h"
 
 #include "Game/Component/Camera.h"
 
@@ -14,18 +14,17 @@ namespace sh::render
 
 namespace sh::editor
 {
-	class EditorOutlinePass : public render::RenderPipeline
+	class EditorOutlinePass : public render::ScriptableRenderPass
 	{
-	private:
-		core::SObjWeakPtr<render::RenderTexture> output = nullptr;
-		core::SObjWeakPtr<game::Camera> camera = nullptr;
 	public:
 		SH_EDITOR_API EditorOutlinePass();
 		SH_EDITOR_API ~EditorOutlinePass();
 
-		SH_EDITOR_API void RecordCommand(const std::vector<const render::Camera*>& cameras, uint32_t imgIdx) override;
-
 		SH_EDITOR_API void SetOutTexture(render::RenderTexture& tex);
-		SH_EDITOR_API void SetCamera(game::Camera& camera);
+	protected:
+		SH_EDITOR_API void Configure(const render::RenderTarget& renderData) override;
+		SH_EDITOR_API void Record(render::CommandBuffer& cmd, const render::IRenderContext& ctx, const render::RenderTarget& renderData) override;
+	private:
+		core::SObjWeakPtr<render::RenderTexture> output = nullptr;
 	};
 }//namespace

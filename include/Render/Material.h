@@ -68,6 +68,8 @@ namespace sh::render
 
 		SH_RENDER_API auto Serialize() const -> core::Json override;
 		SH_RENDER_API void Deserialize(const core::Json& json) override;
+
+		SH_RENDER_API auto GetCachedRenderTextures() const -> const core::SHashMap<std::string, const RenderTexture*>& { return cachedRts; }
 	private:
 		void Clear();
 		void SetDefaultProperties();
@@ -94,6 +96,7 @@ namespace sh::render
 
 		std::vector<std::pair<const ShaderPass*, const UniformStructLayout*>> dirtyProps;
 		std::vector<std::vector<uint8_t>> cachedConstantData;
+		core::SHashMap<std::string, const RenderTexture*> cachedRts;
 
 		core::Observer<false, const Texture*>::Listener onBufferUpdateListener;
 

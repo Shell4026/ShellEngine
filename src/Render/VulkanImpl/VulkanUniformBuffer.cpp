@@ -2,7 +2,7 @@
 #include "VulkanContext.h"
 #include "VulkanShaderPass.h"
 #include "VulkanBuffer.h"
-#include "VulkanTextureBuffer.h"
+#include "VulkanImageBuffer.h"
 #include "VulkanDescriptorPool.h"
 
 #include <mutex>
@@ -81,8 +81,8 @@ namespace sh::render::vk
 
 		VkDescriptorImageInfo imgInfo{};
 		imgInfo.imageLayout = VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-		imgInfo.imageView = static_cast<VulkanTextureBuffer*>(texture.GetTextureBuffer())->GetImageBuffer()->GetImageView();
-		imgInfo.sampler = static_cast<VulkanTextureBuffer*>(texture.GetTextureBuffer())->GetImageBuffer()->GetSampler();
+		imgInfo.imageView = static_cast<VulkanImageBuffer*>(texture.GetTextureBuffer())->GetImageView();
+		imgInfo.sampler = static_cast<VulkanImageBuffer*>(texture.GetTextureBuffer())->GetSampler();
 
 		VkWriteDescriptorSet descriptorWrite{};
 		descriptorWrite.sType = VkStructureType::VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;

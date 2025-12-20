@@ -4,7 +4,7 @@ Shader "Error Shader"
 {
 	Pass
 	{
-		LightingPass "Forward"
+		LightingPass "Opaque"
 		Stage Vertex
 		{
 			void main()

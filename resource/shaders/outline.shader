@@ -9,7 +9,7 @@ Shader "Outline Shader"
 	}
 	Pass
 	{
-		LightingPass "Forward"
+		LightingPass "Opaque"
 		ColorMask 0;
 		
 		Stencil
@@ -41,7 +41,7 @@ Shader "Outline Shader"
 	}
 	Pass
 	{
-		LightingPass "Forward"
+		LightingPass "Opaque"
 		Stencil
 		{
 			Ref 1;

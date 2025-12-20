@@ -10,7 +10,7 @@ Shader "Line Shader"
 	}
 	Pass
 	{
-		LightingPass "Forward"
+		LightingPass "Opaque"
 		
 		Stage Vertex
 		{

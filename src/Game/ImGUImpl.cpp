@@ -2,11 +2,11 @@
 
 #include "Render/VulkanImpl/VulkanRenderer.h"
 #include "Render/VulkanImpl/VulkanContext.h"
-#include "Render/VulkanImpl/VulkanFramebuffer.h"
 #include "Render/VulkanImpl/VulkanQueueManager.h"
-#include "Render/VulkanImpl/VulkanRenderPass.h"
 #include "Render/VulkanImpl/VulkanCommandBufferPool.h"
+#include "Render/VulkanImpl/VulkanCommandBuffer.h"
 #include "Render/VulkanImpl/VulkanRenderer.h"
+#include "Render/VulkanImpl/VulkanSwapChain.h"
 
 #include "Core/ThreadSyncManager.h"
 
@@ -121,37 +121,29 @@ namespace sh::game
 			initInfo.QueueFamily = vkContext.GetQueueManager().GetFamilyIndex(render::vk::VulkanQueueManager::Role::Graphics);
 			initInfo.Queue = vkContext.GetQueueManager().GetQueue(render::vk::VulkanQueueManager::Role::Graphics);
 			initInfo.DescriptorPool = &vkContext.GetDescriptorPool();
-			initInfo.RenderPass = static_cast<const render::vk::VulkanFramebuffer*>(vkContext.GetMainFramebuffer())->GetRenderPass()->GetVkRenderPass();
+			//initInfo.RenderPass = static_cast<const render::vk::VulkanFramebuffer*>(vkContext.GetMainFramebuffer())->GetRenderPass()->GetVkRenderPass();
 			initInfo.MinImageCount = 2;
 			initInfo.ImageCount = 2;
 			initInfo.MSAASamples = vkContext.GetSampleCount();
 			initInfo.Subpass = 0;
 			initInfo.PipelineCache = nullptr;
 			initInfo.CheckVkResultFn = check_vk_result;
-			initInfo.UseDynamicRendering = false;
+			initInfo.UseDynamicRendering = true;
+
+			VkFormat colorFormat = vkContext.GetSwapChain().GetSwapChainImages()[0].GetFormat();;
+
+			VkPipelineRenderingCreateInfoKHR ci{};
+			ci.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+			ci.colorAttachmentCount = 1;
+			ci.pColorAttachmentFormats = &colorFormat;
+			ci.depthAttachmentFormat = vkContext.GetSwapChain().GetSwapChainDepthImages()[0].GetFormat();
+			ci.stencilAttachmentFormat = vkContext.GetSwapChain().GetSwapChainDepthImages()[0].GetFormat();
+
+			initInfo.PipelineRenderingCreateInfo = ci;
 			ImGui_ImplVulkan_Init(&initInfo);
 			ImGui_ImplVulkan_CreateFontsTexture();
-
-			AddDrawCallToRenderer();
 		}
 		bInit = true;
-	}
-
-	SH_GAME_API void ImGUImpl::AddDrawCallToRenderer()
-	{
-		if (renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan)
-		{
-			render::vk::VulkanContext& vkContext = static_cast<render::vk::VulkanContext&>(*renderer.GetContext());
-			auto& vkRenderer = static_cast<render::vk::VulkanRenderer&>(renderer);
-			renderer.AddDrawCall
-			(
-				[&]()
-				{
-					if (drawData.Valid)
-						ImGui_ImplVulkan_RenderDrawData(&drawData, vkRenderer.GetCommandBuffer()->GetCommandBuffer());
-				}
-			);
-		}
 	}
 
 	SH_GAME_API void ImGUImpl::Resize()
@@ -500,6 +492,7 @@ namespace sh::game
 		ImGui::NewFrame();
 		ImGuizmo::BeginFrame();
 		ImGui::ShowDemoWindow();
+		SyncDirty();
 	}
 	SH_GAME_API void ImGUImpl::End()
 	{
@@ -515,6 +508,11 @@ namespace sh::game
 	SH_GAME_API auto ImGUImpl::GetContext() const -> ImGuiContext*
 	{
 		return ImGui::GetCurrentContext();
+	}
+
+	SH_GAME_API auto ImGUImpl::GetDrawData() -> ImDrawData&
+	{
+		return drawData;
 	}
 
 	SH_GAME_API void ImGUImpl::SyncDirty()

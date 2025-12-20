@@ -8,8 +8,6 @@
 
 #include "Core/Reflection.hpp"
 
-#include "Render/Drawable.h"
-
 #include <cstring>
 #include <algorithm>
 

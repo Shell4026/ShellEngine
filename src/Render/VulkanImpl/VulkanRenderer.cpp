@@ -3,12 +3,9 @@
 #include "VulkanSwapChain.h"
 #include "VulkanQueueManager.h"
 #include "VulkanPipelineManager.h"
-#include "VulkanFramebuffer.h"
-#include "VulkanRenderPass.h"
 #include "VulkanCameraBuffers.h"
-#include "VulkanRenderPipelineImpl.h"
-#include "VulkanRenderPassManager.h"
 #include "VulkanCommandBufferPool.h"
+#include "Drawable.h"
 
 #include "Core/Util.h"
 #include "Core/ThreadPool.h"
@@ -40,16 +37,13 @@ namespace sh::render::vk
 
 			camManager->Destroy();
 			DestroySyncObjects();
-			context->Clean();
+			context->Clear();
 		}
 	}
 
 	SH_RENDER_API void VulkanRenderer::Clear()
 	{
 		vkDeviceWaitIdle(context->GetDevice());
-
-		context->GetCommandBufferPool().DeallocateCommandBuffer(*cmd);
-		cmd = nullptr;
 
 		frameFences.clear();
 		camManager->Clear();
@@ -128,11 +122,6 @@ namespace sh::render::vk
 		DestroySyncObjects();
 		CreateSyncObjects();
 
-		if (cmd == nullptr)
-			cmd = context->GetCommandBufferPool().AllocateCommandBuffer(std::this_thread::get_id(), VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
-		cmd->ResetSyncObjects();
-		cmd->SetSignalSemaphores({ VulkanCommandBuffer::SignalSemaphore{ renderFinishedSemaphore } });
-
 		return context->ReSizing();
 	}
 
@@ -154,6 +143,10 @@ namespace sh::render::vk
 
 		if (!isInit || bPause.load(std::memory_order::memory_order_acquire))
 			return;
+		if (renderer == nullptr)
+			return;
+		if (cameras.size() == 0)
+			return;
 
 		// 스왑체인에서 이미지를 가져오고, 변경 사항이 있다면 리사이징
 		uint32_t imgIdx;
@@ -173,170 +166,88 @@ namespace sh::render::vk
 		}
 		assert(result == VkResult::VK_SUCCESS);
 
-		// UI 커맨드 버퍼 설정
-		if (cmd == nullptr)
+		// 카메라 데이터 GPU에 업로드
+		std::vector<const Camera*> cams{};
+		cams.reserve(cameras.size());
+		for (auto camera : cameras)
 		{
-			cmd = context->GetCommandBufferPool().AllocateCommandBuffer(std::this_thread::get_id(), VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
-			cmd->SetSignalSemaphores({ SignalSemaphore{ renderFinishedSemaphore } });
+			if (!camera->GetActive())
+				continue;
+			camManager->UploadDataToGPU(*camera);
+			cams.push_back(camera);
 		}
-		cmd->ResetCommand();
 
-		// UI 커맨드 빌드
-		cmd->Build(
-			[&]
-			{
-				const VulkanFramebuffer* mainFramebuffer = static_cast<const VulkanFramebuffer*>(context->GetMainFramebuffer(imgIdx));
-				auto& uiRenderPass = context->GetUIRenderPass();
-				VulkanImageBuffer& swapchainImageBuffer = context->GetSwapChain().GetSwapChainImages()[imgIdx];
-
-				if (uiRenderPass.GetInitialColorLayout() != VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED && swapchainImageBuffer.GetLayout() != uiRenderPass.GetInitialColorLayout())
-					swapchainImageBuffer.ChangeLayoutCommand(cmd->GetCommandBuffer(), uiRenderPass.GetInitialColorLayout());
-				auto msaaImg = mainFramebuffer->GetColorImg();
-				if (msaaImg->GetLayout() == VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED)
-					msaaImg->ChangeLayoutCommand(cmd->GetCommandBuffer(), VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL);
-				if (uiRenderPass.GetInitialDepthLayout() != VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED && uiRenderPass.GetInitialDepthLayout() != mainFramebuffer->GetDepthImg()->GetLayout())
-					mainFramebuffer->GetDepthImg()->ChangeLayoutCommand(cmd->GetCommandBuffer(), uiRenderPass.GetInitialDepthLayout());
-
-				VkRenderPassBeginInfo renderPassInfo{};
-				renderPassInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-				renderPassInfo.renderPass = uiRenderPass.GetVkRenderPass();
-				renderPassInfo.framebuffer = mainFramebuffer->GetVkFramebuffer();
-				renderPassInfo.renderArea.offset = { 0, 0 };
-				renderPassInfo.renderArea.extent = context->GetSwapChain().GetSwapChainSize();
-
-				std::array<VkClearValue, 3> clearMSAA;
-				clearMSAA[0].color = { { 0.0f, 1.0f, 0.0f, 1.0f } };
-				clearMSAA[1].color = { { 1.0f, 0.0f, 0.0f, 1.0f } };
-				clearMSAA[2].depthStencil = { 1.0f, 0 };
-				renderPassInfo.clearValueCount = static_cast<uint32_t>(clearMSAA.size());
-				renderPassInfo.pClearValues = clearMSAA.data();
-
-				vkCmdBeginRenderPass(cmd->GetCommandBuffer(), &renderPassInfo, VkSubpassContents::VK_SUBPASS_CONTENTS_INLINE);
-
-				VkViewport viewport{};
-				float width = context->GetViewportEnd().x - context->GetViewportStart().x;
-				float height = context->GetViewportEnd().y - context->GetViewportStart().y;
-				float surfWidth = static_cast<float>(context->GetSwapChain().GetSwapChainSize().width);
-				float surfHeight = static_cast<float>(context->GetSwapChain().GetSwapChainSize().height);
-				viewport.x = context->GetViewportStart().x;
-				viewport.y = context->GetViewportEnd().y;
-				viewport.width = std::min(width, surfWidth);
-				viewport.height = -std::min(height, surfHeight);
-				viewport.minDepth = 0.0f;
-				viewport.maxDepth = 1.0f;
-				vkCmdSetViewport(cmd->GetCommandBuffer(), 0, 1, &viewport);
-
-				VkRect2D scissor{};
-				scissor.offset = { 0, 0 };
-				scissor.extent = context->GetSwapChain().GetSwapChainSize();
-				vkCmdSetScissor(cmd->GetCommandBuffer(), 0, 1, &scissor);
-
-				for (auto& func : drawCalls)
-					func();
-
-				vkCmdEndRenderPass(cmd->GetCommandBuffer());
-
-				swapchainImageBuffer.LayoutChangedByRenderPass(uiRenderPass.GetFinalColorLayout());
-				mainFramebuffer->GetDepthImg()->LayoutChangedByRenderPass(uiRenderPass.GetFinalDepthLayout());
-			},
-			true
-		);
-
-		struct Command
+		for (const Camera* cam : cams)
 		{
-			RenderPipeline* pipeline;
-			VulkanCommandBuffer* cmdBuffer;
-		};
-		std::vector<Command> recordedCommands;
-		if (cameras.size() > 0)
-		{
-			// 카메라 데이터 GPU에 업로드
-			std::vector<const Camera*> cams{};
-			cams.reserve(cameras.size());
-			for (auto camera : cameras)
-			{
-				if (!camera->GetActive())
-					continue;
-				camManager->UploadDataToGPU(*camera);
-				cams.push_back(camera);
-			}
-			// 파이프라인 커맨드 기록
-			std::vector<std::future<Command>> futureCommands;
-			futureCommands.reserve(renderPipelines.size());
-			for (auto& renderPipeline : renderPipelines)
-			{
-				futureCommands.push_back(core::ThreadPool::GetInstance()->AddTask(
-					[&, pipeline = renderPipeline.get()]() -> Command
-					{
-						std::thread::id tid{ std::this_thread::get_id() };
-						auto pipelineImpl = static_cast<VulkanRenderPipelineImpl*>(pipeline->GetImpl());
-						auto pipelineCmd = context->GetCommandBufferPool().AllocateCommandBuffer(tid, VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
-						assert(pipelineCmd != nullptr);
-						pipelineImpl->SetCommandBuffer(*pipelineCmd);
+			std::vector<Drawable*> filteredDrawables;
 
-						pipelineCmd->Build([&] { pipeline->RecordCommand(cams, imgIdx); }, true);
-						return { pipeline, pipelineCmd };
-					}
-				));
-			}
-			for (auto& futureCommand : futureCommands)
-				recordedCommands.push_back(futureCommand.get());
+			RenderTarget rt{};
+			rt.frameIndex = imgIdx;
+			rt.camera = cam;
+			rt.target = cam->GetRenderTexture();
+			rt.drawables = &filteredDrawables;
 			
-			// 타임라인 세마포어를 사용하여 순서대로 커맨드 제출
-			for (const auto& recordedCmd : recordedCommands)
+			for (Drawable* drawable : drawables)
 			{
-				// 첫번째 파이프라인은 스왑체인 이미지를 기다리고 완료 시 세마포어 신호를 1로 바꾼다.
-				if (timelineValue % recordedCommands.size() == 0)
-				{
-					uint64_t signalValue = timelineValue + 1; // 미리 계산
-					timelineValueAtomic.store(signalValue, std::memory_order::memory_order_release);
-
-					// 스왑체인 이미지가 준비 되기전까지 COLOR_ATTACHMENT단계에서 대기해야 함
-					recordedCmd.cmdBuffer->SetWaitSemaphores({ 
-						WaitSemaphore
-						{ 
-							imageAvailableSemaphore, 
-							VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT 
-						} 
-					});
-					recordedCmd.cmdBuffer->SetSignalSemaphores({ SignalSemaphore{ timelineSemaphore, true, ++timelineValue } });
-				}
-				else
-				{
-					recordedCmd.cmdBuffer->SetWaitSemaphores({ 
-						WaitSemaphore
-						{ 
-							timelineSemaphore, 
-							VkPipelineStageFlagBits::VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
-							true, 
-							timelineValue++
-						} 
-					});
-					recordedCmd.cmdBuffer->SetSignalSemaphores({ SignalSemaphore{ timelineSemaphore, true, timelineValue } });
-				}
-				
-				context->GetQueueManager().Submit(VulkanQueueManager::Role::Graphics, *recordedCmd.cmdBuffer, nullptr);
+				if (cam->CheckRenderTag(drawable->GetRenderTagId()))
+					filteredDrawables.push_back(drawable);
 			}
-			cmd->SetWaitSemaphores({ 
+			IRenderThrMethod<ScriptableRenderer>::Setup(*renderer, rt);
+			IRenderThrMethod<ScriptableRenderer>::Execute(*renderer, rt); // ScriptableRenderer에 등록된 패스들을 렌더큐 순서대로, 병렬적으로 커맨드에 기록
+		}
+		IRenderThrMethod<ScriptableRenderer>::ExecuteTransfer(*renderer, imgIdx);
+
+		const auto& submittedCmds = renderer->GetSubmittedCommands();
+		if (submittedCmds.size() == 1)
+		{
+			VulkanCommandBuffer& cmd = static_cast<VulkanCommandBuffer&>(submittedCmds.front().cmd);
+			cmd.AddWaitSemaphore(
 				WaitSemaphore
-				{ 
-					timelineSemaphore, 
-					VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, 
-					true, 
-					timelineValue 
-				} 
-			});
+				{
+					imageAvailableSemaphore,
+					VkPipelineStageFlagBits::VK_PIPELINE_STAGE_ALL_COMMANDS_BIT
+				}
+			);
+			cmd.AddSignalSemaphore(SignalSemaphore{ renderFinishedSemaphore });
+			context->GetQueueManager().Submit(VulkanQueueManager::Role::Graphics, cmd, inFlightFence);
 		}
 		else
 		{
-			// 카메라가 없는 경우는 UI 커맨드 혼자뿐.
-			cmd->SetWaitSemaphores({ WaitSemaphore{ imageAvailableSemaphore, VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT } });
-		}
-		context->GetQueueManager().Submit(VulkanQueueManager::Role::Graphics, *cmd, inFlightFence);
+			VulkanCommandBuffer& endCmd = static_cast<VulkanCommandBuffer&>(submittedCmds.back().cmd);
+			endCmd.AddSignalSemaphore(SignalSemaphore{ renderFinishedSemaphore });
 
+			bool bUsedImageAvailableSemaphore = false;
+			for (const auto& submittedCmd : submittedCmds)
+			{
+				ScriptableRenderPass& pass = submittedCmd.pass;
+				VulkanCommandBuffer& cmd = static_cast<VulkanCommandBuffer&>(submittedCmd.cmd);
+
+				// 스왑체인을 쓰는 첫 패스는 imageAvailableSemaphore대기
+				if (!bUsedImageAvailableSemaphore)
+				{
+					const auto& rts = pass.GetRenderTextures();
+					if (rts.find(nullptr) != rts.end())
+					{
+						cmd.AddWaitSemaphore(
+							WaitSemaphore
+							{
+								imageAvailableSemaphore,
+								VkPipelineStageFlagBits::VK_PIPELINE_STAGE_ALL_COMMANDS_BIT
+							}
+						);
+						bUsedImageAvailableSemaphore = true;
+					}
+				}
+
+				VkFence fence = nullptr;
+				if (&cmd == &endCmd)
+					fence = inFlightFence;
+				context->GetQueueManager().Submit(VulkanQueueManager::Role::Graphics, cmd, fence);
+			}
+		}
 		uint32_t drawCallCount = 0;
-		for (auto& renderPipeline : renderPipelines)
-			drawCallCount += renderPipeline->GetDrawCallCount();
+		//for (auto& renderPipeline : renderPipelines)
+		//	drawCallCount += renderPipeline->GetDrawCallCount();
 		SetDrawCallCount(drawCallCount);
 
 		VkPresentInfoKHR presentInfo{};
@@ -357,8 +268,10 @@ namespace sh::render::vk
 			SH_ERROR_FORMAT("Error vkWaitForFences: {}", string_VkResult(result));
 		}
 		vkResetFences(context->GetDevice(), 1, &inFlightFence);
-		for (auto& cmd : recordedCommands)
-			context->GetCommandBufferPool().DeallocateCommandBuffer(*cmd.cmdBuffer);
+
+		IRenderThrMethod<ScriptableRenderer>::CallReadbacks(*renderer);
+
+		IRenderThrMethod<ScriptableRenderer>::ResetSubmittedCommands(*renderer, *context);
 	}
 
 	SH_RENDER_API auto VulkanRenderer::GetCurrentFrame() const -> int
@@ -384,10 +297,6 @@ namespace sh::render::vk
 	SH_RENDER_API auto VulkanRenderer::GetContext() const -> IRenderContext*
 	{
 		return context.get();
-	}
-	SH_RENDER_API auto VulkanRenderer::GetCommandBuffer() const -> VulkanCommandBuffer*
-	{
-		return cmd;
 	}
 	SH_RENDER_API void VulkanRenderer::Sync()
 	{

@@ -2,15 +2,8 @@
 
 #include "Game/World.h"
 #include "Game/GameObject.h"
-#include "Game/RenderThread.h"
 
-#include "Render/VulkanImpl/VulkanRenderer.h"
-#include "Render/VulkanImpl/VulkanFramebuffer.h"
-#include "Render/VulkanImpl/VulkanImageBuffer.h"
-#include "Render/VulkanImpl/VulkanContext.h"
-#include "Render/VulkanImpl/VulkanBuffer.h"
-#include "Render/BufferFactory.h"
-
+#include <chrono>
 namespace sh::game
 {
 	PickingCamera::PixelData::operator uint32_t() const
@@ -22,8 +15,12 @@ namespace sh::game
 	PickingCamera::PickingCamera(GameObject& owner) :
 		Camera(owner)
 	{
-		renderTex = core::SObject::Create<render::RenderTexture>(render::Texture::TextureFormat::RGBA32, false);
-		renderTex->SetReadUsage(true);
+		render::RenderTargetLayout rt{};
+		rt.format = render::TextureFormat::RGBA32;
+		rt.depthFormat = render::TextureFormat::D24S8;
+		rt.bUseMSAA = false;
+
+		renderTex = core::SObject::Create<render::RenderTexture>(rt);
 		renderTex->SetSize(1024, 768);
 		renderTex->Build(*world.renderer.GetContext());
 		camera.SetWidth(1024);
@@ -31,8 +28,6 @@ namespace sh::game
 		renderTex->SetName("PickingFramebuffer");
 
 		SetRenderTexture(renderTex);
-
-		buffer = render::BufferFactory::Create(*world.renderer.GetContext(), sizeof(uint8_t) * 4, true);
 	}
 
 	SH_GAME_API void PickingCamera::Awake()
@@ -49,36 +44,25 @@ namespace sh::game
 			SetUpVector(followCamera->GetUpVector());
 		}
 		Super::BeginUpdate();
-		if (!pickingCallback.Empty())
+		if (!pickingCallback.Empty() && !bRequestRead)
 		{
-			assert(world.renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan);
-			if (world.renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan)
-			{
-				auto& vkRenderer = static_cast<render::vk::VulkanRenderer&>(world.renderer);
-				auto vkFramebuffer = static_cast<render::vk::VulkanFramebuffer*>(renderTex->GetFramebuffer());
-				auto& vkContext = static_cast<render::vk::VulkanContext&>(*world.renderer.GetContext());
-				auto vkBuffer = static_cast<render::vk::VulkanBuffer*>(buffer.get());
-
-				VkSemaphore timelineSemaphore = vkRenderer.GetTimelineSemaphore();
-				// 첫번째 패스의 타임라인 값을 가져오는데, 첫번째 패스는 pickingPass다.
-				// 즉, 피킹 패스가 끝날 때 까지 대기하는 코드.
-				uint64_t timelineValue = vkRenderer.GetTimelineValue();
-
-				VkSemaphoreWaitInfo info{};
-				info.sType = VkStructureType::VK_STRUCTURE_TYPE_SEMAPHORE_WAIT_INFO;
-				info.semaphoreCount = 1;
-				info.pSemaphores = &timelineSemaphore;
-				info.pValues = &timelineValue;
-				info.flags = VkSemaphoreWaitFlagBits::VK_SEMAPHORE_WAIT_ANY_BIT;
-
-				auto result = vkWaitSemaphores(vkContext.GetDevice(), &info, std::numeric_limits<uint64_t>::max());
-				assert(result == VkResult::VK_SUCCESS);
-				vkFramebuffer->TransferImageToBuffer(vkBuffer->GetBuffer(), x, y);
-				pixels = reinterpret_cast<uint8_t*>(buffer->GetData());
-			}
-			SH_INFO_FORMAT("{}, {}, {}, {}", pixels[0], pixels[1], pixels[2], pixels[3]);
-			pickingCallback.Notify({ pixels[0], pixels[1], pixels[2], pixels[3] });
+			bufferFuture = world.renderer.GetScriptableRenderer()->ReadRenderTextureAsync(*renderTex, x, y);
+			bRequestRead = true;
 		}
+
+		if (bufferFuture.valid())
+		{
+			auto status = bufferFuture.wait_for(std::chrono::milliseconds(0));
+			if (status == std::future_status::ready)
+			{
+				pixels = reinterpret_cast<uint8_t*>(bufferFuture.get()->GetData());
+				SH_INFO_FORMAT("{}, {}, {}, {}", pixels[0], pixels[1], pixels[2], pixels[3]);
+
+				pickingCallback.Notify({ pixels[0], pixels[1], pixels[2], pixels[3] });
+				bRequestRead = false;
+			}
+		}
+		
 	}
 
 	SH_GAME_API void PickingCamera::SetPickingPos(const Vec2& pos)

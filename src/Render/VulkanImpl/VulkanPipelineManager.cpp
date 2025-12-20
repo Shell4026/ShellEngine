@@ -2,7 +2,6 @@
 #include "VulkanShaderPass.h"
 #include "VulkanVertexBuffer.h"
 #include "VulkanContext.h"
-#include "VulkanRenderPass.h"
 
 namespace sh::render::vk
 {
@@ -42,8 +41,8 @@ namespace sh::render::vk
 		);
 	}
 	SH_RENDER_API auto VulkanPipelineManager::GetOrCreatePipelineHandle(
-		const VulkanRenderPass& renderPass, 
-		const VulkanShaderPass& shader, 
+		const VulkanShaderPass& shader,
+		const RenderTargetLayout& renderTargetLayout,
 		Mesh::Topology topology,
 		const std::vector<uint8_t>* constDataPtr) -> PipelineHandle
 	{
@@ -55,7 +54,7 @@ namespace sh::render::vk
 				constantHash = core::Util::CombineHash(constantHash, hasher(data));
 		}
 
-		PipelineInfo info{ renderPass.GetVkRenderPass(), &shader, topology, constantHash };
+		PipelineInfo info{ &shader, renderTargetLayout, topology, constantHash };
 		{
 			std::shared_lock<std::shared_mutex> readLock{ mu };
 			auto it = infoIdx.find(info);
@@ -69,7 +68,7 @@ namespace sh::render::vk
 					std::unique_lock<std::shared_mutex> writeLock{ mu };
 					if (pipelines[it->second].pipelinePtr.get() == nullptr)
 					{
-						pipelines[it->second].pipelinePtr = BuildPipeline(renderPass, shader, topology, constDataPtr);
+						pipelines[it->second].pipelinePtr = BuildPipeline(shader, renderTargetLayout, topology, constDataPtr);
 						gen = ++pipelines[it->second].generation;
 					}
 				}
@@ -88,7 +87,7 @@ namespace sh::render::vk
 			uint32_t gen = 0;
 			if (emptyIdx.empty())
 			{
-				pipelines.push_back(Pipeline{ BuildPipeline(renderPass, shader, topology, constDataPtr), 0 });
+				pipelines.push_back(Pipeline{ BuildPipeline(shader, renderTargetLayout, topology, constDataPtr), 0 });
 				pipelinesInfo.push_back(info);
 
 				idx = static_cast<uint32_t>(pipelines.size()) - 1;
@@ -98,7 +97,7 @@ namespace sh::render::vk
 				idx = emptyIdx.front();
 				emptyIdx.pop();
 
-				pipelines[idx].pipelinePtr = BuildPipeline(renderPass, shader, topology, constDataPtr);
+				pipelines[idx].pipelinePtr = BuildPipeline(shader, renderTargetLayout, topology, constDataPtr);
 				gen = ++pipelines[idx].generation;
 			}
 			infoIdx.insert({ info, idx });
@@ -132,12 +131,12 @@ namespace sh::render::vk
 	}
 
 	auto VulkanPipelineManager::BuildPipeline(
-		const VulkanRenderPass& renderPass,
-		const VulkanShaderPass& shader,
-		Mesh::Topology topology,
+		const VulkanShaderPass& shader, 
+		const RenderTargetLayout& renderTargetLayout, 
+		Mesh::Topology topology, 
 		const std::vector<uint8_t>* constDataPtr) -> std::unique_ptr<VulkanPipeline>
 	{
-		auto pipeline = std::make_unique<VulkanPipeline>(context.GetDevice(), renderPass.GetVkRenderPass());
+		auto pipeline = std::make_unique<VulkanPipeline>(context.GetDevice(), renderTargetLayout);
 
 		VulkanPipeline::Topology topol = VulkanPipeline::Topology::Triangle;
 		switch (topology)
@@ -158,9 +157,10 @@ namespace sh::render::vk
 			SetTopology(topol).
 			SetShader(&shader).
 			SetZWrite(shader.GetZWrite()).
-			SetSampleCount(renderPass.GetConfig().sampleCount).
+			SetSampleCount(renderTargetLayout.bUseMSAA ? context.GetSampleCount() : VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT).
 			AddShaderStage(VulkanPipeline::ShaderStage::Vertex).
 			AddShaderStage(VulkanPipeline::ShaderStage::Fragment);
+
 		if (constDataPtr != nullptr)
 			pipeline->SetSpecializationConstant(constDataPtr->data());
 

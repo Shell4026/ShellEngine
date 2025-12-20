@@ -1,6 +1,8 @@
 ﻿#pragma once
+#include "../Export.h"
+#include "../ITextureBuffer.h"
+#include "../Formats.hpp"
 #include "VulkanCommandBuffer.h"
-#include "Render/Export.h"
 
 #include "Core/NonCopyable.h"
 
@@ -10,54 +12,70 @@ namespace sh::render::vk
 {
 	class VulkanContext;
 
-	class VulkanImageBuffer : public core::INonCopyable
+	class VulkanImageBuffer : public ITextureBuffer
 	{
 	public:
-		SH_RENDER_API VulkanImageBuffer(const VulkanContext& context);
+		SH_RENDER_API VulkanImageBuffer();
 		SH_RENDER_API VulkanImageBuffer(VulkanImageBuffer&& other) noexcept;
 		SH_RENDER_API ~VulkanImageBuffer();
 
 		SH_RENDER_API auto operator=(VulkanImageBuffer&& other) noexcept -> VulkanImageBuffer&;
 
+		SH_RENDER_API auto Create(const IRenderContext& context, const CreateInfo& info) -> bool override;
+		SH_RENDER_API void Clear() override;
+
+		SH_RENDER_API void SetData(const void* data, uint32_t mipLevel) override;
+
+		SH_RENDER_API void CreateFromSwapChain(const IRenderContext& context, VkImage img);
+
 		SH_RENDER_API auto SetAnisotropy(uint32_t aniso) -> VulkanImageBuffer&;
 		SH_RENDER_API auto SetFilter(VkFilter filter) -> VulkanImageBuffer&;
 
-		SH_RENDER_API auto Create(uint32_t width, uint32_t height, VkFormat format, VkImageUsageFlags usage, 
-			VkImageAspectFlags aspectFlag = VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT, 
-			VkSampleCountFlagBits sampleCount = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT, uint32_t mipLevels = 1) -> VkResult;
-		SH_RENDER_API auto Create(VkImage image, VkFormat format) -> VkResult;
-		SH_RENDER_API void Clean();
+		SH_RENDER_API auto GetImage() const -> VkImage { return img; }
+		SH_RENDER_API auto GetImageView() const -> VkImageView { return imgView; }
+		SH_RENDER_API auto GetSampler() const -> VkSampler { return sampler; }
 
-		SH_RENDER_API auto GetImage() const -> VkImage;
-		SH_RENDER_API auto GetImageView() const -> VkImageView;
-		SH_RENDER_API auto GetSampler() const -> VkSampler;
-
-		/// @brief 렌더 패스에 의해 레이아웃이 변경 됐다면 호출
-		/// @param layout 이미지 레이아웃
-		SH_RENDER_API void LayoutChangedByRenderPass(VkImageLayout layout);
-		SH_RENDER_API auto GetLayout() const -> VkImageLayout;
-
-		SH_RENDER_API void ChangeLayoutCommand(VkCommandBuffer cmd, VkImageLayout newLayout);
+		SH_RENDER_API auto GetAspect() const -> VkImageAspectFlags { return aspect; }
+		SH_RENDER_API auto GetFilter() const -> VkFilter { return filter; }
+		SH_RENDER_API auto GetFormat() const -> VkFormat { return format; }
+		SH_RENDER_API auto GetSample() const -> VkSampleCountFlagBits { return sample; }
+		SH_RENDER_API auto GetWidth() const -> uint32_t { return width; }
+		SH_RENDER_API auto GetHeight() const -> uint32_t { return height; }
+		SH_RENDER_API auto GetAniso() const -> uint32_t { return aniso; }
+		SH_RENDER_API auto GetMipLevel() const -> uint32_t { return mipLevel; }
+		
+		SH_RENDER_API static void BarrierCommand(
+			VkCommandBuffer cmd, 
+			const VulkanImageBuffer& img,
+			VkImageLayout oldLayout, 
+			VkImageLayout newLayout, 
+			VkPipelineStageFlags srcStage,
+			VkPipelineStageFlags dstStage, 
+			VkAccessFlags srcAccess,
+			VkAccessFlags dstAccess);
+		SH_RENDER_API static auto ConvertTextureFormat(TextureFormat format) -> VkFormat;
 	private:
-		const VulkanContext& context;
+		static auto GetChannelCount(VkFormat format) -> uint32_t;
+		static auto IsDepthTexture(TextureFormat format) -> bool;
+	private:
+		const VulkanContext* ctx = nullptr;
 
-		VkDevice device;
-		VkPhysicalDevice gpu;
-		VmaAllocator allocator;
+		VkImage img = VK_NULL_HANDLE;
+		VkImageView imgView = VK_NULL_HANDLE;
+		VmaAllocation imgMem = VK_NULL_HANDLE;
+		VkSampler sampler = VK_NULL_HANDLE;
 
-		VkImage img;
-		VmaAllocation imgMem;
-
-		VkImageView imgView;
-		VkSampler sampler;
-
-		VkImageLayout layout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
-
-		uint32_t aniso = 0;
-		uint32_t mipLevels = 1;
-
+		VkImageAspectFlags aspect = VkImageAspectFlagBits::VK_IMAGE_ASPECT_NONE;
 		VkFilter filter = VkFilter::VK_FILTER_LINEAR;
+		VkFormat format = VkFormat::VK_FORMAT_UNDEFINED;
+		VkSampleCountFlagBits sample = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
+		uint32_t width = 0;
+		uint32_t height = 0;
+		uint32_t channel = 4;
+		uint32_t aniso = 0;
+		uint32_t mipLevel = 1;
 
-		bool bOtherImg = false;
+		bool bSwapChainImg = false;
+		bool bRenderTarget = false;
 	};
 }

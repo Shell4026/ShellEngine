@@ -108,6 +108,7 @@ namespace sh::render::vk
 		if (it == allocated.end())
 		{
 			SH_ERROR("Attempt to deallocate unknown command buffer");
+			assert(false);
 			return;
 		}
 

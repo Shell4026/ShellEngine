@@ -5,6 +5,7 @@
 #include "Render/Material.h"
 #include "Render/Mesh.h"
 #include "Render/MaterialPropertyBlock.h"
+#include "Render/Drawable.h"
 
 #include "Core/Util.h"
 #include "Core/Observer.hpp"
@@ -13,10 +14,6 @@
 #include <unordered_map>
 #include <memory>
 #include <vector>
-namespace sh::render
-{
-	class Drawable;
-}
 namespace sh::game
 {
 	class Camera;

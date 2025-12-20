@@ -11,7 +11,7 @@ Shader "Default Shader"
 	
 	Pass
 	{
-		LightingPass "Forward"
+		LightingPass "Opaque"
 		
 		Stage Vertex
 		{

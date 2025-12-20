@@ -18,7 +18,7 @@ namespace sh::game
 		{
 			uint32_t width;
 			uint32_t height;
-			render::Texture::TextureFormat format;
+			render::TextureFormat format;
 			uint32_t aniso;
 			uint32_t filter;
 			bool bMipmap;

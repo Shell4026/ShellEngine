@@ -3,14 +3,16 @@
 #include "Core/GarbageCollection.h"
 
 #include "Render/Mesh.h"
+#include "Render/Material.h"
+#include "Render/Drawable.h"
+#include "Render/IRenderContext.h"
 
 namespace sh::editor
 {
-	EditorPostOutlinePass::EditorPostOutlinePass()
+	EditorPostOutlinePass::EditorPostOutlinePass(const render::IRenderContext& ctx) :
+		ScriptableRenderPass(core::Name("EditorPostOutline"), render::RenderQueue::AfterTransparent),
+		ctx(ctx)
 	{
-		passName = core::Name("EditorPostOutline");
-		SetClear(false);
-
 		plane = core::SObject::Create<render::Mesh>();
 
 		core::GarbageCollection::GetInstance()->SetRootSet(plane);
@@ -22,47 +24,47 @@ namespace sh::editor
 			{{-1.0f, 1.0f, 0.0f}, {0.0f, 0.0f}, {0.f, 0.f, 0.f} },
 		});
 		plane->SetIndices({ 0, 1, 2, 2, 3, 0 });
+		plane->Build(ctx);
 	}
 	EditorPostOutlinePass::~EditorPostOutlinePass()
 	{
 		core::GarbageCollection::GetInstance()->ForceDelete(drawable);
 		core::GarbageCollection::GetInstance()->ForceDelete(plane);
 	}
-	SH_EDITOR_API void EditorPostOutlinePass::Create(render::IRenderContext& context)
-	{
-		this->context = &context;
-
-		plane->Build(context);
-		render::RenderPipeline::Create(context);
-	}
-	SH_EDITOR_API void EditorPostOutlinePass::RecordCommand(const std::vector<const render::Camera*>& cameras, uint32_t imgIdx)
-	{
-		std::vector<const render::Camera*> camVec{};
-		if (camera->GetNative().GetActive())
-			camVec.push_back(&camera->GetNative());
-
-		render::RenderPipeline::RecordCommand(camVec, imgIdx);
-	}
-	SH_EDITOR_API void EditorPostOutlinePass::ClearDrawable()
-	{
-		RenderPipeline::ClearDrawable();
-		if (drawable != nullptr)
-			RenderPipeline::PushDrawable(drawable);
-	}
-	SH_EDITOR_API void EditorPostOutlinePass::SetCamera(game::Camera& camera)
-	{
-		this->camera = &camera;
-	}
 	SH_EDITOR_API void EditorPostOutlinePass::SetOutlineMaterial(render::Material& mat)
 	{
 		this->mat = &mat;
+	}
 
-		if (drawable != nullptr)
-			drawable->Destroy();
+	SH_EDITOR_API void EditorPostOutlinePass::Configure(const render::RenderTarget& renderData)
+	{
+		if (drawable == nullptr)
+		{
+			assert(mat != nullptr);
+			drawable = core::SObject::Create<render::Drawable>(*mat, *plane);
+			drawable->Build(ctx);
 
-		drawable = core::SObject::Create<render::Drawable>(mat, *plane);
-		drawable->Build(*context);
+			core::GarbageCollection::GetInstance()->SetRootSet(drawable);
+		}
+		ScriptableRenderPass::Configure(renderData);
+	}
+	SH_EDITOR_API auto EditorPostOutlinePass::BuildDrawList(const render::RenderTarget& renderData) -> render::DrawList
+	{
+		render::DrawList list{};
+		list.bClearColor = false;
 
-		core::GarbageCollection::GetInstance()->SetRootSet(drawable);
+		if (!drawable->CheckAssetValid())
+			return list;
+		if (drawable->GetMaterial()->GetShader()->GetShaderPasses(passName) == nullptr)
+			return list;
+
+		render::DrawList::Group group;
+		group.material = mat;
+		group.topology = drawable->GetTopology(core::ThreadType::Render);
+		group.drawables.push_back(drawable);
+
+		list.groups.push_back(std::move(group));
+
+		return list;
 	}
 }//namespace

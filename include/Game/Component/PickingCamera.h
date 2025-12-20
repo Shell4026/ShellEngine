@@ -7,10 +7,7 @@
 
 #include "Core/Observer.hpp"
 
-#include <functional>
-#include <queue>
 #include <future>
-#include <atomic>
 
 namespace sh::game
 {
@@ -41,8 +38,10 @@ namespace sh::game
 
 		int x = 0, y = 0;
 
-		std::unique_ptr<render::IBuffer> buffer;
-
 		uint8_t* pixels = nullptr;
+
+		std::future<std::unique_ptr<render::IBuffer>> bufferFuture;
+
+		bool bRequestRead = false;
 	};
 }//namepspace

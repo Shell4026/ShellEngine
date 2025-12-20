@@ -6,34 +6,35 @@
 
 namespace sh::editor
 {
-	EditorOutlinePass::EditorOutlinePass()
+	EditorOutlinePass::EditorOutlinePass() :
+		ScriptableRenderPass(core::Name("EditorOutline"), render::RenderQueue::BeforeOpaque)
 	{
-		passName = core::Name("EditorOutline");
 	}
-
 	EditorOutlinePass::~EditorOutlinePass()
 	{
-	}
-	SH_EDITOR_API void EditorOutlinePass::RecordCommand(const std::vector<const render::Camera*>& cameras, uint32_t imgIdx)
-	{
-		if (camera == nullptr || output == nullptr)
-			return;
-
-		render::Camera copyCamera = camera->GetNative();
-
-		std::vector<const render::Camera*> camVec{ &copyCamera };
-
-		copyCamera.SetRenderTagMask(1);
-		copyCamera.SetRenderTexture(output.Get());
-
-		render::RenderPipeline::RecordCommand(camVec, imgIdx);
 	}
 	SH_EDITOR_API void EditorOutlinePass::SetOutTexture(render::RenderTexture& tex)
 	{
 		output = &tex;
 	}
-	SH_EDITOR_API void EditorOutlinePass::SetCamera(game::Camera& camera)
+
+	SH_EDITOR_API void EditorOutlinePass::Configure(const render::RenderTarget& renderData)
 	{
-		this->camera = &camera;
+		render::RenderTarget rd;
+		rd.camera = renderData.camera;
+		rd.frameIndex = renderData.frameIndex;
+		rd.target = output.Get();
+		rd.drawables = renderData.drawables;
+
+		ScriptableRenderPass::Configure(rd);
+	}
+	SH_EDITOR_API void EditorOutlinePass::Record(render::CommandBuffer& cmd, const render::IRenderContext& ctx, const render::RenderTarget& renderData)
+	{
+		render::RenderTarget rd;
+		rd.camera = renderData.camera;
+		rd.frameIndex = renderData.frameIndex;
+		rd.target = output.Get();
+
+		ScriptableRenderPass::Record(cmd, ctx, rd);
 	}
 }//namespace

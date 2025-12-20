@@ -209,8 +209,8 @@ namespace sh::render::vk
             waitSems.push_back(wait.semaphore);
             waitStages.push_back(wait.stageMask);
 
-            waitValues.push_back(wait.isTimeline ? wait.value : 0);
-            bHasTimeline |= wait.isTimeline;
+            waitValues.push_back(wait.value);
+            bHasTimeline |= wait.value > 0;
         }
 
         std::vector<VkSemaphore> signalSems;
@@ -222,8 +222,8 @@ namespace sh::render::vk
         for (auto& signal : signals)
         {
             signalSems.push_back(signal.semaphore);
-            signalValues.push_back(signal.isTimeline ? signal.value : 0);
-            bHasTimeline |= signal.isTimeline;
+            signalValues.push_back(signal.value);
+            bHasTimeline |= signal.value > 0;
         }
 
         VkTimelineSemaphoreSubmitInfo timelineInfo{};

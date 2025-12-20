@@ -66,6 +66,8 @@ namespace sh::render::vk
 		auto it = std::find_if(cams.begin(), cams.end(), 
 			[&](const Camera* other)
 			{
+				if (other == nullptr)
+					return false;
 				return (other->id == camera.id);
 			}
 		);

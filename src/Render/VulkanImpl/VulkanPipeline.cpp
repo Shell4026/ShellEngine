@@ -1,14 +1,17 @@
 ﻿#include "VulkanPipeline.h"
 #include "VulkanShaderPass.h"
+#include "VulkanImageBuffer.h"
+#include "Texture.h"
 
 #include <cassert>
 namespace sh::render::vk
 {
-	SH_RENDER_API VulkanPipeline::VulkanPipeline(VkDevice device, VkRenderPass renderPass) :
-		device(device), renderPass(renderPass),
+	SH_RENDER_API VulkanPipeline::VulkanPipeline(VkDevice device, const RenderTargetLayout& rt) :
+		device(device),
 		pipeline(nullptr), shader(nullptr),
 		cullMode(CullMode::Back),
-		topology(Topology::Triangle)
+		topology(Topology::Triangle),
+		rtLayout(rt)
 	{
 		stencilState.reference = 0;
 		stencilState.compareMask = 0xFF;
@@ -21,7 +24,7 @@ namespace sh::render::vk
 
 	SH_RENDER_API VulkanPipeline::VulkanPipeline(VulkanPipeline&& other) noexcept :
 		pipeline(other.pipeline),
-		device(other.device), renderPass(other.renderPass), shader(other.shader),
+		device(other.device), shader(other.shader),
 		shaderStages(std::move(other.shaderStages)),
 		bindingDescriptions(std::move(other.bindingDescriptions)),
 		attributeDescriptions(std::move(other.attributeDescriptions)),
@@ -32,11 +35,11 @@ namespace sh::render::vk
 		lineWidth(other.lineWidth),
 		sampleCount(other.sampleCount),
 		bUseStencil(other.bUseStencil),
-		bZWrite(other.bZWrite)
+		bZWrite(other.bZWrite),
+		rtLayout(other.rtLayout)
 	{
 		other.pipeline = nullptr;
 		other.device = nullptr;
-		other.renderPass = nullptr;
 		other.shader = nullptr;
 	}
 
@@ -253,6 +256,16 @@ namespace sh::render::vk
 				stageCreateInfo.pSpecializationInfo = &specializationInfo;
 		}
 		
+		VkFormat colorFormat = VulkanImageBuffer::ConvertTextureFormat(rtLayout.format);
+		VkFormat depthFormat = VulkanImageBuffer::ConvertTextureFormat(rtLayout.depthFormat);
+
+		VkPipelineRenderingCreateInfoKHR pipelineRenderingCI{};
+		pipelineRenderingCI.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
+		pipelineRenderingCI.colorAttachmentCount = 1;
+		pipelineRenderingCI.pColorAttachmentFormats = &colorFormat;
+		pipelineRenderingCI.depthAttachmentFormat = depthFormat;
+		pipelineRenderingCI.stencilAttachmentFormat = depthFormat;
+
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 		pipelineInfo.stageCount = shaderStages.size();
@@ -266,10 +279,11 @@ namespace sh::render::vk
 		pipelineInfo.pColorBlendState = &colorBlending;
 		pipelineInfo.pDynamicState = &dynamicState;
 		pipelineInfo.layout = layout;
-		pipelineInfo.renderPass = renderPass;
+		pipelineInfo.renderPass = VK_NULL_HANDLE;
 		pipelineInfo.subpass = 0;
 		pipelineInfo.basePipelineHandle = nullptr;
 		pipelineInfo.basePipelineIndex = -1;
+		pipelineInfo.pNext = &pipelineRenderingCI;
 
 		auto result = vkCreateGraphicsPipelines(device, nullptr, 1, &pipelineInfo, nullptr, &pipeline);
 		assert(result == VkResult::VK_SUCCESS);

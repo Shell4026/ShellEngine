@@ -1,8 +1,7 @@
 ﻿#pragma once
-
 #include "Export.h"
 #include "Camera.h"
-#include "RenderPipeline.h"
+#include "ScriptableRenderer.h"
 
 #include "Core/ISyncable.h"
 #include "Core/SContainer.hpp"
@@ -30,12 +29,16 @@ namespace sh::render
 
 	class Renderer : public core::ISyncable
 	{
+		friend IRenderThrMethod<Renderer>;
 		SCLASS(Renderer)
 	public:
 		static constexpr int SYNC_PRIORITY = -10000;
 	public:
 		SH_RENDER_API Renderer();
 		SH_RENDER_API virtual ~Renderer();
+
+		SH_RENDER_API void SyncDirty() override;
+		SH_RENDER_API void Sync() override;
 
 		SH_RENDER_API virtual bool Init(sh::window::Window& win);
 		SH_RENDER_API virtual bool Resizing() = 0;
@@ -49,14 +52,12 @@ namespace sh::render
 		SH_RENDER_API virtual auto GetWidth() const -> uint32_t = 0;
 		SH_RENDER_API virtual auto GetHeight() const -> uint32_t = 0;
 		SH_RENDER_API virtual void WaitForCurrentFrame() = 0;
+		SH_RENDER_API virtual auto GetContext() const->IRenderContext* = 0;
 
-		/// @brief [게임 스레드 전용] 드로우 객체를 큐에 집어 넣는다.
+		/// @brief 드로우 객체를 큐에 집어 넣는다.
 		/// @brief 큐에 들어간 객체는 sync 타이밍에 렌더러에 들어간다.
 		/// @param drawable 드로우 객체 포인터
 		SH_RENDER_API void PushDrawAble(Drawable* drawable);
-		/// @brief [렌더 스레드 전용] 별도의 드로우 콜을 추가한다.
-		/// @param func 드로우 콜 함수
-		SH_RENDER_API void AddDrawCall(const std::function<void()>& func);
 
 		SH_RENDER_API auto GetWindow() const -> sh::window::Window&;
 
@@ -64,18 +65,8 @@ namespace sh::render
 		/// @return 일시정지 시 true 그 외 false
 		SH_RENDER_API auto IsPause() const -> bool;
 
-		SH_RENDER_API void SyncDirty() override;
-		SH_RENDER_API void Sync() override;
-
-		SH_RENDER_API virtual auto GetContext() const -> IRenderContext* = 0;
-
-		SH_RENDER_API auto AddRenderPipeline(std::unique_ptr<RenderPipeline>&& renderPipeline) -> RenderPipeline*;
-		              template<typename T, typename Check = std::enable_if_t<std::is_base_of_v<RenderPipeline, T>>>
-		              auto AddRenderPipeline() -> T*;
-		SH_RENDER_API void ClearRenderPipeline();
-		SH_RENDER_API auto GetRenderPipeline(const core::Name& name) const -> RenderPipeline*;
-		SH_RENDER_API auto GetRenderPipelines() -> std::vector<std::unique_ptr<RenderPipeline>>&;
-
+		SH_RENDER_API void SetScriptableRenderer(ScriptableRenderer& renderer);
+		SH_RENDER_API auto GetScriptableRenderer() const -> ScriptableRenderer* { return renderer; }
 		/// @brief 카메라를 추가한다. 동기화 타이밍 때 추가 된다.
 		/// @param camera 카메라 참조
 		SH_RENDER_API void AddCamera(const Camera& camera);
@@ -91,7 +82,7 @@ namespace sh::render
 		virtual void OnCameraAdded(const Camera* camera) {};
 		virtual void OnCameraRemoved(const Camera* camera) {};
 
-		void SetDrawCallCount(uint32_t drawcall);
+		SH_RENDER_API void SetDrawCallCount(uint32_t drawcall);
 	protected:
 		struct CameraCompare
 		{
@@ -112,11 +103,13 @@ namespace sh::render
 			} mode;
 		};
 		std::queue<Drawable*> drawableQueue;
+		std::vector<Drawable*> drawables;
 		std::set<const Camera*, CameraCompare> cameras;
 		std::vector<std::function<void()>> drawCalls;
-		std::vector<std::unique_ptr<RenderPipeline>> renderPipelines;
 
 		std::atomic_bool bPause;
+
+		ScriptableRenderer* renderer = nullptr;
 	private:
 		sh::window::Window* window;
 		std::queue<CameraProcess> cameraQueue;
@@ -129,17 +122,4 @@ namespace sh::render
 		bool bDirty;
 		bool bDrawCallDirty = false;
 	};
-
-	template<typename T, typename Check>
-	inline auto Renderer::AddRenderPipeline() -> T*
-	{
-		std::unique_ptr<RenderPipeline> pass{ new T{} };
-		pass->Create(*GetContext());
-
-		auto ptr = pass.get();
-
-		renderPipelines.push_back(std::move(pass));
-
-		return static_cast<T*>(ptr);
-	}
-}
+}//namespace

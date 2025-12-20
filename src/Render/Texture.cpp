@@ -1,6 +1,6 @@
 ﻿#include "Texture.h"
 #include "VulkanContext.h"
-#include "VulkanTextureBuffer.h"
+#include "VulkanImageBuffer.h"
 
 #include "Core/ThreadSyncManager.h"
 
@@ -8,35 +8,6 @@
 
 namespace sh::render
 {
-	void Texture::CreateTextureBuffer()
-	{
-		if (context->GetRenderAPIType() == RenderAPI::Vulkan)
-		{
-			if (textureBuffer == nullptr)
-				textureBuffer = std::make_unique<vk::VulkanTextureBuffer>();
-
-			ITextureBuffer::CreateInfo ci{};
-			ci.width = width;
-			ci.height = height;
-			ci.format = format;
-			ci.aniso = aniso;
-			ci.filtering = static_cast<uint32_t>(filtering);
-			ci.bGenerateMipmap = bGenerateMipmap;
-			textureBuffer->Create(*context, ci);
-
-			const int mipLevel = bGenerateMipmap ? pixels.size() : 1;
-			for (int m = 0; m < mipLevel; ++m)
-				textureBuffer->SetData(pixels[m].data(), m);
-		}
-		onBufferUpdate.Notify(this);
-	}
-	auto Texture::CheckSRGB() const -> bool
-	{
-		if (format == TextureFormat::SRGB24 || format == TextureFormat::SRGBA32)
-			return true;
-		return false;
-	}
-
 	Texture::Texture(TextureFormat format, uint32_t width, uint32_t height, bool bUseMipmap) :
 		context(nullptr),
 		format(format), width(width), height(height),
@@ -194,17 +165,17 @@ namespace sh::render
 	{
 		if (bSRGB)
 		{
-			if (format == Texture::TextureFormat::RGB24)
-				ChangeTextureFormat(Texture::TextureFormat::SRGB24);
-			else if (format == Texture::TextureFormat::RGBA32)
-				ChangeTextureFormat(Texture::TextureFormat::SRGBA32);
+			if (format == TextureFormat::RGB24)
+				ChangeTextureFormat(TextureFormat::SRGB24);
+			else if (format == TextureFormat::RGBA32)
+				ChangeTextureFormat(TextureFormat::SRGBA32);
 		}
 		else
 		{
-			if (format == Texture::TextureFormat::SRGB24)
-				ChangeTextureFormat(Texture::TextureFormat::RGB24);
-			else if (format == Texture::TextureFormat::SRGBA32)
-				ChangeTextureFormat(Texture::TextureFormat::RGBA32);
+			if (format == TextureFormat::SRGB24)
+				ChangeTextureFormat(TextureFormat::RGB24);
+			else if (format == TextureFormat::SRGBA32)
+				ChangeTextureFormat(TextureFormat::RGBA32);
 		}
 	}
 	SH_RENDER_API void Texture::SetFiltering(Filtering filter)
@@ -238,5 +209,38 @@ namespace sh::render
 		{
 			SetFiltering(filtering);
 		}
+	}
+
+	void Texture::CreateTextureBuffer()
+	{
+		if (textureBuffer == nullptr)
+		{
+			if (context->GetRenderAPIType() == RenderAPI::Vulkan)
+				textureBuffer = std::make_unique<vk::VulkanImageBuffer>();
+		}
+
+		ITextureBuffer::CreateInfo ci{};
+		ci.width = width;
+		ci.height = height;
+		ci.format = format;
+		ci.aniso = aniso;
+		ci.filtering = static_cast<uint32_t>(filtering);
+		ci.mipLevel = pixels.size();
+		ci.bMSAAImg = false;
+		ci.bRenderTarget = false;
+
+		textureBuffer->Create(*context, ci);
+
+		const int mipLevel = bGenerateMipmap ? pixels.size() : 1;
+		for (int m = 0; m < mipLevel; ++m)
+			textureBuffer->SetData(pixels[m].data(), m);
+
+		onBufferUpdate.Notify(this);
+	}
+	auto Texture::CheckSRGB() const -> bool
+	{
+		if (format == TextureFormat::SRGB24 || format == TextureFormat::SRGBA32)
+			return true;
+		return false;
 	}
 }

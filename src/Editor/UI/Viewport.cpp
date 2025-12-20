@@ -12,7 +12,7 @@
 #include "Game/GameManager.h"
 
 #include "Render/RenderTexture.h"
-#include "Render/VulkanImpl/VulkanTextureBuffer.h"
+#include "Render/VulkanImpl/VulkanImageBuffer.h"
 #include "Render/VulkanImpl/VulkanRenderer.h"
 #include "Render/VulkanImpl/VulkanContext.h"
 
@@ -32,10 +32,9 @@ namespace sh::editor
 	{
 		renderTex = world.GetGameObject("EditorCamera")->GetComponent<game::EditorCamera>()->GetRenderTexture();
 
-		auto vkTexBuffer = static_cast<render::vk::VulkanTextureBuffer*>(renderTex->GetTextureBuffer());
-		auto imgBuffer = vkTexBuffer->GetImageBuffer();
+		auto vkImgBuffer = static_cast<render::vk::VulkanImageBuffer*>(renderTex->GetTextureBuffer());
 
-		viewportTexture = ImGui_ImplVulkan_AddTexture(imgBuffer->GetSampler(), imgBuffer->GetImageView(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		viewportTexture = ImGui_ImplVulkan_AddTexture(vkImgBuffer->GetSampler(), vkImgBuffer->GetImageView(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 		pickingListener.SetCallback([&world](game::PickingCamera::PixelData pixel)
 			{
@@ -284,9 +283,24 @@ namespace sh::editor
 		game::Camera* mainCam = world.GetMainCamera();
 		if (!core::IsValid(mainCam))
 		{
+			std::vector<game::Camera*> cams;
 			for (auto cam : world.GetCameras())
+				cams.push_back(cam);
+			
+			std::sort(cams.begin(), cams.end(),
+				[](const game::Camera* left, const game::Camera* right)
+				{
+					if (left->GetDepth() == right->GetDepth())
+						return left->GetNative().id < right->GetNative().id;
+					return left->GetDepth() < right->GetDepth();
+				}
+			);
+
+			for (auto cam : cams)
 			{
 				if (cam->GetType() == game::EditorCamera::GetStaticType() || cam->GetType() == game::PickingCamera::GetStaticType())
+					continue;
+				if (core::IsValid(cam->GetRenderTexture()))
 					continue;
 				world.SetMainCamera(cam);
 				mainCam = world.GetMainCamera();
@@ -307,10 +321,10 @@ namespace sh::editor
 		for (auto& [uuid, worldPtr] : gameManager.GetWorlds())
 			worldPtr->SaveWorldPoint(worldPtr->Serialize());
 
-		renderTex = &world.GetGameViewTexture();
+		//renderTex = &world.GetGameViewTexture();
 		mainCam->SetRenderTexture(renderTex);
 		mainCam->SetActive(true);
-		ChangeViewportSize();
+		//ChangeViewportSize();
 
 		world.ClearSelectedObjects();
 
@@ -334,8 +348,8 @@ namespace sh::editor
 		cam->SetRenderTexture(nullptr);
 		cam->SetActive(false);
 
-		renderTex = world.GetGameObject("EditorCamera")->GetComponent<game::EditorCamera>()->GetRenderTexture();
-		ChangeViewportSize();
+		//renderTex = world.GetGameObject("EditorCamera")->GetComponent<game::EditorCamera>()->GetRenderTexture();
+		//ChangeViewportSize();
 
 		editorCamera->SetActive(true);
 		BlockLeftClick(false);
@@ -359,9 +373,8 @@ namespace sh::editor
 			ImGui_ImplVulkan_RemoveTexture(static_cast<VkDescriptorSet>(viewportTexture));
 		VkDescriptorSet viewportDescSetLast = static_cast<VkDescriptorSet>(viewportTexture);
 
-		auto vkTexBuffer = static_cast<render::vk::VulkanTextureBuffer*>(renderTex->GetTextureBuffer());
-		auto imgBuffer = vkTexBuffer->GetImageBuffer();
-		viewportTexture = ImGui_ImplVulkan_AddTexture(imgBuffer->GetSampler(), imgBuffer->GetImageView(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		auto vkImgBuffer = static_cast<render::vk::VulkanImageBuffer*>(renderTex->GetTextureBuffer());
+		viewportTexture = ImGui_ImplVulkan_AddTexture(vkImgBuffer->GetSampler(), vkImgBuffer->GetImageView(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 		if (viewportDescSetLast != nullptr)
 		{

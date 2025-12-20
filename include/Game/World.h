@@ -34,6 +34,7 @@ namespace sh::core
 namespace sh::render
 {
 	class Renderer;
+	class ScriptableRenderer;
 }
 
 namespace sh::game
@@ -58,9 +59,9 @@ namespace sh::game
 
 		SH_GAME_API virtual void Clear();
 
+		SH_GAME_API virtual void SetupRenderer();
 		/// @brief 기본 리소스를 로드한다.
 		SH_GAME_API virtual void InitResource();
-		SH_GAME_API virtual void SetRenderPass();
 
 		/// @brief 게임 오브젝트를 추가한다.
 		/// @param name 오브젝트 이름
@@ -116,7 +117,6 @@ namespace sh::game
 		SH_GAME_API void ClearWorldPoint(const std::string& name = "default");
 
 		SH_GAME_API auto GetUiContext() const -> ImGUImpl&;
-		SH_GAME_API auto GetGameViewTexture() const -> render::RenderTexture&;
 
 		SH_GAME_API void PublishEvent(const core::IEvent& event);
 		SH_GAME_API void SubscribeEvent(core::ISubscriber& subscriber);
@@ -143,6 +143,8 @@ namespace sh::game
 		core::EventBus eventBus;
 		core::SHashSet<GameObject*> objs;
 		core::SHashSet<Camera*> cameras;
+
+		std::unique_ptr<render::ScriptableRenderer> customRenderer;
 	private:
 		core::GarbageCollection* gc;
 		ImGUImpl* imgui = nullptr;
@@ -156,8 +158,6 @@ namespace sh::game
 
 		PROPERTY(mainCamera)
 		Camera* mainCamera = nullptr;
-		PROPERTY(gameViewTexture, core::PropertyOption::noSave)
-		render::RenderTexture* gameViewTexture = nullptr;
 
 		phys::PhysWorld physWorld;
 

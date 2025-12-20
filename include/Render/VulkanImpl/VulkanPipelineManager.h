@@ -2,8 +2,9 @@
 #include "../Export.h"
 #include "VulkanPipeline.h"
 #include "VulkanConfig.h"
-#include "Render/Mesh.h"
-#include "Render/StencilState.h"
+#include "../Mesh.h"
+#include "../StencilState.h"
+#include "../RenderTarget.h"
 
 #include "Core/SContainer.hpp"
 #include "Core/Util.h"
@@ -20,7 +21,6 @@ namespace sh::render
 namespace sh::render::vk
 {
 	class VulkanContext;
-	class VulkanRenderPass;
 
 	/// @brief Vulkan 파이프라인을 관리하는 클래스.
 	class VulkanPipelineManager : public core::INonCopyable
@@ -41,8 +41,8 @@ namespace sh::render::vk
 		/// @param constPtr 상수 데이터 포인터
 		/// @return 파이프라인 핸들
 		SH_RENDER_API auto GetOrCreatePipelineHandle(
-			const VulkanRenderPass& renderPass, 
-			const VulkanShaderPass& shader, 
+			const VulkanShaderPass& shader,
+			const RenderTargetLayout& renderTargetLayout, 
 			Mesh::Topology topology, 
 			const std::vector<uint8_t>* constDataPtr = nullptr) -> PipelineHandle;
 
@@ -52,8 +52,8 @@ namespace sh::render::vk
 		SH_RENDER_API bool BindPipeline(VkCommandBuffer cmd, PipelineHandle handle);
 	private:
 		auto BuildPipeline(
-			const VulkanRenderPass& renderPass,
 			const VulkanShaderPass& shader,
+			const RenderTargetLayout& renderTargetLayout,
 			Mesh::Topology topology,
 			const std::vector<uint8_t>* constDataPtr) -> std::unique_ptr<VulkanPipeline>;
 
@@ -61,14 +61,14 @@ namespace sh::render::vk
 	private:
 		struct PipelineInfo
 		{
-			const VkRenderPass pass;
 			const VulkanShaderPass* shader;
+			RenderTargetLayout renderTargetLayout;
 			Mesh::Topology topology;
 			std::size_t constantHash = 0;
 
 			bool operator==(const PipelineInfo& other) const
 			{
-				return pass == other.pass && shader == other.shader && topology == other.topology && constantHash == other.constantHash;
+				return renderTargetLayout == other.renderTargetLayout && shader == other.shader && topology == other.topology && constantHash == other.constantHash;
 			}
 		};
 		struct PipelineInfoHasher
@@ -79,11 +79,13 @@ namespace sh::render::vk
 				std::hash<const void*> hasher;
 				std::hash<int> intHasher;
 				std::hash<std::size_t> sizeHasher;
+				std::hash<RenderTargetLayout> layoutHasher;
 
-				std::size_t hash = hasher(info.pass);
+				std::size_t hash = layoutHasher(info.renderTargetLayout);
 				hash = Util::CombineHash(hash, hasher(info.shader));
 				hash = Util::CombineHash(hash, intHasher(static_cast<int>(info.topology)));
 				hash = Util::CombineHash(hash, sizeHasher(info.constantHash));
+
 				return hash;
 			}
 		};

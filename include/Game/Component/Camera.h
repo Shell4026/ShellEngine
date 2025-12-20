@@ -5,7 +5,6 @@
 
 #include "Render/Renderer.h"
 #include "Render/RenderTexture.h"
-#include "Render/Framebuffer.h"
 #include "Render/Camera.h"
 
 #include "glm/mat4x4.hpp"
@@ -40,6 +39,7 @@ namespace sh::game
 		SH_GAME_API auto GetViewMatrix() const -> const glm::mat4&;
 
 		SH_GAME_API void SetDepth(int depth);
+		SH_GAME_API auto GetDepth() const -> int { return depth; }
 		SH_GAME_API void SetFov(float degree);
 
 		SH_GAME_API void SetRenderTexture(render::RenderTexture* renderTexture);

@@ -1,110 +1,36 @@
 ﻿#include "RenderTexture.h"
-#include "VulkanContext.h"
-#include "VulkanTextureBuffer.h"
-#include "VulkanFramebuffer.h"
-#include "VulkanRenderPass.h"
-#include "VulkanRenderPassManager.h"
+#include "VulkanImageBuffer.h"
+#include "IRenderContext.h"
 
 namespace sh::render
 {
-	RenderTexture::RenderTexture(Texture::TextureFormat format, bool bMSAA) :
-		Texture(format, 1024, 1024, false),
+	RenderTexture::RenderTexture(const RenderTargetLayout& layout) :
+		Texture(layout.format, 1024, 1024, false),
 
 		width(1024), height(1024), 
-		bMSAA(bMSAA)
+		layout(layout)
 	{
 		SetAnisoLevel(0);
+	}
+	RenderTexture::RenderTexture(RenderTexture&& other) noexcept :
+		Texture(std::move(other)),
+
+		width(other.width), height(other.height),
+		layout(other.layout)
+	{
 	}
 	RenderTexture::~RenderTexture()
 	{
 	}
 
-	RenderTexture::RenderTexture(RenderTexture&& other) noexcept :
-		Texture(std::move(other)),
-
-		width(other.width), height(other.height),
-		framebuffer(std::move(other.framebuffer)),
-		bMSAA(other.bMSAA)
-	{
-
-	}
-
-	SH_RENDER_API void RenderTexture::SetReadUsage(bool bReadUsage) noexcept
-	{
-		this->bReadUsage = bReadUsage;
-	}
 	SH_RENDER_API void RenderTexture::Build(const IRenderContext& context)
 	{
-		if (framebuffer != nullptr)
-			return;
-
-		this->context = &context;
-		CreateBuffers();
-	}
-
-	SH_RENDER_API auto RenderTexture::GetFramebuffer() const -> Framebuffer*
-	{
-		return framebuffer.get();
-	}
-	void RenderTexture::CreateBuffers()
-	{
-		if (context->GetRenderAPIType() == RenderAPI::Vulkan)
+		if (this->context == nullptr)
 		{
-			auto& vkContext = static_cast<const vk::VulkanContext&>(*context);
-
-			VkFormat format = VkFormat::VK_FORMAT_R8G8B8A8_SRGB;
-			switch (GetTextureFormat())
-			{
-			case Texture::TextureFormat::SRGB24:
-				format = VkFormat::VK_FORMAT_R8G8B8_SRGB;
-				break;
-			case Texture::TextureFormat::R8:
-				format = VkFormat::VK_FORMAT_R8_UNORM;
-				break;
-			case Texture::TextureFormat::RGB24:
-				format = VkFormat::VK_FORMAT_R8G8B8_UNORM;
-				break;
-			case Texture::TextureFormat::RGBA32:
-				format = VkFormat::VK_FORMAT_R8G8B8A8_UNORM;
-				break;
-			}
-
-			vk::VulkanRenderPass::Config config;
-			config.format = format;
-			config.depthFormat = vkContext.FindSupportedDepthFormat(true);
-			config.bOffScreen = true;
-			config.bTransferSrc = bReadUsage;
-			config.bUseStencil = true;
-			config.sampleCount = bMSAA ? vkContext.GetSampleCount() : VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
-
-			auto& renderPass = vkContext.GetRenderPassManager().GetOrCreateRenderPass(config);
-
-			if (framebuffer == nullptr)
-				framebuffer = std::make_unique<vk::VulkanFramebuffer>(vkContext);
-			static_cast<vk::VulkanFramebuffer*>(framebuffer.get())->CreateOffScreen(renderPass, width, height);
+			this->context = &context;
+			CreateBuffers();
 		}
-		if (textureBuffer == nullptr)
-			textureBuffer = std::make_unique<vk::VulkanTextureBuffer>();
-		textureBuffer->Create(*framebuffer.get());
 	}
-	SH_RENDER_API void RenderTexture::SetSize(uint32_t width, uint32_t height)
-	{
-		assert(width != 0 && height != 0);
-		this->width = width;
-		this->height = height;
-
-		bChangeSize = true;
-		SyncDirty();
-	}
-	SH_RENDER_API auto RenderTexture::GetSize() const -> glm::vec2
-	{
-		return { width, height };
-	}
-	SH_RENDER_API auto RenderTexture::IsMSAA() const -> bool
-	{
-		return bMSAA;
-	}
-
 	SH_RENDER_API void RenderTexture::Sync()
 	{
 		Super::Sync();
@@ -123,4 +49,57 @@ namespace sh::render
 			Build(*context);
 		}
 	}
-}
+	SH_RENDER_API void RenderTexture::SetSize(uint32_t width, uint32_t height)
+	{
+		assert(width != 0 && height != 0);
+		this->width = width;
+		this->height = height;
+
+		bChangeSize = true;
+		SyncDirty();
+	}
+	SH_RENDER_API auto RenderTexture::GetSize() const -> glm::vec2
+	{
+		return { width, height };
+	}
+	SH_RENDER_API void RenderTexture::ChangeUsage(ImageUsage newUsage)
+	{
+		usage = newUsage;
+	}
+
+	void RenderTexture::CreateBuffers()
+	{
+		assert(context->GetRenderAPIType() == RenderAPI::Vulkan);
+		if (textureBuffer == nullptr)
+		{
+			if (context->GetRenderAPIType() == RenderAPI::Vulkan)
+				textureBuffer = std::make_unique<vk::VulkanImageBuffer>();
+		}
+		ITextureBuffer::CreateInfo ci{};
+		ci.width = width;
+		ci.height = height;
+		ci.format = GetTextureFormat();
+		ci.aniso = 0;
+		ci.filtering = 1;
+		ci.mipLevel = 1;
+		ci.bMSAAImg = false;
+		ci.bRenderTarget = true;
+
+		textureBuffer->Create(*context, ci);
+
+		if (layout.depthFormat == TextureFormat::D32S8 || 
+			layout.depthFormat == TextureFormat::D24S8 ||
+			layout.depthFormat == TextureFormat::D16S8)
+		{
+			if (depthBuffer == nullptr)
+			{
+				if (context->GetRenderAPIType() == RenderAPI::Vulkan)
+					depthBuffer = std::make_unique<vk::VulkanImageBuffer>();
+			}
+			ci.format = layout.depthFormat;
+			depthBuffer->Create(*context, ci);
+		}
+
+		usage = ImageUsage::Undefined;
+	}
+}//namespace

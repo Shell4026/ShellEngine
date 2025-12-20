@@ -1,8 +1,6 @@
 ﻿#include "EditorWorld.h"
 #include "EditorResource.h"
-#include "EditorPickingPass.h"
-#include "EditorOutlinePass.h"
-#include "EditorPostOutlinePass.h"
+#include "EditorRenderer.h"
 #include "UI/Project.h"
 #include "AssetDatabase.h"
 
@@ -13,7 +11,6 @@
 
 #include "Render/Mesh/Grid.h"
 #include "Render/Model.h"
-#include "Render/TransparentPipeline.h"
 
 #include "Editor/Component/EditorControl.h"
 
@@ -133,24 +130,46 @@ namespace sh::editor
 		}
 	}
 
-	SH_EDITOR_API void EditorWorld::SetRenderPass()
+	//SH_EDITOR_API void EditorWorld::SetRenderPass()
+	//{
+	//	pickingPass = renderer.AddRenderPipeline<EditorPickingPass>();
+	//	outlinePass = renderer.AddRenderPipeline<EditorOutlinePass>();
+	//	renderer.AddRenderPipeline<render::RenderPipeline>();
+	//	transParentPass = renderer.AddRenderPipeline<render::TransparentPipeline>();
+	//	postOutlinePass = renderer.AddRenderPipeline<EditorPostOutlinePass>();
+	//}
+	SH_EDITOR_API void EditorWorld::SetupRenderer()
 	{
-		pickingPass = renderer.AddRenderPipeline<EditorPickingPass>();
-		outlinePass = renderer.AddRenderPipeline<EditorOutlinePass>();
-		renderer.AddRenderPipeline<render::RenderPipeline>();
-		transParentPass = renderer.AddRenderPipeline<render::TransparentPipeline>();
-		postOutlinePass = renderer.AddRenderPipeline<EditorPostOutlinePass>();
+		customRenderer = std::make_unique<EditorRenderer>(*renderer.GetContext(), GetUiContext());
+		renderer.SetScriptableRenderer(*customRenderer);
+		auto& editorRenderer = static_cast<EditorRenderer&>(*customRenderer);
+
+		game::GameObject* uicamObj = AddGameObject("UICamera");
+		uicamObj->transform->SetPosition({ 2.f, 2.f, 2.f });
+		uicamObj->hideInspector = true;
+		uicamObj->bNotSave = true;
+		game::Camera* cam = uicamObj->AddComponent<game::Camera>();
+		cam->SetDepth(1000);
+
+		editorRenderer.SetUICamera(*cam);
 	}
 	SH_EDITOR_API void EditorWorld::InitResource()
 	{
 		Super::InitResource();
+		auto& editorRenderer = static_cast<EditorRenderer&>(*customRenderer);
 
 		auto viewportPtr = static_cast<render::RenderTexture*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{"180635b4e4d1a98ebb0064ab47dc452a"}));
 		if (!core::IsValid(viewportPtr))
 		{
 			if (viewportPtr != nullptr && viewportPtr->IsPendingKill())
 				viewportPtr->SetUUID(core::UUID::Generate());
-			viewportTexture = core::SObject::Create<render::RenderTexture>(render::Texture::TextureFormat::SRGBA32);
+
+			render::RenderTargetLayout rt{};
+			rt.format = render::TextureFormat::SRGBA32;
+			rt.depthFormat = render::TextureFormat::D24S8;
+			rt.bUseMSAA = false;
+
+			viewportTexture = core::SObject::Create<render::RenderTexture>(rt);
 			viewportTexture->SetUUID(core::UUID{ "180635b4e4d1a98ebb0064ab47dc452a" });
 			viewportTexture->Build(*renderer.GetContext());
 		}
@@ -160,13 +179,11 @@ namespace sh::editor
 		game::GameObject* camObj = AddGameObject("EditorCamera");
 		camObj->transform->SetPosition({ 2.f, 2.f, 2.f });
 		camObj->hideInspector = true;
-		camObj->bNotSave= true;
+		camObj->bNotSave = true;
 		editorCamera = camObj->AddComponent<game::EditorCamera>();
 		editorCamera->SetRenderTexture(viewportTexture);
 		editorCamera->GetNative().SetActive(true);
-
-		outlinePass->SetCamera(*editorCamera);
-		postOutlinePass->SetCamera(*editorCamera);
+		editorRenderer.SetEditorCamera(*editorCamera);
 
 		auto PickingCamObj = AddGameObject("PickingCamera");
 		PickingCamObj->bNotSave = true;
@@ -175,18 +192,15 @@ namespace sh::editor
 		pickingCamera = PickingCamObj->AddComponent<game::PickingCamera>();
 		pickingCamera->SetFollowCamera(editorCamera);
 		pickingCamera->GetNative().SetActive(true);
-
-		pickingPass->SetCamera(*pickingCamera);
-		transParentPass->IgnoreCamera(pickingCamera->GetNative());
-		renderer.GetRenderPipeline(core::Name{ "Forward" })->IgnoreCamera(pickingCamera->GetNative());
+		editorRenderer.SetPickingCamera(*pickingCamera);
 
 		auto outlineTexture = EditorResource::GetInstance()->GetTexture("OutlineTexture");
 		assert(outlineTexture);
-		outlinePass->SetOutTexture(static_cast<render::RenderTexture&>(*outlineTexture));
+		editorRenderer.GetOutlinePass()->SetOutTexture(static_cast<render::RenderTexture&>(*outlineTexture));
 
 		auto outlinePostMat = EditorResource::GetInstance()->GetMaterial("OutlinePostMaterial");
 		assert(outlinePostMat);
-		postOutlinePass->SetOutlineMaterial(*outlinePostMat);
+		editorRenderer.GetPostOutlinePass()->SetOutlineMaterial(*outlinePostMat);
 
 		// 렌더 테스트용 객체
 		//auto prop = core::SObject::Create<render::MaterialPropertyBlock>();

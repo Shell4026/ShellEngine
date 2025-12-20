@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "../Export.h"
+#include "../CommandBuffer.h"
 #include "VulkanConfig.h"
 #include "Core/NonCopyable.h"
 
@@ -10,21 +11,19 @@ namespace sh::render::vk
 {
     class VulkanContext;
 
-    class VulkanCommandBuffer : public core::INonCopyable
+    class VulkanCommandBuffer : public CommandBuffer
     {
     public:
         struct WaitSemaphore
         {
             VkSemaphore semaphore = VK_NULL_HANDLE;
             VkPipelineStageFlags stageMask = VK_PIPELINE_STAGE_NONE;
-            bool isTimeline = false;
             uint64_t value = 0;
         };
 
         struct SignalSemaphore
         {
             VkSemaphore semaphore = VK_NULL_HANDLE;
-            bool isTimeline = false;
             uint64_t value = 0;
         };
 
@@ -37,7 +36,14 @@ namespace sh::render::vk
 
         SH_RENDER_API auto Create(VkCommandPool pool, VkCommandBufferLevel level = VK_COMMAND_BUFFER_LEVEL_PRIMARY) -> VkResult;
 
+        /// @brief Begin()과 End()사이에 recordFn이 실행 된다.
+        /// @param recordFn 명령 버퍼에 기록할 함수
+        /// @param bOneTimeSubmit 일회용인지
         SH_RENDER_API auto Build(const std::function<void()>& recordFn, bool bOneTimeSubmit = true) -> VkResult;
+        SH_RENDER_API void Begin(bool bOnetime) override;
+        SH_RENDER_API void End() override;
+
+        SH_RENDER_API void Blit(RenderTexture& src, int x, int y, IBuffer& dst) override;
 
         SH_RENDER_API auto ResetCommand(VkCommandBufferResetFlags flags = 0) -> VkResult;
 
@@ -59,10 +65,6 @@ namespace sh::render::vk
         SH_RENDER_API auto GetCommandPool() const -> VkCommandPool;
 
         SH_RENDER_API void Clear();
-
-    private:
-        auto Begin(bool bOneTime) -> VkResult;
-        auto End() -> VkResult;
     private:
         const VulkanContext& context;
         VkCommandBuffer buffer = VK_NULL_HANDLE;

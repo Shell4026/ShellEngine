@@ -66,7 +66,6 @@ namespace sh
 #endif
 		gameManager->Destroy();
 		renderer->WaitForCurrentFrame();
-		renderer->ClearRenderPipeline();
 
 		gc->DefragmentRootSet();
 		while(gc->GetRootSetCount() != gc->GetObjectCount())

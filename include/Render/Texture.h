@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Export.h"
+#include "Formats.hpp"
 
 #include "Core/ISyncable.h"
 #include "Core/NonCopyable.h"
@@ -22,49 +23,12 @@ namespace sh::render
 	{
 		SCLASS(Texture)
 	public:
-		enum class TextureFormat
-		{
-			SRGB24,
-			SRGBA32,
-			R8,
-			RGB24,
-			RGBA32
-		};
 		enum class Filtering
 		{
+			Box,
 			Linear,
-			Box
 		};
-
 		using Byte = unsigned char;
-	private:
-		TextureFormat format;
-
-		std::atomic_flag bDirty;
-
-		uint32_t width;
-		uint32_t height;
-		PROPERTY(aniso)
-		uint32_t aniso;
-		PROPERTY(filtering)
-		Filtering filtering = Filtering::Linear;
-		
-		PROPERTY(bSRGB)
-		bool bSRGB = false;
-		PROPERTY(bGenerateMipmap)
-		bool bGenerateMipmap = true;
-		bool bSetDataDirty = false;
-	protected:
-		const IRenderContext* context;
-
-		std::unique_ptr<ITextureBuffer> textureBuffer;
-
-		std::vector<std::vector<Byte>> pixels;
-	public:
-		mutable core::Observer<false, const Texture*> onBufferUpdate;
-	private:
-		void CreateTextureBuffer();
-		auto CheckSRGB() const -> bool;
 	public:
 		SH_RENDER_API Texture(TextureFormat format, uint32_t width, uint32_t height, bool bUseMipmap = true);
 		SH_RENDER_API Texture(Texture&& other) noexcept;
@@ -92,7 +56,7 @@ namespace sh::render
 		SH_RENDER_API auto GetTextureFormat() const -> TextureFormat;
 
 		SH_RENDER_API auto GetWidth() const -> uint32_t;
-		SH_RENDER_API auto GetHeight() const->uint32_t;
+		SH_RENDER_API auto GetHeight() const -> uint32_t;
 		/// @brief 텍스쳐 포멧을 변경한다.
 		/// @brief [주의] 동기화 타이밍에 텍스쳐 버퍼가 재설정됨.
 		/// @param target 텍스쳐 포멧
@@ -115,5 +79,34 @@ namespace sh::render
 		SH_RENDER_API auto GetFiltering() const-> Filtering;
 
 		SH_RENDER_API void OnPropertyChanged(const core::reflection::Property& prop) override;
+	private:
+		void CreateTextureBuffer();
+		auto CheckSRGB() const -> bool;
+	public:
+		mutable core::Observer<false, const Texture*> onBufferUpdate;
+	protected:
+		const IRenderContext* context;
+
+		std::unique_ptr<ITextureBuffer> textureBuffer;
+
+		std::vector<std::vector<Byte>> pixels;
+	private:
+		TextureFormat format;
+
+		std::atomic_flag bDirty;
+
+		uint32_t width;
+		uint32_t height;
+
+		PROPERTY(aniso)
+		uint32_t aniso;
+		PROPERTY(filtering)
+		Filtering filtering = Filtering::Linear;
+
+		PROPERTY(bSRGB)
+		bool bSRGB = false;
+		PROPERTY(bGenerateMipmap)
+		bool bGenerateMipmap = true;
+		bool bSetDataDirty = false;
 	};
 }

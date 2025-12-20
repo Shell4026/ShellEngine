@@ -2,6 +2,7 @@
 #include "Render/Export.h"
 #include "Render/ShaderEnum.h"
 #include "VulkanConfig.h"
+#include "../RenderTarget.h"
 
 #include "Core/NonCopyable.h"
 
@@ -16,42 +17,20 @@ namespace sh::render::vk
 	class VulkanPipeline : public core::INonCopyable
 	{
 	public:
-		 enum class ShaderStage 
-		 {
-			Vertex,
-			Fragment
+		enum class ShaderStage 
+		{
+		Vertex,
+		Fragment
 		};
 
-		 enum class Topology
-		 {
-			 Point,
-			 Line,
-			 Triangle
-		 };
-	private:
-		VkDevice device;
-		VkRenderPass renderPass;
-		const VulkanShaderPass* shader;
-
-		VkPipeline pipeline;
-
-		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
-		std::vector<VkVertexInputBindingDescription> bindingDescriptions;
-		std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
-		const uint8_t* specializationData = nullptr;
-
-		CullMode cullMode;
-		Topology topology;
-		VkStencilOpState stencilState{};
-
-		float lineWidth = 1.f;
-
-		VkSampleCountFlagBits sampleCount = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
-
-		bool bUseStencil = true;
-		bool bZWrite = true;
+		enum class Topology
+		{
+			Point,
+			Line,
+			Triangle
+		};
 	public:
-		SH_RENDER_API VulkanPipeline(VkDevice device, VkRenderPass renderPass);
+		SH_RENDER_API VulkanPipeline(VkDevice device, const RenderTargetLayout& rt);
 		SH_RENDER_API VulkanPipeline(VulkanPipeline&& other) noexcept;
 		SH_RENDER_API ~VulkanPipeline();
 
@@ -90,5 +69,27 @@ namespace sh::render::vk
 		SH_RENDER_API auto GetSampleCount() const -> VkSampleCountFlagBits;
 
 		SH_RENDER_API void SetSpecializationConstant(const uint8_t* dataPtr);
+	private:
+		VkDevice device;
+		const VulkanShaderPass* shader;
+		RenderTargetLayout rtLayout;
+
+		VkPipeline pipeline;
+
+		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
+		std::vector<VkVertexInputBindingDescription> bindingDescriptions;
+		std::vector<VkVertexInputAttributeDescription> attributeDescriptions;
+		const uint8_t* specializationData = nullptr;
+
+		CullMode cullMode;
+		Topology topology;
+		VkStencilOpState stencilState{};
+
+		float lineWidth = 1.f;
+
+		VkSampleCountFlagBits sampleCount = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
+
+		bool bUseStencil = true;
+		bool bZWrite = true;
 	};
 }

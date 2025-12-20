@@ -50,11 +50,9 @@ namespace sh::game
 
 		stbi_uc* pixels = stbi_load(filePath.string().c_str(), &width, &height, &channel, STBI_rgb_alpha);
 
-		render::Texture::TextureFormat format = render::Texture::TextureFormat::SRGBA32;
+		render::TextureFormat format = render::TextureFormat::SRGBA32;
 		if (channel == 3)
-		{
-			format = render::Texture::TextureFormat::SRGB24;
-		}
+			format = render::TextureFormat::SRGB24;
 		
 		auto mipMaps = GenerateMipmaps(pixels, width, height);
 
