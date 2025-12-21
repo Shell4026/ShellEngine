@@ -87,6 +87,17 @@ namespace sh::render
 
 		textureBuffer->Create(*context, ci);
 
+		if (layout.bUseMSAA)
+		{
+			ci.bMSAAImg = true;
+			if (msaaBuffer == nullptr)
+			{
+				if (context->GetRenderAPIType() == RenderAPI::Vulkan)
+					msaaBuffer = std::make_unique<vk::VulkanImageBuffer>();
+			}
+			msaaBuffer->Create(*context, ci);
+		}
+
 		if (layout.depthFormat == TextureFormat::D32S8 || 
 			layout.depthFormat == TextureFormat::D24S8 ||
 			layout.depthFormat == TextureFormat::D16S8)

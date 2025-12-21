@@ -167,7 +167,7 @@ namespace sh::editor
 			render::RenderTargetLayout rt{};
 			rt.format = render::TextureFormat::SRGBA32;
 			rt.depthFormat = render::TextureFormat::D24S8;
-			rt.bUseMSAA = false;
+			rt.bUseMSAA = true;
 
 			viewportTexture = core::SObject::Create<render::RenderTexture>(rt);
 			viewportTexture->SetUUID(core::UUID{ "180635b4e4d1a98ebb0064ab47dc452a" });

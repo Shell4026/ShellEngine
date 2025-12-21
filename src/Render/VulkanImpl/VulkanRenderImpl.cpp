@@ -25,7 +25,10 @@ namespace sh::render::vk
 			VulkanImageBuffer* msaaBuffer = nullptr;
 
 			if (barrier.target.index() == 0)
+			{
 				imgBuffer = (static_cast<VulkanImageBuffer*>(std::get<0>(barrier.target)->GetTextureBuffer()));
+				msaaBuffer = (static_cast<VulkanImageBuffer*>(std::get<0>(barrier.target)->GetMSAABuffer()));
+			}
 			else
 			{
 				const uint32_t imgIdx = std::get<1>(barrier.target);
@@ -80,8 +83,9 @@ namespace sh::render::vk
 
 			if (msaaBuffer != nullptr)
 			{
+				// MSAA 버퍼를 다른 용도로 쓸 일이 없을듯?
 				//if (barrier.curUsage != ImageUsage::Present)
-					VulkanImageBuffer::BarrierCommand(cmd.GetCommandBuffer(), *msaaBuffer, srcLayout, dstLayout, srcStage, dstStage, srcAccess, dstAccess);
+					//VulkanImageBuffer::BarrierCommand(cmd.GetCommandBuffer(), *msaaBuffer, srcLayout, dstLayout, srcStage, dstStage, srcAccess, dstAccess);
 			}
 		}
 	}
@@ -132,6 +136,7 @@ namespace sh::render::vk
 			scissor.extent = { static_cast<uint32_t>(w), static_cast<uint32_t>(h) };
 
 			imgBuffer = static_cast<VulkanImageBuffer*>(renderData.target->GetTextureBuffer());
+			imgBufferMSAA = static_cast<VulkanImageBuffer*>(renderData.target->GetMSAABuffer());
 			depthBuffer = static_cast<VulkanImageBuffer*>(renderData.target->GetDepthBuffer());
 
 			rtLayout = renderData.target->GetLayout();

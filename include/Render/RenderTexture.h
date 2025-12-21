@@ -35,6 +35,7 @@ namespace sh::render
 		SH_RENDER_API auto GetSize() const -> glm::vec2;
 
 		SH_RENDER_API auto GetLayout() const -> const RenderTargetLayout& { return layout; }
+		SH_RENDER_API auto GetMSAABuffer() const -> ITextureBuffer* { return msaaBuffer.get(); }
 		SH_RENDER_API auto GetDepthBuffer() const -> ITextureBuffer* { return depthBuffer.get(); }
 		SH_RENDER_API auto GetUsage() const -> ImageUsage { return usage; }
 	protected:
@@ -49,6 +50,7 @@ namespace sh::render
 
 		RenderTargetLayout layout;
 
+		std::unique_ptr<ITextureBuffer> msaaBuffer;
 		std::unique_ptr<ITextureBuffer> depthBuffer;
 
 		ImageUsage usage = ImageUsage::Undefined;
