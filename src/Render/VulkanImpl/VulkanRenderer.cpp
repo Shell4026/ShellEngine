@@ -122,6 +122,9 @@ namespace sh::render::vk
 		DestroySyncObjects();
 		CreateSyncObjects();
 
+		if (renderer != nullptr)
+			IRenderThrMethod<ScriptableRenderer>::ResetSwapChainStates(*renderer);
+
 		return context->ReSizing();
 	}
 
