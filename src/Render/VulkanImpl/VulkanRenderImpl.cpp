@@ -91,13 +91,6 @@ namespace sh::render::vk
 	}
 	SH_RENDER_API void VulkanRenderImpl::RecordCommand(CommandBuffer& _cmd, const core::Name& passName, const RenderTarget& renderData, const DrawList& drawList)
 	{
-		auto& cmd = static_cast<VulkanCommandBuffer&>(_cmd);
-
-		const float width = ctx.GetViewportEnd().x - ctx.GetViewportStart().x;
-		const float height = ctx.GetViewportEnd().y - ctx.GetViewportStart().y;
-		const float surfWidth = static_cast<float>(ctx.GetSwapChain().GetSwapChainSize().width);
-		const float surfHeight = static_cast<float>(ctx.GetSwapChain().GetSwapChainSize().height);
-
 		// 드로우 목적이 아닌 경우
 		if (renderData.camera == nullptr)
 		{
@@ -105,6 +98,13 @@ namespace sh::render::vk
 				call(_cmd);
 			return;
 		}
+
+		auto& cmd = static_cast<VulkanCommandBuffer&>(_cmd);
+
+		const float width = ctx.GetViewportEnd().x - ctx.GetViewportStart().x;
+		const float height = ctx.GetViewportEnd().y - ctx.GetViewportStart().y;
+		const float surfWidth = static_cast<float>(ctx.GetSwapChain().GetSwapChainSize().width);
+		const float surfHeight = static_cast<float>(ctx.GetSwapChain().GetSwapChainSize().height);
 
 		VkViewport viewport{};
 		viewport.minDepth = 0.0f;
@@ -159,7 +159,7 @@ namespace sh::render::vk
 		colorAttachment.imageView = bMSAA ? imgBufferMSAA->GetImageView() : imgBuffer->GetImageView();
 		colorAttachment.imageLayout = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		colorAttachment.loadOp = drawList.bClearColor ? VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR : VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_LOAD;
-		colorAttachment.storeOp = VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE; // 다음 패스에서 다시 읽을 수도 있음
+		colorAttachment.storeOp = bStore ? VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE : VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		colorAttachment.clearValue = { 0.f, 0.f, 0.f, 1.f };
 		if (bMSAA)
 		{
@@ -202,6 +202,12 @@ namespace sh::render::vk
 		static PFN_vkCmdEndRenderingKHR pfnCmdEndRenderingKHR = (PFN_vkCmdEndRenderingKHR)vkGetDeviceProcAddr(ctx.GetDevice(), "vkCmdEndRenderingKHR");;
 		pfnCmdEndRenderingKHR(commandBuffer);
 	}
+
+	SH_RENDER_API void VulkanRenderImpl::SetStoreImage(bool bStore)
+	{
+		this->bStore = bStore;
+	}
+
 	void VulkanRenderImpl::BindCameraSet(VulkanCommandBuffer& cmd, VkPipelineLayout layout, const ShaderPass& pass, const Material& mat, uint32_t cameraOffset)
 	{
 		// 카메라 데이터는 다이나믹 디스크립터셋

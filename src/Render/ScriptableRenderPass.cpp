@@ -61,6 +61,11 @@ namespace sh::render
 		ctx.GetRenderImpl().EmitBarrier(cmd, barriers);
 	}
 
+	SH_RENDER_API void ScriptableRenderPass::SetStoreImg(const IRenderContext& ctx, bool bStore)
+	{
+		IRenderThrMethod<IRenderImpl>::SetStoreImage(ctx.GetRenderImpl(), bStore);
+	}
+
 	void ScriptableRenderPass::CollectRenderImages(const RenderTarget& renderData, const DrawList& drawList)
 	{
 		renderTextures.clear();

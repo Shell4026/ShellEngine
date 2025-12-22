@@ -74,7 +74,7 @@ namespace sh::render::vk
 		SH_RENDER_API auto GetPipelineManager() const -> VulkanPipelineManager& { return *pipelineManager; }
 		SH_RENDER_API auto GetEmptyDescriptorSetLayout() const -> VkDescriptorSetLayout { return emptyDescLayout; }
 		SH_RENDER_API auto GetEmptyDescriptorSet() const -> VkDescriptorSet { return emptyDescSet; }
-		SH_RENDER_API auto GetMaxSampleCount() const ->VkSampleCountFlagBits;
+		SH_RENDER_API auto GetMaxSampleCount() const -> VkSampleCountFlagBits;
 	private:
 		void PrepareValidationLayer();
 		void CreateDebugInfo();

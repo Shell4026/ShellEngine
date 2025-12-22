@@ -21,6 +21,8 @@ namespace sh::render::vk
 		SH_RENDER_API VulkanRenderImpl(VulkanContext& context);
 		SH_RENDER_API void EmitBarrier(CommandBuffer& cmd, const std::vector<BarrierInfo>& barriers) override;
 		SH_RENDER_API void RecordCommand(CommandBuffer& cmd, const core::Name& passName, const RenderTarget& renderData, const DrawList& drawList) override;
+	protected:
+		SH_RENDER_API void SetStoreImage(bool bStore) override;
 	private:
 		void BindCameraSet(VulkanCommandBuffer& cmd, VkPipelineLayout layout, const ShaderPass& pass, const Material& mat, uint32_t cameraOffset);
 		void BindMaterialSet(VulkanCommandBuffer& cmd, VkPipelineLayout layout, const ShaderPass& pass, const Material& mat);
@@ -30,5 +32,7 @@ namespace sh::render::vk
 	private:
 		VulkanContext& ctx;
 		VulkanCameraBuffers* cameraManager = nullptr;
+
+		bool bStore = true;
 	};
 }//namespace

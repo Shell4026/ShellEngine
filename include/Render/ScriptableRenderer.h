@@ -25,6 +25,7 @@ namespace sh::render
 		static void EnqueRenderPass(ScriptableRenderer& renderer, ScriptableRenderPass& pass);
 		static void CallReadbacks(ScriptableRenderer& renderer);
 		static void ResetSubmittedCommands(ScriptableRenderer& renderer, IRenderContext& ctx);
+		static void ResetSwapChainStates(ScriptableRenderer& renderer);
 	};
 
 	class ScriptableRenderer : public core::ISyncable
@@ -59,6 +60,8 @@ namespace sh::render
 
 		SH_RENDER_API void EnqueRenderPass(ScriptableRenderPass& pass);
 		SH_RENDER_API void ResetSubmittedCommands(IRenderContext& ctx);
+
+		SH_RENDER_API void ResetSwapChainStates();
 	private:
 		auto BuildBarrierInfo(ScriptableRenderPass& pass, uint32_t imgIdx) -> std::vector<BarrierInfo>;
 	protected:
@@ -66,7 +69,8 @@ namespace sh::render
 
 		std::vector<std::unique_ptr<ScriptableRenderPass>> allPasses;
 	private:
-		std::vector<ImageUsage> swapChainStates;
+		SH_RENDER_API static std::vector<ImageUsage> swapChainStates;
+
 		std::vector<ScriptableRenderPass*> activePasses;
 		std::vector<SubmittedCommand> submittedCmds;
 
@@ -123,5 +127,9 @@ namespace sh::render
 	inline void IRenderThrMethod<class ScriptableRenderer>::ResetSubmittedCommands(ScriptableRenderer& renderer, IRenderContext& ctx)
 	{
 		renderer.ResetSubmittedCommands(ctx);
+	}
+	inline void IRenderThrMethod<class ScriptableRenderer>::ResetSwapChainStates(ScriptableRenderer& renderer)
+	{
+		renderer.ResetSwapChainStates();
 	}
 }//namespace

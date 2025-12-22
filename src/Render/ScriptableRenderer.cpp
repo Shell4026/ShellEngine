@@ -8,6 +8,8 @@
 #include <algorithm>
 namespace sh::render
 {
+	std::vector<ImageUsage> ScriptableRenderer::swapChainStates{};
+
 	ScriptableRenderer::ScriptableRenderer(IRenderContext& ctx) :
 		ctx(ctx)
 	{
@@ -153,9 +155,18 @@ namespace sh::render
 			ctx.DeallocateCommandBuffer(submittedCmd.cmd);
 		submittedCmds.clear();
 	}
+
+	SH_RENDER_API void ScriptableRenderer::ResetSwapChainStates()
+	{
+		for (auto& state : swapChainStates)
+			state = ImageUsage::Undefined;
+	}
+
 	auto ScriptableRenderer::BuildBarrierInfo(ScriptableRenderPass& pass, uint32_t imgIdx) -> std::vector<BarrierInfo>
 	{
-		std::vector<BarrierInfo> barriers;
+		std::vector<BarrierInfo> barriers{};
+		barriers.reserve(pass.GetRenderTextures().size());
+
 		for (auto& [rt, usage] : pass.GetRenderTextures())
 		{
 			BarrierInfo& barrierInfo = barriers.emplace_back();
