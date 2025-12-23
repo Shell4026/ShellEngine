@@ -146,8 +146,9 @@ namespace sh::game
 						World* world = loadingWorldQueue.front();
 						loadingWorldQueue.pop();
 
-						world->InitResource();
-						world->LoadWorldPoint();
+						core::Json* worldPoint = world->GetWorldPoint();
+						if (worldPoint != nullptr)
+							world->Deserialize(*worldPoint); // 즉시 역직렬화 해야하므로 LoadWorldPoint()를 쓰지 않음
 						if (bPlayWorld)
 							world->Play();
 						world->Start();

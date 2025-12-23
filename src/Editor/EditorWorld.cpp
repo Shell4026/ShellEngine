@@ -156,68 +156,73 @@ namespace sh::editor
 	SH_EDITOR_API void EditorWorld::InitResource()
 	{
 		Super::InitResource();
-		auto& editorRenderer = static_cast<EditorRenderer&>(*customRenderer);
+		auto* editorRenderer = static_cast<EditorRenderer*>(customRenderer.get());
 
-		auto viewportPtr = static_cast<render::RenderTexture*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{"180635b4e4d1a98ebb0064ab47dc452a"}));
-		if (!core::IsValid(viewportPtr))
+		// editorRenderer가 없으면 addtive로 추가된 월드임
+		if (editorRenderer != nullptr)
 		{
-			if (viewportPtr != nullptr && viewportPtr->IsPendingKill())
-				viewportPtr->SetUUID(core::UUID::Generate());
+			auto viewportPtr = static_cast<render::RenderTexture*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ "180635b4e4d1a98ebb0064ab47dc452a" }));
+			if (!core::IsValid(viewportPtr))
+			{
+				if (viewportPtr != nullptr && viewportPtr->IsPendingKill())
+					viewportPtr->SetUUID(core::UUID::Generate());
 
-			render::RenderTargetLayout rt{};
-			rt.format = render::TextureFormat::SRGBA32;
-			rt.depthFormat = render::TextureFormat::D24S8;
-			rt.bUseMSAA = true;
+				render::RenderTargetLayout rt{};
+				rt.format = render::TextureFormat::SRGBA32;
+				rt.depthFormat = render::TextureFormat::D24S8;
+				rt.bUseMSAA = true;
 
-			viewportTexture = core::SObject::Create<render::RenderTexture>(rt);
-			viewportTexture->SetUUID(core::UUID{ "180635b4e4d1a98ebb0064ab47dc452a" });
-			viewportTexture->Build(*renderer.GetContext());
+				viewportTexture = core::SObject::Create<render::RenderTexture>(rt);
+				viewportTexture->SetUUID(core::UUID{ "180635b4e4d1a98ebb0064ab47dc452a" });
+				viewportTexture->Build(*renderer.GetContext());
+			}
+			else
+				viewportTexture = viewportPtr;
+
+			game::GameObject* camObj = AddGameObject("EditorCamera");
+			camObj->transform->SetPosition({ 2.f, 2.f, 2.f });
+			camObj->hideInspector = true;
+			camObj->bNotSave = true;
+			editorCamera = camObj->AddComponent<game::EditorCamera>();
+			editorCamera->SetRenderTexture(viewportTexture);
+			editorCamera->GetNative().SetActive(true);
+			editorRenderer->SetEditorCamera(*editorCamera);
+
+			auto PickingCamObj = AddGameObject("PickingCamera");
+			PickingCamObj->bNotSave = true;
+			PickingCamObj->transform->SetParent(camObj->transform);
+			PickingCamObj->transform->SetPosition({ 0.f, 0.f, 0.f });
+			pickingCamera = PickingCamObj->AddComponent<game::PickingCamera>();
+			pickingCamera->SetFollowCamera(editorCamera);
+			pickingCamera->GetNative().SetActive(true);
+
+			editorRenderer->SetPickingCamera(*pickingCamera);
+
+			auto outlineTexture = EditorResource::GetInstance()->GetTexture("OutlineTexture");
+			assert(outlineTexture);
+			editorRenderer->GetOutlinePass()->SetOutTexture(static_cast<render::RenderTexture&>(*outlineTexture));
+
+			auto outlinePostMat = EditorResource::GetInstance()->GetMaterial("OutlinePostMaterial");
+			assert(outlinePostMat);
+			editorRenderer->GetPostOutlinePass()->SetOutlineMaterial(*outlinePostMat);
+
+			// 렌더 테스트용 객체
+			//auto prop = core::SObject::Create<render::MaterialPropertyBlock>();
+			//prop->SetProperty("offset", glm::vec2{ 0.5f, 0.f });
+
+			//game::GameObject* tri = AddGameObject("Triangle");
+			//tri->transform->SetScale(0.5f, 1.0f, 1.f);
+			//auto m = tri->AddComponent<game::MeshRenderer>();
+			//m->SetMaterial(triMat);
+			//m->SetMesh(plane);
+			//m->SetMaterialPropertyBlock(prop);
+
+			game::GameObject* uiObj = AddGameObject("EditorUI");
+			uiObj->hideInspector = true;
+			uiObj->bNotSave = true;
+			editorUI = uiObj->AddComponent<EditorUI>();
+			editorUI->SetProject(project);
 		}
-		else
-			viewportTexture = viewportPtr;
-
-		game::GameObject* camObj = AddGameObject("EditorCamera");
-		camObj->transform->SetPosition({ 2.f, 2.f, 2.f });
-		camObj->hideInspector = true;
-		camObj->bNotSave = true;
-		editorCamera = camObj->AddComponent<game::EditorCamera>();
-		editorCamera->SetRenderTexture(viewportTexture);
-		editorCamera->GetNative().SetActive(true);
-		editorRenderer.SetEditorCamera(*editorCamera);
-
-		auto PickingCamObj = AddGameObject("PickingCamera");
-		PickingCamObj->bNotSave = true;
-		PickingCamObj->transform->SetParent(camObj->transform);
-		PickingCamObj->transform->SetPosition({ 0.f, 0.f, 0.f });
-		pickingCamera = PickingCamObj->AddComponent<game::PickingCamera>();
-		pickingCamera->SetFollowCamera(editorCamera);
-		pickingCamera->GetNative().SetActive(true);
-		editorRenderer.SetPickingCamera(*pickingCamera);
-
-		auto outlineTexture = EditorResource::GetInstance()->GetTexture("OutlineTexture");
-		assert(outlineTexture);
-		editorRenderer.GetOutlinePass()->SetOutTexture(static_cast<render::RenderTexture&>(*outlineTexture));
-
-		auto outlinePostMat = EditorResource::GetInstance()->GetMaterial("OutlinePostMaterial");
-		assert(outlinePostMat);
-		editorRenderer.GetPostOutlinePass()->SetOutlineMaterial(*outlinePostMat);
-
-		// 렌더 테스트용 객체
-		//auto prop = core::SObject::Create<render::MaterialPropertyBlock>();
-		//prop->SetProperty("offset", glm::vec2{ 0.5f, 0.f });
-
-		//game::GameObject* tri = AddGameObject("Triangle");
-		//tri->transform->SetScale(0.5f, 1.0f, 1.f);
-		//auto m = tri->AddComponent<game::MeshRenderer>();
-		//m->SetMaterial(triMat);
-		//m->SetMesh(plane);
-		//m->SetMaterialPropertyBlock(prop);
-
-		game::GameObject* uiObj = AddGameObject("EditorUI");
-		uiObj->hideInspector = true;
-		uiObj->bNotSave = true;
-		editorUI = uiObj->AddComponent<EditorUI>();
-		editorUI->SetProject(project);
 
 		grid = AddGameObject("Grid"); // Grid와 Axis는 피킹 렌더러가 추가 되면 안 된다.
 		grid->hideInspector = true;
@@ -347,13 +352,16 @@ namespace sh::editor
 
 		Super::Deserialize(copyJson);
 
-		if (json.contains("camPos") && json["camPos"].is_array())
+		if (editorCamera != nullptr)
 		{
-			const auto& camPosJson = json["camPos"];
-			editorCamera->gameObject.transform->SetWorldPosition(camPosJson[0], camPosJson[1], camPosJson[2]);
-			editorCamera->gameObject.transform->UpdateMatrix();
+			if (json.contains("camPos") && json["camPos"].is_array())
+			{
+				const auto& camPosJson = json["camPos"];
+				editorCamera->gameObject.transform->SetWorldPosition(camPosJson[0], camPosJson[1], camPosJson[2]);
+				editorCamera->gameObject.transform->UpdateMatrix();
+			}
+			if (json.contains("cam"))
+				editorCamera->Deserialize(json["cam"]);
 		}
-		if (json.contains("cam"))
-			editorCamera->Deserialize(json["cam"]);
 	}
 }

@@ -353,8 +353,10 @@ namespace sh::game
 			return;
 		}
 
+		bool hasCustomRenderer = customRenderer != nullptr;
 		CleanObjs();
-		SetupRenderer();
+		if (hasCustomRenderer)
+			SetupRenderer();
 		InitResource();
 
 		core::SObjectManager* objManager = core::SObjectManager::GetInstance();

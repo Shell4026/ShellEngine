@@ -5,6 +5,7 @@
 #include "Game/ImGUImpl.h"
 #include "Game/GameObject.h"
 #include "Game/Input.h"
+#include "Game/GameManager.h"
 
 #include <type_traits>
 namespace sh::editor
@@ -20,6 +21,16 @@ namespace sh::editor
 				{
 					if (!event.gameObject.IsPendingKill())
 						objList.push_back(&event.gameObject);
+				}
+			}
+		);
+		gameObjectEventSubscriberOther.SetCallback(
+			[&](const game::events::GameObjectEvent& event)
+			{
+				if (event.type == game::events::GameObjectEvent::Type::Added)
+				{
+					if (!event.gameObject.IsPendingKill())
+						objListOther.push_back(&event.gameObject);
 				}
 			}
 		);
@@ -43,6 +54,104 @@ namespace sh::editor
 				objList.push_back(draggedObj);
 			}
 		);
+	}
+	SH_EDITOR_API void Hierarchy::Update()
+	{
+		if (game::Input::GetKeyDown(game::Input::KeyCode::LCtrl) && game::Input::GetKeyPressed(game::Input::KeyCode::D))
+			CopyGameobject();
+
+		if (otherWorld == nullptr)
+		{
+			auto& worlds = game::GameManager::GetInstance()->GetWorlds();
+			for (auto& [uuid, worldPtr] : worlds)
+			{
+				if (worldPtr == &world || !core::IsValid(worldPtr))
+					continue;
+				otherWorld = worldPtr;
+				AddOtherWorld(*otherWorld);
+				break;
+			}
+		}
+	}
+	SH_EDITOR_API void Hierarchy::Render()
+	{
+		ImGuiWindowFlags style =
+			//ImGuiWindowFlags_::ImGuiWindowFlags_NoBringToFrontOnFocus |
+			ImGuiWindowFlags_::ImGuiWindowFlags_NoCollapse;
+
+		ImGui::SetNextWindowSize({ 200, 500 });
+		ImGui::Begin("Hierarchy", nullptr, style);
+		isDocking = ImGui::IsWindowDocked();
+		isFocus = ImGui::IsWindowFocused() && ImGui::IsWindowHovered();
+
+		RenderHierarchy(objList);
+		if (!objListOther.empty())
+		{
+			ImGui::Separator();
+			RenderHierarchy(objListOther, false);
+		}
+		// 빈 공간 드래그 시 부모 제거
+		ImGui::PushStyleVar(ImGuiStyleVar_::ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
+		ImGui::InvisibleButton("HierarchyEmptySpace", ImGui::GetContentRegionAvail());
+		if (ImGui::BeginDragDropTarget())
+		{
+			const auto customHierarchyManager = CustomHierarchyManager::GetInstance();
+			for (const auto& [stype, customHierarchy] : customHierarchyManager->map)
+			{
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(std::string{ stype->type.name }.c_str()))
+					customHierarchy->OnHierarchyDraged(world, *payload);
+			}
+			for (auto& [name, func] : dragFunc)
+			{
+				const std::string typeName{ core::reflection::GetType<game::GameObject>().name };
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(typeName.c_str()))
+					func(*payload);
+			}
+
+			ImGui::EndDragDropTarget();
+		}
+		ImGui::PopStyleVar();
+
+		// 우클릭
+		if (ImGui::BeginPopupContextItem("RightClickPopup"))
+		{
+			if (ImGui::BeginMenu("Create"))
+			{
+				if (ImGui::MenuItem("GameObject"))
+				{
+					world.AddGameObject("EmptyObject");
+				}
+				ImGui::EndMenu();
+			}
+			ImGui::EndPopup();
+		}
+
+		ImGui::End();
+	}
+
+	SH_EDITOR_API void Hierarchy::RegisterDragItemFunction(const std::string& dragItem, const std::function<void(const ImGuiPayload& payload)>& func)
+	{
+		for (auto& [name, _func] : dragFunc)
+		{
+			if (name == dragItem)
+			{
+				_func = func;
+				return;
+			}
+		}
+		dragFunc.push_back({ dragItem, func });
+	}
+
+	SH_EDITOR_API void Hierarchy::AddOtherWorld(game::World& world)
+	{
+		world.SubscribeEvent(gameObjectEventSubscriberOther);
+		for (auto obj : world.GetGameObjects())
+			objListOther.push_back(obj);
+	}
+
+	SH_EDITOR_API bool Hierarchy::IsDocking() const
+	{
+		return isDocking;
 	}
 
 	void Hierarchy::DrawInvisibleSpace(game::GameObject* obj)
@@ -99,7 +208,7 @@ namespace sh::editor
 		}
 	}
 
-	void Hierarchy::DrawGameObjectHierarchy(game::GameObject* obj, std::unordered_set<game::GameObject*>& drawSet)
+	void Hierarchy::DrawGameObjectHierarchy(game::GameObject* obj, std::unordered_set<game::GameObject*>& drawSet, bool bCanDrag)
 	{
 		bool isSelected = world.IsSelected(obj);
 		bool nodeOpen = false;
@@ -107,7 +216,7 @@ namespace sh::editor
 		bool bActive = obj->IsActive();
 
 		DrawInvisibleSpace(obj);
-		if (hasChildren) 
+		if (hasChildren)
 		{
 			if (!bActive)
 				ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Text, ImVec4(0.4f, 0.4f, 0.4f, 1.0f));
@@ -163,46 +272,49 @@ namespace sh::editor
 		}
 
 		const std::string typeName{ core::reflection::GetType<game::GameObject>().name };
-		// 드래그 되는 대상의 시점
-		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_::ImGuiDragDropFlags_None))
+		if (bCanDrag)
 		{
-			ImGui::SetDragDropPayload(typeName.c_str(), &obj, sizeof(game::GameObject*));
-			ImGui::Text("%s", obj->GetName().ToString().c_str());
-			ImGui::EndDragDropSource();
-		}
-		// 드래그 받는 대상의 시점
-		if (ImGui::BeginDragDropTarget()) 
-		{
-			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(typeName.c_str()))
+			// 드래그 되는 대상의 시점
+			if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_::ImGuiDragDropFlags_None))
 			{
-				IM_ASSERT(payload->DataSize == sizeof(game::GameObject*));
-				game::GameObject* draggedObj = *reinterpret_cast<game::GameObject**>(payload->Data);
-
-				// 순환 참조 체크, 부모 설정
-				bool circulation = false;
-				game::Transform* parent = obj->transform->GetParent();
-				while (parent)
-				{
-					if (parent == draggedObj->transform)
-					{
-						circulation = true;
-						break;
-					}
-					parent = parent->GetParent();
-				}
-				if(!circulation)
-					draggedObj->transform->SetParent(obj->transform);
+				ImGui::SetDragDropPayload(typeName.c_str(), &obj, sizeof(game::GameObject*));
+				ImGui::Text("%s", obj->GetName().ToString().c_str());
+				ImGui::EndDragDropSource();
 			}
-			ImGui::EndDragDropTarget();
+			// 드래그 받는 대상의 시점
+			if (ImGui::BeginDragDropTarget())
+			{
+				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(typeName.c_str()))
+				{
+					IM_ASSERT(payload->DataSize == sizeof(game::GameObject*));
+					game::GameObject* draggedObj = *reinterpret_cast<game::GameObject**>(payload->Data);
+
+					// 순환 참조 체크, 부모 설정
+					bool circulation = false;
+					game::Transform* parent = obj->transform->GetParent();
+					while (parent)
+					{
+						if (parent == draggedObj->transform)
+						{
+							circulation = true;
+							break;
+						}
+						parent = parent->GetParent();
+					}
+					if (!circulation)
+						draggedObj->transform->SetParent(obj->transform);
+				}
+				ImGui::EndDragDropTarget();
+			}
 		}
 
-		if (nodeOpen && hasChildren) 
+		if (nodeOpen && hasChildren)
 		{
 			for (auto child : obj->transform->GetChildren())
 			{
 				if (child->gameObject.hideInspector)
 					continue;
-				DrawGameObjectHierarchy(&child->gameObject, drawSet);
+				DrawGameObjectHierarchy(&child->gameObject, drawSet, bCanDrag);
 			}
 			ImGui::TreePop();
 		}
@@ -228,22 +340,8 @@ namespace sh::editor
 			world.AddSelectedObject(&clone.get());
 	}
 
-	SH_EDITOR_API void Hierarchy::Update()
+	void Hierarchy::RenderHierarchy(core::SList<game::GameObject*>& objList, bool bCanDrag)
 	{
-		if (game::Input::GetKeyDown(game::Input::KeyCode::LCtrl) && game::Input::GetKeyPressed(game::Input::KeyCode::D))
-			CopyGameobject();
-	}
-	SH_EDITOR_API void Hierarchy::Render()
-	{
-		ImGuiWindowFlags style =
-			//ImGuiWindowFlags_::ImGuiWindowFlags_NoBringToFrontOnFocus |
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoCollapse;
-
-		ImGui::SetNextWindowSize({ 200, 500 });
-		ImGui::Begin("Hierarchy", nullptr, style);
-		isDocking = ImGui::IsWindowDocked();
-		isFocus = ImGui::IsWindowFocused() && ImGui::IsWindowHovered();
-
 		std::unordered_set<game::GameObject*> drawSet{};
 
 		for (auto it = objList.begin(); it != objList.end();)
@@ -260,64 +358,8 @@ namespace sh::editor
 				continue;
 			}
 			if (obj->transform->GetParent() == nullptr)
-				DrawGameObjectHierarchy(obj, drawSet);
+				DrawGameObjectHierarchy(obj, drawSet, bCanDrag);
 			++it;
 		}
-
-		// 빈 공간 드래그 시 부모 제거
-		ImGui::PushStyleVar(ImGuiStyleVar_::ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
-		ImGui::InvisibleButton("HierarchyEmptySpace", ImGui::GetContentRegionAvail());
-		if (ImGui::BeginDragDropTarget())
-		{
-			const auto customHierarchyManager = CustomHierarchyManager::GetInstance();
-			for (const auto& [stype, customHierarchy] : customHierarchyManager->map)
-			{
-				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(std::string{ stype->type.name }.c_str()))
-					customHierarchy->OnHierarchyDraged(world, *payload);
-			}
-			for (auto& [name, func] : dragFunc)
-			{
-				const std::string typeName{ core::reflection::GetType<game::GameObject>().name };
-				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(typeName.c_str()))
-					func(*payload);
-			}
-
-			ImGui::EndDragDropTarget();
-		}
-		ImGui::PopStyleVar();
-
-		// 우클릭
-		if (ImGui::BeginPopupContextItem("RightClickPopup"))
-		{
-			if (ImGui::BeginMenu("Create"))
-			{
-				if (ImGui::MenuItem("GameObject"))
-				{
-					world.AddGameObject("EmptyObject");
-				}
-				ImGui::EndMenu();
-			}
-			ImGui::EndPopup();
-		}
-
-		ImGui::End();
-	}
-
-	SH_EDITOR_API void Hierarchy::RegisterDragItemFunction(const std::string& dragItem, const std::function<void(const ImGuiPayload& payload)>& func)
-	{
-		for (auto& [name, _func] : dragFunc)
-		{
-			if (name == dragItem)
-			{
-				_func = func;
-				return;
-			}
-		}
-		dragFunc.push_back({ dragItem, func });
-	}
-
-	SH_EDITOR_API bool Hierarchy::IsDocking() const
-	{
-		return isDocking;
 	}
 }

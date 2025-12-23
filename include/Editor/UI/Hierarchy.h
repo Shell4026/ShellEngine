@@ -11,6 +11,7 @@
 namespace sh::game
 {
 	class GameObject;
+	class World;
 }
 namespace sh::editor
 {
@@ -18,23 +19,6 @@ namespace sh::editor
 
 	class Hierarchy
 	{
-	private:
-		EditorWorld& world;
-
-		core::SList<game::GameObject*> objList;
-		core::EventSubscriber<game::events::GameObjectEvent> gameObjectEventSubscriber;
-
-		std::vector<std::pair<std::string, std::function<void(const ImGuiPayload& payload)>>> dragFunc;
-
-		bool isDocking;
-		bool isFocus = false;
-	public:
-		static constexpr const char* name = "Hierarchy";
-	private:
-		/// @brief 오브젝트 사이 빈공간
-		void DrawInvisibleSpace(game::GameObject* obj);
-		void DrawGameObjectHierarchy(game::GameObject* obj, std::unordered_set<game::GameObject*>& drawSet);
-		void CopyGameobject();
 	public:
 		SH_EDITOR_API Hierarchy(EditorWorld& world);
 
@@ -47,6 +31,30 @@ namespace sh::editor
 		/// @param func 작동 함수
 		SH_EDITOR_API void RegisterDragItemFunction(const std::string& dragItem, const std::function<void(const ImGuiPayload& payload)>& func);
 
+		SH_EDITOR_API void AddOtherWorld(game::World& world);
+
 		SH_EDITOR_API bool IsDocking() const;
+	private:
+		/// @brief 오브젝트 사이 빈공간
+		void DrawInvisibleSpace(game::GameObject* obj);
+		void DrawGameObjectHierarchy(game::GameObject* obj, std::unordered_set<game::GameObject*>& drawSet, bool bCanDrag = true);
+		void CopyGameobject();
+		void RenderHierarchy(core::SList<game::GameObject*>& objList, bool bCanDrag = true);
+	public:
+		static constexpr const char* name = "Hierarchy";
+	private:
+		EditorWorld& world;
+		game::World* otherWorld = nullptr;
+
+		core::SList<game::GameObject*> objList;
+		core::SList<game::GameObject*> objListOther;
+
+		core::EventSubscriber<game::events::GameObjectEvent> gameObjectEventSubscriber;
+		core::EventSubscriber<game::events::GameObjectEvent> gameObjectEventSubscriberOther;
+
+		std::vector<std::pair<std::string, std::function<void(const ImGuiPayload& payload)>>> dragFunc;
+
+		bool isDocking;
+		bool isFocus = false;
 	};
 }//namespace
