@@ -328,7 +328,7 @@ namespace sh::editor
 		}
 		ImGui::Text("Filtering");
 		{
-			const char* filters[] = { "Linear", "Box" };
+			const char* filters[] = { "Box", "Linear" };
 			static int current = 0;
 			current = static_cast<int>(texture->GetFiltering());
 			if (ImGui::ListBox(fmt::format("##filtering{}", idx).c_str(), &current, filters, IM_ARRAYSIZE(filters), 4))
