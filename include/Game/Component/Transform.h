@@ -11,36 +11,6 @@ namespace sh::game
 	class Transform : public Component
 	{
 		SCLASS(Transform)
-	private:
-		PROPERTY(vPosition)
-		Vec3 vPosition;
-		PROPERTY(vScale)
-		Vec3 vScale;
-		PROPERTY(vRotation)
-		Vec3 vRotation;
-
-		Vec3 worldPosition;
-		Vec3 worldRotation;
-		Vec3 worldScale;
-
-		glm::mat4 matModel;
-
-		glm::quat quat;
-		glm::quat worldQuat;
-
-		Transform* parent;
-		std::vector<Transform*> childs;
-
-		bool bUpdateMatrix;
-	private:
-		void RemoveChild(const Transform& child);
-	public:
-		const Vec3& position;
-		const Vec3& scale;
-		const Vec3& rotation;
-		const glm::mat4& localToWorldMatrix;
-
-		mutable core::Observer<false, const glm::mat4&> onMatrixUpdate;
 	public:
 		SH_GAME_API Transform(GameObject& owner);
 		SH_GAME_API ~Transform();
@@ -81,8 +51,9 @@ namespace sh::game
 		SH_GAME_API auto GetWorldScale() const -> const Vec3&;
 		SH_GAME_API auto GetWorldToLocalMatrix() const -> glm::mat4;
 
-		SH_GAME_API void SetParent(Transform* parent);
-		SH_GAME_API bool HasChild(const Transform& child) const;
+		SH_GAME_API void SetParent(Transform* newParent, bool keepWorld = true);
+		SH_GAME_API auto HasChild(const Transform& child) const -> bool;
+		SH_GAME_API auto IsAncestorOf(const Transform& transform) const -> bool;
 
 		SH_GAME_API void OnDestroy() override;
 
@@ -90,5 +61,35 @@ namespace sh::game
 		SH_GAME_API void Deserialize(const core::Json& json) override;
 
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& property) override;
+	private:
+		void RemoveChild(const Transform& child);
+	public:
+		const Vec3& position;
+		const Vec3& scale;
+		const Vec3& rotation;
+		const glm::mat4& localToWorldMatrix;
+
+		mutable core::Observer<false, const glm::mat4&> onMatrixUpdate;
+	private:
+		PROPERTY(vPosition)
+		Vec3 vPosition;
+		PROPERTY(vScale)
+		Vec3 vScale;
+		PROPERTY(vRotation)
+		Vec3 vRotation;
+
+		Vec3 worldPosition;
+		Vec3 worldRotation;
+		Vec3 worldScale;
+
+		glm::mat4 matModel;
+
+		glm::quat quat;
+		glm::quat worldQuat;
+
+		Transform* parent;
+		std::vector<Transform*> childs;
+
+		bool bUpdateMatrix;
 	};
 }

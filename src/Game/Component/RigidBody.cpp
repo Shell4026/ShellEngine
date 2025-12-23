@@ -113,13 +113,21 @@ namespace sh::game
 				}
 			}
 		}
+		hitCollidersCache.clear();
 	}
 	SH_GAME_API void RigidBody::OnDestroy()
 	{
 		nativeMap.erase(impl->rigidbody);
 
 		if (impl->collider != nullptr)
+		{
+			auto& handles = collision->handles;
+			auto it = std::find(handles.begin(), handles.end(), Collider::Handle{ this, impl->collider });
+			if (it != handles.end())
+				handles.erase(it);
+
 			impl->rigidbody->removeCollider(impl->collider);
+		}
 
 		auto world = reinterpret_cast<reactphysics3d::PhysicsWorld*>(gameObject.world.GetPhysWorld()->GetNative());
 		world->destroyRigidBody(impl->rigidbody);
@@ -170,7 +178,13 @@ namespace sh::game
 			return;
 
 		if (collision != nullptr)
+		{
 			collision->onDestroy.UnRegister(colliderDestroyListener);
+			auto& handles = collision->handles;
+			auto it = std::find(handles.begin(), handles.end(), Collider::Handle{ this, impl->collider });
+			if (it != handles.end())
+				handles.erase(it);
+		}
 
 		collision = colliderComponent;
 
@@ -183,22 +197,46 @@ namespace sh::game
 			impl->collider = nullptr;
 		}
 
-		if (core::IsValid(collision))
-		{
-			auto shape = reinterpret_cast<reactphysics3d::CollisionShape*>(collision->GetNative());
-			const glm::quat& quat = colliderComponent->gameObject.transform->GetQuat();
-			const Vec3& pos = colliderComponent->gameObject.transform->position;
-			reactphysics3d::Transform transform{ reactphysics3d::Transform::identity() };
-			// 리지드 바디랑 콜라이더랑 같은 오브젝트에 있으면 transform은 identity
-			if (&colliderComponent->gameObject != &gameObject)
-				transform = reactphysics3d::Transform{ { pos.x, pos.y, pos.z }, { quat.x, quat.y, quat.z, quat.w } };
-			impl->collider = impl->rigidbody->addCollider(shape, transform);
-			impl->collider->getMaterial().setBounciness(bouncy);
-			impl->collider->setCollisionCategoryBits(static_cast<uint16_t>(collision->GetCollisionTag()));
-			impl->collider->setCollideWithMaskBits(collision->GetAllowCollisions());
-			impl->collider->setIsTrigger(collision->IsTrigger());
-			collision->handles.push_back({ this, impl->collider });
-		}
+		if (!core::IsValid(collision))
+			return;
+
+		const auto ComputeLocalToBodyFn = 
+			[&](const GameObject& colliderGO) -> reactphysics3d::Transform
+			{
+				const glm::vec3 rbWorldPos = gameObject.transform->GetWorldPosition();
+				glm::quat rbWorldQuat = gameObject.transform->GetWorldQuat();
+				rbWorldQuat = glm::normalize(rbWorldQuat);
+
+				const glm::vec3 colWorldPos = colliderGO.transform->GetWorldPosition();
+				glm::quat colWorldQuat = colliderGO.transform->GetWorldQuat();
+				colWorldQuat = glm::normalize(colWorldQuat);
+
+				const glm::quat invRb = glm::inverse(rbWorldQuat);
+				glm::quat localQuat = invRb * colWorldQuat;
+				localQuat = glm::normalize(localQuat);
+
+				const glm::vec3 localPos = invRb * (colWorldPos - rbWorldPos);
+
+				return reactphysics3d::Transform{
+					reactphysics3d::Vector3{ localPos.x, localPos.y, localPos.z },
+					reactphysics3d::Quaternion{ localQuat.x, localQuat.y, localQuat.z, localQuat.w }
+				};
+			};
+		reactphysics3d::Transform localToBody = reactphysics3d::Transform::identity();
+
+		auto shape = reinterpret_cast<reactphysics3d::CollisionShape*>(collision->GetNative());
+
+		// 리지드 바디랑 콜라이더랑 같은 오브젝트에 있으면 transform은 identity
+		if (&colliderComponent->gameObject != &gameObject)
+			localToBody = ComputeLocalToBodyFn(collision->gameObject);
+
+		impl->collider = impl->rigidbody->addCollider(shape, localToBody);
+		impl->collider->getMaterial().setBounciness(bouncy);
+		impl->collider->setCollisionCategoryBits(static_cast<uint16_t>(collision->GetCollisionTag()));
+		impl->collider->setCollideWithMaskBits(collision->GetAllowCollisions());
+		impl->collider->setIsTrigger(collision->IsTrigger());
+
+		collision->handles.push_back({ this, impl->collider });
 	}
 
 	SH_GAME_API auto RigidBody::GetCollider() const -> Collider*
@@ -208,6 +246,7 @@ namespace sh::game
 
 	SH_GAME_API void RigidBody::SetMass(float mass)
 	{
+		this->mass = mass;
 		impl->rigidbody->setMass(mass);
 	}
 
@@ -223,11 +262,13 @@ namespace sh::game
 
 	SH_GAME_API void RigidBody::SetLinearDamping(float damping)
 	{
+		linearDamping = damping;
 		impl->rigidbody->setLinearDamping(damping);
 	}
 
 	SH_GAME_API void RigidBody::SetAngularDamping(float damping)
 	{
+		angularDamping = damping;
 		impl->rigidbody->setAngularDamping(damping);
 	}
 
@@ -355,23 +396,44 @@ namespace sh::game
 	SH_GAME_API void RigidBody::ResetPhysicsTransform()
 	{
 		gameObject.transform->UpdateMatrix();
-		const Vec3& objPos = gameObject.transform->GetWorldPosition();
-		const auto& objQuat = gameObject.transform->GetWorldQuat();
-		
-		if (core::IsValid(collision))
+
+		const Vec3& rbWorldPos = gameObject.transform->GetWorldPosition();
+		const glm::quat& rbWorldQuat = gameObject.transform->GetWorldQuat();
+
+		if (core::IsValid(collision) && impl->collider != nullptr)
 		{
 			if (&collision->gameObject != &gameObject)
 			{
-				const auto& pos = collision->gameObject.transform->position;
-				const auto& quat = collision->gameObject.transform->GetQuat();
-				impl->collider->setLocalToBodyTransform(reactphysics3d::Transform{ {pos.x, pos.y, pos.z}, {quat.x, quat.y, quat.z, quat.w} });
+				const glm::vec3 colWPos = collision->gameObject.transform->GetWorldPosition();
+				auto colWQuat = collision->gameObject.transform->GetWorldQuat();
+				colWQuat = glm::normalize(colWQuat);
+
+				const glm::quat invRb = glm::inverse(rbWorldQuat);
+				glm::quat localQuat = glm::normalize(invRb * colWQuat);
+				const glm::vec3 localPos = invRb * (colWPos - glm::vec3(rbWorldPos.x, rbWorldPos.y, rbWorldPos.z));
+
+				impl->collider->setLocalToBodyTransform(
+					reactphysics3d::Transform
+					{
+						reactphysics3d::Vector3{ localPos.x, localPos.y, localPos.z },
+						reactphysics3d::Quaternion{ localQuat.x, localQuat.y, localQuat.z, localQuat.w }
+					}
+				);
 			}
 			else
 			{
 				impl->collider->setLocalToBodyTransform(reactphysics3d::Transform::identity());
 			}
 		}
-		impl->rigidbody->setTransform(reactphysics3d::Transform{ reactphysics3d::Vector3{objPos.x, objPos.y, objPos.z}, reactphysics3d::Quaternion{objQuat.x, objQuat.y, objQuat.z, objQuat.w} });
+
+		// rb 월드 트랜스폼 리셋
+		impl->rigidbody->setTransform(
+			reactphysics3d::Transform{
+				reactphysics3d::Vector3{ rbWorldPos.x, rbWorldPos.y, rbWorldPos.z },
+				reactphysics3d::Quaternion{ rbWorldQuat.x, rbWorldQuat.y, rbWorldQuat.z, rbWorldQuat.w }
+			}
+		);
+
 		ResetInterpolationState();
 	}
 

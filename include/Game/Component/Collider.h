@@ -36,6 +36,11 @@ namespace sh::game
 		struct Handle
 		{
 			SH_GAME_API ~Handle();
+			auto operator==(const Handle& other) const -> bool
+			{
+				return rb == other.rb && nativeCollider == other.nativeCollider;
+			}
+
 			core::SObjWeakPtr<RigidBody, void> rb;
 			void* nativeCollider = nullptr;
 		};

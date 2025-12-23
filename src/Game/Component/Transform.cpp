@@ -5,7 +5,7 @@
 #include "glm/mat4x4.hpp"
 #include "glm/gtx/orthonormalize.hpp"
 #include <algorithm>
-
+#include <cmath>
 namespace sh::game
 {
 	SH_GAME_API Transform::Transform(GameObject& owner) :
@@ -91,17 +91,17 @@ namespace sh::game
 	SH_GAME_API void Transform::UpdateMatrix()
 	{
 		if (vRotation.x >= 360)
-			vRotation.x -= 360;
+			vRotation.x = std::fmod(vRotation.x, 360.f);
 		if (vRotation.y >= 360)
-			vRotation.y -= 360;
+			vRotation.y = std::fmod(vRotation.y, 360.f);
 		if (vRotation.z >= 360)
-			vRotation.z -= 360;
+			vRotation.z = std::fmod(vRotation.z, 360.f);
 
 		matModel = glm::translate(glm::mat4{ 1.0f }, glm::vec3{ vPosition }) * glm::mat4_cast(quat) * glm::scale(glm::mat4{ 1.0f }, glm::vec3{ vScale });
 		if (parent)
 		{
 			matModel = parent->matModel * matModel;
-			worldPosition = matModel[3];
+			worldPosition = glm::vec3(matModel[3]);
 			worldQuat = parent->worldQuat * quat;
 			worldScale = parent->worldScale * vScale;
 			if (IsEditor())
@@ -127,16 +127,9 @@ namespace sh::game
 			else
 				it = childs.erase(it);
 		}
+
 		onMatrixUpdate.Notify(matModel);
 		bUpdateMatrix = false;
-	}
-
-	void Transform::RemoveChild(const Transform& child)
-	{
-		auto it = std::find(childs.begin(), childs.end(), &child);
-		if (it == childs.end())
-			return;
-		childs.erase(it);
 	}
 
 	SH_GAME_API auto Transform::GetParent() const -> Transform*
@@ -194,20 +187,20 @@ namespace sh::game
 		vRotation = rot;
 
 		if (vRotation.x >= 360)
-			vRotation.x -= 360;
+			vRotation.x = std::fmod(vRotation.x, 360.f);
 		if (vRotation.y >= 360)
-			vRotation.y -= 360;
+			vRotation.y = std::fmod(vRotation.y, 360.f);
 		if (vRotation.z >= 360)
-			vRotation.z -= 360;
+			vRotation.z = std::fmod(vRotation.z, 360.f);
 
 		quat = glm::quat{ glm::radians(glm::vec3{ rot }) };
 		bUpdateMatrix = true;
 	}
 	SH_GAME_API void Transform::SetRotation(const glm::quat& rot)
 	{
+		quat = glm::normalize(rot);
 		if (IsEditor())
 			vRotation = glm::degrees(glm::eulerAngles(quat));
-		quat = rot;
 		bUpdateMatrix = true;
 	}
 
@@ -271,62 +264,95 @@ namespace sh::game
 		bUpdateMatrix = true;
 	}
 
-	SH_GAME_API void Transform::SetParent(Transform* parent)
+	SH_GAME_API void Transform::SetParent(Transform* newParent, bool keepWorld)
 	{
-		if (parent == this)
+		if (newParent == this)
 			return;
 
-		if (parent && parent->HasChild(*this))
+		if (!core::IsValid(newParent))
+			newParent = nullptr;
+
+		if (parent == newParent)
 			return;
 
-		if (core::IsValid(parent))
+		if (newParent != nullptr && this->IsAncestorOf(*newParent))
+			return;
+
+		if (parent != nullptr && parent->bUpdateMatrix)
 			parent->UpdateMatrix();
-		UpdateMatrix();
+		if (newParent != nullptr && newParent->bUpdateMatrix)
+			newParent->UpdateMatrix();
+		if (bUpdateMatrix)
+			UpdateMatrix();
 
-		if (this->parent) // 이미 다른 부모가 있던 경우
+		const glm::vec3 oldWorldPos = glm::vec3(worldPosition);
+		const glm::quat oldWorldQuat = worldQuat;
+		const glm::vec3 oldWorldScale = glm::vec3(worldScale);
+
+		if (parent != nullptr)
+			parent->RemoveChild(*this);
+
+		parent = newParent;
+		if (parent != nullptr)
+			parent->childs.push_back(this);
+
+		if (keepWorld)
 		{
-			this->parent->RemoveChild(*this);
-			if (core::IsValid(parent))
+			if (parent != nullptr)
 			{
-				this->parent = parent;
-				this->parent->childs.push_back(this);
+				// 내 월드 좌표를 부모의 로컬 좌표계로 변환
+				const glm::mat4 parentWorldToLocal = parent->GetWorldToLocalMatrix();
+				const glm::vec4 localPos4 = parentWorldToLocal * glm::vec4(oldWorldPos, 1.0f);
+				vPosition = glm::vec3(localPos4);
 
-				vPosition = parent->GetWorldToLocalMatrix() * glm::vec4{ glm::vec3{ worldPosition }, 1.f };
-				quat = glm::inverse(parent->worldQuat) * worldQuat;
-				vScale = (1.f / parent->worldScale) * worldScale;
-				if (IsEditor())
-					vRotation = glm::degrees(glm::eulerAngles(glm::inverse(parent->worldQuat) * worldQuat));
+				quat = glm::normalize(glm::inverse(parent->worldQuat) * oldWorldQuat);
+
+				const auto safeDivfn =
+					[](const glm::vec3& a, const glm::vec3& b) -> glm::vec3
+					{
+						constexpr float eps = 1e-8f;
+						return glm::vec3{
+							(std::abs(b.x) < eps) ? 0.0f : a.x / b.x,
+							(std::abs(b.y) < eps) ? 0.0f : a.y / b.y,
+							(std::abs(b.z) < eps) ? 0.0f : a.z / b.z
+						};
+					};
+				vScale = safeDivfn(oldWorldScale, glm::vec3(parent->worldScale));
 			}
 			else
 			{
-				this->parent = nullptr;
-				vPosition = worldPosition;
-				quat = glm::quat{ glm::radians(glm::vec3{ worldRotation }) };
-				vRotation = worldRotation;
-				vScale = worldScale;
+				vPosition = oldWorldPos;
+				quat = glm::normalize(oldWorldQuat);
+				vScale = oldWorldScale;
 			}
+
+			if (IsEditor())
+				vRotation = glm::degrees(glm::eulerAngles(quat));
 		}
 		else
 		{
-			if (core::IsValid(parent))
-			{
-				this->parent = parent;
-				this->parent->childs.push_back(this);
-				vPosition = parent->GetWorldToLocalMatrix() * glm::vec4{ glm::vec3{ worldPosition }, 1.f };
-				quat = glm::inverse(parent->worldQuat) * quat;
-				vScale = (1.f / glm::vec3{ parent->worldScale }) * glm::vec3{ worldScale };
-				if (IsEditor())
-					vRotation = glm::degrees(glm::eulerAngles(glm::inverse(parent->worldQuat) * quat));
-			}
-			else
-				return;
+			if (IsEditor())
+				vRotation = glm::degrees(glm::eulerAngles(quat));
 		}
+		bUpdateMatrix = true;
 		UpdateMatrix();
 	}
 	SH_GAME_API bool Transform::HasChild(const Transform& child) const
 	{
 		auto it = std::find(childs.begin(), childs.end(), &child);
 		return it != childs.end();
+	}
+
+	SH_GAME_API auto Transform::IsAncestorOf(const Transform& transform) const -> bool
+	{
+		const Transform* parent = &transform;
+		while (parent != nullptr)
+		{
+			if (parent == this)
+				return true;
+			parent = parent->parent;
+		}
+		return false;
 	}
 
 	SH_GAME_API auto Transform::GetQuat() const -> const glm::quat&
@@ -386,7 +412,7 @@ namespace sh::game
 		UpdateMatrix();
 	}
 
-	void Transform::OnPropertyChanged(const core::reflection::Property& property)
+	SH_GAME_API void Transform::OnPropertyChanged(const core::reflection::Property& property)
 	{
 		Super::OnPropertyChanged(property);
 		if (IsEditor())
@@ -397,5 +423,13 @@ namespace sh::game
 			}
 		}
 		bUpdateMatrix = true;
+	}
+
+	void Transform::RemoveChild(const Transform& child)
+	{
+		auto it = std::find(childs.begin(), childs.end(), &child);
+		if (it == childs.end())
+			return;
+		childs.erase(it);
 	}
 }
