@@ -10,6 +10,10 @@
 #include <Windows.h>
 #endif
 
+#ifdef None
+#undef None
+#endif
+
 namespace sh::render::vk
 {
 	VulkanSwapChain::VulkanSwapChain(const VulkanContext& context) :
@@ -155,7 +159,11 @@ namespace sh::render::vk
 
 		const bool bMSAA = context.GetSampleCount() != VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
 
-		rtLayout.format = TextureFormat::SRGBA32;
+		TextureFormat colorFormat = TextureFormat::SRGBA32;
+		if (swapChainImageFormat == VkFormat::VK_FORMAT_B8G8R8A8_SRGB)
+			colorFormat = TextureFormat::SBGRA32;
+
+		rtLayout.format = colorFormat;
 		rtLayout.depthFormat = TextureFormat::None;
 		rtLayout.bUseMSAA = bMSAA;
 		for (VkImage img : images)
@@ -167,7 +175,7 @@ namespace sh::render::vk
 			{
 				VulkanImageBuffer& msaaBuffer = swapChainImagesMSAA.emplace_back();
 				ITextureBuffer::CreateInfo ci{};
-				ci.format = TextureFormat::SRGBA32;
+				ci.format = colorFormat;
 				ci.width = imgBuffer.GetWidth();
 				ci.height = imgBuffer.GetHeight();
 				ci.bMSAAImg = true;

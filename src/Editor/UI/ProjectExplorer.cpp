@@ -25,6 +25,8 @@ namespace sh::editor
 	}
 	SH_EDITOR_API void ProjectExplorer::Refresh()
 	{
+		if (!std::filesystem::exists(currentPath))
+			return;
 		folders.clear();
 		files.clear();
 		for (const auto& e : std::filesystem::directory_iterator(currentPath))

@@ -135,4 +135,7 @@ namespace sh::core
 	/// @param obj SObject 포인터
 	/// @return 유효하면 true, 아니면 false
 	SH_CORE_API bool IsValid(const SObject* obj);
+
+	template <class... T>
+	constexpr bool alwaysFalse = false;
 }

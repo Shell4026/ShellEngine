@@ -398,9 +398,15 @@ namespace sh::render::vk
 		case TextureFormat::SRGB24: [[fallthrough]]; // 대부분 지원 안 함
 		case TextureFormat::SRGBA32:
 			return VkFormat::VK_FORMAT_R8G8B8A8_SRGB;
+		case TextureFormat::SBGR24: [[fallthrough]]; // 대부분 지원 안 함
+		case TextureFormat::SBGRA32:
+			return VkFormat::VK_FORMAT_B8G8R8A8_SRGB;
 		case TextureFormat::RGB24: [[fallthrough]]; // 대부분 지원 안 함
 		case TextureFormat::RGBA32:
 			return VkFormat::VK_FORMAT_R8G8B8A8_UNORM;
+		case TextureFormat::BGR24: [[fallthrough]]; // 대부분 지원 안 함
+		case TextureFormat::BGRA32:
+			return VkFormat::VK_FORMAT_B8G8R8A8_UNORM;
 		case TextureFormat::R8:
 			return VkFormat::VK_FORMAT_R8_UNORM;
 		case TextureFormat::D32S8:
@@ -418,7 +424,9 @@ namespace sh::render::vk
 		switch (format)
 		{
 		case VkFormat::VK_FORMAT_R8G8B8A8_UNORM: [[fallthrough]];
-		case VkFormat::VK_FORMAT_R8G8B8A8_SRGB:
+		case VkFormat::VK_FORMAT_R8G8B8A8_SRGB: [[fallthrough]];
+		case VkFormat::VK_FORMAT_B8G8R8A8_UNORM: [[fallthrough]];
+		case VkFormat::VK_FORMAT_B8G8R8A8_SRGB: [[fallthrough]];
 			return 4;
 		case VkFormat::VK_FORMAT_D32_SFLOAT_S8_UINT: [[fallthrough]];
 		case VkFormat::VK_FORMAT_D24_UNORM_S8_UINT: [[fallthrough]];

@@ -9,10 +9,11 @@
 #include <vector>
 namespace sh::game
 {
+	class RigidBody;
 	class Collider : public Component
 	{
 		SCLASS(Collider)
-		friend class RigidBody;
+		friend RigidBody;
 	public:
 		SH_GAME_API Collider(GameObject& owner);
 		SH_GAME_API virtual ~Collider() = default;

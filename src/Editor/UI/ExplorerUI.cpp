@@ -20,6 +20,8 @@ namespace sh::editor
 
     void ExplorerUI::UpdateDirectoryEntries()
 	{
+        if (!std::filesystem::exists(currentPath))
+            return;
         auto a = {1, 2 ,3};
         folders.clear();
         files.clear();
@@ -144,7 +146,9 @@ namespace sh::editor
         {
             if (ImGui::Button("Select"))
             {
-                if (std::filesystem::exists(currentPath / selected))
+                if (selected.empty() && std::filesystem::exists(currentPath))
+                    SelectFile();
+                else if (std::filesystem::exists(currentPath / selected))
                     SelectFile();
             }
         }

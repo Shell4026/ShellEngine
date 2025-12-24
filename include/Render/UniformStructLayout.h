@@ -106,7 +106,7 @@ namespace sh::render
 			static_assert(std::_Always_false<T>, "Unknown type for GetSTD140Layout: " __FUNCSIG__);
 #elif defined(__GNUC__) || defined(__clang__)
 		else
-			static_assert(std::_Always_false<T>, "Unknown type for GetSTD140Layout: " __PRETTY_FUNCTION__);
+			static_assert(core::alwaysFalse<T>, "Unknown type for GetSTD140Layout ");
 # else
 		else
 			static_assert(always_false<T>, "Unknown type for GetSTD140Layout: Unknown compiler");
