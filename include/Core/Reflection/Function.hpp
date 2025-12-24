@@ -220,6 +220,23 @@ namespace sh::core::reflection
             static FunctionData<ThisType, FnPtrType, ptr> data{};
             this->data = &data;
         }
+        auto operator==(const Function& other) const -> bool
+        {
+            if (name != other.name || 
+                returnType != other.returnType || 
+                paramTypes.size() != other.paramTypes.size() || 
+                isConstMethod != other.isConstMethod || 
+                isMember != other.isMember)
+                return false;
+            for (int i = 0; i < paramTypes.size(); ++i)
+            {
+                auto* typeA = paramTypes[i];
+                auto* typeB = other.paramTypes[i];
+                if (*typeA != *typeB)
+                    return false;
+            }
+            return true;
+        }
         auto GetName() const -> const core::Name& { return name; }
         auto GetReturnType() const -> const TypeInfo& { return returnType; }
         auto GetParamTypes() const -> const std::vector<const TypeInfo*>& { return paramTypes; }

@@ -40,13 +40,17 @@ namespace sh::core::reflection
 	}
 	SH_CORE_API auto STypeInfo::AddFunction(std::unique_ptr<Function>&& fn) -> Function*
 	{
+		for (auto& func : functions)
+		{
+			if (*func == *fn)
+				return nullptr;
+		}
 		functions.push_back(std::move(fn));
 		return functions.back().get();
 	}
 	SH_CORE_API auto STypeInfo::AddFunction(const Function& fn) -> Function*
 	{
-		functions.push_back(std::make_unique<Function>(fn));
-		return functions.back().get();
+		return AddFunction(std::make_unique<Function>(fn));
 	}
 
 	SH_CORE_API auto STypeInfo::operator==(const STypeInfo& other) const -> bool
