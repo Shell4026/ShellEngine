@@ -2,6 +2,7 @@
 #include "../Export.h"
 #include "TypeTraits.hpp"
 #include "Property.hpp"
+#include "Function.hpp"
 #include "../Name.h"
 
 #include <string_view>
@@ -98,6 +99,8 @@ namespace sh::core::reflection
 
 		SH_CORE_API auto AddProperty(std::unique_ptr<Property>&& prop) -> Property*;
 		SH_CORE_API auto AddProperty(const Property& prop) -> Property*;
+		SH_CORE_API auto AddFunction(std::unique_ptr<Function>&& fn) -> Function*;
+		SH_CORE_API auto AddFunction(const Function& fn) -> Function*;
 
 		SH_CORE_API auto operator==(const STypeInfo& other) const -> bool;
 		SH_CORE_API auto operator!=(const STypeInfo& other) const -> bool;
@@ -110,6 +113,9 @@ namespace sh::core::reflection
 		SH_CORE_API auto GetProperties() const -> const std::vector<std::unique_ptr<Property>>&;
 		SH_CORE_API auto GetSObjectPtrProperties() const -> const std::vector<Property*>&;
 		SH_CORE_API auto GetSObjectPtrContainerProperties() const -> const std::vector<Property*>&;
+		SH_CORE_API auto GetFunction(const core::Name& name) const -> Function*;
+		SH_CORE_API auto GetFunction(std::string_view name) const -> Function*;
+		SH_CORE_API auto GetFunctions() const -> const std::vector<std::unique_ptr<Function>>& { return functions; }
 	public:
 		const core::Name name;
 		const TypeInfo& type;
@@ -120,6 +126,7 @@ namespace sh::core::reflection
 		std::vector<std::unique_ptr<Property>> properties;
 		std::vector<Property*> sobjPtrs;
 		std::vector<Property*> sobjPtrContainers;
+		std::vector<std::unique_ptr<Function>> functions;
 	};//STypeInfo
 
 	/// @brief 리플렉션 데이터의 DLL간 공유를 위한 구조체

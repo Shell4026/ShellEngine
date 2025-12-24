@@ -3,6 +3,7 @@
 #include "Reflection/TypeTraits.hpp"
 #include "Reflection/STypeInfo.hpp"
 #include "Reflection/Property.hpp"
+#include "Reflection/Function.hpp"
 #include "Reflection/TypeInfo.hpp"
 
 namespace sh::core::reflection

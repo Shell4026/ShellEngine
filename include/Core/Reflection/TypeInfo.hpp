@@ -13,12 +13,21 @@ namespace sh::core::reflection
 		const std::size_t size;
 		const std::size_t hash;
 		constexpr TypeInfoCreateInfo() :
-			name
-			(
-				TypeTraits::GetTypeName<std::remove_const_t<std::remove_pointer_t<std::remove_reference_t<T>>>>()), 
-				size(sizeof(T)), 
-				hash(TypeTraits::GetTypeHash<std::remove_const_t<std::remove_pointer_t<std::remove_reference_t<T>>>>()
-			)
+			name(TypeTraits::GetTypeName<std::remove_const_t<std::remove_pointer_t<std::remove_reference_t<T>>>>()), 
+			size(sizeof(T)), 
+			hash(TypeTraits::GetTypeHash<std::remove_const_t<std::remove_pointer_t<std::remove_reference_t<T>>>>())
+		{}
+	};
+	template<>
+	struct TypeInfoCreateInfo<void>
+	{
+		const std::string_view name;
+		const std::size_t size;
+		const std::size_t hash;
+		constexpr TypeInfoCreateInfo() :
+			name(TypeTraits::GetTypeName<void>()),
+			size(0),
+			hash(TypeTraits::GetTypeHash<void>())
 		{}
 	};
 

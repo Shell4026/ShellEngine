@@ -38,6 +38,17 @@ namespace sh::core::reflection
 			sobjPtrContainers.push_back(propPtr);
 		return propPtr;
 	}
+	SH_CORE_API auto STypeInfo::AddFunction(std::unique_ptr<Function>&& fn) -> Function*
+	{
+		functions.push_back(std::move(fn));
+		return functions.back().get();
+	}
+	SH_CORE_API auto STypeInfo::AddFunction(const Function& fn) -> Function*
+	{
+		functions.push_back(std::make_unique<Function>(fn));
+		return functions.back().get();
+	}
+
 	SH_CORE_API auto STypeInfo::operator==(const STypeInfo& other) const -> bool
 	{
 		if (this == &other)
@@ -89,5 +100,24 @@ namespace sh::core::reflection
 	{
 		return sobjPtrContainers;
 	}
-
+	SH_CORE_API auto STypeInfo::GetFunction(const core::Name& name) const -> Function*
+	{
+		for (auto& fn : functions)
+			if (fn->GetName() == name)
+				return fn.get();
+		const STypeInfo* superType = this->super;
+		while (superType != nullptr)
+		{
+			Function* fn = superType->GetFunction(name);
+			if (fn != nullptr)
+				return fn;
+			superType = superType->super;
+		}
+		return nullptr;
+	}
+	SH_CORE_API auto STypeInfo::GetFunction(std::string_view name) const -> Function*
+	{
+		core::Name key{ name };
+		return GetFunction(key);
+	}
 }//namespace

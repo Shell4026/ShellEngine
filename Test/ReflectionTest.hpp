@@ -91,6 +91,40 @@ public:
     }
 };
 
+class FunctionObj : public sh::core::SObject
+{
+    SCLASS(FunctionObj)
+public:
+    FunctionObj() = default;
+
+    SFUNCTION(SetValue)
+    void SetValue(int v) { value = v; }
+    SFUNCTION(GetValue)
+    auto GetValue() const -> int { return value; }
+    SFUNCTION(Sum)
+    auto Sum(int a, int b) -> int { return a + b; }
+    SFUNCTION(AddToValue)
+    void AddToValue(int d) { value += d; }
+    SFUNCTION(NoArgs)
+    void NoArgs() { calledNoArgs = true; }
+    SFUNCTION(WasNoArgsCalled)
+    auto WasNoArgsCalled() const -> bool { return calledNoArgs; }
+
+    SFUNCTION(StaticMul)
+    static int StaticMul(int a, int b) { return a * b; }
+private:
+    int value = 0;
+    bool calledNoArgs = false;
+};
+
+class FunctionDerived : public FunctionObj
+{
+    SCLASS(FunctionDerived)
+public:
+    SFUNCTION(Inc)
+    int Inc(int x) { return x + 1; }
+};
+
 namespace A::B
 {
     class C
@@ -364,4 +398,127 @@ TEST(ReflectionTest, SafePropertyTest)
 
     float* floatPtr = prop->GetSafe<float>(derived);
     EXPECT_EQ(floatPtr, nullptr);
+}
+
+TEST(ReflectionTest, FunctionRegistrationTest)
+{
+    auto& st = FunctionObj::GetStaticType();
+
+    auto* f1 = st.GetFunction("SetValue");
+    auto* f2 = st.GetFunction("GetValue");
+    auto* f3 = st.GetFunction("Sum");
+    auto* f4 = st.GetFunction("AddToValue");
+    auto* f5 = st.GetFunction("NoArgs");
+
+    ASSERT_NE(f1, nullptr);
+    ASSERT_NE(f2, nullptr);
+    ASSERT_NE(f3, nullptr);
+    ASSERT_NE(f4, nullptr);
+    ASSERT_NE(f5, nullptr);
+
+    EXPECT_EQ(f1->GetName(), "SetValue");
+    EXPECT_EQ(f2->GetName(), "GetValue");
+}
+
+TEST(ReflectionTest, FunctionInvokeTest)
+{
+    FunctionObj obj;
+
+    // SetValue(int)
+    {
+        auto* fn = obj.GetType().GetFunction("SetValue");
+        ASSERT_NE(fn, nullptr);
+
+        int v = 123;
+        fn->InvokeVoid(obj, v);
+        EXPECT_EQ(obj.GetValue(), 123);
+    }
+
+    // AddToValue(int)
+    {
+        auto* fn = obj.GetType().GetFunction("AddToValue");
+        ASSERT_NE(fn, nullptr);
+
+        fn->InvokeVoid(obj, 7);
+        EXPECT_EQ(obj.GetValue(), 130);
+    }
+
+    // Sum(int,int) -> int (반환값)
+    {
+        auto* fn = obj.GetType().GetFunction("Sum");
+        ASSERT_NE(fn, nullptr);
+
+        int a = 10, b = 20;
+        int r = fn->Invoke<int>(obj, a, b);
+        EXPECT_EQ(r, 30);
+    }
+
+    // NoArgs() / WasNoArgsCalled()
+    {
+        auto* noArgs = obj.GetType().GetFunction("NoArgs");
+        auto* wasCalled = obj.GetType().GetFunction("WasNoArgsCalled");
+        ASSERT_NE(noArgs, nullptr);
+        ASSERT_NE(wasCalled, nullptr);
+
+        EXPECT_FALSE(obj.WasNoArgsCalled());
+        noArgs->InvokeVoid(obj);
+        EXPECT_TRUE(obj.WasNoArgsCalled());
+
+        // const object로 const 함수 호출 가능해야 함
+        const FunctionObj& cref = obj;
+        bool called = wasCalled->Invoke<bool>(cref);
+        EXPECT_TRUE(called);
+    }
+}
+
+TEST(ReflectionTest, FunctionInvokeRawTest)
+{
+    FunctionObj obj;
+
+    // Sum을 Raw로 호출 (void** args, void* ret)
+    auto* fn = obj.GetType().GetFunction("Sum");
+    ASSERT_NE(fn, nullptr);
+
+    int a = 3, b = 4;
+    void* args[] = { &a, &b };
+    int out = 0;
+
+    fn->InvokeRaw(&obj, args, &out);
+    EXPECT_EQ(out, 7);
+}
+
+TEST(ReflectionTest, FunctionStaticTest)
+{
+    auto* fn = FunctionObj::GetStaticType().GetFunction("StaticMul");
+    ASSERT_NE(fn, nullptr);
+
+    int a = 6, b = 7;
+    int r = fn->Invoke<int>(*(FunctionObj*)nullptr, a, b);
+
+    EXPECT_EQ(r, 42);
+}
+
+TEST(ReflectionTest, FunctionInheritanceLookupTest)
+{
+    FunctionDerived d;
+
+    auto* inc = d.GetType().GetFunction("Inc");
+    ASSERT_NE(inc, nullptr);
+
+    int x = 9;
+    int r = inc->Invoke<int>(d, x);
+    EXPECT_EQ(r, 10);
+
+    // 부모 함수도 자식 타입에서 GetFunction으로 찾아지는가
+    auto* getValue = d.GetType().GetFunction("GetValue");
+    ASSERT_NE(getValue, nullptr);
+
+    // 부모쪽 SetValue도 동작해야 함
+    auto* setValue = d.GetType().GetFunction("SetValue");
+    ASSERT_NE(setValue, nullptr);
+
+    int v = 55;
+    setValue->InvokeVoid(d, v);
+    int cur = getValue->Invoke<int>(d);
+    EXPECT_EQ(cur, 55);
 }
