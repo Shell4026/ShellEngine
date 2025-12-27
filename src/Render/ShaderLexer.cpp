@@ -294,6 +294,7 @@ namespace sh::render
 					{"Stencil", TokenType::Stencil},
 					{"Cull", TokenType::Cull},
 					{"ZWrite", TokenType::ZWrite},
+					{"ZTest", TokenType::ZTest},
 					{"ColorMask", TokenType::ColorMask},
 					{"LightingPass", TokenType::LightingPass},
 					{"Property", TokenType::Property},

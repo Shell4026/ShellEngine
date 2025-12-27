@@ -157,6 +157,7 @@ namespace sh::render::vk
 			SetTopology(topol).
 			SetShader(&shader).
 			SetZWrite(shader.GetZWrite()).
+			SetZTest(shader.GetZTest()).
 			SetSampleCount(renderTargetLayout.bUseMSAA ? context.GetSampleCount() : VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT).
 			AddShaderStage(VulkanPipeline::ShaderStage::Vertex).
 			AddShaderStage(VulkanPipeline::ShaderStage::Fragment);

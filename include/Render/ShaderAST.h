@@ -114,6 +114,7 @@ namespace sh::render
 			std::vector<VariableNode> constants;
 			std::vector<StageNode> stages;
 			bool zwrite = true;
+			bool bZTest = true;
 
 			SH_RENDER_API auto Serialize() const -> core::Json override;
 			SH_RENDER_API void Deserialize(const core::Json& json) override;

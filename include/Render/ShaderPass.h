@@ -55,6 +55,7 @@ namespace sh::render
 		SH_RENDER_API auto GetStencilState() const -> const StencilState&;
 		SH_RENDER_API auto GetCullMode() const->CullMode;
 		SH_RENDER_API auto GetZWrite() const -> bool;
+		SH_RENDER_API auto GetZTest() const -> bool { return bZTest; }
 		/// @brief RGBA전부 쓰기면 0b1111, R만 쓰기면 0b0001, G만 쓴다면 0b0010, B만 쓴다면 0b0100, A만 쓴다면 0b1000
 		/// @return 컬러 마스크 값
 		SH_RENDER_API auto GetColorMask() const -> uint8_t;
@@ -115,6 +116,7 @@ namespace sh::render
 		uint8_t colorMask = 7; //0b111
 		std::size_t constantSize = 0;
 		bool bZWrite = true;
+		bool bZTest = true;
 		bool bHasConstant = false;
 		bool bUseLighting = false;
 	};

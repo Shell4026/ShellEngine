@@ -52,6 +52,7 @@ namespace sh::render
 		void ParseStencil(ShaderAST::PassNode& passNode);
 		void ParseCull(ShaderAST::PassNode& passNode);
 		void ParseZWrite(ShaderAST::PassNode& passNode);
+		void ParseZTest(ShaderAST::PassNode& passNode);
 		void ParseColorMask(ShaderAST::PassNode& passNode);
 		auto ParseStage(const ShaderAST::ShaderNode& shaderNode, ShaderAST::PassNode& passNode) -> ShaderAST::StageNode;
 		void ParseStageBody(const ShaderAST::ShaderNode& shaderNode, ShaderAST::StageNode& stageNode, ShaderAST::PassNode& passNode);

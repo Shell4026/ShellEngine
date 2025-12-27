@@ -154,8 +154,8 @@ namespace sh::render
 		json["cullMode"] = static_cast<int>(cullMode);
 		json["colorMask"] = colorMask;
 		json["zwrite"] = zwrite;
+		json["ztest"] = bZTest;
 
-		// stencil
 		json["stencil"] = stencil.Serialize();
 
 		// constants
@@ -180,6 +180,7 @@ namespace sh::render
 		cullMode = static_cast<CullMode>(json.at("cullMode").get<int>());
 		colorMask = json.at("colorMask").get<uint8_t>();
 		zwrite = json.at("zwrite").get<bool>();
+		bZTest = json.contains("ztest") ? json["ztest"] : true;
 
 		// stencil
 		stencil.Deserialize(json.at("stencil"));

@@ -144,7 +144,7 @@ namespace sh::render
 	{
 		if (bPerspective)
 			bufferData[core::ThreadType::Game].matProj =
-			glm::perspectiveFovRH_ZO(fovRadians, width[core::ThreadType::Game], height[core::ThreadType::Game], nearPlane[core::ThreadType::Game], farPlane[core::ThreadType::Game]);
+				glm::perspectiveFovRH_ZO(fovRadians, width[core::ThreadType::Game], height[core::ThreadType::Game], nearPlane[core::ThreadType::Game], farPlane[core::ThreadType::Game]);
 		else
 		{
 			const float dis = glm::length(to[core::ThreadType::Game] - pos[core::ThreadType::Game]) / 2.0f;

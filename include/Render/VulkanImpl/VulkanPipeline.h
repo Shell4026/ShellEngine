@@ -65,6 +65,9 @@ namespace sh::render::vk
 		SH_RENDER_API auto SetZWrite(bool zwrite) -> VulkanPipeline&;
 		SH_RENDER_API auto GetZWrite() const -> bool;
 
+		SH_RENDER_API auto SetZTest(bool ztest) -> VulkanPipeline&;
+		SH_RENDER_API auto GetZTest() const -> bool { return bZTest; }
+
 		SH_RENDER_API auto SetSampleCount(VkSampleCountFlagBits sampleCount) -> VulkanPipeline&;
 		SH_RENDER_API auto GetSampleCount() const -> VkSampleCountFlagBits;
 
@@ -91,5 +94,6 @@ namespace sh::render::vk
 
 		bool bUseStencil = true;
 		bool bZWrite = true;
+		bool bZTest = true;
 	};
 }

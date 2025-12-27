@@ -73,6 +73,7 @@ namespace sh::render
 		SetStencilState(passNode.stencil);
 		cull = passNode.cullMode;
 		bZWrite = passNode.zwrite;
+		bZTest = passNode.bZTest;
 		colorMask = passNode.colorMask;
 		FillAttributes(passNode);
 		for (auto& stage : passNode.stages)

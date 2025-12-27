@@ -269,6 +269,8 @@ namespace sh::render
 				ParseCull(passNode);
 			else if (CheckToken(ShaderLexer::TokenType::ZWrite))
 				ParseZWrite(passNode);
+			else if (CheckToken(ShaderLexer::TokenType::ZTest))
+				ParseZTest(passNode);
 			else if (CheckToken(ShaderLexer::TokenType::ColorMask))
 				ParseColorMask(passNode);
 			else
@@ -400,6 +402,19 @@ namespace sh::render
 			passNode.zwrite = true;
 		else
 			throw ShaderParserException{ "Allowed ZWrite identifiers: Off, On" };
+		ConsumeToken(ShaderLexer::TokenType::Semicolon);
+	}
+	void ShaderParser::ParseZTest(ShaderAST::PassNode& passNode)
+	{
+		ConsumeToken(ShaderLexer::TokenType::ZTest);
+		ConsumeToken(ShaderLexer::TokenType::Identifier);
+		const std::string& ident = PreviousToken().text;
+		if (ident == "Off" || ident == "off")
+			passNode.bZTest = false;
+		else if (ident == "On" || ident == "on")
+			passNode.bZTest = true;
+		else
+			throw ShaderParserException{ "Allowed ZTest identifiers: Off, On" };
 		ConsumeToken(ShaderLexer::TokenType::Semicolon);
 	}
 	void ShaderParser::ParseColorMask(ShaderAST::PassNode& passNode)

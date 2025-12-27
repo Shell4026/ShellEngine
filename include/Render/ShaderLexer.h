@@ -12,7 +12,7 @@ namespace sh::render
 		{
 			Preprocessor,
 			Shader, Pass, Stage, LightingPass, Property,
-			Stencil, Cull, ZWrite, ColorMask,
+			Stencil, Cull, ZWrite, ZTest, ColorMask,
 			Vertex, Fragment,
 			Layout, Uniform, In, Out, Sampler2D, Constexpr,
 			Const,

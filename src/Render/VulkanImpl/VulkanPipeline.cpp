@@ -235,7 +235,7 @@ namespace sh::render::vk
 
 		VkPipelineDepthStencilStateCreateInfo depthStencil{};
 		depthStencil.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
-		depthStencil.depthTestEnable = true;
+		depthStencil.depthTestEnable = bZTest;
 		depthStencil.depthWriteEnable = bZWrite;
 		depthStencil.depthCompareOp = VkCompareOp::VK_COMPARE_OP_LESS_OR_EQUAL;
 		depthStencil.depthBoundsTestEnable = false;
@@ -342,6 +342,11 @@ namespace sh::render::vk
 	SH_RENDER_API auto VulkanPipeline::GetZWrite() const -> bool
 	{
 		return bZWrite;
+	}
+	SH_RENDER_API auto VulkanPipeline::SetZTest(bool ztest) -> VulkanPipeline&
+	{
+		bZTest = ztest;
+		return *this;
 	}
 	SH_RENDER_API auto VulkanPipeline::SetSampleCount(VkSampleCountFlagBits sampleCount) -> VulkanPipeline&
 	{
