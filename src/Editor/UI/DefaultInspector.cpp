@@ -50,7 +50,13 @@ namespace sh::editor
 				ImGui::EndPopup();
 			}
 			if (bOpenComponent && core::IsValid(component))
-				Inspector::RenderProperties(component->GetType(), *component, componentsIdx);
+			{
+				ICustomInspector* customInspector = CustomInspectorManager::GetInstance()->GetCustomInspector(component->GetType());
+				if (customInspector != nullptr)
+					customInspector->RenderUI(component, componentsIdx);
+				else
+					Inspector::RenderProperties(component->GetType(), *component, componentsIdx);
+			}
 			++componentsIdx;
 		}//for auto& component
 		ImGui::Separator();
