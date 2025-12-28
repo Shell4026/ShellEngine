@@ -86,6 +86,30 @@ namespace sh::game
 			}
 			return nullptr;
 		}
+		template<typename T>
+		auto GetComponentsInChildren(bool bIncludeDerived = false) const -> std::vector<T*>
+		{
+			std::vector<T*> result{};
+			std::queue<Transform*> bfs{};
+			bfs.push(transform);
+			while (!bfs.empty())
+			{
+				Transform* trans = bfs.front();
+				bfs.pop();
+				GameObject* obj = &trans->gameObject;
+				for (Component* component : obj->components)
+				{
+					if (!core::IsValid(component))
+						continue;
+					if (!bIncludeDerived && component->GetType() == T::GetStaticType() ||
+						bIncludeDerived && component->GetType().IsChildOf(T::GetStaticType()))
+						result.push_back(static_cast<T*>(component));
+				}
+				for (Transform* child : trans->GetChildren())
+					bfs.push(child);
+			}
+			return result;
+		}
 	private:
 		void SortComponents();
 	public:

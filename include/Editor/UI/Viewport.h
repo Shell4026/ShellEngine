@@ -27,45 +27,6 @@ namespace sh::editor
 
 	class Viewport : public core::ISyncable
 	{
-	private:
-		float x, y;
-		float viewportWidthLast;
-		float viewportHeightLast;
-		glm::vec2 mousePos;
-
-		render::RenderTexture* renderTex;
-		render::RenderTexture* outlineTex = nullptr;
-
-		ImTextureID viewportTexture = nullptr;
-		
-		game::EditorCamera* editorCamera = nullptr;
-		game::PickingCamera* pickingCamera = nullptr;
-
-		core::Observer<true,game::PickingCamera::PixelData>::Listener pickingListener{};
-
-		ImDrawList* imguiDrawList = nullptr;
-
-		bool bDirty;
-		bool bMouseLeftDown;
-		bool bMouseRightDown;
-		bool bFocus;
-		bool bOverlay = true;
-		bool bBlockRightClick = false;
-		bool bBlockLeftClick = false;
-		bool bPlaying = false;
-	protected:
-		EditorWorld& world;
-	public:
-		static constexpr const char* name = "Viewport";
-	private:
-		/// @brief 뷰포트 사이즈가 변했을 시 렌더 텍스쳐의 사이즈를 바꾸는 함수.
-		void ChangeViewportSize();
-		void RenderOverlay();
-		void RenderPopup();
-		void LeftClick();
-		void RightClick();
-	protected:
-		SH_EDITOR_API void Sync() override;
 	public:
 		SH_EDITOR_API Viewport(EditorWorld& world);
 		SH_EDITOR_API ~Viewport() noexcept;
@@ -88,5 +49,44 @@ namespace sh::editor
 		SH_EDITOR_API void Stop();
 
 		SH_EDITOR_API auto IsPlaying() const -> bool;
+	protected:
+		SH_EDITOR_API void Sync() override;
+	private:
+		/// @brief 뷰포트 사이즈가 변했을 시 렌더 텍스쳐의 사이즈를 바꾸는 함수.
+		void ChangeViewportSize();
+		void RenderOverlay();
+		void RenderPopup();
+		void LeftClick();
+		void RightClick();
+	public:
+		static constexpr const char* name = "Viewport";
+	protected:
+		EditorWorld& world;
+	private:
+		float x, y;
+		float viewportWidthLast;
+		float viewportHeightLast;
+		glm::vec2 mousePos;
+
+		render::RenderTexture* renderTex;
+		render::RenderTexture* outlineTex = nullptr;
+
+		ImTextureID viewportTexture = nullptr;
+
+		game::EditorCamera* editorCamera = nullptr;
+		game::PickingCamera* pickingCamera = nullptr;
+
+		core::Observer<true, game::PickingCamera::PixelData>::Listener pickingListener{};
+
+		ImDrawList* imguiDrawList = nullptr;
+
+		bool bDirty;
+		bool bMouseLeftDown;
+		bool bMouseRightDown;
+		bool bFocus;
+		bool bOverlay = true;
+		bool bBlockRightClick = false;
+		bool bBlockLeftClick = false;
+		bool bPlaying = false;
 	};
 }//namespace

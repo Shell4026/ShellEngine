@@ -41,6 +41,13 @@ namespace sh::game
 		SH_GAME_API void SetDepth(int depth);
 		SH_GAME_API auto GetDepth() const -> int { return depth; }
 		SH_GAME_API void SetFov(float degree);
+		
+		/// @brief 세로 시야각을 가져오는 함수.
+		/// @return Degree로 반환한다.
+		SH_GAME_API auto GetFov() const -> float { return fov; }
+		/// @brief 가로 시야각을 가져오는 함수.
+		/// @return Degree로 반환한다.
+		SH_GAME_API auto GetFovx() const -> float { return fovx; }
 
 		SH_GAME_API void SetRenderTexture(render::RenderTexture* renderTexture);
 		SH_GAME_API auto GetRenderTexture() const -> render::RenderTexture*;
@@ -82,6 +89,7 @@ namespace sh::game
 		int depth;
 		PROPERTY(fov)
 		float fov;
+		float fovx;
 		PROPERTY(projection)
 		Projection projection = Projection::Perspective;
 	};

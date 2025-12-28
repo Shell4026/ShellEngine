@@ -103,4 +103,24 @@ namespace sh::render
 
 		return AABB{ newMin, newMax };
 	}
+	SH_RENDER_API auto AABB::GetRadius() const -> float
+	{
+		return glm::length(max - center);
+	}
+
+	SH_RENDER_API auto AABB::Encapsulate(const AABB& a, const AABB& b) -> AABB
+	{
+		AABB aabb{};
+		aabb.min.x = std::min(a.min.x, b.min.x);
+		aabb.min.y = std::min(a.min.y, b.min.y);
+		aabb.min.z = std::min(a.min.z, b.min.z);
+
+		aabb.max.x = std::max(a.max.x, b.max.x);
+		aabb.max.y = std::max(a.max.y, b.max.y);
+		aabb.max.z = std::max(a.max.z, b.max.z);
+
+		aabb.center = (aabb.min + aabb.max) / 2.0f;
+
+		return aabb;
+	}
 }//namespace

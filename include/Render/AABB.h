@@ -9,8 +9,6 @@ namespace sh::render
 	/// @brief 단순한 AABB 클래스
 	class AABB
 	{
-	private:
-		glm::vec3 min, max, center;
 	public:
 		SH_RENDER_API AABB();
 		SH_RENDER_API AABB(float x1, float y1, float z1, float x2, float y2, float z2);
@@ -34,5 +32,13 @@ namespace sh::render
 		SH_RENDER_API auto GetMax() const -> const glm::vec3&;
 		SH_RENDER_API auto GetCenter() const -> const glm::vec3&;
 		SH_RENDER_API auto GetWorldAABB(const glm::mat4& modelMatrix) const -> AABB;
+		SH_RENDER_API auto GetRadius() const -> float;
+
+		/// @brief 두 바운딩 박스를 포함하는 새 바운딩 박스를 만드는 함수.
+		/// @param other 다른 바운딩 박스
+		/// @return 새 바운딩 박스
+		SH_RENDER_API static auto Encapsulate(const AABB& a, const AABB& b) -> AABB;
+	private:
+		glm::vec3 min, max, center;
 	};
 }//namespace

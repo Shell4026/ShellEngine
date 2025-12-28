@@ -18,6 +18,7 @@
 
 #include <string>
 #include <cstdint>
+#include <limits>
 namespace sh::game
 {
 	SH_GAME_API auto ModelLoader::LoadObj(const std::filesystem::path& path) -> render::Model*
@@ -173,6 +174,10 @@ namespace sh::game
 				mesh->SetName(node.name);
 				modelNode->mesh = mesh;
 
+				const float minLimit = std::numeric_limits<float>::min();
+				const float maxLimit = std::numeric_limits<float>::max();
+				glm::vec3 min{ maxLimit, maxLimit, maxLimit }, max{ minLimit, minLimit, minLimit };
+
 				std::vector<render::Mesh::Vertex> verts;
 				std::vector<uint32_t> indices;
 
@@ -215,6 +220,14 @@ namespace sh::game
 						vert.normal = glm::normalize(glm::vec3(normalsBuffer ? glm::make_vec3(&normalsBuffer[v * 3]) : glm::vec3(0.0f)));
 						vert.uv = texCoordsBuffer ? glm::make_vec2(&texCoordsBuffer[v * 2]) : glm::vec2(0.0f);
 						verts.push_back(vert);
+
+						min.x = std::min(min.x, vert.vertex.x);
+						min.y = std::min(min.y, vert.vertex.y);
+						min.z = std::min(min.z, vert.vertex.z);
+
+						max.x = std::max(max.x, vert.vertex.x);
+						max.y = std::max(max.y, vert.vertex.y);
+						max.z = std::max(max.z, vert.vertex.z);
 					}
 					// indicies
 					{
@@ -255,7 +268,7 @@ namespace sh::game
 				}
 				CreateTangents(verts, indices);
 
-				//mesh->GetBoundingBox().Set(min, max);
+				mesh->GetBoundingBox().Set(min, max);
 
 				mesh->SetVertex(std::move(verts));
 				mesh->SetIndices(std::move(indices));

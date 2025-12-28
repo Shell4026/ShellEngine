@@ -13,8 +13,6 @@
 
 #include "Render/RenderTexture.h"
 #include "Render/VulkanImpl/VulkanImageBuffer.h"
-#include "Render/VulkanImpl/VulkanRenderer.h"
-#include "Render/VulkanImpl/VulkanContext.h"
 
 #include "External/imgui/backends/imgui_impl_vulkan.h"
 #include "External/imgui/ImGuizmo.h"
@@ -83,6 +81,20 @@ namespace sh::editor
 			return;
 		editorCamera->SetFocus(true);
 
+		if (game::Input::GetKeyPressed(game::Input::KeyCode::F))
+		{
+			auto& sobjs = world.GetSelectedObjects();
+			std::vector<const game::GameObject*> gameObjs;
+
+			for (auto sobj : sobjs)
+			{
+				auto obj = core::reflection::Cast<game::GameObject>(sobj);
+				if (obj != nullptr)
+					gameObjs.push_back(obj);
+			}
+			editorCamera->FocusObject(gameObjs);
+		}
+
 		if (game::Input::GetKeyDown(game::Input::KeyCode::LAlt))
 			return;
 
@@ -107,83 +119,7 @@ namespace sh::editor
 			Play(false);
 	}
 
-	void Viewport::ChangeViewportSize()
-	{
-		if (viewportWidthLast != 0.f && viewportHeightLast != 0.f)
-			renderTex->SetSize(viewportWidthLast, viewportHeightLast); // renderTex dirty등록
-		if (pickingCamera)
-			pickingCamera->SetTextureSize({ viewportWidthLast, viewportHeightLast });
-
-		SyncDirty();
-	}
-
-	void Viewport::RenderOverlay()
-	{
-		ImGuiChildFlags childFlags =
-			ImGuiChildFlags_::ImGuiChildFlags_AutoResizeX |
-			ImGuiChildFlags_::ImGuiChildFlags_AutoResizeY |
-			ImGuiChildFlags_::ImGuiChildFlags_AlwaysAutoResize |
-			ImGuiChildFlags_::ImGuiChildFlags_Border;
-		ImGuiWindowFlags windowFlags =
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoDecoration |
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoDocking |
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoSavedSettings |
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoFocusOnAppearing |
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoNav |
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoMove |
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoInputs;
-		ImGui::SetNextWindowPos({ x, y });
-		ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
-		if (ImGui::BeginChild("Viewport Overlay", { 0, 0 }, childFlags, windowFlags))
-		{
-			ImGui::Text(fmt::format("Render Call: {}", world.renderer.GetDrawCall(core::ThreadType::Render)).c_str());
-		}
-		ImGui::EndChild();
-	}
-
-	void Viewport::RenderPopup()
-	{
-		if (bBlockRightClick)
-			return;
-		if (ImGui::BeginPopupContextItem("ViewportRightClick", ImGuiPopupFlags_::ImGuiPopupFlags_MouseButtonRight))
-		{
-			auto& selectedObjs = world.GetSelectedObjects();
-			if (selectedObjs.size() > 0)
-			{
-				if (ImGui::Selectable("Delete"))
-				{
-					for (auto obj : selectedObjs)
-					{
-						if (obj->GetType() == game::GameObject::GetStaticType())
-						{
-							if (core::IsValid(obj))
-								world.DestroyGameObject(*static_cast<game::GameObject*>(obj));
-						}
-					}
-				}
-			}
-			ImGui::EndPopup();
-		}
-	}
-
-	void Viewport::LeftClick()
-	{
-		mousePos.x = ImGui::GetIO().MousePos.x - x;
-		mousePos.y = ImGui::GetIO().MousePos.y - y;
-		if (mousePos.x < 0 || mousePos.y < 0)
-			return;
-		if (mousePos.x > viewportWidthLast || mousePos.y > viewportHeightLast)
-			return;
-
-		pickingCamera->SetPickingPos({ mousePos.x, mousePos.y });
-		pickingCamera->pickingCallback.Register(pickingListener);
-	}
-
-	void Viewport::RightClick()
-	{
-	}
-
-	void Viewport::Render()
+	SH_EDITOR_API void Viewport::Render()
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 		ImGui::Begin(name);
@@ -386,5 +322,80 @@ namespace sh::editor
 			viewportDescSetLast = nullptr;
 		}
 		bDirty = false;
+	}
+	void Viewport::ChangeViewportSize()
+	{
+		if (viewportWidthLast != 0.f && viewportHeightLast != 0.f)
+			renderTex->SetSize(viewportWidthLast, viewportHeightLast); // renderTex dirty등록
+		if (pickingCamera)
+			pickingCamera->SetTextureSize({ viewportWidthLast, viewportHeightLast });
+
+		SyncDirty();
+	}
+
+	void Viewport::RenderOverlay()
+	{
+		ImGuiChildFlags childFlags =
+			ImGuiChildFlags_::ImGuiChildFlags_AutoResizeX |
+			ImGuiChildFlags_::ImGuiChildFlags_AutoResizeY |
+			ImGuiChildFlags_::ImGuiChildFlags_AlwaysAutoResize |
+			ImGuiChildFlags_::ImGuiChildFlags_Border;
+		ImGuiWindowFlags windowFlags =
+			ImGuiWindowFlags_::ImGuiWindowFlags_NoDecoration |
+			ImGuiWindowFlags_::ImGuiWindowFlags_NoDocking |
+			ImGuiWindowFlags_::ImGuiWindowFlags_NoSavedSettings |
+			ImGuiWindowFlags_::ImGuiWindowFlags_NoFocusOnAppearing |
+			ImGuiWindowFlags_::ImGuiWindowFlags_NoNav |
+			ImGuiWindowFlags_::ImGuiWindowFlags_NoMove |
+			ImGuiWindowFlags_::ImGuiWindowFlags_NoInputs;
+		ImGui::SetNextWindowPos({ x, y });
+		ImGui::SetNextWindowBgAlpha(0.35f); // Transparent background
+		if (ImGui::BeginChild("Viewport Overlay", { 0, 0 }, childFlags, windowFlags))
+		{
+			ImGui::Text(fmt::format("Render Call: {}", world.renderer.GetDrawCall(core::ThreadType::Render)).c_str());
+		}
+		ImGui::EndChild();
+	}
+
+	void Viewport::RenderPopup()
+	{
+		if (bBlockRightClick)
+			return;
+		if (ImGui::BeginPopupContextItem("ViewportRightClick", ImGuiPopupFlags_::ImGuiPopupFlags_MouseButtonRight))
+		{
+			auto& selectedObjs = world.GetSelectedObjects();
+			if (selectedObjs.size() > 0)
+			{
+				if (ImGui::Selectable("Delete"))
+				{
+					for (auto obj : selectedObjs)
+					{
+						if (obj->GetType() == game::GameObject::GetStaticType())
+						{
+							if (core::IsValid(obj))
+								world.DestroyGameObject(*static_cast<game::GameObject*>(obj));
+						}
+					}
+				}
+			}
+			ImGui::EndPopup();
+		}
+	}
+
+	void Viewport::LeftClick()
+	{
+		mousePos.x = ImGui::GetIO().MousePos.x - x;
+		mousePos.y = ImGui::GetIO().MousePos.y - y;
+		if (mousePos.x < 0 || mousePos.y < 0)
+			return;
+		if (mousePos.x > viewportWidthLast || mousePos.y > viewportHeightLast)
+			return;
+
+		pickingCamera->SetPickingPos({ mousePos.x, mousePos.y });
+		pickingCamera->pickingCallback.Register(pickingListener);
+	}
+
+	void Viewport::RightClick()
+	{
 	}
 }//namespace

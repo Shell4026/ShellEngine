@@ -45,6 +45,8 @@ namespace sh::game
 		SH_GAME_API auto GetRenderTagId() const -> uint32_t;
 
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
+
+		SH_GAME_API auto GetWorldAABB() const -> const render::AABB { return worldAABB; }
 	protected:
 		/// @brief Drawable을 생성하거나 이미 존재 시 갱신하는 함수.
 		SH_GAME_API virtual void CreateDrawable();

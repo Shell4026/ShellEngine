@@ -14,11 +14,12 @@ namespace sh::game
 	Camera::Camera(GameObject& owner) :
 		Component(owner),
 
-		fov(60.f),
+		fov(60.f), fovx(0.f),
 		camera(), depth(0),
 
 		renderTexture(nullptr)
 	{
+		SetFov(60);
 		owner.world.RegisterCamera(this);
 		camera.SetNearPlane(0.1f);
 		camera.SetFarPlane(1000.f);
@@ -78,6 +79,10 @@ namespace sh::game
 	}
 	SH_GAME_API void Camera::SetFov(float degree)
 	{
+		const float aspect = camera.GetWidth(core::ThreadType::Game) / camera.GetHeight(core::ThreadType::Game);
+		fov = degree;
+		fovx = glm::degrees(glm::atan(glm::tan(glm::radians(fov) * 0.5f) * aspect) * 2.f);
+
 		camera.SetFov(degree);
 	}
 
