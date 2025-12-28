@@ -12,7 +12,7 @@ namespace sh::game
 		Component(owner),
 		position(vPosition), scale(vScale), rotation(vRotation), localToWorldMatrix(matModel),
 
-		worldPosition(), worldRotation(), worldScale(),
+		worldPosition{ 0.f, 0.f, 0.f }, worldRotation{ 0.f, 0.f, 0.f }, worldScale{ 1.f, 1.f, 1.f },
 		vPosition{ 0.f, 0.f, 0.f }, vScale{ 1.0f, 1.0f, 1.0f }, vRotation{ 0.f, 0.f, 0.f },
 		matModel(), quat(glm::radians(glm::vec3{ vRotation })), worldQuat(quat),
 		parent(nullptr), childs(),

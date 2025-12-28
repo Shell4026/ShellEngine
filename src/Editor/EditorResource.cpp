@@ -102,6 +102,7 @@ namespace sh::editor
 
 		errorMat->Build(*renderer.GetContext());
 		errorMat->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f10" });
+		lineMat->SetName("Line");
 		lineMat->Build(*renderer.GetContext());
 		lineMat->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f11" });
 		pickingMat->Build(*renderer.GetContext());
