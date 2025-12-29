@@ -84,6 +84,8 @@ namespace sh::render
 			std::memcpy(uniformData.data() + offset, &data, sizeof(T));
 		}
 		void UpdateListener();
+	public:
+		mutable core::Observer<false, const Shader*> onShaderChanged;
 	private:
 		const IRenderContext* context = nullptr;
 

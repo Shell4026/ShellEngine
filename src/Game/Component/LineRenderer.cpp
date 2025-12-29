@@ -23,12 +23,7 @@ namespace sh::game
 		mesh.lineWidth = 1.f;
 		mesh.Build(*world.renderer.GetContext());
 		Super::SetMesh(&mesh);
-
-		mat = static_cast<render::Material*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{"bbc4ef7ec45dce223297a224f8093f11"}));
-		assert(mat);
-		Super::SetMaterial(mat);
-
-		SetMaterialPropertyBlock(std::make_unique<render::MaterialPropertyBlock>());
+		Super::SetMaterial(static_cast<render::Material*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ "bbc4ef7ec45dce223297a224f8093f11" })));
 	}
 
 	SH_GAME_API void LineRenderer::Awake()

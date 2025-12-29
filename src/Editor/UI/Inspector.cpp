@@ -714,6 +714,7 @@ namespace sh::editor
 				static std::string name;
 				name = obj->GetName().ToString();
 
+				ImGui::Text("%s", obj->GetUUID().ToString().c_str());
 				ImGui::SetNextItemWidth(100);
 				if (ImGui::InputText("Name", &name))
 					obj->SetName(name);

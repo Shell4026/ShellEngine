@@ -17,13 +17,29 @@ namespace sh::game
 		Component(owner),
 		mesh(nullptr), mat(nullptr), drawable(nullptr)
 	{
-		onMatrixUpdateListener.SetCallback([&](const glm::mat4& mat)
+		onMatrixUpdateListener.SetCallback(
+			[this](const glm::mat4& mat)
 			{
 				if (core::IsValid(mesh))
 					worldAABB = mesh->GetBoundingBox().GetWorldAABB(mat);
 			}
 		);
 		gameObject.transform->onMatrixUpdate.Register(onMatrixUpdateListener);
+		onShaderChangedListener.SetCallback(
+			[this](const render::Shader* shader)
+			{
+				SH_INFO("Shader was changed");
+				if (!core::IsValid(shader))
+					return;
+				SearchLocalProperties();
+				if (!localUniformLocations.empty())
+				{
+					if (propertyBlock == nullptr)
+						propertyBlock = std::make_unique<render::MaterialPropertyBlock>();
+					SetDefaultLocalTexture();
+				}
+			}
+		);
 
 		canPlayInEditor = true;
 	}
@@ -41,7 +57,7 @@ namespace sh::game
 
 			if (drawable == nullptr)
 				CreateDrawable();
-			else
+			if (drawable != nullptr)
 				drawable->SetMesh(*this->mesh);
 		}
 	}
@@ -53,23 +69,33 @@ namespace sh::game
 
 	SH_GAME_API void MeshRenderer::SetMaterial(sh::render::Material* mat)
 	{
+		if (this->mat != nullptr)
+			this->mat->onShaderChanged.UnRegister(onShaderChangedListener);
+
 		if (core::IsValid(mat))
 			this->mat = mat;
 		else
 			this->mat = static_cast<render::Material*>(core::SObject::GetSObjectUsingResolver(core::UUID{ "bbc4ef7ec45dce223297a224f8093f10" })); // errorMat
 
+		this->mat->onShaderChanged.Register(onShaderChangedListener);
+
 		if (drawable == nullptr)
 			CreateDrawable();
-		else
+		if (drawable != nullptr)
 			drawable->SetMaterial(*this->mat);
 
-		if (core::IsValid(mat->GetShader()))
+		if (core::IsValid(this->mat->GetShader()))
 		{
 			if (mat->GetShader()->IsUsingLight())
 				FillLightStruct(*drawable, *mat->GetShader());
 
-			if (propertyBlock != nullptr)
-				SearchLocalProperties();
+			SearchLocalProperties();
+			if (!localUniformLocations.empty())
+			{
+				if (propertyBlock == nullptr)
+					propertyBlock = std::make_unique<render::MaterialPropertyBlock>();
+				SetDefaultLocalTexture();
+			}
 		}
 		else
 		{
@@ -122,8 +148,7 @@ namespace sh::game
 	SH_GAME_API void MeshRenderer::SetMaterialPropertyBlock(std::unique_ptr<render::MaterialPropertyBlock>&& block)
 	{
 		propertyBlock = std::move(block);
-
-		SearchLocalProperties();
+		SetDefaultLocalTexture();
 	}
 
 	SH_GAME_API auto MeshRenderer::GetMaterialPropertyBlock() const -> render::MaterialPropertyBlock*
@@ -221,7 +246,7 @@ namespace sh::game
 						static core::UUID blackTexUUID{ "bbc4ef7ec45dce223297a224f8093f18" };
 						auto texPtr = static_cast<render::Texture*>(core::SObject::GetSObjectUsingResolver(blackTexUUID));
 						if (texPtr != nullptr)
-							drawable->GetMaterialData().SetTextureData(*passPtr, layoutPtr->type, layoutPtr->binding, *var);
+							drawable->GetMaterialData().SetTextureData(*passPtr, layoutPtr->type, layoutPtr->binding, *texPtr);
 						else
 							SH_ERROR("Can't get default texture!");
 					}
@@ -270,7 +295,9 @@ namespace sh::game
 		if (!core::IsValid(mat->GetShader()))
 			return;
 
-		drawable = core::SObject::Create<render::Drawable>(*mat, *mesh);
+		drawable = core::SObject::Create<render::Drawable>();
+		drawable->SetMesh(*mesh);
+		drawable->SetMaterial(*mat);
 		drawable->SetRenderTagId(renderTag);
 		drawable->SetTopology(mesh->GetTopology());
 		drawable->Build(*world.renderer.GetContext());
@@ -304,39 +331,57 @@ namespace sh::game
 		}
 	}
 
+	void MeshRenderer::SetDefaultLocalTexture()
+	{
+		if (!core::IsValid(mat))
+			return;
+		render::Shader* shader = mat->GetShader();
+		if (!core::IsValid(shader))
+			return;
+
+		if (propertyBlock == nullptr)
+			propertyBlock = std::make_unique<render::MaterialPropertyBlock>();
+
+		for (auto& [propName, propInfo] : shader->GetProperties())
+		{
+			if (propInfo.type == core::reflection::GetType<render::Texture>())
+			{
+				propertyBlock->SetProperty(propName, static_cast<render::Texture*>(core::SObject::GetSObjectUsingResolver(core::UUID{ "bbc4ef7ec45dce223297a224f8093f18" })));
+				UpdatePropertyBlockData();
+			}
+		}
+	}
+
 	void MeshRenderer::FillLightStruct(render::Drawable& drawable, render::Shader& shader) const
 	{
 		Light lightStruct{};
 		auto lights = world.GetLightOctree().Query(worldAABB);
-		if (lights.size() < 10)
+		int idx = 0;
+		for (int i = 0; i < std::min((int)lights.size(), 10); ++i)
 		{
-			int idx = 0;
-			for (int i = 0; i < lights.size(); ++i)
+			const ILight* light = static_cast<ILight*>(lights[i]);
+			if (light->GetLightType() == ILight::Type::Point)
 			{
-				const ILight* light = static_cast<ILight*>(lights[i]);
-				if (light->GetLightType() == ILight::Type::Point)
-				{
-					const PointLight* pointLight = static_cast<const PointLight*>(light);
-					if (!core::IsValid(pointLight))
-						continue;
-					const Vec3& pos = pointLight->gameObject.transform->GetWorldPosition();
-					lightStruct.lightPos[idx] = { pos.x, pos.y, pos.z, 0.f };
-					lightStruct.lightPos[idx].w = pointLight->GetRadius();
-					lightStruct.other[idx].w = 1;
-				}
-				else if (light->GetLightType() == ILight::Type::Directional)
-				{
-					const DirectionalLight* dirLight = static_cast<const DirectionalLight*>(light);
-					if (!core::IsValid(dirLight))
-						continue;
-					const Vec3& dir = dirLight->GetDirection();
-					lightStruct.lightPos[idx] = { dir.x, dir.y, dir.z, dirLight->GetIntensity() };
-					lightStruct.other[idx].w = 0;
-				}
-				++idx;
+				const PointLight* pointLight = static_cast<const PointLight*>(light);
+				if (!core::IsValid(pointLight))
+					continue;
+				const Vec3& pos = pointLight->gameObject.transform->GetWorldPosition();
+				lightStruct.lightPos[idx] = { pos.x, pos.y, pos.z, 0.f };
+				lightStruct.lightPos[idx].w = pointLight->GetRadius();
+				lightStruct.other[idx].w = 1;
 			}
-			lightStruct.lightCount = idx;
+			else if (light->GetLightType() == ILight::Type::Directional)
+			{
+				const DirectionalLight* dirLight = static_cast<const DirectionalLight*>(light);
+				if (!core::IsValid(dirLight))
+					continue;
+				const Vec3& dir = dirLight->GetDirection();
+				lightStruct.lightPos[idx] = { dir.x, dir.y, dir.z, dirLight->GetIntensity() };
+				lightStruct.other[idx].w = 0;
+			}
+			++idx;
 		}
+		lightStruct.lightCount = idx;
 		for (auto& lightingPass : shader.GetAllShaderPass())
 		{
 			for (render::ShaderPass& pass : lightingPass.passes)

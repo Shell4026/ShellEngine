@@ -20,7 +20,7 @@ namespace sh::render
 	{
 		SCLASS(Drawable)
 	public:
-		SH_RENDER_API Drawable(const Material& material, const Mesh& mesh);
+		SH_RENDER_API Drawable();
 		SH_RENDER_API Drawable(Drawable&& other) noexcept;
 		SH_RENDER_API virtual ~Drawable();
 
@@ -76,4 +76,4 @@ namespace sh::render
 		bool bDirty = false;
 		bool bMatrixDirty = false;
 	};
-}
+}//namespace

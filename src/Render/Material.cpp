@@ -43,7 +43,8 @@ namespace sh::render
 		materialData(std::move(other.materialData)),
 		propertyBlock(std::move(other.propertyBlock)),
 		onBufferUpdateListener(std::move(other.onBufferUpdateListener)),
-		cachedConstantData(std::move(other.cachedConstantData))
+		cachedConstantData(std::move(other.cachedConstantData)),
+		onShaderChanged(std::move(other.onShaderChanged))
 	{
 		other.context = nullptr;
 		other.shader = nullptr;
@@ -105,7 +106,10 @@ namespace sh::render
 	{
 		this->shader = shader;
 		if (!core::IsValid(this->shader))
+		{
+			onShaderChanged.Notify(shader);
 			return;
+		}
 		Clear();
 		SetDefaultProperties();
 		for (const auto& lightingPass : shader->GetAllShaderPass())
@@ -121,6 +125,8 @@ namespace sh::render
 		}
 		if(context != nullptr)
 			Build(*context);
+
+		onShaderChanged.Notify(shader);
 	}
 	
 	SH_RENDER_API auto Material::GetShader() const -> Shader*

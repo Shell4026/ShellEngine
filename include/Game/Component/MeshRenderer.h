@@ -54,6 +54,7 @@ namespace sh::game
 		SH_GAME_API virtual void UpdateDrawable();
 	private:
 		void SearchLocalProperties();
+		void SetDefaultLocalTexture();
 
 		template<typename T>
 		void SetData(const T& data, std::vector<uint8_t>& uniformData, std::size_t offset, std::size_t size)
@@ -68,10 +69,6 @@ namespace sh::game
 
 		void FillLightStruct(render::Drawable& drawable, render::Shader& shader) const;
 	protected:
-		PROPERTY(mesh)
-		const render::Mesh* mesh;
-		PROPERTY(mat)
-		render::Material* mat;
 		PROPERTY(drawable, core::PropertyOption::invisible, core::PropertyOption::noSave)
 		render::Drawable* drawable;
 	private:
@@ -81,6 +78,12 @@ namespace sh::game
 			alignas(16) glm::vec4 lightPos[10];
 			alignas(16) glm::vec4 other[10];
 		};
+
+		PROPERTY(mesh)
+		const render::Mesh* mesh;
+		PROPERTY(mat)
+		render::Material* mat;
+
 		render::AABB worldAABB;
 
 		std::unique_ptr<render::MaterialPropertyBlock> propertyBlock;
@@ -88,6 +91,7 @@ namespace sh::game
 		std::vector<std::pair<const render::ShaderPass*, const render::UniformStructLayout*>> localUniformLocations;
 
 		core::Observer<false, const glm::mat4&>::Listener onMatrixUpdateListener;
+		core::Observer<false, const render::Shader*>::Listener onShaderChangedListener;
 
 		PROPERTY(renderTag)
 		uint32_t renderTag = 1;

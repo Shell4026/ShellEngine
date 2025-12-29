@@ -7,8 +7,9 @@ namespace sh::editor
 	OutlineComponent::OutlineComponent(game::GameObject& owner) :
 		game::MeshRenderer(owner)
 	{
-		mat = static_cast<render::Material*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ "bbc4ef7ec45dce223297a224f8093f13" }));
+		auto mat = static_cast<render::Material*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ "bbc4ef7ec45dce223297a224f8093f13" }));
 		assert(mat);
+		SetMaterial(mat);
 		renderer = owner.GetComponent<MeshRenderer>();
 		canPlayInEditor = true;
 	}
@@ -19,7 +20,7 @@ namespace sh::editor
 		if (!core::IsValid(renderer))
 			return;
 
-		if (mesh != renderer->GetMesh())
+		if (GetMesh() != renderer->GetMesh())
 			SetMesh(renderer->GetMesh());
 	}
 	SH_EDITOR_API auto OutlineComponent::Serialize() const -> core::Json

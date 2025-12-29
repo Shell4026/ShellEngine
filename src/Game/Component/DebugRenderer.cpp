@@ -12,7 +12,8 @@ namespace sh::game
 	SH_GAME_API void DebugRenderer::CreateDrawable()
 	{
 		Super::CreateDrawable();
-		drawable->SetTopology(render::Mesh::Topology::Line);
+		if (drawable != nullptr)
+			drawable->SetTopology(render::Mesh::Topology::Line);
 	}
 	SH_GAME_API void DebugRenderer::UpdateDrawable()
 	{
@@ -24,8 +25,10 @@ namespace sh::game
 	DebugRenderer::DebugRenderer(game::GameObject& owner) :
 		MeshRenderer(owner)
 	{
-		mat = static_cast<render::Material*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{"bbc4ef7ec45dce223297a224f8093f10"})); // ErrorMaterial
+		auto mat = static_cast<render::Material*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{"bbc4ef7ec45dce223297a224f8093f10"})); // ErrorMaterial
 		assert(mat);
+		SetMaterial(mat);
+
 		position = Vec3{ 0.f, 0.f, 0.f };
 		scale = Vec3{ 1.0f, 1.0f, 1.0f };
 		rotation = Vec3{ 0.f, 0.f, 0.f };

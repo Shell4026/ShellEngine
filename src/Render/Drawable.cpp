@@ -6,48 +6,8 @@
 
 namespace sh::render
 {
-	SH_RENDER_API void Drawable::SyncDirty()
-	{
-		if (bDirty)
-			return;
-
-		core::ThreadSyncManager::PushSyncable(*this);
-
-		bDirty = true;
-	}
-	SH_RENDER_API void Drawable::Sync()
-	{
-		for (auto& syncData : syncDatas)
-		{
-			std::size_t index = syncData.changed.index();
-			if (index == 0)
-				continue;
-			else if (index == 1) // 메테리얼이 변경됨
-			{
-				this->mat = std::get<1>(syncData.changed);
-			}
-			else if (index == 2)
-			{
-				this->mesh = std::get<2>(syncData.changed);
-			}
-			else if (index == 3)
-			{
-				topology[core::ThreadType::Render] = std::get<3>(syncData.changed);
-			}
-			else if (index == 4)
-			{
-				priority[core::ThreadType::Render] = std::get<4>(syncData.changed);
-			}
-			syncData.changed = std::monostate{};
-		}
-		if (bMatrixDirty)
-			std::swap(modelMatrix[core::ThreadType::Game], modelMatrix[core::ThreadType::Render]);
-		bMatrixDirty = false;
-		bDirty = false;
-	}
-
-	Drawable::Drawable(const Material& material, const Mesh& mesh) :
-		mat(&material), mesh(&mesh)
+	Drawable::Drawable() :
+		mat(nullptr), mesh(nullptr)
 	{
 		topology[core::ThreadType::Game] = Mesh::Topology::Face;
 		topology[core::ThreadType::Render] = Mesh::Topology::Face;
@@ -57,8 +17,6 @@ namespace sh::render
 
 		priority[core::ThreadType::Game] = 0;
 		priority[core::ThreadType::Render] = 0;
-
-		SH_INFO("Creation");
 	}
 	Drawable::Drawable(Drawable&& other) noexcept :
 		mat(other.mat), mesh(other.mesh), modelMatrix(other.modelMatrix),
@@ -69,22 +27,14 @@ namespace sh::render
 		other.bDirty = false;
 		topology[core::ThreadType::Game] = other.topology[core::ThreadType::Game];
 		topology[core::ThreadType::Render] = other.topology[core::ThreadType::Render];
-		SH_INFO("Creation");
 	}
 	Drawable::~Drawable()
 	{
-		SH_INFO_FORMAT("~Drawable: {}", (void*)this);
 	}
 
 	SH_RENDER_API void Drawable::Build(const IRenderContext& context)
 	{
 		this->context = &context;
-
-		assert(core::IsValid(mat->GetShader()));
-		if (!core::IsValid(mat->GetShader()))
-			return;
-
-		materialData.Create(context, *mat->GetShader(), true);
 	}
 
 	SH_RENDER_API void Drawable::SetMesh(const Mesh& mesh)
@@ -178,5 +128,44 @@ namespace sh::render
 	SH_RENDER_API auto Drawable::GetPriority(core::ThreadType thr) const -> int
 	{
 		return priority[thr];
+	}
+	SH_RENDER_API void Drawable::SyncDirty()
+	{
+		if (bDirty)
+			return;
+
+		core::ThreadSyncManager::PushSyncable(*this);
+
+		bDirty = true;
+	}
+	SH_RENDER_API void Drawable::Sync()
+	{
+		for (auto& syncData : syncDatas)
+		{
+			std::size_t index = syncData.changed.index();
+			if (index == 0)
+				continue;
+			else if (index == 1) // 메테리얼이 변경됨
+			{
+				this->mat = std::get<1>(syncData.changed);
+			}
+			else if (index == 2)
+			{
+				this->mesh = std::get<2>(syncData.changed);
+			}
+			else if (index == 3)
+			{
+				topology[core::ThreadType::Render] = std::get<3>(syncData.changed);
+			}
+			else if (index == 4)
+			{
+				priority[core::ThreadType::Render] = std::get<4>(syncData.changed);
+			}
+			syncData.changed = std::monostate{};
+		}
+		if (bMatrixDirty)
+			std::swap(modelMatrix[core::ThreadType::Game], modelMatrix[core::ThreadType::Render]);
+		bMatrixDirty = false;
+		bDirty = false;
 	}
 }//namespace

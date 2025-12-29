@@ -14,9 +14,9 @@ namespace sh::game
 		id = PickingIdManager::AssignId(this);
 		//SH_INFO_FORMAT("ID: {}", id);
 
-		mat = static_cast<render::Material*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ "bbc4ef7ec45dce223297a224f8093f12" }));
+		auto mat = static_cast<render::Material*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ "bbc4ef7ec45dce223297a224f8093f12" }));
 		assert(mat);
-
+		SetMaterial(mat);
 		SetMaterialPropertyBlock(std::make_unique<render::MaterialPropertyBlock>());
 	}
 	SH_GAME_API PickingRenderer::~PickingRenderer()
@@ -34,7 +34,7 @@ namespace sh::game
 			return;
 		if (core::IsValid(renderer))
 		{
-			if (this->mesh != renderer->GetMesh())
+			if (GetMesh() != renderer->GetMesh())
 				SetMesh(renderer->GetMesh());
 		}
 
