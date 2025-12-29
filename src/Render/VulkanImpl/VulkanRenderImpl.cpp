@@ -193,7 +193,8 @@ namespace sh::render::vk
 		vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-		if (!drawList.groups.empty())
+		if (drawList.renderData.index() == 0 && !std::get<0>(drawList.renderData).empty() ||
+			drawList.renderData.index() == 1 && !std::get<1>(drawList.renderData).empty())
 			RenderDrawable(cmd, passName, renderData, drawList, rtLayout);
 
 		for (auto& call : drawList.drawCall)
@@ -263,53 +264,116 @@ namespace sh::render::vk
 		if (!cameraOffsetOpt.has_value())
 			return;
 
-		// 렌더 그룹은 메테리얼별로 나눠져있음
-		for (const DrawList::Group& renderGroup : drawList.groups)
+		VulkanPipelineManager::PipelineHandle lastPipelineHandle{ 0xffffffff, 0xffffffff };
+		if (drawList.renderData.index() == 0)
 		{
-			const Material* mat = renderGroup.material;
-			assert(mat);
-
-			const auto passVectorPtr = renderGroup.material->GetShader()->GetShaderPasses(passName);
-			if (passVectorPtr == nullptr)
-				continue;
-			for (const ShaderPass& pass : *passVectorPtr)
+			for (const DrawList::RenderGroup& renderGroup : std::get<0>(drawList.renderData))
 			{
-				if (pass.IsPendingKill())
+				const Material* mat = renderGroup.material;
+				assert(mat);
+
+				const auto passVectorPtr = renderGroup.material->GetShader()->GetShaderPasses(passName);
+				if (passVectorPtr == nullptr)
+					continue;
+				for (const ShaderPass& pass : *passVectorPtr)
+				{
+					if (pass.IsPendingKill())
+						continue;
+
+					const std::vector<uint8_t>* constantData = mat->GetConstantData(pass);
+
+					auto pipelineHandle = ctx.GetPipelineManager().
+						GetOrCreatePipelineHandle(static_cast<const VulkanShaderPass&>(pass), layout, renderGroup.topology, constantData);
+
+					if (lastPipelineHandle != pipelineHandle)
+					{
+						ctx.GetPipelineManager().BindPipeline(cmd.GetCommandBuffer(), pipelineHandle);
+						lastPipelineHandle = pipelineHandle;
+					}
+					VkPipelineLayout pipelineLayout = static_cast<const VulkanShaderPass&>(pass).GetPipelineLayout();
+					uint32_t setSize = static_cast<const VulkanShaderPass&>(pass).GetSetCount();
+
+					// set = 0 카메라
+					// set = 1 객체 고유
+					// set = 2 메테리얼
+					if (setSize > 0)
+						BindCameraSet(cmd, pipelineLayout, pass, *mat, cameraOffsetOpt.value());
+					if (setSize > 2)
+						BindMaterialSet(cmd, pipelineLayout, pass, *mat);
+
+					for (auto drawable : renderGroup.drawables)
+					{
+						if (drawable == nullptr)
+							continue;
+						const Mesh* mesh = drawable->GetMesh();
+						if (!core::IsValid(mesh))
+							continue;
+
+						if (setSize > 1)
+							BindObjectSet(cmd, pipelineLayout, pass, *drawable);
+
+						if (pass.HasConstantUniform())
+							vkCmdPushConstants(cmd.GetCommandBuffer(), pipelineLayout,
+								VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT,
+								0, sizeof(glm::mat4),
+								&drawable->GetModelMatrix(core::ThreadType::Render));
+
+						DrawMesh(cmd, pass, *mesh);
+					}
+				}
+			}
+		}
+		else
+		{
+			for (const DrawList::RenderItem& renderItem : std::get<1>(drawList.renderData))
+			{
+				const Material* mat = renderItem.material;
+				assert(mat);
+
+				const auto passVectorPtr = mat->GetShader()->GetShaderPasses(passName);
+				if (passVectorPtr == nullptr)
 					continue;
 
-				const std::vector<uint8_t>* constantData = mat->GetConstantData(pass);
-
-				auto pipelineHandle = ctx.GetPipelineManager().
-					GetOrCreatePipelineHandle(static_cast<const VulkanShaderPass&>(pass), layout, renderGroup.topology, constantData);
-
-				ctx.GetPipelineManager().BindPipeline(cmd.GetCommandBuffer(), pipelineHandle);
-				VkPipelineLayout pipelineLayout = static_cast<const VulkanShaderPass&>(pass).GetPipelineLayout();
-				uint32_t setSize = static_cast<const VulkanShaderPass&>(pass).GetSetCount();
-
-				// set = 0 카메라
-				// set = 1 객체 고유
-				// set = 2 메테리얼
-				if (setSize > 0)
-					BindCameraSet(cmd, pipelineLayout, pass, *mat, cameraOffsetOpt.value());
-				if (setSize > 2)
-					BindMaterialSet(cmd, pipelineLayout, pass, *mat);
-
-				for (auto drawable : renderGroup.drawables)
+				for (const ShaderPass& pass : *passVectorPtr)
 				{
-					if (drawable == nullptr)
+					if (pass.IsPendingKill())
 						continue;
-					const Mesh* mesh = drawable->GetMesh();
+
+					const std::vector<uint8_t>* constantData = mat->GetConstantData(pass);
+
+					auto pipelineHandle = ctx.GetPipelineManager().
+						GetOrCreatePipelineHandle(static_cast<const VulkanShaderPass&>(pass), layout, renderItem.topology, constantData);
+
+					if (lastPipelineHandle != pipelineHandle)
+					{
+						ctx.GetPipelineManager().BindPipeline(cmd.GetCommandBuffer(), pipelineHandle);
+						lastPipelineHandle = pipelineHandle;
+					}
+					VkPipelineLayout pipelineLayout = static_cast<const VulkanShaderPass&>(pass).GetPipelineLayout();
+					uint32_t setSize = static_cast<const VulkanShaderPass&>(pass).GetSetCount();
+
+					// set = 0 카메라
+					// set = 1 객체 고유
+					// set = 2 메테리얼
+					if (setSize > 0)
+						BindCameraSet(cmd, pipelineLayout, pass, *mat, cameraOffsetOpt.value());
+					if (setSize > 2)
+						BindMaterialSet(cmd, pipelineLayout, pass, *mat);
+
+					if (renderItem.drawable == nullptr)
+						continue;
+					const Mesh* mesh = renderItem.drawable->GetMesh();
 					if (!core::IsValid(mesh))
 						continue;
 
 					if (setSize > 1)
-						BindObjectSet(cmd, pipelineLayout, pass, *drawable);
+						BindObjectSet(cmd, pipelineLayout, pass, *renderItem.drawable);
 
 					if (pass.HasConstantUniform())
 						vkCmdPushConstants(cmd.GetCommandBuffer(), pipelineLayout,
 							VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT,
 							0, sizeof(glm::mat4),
-							&drawable->GetModelMatrix(core::ThreadType::Render));
+							&renderItem.drawable->GetModelMatrix(core::ThreadType::Render));
 
 					DrawMesh(cmd, pass, *mesh);
 				}

@@ -76,6 +76,7 @@ namespace sh::render::vk
 		ctx = &static_cast<const VulkanContext&>(context);
 
 		const uint32_t actualMip = info.bMSAAImg ? 1 : info.mipLevel;
+		assert(actualMip > 0);
 
 		const bool bColorImg = !IsDepthTexture(info.format);
 		format = ConvertTextureFormat(info.format);

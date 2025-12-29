@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <variant>
 namespace sh::render
 {
 	class Camera;
@@ -23,13 +24,19 @@ namespace sh::render
 
 	struct DrawList
 	{
-		struct Group
+		struct RenderGroup
 		{
 			const Material* material;
 			Mesh::Topology topology;
 			std::vector<Drawable*> drawables;
 		};
-		std::vector<Group> groups;
+		struct RenderItem
+		{
+			const Material* material;
+			Mesh::Topology topology;
+			Drawable* drawable;
+		};
+		std::variant<std::vector<RenderGroup>, std::vector<RenderItem>> renderData;
 		std::vector<std::function<void(CommandBuffer&)>> drawCall;
 
 		bool bClearColor = true;

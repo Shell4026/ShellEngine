@@ -14,24 +14,37 @@ namespace sh::render
 	}
 	SH_RENDER_API auto TransparentPass::BuildDrawList(const RenderTarget& renderData) -> DrawList
 	{
-		DrawList list = ScriptableRenderPass::BuildDrawList(renderData);
+		DrawList list{};
+		list.renderData = std::vector<DrawList::RenderItem>{};
 		list.bClearColor = false;
 		list.bClearDepth = false;
+		if (renderData.drawables == nullptr)
+			return list;
+
+		for (auto drawable : *renderData.drawables)
+		{
+			if (!core::IsValid(drawable) || !drawable->CheckAssetValid() || drawable->GetMaterial()->GetShader()->GetShaderPasses(passName) == nullptr)
+				continue;
+
+			DrawList::RenderItem item{};
+			item.material = drawable->GetMaterial();
+			item.topology = drawable->GetTopology(core::ThreadType::Render);
+			item.drawable = drawable;
+
+			std::get<1>(list.renderData).push_back(item);
+		}
 
 		const auto& camPos = renderData.camera->GetPos(core::ThreadType::Render);
-		for (auto& renderGroup : list.groups)
-		{
-			std::sort(renderGroup.drawables.begin(), renderGroup.drawables.end(),
-				[&camPos](const Drawable* left, const Drawable* right) -> bool
-				{
-					const glm::vec3 posLeft = left->GetModelMatrix(core::ThreadType::Render)[3];
-					const glm::vec3 posRight = right->GetModelMatrix(core::ThreadType::Render)[3];
-					float leftLenSqr = glm::distance2(posLeft, camPos);
-					float rightLenSqr = glm::distance2(posRight, camPos);
-					return leftLenSqr > rightLenSqr;
-				}
-			);
-		}
+		std::stable_sort(std::get<1>(list.renderData).begin(), std::get<1>(list.renderData).end(),
+			[&camPos](const DrawList::RenderItem& left, const DrawList::RenderItem& right) -> bool
+			{
+				const glm::vec3 posLeft = left.drawable->GetModelMatrix(core::ThreadType::Render)[3];
+				const glm::vec3 posRight = right.drawable->GetModelMatrix(core::ThreadType::Render)[3];
+				float leftLenSqr = glm::distance2(posLeft, camPos);
+				float rightLenSqr = glm::distance2(posRight, camPos);
+				return leftLenSqr > rightLenSqr;
+			}
+		);
 		return list;
 	}
 }//namespace

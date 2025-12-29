@@ -21,18 +21,20 @@ namespace sh::render
 	SH_RENDER_API auto ScriptableRenderPass::BuildDrawList(const RenderTarget& renderData) -> DrawList
 	{
 		DrawList list{};
+		list.renderData = std::vector<DrawList::RenderGroup>{};
+		if (renderData.drawables == nullptr)
+			return list;
+
 		for (auto drawable : *renderData.drawables)
 		{
-			if (!drawable->CheckAssetValid())
-				continue;
-			if (drawable->GetMaterial()->GetShader()->GetShaderPasses(passName) == nullptr)
+			if (!core::IsValid(drawable) || !drawable->CheckAssetValid() || drawable->GetMaterial()->GetShader()->GetShaderPasses(passName) == nullptr)
 				continue;
 
 			const Material* mat = drawable->GetMaterial();
 			Mesh::Topology topology = drawable->GetTopology(core::ThreadType::Render);
 
-			DrawList::Group* renderGroup = nullptr;
-			for (auto& group : list.groups)
+			DrawList::RenderGroup* renderGroup = nullptr;
+			for (auto& group : std::get<0>(list.renderData))
 			{
 				if (group.material == mat && group.topology == topology)
 				{
@@ -42,12 +44,12 @@ namespace sh::render
 			}
 			if (renderGroup == nullptr)
 			{
-				DrawList::Group group{};
+				DrawList::RenderGroup group{};
 				group.material = mat;
 				group.topology = topology;
 				group.drawables.push_back(drawable);
 
-				list.groups.push_back(std::move(group));
+				std::get<0>(list.renderData).push_back(std::move(group));
 			}
 			else
 			{
@@ -70,23 +72,35 @@ namespace sh::render
 	{
 		renderTextures.clear();
 		renderTextures[renderData.target] = ImageUsage::ColorAttachment;
-		for (const auto& group : drawList.groups)
-		{
-			const Material* mat = group.material;
-			for (auto& [name, rt] : mat->GetCachedRenderTextures())
+
+		const auto collectFn =
+			[this](const Material* mat)
 			{
-				auto it = renderTextures.find(rt);
-				if (it != renderTextures.end())
+				for (auto& [name, rt] : mat->GetCachedRenderTextures())
 				{
-					if (it->second == ImageUsage::ColorAttachment)
+					auto it = renderTextures.find(rt);
+					if (it != renderTextures.end())
 					{
-						SH_ERROR_FORMAT("RenderTexture {} is used as ColorAttachment", it->first->GetName().ToString());
-						continue;
+						if (it->second == ImageUsage::ColorAttachment)
+						{
+							SH_ERROR_FORMAT("RenderTexture {} is used as ColorAttachment", it->first->GetName().ToString());
+							continue;
+						}
 					}
+					else
+						renderTextures[rt] = ImageUsage::SampledRead;
 				}
-				else
-					renderTextures[rt] = ImageUsage::SampledRead;
-			}
+			};
+
+		if (drawList.renderData.index() == 0)
+		{
+			for (const auto& group : std::get<0>(drawList.renderData))
+				collectFn(group.material);
+		}
+		else
+		{
+			for (const auto& item : std::get<1>(drawList.renderData))
+				collectFn(item.material);
 		}
 	}
 }//namespace

@@ -51,19 +51,18 @@ namespace sh::editor
 	SH_EDITOR_API auto EditorPostOutlinePass::BuildDrawList(const render::RenderTarget& renderData) -> render::DrawList
 	{
 		render::DrawList list{};
+		list.renderData = std::vector<render::DrawList::RenderItem>{};
 		list.bClearColor = false;
 
-		if (!drawable->CheckAssetValid())
-			return list;
-		if (drawable->GetMaterial()->GetShader()->GetShaderPasses(passName) == nullptr)
+		if (!core::IsValid(drawable) || !drawable->CheckAssetValid() || drawable->GetMaterial()->GetShader()->GetShaderPasses(passName) == nullptr)
 			return list;
 
-		render::DrawList::Group group;
-		group.material = mat;
-		group.topology = drawable->GetTopology(core::ThreadType::Render);
-		group.drawables.push_back(drawable);
+		render::DrawList::RenderItem renderItem;
+		renderItem.material = mat;
+		renderItem.topology = drawable->GetTopology(core::ThreadType::Render);
+		renderItem.drawable = drawable;
 
-		list.groups.push_back(std::move(group));
+		std::get<1>(list.renderData).push_back(renderItem);
 
 		return list;
 	}

@@ -28,8 +28,16 @@ namespace sh::render::vk
 	public:
 		struct PipelineHandle
 		{
-			uint32_t index;
-			uint32_t generation;
+			uint32_t index = 0;
+			uint32_t generation = 0;
+			auto operator==(const PipelineHandle& other) const -> bool
+			{
+				return index == other.index && generation == other.generation;
+			}
+			auto operator!=(const PipelineHandle& other) const -> bool
+			{
+				return !operator==(other);
+			}
 		};
 	public:
 		SH_RENDER_API VulkanPipelineManager(const VulkanContext& context);
