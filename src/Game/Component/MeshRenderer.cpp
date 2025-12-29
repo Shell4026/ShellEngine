@@ -63,11 +63,18 @@ namespace sh::game
 		else
 			drawable->SetMaterial(*this->mat);
 
-		if (mat->GetShader()->IsUsingLight())
-			FillLightStruct(*drawable, *mat->GetShader());
+		if (core::IsValid(mat->GetShader()))
+		{
+			if (mat->GetShader()->IsUsingLight())
+				FillLightStruct(*drawable, *mat->GetShader());
 
-		if (propertyBlock != nullptr)
-			SearchLocalProperties();
+			if (propertyBlock != nullptr)
+				SearchLocalProperties();
+		}
+		else
+		{
+			mat->SetShader(static_cast<render::Shader*>(core::SObject::GetSObjectUsingResolver(core::UUID{ "bbc4ef7ec45dce223297a224f8093f0f" })));
+		}
 
 		auto shader = this->mat->GetShader();
 

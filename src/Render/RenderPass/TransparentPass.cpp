@@ -16,6 +16,7 @@ namespace sh::render
 	{
 		DrawList list = ScriptableRenderPass::BuildDrawList(renderData);
 		list.bClearColor = false;
+		list.bClearDepth = false;
 
 		const auto& camPos = renderData.camera->GetPos(core::ThreadType::Render);
 		for (auto& renderGroup : list.groups)

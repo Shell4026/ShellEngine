@@ -33,6 +33,7 @@ namespace sh::render
 		std::vector<std::function<void(CommandBuffer&)>> drawCall;
 
 		bool bClearColor = true;
+		bool bClearDepth = true;
 	};
 
 	enum class ImageUsage
