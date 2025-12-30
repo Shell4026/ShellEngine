@@ -26,7 +26,7 @@ namespace sh::core
 				return;
 			}
 
-			if (ptr->bPendingKill.load(std::memory_order::memory_order_acquire))
+			if (ptr->bPendingKill)
 				it.Erase(); // iterator 자동 갱신
 			else
 			{
@@ -101,7 +101,7 @@ namespace sh::core
 					continue;
 
 				// Destory함수로 인해 제거 될 객체면 가르키고 있던 포인터를 nullptr로 바꾸고, 마킹하지 않는다.
-				if (ptr->bPendingKill.load(std::memory_order::memory_order_acquire))
+				if (ptr->bPendingKill)
 					*propertyPtr = nullptr;
 				else
 					bfs.push(ptr);
@@ -127,7 +127,7 @@ namespace sh::core
 							continue;
 						}
 
-						if (ptr->bPendingKill.load(std::memory_order::memory_order_acquire))
+						if (ptr->bPendingKill)
 							it.Erase(); // iterator 자동 갱신
 						else
 						{
@@ -160,7 +160,7 @@ namespace sh::core
 					if (*obj == nullptr)
 						continue;
 
-					if ((*obj)->bPendingKill.load(std::memory_order::memory_order_acquire))
+					if ((*obj)->bPendingKill)
 					{
 						*obj = nullptr;
 						continue;
@@ -190,7 +190,7 @@ namespace sh::core
 					SObject* obj = vector[i];
 					if (obj == nullptr)
 						continue;
-					if (obj->bPendingKill.load(std::memory_order::memory_order_acquire))
+					if (obj->bPendingKill)
 					{
 						vector[i] = nullptr;
 						continue;
@@ -223,7 +223,7 @@ namespace sh::core
 						++it;
 						continue;
 					}
-					if (obj->bPendingKill.load(std::memory_order::memory_order_acquire))
+					if (obj->bPendingKill)
 					{
 						it = list.erase(it);
 						continue;
@@ -251,7 +251,7 @@ namespace sh::core
 				for (auto it = set.begin(); it != set.end();)
 				{
 					SObject* obj = *it;
-					if (obj->bPendingKill.load(std::memory_order::memory_order_acquire))
+					if (obj->bPendingKill)
 					{
 						it = set.erase(it);
 						continue;
@@ -280,7 +280,7 @@ namespace sh::core
 				for (auto it = set.begin(); it != set.end();)
 				{
 					SObject* obj = *it;
-					if (obj->bPendingKill.load(std::memory_order::memory_order_acquire))
+					if (obj->bPendingKill)
 					{
 						it = set.erase(it);
 						continue;
@@ -348,7 +348,7 @@ namespace sh::core
 			SObjWeakPtr<SObject>& weakPtr = *reinterpret_cast<SObjWeakPtr<SObject>*>(ptr);
 			if (weakPtr == nullptr)
 				continue;
-			if (weakPtr->bPendingKill.load(std::memory_order::memory_order_acquire))
+			if (weakPtr->bPendingKill)
 				weakPtr.Reset();
 		}
 	}
@@ -483,7 +483,7 @@ namespace sh::core
 		{
 			if (!objPtr->bMark.test_and_set(std::memory_order::memory_order_relaxed))
 			{
-				if (!objPtr->bPendingKill.load(std::memory_order::memory_order_relaxed))
+				if (!objPtr->bPendingKill)
 				{
 					// AddToPendingKillList함수도 OnDestroy()에서 실행됨
 					objPtr->OnDestroy();
@@ -536,7 +536,7 @@ namespace sh::core
 	SH_CORE_API void GarbageCollection::AddToPendingKillList(SObject* obj)
 	{
 		pendingKillObjs.push_back(obj);
-		obj->bPendingKill.store(true, std::memory_order::memory_order_release);
+		obj->bPendingKill = true;
 	}
 
 	SH_CORE_API void GarbageCollection::DestroyPendingKillObjs()

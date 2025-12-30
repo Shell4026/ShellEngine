@@ -83,7 +83,7 @@ namespace sh::core
 						if constexpr (std::is_convertible_v<U, const SObject*>)
 						{
 							const SObject* value = it->second;
-							if (value->bPendingKill.load(std::memory_order::memory_order_acquire))
+							if (value->bPendingKill)
 							{
 								it = map->erase(it);
 								continue;
@@ -137,7 +137,7 @@ namespace sh::core
 						if constexpr (std::is_convertible_v<U, const SObject*>)
 						{
 							const SObject* value = it->second;
-							if (value->bPendingKill.load(std::memory_order::memory_order_acquire))
+							if (value->bPendingKill)
 							{
 								it = map->erase(it);
 								continue;

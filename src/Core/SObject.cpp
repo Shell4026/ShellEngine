@@ -32,11 +32,11 @@ namespace sh::core
 	{
 	}
 	SH_CORE_API SObject::SObject(SObject&& other) noexcept :
-		bPendingKill(other.bPendingKill.load(std::memory_order::memory_order_relaxed)),
+		bPendingKill(other.bPendingKill),
 		uuid(std::move(other.uuid)), name(std::move(other.name)),
 		onDestroy(std::move(other.onDestroy))
 	{
-		other.bPendingKill.store(true, std::memory_order_release);
+		other.bPendingKill = true;
 		if (other.bMark.test_and_set(std::memory_order::memory_order_acquire))
 			bMark.test_and_set(std::memory_order::memory_order_relaxed);
 	}
@@ -49,7 +49,7 @@ namespace sh::core
 		uuid = std::move(other.uuid);
 		name = std::move(other.name);
 		onDestroy = std::move(other.onDestroy);
-		bPendingKill.store(other.bPendingKill.load(std::memory_order::memory_order_relaxed));
+		bPendingKill = other.bPendingKill;
 
 		other.SetUUID(core::UUID::Generate());
 
@@ -79,7 +79,7 @@ namespace sh::core
 
 	SH_CORE_API auto SObject::IsPendingKill() const -> bool
 	{
-		return bPendingKill.load(std::memory_order::memory_order_acquire);
+		return bPendingKill;
 	}
 
 	SH_CORE_API void SObject::OnPropertyChanged(const reflection::Property& prop)
@@ -88,8 +88,9 @@ namespace sh::core
 
 	SH_CORE_API void SObject::Destroy()
 	{
-		if (bPendingKill.exchange(true, std::memory_order::memory_order_acq_rel))
+		if (bPendingKill)
 			return;
+		bPendingKill = true;
 		GarbageCollection& gc = *GarbageCollection::GetInstance();
 		gc.RemoveRootSet(this);
 

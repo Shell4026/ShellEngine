@@ -100,7 +100,7 @@ namespace sh::core
 		UUID uuid;
 		Name name;
 		std::atomic_flag bMark;
-		std::atomic<bool> bPendingKill;
+		bool bPendingKill;
 	};
 
 	template<>
