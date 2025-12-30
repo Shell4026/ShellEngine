@@ -105,6 +105,7 @@ namespace sh::editor
 		lineMat->SetName("Line");
 		lineMat->Build(*renderer.GetContext());
 		lineMat->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f11" });
+		pickingMat->SetName("PickingMaterial");
 		pickingMat->Build(*renderer.GetContext());
 		pickingMat->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f12" });
 

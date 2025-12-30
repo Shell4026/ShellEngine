@@ -57,7 +57,7 @@ namespace sh::game
 
 			if (drawable == nullptr)
 				CreateDrawable();
-			if (drawable != nullptr)
+			else
 				drawable->SetMesh(*this->mesh);
 		}
 	}
@@ -81,13 +81,16 @@ namespace sh::game
 
 		if (drawable == nullptr)
 			CreateDrawable();
-		if (drawable != nullptr)
+		else
 			drawable->SetMaterial(*this->mat);
 
 		if (core::IsValid(this->mat->GetShader()))
 		{
 			if (mat->GetShader()->IsUsingLight())
-				FillLightStruct(*drawable, *mat->GetShader());
+			{
+				if (drawable != nullptr)
+					FillLightStruct(*drawable, *mat->GetShader());
+			}
 
 			SearchLocalProperties();
 			if (!localUniformLocations.empty())
@@ -101,9 +104,6 @@ namespace sh::game
 		{
 			mat->SetShader(static_cast<render::Shader*>(core::SObject::GetSObjectUsingResolver(core::UUID{ "bbc4ef7ec45dce223297a224f8093f0f" })));
 		}
-
-		auto shader = this->mat->GetShader();
-
 	}
 	SH_GAME_API auto MeshRenderer::GetMaterial() const -> sh::render::Material*
 	{
@@ -295,9 +295,7 @@ namespace sh::game
 		if (!core::IsValid(mat->GetShader()))
 			return;
 
-		drawable = core::SObject::Create<render::Drawable>();
-		drawable->SetMesh(*mesh);
-		drawable->SetMaterial(*mat);
+		drawable = core::SObject::Create<render::Drawable>(*mat, *mesh);
 		drawable->SetRenderTagId(renderTag);
 		drawable->SetTopology(mesh->GetTopology());
 		drawable->Build(*world.renderer.GetContext());

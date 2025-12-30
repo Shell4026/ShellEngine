@@ -41,9 +41,7 @@ namespace sh::editor
 		if (drawable == nullptr)
 		{
 			assert(mat != nullptr);
-			drawable = core::SObject::Create<render::Drawable>();
-			drawable->SetMaterial(*mat);
-			drawable->SetMesh(*plane);
+			drawable = core::SObject::Create<render::Drawable>(*mat, *plane);
 			drawable->Build(ctx);
 
 			core::GarbageCollection::GetInstance()->SetRootSet(drawable);

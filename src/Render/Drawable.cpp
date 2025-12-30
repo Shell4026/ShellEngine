@@ -6,8 +6,8 @@
 
 namespace sh::render
 {
-	Drawable::Drawable() :
-		mat(nullptr), mesh(nullptr)
+	Drawable::Drawable(const Material& mat, const Mesh& mesh) :
+		mat(&mat), mesh(&mesh)
 	{
 		topology[core::ThreadType::Game] = Mesh::Topology::Face;
 		topology[core::ThreadType::Render] = Mesh::Topology::Face;
@@ -35,6 +35,8 @@ namespace sh::render
 	SH_RENDER_API void Drawable::Build(const IRenderContext& context)
 	{
 		this->context = &context;
+		if (core::IsValid(mat) && core::IsValid(mat->GetShader()))
+			materialData.Create(context, *mat->GetShader(), true); // sync타이밍에 이뤄짐
 	}
 
 	SH_RENDER_API void Drawable::SetMesh(const Mesh& mesh)
@@ -56,7 +58,7 @@ namespace sh::render
 		syncDatas[0]= data;
 
 		SyncDirty();
-		if (core::IsValid(mat.GetShader()))
+		if (context != nullptr && core::IsValid(mat.GetShader()))
 			materialData.Create(*context, *mat.GetShader(), true); // 얘도 sync타이밍에 이뤄짐
 	}
 

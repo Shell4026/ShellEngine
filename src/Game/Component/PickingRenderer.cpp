@@ -17,7 +17,6 @@ namespace sh::game
 		auto mat = static_cast<render::Material*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ "bbc4ef7ec45dce223297a224f8093f12" }));
 		assert(mat);
 		SetMaterial(mat);
-		SetMaterialPropertyBlock(std::make_unique<render::MaterialPropertyBlock>());
 	}
 	SH_GAME_API PickingRenderer::~PickingRenderer()
 	{
