@@ -25,6 +25,16 @@ namespace sh::editor
         sh::core::AssetBundle bundle;
         std::unique_ptr<ExplorerUI> explorer;
 
+        struct AssetInfo
+        {
+            std::string uuid;
+            std::string type;
+            uint64_t offset;
+            uint64_t size;
+            bool bCompressed;
+        };
+        std::vector<AssetInfo> assets;
+
         bool bShow;
     };
 }//namespace
