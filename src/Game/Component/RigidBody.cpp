@@ -85,7 +85,7 @@ namespace sh::game
 	SH_GAME_API void RigidBody::Awake()
 	{
 		impl->rigidbody->setTransform(reactphysics3d::Transform::identity());
-		impl->rigidbody->setLinearVelocity({ 0.f, 0.f, 0.f });
+		//impl->rigidbody->setLinearVelocity({ 0.f, 0.f, 0.f });
 	}
 	SH_GAME_API void RigidBody::Start()
 	{
