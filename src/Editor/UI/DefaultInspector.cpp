@@ -2,6 +2,7 @@
 #include "UI/Inspector.h"
 #include "AssetDatabase.h"
 
+#include "External/imgui/misc/cpp/imgui_stdlib.h"
 #include "imgui.h"
 
 #include <cstdint>
@@ -372,5 +373,10 @@ namespace sh::editor
 			currentType = currentType->super;
 		} 
 		while (currentType != nullptr);
+	}
+	SH_EDITOR_API void TextInspector::RenderUI(void* obj, int idx)
+	{
+		game::TextObject* textObj = reinterpret_cast<game::TextObject*>(obj);
+		ImGui::InputTextMultiline(fmt::format("##textBox{}", idx).c_str(), &textObj->text);
 	}
 }//namespace

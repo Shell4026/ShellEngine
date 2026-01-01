@@ -22,6 +22,9 @@
 #include "Game/Asset/MaterialLoader.h"
 #include "Game/Asset/ShaderLoader.h"
 #include "Game/Asset/WorldLoader.h"
+#include "Game/Asset/PrefabLoader.h"
+#include "Game/Asset/TextLoader.h"
+
 #include "Game/Asset/TextureAsset.h"
 #include "Game/Asset/ModelAsset.h"
 #include "Game/Asset/MeshAsset.h"
@@ -29,7 +32,7 @@
 #include "Game/Asset/ShaderAsset.h"
 #include "Game/Asset/WorldAsset.h"
 #include "Game/Asset/PrefabAsset.h"
-#include "Game/Asset/PrefabLoader.h"
+#include "Game/Asset/TextAsset.h"
 
 #include <istream>
 #include <ostream>
@@ -149,6 +152,14 @@ namespace sh::editor
 			if (prefabPtr != nullptr)
 				project->loadedAssets.AddResource(prefabPtr->GetUUID(), prefabPtr);
 			return prefabPtr;
+		}
+		if (type == AssetExtensions::Type::Text)
+		{
+			static game::TextLoader loader{};
+			game::TextObject* textObjPtr = static_cast<game::TextObject*>(LoadAsset(dir, loader, false));
+			if (textObjPtr != nullptr)
+				project->loadedAssets.AddResource(textObjPtr->GetUUID(), textObjPtr);
+			return textObjPtr;
 		}
 		return nullptr;
 	}
@@ -530,6 +541,8 @@ namespace sh::editor
 			assetType = game::ShaderAsset::ASSET_NAME;
 		else if (obj.GetType() == game::Prefab::GetStaticType())
 			assetType = game::PrefabAsset::ASSET_NAME;
+		else if (obj.GetType() == game::TextObject::GetStaticType())
+			assetType = game::TextAsset::ASSET_NAME;
 		else
 			return false;
 

@@ -7,6 +7,7 @@
 
 #include "Game/GameObject.h"
 #include "Game/Component/Camera.h"
+#include "Game/TextObject.h"
 
 #include <unordered_map>
 namespace sh::editor
@@ -41,6 +42,13 @@ namespace sh::editor
 	class CameraInspector : public ICustomInspector
 	{
 		INSPECTOR(CameraInspector, game::Camera)
+	public:
+		SH_EDITOR_API void RenderUI(void* obj, int idx) override;
+	};
+
+	class TextInspector : public ICustomInspector
+	{
+		INSPECTOR(TextInspector, game::TextObject)
 	public:
 		SH_EDITOR_API void RenderUI(void* obj, int idx) override;
 	};

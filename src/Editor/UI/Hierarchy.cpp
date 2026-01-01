@@ -310,7 +310,8 @@ namespace sh::editor
 
 		if (nodeOpen && hasChildren)
 		{
-			for (auto child : obj->transform->GetChildren())
+			std::vector<game::Transform*> childrenCopy = obj->transform->GetChildren();
+			for (auto child : childrenCopy)
 			{
 				if (child->gameObject.hideInspector)
 					continue;

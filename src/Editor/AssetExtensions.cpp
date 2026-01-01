@@ -11,7 +11,9 @@ namespace sh::editor
 		{".mat", Type::Material},
 		{".world", Type::World},
 		{".shader", Type::Shader},
-		{".prefab", Type::Prefab}
+		{".prefab", Type::Prefab},
+		{".txt", Type::Text},
+		{".json", Type::Text}
 	};
 
 	SH_EDITOR_API auto AssetExtensions::CheckType(const std::string& extension) -> AssetExtensions::Type
