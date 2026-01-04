@@ -71,8 +71,21 @@ namespace sh::network
 	{
 		if (impl->socket != nullptr)
 		{
-			asio::ip::udp::endpoint endPoint{ asio::ip::make_address(ip), port };
-			impl->socket->send_to(asio::buffer(core::Json::to_bson(packet.Serialize())), endPoint); // async_send_to로 나중에 비동기 생각
+			const asio::ip::udp::endpoint endPoint{ asio::ip::make_address(ip), port };
+
+			auto buffer = std::make_unique<std::vector<uint8_t>>(core::Json::to_bson(packet.Serialize()));
+			std::vector<uint8_t>* bufferRawPtr = buffer.get();
+			impl->socket->async_send_to(asio::buffer(*bufferRawPtr), endPoint,
+				[buffer = std::move(buffer)](std::error_code ec, std::size_t sendBytes)
+				{
+					if (ec)
+					{
+						SH_INFO_FORMAT("Send failed: {} ({})", ec.message(), ec.value());
+					}
+				}
+			);
+
+			//impl->socket->send_to(asio::buffer(core::Json::to_bson(packet.Serialize())), endPoint); // async_send_to로 나중에 비동기 생각
 		}
 	}
 	SH_NET_API auto Server::IsOpen() const -> bool

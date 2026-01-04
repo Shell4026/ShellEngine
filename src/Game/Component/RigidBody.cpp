@@ -50,7 +50,7 @@ namespace sh::game
 		);
 
 		physEventSubscriber.SetCallback(
-			[&](const phys::PhysWorld::PhysicsEvent& evt)
+			[this](const phys::PhysWorld::PhysicsEvent& evt)
 			{
 				if (evt.rigidBody1Handle == impl->rigidbody || evt.rigidBody2Handle == impl->rigidbody)
 				{

@@ -16,8 +16,7 @@ namespace sh::network
 	Client::Client()
 	{
 		impl = std::make_unique<Impl>();
-
-		std::memset(buffer.data(), 0, buffer.size());
+		receivedBuffer.resize(Packet::MAX_PACKET_SIZE, 0);
 	}
 	Client::~Client()
 	{
@@ -49,7 +48,16 @@ namespace sh::network
 	{
 		if (impl->socket != nullptr)
 		{
-			impl->socket->send_to(asio::buffer(core::Json::to_bson(packet.Serialize())), impl->serverEndpoint); // async_send_to로 나중에 비동기 생각
+			auto buffer = std::make_unique<Buffer>(core::Json::to_bson(packet.Serialize()));
+			Buffer* bufferRawPtr = buffer.get();
+			impl->socket->async_send_to(asio::buffer(*bufferRawPtr), impl->serverEndpoint,
+				[buffer = std::move(buffer)](std::error_code ec, std::size_t sendBytes)
+				{
+					if (ec)
+						SH_INFO_FORMAT("Send failed: {} ({})", ec.message(), ec.value());
+				}
+			);
+			//impl->socket->send_to(asio::buffer(core::Json::to_bson(packet.Serialize())), impl->serverEndpoint); // async_send_to로 나중에 비동기 생각
 		}
 	}
 	SH_NET_API auto Client::GetReceivedPacket() -> std::unique_ptr<Packet>
@@ -65,12 +73,12 @@ namespace sh::network
 	{
 		impl->socket->async_receive_from
 		(
-			asio::buffer(buffer), impl->serverEndpoint,
+			asio::buffer(receivedBuffer), impl->serverEndpoint,
 			[this](std::error_code ec, std::size_t receivedBytes)
 			{
 				if (!ec && receivedBytes > 0)
 				{
-					core::Json json = core::Json::from_bson(buffer.data(), receivedBytes, true, true);
+					core::Json json = core::Json::from_bson(receivedBuffer.data(), receivedBytes, true, true);
 					if (json.contains("id"))
 					{
 						static auto conatinerFactory = Packet::Factory::GetInstance();

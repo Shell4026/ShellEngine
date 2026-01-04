@@ -4,6 +4,7 @@
 
 #include <memory>
 #include <array>
+#include <vector>
 #include <queue>
 #include <mutex>
 #include <optional>
@@ -25,10 +26,11 @@ namespace sh::network
 	private:
 		void Receive();
 	private:
+		using Buffer = std::vector<uint8_t>;
 		struct Impl;
 		std::unique_ptr<Impl> impl;
 
-		std::array<uint8_t, Packet::MAX_PACKET_SIZE> buffer;
+		Buffer receivedBuffer;
 		std::queue<std::unique_ptr<Packet>> receivedPacket;
 
 		std::mutex mu;
