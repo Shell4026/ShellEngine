@@ -66,6 +66,8 @@ namespace sh::core
 				continue;
 			threads[i].threadPtr->mutex.lock(); // 자고 있는 상태면 잠금을 획득 할 수 있다. 아니면 대기
 		}
+		ThreadPool::GetInstance()->WaitAllTask();
+		ThreadPool::GetInstance()->Lock();
 
 		for (auto& threadData : threads)
 		{
@@ -87,6 +89,7 @@ namespace sh::core
 		}
 		bOnSync = false;
 
+		ThreadPool::GetInstance()->Unlock();
 		for (int i = threads.size() - 1; i >= 0; --i)
 		{
 			if (threads[i].threadPtr == nullptr)
