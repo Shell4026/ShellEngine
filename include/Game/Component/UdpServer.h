@@ -6,7 +6,7 @@
 #include "Network/Packet.h"
 
 #include <vector>
-#include <future>
+#include <thread>
 namespace sh::game
 {
 	/// @brief UDP 에코 서버 컴포넌트
@@ -20,7 +20,6 @@ namespace sh::game
 
 		SH_GAME_API void OnDestroy() override;
 		SH_GAME_API void Start() override;
-		SH_GAME_API void BeginUpdate() override;
 		SH_GAME_API void Update() override;
 
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
@@ -30,6 +29,6 @@ namespace sh::game
 		PROPERTY(port)
 		int port = 4026;
 
-		std::future<void> runFuture;
+		std::thread networkThread;
 	};
 }//namespace

@@ -23,6 +23,8 @@ namespace sh::network
 		SH_NET_API void Send(const Packet& packet);
 
 		SH_NET_API auto GetReceivedPacket() -> std::unique_ptr<Packet>;
+
+		SH_NET_API auto IsOpen() const -> bool;
 	private:
 		void Receive();
 	private:

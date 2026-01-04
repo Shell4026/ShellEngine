@@ -69,6 +69,12 @@ namespace sh::network
 		receivedPacket.pop();
 		return packet;
 	}
+	SH_NET_API auto Client::IsOpen() const -> bool
+	{
+		if (impl->socket == nullptr)
+			return false;
+		return true;
+	}
 	void Client::Receive()
 	{
 		impl->socket->async_receive_from

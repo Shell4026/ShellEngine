@@ -5,7 +5,7 @@
 #include "Network/Client.h"
 
 #include <string>
-#include <future>
+#include <thread>
 namespace sh::game
 {
 	/// @brief 에코 클라이언트 컴포넌트
@@ -17,7 +17,6 @@ namespace sh::game
 
 		SH_GAME_API void OnDestroy() override;
 		SH_GAME_API void Start() override;
-		SH_GAME_API void BeginUpdate() override;
 		SH_GAME_API void Update() override;
 
 		SH_GAME_API void SendPacket(const network::Packet& packet);
@@ -29,6 +28,6 @@ namespace sh::game
 		PROPERTY(serverPort)
 		int serverPort = 4026;
 
-		std::future<void> runFuture;
+		std::thread networkThread;
 	};
 }//namespace

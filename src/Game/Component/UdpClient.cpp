@@ -14,35 +14,23 @@ namespace sh::game
 	SH_GAME_API void UdpClient::OnDestroy()
 	{
 		client.Disconnect();
-		if (runFuture.valid())
-			runFuture.get();
+		if (networkThread.joinable())
+			networkThread.join();
 
 		Super::OnDestroy();
 	}
 	SH_GAME_API void UdpClient::Start()
 	{
 		client.Connect(serverIp, serverPort);
-	}
-	SH_GAME_API void UdpClient::BeginUpdate()
-	{
-		if (!runFuture.valid())
-		{
-			runFuture = core::ThreadPool::GetInstance()->AddTask(
-				[&]()
+		networkThread = std::thread(
+			[this]()
+			{
+				while (client.IsOpen())
 				{
 					client.Update();
 				}
-			);
-		}
-		else if (runFuture.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
-		{
-			runFuture = core::ThreadPool::GetInstance()->AddTask(
-				[&]()
-				{
-					client.Update();
-				}
-			);
-		}
+			}
+		);
 	}
 	SH_GAME_API void UdpClient::Update()
 	{

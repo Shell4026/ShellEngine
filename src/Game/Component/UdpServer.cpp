@@ -1,7 +1,5 @@
 ﻿#include "Component/UdpServer.h"
 
-#include "Core/ThreadPool.h"
-
 #include "Network/StringPacket.h"
 namespace sh::game
 {
@@ -17,37 +15,22 @@ namespace sh::game
 	SH_GAME_API void UdpServer::OnDestroy()
 	{
 		server.Stop();
-		if (runFuture.valid())
-			runFuture.get();
+		if (networkThread.joinable())
+			networkThread.join();
 		Super::OnDestroy();
 	}
 	SH_GAME_API void UdpServer::Start()
 	{
 		server.Start();
-	}
-	SH_GAME_API void UdpServer::BeginUpdate()
-	{
-		if (server.IsOpen())
-		{
-			if (!runFuture.valid())
+		networkThread = std::thread(
+			[this]()
 			{
-				runFuture = core::ThreadPool::GetInstance()->AddTask(
-					[&]()
-					{
-						server.Run();
-					}
-				);
+				while (server.IsOpen())
+				{
+					server.Run();
+				}
 			}
-			else if (runFuture.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
-			{
-				runFuture = core::ThreadPool::GetInstance()->AddTask(
-					[&]()
-					{
-						server.Run();
-					}
-				);
-			}
-		}
+		);
 	}
 	SH_GAME_API void UdpServer::Update()
 	{
