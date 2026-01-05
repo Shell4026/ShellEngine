@@ -30,8 +30,14 @@ namespace sh::core
 
 		template<typename F, typename... Args>
 		auto AddTask(F&& func, Args&&... args) -> std::future<typename std::invoke_result_t<F, Args...>>;
+		/// @brief 해당 함수로 작업을 추가하면 동기화 타이밍에 해당 작업이 끝날 때까지 기다리지 않게 한다.
+		template<typename F, typename... Args>
+		auto AddContinousTask(F&& func, Args&&... args) -> std::future<typename std::invoke_result_t<F, Args...>>;
 	protected:
 		SH_CORE_API ThreadPool();
+	private:
+		template<typename F, typename... Args>
+		auto AddTaskImpl(F&& func, bool bContinous, Args&&... args) -> std::future<typename std::invoke_result_t<F, Args...>>;
 	private:
 		std::mutex mu;
 
@@ -39,7 +45,13 @@ namespace sh::core
 		std::condition_variable cvDone;
 
 		std::vector<std::thread> threads;
-		std::queue<std::function<void()>> tasks;
+
+		struct Task
+		{
+			std::function<void()> fn;
+			bool bContinous = false;
+		};
+		std::queue<Task> tasks;
 
 		int counter = 0;
 		bool bStop = false;
@@ -50,6 +62,16 @@ namespace sh::core
 	template<typename F, typename... Args>
 	auto ThreadPool::AddTask(F&& func, Args&&... args) -> std::future<typename std::invoke_result_t<F, Args...>>
 	{
+		return AddTaskImpl(std::forward<F>(func), false, std::forward<Args>(args)...);
+	}
+	template<typename F, typename... Args>
+	auto ThreadPool::AddContinousTask(F&& func, Args&&... args) -> std::future<typename std::invoke_result_t<F, Args...>>
+	{
+		return AddTaskImpl(std::forward<F>(func), true, std::forward<Args>(args)...);
+	}
+	template<typename F, typename... Args>
+	auto ThreadPool::AddTaskImpl(F&& func, bool bContinous, Args&&... args) -> std::future<typename std::invoke_result_t<F, Args...>>
+	{
 		using ReturnType = typename std::invoke_result_t<F, Args...>;
 		using PackageType = std::packaged_task<ReturnType()>;
 
@@ -57,12 +79,16 @@ namespace sh::core
 		auto result = packagePtr->get_future();
 		{
 			std::lock_guard<std::mutex> lock{ mu };
-			tasks.push([packagePtr]()
+			Task task{};
+			task.fn =
+				[packagePtr]()
 				{
 					std::unique_ptr<PackageType> uniquePackage{ packagePtr };
 					(*packagePtr)();
-				}
-			);
+				};
+			task.bContinous = bContinous;
+
+			tasks.push(std::move(task));
 		}
 
 		cvTask.notify_one();

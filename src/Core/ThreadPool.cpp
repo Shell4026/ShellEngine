@@ -24,7 +24,7 @@ namespace sh::core
 				{
 					while (true)
 					{
-						std::function<void()> task;
+						Task task;
 						{
 							std::unique_lock<std::mutex> lock{ mu };
 							
@@ -36,11 +36,13 @@ namespace sh::core
 							task = std::move(tasks.front());
 							tasks.pop();
 
-							++counter;
+							if (!task.bContinous)
+								++counter;
 						}
 
-						task();
+						task.fn();
 
+						if (!task.bContinous)
 						{
 							std::unique_lock<std::mutex> lock{ mu };
 							--counter;
