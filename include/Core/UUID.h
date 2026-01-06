@@ -11,13 +11,6 @@ namespace sh::core
 	class UUID
 	{
 		friend struct std::hash<UUID>;
-	private:
-		std::array<uint32_t, 4> uuid{};
-		std::string uuidStr;
-	public:
-		static constexpr std::size_t CHACHE_SIZE = 128;
-	private:
-		UUID() = default;
 	public:
 		/// @brief 문자열 UUID로 객체를 생성하는 함수
 		/// @brief 올바르지 않은 형식이면 임의로 생성한다.
@@ -25,18 +18,16 @@ namespace sh::core
 		SH_CORE_API UUID(std::string_view str);
 		SH_CORE_API UUID(const std::array<uint32_t, 4>& uuid);
 		SH_CORE_API UUID(const UUID& other) noexcept;
-		SH_CORE_API UUID(UUID&& other) noexcept;
 		SH_CORE_API ~UUID() = default;
 
 		SH_CORE_API auto operator=(const UUID& other) noexcept -> UUID&;
-		SH_CORE_API auto operator=(UUID&& other) noexcept -> UUID&;
 		SH_CORE_API auto operator==(const UUID& other) const noexcept -> bool;
 		SH_CORE_API auto operator==(std::string_view str) const noexcept -> bool;
 		SH_CORE_API auto operator!=(const UUID& other) const noexcept -> bool;
 		SH_CORE_API auto operator!=(std::string_view str) const noexcept -> bool;
 		/// @brief 문자열로 변환하는 함수
 		/// @return 16진수로 표기된 길이가 32인 문자열
-		SH_CORE_API auto ToString() const -> const std::string&;
+		SH_CORE_API auto ToString() const -> std::string;
 		SH_CORE_API auto GetRawData() const -> const std::array<uint32_t, 4>&;
 		SH_CORE_API auto IsEmpty() const -> bool;
 
@@ -44,6 +35,12 @@ namespace sh::core
 		SH_CORE_API static auto Generate() -> UUID;
 		/// @brief 0으로 초기화 된 UUID를 생성한다.
 		SH_CORE_API static auto GenerateEmptyUUID() -> UUID;
+	private:
+		UUID() = default;
+	public:
+		static constexpr std::size_t CHACHE_SIZE = 128;
+	private:
+		std::array<uint32_t, 4> uuid{};
 	};
 }//namespace
 
