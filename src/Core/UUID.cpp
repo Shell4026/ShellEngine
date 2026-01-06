@@ -1,33 +1,29 @@
 ﻿#include "UUID.h"
-#include "Util.h"
 
 #include <charconv>
-#include <mutex>
 #include <algorithm>
 namespace sh::core
 {
 	SH_CORE_API UUID::UUID(std::string_view str)
 	{
-		// 32글자
-		if (str.size() == uuid.size() * 8)
-		{
-			try
-			{
-				for (int i = 0; i < str.size(); i += 8)
-				{
-					std::string sub{ str.substr(i, 8) };
-					uuid[i / 8] = std::stoul(sub, nullptr, 16);
-				}
-					
-			}
-			catch (const std::exception& e)
-			{
-				this->operator=(Generate());
-			}
-		}
-		else
+		// 32글자여야 함
+		if (str.size() != uuid.size() * 8)
 		{
 			this->operator=(Generate());
+			return;
+		}
+		for (int i = 0; i < str.size(); i += 8)
+		{
+			const std::string_view sub{ str.substr(i, 8) };
+			uint32_t value{};
+			auto [ptr, ec] = std::from_chars(sub.data(), sub.data() + sub.size(), value, 16);
+			if (ec == std::errc{})
+				uuid[i / 8] = value;
+			else
+			{
+				this->operator=(GenerateEmptyUUID());
+				return;
+			}
 		}
 	}
 	UUID::UUID(const std::array<uint32_t, 4>& uuid)
@@ -62,12 +58,7 @@ namespace sh::core
 	}
 	SH_CORE_API auto UUID::operator!=(const UUID& other) const noexcept -> bool
 	{
-		for (int i = 0; i < uuid.size(); ++i)
-		{
-			if (uuid[i] != other.uuid[i])
-				return true;
-		}
-		return false;
+		return !operator==(other);
 	}
 	SH_CORE_API auto UUID::operator!=(std::string_view str) const noexcept -> bool
 	{
@@ -75,22 +66,9 @@ namespace sh::core
 	}
 	SH_CORE_API auto UUID::Generate() -> UUID
 	{
-		static std::stack<UUID> uuids;
-		static std::mutex mu{};
-
-		std::lock_guard<std::mutex> lock{ mu };
-		if (uuids.empty())
-		{
-			for (int i = 0; i < CHACHE_SIZE; ++i)
-			{
-				UUID uuid{};
-				for (int i = 0; i < 4; ++i)
-					uuid.uuid[i] = Util::RandomRange(static_cast<uint32_t>(0), std::numeric_limits<uint32_t>::max());
-				uuids.push(uuid);
-			}
-		}
-		UUID uuid{ uuids.top() };
-		uuids.pop();
+		UUID uuid{};
+		for (int i = 0; i < 4; ++i)
+			uuid.uuid[i] = Util::RandomRange(static_cast<uint32_t>(0), std::numeric_limits<uint32_t>::max());
 		return uuid;
 	}
 	SH_CORE_API auto UUID::GenerateEmptyUUID() -> UUID
