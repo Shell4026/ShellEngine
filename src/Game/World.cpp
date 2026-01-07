@@ -90,6 +90,7 @@ namespace sh::game
 			if (core::IsValid(obj))
 				obj->Destroy();
 		}
+		objIdx.clear();
 		objs.clear();
 		cameras.clear();
 		lightOctree.Clear();
@@ -103,8 +104,12 @@ namespace sh::game
 		if (ptr == nullptr)
 			return nullptr;
 
-		GameObject* obj = CreateAt<GameObject>(ptr, *this, std::string{ name });
-		objs.insert(obj);
+		GameObject* obj = CreateAt<GameObject>(ptr, *this, std::string{ name }, GameObject::CreateKey{});
+		obj->Awake();
+		if (obj->IsActive())
+			obj->OnEnable();
+		addedObjs.push_back(obj);
+		gc->SetRootSet(obj);
 
 		eventBus.Publish(events::GameObjectEvent{ *obj, events::GameObjectEvent::Type::Added });
 
@@ -119,8 +124,26 @@ namespace sh::game
 	}
 	SH_GAME_API void World::DestroyGameObject(GameObject& obj)
 	{
-		obj.Destroy();
-		objs.erase(&obj);
+		if (obj.IsPendingKill())
+		{
+			auto it = objIdx.find(&obj);
+			if (it == objIdx.end())
+				return;
+
+			const std::size_t idx = it->second;
+			const std::size_t last = objs.size() - 1;
+			objIdx.erase(it);
+
+			if (idx != last)
+			{
+				GameObject* moved = objs[last];
+				objs[idx] = moved;
+				objIdx[moved] = idx;
+			}
+			objs.pop_back();
+			return;
+		}
+		obj.Destroy(); // 이 함수에서 월드의 DestroyGameObject()함수가 호출됨
 	}
 
 	SH_GAME_API auto World::GetGameObject(std::string_view name) const -> GameObject*
@@ -145,11 +168,6 @@ namespace sh::game
 		}
 
 		return nullptr;
-	}
-
-	SH_GAME_API auto World::GetGameObjects() const -> const core::SHashSet<GameObject*>&
-	{
-		return objs;
 	}
 
 	SH_GAME_API auto World::GetGameObjectPool() -> core::memory::MemoryPool<GameObject>&
@@ -182,7 +200,10 @@ namespace sh::game
 		for (auto& addedObj : addedObjs)
 		{
 			if (addedObj.IsValid())
-				objs.insert(addedObj.Get());
+			{
+				objIdx[addedObj.Get()] = objs.size();
+				objs.push_back(addedObj.Get());
+			}
 		}
 
 		addedObjs.clear();
