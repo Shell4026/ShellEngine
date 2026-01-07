@@ -59,7 +59,7 @@ namespace sh::core
 						if constexpr (std::is_convertible_v<T, const SObject*>)
 						{
 							const SObject* key = it->first;
-							if (key->bPendingKill.load(std::memory_order::memory_order_acquire))
+							if (key->bPendingKill)
 							{
 								it = map->erase(it);
 								continue;
@@ -113,7 +113,7 @@ namespace sh::core
 						if constexpr (std::is_convertible_v<T, const SObject*>)
 						{
 							const SObject* key = it->first;
-							if (key->bPendingKill.load(std::memory_order::memory_order_acquire))
+							if (key->bPendingKill)
 							{
 								it = map->erase(it);
 								continue;

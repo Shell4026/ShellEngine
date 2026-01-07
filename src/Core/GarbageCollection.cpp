@@ -56,7 +56,7 @@ namespace sh::core
 
 				if (obj == nullptr)
 					continue;
-				if (obj->bMark.test_and_set(std::memory_order::memory_order_acq_rel))
+				if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
 					continue;
 
 				MarkProperties(obj, bfs);
@@ -174,7 +174,7 @@ namespace sh::core
 
 						if (obj == nullptr)
 							continue;
-						if (obj->bMark.test_and_set(std::memory_order::memory_order_acq_rel))
+						if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
 							continue;
 
 						MarkProperties(obj, bfs);
@@ -204,7 +204,7 @@ namespace sh::core
 
 						if (obj == nullptr)
 							continue;
-						if (obj->bMark.test_and_set(std::memory_order::memory_order_acq_rel))
+						if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
 							continue;
 
 						MarkProperties(obj, bfs);
@@ -237,7 +237,7 @@ namespace sh::core
 
 						if (obj == nullptr)
 							continue;
-						if (obj->bMark.test_and_set(std::memory_order::memory_order_acq_rel))
+						if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
 							continue;
 						MarkProperties(obj, bfs);
 					}
@@ -265,7 +265,7 @@ namespace sh::core
 
 						if (obj == nullptr)
 							continue;
-						if (obj->bMark.test_and_set(std::memory_order::memory_order_acq_rel))
+						if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
 							continue;
 
 						MarkProperties(obj, bfs);
@@ -294,7 +294,7 @@ namespace sh::core
 
 						if (obj == nullptr)
 							continue;
-						if (obj->bMark.test_and_set(std::memory_order::memory_order_acq_rel))
+						if (obj->bMark.test_and_set(std::memory_order::memory_order_acquire))
 							continue;
 
 						MarkProperties(obj, bfs);
