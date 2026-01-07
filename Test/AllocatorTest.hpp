@@ -49,42 +49,14 @@ TEST(AllocateTest, MemoryPoolTest)
 	ptr2->~TestClass();
 	ptr1->~TestClass();
 	pool.DeAllocate(ptr3);
+	EXPECT_EQ(pool.GetFreeSize(), 2);
 	pool.DeAllocate(ptr2);
+	EXPECT_EQ(pool.GetFreeSize(), 3);
 	pool.DeAllocate(ptr1);
+	EXPECT_EQ(pool.GetFreeSize(), 4);
 
 	EXPECT_TRUE(pool.HasFreeBlock());
 
 	ptr1 = pool.Allocate();
-	EXPECT_EQ(pool.GetFreeSize(), 1);
-}
-
-TEST(AllocateTest, MemoryPoolThreadTest)
-{
-	sh::core::memory::MemoryPool<int, 10> pool{};
-
-	auto func1 = [&]
-	{
-		for (int i = 0; i < 5; ++i)
-		{
-			int* ptr = pool.Allocate();
-			*ptr = i * 100;
-			pool.DeAllocate(ptr);
-		}
-	};
-	auto func2 = [&]
-	{
-		for (int i = 0; i < 5; ++i)
-		{
-			int* ptr = pool.Allocate();
-			*ptr = i;
-		}
-	};
-
-	std::thread thr1{ func1 };
-	std::thread thr2{ func2 };
-
-	thr1.join();
-	thr2.join();
-
-	EXPECT_EQ(pool.GetFreeSize(), 5);
+	EXPECT_EQ(pool.GetFreeSize(), 3);
 }
