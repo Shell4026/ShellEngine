@@ -367,12 +367,12 @@ namespace sh::core
 		std::lock_guard<std::mutex> lock{ mu };
 
 		auto it = rootSetIdx.find(obj);
-		if (it == rootSetIdx.end())
-		{
-			std::size_t idx = rootSets.size();
-			rootSets.push_back(obj);
-			rootSetIdx.insert_or_assign(obj, idx);
-		}
+		if (it != rootSetIdx.end())
+			return;
+
+		const std::size_t idx = rootSets.size();
+		rootSets.push_back(obj);
+		rootSetIdx.insert_or_assign(obj, idx);
 	}
 	SH_CORE_API auto GarbageCollection::GetRootSet() const -> const std::vector<SObject*>&
 	{
@@ -380,7 +380,7 @@ namespace sh::core
 	}
 	SH_CORE_API auto GarbageCollection::GetRootSetCount() const -> uint64_t
 	{
-		return rootSets.size() - emptyRootSetCount;
+		return rootSets.size();
 	}
 	SH_CORE_API void GarbageCollection::SetUpdateTick(uint32_t tick)
 	{
@@ -401,35 +401,20 @@ namespace sh::core
 		std::lock_guard<std::mutex> lock{ mu };
 
 		auto it = rootSetIdx.find(const_cast<SObject*>(obj));
-		if (it != rootSetIdx.end())
+		if (it == rootSetIdx.end())
+			return;
+		const std::size_t idx = it->second;
+		const std::size_t last = rootSets.size() - 1;
+
+		rootSetIdx.erase(it);
+
+		if (idx != last)
 		{
-			std::size_t idx = it->second;
-			rootSets[idx] = nullptr;
-			rootSetIdx.erase(it);
-			++emptyRootSetCount;
+			SObject* moved = rootSets.back();
+			rootSets[idx] = moved;
+			rootSetIdx[moved] = idx;
 		}
-	}
-
-	SH_CORE_API void GarbageCollection::DefragmentRootSet()
-	{
-		std::lock_guard<std::mutex> lock{ mu };
-
-		std::unordered_map<SObject*, std::size_t> tmpIdx;
-		std::vector<SObject*> tmp;
-		tmp.reserve(rootSets.size() - emptyRootSetCount);
-		for (auto rootset : rootSets)
-		{
-			if (rootset == nullptr)
-				continue;
-
-			const std::size_t idx = tmp.size();
-			tmp.push_back(rootset);
-			tmpIdx.insert_or_assign(rootset, idx);
-		}
-		emptyRootSetCount = 0;
-
-		rootSetIdx = std::move(tmpIdx);
-		rootSets = std::move(tmp);
+		rootSets.pop_back();
 	}
 
 	SH_CORE_API void GarbageCollection::Update()
@@ -439,8 +424,6 @@ namespace sh::core
 		{
 			if (tick == updatePeriodTick - 1)
 			{
-				if (emptyRootSetCount >= DEFRAGMENT_ROOTSET_CAP)
-					DefragmentRootSet();
 				Collect();
 				return;
 			}
@@ -453,8 +436,6 @@ namespace sh::core
 		}
 		else
 		{
-			if (emptyRootSetCount >= DEFRAGMENT_ROOTSET_CAP)
-				DefragmentRootSet();
 			Collect();
 			DestroyPendingKillObjs();
 		}
@@ -462,8 +443,8 @@ namespace sh::core
 	SH_CORE_API void sh::core::GarbageCollection::Collect()
 	{
 		auto start = std::chrono::high_resolution_clock::now();
-		for (auto& [id, obj] : objs)
-			obj->bMark.clear(std::memory_order::memory_order_relaxed); // memory_order_relaxed - 어차피 다른 스레드들은 모두 자고 있음
+		for (auto& objPtr : objs)
+			objPtr->bMark.clear(std::memory_order::memory_order_relaxed); // memory_order_relaxed - 어차피 다른 스레드들은 모두 자고 있음
 
 		const bool bThreadPoolInit = ThreadPool::GetInstance()->IsInit();
 
@@ -479,7 +460,7 @@ namespace sh::core
 
 		// 모든 SObject를 순회하며 마킹이 안 됐으면 보류 목록에 추가
 		// TODO: 나중에 멀티 스레드로 바꿀 때 메모리 오더 바꾸기
-		for (auto& [uuid, objPtr] : objs)
+		for (auto& objPtr : objs)
 		{
 			if (!objPtr->bMark.test_and_set(std::memory_order::memory_order_relaxed))
 			{
@@ -519,18 +500,17 @@ namespace sh::core
 
 	SH_CORE_API void GarbageCollection::ForceDelete(SObject* obj)
 	{
-		auto it = objs.find(obj->GetUUID());
-		if (it != objs.end())
+		if (obj == nullptr)
+			return;
+
+		for (auto& pendingObj : pendingKillObjs)
 		{
-			for (auto& pendingObj : pendingKillObjs)
-			{
-				if (pendingObj == obj)
-					pendingObj = nullptr;
-			}
-			RemoveRootSet(obj);
-			objs.erase(it);
-			delete obj;
+			if (pendingObj == obj)
+				pendingObj = nullptr;
 		}
+		RemoveRootSet(obj);
+		SObjectManager::GetInstance()->UnRegisterSObject(obj);
+		delete obj;
 	}
 
 	SH_CORE_API void GarbageCollection::AddToPendingKillList(SObject* obj)

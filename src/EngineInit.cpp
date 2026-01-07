@@ -69,7 +69,6 @@ namespace sh
 		gameManager->Destroy();
 		renderer->WaitForCurrentFrame();
 
-		gc->DefragmentRootSet();
 		while(gc->GetRootSetCount() != gc->GetObjectCount())
 		{
 			gc->Collect();

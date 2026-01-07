@@ -34,11 +34,10 @@ namespace sh::core
 	{
 		friend Singleton<GarbageCollection>;
 	private:
-		std::unordered_map<UUID, SObject*>& objs;
+		std::vector<SObject*>& objs;
 		std::unordered_map<SObject*, std::size_t> rootSetIdx;
 		std::vector<SObject*> rootSets;
 		std::vector<SObject*> pendingKillObjs;
-		int emptyRootSetCount = 0;
 
 		struct ICheckable
 		{
@@ -255,10 +254,6 @@ namespace sh::core
 		/// @brief 루트셋에서 해당 객체를 제외하는 함수.
 		/// @param obj SObject 포인터
 		SH_CORE_API void RemoveRootSet(const SObject* obj);
-
-		/// @brief 루트셋 배열의 빈공간을 조각 모음 하는 함수.
-		/// @brief 쓰레기 수집이 시작되기 전 1프레임 전에 DEFRAGMENT_ROOTSET_CAP보다 빈 공간이 많아지면 실행 된다.
-		SH_CORE_API void DefragmentRootSet();
 
 		/// @brief GC를 갱신하며 지정된 시간이 흐르면 Collect()와 DestroyPendingKillObjs()가 호출 된다.
 		SH_CORE_API void Update();

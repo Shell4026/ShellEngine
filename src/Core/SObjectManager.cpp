@@ -14,21 +14,40 @@ namespace sh::core
 	{
 		std::unique_lock<std::shared_mutex> lock{ mu };
 
-		objs.insert({ obj->GetUUID(), obj });
+		auto it = objIdxMap.find(obj->GetUUID());
+		if (it != objIdxMap.end())
+			return;
+
+		objIdxMap[obj->GetUUID()] = objs.size();
+		objs.push_back(obj);
 	}
 	SH_CORE_API void SObjectManager::UnRegisterSObject(const SObject* obj)
 	{
 		std::unique_lock<std::shared_mutex> lock{ mu };
+		auto it = objIdxMap.find(obj->GetUUID());
+		if (it == objIdxMap.end())
+			return;
 
-		objs.erase(obj->GetUUID());
+		const std::size_t idx = it->second;
+		const std::size_t last = objs.size() - 1;
+
+		objIdxMap.erase(it);
+
+		if (idx != last)
+		{
+			SObject* moved = objs[last];
+			objs[idx] = moved;
+			objIdxMap[moved->GetUUID()] = idx;
+		}
+		objs.pop_back();
 	}
 	SH_CORE_API auto SObjectManager::GetSObject(const UUID& uuid) -> SObject*
 	{
 		std::shared_lock<std::shared_mutex> lock{ mu };
 
-		auto it = objs.find(uuid);
-		if (it == objs.end())
+		auto it = objIdxMap.find(uuid);
+		if (it == objIdxMap.end())
 			return nullptr;
-		return it->second;
+		return objs[it->second];
 	}
 }//namespace

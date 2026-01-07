@@ -14,7 +14,8 @@ namespace sh::core
 		friend Singleton<SObjectManager>;
 		friend class GarbageCollection;
 	private:
-		std::unordered_map<UUID, SObject*> objs;
+		std::unordered_map<UUID, std::size_t> objIdxMap;
+		std::vector<SObject*> objs;
 		std::shared_mutex mu;
 	private:
 		SH_CORE_API SObjectManager();
