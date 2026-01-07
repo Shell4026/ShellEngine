@@ -72,7 +72,7 @@ namespace sh::game
 		/// @param name 이름
 		/// @return 못 찾을 시 nullptr, 찾을 시 게임 오브젝트 포인터
 		SH_GAME_API auto GetGameObject(std::string_view name) const -> GameObject*;
-		SH_GAME_API auto GetGameObjects() const -> const core::SHashSet<GameObject*>&;
+		SH_GAME_API auto GetGameObjects() const -> const std::vector<GameObject*>& { return objs; }
 		SH_GAME_API auto GetGameObjectPool() -> core::memory::MemoryPool<GameObject>&;
 		/// @brief 게임 오브젝트가 할당된 메모리를 반환 큐에 넣는 함수.
 		/// @param ptr 오브젝트 포인터
@@ -141,7 +141,8 @@ namespace sh::game
 		const ComponentModule& componentModule;
 	protected:
 		core::EventBus eventBus;
-		core::SHashSet<GameObject*> objs;
+		std::unordered_map<GameObject*, std::size_t> objIdx;
+		std::vector<GameObject*> objs;
 		core::SHashSet<Camera*> cameras;
 
 		std::unique_ptr<render::ScriptableRenderer> customRenderer;

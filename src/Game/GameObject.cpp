@@ -8,38 +8,12 @@
 
 namespace sh::game
 {
-	SH_GAME_API GameObject::GameObject(World& world, const std::string& name) :
+	SH_GAME_API GameObject::GameObject(World& world, const std::string& name, CreateKey key) :
 		world(world),
 		bEnable(true), activeSelf(bEnable)
 	{
 		transform = AddComponent<Transform>();
 		SetName(name);
-	}
-
-	GameObject::GameObject(const GameObject& other) :
-		SObject(other),
-		world(other.world), activeSelf(bEnable),
-		bEnable(other.bEnable), hideInspector(other.hideInspector), bNotSave(other.bNotSave)
-	{
-		transform = AddComponent<Transform>();
-		*transform = *other.transform;
-
-		for (int i = 1; i < other.components.size(); ++i)
-		{
-			Component* component = other.components[i];
-			if (!core::IsValid(component))
-				continue;
-
-			IComponentType* componentType = ComponentModule::GetInstance()->GetComponent(component->GetName().ToString());
-			if (componentType == nullptr)
-			{
-				SH_ERROR_FORMAT("Not found component: {}", component->GetName().ToString());
-				continue;
-			}
-			Component* copyComponent = componentType->Clone(*this, *component);
-			if (copyComponent)
-				AddComponent(copyComponent);
-		}
 	}
 
 	SH_GAME_API GameObject::~GameObject()
@@ -116,6 +90,11 @@ namespace sh::game
 				if (world.IsPlaying() || component->canPlayInEditor)
 					component->OnDisable();
 		}
+	}
+	SH_GAME_API void GameObject::Destroy()
+	{
+		Super::Destroy();
+		world.DestroyGameObject(*this);
 	}
 	SH_GAME_API void GameObject::OnDestroy()
 	{

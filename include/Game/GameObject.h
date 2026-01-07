@@ -19,12 +19,19 @@ namespace sh::game
 	{
 		SCLASS(GameObject)
 	public:
-		SH_GAME_API GameObject(World& world, const std::string& name);
-		SH_GAME_API GameObject(const GameObject& other);
+		struct CreateKey
+		{
+		private:
+			friend World;
+			CreateKey() = default;
+		};
+	public:
+		SH_GAME_API GameObject(World& world, const std::string& name, CreateKey key);
 		SH_GAME_API ~GameObject();
 
 		SH_GAME_API auto operator=(const GameObject& other) -> GameObject&;
 
+		SH_GAME_API void Destroy() override;
 		SH_GAME_API void OnDestroy() override;
 		SH_GAME_API void Awake() override;
 		SH_GAME_API void Start() override;
@@ -57,6 +64,8 @@ namespace sh::game
 		SH_GAME_API auto Serialize() const -> core::Json override;
 		SH_GAME_API void Deserialize(const core::Json& json) override;
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
+
+		SH_GAME_API auto IsStatic() const -> bool { return bStatic; }
 	public:
 		/// @brief 새 컴포넌트를 추가하는 함수
 		/// @tparam T 컴포넌트 타입
@@ -135,5 +144,7 @@ namespace sh::game
 		bool bEnable;
 		bool bParentEnable = true;
 		bool bRequestSortComponent = false;
+		PROPERTY(bStatic)
+		bool bStatic = false;
 	};
 }//namespace
