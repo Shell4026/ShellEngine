@@ -18,9 +18,10 @@ namespace sh::network
 		SH_NET_API ~TcpListener();
 
 		SH_NET_API auto Listen(uint16_t port) -> bool;
-		SH_NET_API void Accept();
 
 		SH_NET_API auto GetJoinedSocket() -> std::optional<TcpSocket>;
+	private:
+		void Accept();
 	private:
 		struct Impl;
 		std::unique_ptr<Impl> impl;

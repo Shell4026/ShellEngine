@@ -40,7 +40,17 @@ namespace sh::network
 		Accept();
 		return true;
 	}
-	SH_NET_API void TcpListener::Accept()
+	SH_NET_API auto TcpListener::GetJoinedSocket() -> std::optional<TcpSocket>
+	{
+		std::lock_guard<std::mutex> lock{ mu };
+		if (joinedSocket.empty())
+			return {};
+		TcpSocket sock{ std::move(joinedSocket.front()) };
+		joinedSocket.pop();
+
+		return sock;
+	}
+	void TcpListener::Accept()
 	{
 		impl->acceptor.async_accept(
 			[this](asio::error_code ec, asio::ip::tcp::socket socket)
@@ -48,7 +58,7 @@ namespace sh::network
 				if (ec)
 				{
 					SH_ERROR_FORMAT("Failed to accept: {}", ec.message());
-					if (ec == asio::error::basic_errors::operation_aborted) 
+					if (ec == asio::error::basic_errors::operation_aborted)
 						return;
 				}
 				else
@@ -59,15 +69,5 @@ namespace sh::network
 				Accept(); // 계속 받기
 			}
 		);
-	}
-	SH_NET_API auto TcpListener::GetJoinedSocket() -> std::optional<TcpSocket>
-	{
-		std::lock_guard<std::mutex> lock{ mu };
-		if (joinedSocket.empty())
-			return {};
-		TcpSocket sock{ std::move(joinedSocket.front()) };
-		joinedSocket.pop();
-
-		return sock;
 	}
 }//namespace
