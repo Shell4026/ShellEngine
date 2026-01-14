@@ -4,39 +4,40 @@
 namespace sh::game
 {
 	UdpServer::UdpServer(GameObject& owner) :
-		NetworkComponent(owner)
+		NetworkComponent(owner),
+		socket(ctx)
 	{
 
 	}
 	SH_GAME_API void UdpServer::Send(const network::Packet& packet, const std::string& ip, uint16_t port)
 	{
-		server.Send(packet, ip, port);
+		socket.Send(packet, ip, port);
 	}
 	SH_GAME_API void UdpServer::OnDestroy()
 	{
-		server.Stop();
+		socket.Close();
 		if (networkThread.joinable())
 			networkThread.join();
 		Super::OnDestroy();
 	}
 	SH_GAME_API void UdpServer::Start()
 	{
-		server.Start();
+		socket.Bind(port);
 		networkThread = std::thread(
 			[this]()
 			{
-				while (server.IsOpen())
+				while (socket.IsOpen())
 				{
-					server.Run();
+					ctx.Update();
 				}
 			}
 		);
 	}
 	SH_GAME_API void UdpServer::Update()
 	{
-		if (server.IsOpen())
+		if (socket.IsOpen())
 		{
-			auto opt = server.GetReceivedMessage();
+			auto opt = socket.GetReceivedMessage();
 			while (opt.has_value())
 			{
 				auto& message = opt.value();
@@ -47,15 +48,21 @@ namespace sh::game
 
 					network::StringPacket packet{};
 					packet.SetString(std::move(str));
-					server.Send(packet, message.senderIp, message.senderPort);
+					socket.Send(packet, message.senderIp, message.senderPort);
 				}
-				opt = server.GetReceivedMessage();
+				opt = socket.GetReceivedMessage();
 			}
 		}
 	}
 	SH_GAME_API void UdpServer::OnPropertyChanged(const core::reflection::Property& prop)
 	{
 		if (prop.GetName() == core::Util::ConstexprHash("port"))
-			server.SetPort(port);
+		{
+			if (socket.IsOpen())
+			{
+				socket.Close();
+				socket.Bind(port);
+			}
+		}
 	}
 }//namespace

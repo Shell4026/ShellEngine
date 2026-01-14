@@ -1,0 +1,32 @@
+﻿#pragma once
+#include "Export.h"
+#include "NetworkContext.h"
+#include "TcpSocket.h"
+
+#include <memory>
+#include <cstdint>
+#include <queue>
+#include <mutex>
+#include <optional>
+namespace sh::network
+{
+	/// @brief 비동기적으로 tcp연결을 받는 클래스
+	class TcpListener
+	{
+	public:
+		SH_NET_API TcpListener(const NetworkContext& ctx);
+		SH_NET_API ~TcpListener();
+
+		SH_NET_API auto Listen(uint16_t port) -> bool;
+		SH_NET_API void Accept();
+
+		SH_NET_API auto GetJoinedSocket() -> std::optional<TcpSocket>;
+	private:
+		struct Impl;
+		std::unique_ptr<Impl> impl;
+
+		std::queue<TcpSocket> joinedSocket;
+
+		std::mutex mu;
+	};
+}//namespace

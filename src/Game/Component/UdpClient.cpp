@@ -8,12 +8,13 @@
 namespace sh::game
 {
 	SH_GAME_API UdpClient::UdpClient(GameObject& owner) :
-		NetworkComponent(owner)
+		NetworkComponent(owner),
+		socket(ctx)
 	{
 	}
 	SH_GAME_API void UdpClient::OnDestroy()
 	{
-		client.Disconnect();
+		socket.Close();
 		if (networkThread.joinable())
 			networkThread.join();
 
@@ -21,13 +22,13 @@ namespace sh::game
 	}
 	SH_GAME_API void UdpClient::Start()
 	{
-		client.Connect(serverIp, serverPort);
+		socket.Bind();
 		networkThread = std::thread(
 			[this]()
 			{
-				while (client.IsOpen())
+				while (socket.IsOpen())
 				{
-					client.Update();
+					ctx.Update();
 				}
 			}
 		);
@@ -38,22 +39,23 @@ namespace sh::game
 		{
 			network::StringPacket packet{};
 			packet.SetString("hello?");
-			client.Send(packet);
+			socket.Send(packet, serverIp, serverPort);
 		}
 
-		auto packet = client.GetReceivedPacket();
-		while (packet != nullptr)
+		if (socket.IsOpen())
 		{
-			if (packet->GetId() == 0)
+			auto opt = socket.GetReceivedMessage();
+			while (opt.has_value())
 			{
-				SH_INFO_FORMAT("Received packet (id:0, {}) from server!", static_cast<network::StringPacket*>(packet.get())->GetString());
+				auto& message = opt.value();
+				if (message.packet->GetId() == 0)
+					SH_INFO_FORMAT("Received packet (id:0, {}) from server!", static_cast<network::StringPacket*>(message.packet.get())->GetString());
+				opt = socket.GetReceivedMessage();
 			}
-			
-			packet = client.GetReceivedPacket();
 		}
 	}
 	SH_GAME_API void UdpClient::SendPacket(const network::Packet& packet)
 	{
-		client.Send(packet);
+		socket.Send(packet, serverIp, serverPort);
 	}
 }//namespace
