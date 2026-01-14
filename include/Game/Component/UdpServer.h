@@ -23,6 +23,8 @@ namespace sh::game
 		SH_GAME_API void Update() override;
 
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
+
+		SH_GAME_API auto GetPort() const -> int { return port; }
 	protected:
 		network::NetworkContext ctx;
 		network::UdpSocket socket;
