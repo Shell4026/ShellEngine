@@ -2,6 +2,8 @@
 
 #include "Core/Logger.h"
 
+#include "Network/PacketEvent.hpp"
+
 #include <asio.hpp>
 
 namespace sh::network
@@ -19,18 +21,23 @@ namespace sh::network
 		socket.open(asio::ip::tcp::v4());
 
 		impl = std::make_unique<Impl>(Impl{ std::move(socket) });
+
+		header.fill(0);
 	}
 	TcpSocket::TcpSocket(TcpSocket&& other) noexcept :
 		impl(std::move(other.impl)),
+		ip(std::move(other.ip)),
+		port(other.port),
 		header(other.header),
 		body(std::move(other.body)),
 		sendQueue(std::move(other.sendQueue)),
-		receivedMessage(std::move(other.receivedMessage))
+		receivedQueue(std::move(other.receivedQueue))
 	{
 	}
 	TcpSocket::~TcpSocket()
 	{
-		impl->socket.close();
+		if (impl != nullptr)
+			impl->socket.close();
 	}
 	SH_NET_API auto TcpSocket::operator=(TcpSocket&& other) noexcept -> TcpSocket&
 	{
@@ -38,16 +45,20 @@ namespace sh::network
 			return *this;
 
 		impl = std::move(other.impl);
+		ip = std::move(other.ip);
+		port = other.port;
 		header = other.header;
 		body = std::move(other.body);
 		sendQueue = std::move(other.sendQueue);
-		receivedMessage = std::move(other.receivedMessage);
+		receivedQueue = std::move(other.receivedQueue);
 
 		return *this;
 	}
 	SH_NET_API void TcpSocket::Connect(const std::string& ip, uint16_t port)
 	{
 		asio::ip::tcp::endpoint endPoint{ asio::ip::make_address(ip), port };
+		this->ip = ip;
+		this->port = port;
 
 		impl->socket.async_connect(endPoint,
 			[this](asio::error_code ec)
@@ -73,7 +84,7 @@ namespace sh::network
 		sendData[2] = (len >> 16) & 0xFF;
 		sendData[3] = (len >> 24) & 0xFF;
 		// Body에 데이터 기록
-		std::memcpy(sendData.data() + 4, sendData.data(), data.size());
+		std::memcpy(sendData.data() + 4, data.data(), data.size());
 
 		std::lock_guard<std::mutex> lock{ mu };
 		bool bWasEmpty = sendQueue.empty();
@@ -85,14 +96,13 @@ namespace sh::network
 	{
 		impl->socket.close();
 	}
-	SH_NET_API auto TcpSocket::GetReceivedMessage() -> std::optional<NetworkContext::Message>
+	SH_NET_API void TcpSocket::ReadStart()
 	{
-		std::lock_guard<std::mutex> lock{ mu };
-		if (receivedMessage.empty())
-			return {};
-		NetworkContext::Message msg = std::move(receivedMessage.front());
-		receivedMessage.pop();
-		return msg;
+		ReadHeader();
+	}
+	SH_NET_API void TcpSocket::SetReceiveQueue(const std::shared_ptr<MessageQueue>& msgQueue)
+	{
+		receivedQueue = msgQueue;
 	}
 	SH_NET_API auto TcpSocket::IsOpen() const -> bool
 	{
@@ -101,9 +111,12 @@ namespace sh::network
 	TcpSocket::TcpSocket(void* nativeSocketPtr)
 	{
 		auto socketPtr = reinterpret_cast<asio::ip::tcp::socket*>(nativeSocketPtr);
+		ip = socketPtr->remote_endpoint().address().to_string();
+		port = socketPtr->remote_endpoint().port();
+
 		impl = std::make_unique<Impl>(Impl{ std::move(*socketPtr) });
 
-		ReadHeader();
+		header.fill(0);
 	}
 	void TcpSocket::WriteNext()
 	{
@@ -160,7 +173,7 @@ namespace sh::network
 					SH_INFO_FORMAT("Read body failed: {} ({})", ec.message(), ec.value());
 					return;
 				}
-				core::Json json = core::Json::from_bson(body.data(), body.size(), true, true);
+				const core::Json json = core::Json::from_bson(body.data(), body.size(), true, true);
 				if (json.contains("id"))
 				{
 					static auto conatinerFactory = Packet::Factory::GetInstance();
@@ -177,13 +190,16 @@ namespace sh::network
 						}
 						else
 						{
+							PacketEvent evt{ packet.get(), ep.address().to_string(), static_cast<uint16_t>(ep.port()) };
+							bus.Publish(evt);
+
 							NetworkContext::Message message{};
 							message.senderIp = ep.address().to_string();
 							message.senderPort = static_cast<uint16_t>(ep.port());
 							message.packet = std::move(packet);
 
-							std::lock_guard<std::mutex> lock{ mu };
-							receivedMessage.push(std::move(message));
+							assert(receivedQueue.get() != nullptr);
+							receivedQueue.get()->Push(std::move(message));
 						}
 					}
 					else

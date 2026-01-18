@@ -6,11 +6,11 @@
 #include <memory>
 #include <cstdint>
 #include <queue>
-#include <mutex>
 #include <optional>
+#include <mutex>
 namespace sh::network
 {
-	/// @brief 비동기적으로 tcp연결을 받는 클래스
+	/// @brief 비동기적으로 tcp연결을 받는 클래스. 스레드 안전하다.
 	class TcpListener
 	{
 	public:

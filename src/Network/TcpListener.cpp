@@ -1,6 +1,7 @@
 ﻿#include "TcpListener.h"
 
 #include "Core/Logger.h"
+#include "Core/ThreadSyncManager.h"
 
 #include <asio.hpp>
 namespace sh::network
@@ -42,7 +43,10 @@ namespace sh::network
 	}
 	SH_NET_API auto TcpListener::GetJoinedSocket() -> std::optional<TcpSocket>
 	{
-		std::lock_guard<std::mutex> lock{ mu };
+		if (!mu.try_lock())
+			return {};
+
+		std::lock_guard<std::mutex> lock{ mu, std::adopt_lock };
 		if (joinedSocket.empty())
 			return {};
 		TcpSocket sock{ std::move(joinedSocket.front()) };

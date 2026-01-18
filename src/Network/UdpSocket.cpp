@@ -26,7 +26,8 @@ namespace sh::network
 	}
 	UdpSocket::~UdpSocket()
 	{
-		impl->udpSocket.close();
+		if (impl != nullptr)
+			impl->udpSocket.close();
 	}
 	SH_NET_API auto UdpSocket::operator=(UdpSocket&& other) noexcept -> UdpSocket&
 	{
