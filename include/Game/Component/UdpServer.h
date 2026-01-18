@@ -2,7 +2,7 @@
 #include "../Export.h"
 #include "NetworkComponent.h"
 
-#include "Network/Server.h"
+#include "Network/UdpSocket.h"
 #include "Network/Packet.h"
 
 #include <vector>
@@ -23,8 +23,11 @@ namespace sh::game
 		SH_GAME_API void Update() override;
 
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
+
+		SH_GAME_API auto GetPort() const -> int { return port; }
 	protected:
-		network::Server server;
+		network::NetworkContext ctx;
+		network::UdpSocket socket;
 	private:
 		PROPERTY(port)
 		int port = 4026;

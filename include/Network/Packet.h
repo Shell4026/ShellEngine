@@ -47,6 +47,7 @@ namespace sh::network
 	public:
 		virtual auto GetId() const -> uint32_t = 0;
 		SH_NET_API Packet();
+		SH_NET_API virtual ~Packet();
 
 		SH_NET_API auto GetPacketUUID() const -> const core::UUID&;
 

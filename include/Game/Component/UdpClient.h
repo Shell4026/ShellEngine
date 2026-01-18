@@ -2,7 +2,7 @@
 #include "../Export.h"
 #include "NetworkComponent.h"
 
-#include "Network/Client.h"
+#include "Network/UdpSocket.h"
 
 #include <string>
 #include <thread>
@@ -20,8 +20,12 @@ namespace sh::game
 		SH_GAME_API void Update() override;
 
 		SH_GAME_API void SendPacket(const network::Packet& packet);
+
+		SH_GAME_API auto GetServerIP() const -> const std::string& { return serverIp; }
+		SH_GAME_API auto GetServerPort() const -> int { return serverPort; }
 	protected:
-		network::Client client;
+		network::NetworkContext ctx;
+		network::UdpSocket socket;
 	private:
 		PROPERTY(serverIp)
 		std::string serverIp = "127.0.0.1";

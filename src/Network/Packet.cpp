@@ -6,6 +6,9 @@ namespace sh::network
 		packetUUID(core::UUID::Generate())
 	{
 	}
+	Packet::~Packet()
+	{
+	}
 	SH_NET_API auto Packet::GetPacketUUID() const -> const core::UUID&
 	{
 		return packetUUID;
