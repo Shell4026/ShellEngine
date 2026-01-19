@@ -25,6 +25,7 @@ namespace sh::network
 
 		SH_NET_API void Connect(const std::string& ip, uint16_t port);
 		SH_NET_API void Send(const Packet& packet);
+		SH_NET_API void SendBlocking(const Packet& packet);
 		SH_NET_API void Close();
 		SH_NET_API void ReadStart();
 

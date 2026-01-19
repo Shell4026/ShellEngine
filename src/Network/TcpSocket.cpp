@@ -92,6 +92,26 @@ namespace sh::network
 		if (bWasEmpty)
 			WriteNext();
 	}
+	SH_NET_API void TcpSocket::SendBlocking(const Packet& packet)
+	{
+		const std::vector<uint8_t> data(core::Json::to_bson(packet.Serialize()));
+
+		const uint32_t len = static_cast<uint32_t>(data.size());
+
+		std::vector<uint8_t> sendData;
+		// 헤더에 리틀엔디안으로 데이터 길이 기록
+		sendData.resize(4 + data.size());
+		sendData[0] = (len >> 0) & 0xFF;
+		sendData[1] = (len >> 8) & 0xFF;
+		sendData[2] = (len >> 16) & 0xFF;
+		sendData[3] = (len >> 24) & 0xFF;
+		// Body에 데이터 기록
+		std::memcpy(sendData.data() + 4, data.data(), data.size());
+		std::error_code ec;
+		impl->socket.send(asio::buffer(sendData), 0, ec);
+		if (ec)
+			SH_INFO_FORMAT("Send failed: {} ({})", ec.message(), ec.value());
+	}
 	SH_NET_API void TcpSocket::Close()
 	{
 		impl->socket.close();
