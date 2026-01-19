@@ -108,7 +108,7 @@ namespace sh::network
 		// Body에 데이터 기록
 		std::memcpy(sendData.data() + 4, data.data(), data.size());
 		std::error_code ec;
-		impl->socket.send(asio::buffer(sendData), 0, ec);
+		asio::write(impl->socket, asio::buffer(sendData), ec);
 		if (ec)
 			SH_INFO_FORMAT("Send failed: {} ({})", ec.message(), ec.value());
 	}
