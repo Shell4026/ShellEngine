@@ -82,7 +82,9 @@ namespace sh::network
 	}
 	SH_NET_API auto UdpSocket::GetReceivedMessage() -> std::optional<NetworkContext::Message>
 	{
-		std::lock_guard<std::mutex> lock{ mu };
+		if (!mu.try_lock())
+			return {};
+		std::lock_guard<std::mutex> lock{ mu, std::adopt_lock };
 		if (receivedMessage.empty())
 			return {};
 		NetworkContext::Message msg = std::move(receivedMessage.front());
