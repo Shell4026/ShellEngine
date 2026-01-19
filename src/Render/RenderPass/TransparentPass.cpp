@@ -35,14 +35,26 @@ namespace sh::render
 		}
 
 		const auto& camPos = renderData.camera->GetPos(core::ThreadType::Render);
+		const auto& camTo = renderData.camera->GetLookPos(core::ThreadType::Render);
+		const glm::vec3 to = glm::normalize(camTo - camPos);
+		const bool bOrtho = renderData.camera->IsOrtho();
 		std::stable_sort(std::get<1>(list.renderData).begin(), std::get<1>(list.renderData).end(),
-			[&camPos](const DrawList::RenderItem& left, const DrawList::RenderItem& right) -> bool
+			[&camPos, &to, bOrtho](const DrawList::RenderItem& left, const DrawList::RenderItem& right) -> bool
 			{
 				const glm::vec3 posLeft = left.drawable->GetModelMatrix(core::ThreadType::Render)[3];
 				const glm::vec3 posRight = right.drawable->GetModelMatrix(core::ThreadType::Render)[3];
-				float leftLenSqr = glm::distance2(posLeft, camPos);
-				float rightLenSqr = glm::distance2(posRight, camPos);
-				return leftLenSqr > rightLenSqr;
+				if (!bOrtho)
+				{
+					const float leftLenSqr = glm::distance2(posLeft, camPos);
+					const float rightLenSqr = glm::distance2(posRight, camPos);
+					return leftLenSqr > rightLenSqr;
+				}
+				else
+				{
+					const float leftLen = glm::dot(to, posLeft - camPos);
+					const float rightLen = glm::dot(to, posRight - camPos);
+					return leftLen > rightLen;
+				}
 			}
 		);
 		return list;
