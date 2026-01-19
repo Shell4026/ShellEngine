@@ -56,6 +56,7 @@ namespace sh::game
 		SH_GAME_API auto GetNative() const -> const render::Camera&;
 
 		SH_GAME_API auto ScreenPointToRay(const Vec2& mousePos) const -> phys::Ray;
+		SH_GAME_API auto ScreenPointToRayOrtho(const Vec2& mousePos) const -> phys::Ray;
 
 		SH_GAME_API void SetLookPos(const Vec3& pos);
 		SH_GAME_API auto GetLookPos() const -> const Vec3&;

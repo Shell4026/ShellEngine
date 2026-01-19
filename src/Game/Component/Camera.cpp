@@ -127,6 +127,31 @@ namespace sh::game
 		return phys::Ray(gameObject.transform->position, dir);
 	}
 
+	SH_GAME_API auto Camera::ScreenPointToRayOrtho(const Vec2& mousePos) const -> phys::Ray
+	{
+		float w = camera.GetWidth(core::ThreadType::Game);
+		float h = camera.GetHeight(core::ThreadType::Game);
+
+		float ndcX = 2.f * (mousePos.x / w) - 1.f;
+		float ndcY = 1.f - 2.f * (mousePos.y / h);
+
+		// Vulkan z_ndc = 0 ~ 1
+		glm::vec4 ndcNear(ndcX, ndcY, 0.f, 1.f);
+		glm::vec4 ndcFar(ndcX, ndcY, 1.f, 1.f);
+
+		glm::mat4 invViewProj = glm::inverse(camera.GetProjMatrix(core::ThreadType::Game) * camera.GetViewMatrix(core::ThreadType::Game));
+
+		glm::vec4 worldNear4 = invViewProj * ndcNear;
+		glm::vec4 worldFar4 = invViewProj * ndcFar;
+
+		glm::vec3 worldNear = glm::vec3(worldNear4) / worldNear4.w;
+		glm::vec3 worldFar = glm::vec3(worldFar4) / worldFar4.w;
+
+		glm::vec3 dir = glm::normalize(worldFar - worldNear);
+
+		return phys::Ray(worldNear, dir);
+	}
+
 	SH_GAME_API void Camera::SetLookPos(const Vec3& pos)
 	{
 		lookPos = pos;

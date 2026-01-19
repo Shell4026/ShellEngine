@@ -66,6 +66,8 @@ namespace sh::render
 
 		SH_RENDER_API void SetActive(bool bActive);
 		SH_RENDER_API auto GetActive() const -> bool;
+
+		SH_RENDER_API auto IsOrtho() const -> bool { return !bPerspective; }
 	protected:
 		SH_RENDER_API void SyncDirty() override;
 		SH_RENDER_API void Sync() override;

@@ -20,14 +20,14 @@ namespace sh::render
 	}
 	SH_RENDER_API void Camera::Sync()
 	{
-		std::swap(pos[core::ThreadType::Game], pos[core::ThreadType::Render]);
-		std::swap(to[core::ThreadType::Game], to[core::ThreadType::Render]);
-		std::swap(up[core::ThreadType::Game], up[core::ThreadType::Render]);
-		std::swap(nearPlane[core::ThreadType::Game], nearPlane[core::ThreadType::Render]);
-		std::swap(farPlane[core::ThreadType::Game], farPlane[core::ThreadType::Render]);
-		std::swap(width[core::ThreadType::Game], width[core::ThreadType::Render]);
-		std::swap(height[core::ThreadType::Game], height[core::ThreadType::Render]);
-		std::swap(bufferData[core::ThreadType::Game], bufferData[core::ThreadType::Render]);
+		pos[core::ThreadType::Render] = pos[core::ThreadType::Game];
+		to[core::ThreadType::Render] = to[core::ThreadType::Game];
+		up[core::ThreadType::Render] = up[core::ThreadType::Game];
+		nearPlane[core::ThreadType::Render] = nearPlane[core::ThreadType::Game];
+		farPlane[core::ThreadType::Render] = farPlane[core::ThreadType::Game];
+		width[core::ThreadType::Render] = width[core::ThreadType::Game];
+		height[core::ThreadType::Render] = height[core::ThreadType::Game];
+		bufferData[core::ThreadType::Render] = bufferData[core::ThreadType::Game];
 		bDirty = false;
 	}
 	Camera::Camera() :
