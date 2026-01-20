@@ -58,6 +58,7 @@ namespace sh::render
 		SH_RENDER_API void Deserialize(const core::Json& json) override;
 	private:
 		void Clear();
+		void AddShaderPasses(std::vector<ShaderPass*>&& passes);
 		void AddShaderPass(ShaderPass* pass);
 		template<typename T>
 		void AddProperty(const std::string& name, bool bLocal);

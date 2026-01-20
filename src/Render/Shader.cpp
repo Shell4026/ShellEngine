@@ -9,8 +9,7 @@ namespace sh::render
 	{
 		SetName(shaderCreateInfo.shaderNode.shaderName);
 
-		for (ShaderPass* pass : shaderCreateInfo.passes)
-			AddShaderPass(pass);
+		AddShaderPasses(std::move(shaderCreateInfo.passes));
 
 		for (auto& prop : shaderCreateInfo.shaderNode.properties)
 		{
@@ -121,6 +120,29 @@ namespace sh::render
 		passes.clear();
 	}
 
+	void Shader::AddShaderPasses(std::vector<ShaderPass*>&& passes)
+	{
+		this->passes = std::move(passes);
+		for (ShaderPass* pass : this->passes)
+		{
+			if (pass->IsUsingLight())
+				bUsingLight = true;
+			const core::Name& lightingPassName = this->passes.back()->GetLightingPassName();
+
+			LightingPassData* lightingPassData = GetLightingPass(lightingPassName);
+			if (lightingPassData == nullptr)
+			{
+				std::vector<std::reference_wrapper<ShaderPass>> v{};
+				v.push_back(*this->passes.back());
+
+				LightingPassData passData{ lightingPassName };
+				passData.passes = std::move(v);
+				passDatas.push_back(std::move(passData));
+			}
+			else
+				lightingPassData->passes.push_back(*this->passes.back());
+		}
+	}
 	void Shader::AddShaderPass(ShaderPass* pass)
 	{
 		if (pass->IsUsingLight())
