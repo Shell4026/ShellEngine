@@ -8,7 +8,7 @@ namespace sh::render
 	class TransparentPass : public ScriptableRenderPass
 	{
 	public:
-		SH_RENDER_API TransparentPass();
+		SH_RENDER_API TransparentPass(std::string_view name = "Transparent", RenderQueue renderQueue = RenderQueue::Transparent);
 
 		SH_RENDER_API auto BuildDrawList(const RenderTarget& renderData) -> DrawList override;
 	};

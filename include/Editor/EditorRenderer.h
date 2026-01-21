@@ -23,15 +23,15 @@ namespace sh::editor
 		SH_EDITOR_API auto GetOutlinePass() const -> EditorOutlinePass* { return outlinePass; }
 		SH_EDITOR_API auto GetPostOutlinePass() const -> EditorPostOutlinePass* { return postOutlinePass; }
 
-		SH_EDITOR_API void SetUICamera(const game::Camera& camera);
-		SH_EDITOR_API void SetEditorCamera(const game::Camera& camera);
-		SH_EDITOR_API void SetPickingCamera(const game::Camera& camera);
+		SH_EDITOR_API void SetImGUICamera(const render::Camera& camera);
+		SH_EDITOR_API void SetEditorCamera(const render::Camera& camera);
+		SH_EDITOR_API void SetPickingCamera(const render::Camera& camera);
 	protected:
 		SH_EDITOR_API void Setup(const render::RenderTarget& data) override;
 	private:
-		const game::Camera* editorCamera = nullptr;
-		const game::Camera* uiCamera = nullptr;
-		const game::Camera* pickingCamera = nullptr;
+		const render::Camera* editorCamera = nullptr;
+		const render::Camera* ImGUICamera = nullptr;
+		const render::Camera* pickingCamera = nullptr;
 
 		EditorOutlinePass* outlinePass = nullptr;
 		EditorPostOutlinePass* postOutlinePass = nullptr;

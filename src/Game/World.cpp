@@ -55,20 +55,15 @@ namespace sh::game
 	}
 	SH_GAME_API void World::SetupRenderer()
 	{
+		uiCamera.SetPriority(1000);
+		renderer.AddCamera(uiCamera);
 		if (customRenderer == nullptr)
 		{
 			customRenderer = std::make_unique<GameRenderer>(*renderer.GetContext(), GetUiContext());
 			renderer.SetScriptableRenderer(*customRenderer);
 		}
-
-		game::GameObject* uicamObj = AddGameObject("UICamera");
-		uicamObj->transform->SetPosition({ 2.f, 2.f, 2.f });
-		uicamObj->hideInspector = true;
-		uicamObj->bNotSave = true;
-		game::Camera* cam = uicamObj->AddComponent<game::Camera>();
-		cam->SetDepth(1000);
-
-		static_cast<GameRenderer*>(customRenderer.get())->SetUICamera(*cam);
+		
+		static_cast<GameRenderer*>(customRenderer.get())->SetUICamera(uiCamera);
 	}
 	SH_GAME_API void World::InitResource()
 	{

@@ -130,14 +130,6 @@ namespace sh::editor
 		}
 	}
 
-	//SH_EDITOR_API void EditorWorld::SetRenderPass()
-	//{
-	//	pickingPass = renderer.AddRenderPipeline<EditorPickingPass>();
-	//	outlinePass = renderer.AddRenderPipeline<EditorOutlinePass>();
-	//	renderer.AddRenderPipeline<render::RenderPipeline>();
-	//	transParentPass = renderer.AddRenderPipeline<render::TransparentPipeline>();
-	//	postOutlinePass = renderer.AddRenderPipeline<EditorPostOutlinePass>();
-	//}
 	SH_EDITOR_API void EditorWorld::SetupRenderer()
 	{
 		customRenderer = std::make_unique<EditorRenderer>(*renderer.GetContext(), GetUiContext());
@@ -151,7 +143,7 @@ namespace sh::editor
 		game::Camera* cam = uicamObj->AddComponent<game::Camera>();
 		cam->SetDepth(1000);
 
-		editorRenderer.SetUICamera(*cam);
+		editorRenderer.SetImGUICamera(cam->GetNative());
 	}
 	SH_EDITOR_API void EditorWorld::InitResource()
 	{
@@ -186,7 +178,7 @@ namespace sh::editor
 			editorCamera = camObj->AddComponent<game::EditorCamera>();
 			editorCamera->SetRenderTexture(viewportTexture);
 			editorCamera->GetNative().SetActive(true);
-			editorRenderer->SetEditorCamera(*editorCamera);
+			editorRenderer->SetEditorCamera(editorCamera->GetNative());
 
 			auto PickingCamObj = AddGameObject("PickingCamera");
 			PickingCamObj->bNotSave = true;
@@ -196,7 +188,7 @@ namespace sh::editor
 			pickingCamera->SetFollowCamera(editorCamera);
 			pickingCamera->GetNative().SetActive(true);
 
-			editorRenderer->SetPickingCamera(*pickingCamera);
+			editorRenderer->SetPickingCamera(pickingCamera->GetNative());
 
 			auto outlineTexture = EditorResource::GetInstance()->GetTexture("OutlineTexture");
 			assert(outlineTexture);

@@ -9,7 +9,7 @@
 namespace sh::game
 {
 	UIPass::UIPass() :
-		render::ScriptableRenderPass(core::Name{ "UI" }, render::RenderQueue::UI)
+		render::ScriptableRenderPass(core::Name{ "ImGUI" }, render::RenderQueue::UI)
 	{
 	}
 	SH_GAME_API void UIPass::SetImGUIContext(ImGUImpl& gui)

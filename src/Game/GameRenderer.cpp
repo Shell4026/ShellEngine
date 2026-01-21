@@ -9,6 +9,7 @@ namespace sh::game
 	{
 		AddRenderPass(core::Name{ "Opaque" }, render::RenderQueue::Opaque);
 		AddRenderPass<render::TransparentPass>();
+		AddRenderPass<render::TransparentPass>("UI", render::RenderQueue::UI);
 		AddRenderPass<game::UIPass>().SetImGUIContext(guictx);
 	}
 	SH_GAME_API void GameRenderer::Setup(const render::RenderTarget& data)
@@ -37,11 +38,12 @@ namespace sh::game
 			EnqueRenderPass(*pass);
 		}
 	}
-	SH_GAME_API void GameRenderer::SetUICamera(const game::Camera& camera)
+	SH_GAME_API void GameRenderer::SetUICamera(const render::Camera& camera)
 	{
 		uiCamera = &camera;
-		allowedCamera["UI"].push_back(&camera.GetNative());
-		ignoreCamera["Opaque"].push_back(&camera.GetNative());
-		ignoreCamera["Transparent"].push_back(&camera.GetNative());
+		allowedCamera["UI"].push_back(&camera);
+		allowedCamera["ImGUI"].push_back(&camera);
+		ignoreCamera["Opaque"].push_back(&camera);
+		ignoreCamera["Transparent"].push_back(&camera);
 	}
 }//namespace

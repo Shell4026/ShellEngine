@@ -45,7 +45,6 @@ namespace sh::game
 		}
 		camera.SetPos(gameObject.transform->GetWorldPosition());
 		camera.SetLookPos(lookPos);
-		camera.UpdateMatrix();
 	}
 	SH_GAME_API void Camera::OnDestroy()
 	{
@@ -119,7 +118,7 @@ namespace sh::game
 
 		camCoord.x = aspect * ndcX;
 		camCoord.y = ndcY;
-		camCoord.z = -1.f / glm::tan(camera.GetFovRadian() / 2.f);
+		camCoord.z = -1.f / glm::tan(camera.GetFovRadian(core::ThreadType::Game) / 2.f);
 
 		glm::vec3 worldCoord{ glm::inverse(camera.GetViewMatrix(core::ThreadType::Game)) * camCoord };
 		glm::vec3 dir = glm::normalize(worldCoord - glm::vec3{ gameObject.transform->position });

@@ -8,8 +8,8 @@
 #include <algorithm>
 namespace sh::render
 {
-	TransparentPass::TransparentPass() :
-		ScriptableRenderPass(core::Name("Transparent"), RenderQueue::Transparent)
+	TransparentPass::TransparentPass(std::string_view name, RenderQueue renderQueue) :
+		ScriptableRenderPass(core::Name(name), renderQueue)
 	{
 	}
 	SH_RENDER_API auto TransparentPass::BuildDrawList(const RenderTarget& renderData) -> DrawList

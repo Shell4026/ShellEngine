@@ -15,34 +15,37 @@ namespace sh::editor
 		AddRenderPass(core::Name{ "Opaque" }, render::RenderQueue::Opaque);
 		AddRenderPass<render::TransparentPass>();
 		postOutlinePass = &AddRenderPass<EditorPostOutlinePass>(ctx);
+		AddRenderPass<render::TransparentPass>("UI", render::RenderQueue::UI);
 		uiPass = &AddRenderPass<game::UIPass>();
 		uiPass->SetImGUIContext(guictx);
 	}
-	SH_EDITOR_API void EditorRenderer::SetUICamera(const game::Camera& camera)
+	SH_EDITOR_API void EditorRenderer::SetImGUICamera(const render::Camera& camera)
 	{
-		uiCamera = &camera;
-		allowedCamera["UI"].push_back(&camera.GetNative());
-		ignoreCamera["Opaque"].push_back(&camera.GetNative());
-		ignoreCamera["Transparent"].push_back(&camera.GetNative());
+		ImGUICamera = &camera;
+		allowedCamera["ImGUI"].push_back(&camera);
+		ignoreCamera["Opaque"].push_back(&camera);
+		ignoreCamera["Transparent"].push_back(&camera);
 	}
-	SH_EDITOR_API void EditorRenderer::SetEditorCamera(const game::Camera& camera)
+	SH_EDITOR_API void EditorRenderer::SetEditorCamera(const render::Camera& camera)
 	{
 		editorCamera = &camera;
-		allowedCamera[outlinePass->passName].push_back(&camera.GetNative());
-		allowedCamera[postOutlinePass->passName].push_back(&camera.GetNative());
+		allowedCamera[outlinePass->passName].push_back(&camera);
+		allowedCamera[postOutlinePass->passName].push_back(&camera);
 
 		uiPass->viewportTexture = editorCamera->GetRenderTexture();
 	}
-	SH_EDITOR_API void EditorRenderer::SetPickingCamera(const game::Camera& camera)
+	SH_EDITOR_API void EditorRenderer::SetPickingCamera(const render::Camera& camera)
 	{
 		pickingCamera = &camera;
-		allowedCamera["EditorPicking"].push_back(&camera.GetNative());
-		ignoreCamera["Opaque"].push_back(&camera.GetNative());
-		ignoreCamera["Transparent"].push_back(&camera.GetNative());
+		allowedCamera["EditorPicking"].push_back(&camera);
+		ignoreCamera["Opaque"].push_back(&camera);
+		ignoreCamera["Transparent"].push_back(&camera);
 	}
 
 	SH_EDITOR_API void EditorRenderer::Setup(const render::RenderTarget& data)
 	{
+		// allowedCamera에 등록된 패스는 등록된 카메라에서만 실행됨
+		// ignoreCamera에 등록된 패스는 등록된 카메라에서는 실행 안 함
 		for (auto& pass : allPasses)
 		{
 			auto allowedIt = allowedCamera.find(pass->passName.ToString());

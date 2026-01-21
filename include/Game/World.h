@@ -3,6 +3,7 @@
 #include "ResourceManager.hpp"
 #include "ComponentModule.h"
 #include "Octree.h"
+#include "UICamera.h"
 
 #include "Core/NonCopyable.h"
 #include "Core/SObject.h"
@@ -127,6 +128,8 @@ namespace sh::game
 		SH_GAME_API auto IsPlaying() const -> bool;
 		SH_GAME_API auto IsStart() const -> bool;
 		SH_GAME_API auto IsLoaded() const -> bool;
+		SH_GAME_API auto GetUICamera() -> UICamera& { return uiCamera; }
+		SH_GAME_API auto GetUICamera() const -> const UICamera& { return uiCamera; }
 
 		SH_GAME_API virtual void ReallocateUUIDS();
 	protected:
@@ -169,6 +172,8 @@ namespace sh::game
 		std::queue<GameObject*> deallocatedObjs;
 
 		std::unordered_map<std::string, core::Json> savePoints;
+
+		UICamera uiCamera;
 
 		bool bStartLoop = false;
 		bool bWaitPlaying = false;
