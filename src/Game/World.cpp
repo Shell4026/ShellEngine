@@ -393,8 +393,8 @@ namespace sh::game
 			if (core::IsValid(sobj)) // 이미 월드 상에 존재 할 경우
 			{
 				gameObj = static_cast<GameObject*>(sobj);
-				// 모든 컴포넌트 제거 (Transform 제외)
-				for (int i = 1; i < gameObj->GetComponents().size(); ++i)
+				// 모든 컴포넌트 제거
+				for (int i = 0; i < gameObj->GetComponents().size(); ++i)
 				{
 					Component* component = gameObj->GetComponents()[i];
 					if (component == nullptr)
@@ -461,6 +461,16 @@ namespace sh::game
 		{
 			GameObject* obj = static_cast<GameObject*>(objManager->GetSObject(core::UUID{ objJson["uuid"].get<std::string>() }));
 			obj->Deserialize(objJson);
+		}
+		for (auto obj : objs)
+		{
+			if (!obj->activeSelf)
+				obj->PropagateEnable();
+		}
+		for (auto& obj : addedObjs)
+		{
+			if (!obj->activeSelf)
+				obj->PropagateEnable();
 		}
 	}
 	SH_GAME_API void World::SaveWorldPoint(const core::Json& json, std::string_view name)

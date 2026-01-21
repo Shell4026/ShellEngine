@@ -47,10 +47,14 @@ namespace sh::game
 		SH_GAME_API void OnCollisionStay(Collider& collider) override {};
 		SH_GAME_API void OnCollisionExit(Collider& collider) override;
 
-		SH_GAME_API void SetActive(bool b);
-		SH_GAME_API auto IsActive() const -> bool;
+		SH_GAME_API auto Serialize() const -> core::Json override;
+		SH_GAME_API void Deserialize(const core::Json& json) override;
+		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 
-		SH_GAME_API auto GetComponents() const -> const std::vector<Component*>&;
+		SH_GAME_API void SetActive(bool b);
+
+		/// @brief 자식에게 자신의 active 상태를 전파 (역직렬화용)
+		SH_GAME_API void PropagateEnable();
 
 		/// @brief 이미 만들어진 컴포넌트를 추가하는 함수. 
 		/// 해당 컴포넌트의 gameObject가 이 gameObject와 다르면 추가 되지 않는다.
@@ -61,10 +65,8 @@ namespace sh::game
 
 		SH_GAME_API auto Clone() const -> GameObject&;
 
-		SH_GAME_API auto Serialize() const -> core::Json override;
-		SH_GAME_API void Deserialize(const core::Json& json) override;
-		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
-
+		SH_GAME_API auto GetComponents() const -> const std::vector<Component*>& { return components; }
+		SH_GAME_API auto IsActive() const -> bool { return bParentEnable && bEnable; }
 		SH_GAME_API auto IsStatic() const -> bool { return bStatic; }
 	public:
 		/// @brief 새 컴포넌트를 추가하는 함수
@@ -123,9 +125,7 @@ namespace sh::game
 		void SortComponents();
 	public:
 		World& world;
-
-		PROPERTY(transform, core::PropertyOption::invisible)
-		Transform* transform;
+		Transform* const transform;
 
 		const bool& activeSelf;
 
@@ -135,6 +135,7 @@ namespace sh::game
 		PROPERTY(bEditorOnly, core::PropertyOption::invisible)
 		bool bEditorOnly = false;
 	private:
+		alignas(alignof(Transform)) std::array<uint8_t, sizeof(Transform)> transformBuffer;
 		core::SVector<Component*> components;
 
 		core::SSet<Collider*> enterColliders;

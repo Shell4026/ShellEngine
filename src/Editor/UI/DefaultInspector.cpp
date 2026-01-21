@@ -26,13 +26,15 @@ namespace sh::editor
 		ImGui::Text("EditorOnly");
 
 		ImGui::Separator();
-
+		
+		Inspector::RenderProperties(gameObjPtr->transform->GetType(), *gameObjPtr->transform, 0);
+		ImGui::Separator();
 		ImGui::Text("Components");
+
 		// 드래그 드랍으로 도중에 컴포넌트가 추가 되는 일이 발생한다.
 		// 그로인해 반복자가 깨지므로 컴포넌트 배열을 복사 해둬야 한다.
 		std::vector<game::Component*> components = gameObjPtr->GetComponents();
-
-		int componentsIdx = 0;
+		int componentsIdx = 1;
 		for (auto component : components)
 		{
 			if (!core::IsValid(component))
