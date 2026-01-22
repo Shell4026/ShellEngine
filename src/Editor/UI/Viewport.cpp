@@ -123,6 +123,10 @@ namespace sh::editor
 	{
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
 		ImGui::Begin(name);
+
+		if (game::Input::GetMousePressed(game::Input::MouseType::Middle) && ImGui::IsWindowHovered())
+			ImGui::FocusWindow(ImGui::GetCurrentWindow());
+
 		imguiDrawList = ImGui::GetWindowDrawList();
 		bFocus = ImGui::IsWindowFocused() && ImGui::IsWindowHovered();
 		float width = ImGui::GetContentRegionAvail().x;
