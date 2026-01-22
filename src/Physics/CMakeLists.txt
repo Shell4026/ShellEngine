@@ -20,8 +20,7 @@ target_link_libraries(ShellEnginePhysics PUBLIC ShellEngine::Core)
 
 FetchContent_Declare(
   reactphysics3d
-  GIT_REPOSITORY "https://github.com/DanielChappuis/reactphysics3d"
-  GIT_TAG "v0.10.2"
+  GIT_REPOSITORY "https://github.com/Shell4026/reactphysics3d"
   )
 FetchContent_MakeAvailable(reactphysics3d)
 target_link_libraries(ShellEnginePhysics PUBLIC reactphysics3d)
