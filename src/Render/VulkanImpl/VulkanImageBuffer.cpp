@@ -86,8 +86,8 @@ namespace sh::render::vk
 			(VkImageAspectFlagBits::VK_IMAGE_ASPECT_DEPTH_BIT | VkImageAspectFlagBits::VK_IMAGE_ASPECT_STENCIL_BIT);
 		filter = info.filtering == 0 ? VkFilter::VK_FILTER_NEAREST : VkFilter::VK_FILTER_LINEAR;
 		
-		width = info.width;
-		height = info.height;
+		width = info.width == 0 ? 1 : info.width;
+		height = info.height == 0 ? 1 : info.height;
 		channel = GetChannelCount(format);
 		aniso = info.aniso;
 		mipLevel = actualMip;
