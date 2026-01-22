@@ -491,7 +491,7 @@ namespace sh::game
 		//ImGui_ImplWin32_NewFrame();
 		ImGui::NewFrame();
 		ImGuizmo::BeginFrame();
-		ImGui::ShowDemoWindow();
+		//ImGui::ShowDemoWindow();
 		SyncDirty();
 	}
 	SH_GAME_API void ImGUImpl::End()
