@@ -1,11 +1,14 @@
 ﻿#include "UI/Hierarchy.h"
 #include "UI/CustomHierarchy.h"
 #include "EditorWorld.h"
+#include "EditorResource.h"
 
 #include "Game/ImGUImpl.h"
 #include "Game/GameObject.h"
 #include "Game/Input.h"
 #include "Game/GameManager.h"
+#include "Game/Component/MeshRenderer.h"
+#include "Game/Component/Camera.h"
 
 #include <type_traits>
 namespace sh::editor
@@ -112,19 +115,7 @@ namespace sh::editor
 		}
 		ImGui::PopStyleVar();
 
-		// 우클릭
-		if (ImGui::BeginPopupContextItem("RightClickPopup"))
-		{
-			if (ImGui::BeginMenu("Create"))
-			{
-				if (ImGui::MenuItem("GameObject"))
-				{
-					world.AddGameObject("EmptyObject");
-				}
-				ImGui::EndMenu();
-			}
-			ImGui::EndPopup();
-		}
+		RenderPopup();
 
 		ImGui::End();
 	}
@@ -147,6 +138,26 @@ namespace sh::editor
 		world.SubscribeEvent(gameObjectEventSubscriberOther);
 		for (auto obj : world.GetGameObjects())
 			objListOther.push_back(obj);
+	}
+
+	SH_EDITOR_API void Hierarchy::RegisterPopupMenu(std::string_view name, const std::function<void()>& fn)
+	{
+		popupMenus.push_back(PopupMenu{ std::string{ name }, fn });
+	}
+
+	SH_EDITOR_API void Hierarchy::RegisterPopupMenu(std::string&& name, const std::function<void()>& fn)
+	{
+		popupMenus.push_back(PopupMenu{ std::move(name), fn});
+	}
+
+	SH_EDITOR_API void Hierarchy::UnRegisterPopupMenu(std::string_view name)
+	{
+		popupMenus.erase(std::find_if(popupMenus.begin(), popupMenus.end(),
+			[&](const PopupMenu& menu)
+			{
+				return menu.name == name;
+			}
+		));
 	}
 
 	SH_EDITOR_API bool Hierarchy::IsDocking() const
@@ -361,6 +372,49 @@ namespace sh::editor
 			if (obj->transform->GetParent() == nullptr)
 				DrawGameObjectHierarchy(obj, drawSet, bCanDrag);
 			++it;
+		}
+	}
+	void Hierarchy::RenderPopup()
+	{
+		if (ImGui::BeginPopupContextItem("RightClickPopup"))
+		{
+			if (ImGui::BeginMenu("Create"))
+			{
+				if (ImGui::MenuItem("GameObject"))
+					world.AddGameObject("EmptyObject");
+				if (ImGui::MenuItem("Camera"))
+				{
+					auto obj = world.AddGameObject("Camera");
+					obj->transform->SetWorldPosition({ 2.f ,2.f, 2.f });
+					auto camera = obj->AddComponent<game::Camera>();
+					camera->SetLookPos({ 0.f, 0.f, 0.f });
+				}
+				if (ImGui::MenuItem("Quad"))
+				{
+					auto obj = world.AddGameObject("Quad");
+					auto meshRenderer = obj->AddComponent<game::MeshRenderer>();
+					meshRenderer->SetMesh(EditorResource::GetInstance()->GetModel("PlaneModel")->GetMeshes()[0]);
+				}
+				if (ImGui::MenuItem("Cube"))
+				{
+					auto obj = world.AddGameObject("Cube");
+					auto meshRenderer = obj->AddComponent<game::MeshRenderer>();
+					meshRenderer->SetMesh(EditorResource::GetInstance()->GetModel("CubeModel")->GetMeshes()[0]);
+				}
+				if (ImGui::MenuItem("Sphere"))
+				{
+					auto obj = world.AddGameObject("Sphere");
+					auto meshRenderer = obj->AddComponent<game::MeshRenderer>();
+					meshRenderer->SetMesh(EditorResource::GetInstance()->GetModel("SphereModel")->GetMeshes()[0]);
+				}
+				for (auto& popup : popupMenus)
+				{
+					if (ImGui::MenuItem(popup.name.c_str()))
+						popup.fn();
+				}
+				ImGui::EndMenu();
+			}
+			ImGui::EndPopup();
 		}
 	}
 }

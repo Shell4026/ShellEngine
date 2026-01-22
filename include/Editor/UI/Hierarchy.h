@@ -8,6 +8,8 @@
 
 #include <list>
 #include <unordered_map>
+#include <string_view>
+#include <string>
 namespace sh::game
 {
 	class GameObject;
@@ -32,6 +34,9 @@ namespace sh::editor
 		SH_EDITOR_API void RegisterDragItemFunction(const std::string& dragItem, const std::function<void(const ImGuiPayload& payload)>& func);
 
 		SH_EDITOR_API void AddOtherWorld(game::World& world);
+		SH_EDITOR_API void RegisterPopupMenu(std::string_view name, const std::function<void()>& fn);
+		SH_EDITOR_API void RegisterPopupMenu(std::string&& name, const std::function<void()>& fn);
+		SH_EDITOR_API void UnRegisterPopupMenu(std::string_view name);
 
 		SH_EDITOR_API bool IsDocking() const;
 	private:
@@ -40,6 +45,7 @@ namespace sh::editor
 		void DrawGameObjectHierarchy(game::GameObject* obj, std::unordered_set<game::GameObject*>& drawSet, bool bCanDrag = true);
 		void CopyGameobject();
 		void RenderHierarchy(core::SList<game::GameObject*>& objList, bool bCanDrag = true);
+		void RenderPopup();
 	public:
 		static constexpr const char* name = "Hierarchy";
 	private:
@@ -53,6 +59,13 @@ namespace sh::editor
 		core::EventSubscriber<game::events::GameObjectEvent> gameObjectEventSubscriberOther;
 
 		std::vector<std::pair<std::string, std::function<void(const ImGuiPayload& payload)>>> dragFunc;
+
+		struct PopupMenu
+		{
+			std::string name;
+			std::function<void()> fn;
+		};
+		std::vector<PopupMenu> popupMenus;
 
 		bool isDocking;
 		bool isFocus = false;
