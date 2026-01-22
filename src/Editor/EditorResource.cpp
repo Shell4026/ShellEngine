@@ -83,10 +83,13 @@ namespace sh::editor
 
 		auto sphereModel = models.insert_or_assign("SphereModel", static_cast<render::Model*>(modelLoader.Load("model/Sphere.obj"))).first->second;
 		sphereModel->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f15" });
+		sphereModel->GetMeshes()[0]->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f19" });
 		auto cubeModel = models.insert_or_assign("CubeModel", static_cast<render::Model*>(modelLoader.Load("model/cube.obj"))).first->second;
 		cubeModel->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f16" });
+		cubeModel->GetMeshes()[0]->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f20" });
 		auto planeModel = models.insert_or_assign("PlaneModel", static_cast<render::Model*>(modelLoader.Load("model/Plane.glb"))).first->second;
 		planeModel->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f17" });
+		planeModel->GetMeshes()[0]->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f21" });
 
 		render::RenderTargetLayout rt{};
 		rt.format = render::TextureFormat::R8;
