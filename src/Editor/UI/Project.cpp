@@ -156,13 +156,18 @@ namespace sh::editor
 
 	SH_EDITOR_API void Project::OpenProject(const std::filesystem::path& dir)
 	{
-		isOpen = true;
-
 		rootPath = dir;
 		assetPath = rootPath / "Assets";
 		binaryPath = rootPath / "bin";
 		libraryPath = rootPath / "Library";
 		tempPath = rootPath / "temp";
+
+		if (!std::filesystem::exists(assetPath) || !std::filesystem::exists(assetPath) || !std::filesystem::exists(assetPath))
+		{
+			SH_ERROR_FORMAT("Wrong project directory: {}", dir.u8string());
+			return;
+		}
+		isOpen = true;
 
 		projectExplorer.SetRoot(rootPath);
 		projectExplorer.Refresh();
