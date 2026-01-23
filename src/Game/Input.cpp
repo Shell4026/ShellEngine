@@ -38,25 +38,29 @@ namespace sh::game
 	{
 		if (event.type == window::Event::EventType::KeyDown)
 		{
-			if (!keyPressing[static_cast<uint32_t>(event.keyType)])
-				keyPressingOneFrame[static_cast<uint32_t>(event.keyType)] = true;
-			keyPressing[static_cast<uint32_t>(event.keyType)] = true;
+			const auto keyType = static_cast<uint32_t>(std::get<2>(event.data).keyType);
+			if (!keyPressing[keyType])
+				keyPressingOneFrame[keyType] = true;
+			keyPressing[keyType] = true;
 		}
 		else if(event.type == window::Event::EventType::KeyUp)
 		{
-			keyPressing[static_cast<uint32_t>(event.keyType)] = false;
-			keyReleasingOneFrame[static_cast<uint32_t>(event.keyType)] = true;
+			const auto keyType = static_cast<uint32_t>(std::get<2>(event.data).keyType);
+			keyPressing[keyType] = false;
+			keyReleasingOneFrame[keyType] = true;
 		}
 
 		if (event.type == sh::window::Event::EventType::MousePressed)
 		{
-			mousePressing[static_cast<uint32_t>(event.mouseType)] = true;
-			mousePressingOneFrame[static_cast<uint32_t>(event.mouseType)] = true;
+			const auto mouseType = static_cast<uint32_t>(std::get<1>(event.data));
+			mousePressing[mouseType] = true;
+			mousePressingOneFrame[mouseType] = true;
 		}
 		else if(event.type == sh::window::Event::EventType::MouseReleased)
 		{
-			mousePressing[static_cast<uint32_t>(event.mouseType)] = false;
-			mouseReleasingOneFrame[static_cast<uint32_t>(event.mouseType)] = true;
+			const auto mouseType = static_cast<uint32_t>(std::get<1>(event.data));
+			mousePressing[mouseType] = false;
+			mouseReleasingOneFrame[mouseType] = true;
 		}
 
 		if (event.type == window::Event::EventType::MouseWheelScrolled)

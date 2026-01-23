@@ -18,6 +18,11 @@ namespace sh::editor
         latest = path;
     }
 
+    SH_EDITOR_API void ExplorerUI::ResetSelected()
+    {
+        selected.clear();
+    }
+
     void ExplorerUI::UpdateDirectoryEntries()
 	{
         if (!std::filesystem::exists(currentPath))
@@ -139,7 +144,7 @@ namespace sh::editor
         static std::string name{};
         name = selected.u8string();
         ImGui::InputText("Name", &name, ImGuiInputTextFlags_EnterReturnsTrue);
-        selected = name;
+        selected = std::filesystem::u8path(name);
         ImGui::SameLine();
 
         if (mode == OpenMode::Select)
@@ -158,7 +163,7 @@ namespace sh::editor
             {
                 if (!name.empty())
                 {
-                    selected = name;
+                    selected = std::filesystem::u8path(name);
                     SelectFile();
                 }
             }
@@ -169,6 +174,7 @@ namespace sh::editor
 
     void ExplorerUI::SelectFile()
     {
+        bOpen = false;
         while (!callbacks.empty())
         {
             auto& func = callbacks.front();
@@ -178,7 +184,6 @@ namespace sh::editor
                 func(currentPath / selected);
             callbacks.pop();
         }
-        bOpen = false;
     }
 
     SH_EDITOR_API void ExplorerUI::Update()

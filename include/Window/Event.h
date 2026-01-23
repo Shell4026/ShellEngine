@@ -1,13 +1,15 @@
 ﻿#pragma once
-
 #include "Export.h"
 
+#include <variant>
+#include <cstdint>
 namespace sh::window 
 {
 	struct Event 
 	{
 		enum class EventType
 		{
+			Unknown,
 			Close,
 			Resize,
 			Move,
@@ -19,7 +21,7 @@ namespace sh::window
 			MouseMove,
 			WindowFocus,
 			WindowFocusOut,
-			Unknown
+			InputText
 		};
 		enum class MouseType
 		{
@@ -59,9 +61,17 @@ namespace sh::window
 			SH_WINDOW_API static int mouseX;
 			SH_WINDOW_API static int mouseY;
 		};
+		struct KeyEvent
+		{
+			KeyType keyType;
+			bool capsLock;
+		};
+		struct InputText
+		{
+			uint32_t unicode = 0;
+		};
+
 		EventType type;
-		MouseType mouseType;
-		KeyType keyType;
-		bool capsLock;
+		std::variant<std::monostate, MouseType, KeyEvent, InputText> data;
 	};
 }//namespace

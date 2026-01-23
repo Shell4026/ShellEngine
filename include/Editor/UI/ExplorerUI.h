@@ -52,6 +52,7 @@ namespace sh::editor
 		/// @brief 최근 선택 경로로 표기할 경로를 지정한다.
 		/// @param path 경로
 		SH_EDITOR_API void SetLatestPath(const std::filesystem::path& path);
+		SH_EDITOR_API void ResetSelected();
 	private:
 		void UpdateDirectoryEntries();
 		void DrawFolderIcon();

@@ -32,6 +32,8 @@ namespace sh::window
 
 		::Window win, root;
 		XEvent e;
+		XIM xim = nullptr;
+		XIC xic = nullptr;
 
 		Atom wmDeleteMessage;
 

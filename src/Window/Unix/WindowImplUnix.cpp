@@ -28,8 +28,10 @@ namespace sh::window {
 
 		//디스플레이 서버에 접속한다.
 		display = XOpenDisplay(NULL);
-
 		screen = DefaultScreen(display);
+
+		setlocale(LC_ALL, "");
+		XSetLocaleModifiers("");
 
 		XSetWindowAttributes attrs;
 		attrs.background_pixel = WhitePixel(display, screen);
@@ -40,6 +42,18 @@ namespace sh::window {
 			CopyFromParent, InputOutput, CopyFromParent,
 			CWBackPixel | CWEventMask, &attrs);
 
+		xim = XOpenIM(display, nullptr, nullptr, nullptr);
+		if (xim)
+		{
+			xic = XCreateIC(
+				xim,
+				XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
+				XNClientWindow, win,
+				XNFocusWindow, win,
+				nullptr
+			);
+		}
+
 		widthPrevious = wsize;
 		heightPrevious = hsize;
 
@@ -47,7 +61,7 @@ namespace sh::window {
 		Atom netWmName = XInternAtom(display, "_NET_WM_NAME", false);
 		Atom utf8String = XInternAtom(display, "UTF8_STRING", false);
 		XChangeProperty(display, win, netWmName, utf8String, 8, PropModeReplace,
-			(const unsigned char*)title.c_str(), 4);
+			(const unsigned char*)title.c_str(), title.size());
 		
 		//event_mask에 해당하는 이벤트를 선택
 		XSelectInput(display, win, attrs.event_mask); 
@@ -116,8 +130,14 @@ namespace sh::window {
 
 	void WindowImplUnix::Close()
 	{
-		XDestroyWindow(display, win);
-		XCloseDisplay(display);
+		if (xic) { XDestroyIC(xic); xic = nullptr; }
+		if (xim) { XCloseIM(xim); xim = nullptr; }
+
+		if (display && win) XDestroyWindow(display, win);
+		if (display) XCloseDisplay(display);
+
+		win = 0;
+		display = nullptr;
 	}
 
 	//현재 윈도우에서 발생한 이벤트인가?
@@ -129,9 +149,12 @@ namespace sh::window {
 	{
 		while (XCheckIfEvent(display, &e, &CheckEvent, reinterpret_cast<XPointer>(win)))
 		{
+			if (xic && XFilterEvent(&e, None))
+				continue;
+
+			Event evt;
 			switch (e.type)
 			{
-				Event evt;
 				//window
 			case ClientMessage:
 				if (e.xclient.data.l[0] == wmDeleteMessage)
@@ -141,10 +164,12 @@ namespace sh::window {
 				}
 				break;
 			case FocusIn:
+				if (xic) XSetICFocus(xic);
 				evt.type = Event::EventType::WindowFocus;
 				PushEvent(evt);
 				break;
 			case FocusOut:
+				if (xic) XUnsetICFocus(xic);
 				evt.type = Event::EventType::WindowFocusOut;
 				PushEvent(evt);
 				break;
@@ -161,15 +186,52 @@ namespace sh::window {
 				//Keyboard
 			case KeyPress:
 			{
-				{
-					XKeyEvent* keyEvent = reinterpret_cast<XKeyEvent*>(&e);
-					evt.type = Event::EventType::KeyDown;
-					evt.keyType = CovertKeyCode(keyEvent->keycode);
+				XKeyEvent* keyEvent = reinterpret_cast<XKeyEvent*>(&e);
+				evt.type = Event::EventType::KeyDown;
+				unsigned int state;
+				bool bCaps = false;
+				if (XkbGetIndicatorState(display, XkbUseCoreKbd, &state) == Success)
+					bCaps = (state & 0x01); // 0x01 = capslock
+				evt.data = Event::KeyEvent{ CovertKeyCode(keyEvent->keycode), bCaps };
+				PushEvent(evt);
 
-					unsigned int state;
-					if(XkbGetIndicatorState(display, XkbUseCoreKbd, &state) == Success)
-						evt.capsLock = (state & 0x01); // 0x01 = capslock
-					PushEvent(evt);
+				char buf[128];
+				int len = 0;
+
+				if (xic)
+				{
+					KeySym keysym = 0;
+					Status status = 0;
+					len = Xutf8LookupString(xic, keyEvent, buf, (int)sizeof(buf) - 1, &keysym, &status);
+
+					if (status == XLookupChars || status == XLookupBoth)
+					{
+						buf[len] = '\0';
+
+						uint32_t unicode = 0;
+						core::Util::UTF8ToUnicode(buf, buf + len, unicode);
+
+						evt.type = Event::EventType::InputText;
+						evt.data = Event::InputText{ unicode };
+						PushEvent(evt);
+					}
+				}
+				else
+				{
+					// IME 없이도 최소한 영문은 들어오게
+					KeySym keysym = 0;
+					len = XLookupString(keyEvent, buf, (int)sizeof(buf) - 1, &keysym, nullptr);
+					if (len > 0)
+					{
+						buf[len] = '\0';
+
+						uint32_t unicode = 0;
+						core::Util::UTF8ToUnicode(buf, buf + len, unicode);
+
+						evt.type = Event::EventType::InputText;
+						evt.data = Event::InputText{ unicode };
+						PushEvent(evt);
+					}
 				}
 				break;
 			}
@@ -177,7 +239,7 @@ namespace sh::window {
 			{
 				XKeyEvent* keyEvent = reinterpret_cast<XKeyEvent*>(&e);
 				evt.type = Event::EventType::KeyUp;
-				evt.keyType = CovertKeyCode(keyEvent->keycode);
+				evt.data = Event::KeyEvent{ CovertKeyCode(keyEvent->keycode), false };
 				PushEvent(evt);
 				break;
 			}
@@ -198,17 +260,17 @@ namespace sh::window {
 				{
 				case Button1:
 					evt.type = Event::EventType::MousePressed;
-					evt.mouseType = Event::MouseType::Left;
+					evt.data = Event::MouseType::Left;
 					PushEvent(evt);
 					break;
 				case Button2:
 					evt.type = Event::EventType::MousePressed;
-					evt.mouseType = Event::MouseType::Middle;
+					evt.data = Event::MouseType::Middle;
 					PushEvent(evt);
 					break;
 				case Button3:
 					evt.type = Event::EventType::MousePressed;
-					evt.mouseType = Event::MouseType::Right;
+					evt.data = Event::MouseType::Right;
 					PushEvent(evt);
 					break;
 				case Button4:
@@ -228,17 +290,17 @@ namespace sh::window {
 				{
 				case Button1:
 					evt.type = Event::EventType::MouseReleased;
-					evt.mouseType = Event::MouseType::Left;
+					evt.data = Event::MouseType::Left;
 					PushEvent(evt);
 					break;
 				case Button2:
 					evt.type = Event::EventType::MouseReleased;
-					evt.mouseType = Event::MouseType::Middle;
+					evt.data = Event::MouseType::Middle;
 					PushEvent(evt);
 					break;
 				case Button3:
 					evt.type = Event::EventType::MouseReleased;
-					evt.mouseType = Event::MouseType::Right;
+					evt.data = Event::MouseType::Right;
 					PushEvent(evt);
 					break;
 				}

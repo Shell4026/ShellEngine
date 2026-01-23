@@ -124,6 +124,13 @@ namespace sh::core
 		SH_CORE_API static auto ConvertMat4ToMat3(const glm::mat4& mat) -> glm::mat3;
 
 		SH_CORE_API static auto ExtractUUIDs(const core::Json& json) -> std::vector<std::string>;
+
+		/// @brief utf8문자열을 유니코드로 바꿔주는 함수
+		/// @param s 시작 포인터
+		/// @param end 끝 포인터
+		/// @param unicode 유니코드 결과
+		/// @return 다음 시작 포인터
+		SH_CORE_API static auto UTF8ToUnicode(const char* start, const char* end, uint32_t& unicode) -> const char*;
 	private:
 		static void ExtractUUIDsHelper(std::unordered_set<std::string>& uuids, const core::Json& json);
 	private:

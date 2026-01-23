@@ -199,4 +199,95 @@ namespace sh::core {
 				uuids.insert(value);
 		}
 	}
-}
+
+	SH_CORE_API auto Util::UTF8ToUnicode(const char* start, const char* end, uint32_t& unicode) -> const char*
+	{
+		if (start >= end)
+			return end;
+
+		const unsigned char c0 = *(start++);
+		if (c0 < 0x80)
+		{
+			unicode = static_cast<uint32_t>(c0);
+			return start;
+		}
+
+		auto contFn = [&](unsigned char cx) -> bool { return (cx & 0b1100'0000) == 0b1000'0000; };
+
+		// 2byte 유니코드
+		if ((c0 & 0b1110'0000) == 0b1100'0000)
+		{
+			if (end - start < 1) 
+			{
+				unicode = 0xFFFD;
+				return start;
+			}
+			const unsigned char c1 = *start;
+			if (!contFn(c1))
+			{
+				unicode = 0xFFFD;
+				return start;
+			}
+			const uint32_t v = ((c0 & 0b0001'1111) << 6) | (c1 & 0b0011'1111);
+			if (v < 0x80)
+				unicode = 0xFFFD;
+			else
+				++start;
+			unicode = v;
+			return start;
+		}
+
+		// 3byte 유니코드
+		if ((c0 & 0b1111'0000) == 0b1110'0000)
+		{
+			if (end - start < 2)
+			{
+				unicode = 0xFFFD;
+				return start;
+			}
+
+			const unsigned char c1 = start[0];
+			const unsigned char c2 = start[1];
+			if (!contFn(c1) || !contFn(c2))
+			{
+				unicode = 0xFFFD;
+				return start;
+			}
+			const uint32_t v = ((c0 & 0b0000'1111) << 12) | ((c1 & 0b0011'1111) << 6) | (c2 & 0b0011'1111);
+			if (v < 2048 || (v >= 55296 && v <= 57343))
+				unicode = 0xFFFD;
+			else
+				start += 2;
+			unicode = v;
+			return start;
+		}
+
+		// 4byte 유니코드
+		if ((c0 & 0b1111'0000) == 0b1110'0000)
+		{
+			if (end - start < 3)
+			{
+				unicode = 0xFFFD;
+				return start;
+			}
+
+			const unsigned char c1 = start[0];
+			const unsigned char c2 = start[1];
+			const unsigned char c3 = start[2];
+			if (!contFn(c1) || !contFn(c2) || !contFn(c3))
+			{
+				unicode = 0xFFFD;
+				return start;
+			}
+			const uint32_t v = ((c0 & 0b0000'0111) << 18) | ((c1 & 0b0011'1111) << 12) | ((c2 & 0b0011'1111) << 6) | (c3 & 0b0011'1111);
+			if (v < 65536 || v > 1114111)
+				unicode = 0xFFFD;
+			else
+				start += 3;
+			unicode = v;
+			return start;
+		}
+		unicode = 0xFFFD;
+		return start;
+	}
+}//namespace

@@ -180,7 +180,7 @@ namespace sh::render
 		cullMode = static_cast<CullMode>(json.at("cullMode").get<int>());
 		colorMask = json.at("colorMask").get<uint8_t>();
 		zwrite = json.at("zwrite").get<bool>();
-		bZTest = json.contains("ztest") ? json["ztest"] : true;
+		bZTest = json.value("ztest", true);
 
 		// stencil
 		stencil.Deserialize(json.at("stencil"));

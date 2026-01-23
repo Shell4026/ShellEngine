@@ -115,9 +115,10 @@ namespace sh::window {
 
 		//std::cout << "event: " << std::hex << msg << '\n';
 
+		Event e;
 		switch (msg)
 		{
-			Event e;
+			
 		//Window
 		case WM_CLOSE:
 			e.type = Event::EventType::Close;
@@ -143,15 +144,52 @@ namespace sh::window {
 		//keyboard
 		case WM_SYSKEYDOWN: //alt, f10
 		case WM_KEYDOWN:
+		{
 			e.type = Event::EventType::KeyDown;
-			e.keyType = ConvertKeycode(wParam);
-			e.capsLock = 0x1 & GetKeyState(VK_CAPITAL); // 최하위 비트가 1 = 토글 on
+			const bool bCaps = 0x1 & GetKeyState(VK_CAPITAL); // 최하위 비트가 1 = 토글 on
+			e.data = Event::KeyEvent{ ConvertKeycode(wParam), bCaps };
 			PushEvent(e);
 			break;
+		}
+		case WM_CHAR:
+		{
+			if (wParam < 32)
+				break;
+
+			static WCHAR high = 0;
+			WCHAR c = (WCHAR)wParam;
+
+			uint32_t unicode = 0;
+			if (c >= 0xD800 && c <= 0xDBFF) // 4바이트 데이터라 아직 완성이 안 됨. 다음으로 넘김 (high surrogate)
+			{
+				high = c;
+				break;
+			}
+			if (c >= 0xDC00 && c <= 0xDFFF) // 마저 완성하기 (low surrogate)
+			{                               
+				if (high != 0) 
+				{
+					unicode = 0x10000 + (((high - 0xD800) << 10) | (c - 0xDC00));
+					high = 0;
+				}
+				else
+					break;
+			}
+			else 
+			{
+				high = 0;
+				unicode = (uint32_t)c;
+			}
+
+			e.type = Event::EventType::InputText;
+			e.data = Event::InputText{ unicode };
+			PushEvent(e);
+			break;
+		}
 		case WM_SYSKEYUP:
 		case WM_KEYUP:
 			e.type = Event::EventType::KeyUp;
-			e.keyType = ConvertKeycode(wParam);
+			e.data = Event::KeyEvent{ ConvertKeycode(wParam) };
 			PushEvent(e);
 			break;
 
@@ -170,32 +208,32 @@ namespace sh::window {
 		}
 		case WM_LBUTTONDOWN:
 			e.type = Event::EventType::MousePressed;
-			e.mouseType = Event::MouseType::Left;
+			e.data = Event::MouseType::Left;
 			PushEvent(e);
 			break;
 		case WM_LBUTTONUP:
 			e.type = Event::EventType::MouseReleased;
-			e.mouseType = Event::MouseType::Left;
+			e.data = Event::MouseType::Left;
 			PushEvent(e);
 			break;
 		case WM_RBUTTONDOWN:
 			e.type = Event::EventType::MousePressed;
-			e.mouseType = Event::MouseType::Right;
+			e.data = Event::MouseType::Right;
 			PushEvent(e);
 			break;
 		case WM_RBUTTONUP:
 			e.type = Event::EventType::MouseReleased;
-			e.mouseType = Event::MouseType::Right;
+			e.data = Event::MouseType::Right;
 			PushEvent(e);
 			break;
 		case WM_MBUTTONDOWN:
 			e.type = Event::EventType::MousePressed;
-			e.mouseType = Event::MouseType::Middle;
+			e.data = Event::MouseType::Middle;
 			PushEvent(e);
 			break;
 		case WM_MBUTTONUP:
 			e.type = Event::EventType::MouseReleased;
-			e.mouseType = Event::MouseType::Middle;
+			e.data = Event::MouseType::Middle;
 			PushEvent(e);
 			break;
 		case WM_MOUSEWHEEL:

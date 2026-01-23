@@ -169,29 +169,44 @@ namespace sh::game
 			io.AddFocusEvent(false); 
 			break;
 		case window::Event::EventType::MousePressed:
-			if(event.mouseType == window::Event::MouseType::Left)
+		{
+			const auto mouseType = std::get<1>(event.data);
+			if (mouseType == window::Event::MouseType::Left)
 				io.AddMouseButtonEvent(0, true);
-			if (event.mouseType == window::Event::MouseType::Right)
+			if (mouseType == window::Event::MouseType::Right)
 				io.AddMouseButtonEvent(1, true);
-			if (event.mouseType == window::Event::MouseType::Middle)
+			if (mouseType == window::Event::MouseType::Middle)
 				io.AddMouseButtonEvent(2, true);
 			break;
+		}
 		case window::Event::EventType::MouseReleased:
-			if (event.mouseType == window::Event::MouseType::Left)
+		{
+			const auto mouseType = std::get<1>(event.data);
+			if (mouseType == window::Event::MouseType::Left)
 				io.AddMouseButtonEvent(0, false);
-			if (event.mouseType == window::Event::MouseType::Right)
+			if (mouseType == window::Event::MouseType::Right)
 				io.AddMouseButtonEvent(1, false);
-			if (event.mouseType == window::Event::MouseType::Middle)
+			if (mouseType == window::Event::MouseType::Middle)
 				io.AddMouseButtonEvent(2, false);
 			break;
+		}
 		case window::Event::EventType::MouseWheelScrolled:
 			io.AddMouseWheelEvent(0, window::Event::MouseWheelScrolled::delta);
 			break;
+		case window::Event::EventType::InputText:
+		{
+			const uint32_t unicode = std::get<3>(event.data).unicode;
+			io.AddInputCharacter(unicode);
+			break;
+		}
 		case window::Event::EventType::KeyDown:
 			keyDown = true;
 			[[fallthrough]];
 		case window::Event::EventType::KeyUp:
-			switch (event.keyType)
+		{
+			const auto keyType = std::get<2>(event.data).keyType;
+			const bool bCaps = std::get<2>(event.data).capsLock;
+			switch (keyType)
 			{
 			case window::Event::KeyType::A: [[fallthrough]];
 			case window::Event::KeyType::B: [[fallthrough]];
@@ -220,50 +235,9 @@ namespace sh::game
 			case window::Event::KeyType::Y: [[fallthrough]];
 			case window::Event::KeyType::Z:
 			{
-				int keyDif = static_cast<int>(event.keyType) - static_cast<int>(window::Event::KeyType::A);
+				const int keyDif = static_cast<int>(keyType) - static_cast<int>(window::Event::KeyType::A);
 				io.AddKeyEvent(
 					static_cast<ImGuiKey>(ImGuiKey::ImGuiKey_A + keyDif), keyDown);
-				char alphabet = 'a' + keyDif;
-				if (event.capsLock) alphabet = std::toupper(alphabet);
-				if (keyDown) io.AddInputCharacter(alphabet);
-				break;
-			}
-			case window::Event::KeyType::Num0: [[fallthrough]];
-			case window::Event::KeyType::Num1: [[fallthrough]];
-			case window::Event::KeyType::Num2: [[fallthrough]];
-			case window::Event::KeyType::Num3: [[fallthrough]];
-			case window::Event::KeyType::Num4: [[fallthrough]];
-			case window::Event::KeyType::Num5: [[fallthrough]];
-			case window::Event::KeyType::Num6: [[fallthrough]];
-			case window::Event::KeyType::Num7: [[fallthrough]];
-			case window::Event::KeyType::Num8: [[fallthrough]];
-			case window::Event::KeyType::Num9:
-			{
-				static char upperChars[] = { ')', '!', '@', '#', '$', '%', '^', '&', '*', '(' };
-				int keyDif = static_cast<int>(event.keyType) - static_cast<int>(window::Event::KeyType::Num0);
-				io.AddKeyEvent(static_cast<ImGuiKey>(ImGuiKey::ImGuiKey_0 + keyDif), keyDown);
-				if (keyDown) 
-					if(!io.KeyShift)
-						io.AddInputCharacter('0' + keyDif);
-					else
-						io.AddInputCharacter(upperChars[keyDif]);
-				break;
-			}
-			case window::Event::KeyType::Numpad0: [[fallthrough]];
-			case window::Event::KeyType::Numpad1: [[fallthrough]];
-			case window::Event::KeyType::Numpad2: [[fallthrough]];
-			case window::Event::KeyType::Numpad3: [[fallthrough]];
-			case window::Event::KeyType::Numpad4: [[fallthrough]];
-			case window::Event::KeyType::Numpad5: [[fallthrough]];
-			case window::Event::KeyType::Numpad6: [[fallthrough]];
-			case window::Event::KeyType::Numpad7: [[fallthrough]];
-			case window::Event::KeyType::Numpad8: [[fallthrough]];
-			case window::Event::KeyType::Numpad9:
-			{
-				int keyDif = static_cast<int>(event.keyType) - static_cast<int>(window::Event::KeyType::Numpad0);
-				io.AddKeyEvent(static_cast<ImGuiKey>(ImGuiKey::ImGuiKey_Keypad0 + keyDif), keyDown);
-				if (keyDown)
-					io.AddInputCharacter('0' + keyDif);
 				break;
 			}
 			case window::Event::KeyType::Left:
@@ -326,121 +300,6 @@ namespace sh::game
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_ModShift, keyDown);
 				io.AddKeyEvent(ImGuiKey::ImGuiMod_Shift, keyDown);
 				break;
-			case window::Event::KeyType::Minus:
-				io.AddKeyEvent(ImGuiKey::ImGuiKey_Minus, keyDown);
-				if (keyDown) 
-					if(!io.KeyShift)
-						io.AddInputCharacter('-');
-					else
-						io.AddInputCharacter('_');
-				break;
-			case window::Event::KeyType::Equal:
-				io.AddKeyEvent(ImGuiKey::ImGuiKey_Equal, keyDown);
-				if (keyDown) 
-					if (!io.KeyShift)
-						io.AddInputCharacter('=');
-					else
-						io.AddInputCharacter('+');
-				break;
-			case window::Event::KeyType::Period:
-				io.AddKeyEvent(ImGuiKey::ImGuiKey_Period, keyDown);
-				if (keyDown) 
-					if(!io.KeyShift)
-						io.AddInputCharacter('.');
-					else
-						io.AddInputCharacter('>');
-				break;
-			case window::Event::KeyType::Semicolon:
-				io.AddKeyEvent(ImGuiKey::ImGuiKey_Semicolon, keyDown);
-				if (keyDown) 
-					if (!io.KeyShift)
-						io.AddInputCharacter(';');
-					else
-						io.AddInputCharacter(':');
-				break;
-			case window::Event::KeyType::Colon:
-				io.AddKeyEvent(ImGuiKey::ImGuiKey_Apostrophe, keyDown);
-				if (keyDown) 
-					if (!io.KeyShift)
-						io.AddInputCharacter('\'');
-					else
-						io.AddInputCharacter('"');
-				break;
-			case window::Event::KeyType::Comma:
-				io.AddKeyEvent(ImGuiKey::ImGuiKey_Comma, keyDown);
-				if (keyDown) 
-					if(!io.KeyShift)
-						io.AddInputCharacter(',');
-					else
-						io.AddInputCharacter('<');
-				break;
-			case window::Event::KeyType::LBracket:
-				io.AddKeyEvent(ImGuiKey::ImGuiKey_LeftBracket, keyDown);
-				if (keyDown) 
-					if (!io.KeyShift) 
-						io.AddInputCharacter('[');
-					else 
-						io.AddInputCharacter('{');
-				break;
-			case window::Event::KeyType::RBracket:
-				io.AddKeyEvent(ImGuiKey::ImGuiKey_RightBracket, keyDown);
-				if (keyDown) 
-					if (!io.KeyShift) 
-						io.AddInputCharacter(']');
-					else 
-						io.AddInputCharacter('}');
-				break;
-			case window::Event::KeyType::Grave:
-				io.AddKeyEvent(ImGuiKey::ImGuiKey_GraveAccent, keyDown);
-				if (keyDown) 
-					if(!io.KeyShift)
-						io.AddInputCharacter('`');
-					else
-						io.AddInputCharacter('~');
-				break;
-			case window::Event::KeyType::Slash:
-				io.AddKeyEvent(ImGuiKey::ImGuiKey_Slash, keyDown);
-				if (keyDown) 
-					if(!io.KeyShift)
-						io.AddInputCharacter('/');
-					else 
-						io.AddInputCharacter('?');
-				break;
-			case window::Event::KeyType::NumpadAdd:
-				io.AddKeyEvent(ImGuiKey::ImGuiKey_KeypadAdd, keyDown);
-				if(keyDown)
-					io.AddInputCharacter('+');
-				break;
-			case window::Event::KeyType::NumpadSubtract:
-				io.AddKeyEvent(ImGuiKey::ImGuiKey_KeypadSubtract, keyDown);
-				if (keyDown)
-					io.AddInputCharacter('-');
-				break;
-			case window::Event::KeyType::NumpadMultiply:
-				io.AddKeyEvent(ImGuiKey::ImGuiKey_KeypadMultiply, keyDown);
-				if (keyDown)
-					io.AddInputCharacter('*');
-				break;
-			case window::Event::KeyType::NumpadDivide:
-				io.AddKeyEvent(ImGuiKey::ImGuiKey_KeypadDivide, keyDown);
-				if (keyDown)
-					io.AddInputCharacter('/');
-				break;
-			case window::Event::KeyType::NumpadDecimal:
-				io.AddKeyEvent(ImGuiKey::ImGuiKey_KeypadDecimal, keyDown);
-				if (keyDown)
-					io.AddInputCharacter('.');
-				break;
-			case window::Event::KeyType::BackSlash:
-				io.AddKeyEvent(ImGuiKey::ImGuiKey_Backslash, keyDown);
-				if (keyDown)
-				{
-					if (!io.KeyShift)
-						io.AddInputCharacter('\\');
-					else
-						io.AddInputCharacter('|');
-				}
-				break;
 			case window::Event::KeyType::LCtrl:
 				io.AddKeyEvent(ImGuiKey::ImGuiKey_LeftCtrl, keyDown);
 				io.AddKeyEvent(ImGuiKey::ImGuiMod_Ctrl, keyDown);
@@ -471,12 +330,13 @@ namespace sh::game
 			case window::Event::KeyType::F11: [[fallthrough]];
 			case window::Event::KeyType::F12:
 			{
-				int keyDif = static_cast<int>(event.keyType) - static_cast<int>(window::Event::KeyType::F1);
+				int keyDif = static_cast<int>(keyType) - static_cast<int>(window::Event::KeyType::F1);
 				io.AddKeyEvent(static_cast<ImGuiKey>(ImGuiKey::ImGuiKey_F1 + keyDif), keyDown);
 				break;
 			}
 			}
 			break;
+		}
 		}
 	}
 
