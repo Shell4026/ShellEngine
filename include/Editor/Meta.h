@@ -35,6 +35,8 @@ namespace sh::editor
 		SH_EDITOR_API auto GetObjJson() const -> const core::Json*;
 
 		SH_EDITOR_API void Clear();
+
+		SH_EDITOR_API static auto CreateMetaDirectory(const std::filesystem::path& filePath) -> std::filesystem::path;
 	private:
 
 		std::string name;

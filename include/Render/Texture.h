@@ -39,6 +39,7 @@ namespace sh::render
 		/// @param data 데이터 포인터
 		/// @param mipLevel 밉 레벨
 		SH_RENDER_API         void SetPixelData(const std::vector<uint8_t>& pixels, uint32_t mipLevel = 0);
+		SH_RENDER_API         void SetPixelData(std::vector<uint8_t>&& pixels, uint32_t mipLevel = 0);
 		/// @brief 픽셀 데이터를 지정한다. 
 		/// @brief [주의] 동기화 타이밍에 텍스쳐 버퍼가 재설정됨.
 		/// @param pixels 데이터 포인터
@@ -79,6 +80,8 @@ namespace sh::render
 		SH_RENDER_API auto GetFiltering() const-> Filtering;
 
 		SH_RENDER_API void OnPropertyChanged(const core::reflection::Property& prop) override;
+
+		SH_RENDER_API void ExportToPNG(const std::filesystem::path& path);
 	private:
 		void CreateTextureBuffer();
 		auto CheckSRGB() const -> bool;

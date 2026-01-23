@@ -24,6 +24,7 @@
 #include "Game/Asset/WorldLoader.h"
 #include "Game/Asset/PrefabLoader.h"
 #include "Game/Asset/TextLoader.h"
+#include "Game/Asset/FontLoader.h"
 
 #include "Game/Asset/TextureAsset.h"
 #include "Game/Asset/ModelAsset.h"
@@ -33,6 +34,7 @@
 #include "Game/Asset/WorldAsset.h"
 #include "Game/Asset/PrefabAsset.h"
 #include "Game/Asset/TextAsset.h"
+#include "Game/Asset/FontAsset.h"
 
 #include <istream>
 #include <ostream>
@@ -43,17 +45,11 @@
 #include <chrono>
 namespace sh::editor
 {
-	SH_EDITOR_API auto AssetDatabase::GetMetaDirectory(const std::filesystem::path& assetPath) -> std::filesystem::path
-	{
-		std::filesystem::path metaPath{ assetPath.parent_path() / assetPath.filename() };
-		metaPath += ".meta";
-		return metaPath;
-	}
 	auto AssetDatabase::HasMetaFile(const std::filesystem::path& dir) -> std::optional<std::filesystem::path>
 	{
 		if (!std::filesystem::exists(dir))
 			return std::nullopt;
-		std::filesystem::path metaFileDir = GetMetaDirectory(dir);
+		std::filesystem::path metaFileDir = Meta::CreateMetaDirectory(dir);
 		if (!std::filesystem::exists(metaFileDir))
 			return std::nullopt;
 		return metaFileDir;
@@ -70,7 +66,7 @@ namespace sh::editor
 		os.close();
 
 		Meta meta{};
-		meta.Save(*mat, GetMetaDirectory(dir), false);
+		meta.Save(*mat, Meta::CreateMetaDirectory(dir), false);
 	}
 
 	SH_EDITOR_API auto AssetDatabase::ImportAsset(const std::filesystem::path& dir) -> core::SObject*
@@ -123,7 +119,7 @@ namespace sh::editor
 				static render::vk::VulkanShaderPassBuilder passBuilder{ static_cast<render::vk::VulkanContext&>(*project->renderer.GetContext()) };
 				static game::ShaderLoader loader{ &passBuilder };
 				loader.SetCachePath(projectPath / "temp");
-				render::Shader* shaderPtr = static_cast<render::Shader*>(LoadAsset(dir, loader, false));
+				render::Shader* const shaderPtr = static_cast<render::Shader*>(LoadAsset(dir, loader, false));
 				if (shaderPtr != nullptr)
 					project->loadedAssets.AddResource(shaderPtr->GetUUID(), shaderPtr);
 				return shaderPtr;
@@ -132,7 +128,7 @@ namespace sh::editor
 		if (type == AssetExtensions::Type::Material)
 		{
 			static game::MaterialLoader loader{ *project->renderer.GetContext() };
-			render::Material* matPtr = static_cast<render::Material*>(LoadAsset(dir, loader, false));
+			render::Material* const matPtr = static_cast<render::Material*>(LoadAsset(dir, loader, false));
 			if (matPtr != nullptr)
 				project->loadedAssets.AddResource(matPtr->GetUUID(), matPtr);
 			return matPtr;
@@ -140,7 +136,7 @@ namespace sh::editor
 		if (type == AssetExtensions::Type::World)
 		{
 			static game::WorldLoader loader{ project->renderer, project->gui };
-			game::World* worldPtr = static_cast<game::World*>(LoadAsset(dir, loader, false));
+			game::World* const worldPtr = static_cast<game::World*>(LoadAsset(dir, loader, false));
 			if (worldPtr != nullptr)
 				project->loadedAssets.AddResource(worldPtr->GetUUID(), worldPtr);
 			return worldPtr;
@@ -148,7 +144,7 @@ namespace sh::editor
 		if (type == AssetExtensions::Type::Prefab)
 		{
 			static game::PrefabLoader loader{};
-			game::Prefab* prefabPtr = static_cast<game::Prefab*>(LoadAsset(dir, loader, false));
+			game::Prefab* const prefabPtr = static_cast<game::Prefab*>(LoadAsset(dir, loader, false));
 			if (prefabPtr != nullptr)
 				project->loadedAssets.AddResource(prefabPtr->GetUUID(), prefabPtr);
 			return prefabPtr;
@@ -156,10 +152,18 @@ namespace sh::editor
 		if (type == AssetExtensions::Type::Text)
 		{
 			static game::TextLoader loader{};
-			game::TextObject* textObjPtr = static_cast<game::TextObject*>(LoadAsset(dir, loader, false));
+			game::TextObject* const textObjPtr = static_cast<game::TextObject*>(LoadAsset(dir, loader, false));
 			if (textObjPtr != nullptr)
 				project->loadedAssets.AddResource(textObjPtr->GetUUID(), textObjPtr);
 			return textObjPtr;
+		}
+		if (type == AssetExtensions::Type::Font)
+		{
+			static game::FontLoader loader{};
+			render::Font* const fontPtr = static_cast<render::Font*>(LoadAsset(dir, loader, false));
+			if (fontPtr != nullptr)
+				project->loadedAssets.AddResource(fontPtr->GetUUID(), fontPtr);
+			return fontPtr;
 		}
 		return nullptr;
 	}
@@ -191,7 +195,7 @@ namespace sh::editor
 			{
 				render::Texture* texture = reinterpret_cast<render::Texture*>(obj);
 				Meta meta{};
-				meta.SaveWithObj(*texture, GetMetaDirectory(projectPath / originalPath), false);
+				meta.SaveWithObj(*texture, Meta::CreateMetaDirectory(projectPath / originalPath), false);
 			}
 			else if (obj->GetType().IsChildOf(game::World::GetStaticType()))
 			{
@@ -204,7 +208,7 @@ namespace sh::editor
 				os.close();
 
 				Meta meta{};
-				meta.Save(*world, GetMetaDirectory(projectPath / originalPath), false);
+				meta.Save(*world, Meta::CreateMetaDirectory(projectPath / originalPath), false);
 			}
 		}
 		dirtyObjs.clear();
@@ -221,19 +225,30 @@ namespace sh::editor
 			}
 			else if (entry.is_regular_file())
 			{
-				if (entry.path().extension() == ".meta")
+				const std::string extension = entry.path().extension().u8string();
+				if (extension == ".meta")
 					continue;
 
 				int priority = 0;
-				if (entry.path().extension() == ".mat")
+				auto type = AssetExtensions::CheckType(extension);
+				switch (type)
+				{
+				case AssetExtensions::Type::Material: [[fallthrough]];
+				case AssetExtensions::Type::Font:
+				{
 					priority = -1;
+					break;
+				}
+				default:
+					priority = 0;
+				}
 				loadingAssetsQueue.push(AssetLoadData{ priority, entry.path() });
 			}
 		}
 	}
 	auto AssetDatabase::LoadAsset(const std::filesystem::path& path, core::IAssetLoader& loader, bool bMetaSaveWithObj) -> core::SObject*
 	{
-		std::filesystem::path metaDir{ GetMetaDirectory(path) };
+		std::filesystem::path metaDir{ Meta::CreateMetaDirectory(path) };
 		std::filesystem::path relativePath{ std::filesystem::relative(path, projectPath) };
 		const int64_t writeTime = std::filesystem::last_write_time(path).time_since_epoch().count();
 
@@ -400,7 +415,7 @@ namespace sh::editor
 		os.close();
 
 		Meta meta{};
-		meta.Save(obj, GetMetaDirectory(dir));
+		meta.Save(obj, Meta::CreateMetaDirectory(dir));
 
 		project->loadedAssets.AddResource(obj.GetUUID(), const_cast<core::SObject*>(&obj));
 
@@ -435,7 +450,7 @@ namespace sh::editor
 			std::filesystem::remove(filePath);
 		if (std::filesystem::exists(cachePath))
 			std::filesystem::remove(cachePath);
-		const auto metaPath = GetMetaDirectory(projectPath / it->second.originalPath);
+		const auto metaPath = Meta::CreateMetaDirectory(projectPath / it->second.originalPath);
 		if (std::filesystem::exists(metaPath))
 			std::filesystem::remove(metaPath);
 
@@ -470,9 +485,9 @@ namespace sh::editor
 		const auto& filePath = projectPath / it->second.originalPath;
 
 		std::filesystem::rename(filePath, newPath);
-		const auto metaPath = GetMetaDirectory(filePath);
+		const auto metaPath = Meta::CreateMetaDirectory(filePath);
 		if (std::filesystem::exists(metaPath))
-			std::filesystem::rename(metaPath, GetMetaDirectory(newPath));
+			std::filesystem::rename(metaPath, Meta::CreateMetaDirectory(newPath));
 
 		AssetWasMoved(uuid, newPath);
 	}
@@ -543,6 +558,8 @@ namespace sh::editor
 			assetType = game::PrefabAsset::ASSET_NAME;
 		else if (obj.GetType() == game::TextObject::GetStaticType())
 			assetType = game::TextAsset::ASSET_NAME;
+		else if (obj.GetType() == render::Font::GetStaticType())
+			assetType = game::FontAsset::ASSET_NAME;
 		else
 			return false;
 
@@ -577,7 +594,7 @@ namespace sh::editor
 	}
 	SH_EDITOR_API auto AssetDatabase::IsAssetChanged(const std::filesystem::path& assetPath) -> bool
 	{
-		const std::filesystem::path metaPath{ GetMetaDirectory(assetPath) };
+		const std::filesystem::path metaPath{ Meta::CreateMetaDirectory(assetPath) };
 
 		// 처음 보는 경로의 에셋인 경우에도 변경으로 간주한다.
 		if (uuids.find(std::filesystem::relative(assetPath, projectPath)) == uuids.end())

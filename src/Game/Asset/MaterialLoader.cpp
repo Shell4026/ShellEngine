@@ -23,7 +23,7 @@ namespace sh::game
 		const core::Json matJson = core::Json::parse(file.value());
 		if (!matJson.contains("type"))
 			return nullptr;
-		if (matJson["type"].get<std::string>() != "Material")
+		if (matJson["type"].get_ref<const std::string&>() != "Material")
 			return nullptr;
 
 		render::Material* mat = core::SObject::Create<render::Material>();
@@ -42,7 +42,7 @@ namespace sh::game
 		const core::Json& matJson = matAsset.GetMaterialData();
 		if (!matJson.contains("type"))
 			return nullptr;
-		if (matJson["type"].get<std::string>() != "Material")
+		if (matJson["type"].get_ref<const std::string&>() != "Material")
 			return nullptr;
 		
 		render::Material* mat = core::SObject::Create<render::Material>();

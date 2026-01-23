@@ -6,6 +6,7 @@
 #include "../UI/Project.h"
 #include "../UI/Inspector.h"
 #include "../UI/BundleViewer.h"
+#include "../UI/FontGeneratorUI.h"
 
 #include "Game/Component/UI.h"
 #include "Game/World.h"
@@ -47,6 +48,7 @@ namespace sh::editor
 		std::unique_ptr<Hierarchy> hierarchy;
 		std::unique_ptr<Inspector> inspector;
 		std::unique_ptr<BundleViewer> bundleViewer;
+		std::unique_ptr<FontGeneratorUI> fontGeneratorUI;
 
 		bool bDirty;
 	};

@@ -12,7 +12,7 @@ namespace sh::core
 	{
 		if (json.contains(key))
 		{
-			std::string uuidStr = json[key].get<std::string>();
+			const std::string& uuidStr = json[key].get_ref<const std::string&>();
 			value = SObject::GetSObjectUsingResolver(core::UUID{ uuidStr });
 			if (value == nullptr)
 				return false;
@@ -261,12 +261,12 @@ namespace sh::core
 	SH_CORE_API void SObject::Deserialize(const nlohmann::json& json)
 	{
 		const reflection::STypeInfo* stypeInfo = &GetType();
-		if (stypeInfo->name != json["type"].get<std::string>())
+		if (stypeInfo->name != json["type"].get_ref<const std::string&>())
 			return;
 
 		if (json.contains("uuid"))
 		{
-			UUID newUUID{ json["uuid"].get<std::string>() };
+			UUID newUUID{ json["uuid"].get_ref<const std::string&>() };
 			if (uuid != newUUID)
 			{
 				auto objPtr = core::SObjectManager::GetInstance()->GetSObject(newUUID);
@@ -277,7 +277,7 @@ namespace sh::core
 			}
 		}
 		if (json.contains("name"))
-			SetName(json["name"].get<std::string>());
+			SetName(json["name"].get_ref<const std::string&>());
 
 		while (stypeInfo)
 		{
@@ -334,7 +334,7 @@ namespace sh::core
 					{
 						prop->ClearContainer(*this);
 						for (auto& uuidStr : subJson[name])
-							prop->InsertToContainer(*this, GetSObjectUsingResolver(core::UUID{ uuidStr.get<std::string>() }));
+							prop->InsertToContainer(*this, GetSObjectUsingResolver(core::UUID{ uuidStr.get_ref<const std::string&>() }));
 						OnPropertyChanged(*prop.get());
 					}
 				}

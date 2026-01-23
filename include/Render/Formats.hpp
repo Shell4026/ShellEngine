@@ -18,4 +18,14 @@ namespace sh::render
 		D24S8,
 		D16S8
 	};
+
+	static auto GetTextureFormatChannel(TextureFormat format) -> int
+	{
+		switch (format)
+		{
+		case TextureFormat::R8:
+			return 1;
+		}
+		return 4;
+	}
 }//namespace

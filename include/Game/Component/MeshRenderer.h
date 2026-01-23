@@ -34,6 +34,7 @@ namespace sh::game
 		SH_GAME_API void OnDestroy() override;
 		SH_GAME_API void Awake() override;
 		SH_GAME_API void Start() override;
+		/// @brief 렌더러에 이 타이밍에 drawable 객체를 넣는다.
 		SH_GAME_API void LateUpdate() override;
 
 		SH_GAME_API void SetMaterialPropertyBlock(std::unique_ptr<render::MaterialPropertyBlock>&& block);

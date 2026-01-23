@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Export.h"
+#include "ISerializable.h"
 
 #include <string>
 #include <filesystem>
@@ -27,5 +28,6 @@ namespace sh::core
 		SH_CORE_API static auto SaveBinary(const std::vector<uint8_t>& binary, const std::filesystem::path& path) -> bool;
 		SH_CORE_API static auto LoadText(const std::filesystem::path& path) -> std::optional<std::string>;
 		SH_CORE_API static auto SaveText(const std::string& text, const std::filesystem::path& path) -> bool;
+		SH_CORE_API static auto SaveText(const core::Json& json, const std::filesystem::path& path) -> bool;
 	};
 }//namespace

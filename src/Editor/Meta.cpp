@@ -155,4 +155,10 @@ namespace sh::editor
 	{
 		return bChanged;
 	}
+	SH_EDITOR_API auto Meta::CreateMetaDirectory(const std::filesystem::path& filePath) -> std::filesystem::path
+	{
+		std::filesystem::path metaPath = filePath;
+		metaPath += ".meta";
+		return metaPath;
+	}
 }//namespace

@@ -10,7 +10,7 @@
 
 #include <array>
 #include <cstdint>
-
+#include <fstream>
 namespace sh::core
 {
 	SH_CORE_API auto FileSystem::GetDesktopDirectory() -> std::string
@@ -163,6 +163,14 @@ namespace sh::core
 
 		fwrite(text.data(), sizeof(char), text.size(), file);
 		fclose(file);
+
+		return true;
+	}
+	SH_CORE_API auto FileSystem::SaveText(const core::Json& json, const std::filesystem::path& path) -> bool
+	{
+		std::ofstream os{ path };
+		os << std::setw(4) << json;
+		os.close();
 
 		return true;
 	}

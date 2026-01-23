@@ -5,9 +5,11 @@
 #include "EditorWorld.h"
 
 #include "Core/ModuleLoader.h"
+#include "Core/FileSystem.h"
 
 #include "Game/GameObject.h"
 #include "Game/World.h"
+#include "Game/Asset/FontGenerator.h"
 
 #include "Render/VulkanImpl/VulkanTextureBuffer.h"
 #include "Render/RenderTexture.h"
@@ -39,6 +41,7 @@ namespace sh::editor
 		hierarchy = std::make_unique<Hierarchy>(static_cast<EditorWorld&>(gameObject.world));
 		inspector = std::make_unique<Inspector>(static_cast<EditorWorld&>(gameObject.world));
 		bundleViewer = std::make_unique<BundleViewer>();
+		fontGeneratorUI = std::make_unique<FontGeneratorUI>(*world.renderer.GetContext());
 	}
 
 	void EditorUI::SetDockNode()
@@ -185,6 +188,11 @@ namespace sh::editor
 						bundleViewer->GetExplorer()->SetCurrentPath(project->GetBinPath());
 					bundleViewer->Open();
 				}
+				if (ImGui::MenuItem("Font Generator"))
+				{
+					fontGeneratorUI->SetAssetPath(project->GetAssetPath());
+					fontGeneratorUI->Open();
+				}
 				ImGui::Separator();
 				if (ImGui::BeginMenu("Snap"))
 				{
@@ -246,9 +254,12 @@ namespace sh::editor
 
 			ImGui::End();
 		}
+
 		DrawMenu();
+
 		explorer->Render();
 		bundleViewer->Render();
+		fontGeneratorUI->Render();
 	}
 
 	SH_EDITOR_API auto EditorUI::GetViewport() -> Viewport&

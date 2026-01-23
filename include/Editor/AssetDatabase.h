@@ -82,8 +82,6 @@ namespace sh::editor
 		SH_EDITOR_API auto ExportAsset(const core::SObject& obj, const std::filesystem::path& path, int64_t writeTime = 0) const -> bool;
 
 		SH_EDITOR_API auto IsAssetChanged(const std::filesystem::path& assetPath) -> bool;
-
-		SH_EDITOR_API auto GetMetaDirectory(const std::filesystem::path& assetPath) -> std::filesystem::path;
 	protected:
 		SH_EDITOR_API AssetDatabase();
 	private:

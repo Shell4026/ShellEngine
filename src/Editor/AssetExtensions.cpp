@@ -13,7 +13,8 @@ namespace sh::editor
 		{".shader", Type::Shader},
 		{".prefab", Type::Prefab},
 		{".txt", Type::Text},
-		{".json", Type::Text}
+		{".json", Type::Text},
+		{".font", Type::Font}
 	};
 
 	SH_EDITOR_API auto AssetExtensions::CheckType(const std::string& extension) -> AssetExtensions::Type

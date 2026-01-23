@@ -4,6 +4,9 @@
 
 #include "Core/ThreadSyncManager.h"
 
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <External/stb/stb_image_write.h>
+
 #include <cstring>
 
 namespace sh::render
@@ -22,7 +25,7 @@ namespace sh::render
 		int mipHeight = height;
 		for (int i = 0; i < mipLevels; ++i)
 		{
-			pixels[i].resize(mipWidth * mipHeight * 4);
+			pixels[i].resize(mipWidth * mipHeight * GetTextureFormatChannel(format));
 			mipWidth = std::max(1, mipWidth / 2);
 			mipHeight = std::max(1, mipHeight / 2);
 		}
@@ -46,6 +49,16 @@ namespace sh::render
 	{
 		assert(this->pixels[mipLevel].size() == pixels.size());
 		this->pixels[mipLevel] = pixels;
+		if (textureBuffer != nullptr)
+		{
+			bSetDataDirty = true;
+			SyncDirty();
+		}
+	}
+	SH_RENDER_API void Texture::SetPixelData(std::vector<uint8_t>&& pixels, uint32_t mipLevel)
+	{
+		assert(this->pixels[mipLevel].size() == pixels.size());
+		this->pixels[mipLevel] = std::move(pixels);
 		if (textureBuffer != nullptr)
 		{
 			bSetDataDirty = true;
@@ -209,6 +222,10 @@ namespace sh::render
 		{
 			SetFiltering(filtering);
 		}
+	}
+	SH_RENDER_API void Texture::ExportToPNG(const std::filesystem::path& path)
+	{
+		stbi_write_png(path.u8string().c_str(), width, height, GetTextureFormatChannel(format), pixels[0].data(), width * GetTextureFormatChannel(format));
 	}
 
 	void Texture::CreateTextureBuffer()
