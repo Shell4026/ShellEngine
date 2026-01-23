@@ -57,6 +57,10 @@ namespace sh::render
 	{
 		this->verts = verts;
 	}
+	SH_RENDER_API void Mesh::SetVertex(std::vector<Vertex>&& verts) noexcept
+	{
+		this->verts = std::move(verts);
+	}
 	SH_RENDER_API void Mesh::SetVertex(const std::initializer_list<Vertex>& verts)
 	{
 		this->verts.clear();

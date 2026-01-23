@@ -55,7 +55,9 @@ namespace sh::render
 		SH_RENDER_API auto operator=(Mesh&& other) noexcept -> Mesh&;
 
 		SH_RENDER_API void SetVertex(const std::vector<Vertex>& verts);
+		SH_RENDER_API void SetVertex(std::vector<Vertex>&& verts) noexcept;
 		SH_RENDER_API void SetVertex(const std::initializer_list<Vertex>& verts);
+		
 		SH_RENDER_API auto GetVertex() const -> const std::vector<Vertex>&;
 		SH_RENDER_API auto GetVertexCount() const -> size_t;
 
