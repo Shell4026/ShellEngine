@@ -122,10 +122,16 @@ namespace sh::editor
         bundle.AddAsset(errorShaderAsset, true);
         game::ShaderAsset lineShaderAsset{ *editorResource->GetShader("Line") };
         bundle.AddAsset(lineShaderAsset, true);
+        game::ShaderAsset uiTextShaderAsset{ *editorResource->GetShader("UITextShader") };
+        bundle.AddAsset(uiTextShaderAsset, true);
+
         game::MaterialAsset errorMatAsset{ *editorResource->GetMaterial("ErrorMaterial") };
         bundle.AddAsset(errorMatAsset, true);
         game::MaterialAsset lineMatAsset{ *editorResource->GetMaterial("LineMaterial") };
         bundle.AddAsset(lineMatAsset, true);
+        game::MaterialAsset uiTextMatAsset{ *editorResource->GetMaterial("UITextMaterial") };
+        bundle.AddAsset(uiTextMatAsset, true);
+
         game::MeshAsset cubeMesh{ *editorResource->GetModel("CubeModel")->GetMeshes()[0] };
         bundle.AddAsset(cubeMesh, true);
         game::MeshAsset sphereMesh{ *editorResource->GetModel("SphereModel")->GetMeshes()[0] };
