@@ -251,6 +251,11 @@ namespace sh::core
 				for (auto it = set.begin(); it != set.end();)
 				{
 					SObject* obj = *it;
+					if (obj == nullptr)
+					{
+						++it;
+						continue;
+					}
 					if (obj->bPendingKill)
 					{
 						it = set.erase(it);
@@ -280,6 +285,11 @@ namespace sh::core
 				for (auto it = set.begin(); it != set.end();)
 				{
 					SObject* obj = *it;
+					if (obj == nullptr)
+					{
+						++it;
+						continue;
+					}
 					if (obj->bPendingKill)
 					{
 						it = set.erase(it);

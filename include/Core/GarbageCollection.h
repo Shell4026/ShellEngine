@@ -59,6 +59,11 @@ namespace sh::core
 						if constexpr (std::is_convertible_v<T, const SObject*>)
 						{
 							const SObject* key = it->first;
+							if (key == nullptr)
+							{
+								++it;
+								continue;
+							}
 							if (key->bPendingKill)
 							{
 								it = map->erase(it);
@@ -82,6 +87,11 @@ namespace sh::core
 						if constexpr (std::is_convertible_v<U, const SObject*>)
 						{
 							const SObject* value = it->second;
+							if (value == nullptr)
+							{
+								++it;
+								continue;
+							}
 							if (value->bPendingKill)
 							{
 								it = map->erase(it);
@@ -113,6 +123,11 @@ namespace sh::core
 						if constexpr (std::is_convertible_v<T, const SObject*>)
 						{
 							const SObject* key = it->first;
+							if (key == nullptr)
+							{
+								++it;
+								continue;
+							}
 							if (key->bPendingKill)
 							{
 								it = map->erase(it);
@@ -136,6 +151,11 @@ namespace sh::core
 						if constexpr (std::is_convertible_v<U, const SObject*>)
 						{
 							const SObject* value = it->second;
+							if (value == nullptr)
+							{
+								++it;
+								continue;
+							}
 							if (value->bPendingKill)
 							{
 								it = map->erase(it);
