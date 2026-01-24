@@ -7,6 +7,9 @@ namespace sh::game
     TextRenderer::TextRenderer(GameObject& owner) :
         MeshRenderer(owner)
     {
+        auto mat = static_cast<render::Material*>(core::SObject::GetSObjectUsingResolver(core::UUID{"bbc4ef7ec45dce223297a224f8093f23"})); // UITextMat
+        assert(mat != nullptr);
+        SetMaterial(mat);
     }
     SH_GAME_API void TextRenderer::Start()
     {

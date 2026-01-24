@@ -12,7 +12,6 @@
 #include "Game/Asset/ShaderLoader.h"
 #include "Game/Asset/ModelLoader.h"
 #include "Game/Asset/ShaderAsset.h"
-#include "Game/Asset/TextureAsset.h"
 
 #include <filesystem>
 namespace sh::editor
@@ -68,6 +67,7 @@ namespace sh::editor
 		auto triangleShader = shaders.insert_or_assign("TriangleShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/triangle.shader"))).first->second;
 		auto outlinePreShader = shaders.insert_or_assign("OutlinePreShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/EditorOutlinePre.shader"))).first->second;
 		auto outlinePostShader = shaders.insert_or_assign("OutlinePostShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/EditorOutlinePost.shader"))).first->second;
+		auto uiTextShader = shaders.insert_or_assign("UITextShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/UIText.shader"))).first->second;
 
 		auto blackTex = textures.insert_or_assign("BlackTexture", static_cast<render::Texture*>(texLoader.Load("textures/black.png"))).first->second;
 		blackTex->Build(*renderer.GetContext());
@@ -80,6 +80,7 @@ namespace sh::editor
 		auto triMat = materials.insert_or_assign("TriangleMaterial", core::SObject::Create<render::Material>(triangleShader)).first->second;
 		auto outlinePreMat = materials.insert_or_assign("OutlinePreMaterial", core::SObject::Create<render::Material>(outlinePreShader)).first->second;
 		auto outlinePostMat = materials.insert_or_assign("OutlinePostMaterial", core::SObject::Create<render::Material>(outlinePostShader)).first->second;
+		auto uiTextMat = materials.insert_or_assign("UITextMaterial", core::SObject::Create<render::Material>(uiTextShader)).first->second;
 
 		auto sphereModel = models.insert_or_assign("SphereModel", static_cast<render::Model*>(modelLoader.Load("model/Sphere.obj"))).first->second;
 		sphereModel->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f15" });
@@ -102,6 +103,7 @@ namespace sh::editor
 		textures.insert_or_assign("OutlineTexture", outlineTexture);
 
 		errorShader->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f0f" });
+		uiTextShader->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f22" });
 
 		errorMat->Build(*renderer.GetContext());
 		errorMat->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f10" });
@@ -126,6 +128,11 @@ namespace sh::editor
 		outlinePostMat->SetProperty("tex", outlineTexture);
 		outlinePostMat->Build(*renderer.GetContext());
 		outlinePostMat->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f14" });
+
+		uiTextMat->SetName("UITextMaterial");
+		uiTextMat->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f23" });
+		uiTextMat->Build(*renderer.GetContext());
+		uiTextMat->SetProperty("color", glm::vec3{ 1.f, 1.f, 1.f });
 	}
 
 	SH_EDITOR_API auto EditorResource::GetIcon(Icon icon) const -> const game::GUITexture*
