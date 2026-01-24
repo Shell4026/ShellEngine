@@ -137,14 +137,21 @@ namespace sh::editor
 							const std::filesystem::path relativePath = std::filesystem::relative(path, assetPath);
 							if (!relativePath.empty())
 							{
-								Meta meta{};
-								meta.Save(*font, Meta::CreateMetaDirectory(exportedFontPath));
-
+								const auto fontMetaDir = Meta::CreateMetaDirectory(exportedFontPath);
+								if (!std::filesystem::exists(fontMetaDir))
+								{
+									Meta meta{};
+									meta.Save(*font, Meta::CreateMetaDirectory(exportedFontPath));
+								}
 								int idx = 0;
 								for (auto tex : font->GetAtlases())
 								{
-									Meta atlasMeta{};
-									atlasMeta.Save(*tex, Meta::CreateMetaDirectory(exportedAtlasPaths[idx]));
+									const auto atlasMetaDir = Meta::CreateMetaDirectory(exportedAtlasPaths[idx++]);
+									if (!std::filesystem::exists(atlasMetaDir))
+									{
+										Meta atlasMeta{};
+										atlasMeta.Save(*tex, atlasMetaDir);
+									}
 								}
 							}
 						}
