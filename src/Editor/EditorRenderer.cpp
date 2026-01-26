@@ -40,6 +40,8 @@ namespace sh::editor
 		allowedCamera["EditorPicking"].push_back(&camera);
 		ignoreCamera["Opaque"].push_back(&camera);
 		ignoreCamera["Transparent"].push_back(&camera);
+		ignoreCamera["ImGUI"].push_back(&camera);
+		ignoreCamera["UI"].push_back(&camera);
 	}
 
 	SH_EDITOR_API void EditorRenderer::Setup(const render::RenderTarget& data)

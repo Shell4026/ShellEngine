@@ -24,58 +24,6 @@
 
 namespace sh::editor
 {
-	void EditorWorld::AddEditorControlsToSelected(core::SObject& obj)
-	{
-		if (obj.GetType() == game::GameObject::GetStaticType())
-		{
-			game::GameObject* selectedObj = static_cast<game::GameObject*>(&obj);
-
-			EditorControl* control = selectedObj->GetComponent<EditorControl>();
-			if (control == nullptr)
-			{
-				control = selectedObj->AddComponent<EditorControl>();
-				control->SetCamera(editorCamera);
-				control->hideInspector = true;
-				if (IsPlaying())
-					control->SetActive(false);
-			}
-			AddOrDestroyOutlineComponent(*selectedObj, true);
-		}
-	}
-	void EditorWorld::RemoveEditorControls(core::SObject& obj)
-	{
-		if (obj.GetType() == game::GameObject::GetStaticType())
-		{
-			game::GameObject* selectedObj = static_cast<game::GameObject*>(&obj);
-			auto control = selectedObj->GetComponent<EditorControl>();
-			if (core::IsValid(control))
-				control->Destroy();
-			AddOrDestroyOutlineComponent(*selectedObj, false);
-		}
-	}
-	void EditorWorld::AddOrDestroyOutlineComponent(game::GameObject& obj, bool bAdd)
-	{
-		for (auto child : obj.transform->GetChildren())
-			AddOrDestroyOutlineComponent(child->gameObject, bAdd);
-
-		auto outline = obj.GetComponent<editor::OutlineComponent>();
-		if (!core::IsValid(outline))
-		{
-			if (bAdd)
-			{
-				auto outlineComponent = obj.AddComponent<editor::OutlineComponent>();
-				outlineComponent->hideInspector = true;
-			}
-		}
-		else
-		{
-			if (!bAdd)
-			{
-				outline->Destroy();
-			}
-		}
-	}
-
 	SH_EDITOR_API EditorWorld::EditorWorld(Project& project) :
 		World(project.renderer, project.gui),
 		project(project)
@@ -356,4 +304,55 @@ namespace sh::editor
 				editorCamera->Deserialize(json["cam"]);
 		}
 	}
-}
+	void EditorWorld::AddEditorControlsToSelected(core::SObject& obj)
+	{
+		if (obj.GetType() == game::GameObject::GetStaticType())
+		{
+			game::GameObject* selectedObj = static_cast<game::GameObject*>(&obj);
+
+			EditorControl* control = selectedObj->GetComponent<EditorControl>();
+			if (control == nullptr)
+			{
+				control = selectedObj->AddComponent<EditorControl>();
+				control->SetCamera(editorCamera);
+				control->hideInspector = true;
+				if (IsPlaying())
+					control->SetActive(false);
+			}
+			AddOrDestroyOutlineComponent(*selectedObj, true);
+		}
+	}
+	void EditorWorld::RemoveEditorControls(core::SObject& obj)
+	{
+		if (obj.GetType() == game::GameObject::GetStaticType())
+		{
+			game::GameObject* selectedObj = static_cast<game::GameObject*>(&obj);
+			auto control = selectedObj->GetComponent<EditorControl>();
+			if (core::IsValid(control))
+				control->Destroy();
+			AddOrDestroyOutlineComponent(*selectedObj, false);
+		}
+	}
+	void EditorWorld::AddOrDestroyOutlineComponent(game::GameObject& obj, bool bAdd)
+	{
+		for (auto child : obj.transform->GetChildren())
+			AddOrDestroyOutlineComponent(child->gameObject, bAdd);
+
+		auto outline = obj.GetComponent<editor::OutlineComponent>();
+		if (!core::IsValid(outline))
+		{
+			if (bAdd)
+			{
+				auto outlineComponent = obj.AddComponent<editor::OutlineComponent>();
+				outlineComponent->hideInspector = true;
+			}
+		}
+		else
+		{
+			if (!bAdd)
+			{
+				outline->Destroy();
+			}
+		}
+	}
+}//namespace
