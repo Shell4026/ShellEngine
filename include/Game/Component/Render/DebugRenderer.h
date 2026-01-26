@@ -2,6 +2,8 @@
 #include "Game/Export.h"
 #include "Game/Vector.h"
 #include "MeshRenderer.h"
+
+#include <glm/gtc/quaternion.hpp>
 namespace sh::game
 {
 	class DebugRenderer : public MeshRenderer
@@ -17,7 +19,8 @@ namespace sh::game
 		SH_GAME_API void SetScale(const Vec3& scale);
 		SH_GAME_API auto GetScale() const -> const Vec3&;
 		SH_GAME_API void SetRotation(const Vec3& rot);
-		SH_GAME_API auto GetRotation() const -> const Vec3&;
+		SH_GAME_API void SetQuat(const glm::quat& quat);
+		SH_GAME_API auto GetQuat() const -> glm::quat { return quat; }
 	protected:
 		SH_GAME_API void CreateDrawable() override;
 		SH_GAME_API void UpdateDrawable() override;
@@ -26,7 +29,7 @@ namespace sh::game
 		Vec3 position;
 		PROPERTY(scale)
 		Vec3 scale;
-		PROPERTY(rotation)
-		Vec3 rotation;
+		PROPERTY(quat)
+		glm::quat quat;
 	};
 }//namespace

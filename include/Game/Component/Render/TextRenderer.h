@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "Game/Export.h"
-#include "Component/Render/MeshRenderer.h"
+#include "MeshRenderer.h"
+#include "DebugRenderer.h"
 
 #include "Render/Font.h"
 
@@ -17,7 +18,9 @@ namespace sh::game
 	public:
 		SH_GAME_API TextRenderer(GameObject& owner);
 
+		SH_GAME_API void OnDestroy() override;
 		SH_GAME_API void Start() override;
+		SH_GAME_API void Update() override;
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 
 		SH_GAME_API void SetText(const std::string& text);
@@ -27,10 +30,20 @@ namespace sh::game
 	private:
 		void Setup();
 		auto CreateQuad() -> render::Mesh*;
+		void UpdateDebugRenderer();
 	private:
 		PROPERTY(txt)
 		std::string txt;
 		PROPERTY(font)
 		render::Font* font = nullptr;
+		PROPERTY(width)
+		float width = 100.f;
+		float height = 0.f;
+		float beforeScaleX = 1.f;
+		float beforeScaleY = 1.f;
+
+		DebugRenderer* debugRenderer = nullptr;
+		PROPERTY(bDisplayArea)
+		bool bDisplayArea = true;
 	};
 }//namespace

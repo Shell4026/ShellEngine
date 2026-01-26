@@ -10,19 +10,54 @@ namespace sh::game
         auto mat = static_cast<render::Material*>(core::SObject::GetSObjectUsingResolver(core::UUID{"bbc4ef7ec45dce223297a224f8093f23"})); // UITextMat
         assert(mat != nullptr);
         SetMaterial(mat);
+
+        if (IsEditor())
+        {
+            debugRenderer = gameObject.AddComponent<DebugRenderer>();
+            render::Model* cubeModel = static_cast<render::Model*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ "bbc4ef7ec45dce223297a224f8093f16" })); // Cube Model
+            debugRenderer->SetMesh(cubeModel->GetMeshes()[0]);
+            debugRenderer->hideInspector = true;
+        }
+    }
+    SH_GAME_API void TextRenderer::OnDestroy()
+    {
+        if (debugRenderer != nullptr)
+        {
+            debugRenderer->Destroy();
+            debugRenderer = nullptr;
+        }
+        Super::OnDestroy();
     }
     SH_GAME_API void TextRenderer::Start()
     {
         if (GetMesh() == nullptr)
             Setup();
     }
+    SH_GAME_API void TextRenderer::Update()
+    {
+        Super::Update();
+
+        if (debugRenderer != nullptr)
+            UpdateDebugRenderer();
+
+        if (beforeScaleX != gameObject.transform->GetWorldScale().x ||
+            beforeScaleY != gameObject.transform->GetWorldScale().y)
+        {
+            Setup();
+            beforeScaleX = gameObject.transform->GetWorldScale().x;
+            beforeScaleY = gameObject.transform->GetWorldScale().y;
+        }
+    }
     SH_GAME_API void TextRenderer::OnPropertyChanged(const core::reflection::Property& prop)
     {
         Super::OnPropertyChanged(prop);
-        if (prop.GetName() == core::Util::ConstexprHash("txt"))
+
+        if (prop.GetName() == core::Util::ConstexprHash("txt") || 
+            prop.GetName() == core::Util::ConstexprHash("font") ||
+            prop.GetName() == core::Util::ConstexprHash("width"))
+        {
             Setup();
-        else if (prop.GetName() == core::Util::ConstexprHash("font"))
-            Setup();
+        }
     }
     SH_GAME_API void TextRenderer::SetText(const std::string& text)
     {
@@ -47,19 +82,19 @@ namespace sh::game
             if (mesh->GetVertexCount() == 0)
                 SetMesh(nullptr);
             else
-                SetMesh(CreateQuad());
+                SetMesh(mesh);
         }
 
-        if (GetMaterial() != nullptr)
-        {
-            auto propBlock = GetMaterialPropertyBlock();
-            if (propBlock == nullptr)
-                SetMaterialPropertyBlock(std::make_unique<render::MaterialPropertyBlock>());
-            propBlock = GetMaterialPropertyBlock();
+        if (GetMaterial() == nullptr)
+            return;
 
-            propBlock->SetProperty("tex", font->GetAtlases()[0]);
-            UpdatePropertyBlockData();
-        }
+        auto propBlock = GetMaterialPropertyBlock();
+        if (propBlock == nullptr)
+            SetMaterialPropertyBlock(std::make_unique<render::MaterialPropertyBlock>());
+        propBlock = GetMaterialPropertyBlock();
+
+        propBlock->SetProperty("tex", font->GetAtlases()[0]);
+        UpdatePropertyBlockData();
     }
     auto TextRenderer::CreateQuad() -> render::Mesh*
     {
@@ -68,17 +103,19 @@ namespace sh::game
 
         const char* start = txt.data();
         const char* end = start + txt.size();
+        const float lineHeight = font->GetLineHeightPx();
 
         float x, y;
-        x = y = 0.f;
+        x = 0.f;
+        y = -lineHeight;
         uint32_t prevUnicode = 0;
-
-        const float lineHeight = font->GetLineHeightPx();
 
         render::Mesh* mesh = core::SObject::Create<render::Mesh>();
 
         std::vector<render::Mesh::Vertex> verts;
         std::vector<uint32_t> indices;
+
+        height = lineHeight;
         while (start < end)
         {
             uint32_t unicode = 0;
@@ -89,7 +126,8 @@ namespace sh::game
             if (unicode == '\n')
             {
                 x = 0.f;
-                y += lineHeight;
+                y -= lineHeight;
+                height += lineHeight;
                 prevUnicode = 0;
                 continue;
             }
@@ -98,6 +136,13 @@ namespace sh::game
             if (glyphPtr == nullptr)
                 continue;
 
+            const float curWidth = (x + glyphPtr->bearingX + glyphPtr->w) * gameObject.transform->GetWorldScale().x;
+            if (curWidth > width)
+            {
+                x = 0.f;
+                y -= lineHeight;
+                height += lineHeight;
+            }
             float x0 = x + glyphPtr->bearingX;
             float y0 = y - glyphPtr->bearingY;
             float x1 = x0 + glyphPtr->w;
@@ -134,10 +179,32 @@ namespace sh::game
 
             x += glyphPtr->advance;
         }
+        height *= gameObject.transform->GetWorldScale().y;
+
         mesh->SetName("GeneratedMesh");
         mesh->SetVertex(std::move(verts));
         mesh->SetIndices(std::move(indices));
         mesh->Build(*world.renderer.GetContext());
         return mesh;
+    }
+    void TextRenderer::UpdateDebugRenderer()
+    {
+        if (bDisplayArea)
+        {
+            if (!debugRenderer->IsActive())
+                debugRenderer->SetActive(true);
+
+            const auto& worldPos = gameObject.transform->GetWorldPosition();
+            const auto& quat = gameObject.transform->GetWorldQuat();
+
+            const glm::vec3 localCenterOffset{ width * 0.5f, -height * 0.5f, 0.f };
+            const glm::vec3 rotatedOffset = quat * localCenterOffset;
+
+            debugRenderer->SetPosition({ worldPos.x + rotatedOffset.x, worldPos.y + rotatedOffset.y, worldPos.z + rotatedOffset.z });
+            debugRenderer->SetScale({ width, height, 1.f });
+            debugRenderer->SetQuat(quat);
+        }
+        else if (!bDisplayArea && debugRenderer->IsActive())
+            debugRenderer->SetActive(false);
     }
 }//namespace

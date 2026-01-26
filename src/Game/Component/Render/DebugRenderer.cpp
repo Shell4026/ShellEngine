@@ -18,7 +18,6 @@ namespace sh::game
 
 		position = Vec3{ 0.f, 0.f, 0.f };
 		scale = Vec3{ 1.0f, 1.0f, 1.0f };
-		rotation = Vec3{ 0.f, 0.f, 0.f };
 	}
 	SH_GAME_API auto DebugRenderer::Serialize() const -> core::Json
 	{
@@ -42,11 +41,11 @@ namespace sh::game
 	}
 	SH_GAME_API void DebugRenderer::SetRotation(const Vec3& rot)
 	{
-		rotation = rot;
+		quat = glm::quat{ glm::radians(glm::vec3{rot}) };
 	}
-	SH_GAME_API auto DebugRenderer::GetRotation() const -> const Vec3&
+	SH_GAME_API void DebugRenderer::SetQuat(const glm::quat& quat)
 	{
-		return rotation;
+		this->quat = quat;
 	}
 	SH_GAME_API void DebugRenderer::CreateDrawable()
 	{
@@ -58,7 +57,8 @@ namespace sh::game
 	{
 		Super::UpdateDrawable();
 
-		glm::quat quat = glm::quat{ glm::radians(glm::vec3{ rotation }) };
-		drawable->SetModelMatrix(glm::translate(glm::mat4{ 1.0f }, glm::vec3{ position }) * glm::mat4_cast(quat) * glm::scale(glm::mat4{ 1.0f }, glm::vec3{ scale }));
+		drawable->SetModelMatrix(
+			glm::translate(glm::mat4{ 1.0f }, 
+			glm::vec3{ position }) * glm::mat4_cast(quat) * glm::scale(glm::mat4{ 1.0f }, glm::vec3{ scale }));
 	}
 }//namespace
