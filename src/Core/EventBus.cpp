@@ -35,14 +35,15 @@ namespace sh::core
     SH_CORE_API void EventBus::Publish(const IEvent& event)
     {
         const auto eventTypeHash = event.GetTypeHash();
-        if (listeners.count(eventTypeHash))
+        auto it = listeners.find(eventTypeHash);
+        if (it == listeners.end())
+            return;
+
+        std::vector<ISubscriber*> subscribersCopy = it->second;
+        for (auto* subscriber : subscribersCopy)
         {
-            auto subscribersCopy = listeners.at(eventTypeHash);
-            for (auto* subscriber : subscribersCopy)
-            {
-                if (subscriber->eventBus) 
-                    subscriber->Invoke(event);
-            }
+            if (subscriber->eventBus)
+                subscriber->Invoke(event);
         }
     }
 }
