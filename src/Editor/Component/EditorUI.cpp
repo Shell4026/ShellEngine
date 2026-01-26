@@ -143,7 +143,9 @@ namespace sh::editor
 							explorer->PushCallbackQueue(
 								[&](const std::filesystem::path& path)
 								{
-									project->SaveAsWorld(path);
+									std::filesystem::path worldPath = path;
+									worldPath += ".world";
+									project->SaveAsWorld(worldPath);
 								}
 							);
 							explorer->Open(ExplorerUI::OpenMode::Create);
