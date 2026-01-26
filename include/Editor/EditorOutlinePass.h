@@ -5,7 +5,7 @@
 
 #include "Render/ScriptableRenderPass.h"
 
-#include "Game/Component/Camera.h"
+#include "Game/Component/Render/Camera.h"
 
 namespace sh::render
 {

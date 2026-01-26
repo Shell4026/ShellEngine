@@ -7,8 +7,8 @@
 #include "Game/ImGUImpl.h"
 #include "Game/Input.h"
 #include "Game/GameObject.h"
-#include "Game/Component/EditorCamera.h"
-#include "Game/Component/PickingRenderer.h"
+#include "Game/Component/Render/EditorCamera.h"
+#include "Game/Component/Render/PickingRenderer.h"
 #include "Game/GameManager.h"
 
 #include "Render/RenderTexture.h"

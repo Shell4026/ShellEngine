@@ -15,11 +15,11 @@
 #include "Editor/Component/EditorControl.h"
 
 #include "Game/GameObject.h"
-#include "Game/Component/MeshRenderer.h"
-#include "Game/Component/EditorCamera.h"
-#include "Game/Component/PickingCamera.h"
-#include "Game/Component/PickingRenderer.h"
-#include "Game/Component/LineRenderer.h"
+#include "Game/Component/Render/MeshRenderer.h"
+#include "Game/Component/Render/EditorCamera.h"
+#include "Game/Component/Render/PickingCamera.h"
+#include "Game/Component/Render/PickingRenderer.h"
+#include "Game/Component/Render/LineRenderer.h"
 #include "Game/WorldEvents.hpp"
 
 namespace sh::editor

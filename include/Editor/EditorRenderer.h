@@ -5,7 +5,7 @@
 
 #include "Render/ScriptableRenderer.h"
 
-#include "Game/Component/Camera.h"
+#include "Game/Component/Render/Camera.h"
 
 #include <unordered_map>
 namespace sh::game

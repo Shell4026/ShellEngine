@@ -6,7 +6,7 @@
 #include "Render/Texture.h"
 
 #include "Game/GameObject.h"
-#include "Game/Component/Camera.h"
+#include "Game/Component/Render/Camera.h"
 #include "Game/TextObject.h"
 
 #include <unordered_map>

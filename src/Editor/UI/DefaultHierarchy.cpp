@@ -2,7 +2,7 @@
 #include "EditorWorld.h"
 
 #include "Game/GameObject.h"
-#include "Game/Component/MeshRenderer.h"
+#include "Game/Component/Render/MeshRenderer.h"
 
 #include "Core/Logger.h"
 

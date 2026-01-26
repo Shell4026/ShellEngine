@@ -2,7 +2,7 @@
 #include "Prefab.h"
 #include "ComponentModule.h"
 #include "Component/Component.h"
-#include "Component/Collider.h"
+#include "Component/Phys/Collider.h"
 
 #include "Core/SObjectManager.h"
 

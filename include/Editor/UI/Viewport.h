@@ -7,7 +7,7 @@
 #include "Render/VulkanImpl/VulkanConfig.h"
 #include "Render/RenderTexture.h"
 
-#include "Game/Component/PickingCamera.h"
+#include "Game/Component/Render/PickingCamera.h"
 
 #include "imgui.h"
 

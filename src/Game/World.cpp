@@ -2,7 +2,7 @@
 #include "GameObject.h"
 #include "ImGUImpl.h"
 #include "WorldEvents.hpp"
-#include "Component/Camera.h"
+#include "Component/Render/Camera.h"
 #include "AssetLoaderFactory.h"
 #include "GameRenderer.h"
 

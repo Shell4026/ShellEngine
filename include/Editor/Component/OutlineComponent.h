@@ -1,7 +1,7 @@
 ﻿#pragma once
-#include "../Export.h"
+#include "Editor/Export.h"
 
-#include "Game/Component/MeshRenderer.h"
+#include "Game/Component/Render/MeshRenderer.h"
 
 namespace sh::editor
 {

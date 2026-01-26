@@ -3,7 +3,7 @@
 #include "Game/World.h"
 #include "Game/Input.h"
 #include "Game/GameObject.h"
-#include "Game/Component/MeshRenderer.h"
+#include "Game/Component/Render/MeshRenderer.h"
 
 #include "Render/Mesh.h"
 
