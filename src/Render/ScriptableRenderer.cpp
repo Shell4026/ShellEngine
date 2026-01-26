@@ -61,6 +61,7 @@ namespace sh::render
 	}
 	SH_RENDER_API void ScriptableRenderer::Execute(const RenderTarget& data)
 	{
+		renderCallCount = 0;
 		std::stable_sort(activePasses.begin(), activePasses.end(),
 			[&](const ScriptableRenderPass* left, const ScriptableRenderPass* right)
 			{
@@ -69,7 +70,10 @@ namespace sh::render
 		);
 
 		for (auto& pass : activePasses)
+		{
 			IRenderThrMethod<ScriptableRenderPass>::Configure(*pass, data);
+			renderCallCount += IRenderThrMethod<ScriptableRenderPass>::GetRenderCallCount(*pass);
+		}
 
 		// 각 패스에서 사용되는 렌더 텍스쳐를 추적하여 커맨드를 기록하기전에 배리어를 걸어줘야 함.
 		std::vector<std::vector<BarrierInfo>> barriers(activePasses.size());
@@ -99,13 +103,12 @@ namespace sh::render
 			++idx;
 		}
 		// 모든 패스가 기록이 될 때 까지 대기
-		std::vector<std::pair<ScriptableRenderPass*, CommandBuffer*>> recordedCmds;
-		recordedCmds.reserve(futurePasses.size());
 		for (auto& futurePass : futurePasses)
-			recordedCmds.push_back(futurePass.get());
+		{
+			auto [pass, cmd] = futurePass.get();
 
-		for (auto& [pass, cmd] : recordedCmds)
 			submittedCmds.push_back({ *pass, *cmd });
+		}
 
 		activePasses.clear();
 	}

@@ -16,7 +16,7 @@ namespace sh::render
 	}
 	SH_RENDER_API void ScriptableRenderPass::Record(CommandBuffer& cmd, const IRenderContext& ctx, const RenderTarget& renderData)
 	{
-		ctx.GetRenderImpl().RecordCommand(cmd, passName, renderData, drawList);
+		ctx.GetRenderImpl().RecordCommand(cmd, passName, renderData, drawList, bStoreImage);
 	}
 	SH_RENDER_API auto ScriptableRenderPass::BuildDrawList(const RenderTarget& renderData) -> DrawList
 	{
@@ -58,14 +58,28 @@ namespace sh::render
 		}
 		return list;
 	}
-	SH_RENDER_API void ScriptableRenderPass::EmitBarrier(CommandBuffer& cmd, const IRenderContext& ctx, const std::vector<BarrierInfo>& barriers)
+	SH_RENDER_API void ScriptableRenderPass::EmitBarrier(CommandBuffer& cmd, const IRenderContext& ctx, const std::vector<BarrierInfo>& barriers) const
 	{
 		ctx.GetRenderImpl().EmitBarrier(cmd, barriers);
 	}
-
-	SH_RENDER_API void ScriptableRenderPass::SetStoreImg(const IRenderContext& ctx, bool bStore)
+	SH_RENDER_API auto ScriptableRenderPass::GetRenderCallCount() const -> uint32_t
 	{
-		IRenderThrMethod<IRenderImpl>::SetStoreImage(ctx.GetRenderImpl(), bStore);
+		uint32_t renderCallCount = drawList.drawCall.size();
+		if (drawList.renderData.index() == 0)
+		{
+			const auto& renderGroups = std::get<0>(drawList.renderData);
+			for (const auto& renderGroup : renderGroups)
+			{
+				renderCallCount += renderGroup.drawables.size();
+			}
+		}
+		else
+		{
+			const auto& renderItems = std::get<1>(drawList.renderData);
+			renderCallCount += renderItems.size();
+		}
+
+		return renderCallCount;
 	}
 
 	void ScriptableRenderPass::CollectRenderImages(const RenderTarget& renderData, const DrawList& drawList)

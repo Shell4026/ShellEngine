@@ -180,6 +180,8 @@ namespace sh::render::vk
 			cams.push_back(camera);
 		}
 
+		SetDrawCallCount(0);
+		uint32_t renderCallCount = 0;
 		for (const Camera* cam : cams)
 		{
 			std::vector<Drawable*> filteredDrawables;
@@ -197,7 +199,9 @@ namespace sh::render::vk
 			}
 			IRenderThrMethod<ScriptableRenderer>::Setup(*renderer, rt);
 			IRenderThrMethod<ScriptableRenderer>::Execute(*renderer, rt); // ScriptableRenderer에 등록된 패스들을 렌더큐 순서대로, 병렬적으로 커맨드에 기록
+			renderCallCount += IRenderThrMethod<ScriptableRenderer>::GetRenderCallCount(*renderer);
 		}
+		SetDrawCallCount(renderCallCount);
 		IRenderThrMethod<ScriptableRenderer>::ExecuteTransfer(*renderer, imgIdx);
 
 		const auto& submittedCmds = renderer->GetSubmittedCommands();
@@ -248,10 +252,6 @@ namespace sh::render::vk
 				context->GetQueueManager().Submit(VulkanQueueManager::Role::Graphics, cmd, fence);
 			}
 		}
-		uint32_t drawCallCount = 0;
-		//for (auto& renderPipeline : renderPipelines)
-		//	drawCallCount += renderPipeline->GetDrawCallCount();
-		SetDrawCallCount(drawCallCount);
 
 		VkPresentInfoKHR presentInfo{};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;

@@ -16,7 +16,7 @@ namespace sh::render::vk
 	{
 		cameraManager = VulkanCameraBuffers::GetInstance();
 	}
-	SH_RENDER_API void VulkanRenderImpl::EmitBarrier(CommandBuffer& _cmd, const std::vector<BarrierInfo>& barriers)
+	SH_RENDER_API void VulkanRenderImpl::EmitBarrier(CommandBuffer& _cmd, const std::vector<BarrierInfo>& barriers) const
 	{
 		auto& cmd = static_cast<VulkanCommandBuffer&>(_cmd);
 		for (const BarrierInfo& barrier : barriers)
@@ -89,7 +89,7 @@ namespace sh::render::vk
 			}
 		}
 	}
-	SH_RENDER_API void VulkanRenderImpl::RecordCommand(CommandBuffer& _cmd, const core::Name& passName, const RenderTarget& renderData, const DrawList& drawList)
+	SH_RENDER_API void VulkanRenderImpl::RecordCommand(CommandBuffer& _cmd, const core::Name& passName, const RenderTarget& renderData, const DrawList& drawList, bool bStoreImage) const
 	{
 		// 드로우 목적이 아닌 경우
 		if (renderData.camera == nullptr)
@@ -159,7 +159,7 @@ namespace sh::render::vk
 		colorAttachment.imageView = bMSAA ? imgBufferMSAA->GetImageView() : imgBuffer->GetImageView();
 		colorAttachment.imageLayout = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 		colorAttachment.loadOp = drawList.bClearColor ? VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR : VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_LOAD;
-		colorAttachment.storeOp = bStore ? VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE : VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		colorAttachment.storeOp = bStoreImage ? VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE : VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
 		colorAttachment.clearValue = { 0.f, 0.f, 0.f, 1.f };
 		if (bMSAA)
 		{
@@ -175,7 +175,7 @@ namespace sh::render::vk
 			depthAttachment.imageView = depthBuffer->GetImageView();
 			depthAttachment.imageLayout = VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 			depthAttachment.loadOp = drawList.bClearDepth ? VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR : VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_LOAD;
-			depthAttachment.storeOp = bStore ? VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE : VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			depthAttachment.storeOp = bStoreImage ? VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE : VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
 			depthAttachment.clearValue = { 1.0f, 0.f };
 		}
 
@@ -204,12 +204,7 @@ namespace sh::render::vk
 		pfnCmdEndRenderingKHR(commandBuffer);
 	}
 
-	SH_RENDER_API void VulkanRenderImpl::SetStoreImage(bool bStore)
-	{
-		this->bStore = bStore;
-	}
-
-	void VulkanRenderImpl::BindCameraSet(VulkanCommandBuffer& cmd, VkPipelineLayout layout, const ShaderPass& pass, const Material& mat, uint32_t cameraOffset)
+	void VulkanRenderImpl::BindCameraSet(VulkanCommandBuffer& cmd, VkPipelineLayout layout, const ShaderPass& pass, const Material& mat, uint32_t cameraOffset) const
 	{
 		// 카메라 데이터는 다이나믹 디스크립터셋
 		auto cameraUBO = static_cast<VulkanUniformBuffer*>(
@@ -223,7 +218,7 @@ namespace sh::render::vk
 			static_cast<uint32_t>(UniformStructLayout::Type::Camera),
 			1, &cameraSet, dynamicCount, &cameraOffset);
 	}
-	void VulkanRenderImpl::BindMaterialSet(VulkanCommandBuffer& cmd, VkPipelineLayout layout, const ShaderPass& pass, const Material& mat)
+	void VulkanRenderImpl::BindMaterialSet(VulkanCommandBuffer& cmd, VkPipelineLayout layout, const ShaderPass& pass, const Material& mat) const
 	{
 		auto materialUniformBuffer = static_cast<VulkanUniformBuffer*>(
 			mat.GetMaterialData().GetUniformBuffer(pass, UniformStructLayout::Type::Material));
@@ -235,7 +230,7 @@ namespace sh::render::vk
 			static_cast<uint32_t>(UniformStructLayout::Type::Material),
 			1, &materialDescriptorSet, 0, nullptr);
 	}
-	void VulkanRenderImpl::BindObjectSet(VulkanCommandBuffer& cmd, VkPipelineLayout layout, const ShaderPass& pass, Drawable& drawable)
+	void VulkanRenderImpl::BindObjectSet(VulkanCommandBuffer& cmd, VkPipelineLayout layout, const ShaderPass& pass, Drawable& drawable) const
 	{
 		auto objectUniformBuffer = static_cast<VulkanUniformBuffer*>(
 			drawable.GetMaterialData().GetUniformBuffer(pass, UniformStructLayout::Type::Object));
@@ -247,7 +242,7 @@ namespace sh::render::vk
 			static_cast<uint32_t>(UniformStructLayout::Type::Object),
 			1, &objectDescriptorSet, 0, nullptr);
 	}
-	void VulkanRenderImpl::DrawMesh(VulkanCommandBuffer& cmd, const ShaderPass& pass, const Mesh& mesh)
+	void VulkanRenderImpl::DrawMesh(VulkanCommandBuffer& cmd, const ShaderPass& pass, const Mesh& mesh) const
 	{
 		const VulkanVertexBuffer* vkVertexBuffer = static_cast<VulkanVertexBuffer*>(mesh.GetVertexBuffer());
 
@@ -258,7 +253,7 @@ namespace sh::render::vk
 		vkCmdBindIndexBuffer(cmd.GetCommandBuffer(), vkVertexBuffer->GetIndexBuffer().GetBuffer(), 0, VkIndexType::VK_INDEX_TYPE_UINT32);
 		vkCmdDrawIndexed(cmd.GetCommandBuffer(), static_cast<uint32_t>(mesh.GetIndices().size()), 1, 0, 0, 0);
 	}
-	void VulkanRenderImpl::RenderDrawable(VulkanCommandBuffer& cmd, const core::Name& passName, const RenderTarget& renderData, const DrawList& drawList, const RenderTargetLayout& layout)
+	void VulkanRenderImpl::RenderDrawable(VulkanCommandBuffer& cmd, const core::Name& passName, const RenderTarget& renderData, const DrawList& drawList, const RenderTargetLayout& layout) const
 	{
 		auto cameraOffsetOpt = cameraManager->GetDynamicOffset(*renderData.camera);
 		if (!cameraOffsetOpt.has_value())

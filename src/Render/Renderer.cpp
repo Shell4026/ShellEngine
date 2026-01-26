@@ -54,7 +54,7 @@ namespace sh::render
 			}
 		}
 		if (bDrawCallDirty)
-			std::swap(drawcall[core::ThreadType::Game], drawcall[core::ThreadType::Render]);
+			drawcall[core::ThreadType::Game] = drawcall[core::ThreadType::Render];
 
 		bDirty = false;
 		bDrawCallDirty = false;

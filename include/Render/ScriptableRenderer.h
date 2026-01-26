@@ -26,6 +26,7 @@ namespace sh::render
 		static void CallReadbacks(ScriptableRenderer& renderer);
 		static void ResetSubmittedCommands(ScriptableRenderer& renderer, IRenderContext& ctx);
 		static void ResetSwapChainStates(ScriptableRenderer& renderer);
+		static auto GetRenderCallCount(ScriptableRenderer& renderer) -> uint32_t;
 	};
 
 	class ScriptableRenderer : public core::ISyncable
@@ -62,6 +63,8 @@ namespace sh::render
 		SH_RENDER_API void ResetSubmittedCommands(IRenderContext& ctx);
 
 		SH_RENDER_API void ResetSwapChainStates();
+
+		SH_RENDER_API auto GetRenderCallCount() const -> uint32_t { return renderCallCount; }
 	private:
 		auto BuildBarrierInfo(ScriptableRenderPass& pass, uint32_t imgIdx) -> std::vector<BarrierInfo>;
 	protected:
@@ -91,6 +94,8 @@ namespace sh::render
 			std::promise<std::unique_ptr<IBuffer>> promise;
 		};
 		std::vector<PendingReadback> pendingReadbacks;
+
+		uint32_t renderCallCount = 0;
 
 		bool bSyncDirty = false;
 	};
@@ -131,5 +136,9 @@ namespace sh::render
 	inline void IRenderThrMethod<class ScriptableRenderer>::ResetSwapChainStates(ScriptableRenderer& renderer)
 	{
 		renderer.ResetSwapChainStates();
+	}
+	inline auto IRenderThrMethod<class ScriptableRenderer>::GetRenderCallCount(ScriptableRenderer& renderer) -> uint32_t
+	{
+		return renderer.GetRenderCallCount();
 	}
 }//namespace
