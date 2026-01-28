@@ -14,8 +14,8 @@ namespace sh::editor
 		outlinePass = &AddRenderPass<EditorOutlinePass>();
 		AddRenderPass(core::Name{ "Opaque" }, render::RenderQueue::Opaque);
 		AddRenderPass<render::TransparentPass>();
+		AddRenderPass<render::TransparentPass>("UI", render::RenderQueue::Transparent);
 		postOutlinePass = &AddRenderPass<EditorPostOutlinePass>(ctx);
-		AddRenderPass<render::TransparentPass>("UI", render::RenderQueue::UI);
 		uiPass = &AddRenderPass<game::UIPass>();
 		uiPass->SetImGUIContext(guictx);
 	}
@@ -25,6 +25,7 @@ namespace sh::editor
 		allowedCamera["ImGUI"].push_back(&camera);
 		ignoreCamera["Opaque"].push_back(&camera);
 		ignoreCamera["Transparent"].push_back(&camera);
+		ignoreCamera["UI"].push_back(&camera);
 	}
 	SH_EDITOR_API void EditorRenderer::SetEditorCamera(const render::Camera& camera)
 	{
