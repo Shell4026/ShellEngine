@@ -233,7 +233,7 @@ namespace sh::game
 	}
 	SH_GAME_API void GameManager::SetImmortalObject(GameObject& obj)
 	{
-		if (&obj.world != immortalWorld)
+		if (&obj.world != immortalWorld && !obj.IsPendingKill())
 		{
 			auto objPtr = immortalWorld->AddGameObject(obj.GetName().ToString());
 			(*objPtr) = obj;
