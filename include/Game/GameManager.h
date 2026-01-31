@@ -65,8 +65,13 @@ namespace sh::game
 
 		SH_GAME_API auto LoadGame(const std::filesystem::path& managerPath, core::AssetBundle& bundle) -> bool;
 
+		/// @brief 월드가 변경 돼도 유지 되는 오브젝트를 생성한다.
+		/// @param name 이름
+		/// @return 게임 오브젝트
+		SH_GAME_API auto CreateImmortalObject(std::string_view name) -> GameObject&;
 		/// @brief 월드가 변경 돼도 유지 되는 오브젝트로 만드는 함수.
 		/// @brief 해당 오브젝트 컴포넌트의 생성자에서 호출하면 안 된다!
+		/// @brief 이미 불멸 오브젝트면 무시된다.
 		/// @param obj 게임 오브젝트
 		SH_GAME_API void SetImmortalObject(GameObject& obj);
 		SH_GAME_API void ClearImmortalObjects();

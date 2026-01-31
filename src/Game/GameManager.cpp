@@ -231,6 +231,10 @@ namespace sh::game
 
 		return true;
 	}
+	SH_GAME_API auto GameManager::CreateImmortalObject(std::string_view name) -> GameObject&
+	{
+		return *immortalWorld->AddGameObject(name);
+	}
 	SH_GAME_API void GameManager::SetImmortalObject(GameObject& obj)
 	{
 		if (&obj.world != immortalWorld && !obj.IsPendingKill())
