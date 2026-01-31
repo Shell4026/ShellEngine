@@ -4,7 +4,7 @@
 #include "Component/Render/PointLight.h"
 #include "Component/Render/DirectionalLight.h"
 
-#include "GameObject.h"
+#include "World.h"
 
 #include "Core/Reflection.hpp"
 

@@ -1,5 +1,5 @@
 ﻿#include "Component/UI.h"
-#include "GameObject.h"
+#include "World.h"
 #include "ImGUImpl.h"
 
 namespace sh::game

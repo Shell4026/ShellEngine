@@ -7,6 +7,7 @@
 #include "VulkanCameraBuffers.h"
 
 #include "Core/ThreadSyncManager.h"
+#include "Core/Logger.h"
 
 namespace sh::render
 {

@@ -6,6 +6,8 @@
 #include "VulkanCommandBufferPool.h"
 #include "VulkanCommandBuffer.h"
 
+#include "Core/Logger.h"
+
 #include <cassert>
 
 namespace sh::render::vk

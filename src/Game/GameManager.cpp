@@ -26,6 +26,7 @@ namespace sh::game
 		this->gui = &gui;
 
 		immortalWorld = core::SObject::Create<World>(renderer, gui);
+		immortalWorld->SetName("immortalWorld");
 		core::GarbageCollection::GetInstance()->SetRootSet(immortalWorld);
 	}
 	SH_GAME_API auto GameManager::GetRenderer() const -> render::Renderer&

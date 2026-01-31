@@ -2,6 +2,9 @@
 #include "IRenderContext.h"
 #include "Drawable.h"
 #include "RenderTexture.h"
+
+#include "Core/Logger.h"
+
 namespace sh::render
 {
 	ScriptableRenderPass::ScriptableRenderPass(const core::Name& passName, RenderQueue renderQueue) :

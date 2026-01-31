@@ -1,6 +1,6 @@
 ﻿#include "Component/Render/PointLight.h"
 
-#include "GameObject.h"
+#include "World.h"
 
 namespace sh::game
 {

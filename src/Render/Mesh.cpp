@@ -1,6 +1,7 @@
 ﻿#include "Mesh.h"
-
 #include "VertexBufferFactory.h"
+
+#include "Core/Logger.h"
 
 namespace sh::render
 {

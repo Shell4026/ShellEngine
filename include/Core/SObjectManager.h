@@ -4,6 +4,9 @@
 #include "UUID.h"
 
 #include <shared_mutex>
+#include <vector>
+#include <unordered_map>
+#include <unordered_set>
 namespace sh::core
 {
 	class SObject;
@@ -16,6 +19,7 @@ namespace sh::core
 	private:
 		std::unordered_map<UUID, std::size_t> objIdxMap;
 		std::vector<SObject*> objs;
+		std::unordered_set<const SObject*> objPtrs;
 		std::shared_mutex mu;
 	private:
 		SH_CORE_API SObjectManager();
@@ -25,5 +29,6 @@ namespace sh::core
 		SH_CORE_API void RegisterSObject(SObject* obj);
 		SH_CORE_API void UnRegisterSObject(const SObject* obj);
 		SH_CORE_API auto GetSObject(const UUID& uuid) -> SObject*;
+		SH_CORE_API auto IsSObject(void* ptr) -> bool;
 	};
 }//namespace

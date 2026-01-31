@@ -1,6 +1,6 @@
 ﻿#include "Component/Phys/RigidBody.h"
 
-#include "GameObject.h"
+#include "World.h"
 
 #include "Core/Logger.h"
 

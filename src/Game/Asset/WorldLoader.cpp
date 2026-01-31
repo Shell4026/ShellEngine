@@ -6,6 +6,7 @@
 #include "Core/FileSystem.h"
 #include "Core/SObjectManager.h"
 #include "Core/Factory.hpp"
+#include "Core/Logger.h"
 
 #include <cstring>
 namespace sh::game

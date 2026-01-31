@@ -1,10 +1,6 @@
 ﻿#pragma once
-
 #include "Export.h"
-
-#include "SContainer.hpp"
 #include "NonCopyable.h"
-#include "Logger.h"
 
 #include <functional>
 #include <set>

@@ -3,6 +3,7 @@
 #include "Asset/TextureLoader.h"
 
 #include "Core/SObject.h"
+#include "Core/Logger.h"
 
 #include "External/stb/stb_image.h"
 #include "External/stb/stb_image_resize2.h"

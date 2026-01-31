@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "../Util.h"
-#include "../SContainer.hpp"
 
 #include <type_traits>
 #include <array>
@@ -11,10 +10,6 @@
 #include <unordered_set>
 #include <string_view>
 #include <list>
-namespace sh::core
-{
-	class SObject;
-}
 namespace sh::core::reflection
 {
 	//기본 HasSuper 구조체
@@ -55,36 +50,26 @@ namespace sh::core::reflection
 	struct IsVector : std::bool_constant<false> {};
 	template<typename T>
 	struct IsVector<std::vector<T>> : std::bool_constant<true> {};
-	template<typename T>
-	struct IsVector<SVector<T>> : std::bool_constant<true> {};
 
 	template<typename T, typename U = void>
 	struct IsMap : std::bool_constant<false> {};
 	template<typename T, typename U>
 	struct IsMap<std::map<T, U>, void> : std::bool_constant<true> {};
-	template<typename T, typename U>
-	struct IsMap<SMap<T, U>, void> : std::bool_constant<true> {};
 
 	template<typename T, typename U = void>
 	struct IsHashMap : std::bool_constant<false> {};
 	template<typename... Args>
 	struct IsHashMap<std::unordered_map<Args...>> : std::bool_constant<true> {};
-	template<typename... Args>
-	struct IsHashMap<SHashMap<Args...>> : std::bool_constant<true> {};
 
 	template<typename T>
 	struct IsSet : std::bool_constant<false> {};
 	template<typename... Args>
 	struct IsSet<std::set<Args...>> : std::bool_constant<true> {};
-	template<typename... Args>
-	struct IsSet<SSet<Args...>> : std::bool_constant<true> {};
 
 	template<typename T>
 	struct IsHashSet : std::bool_constant<false> {};
 	template<typename... Args>
 	struct IsHashSet<std::unordered_set<Args...>> : std::bool_constant<true> {};
-	template<typename... Args>
-	struct IsHashSet<SHashSet<Args...>> : std::bool_constant<true> {};
 
 	template<typename T>
 	struct IsArray : std::false_type {};
@@ -97,8 +82,6 @@ namespace sh::core::reflection
 	struct IsList : std::bool_constant<false> {};
 	template<typename T>
 	struct IsList<std::list<T>> : std::bool_constant<true> {};
-	template<typename T>
-	struct IsList<SList<T>> : std::bool_constant<true> {};
 
 	template<typename T>
 	struct IsUniquePtr : std::false_type {};
@@ -110,28 +93,19 @@ namespace sh::core::reflection
 	struct GetContainerNestedCount : std::integral_constant<uint32_t, 0> {};
 	template<typename T>
 	struct GetContainerNestedCount<std::vector<T>> : std::integral_constant<uint32_t, GetContainerNestedCount<T>::value + 1> {};
-	template<typename T>
-	struct GetContainerNestedCount<SVector<T>> : std::integral_constant<uint32_t, GetContainerNestedCount<T>::value + 1> {};
 	template<typename T, std::size_t N>
 	struct GetContainerNestedCount<std::array<T, N>> : std::integral_constant<uint32_t, GetContainerNestedCount<T>::value + 1> {};
 	template<typename T, std::size_t N>
 	struct GetContainerNestedCount<T[N]> : std::integral_constant<uint32_t, GetContainerNestedCount<T>::value + 1> {};
 	template<typename T, typename U, typename _Pr, typename _Alloc>
 	struct GetContainerNestedCount<std::map<T, U, _Pr, _Alloc>> : std::integral_constant<uint32_t, GetContainerNestedCount<U>::value + 1> {};
-	template<typename T, typename U>
-	struct GetContainerNestedCount<SMap<T, U>> : std::integral_constant<uint32_t, GetContainerNestedCount<U>::value + 1> {};
 	template<typename T, typename U, typename _Hasher, typename _Keyeq, typename _Alloc>
 	struct GetContainerNestedCount<std::unordered_map<T, U, _Hasher, _Keyeq, _Alloc>> : std::integral_constant<uint32_t, GetContainerNestedCount<U>::value + 1> {};
-	template<typename T, typename U>
-	struct GetContainerNestedCount<SHashMap<T, U>> : std::integral_constant<uint32_t, GetContainerNestedCount<U>::value + 1> {};
+
 	template<typename T, typename _Pr, typename _Alloc>
 	struct GetContainerNestedCount<std::set<T, _Pr, _Alloc>> : std::integral_constant<uint32_t, GetContainerNestedCount<T>::value + 1> {};
-	template<typename T>
-	struct GetContainerNestedCount<SSet<T>> : std::integral_constant<uint32_t, GetContainerNestedCount<T>::value + 1> {};
 	template<typename T, typename _Hasher, typename _Keyeq, typename _Alloc>
 	struct GetContainerNestedCount<std::unordered_set<T, _Hasher, _Keyeq, _Alloc>> : std::integral_constant<uint32_t, GetContainerNestedCount<T>::value + 1> {};
-	template<typename T>
-	struct GetContainerNestedCount<SHashSet<T>> : std::integral_constant<uint32_t, GetContainerNestedCount<T>::value + 1> {};
 	template<typename T>
 	struct GetContainerElementType
 	{
@@ -139,11 +113,6 @@ namespace sh::core::reflection
 	};
 	template<typename T>
 	struct GetContainerElementType<std::vector<T>>
-	{
-		using type = T;
-	};
-	template<typename T>
-	struct GetContainerElementType<SVector<T>>
 	{
 		using type = T;
 	};
@@ -162,28 +131,13 @@ namespace sh::core::reflection
 	{
 		using type = std::pair<T, U>;
 	};
-	template<typename T, typename U>
-	struct GetContainerElementType<SMap<T, U>>
-	{
-		using type = std::pair<T, U>;
-	};
 	template<typename T, typename U, typename _Hasher, typename _Keyeq, typename _Alloc>
 	struct GetContainerElementType<std::unordered_map<T, U, _Hasher, _Keyeq, _Alloc>>
 	{
 		using type = std::pair<T, U>;
 	};
-	template<typename T, typename U>
-	struct GetContainerElementType<SHashMap<T, U>>
-	{
-		using type = std::pair<T, U>;
-	};
 	template<typename T, typename _Pr, typename _Alloc>
 	struct GetContainerElementType<std::set<T, _Pr, _Alloc>>
-	{
-		using type = T;
-	};
-	template<typename T>
-	struct GetContainerElementType<SSet<T>>
 	{
 		using type = T;
 	};
@@ -193,17 +147,7 @@ namespace sh::core::reflection
 		using type = T;
 	};
 	template<typename T>
-	struct GetContainerElementType<SHashSet<T>>
-	{
-		using type = T;
-	};
-	template<typename T>
 	struct GetContainerElementType<std::list<T>>
-	{
-		using type = T;
-	};
-	template<typename T>
-	struct GetContainerElementType<SList<T>>
 	{
 		using type = T;
 	};
@@ -216,11 +160,6 @@ namespace sh::core::reflection
 	};
 	template<typename T>
 	struct GetContainerLastType<std::vector<T>>
-	{
-		using type = typename GetContainerLastType<T>::type;
-	};
-	template<typename T>
-	struct GetContainerLastType<SVector<T>>
 	{
 		using type = typename GetContainerLastType<T>::type;
 	};
@@ -239,18 +178,8 @@ namespace sh::core::reflection
 	{
 		using type = typename GetContainerLastType<U>::type;
 	};
-	template<typename T, typename U>
-	struct GetContainerLastType<SMap<T, U>>
-	{
-		using type = typename GetContainerLastType<U>::type;
-	};
 	template<typename T, typename U, typename _Hasher, typename _Keyeq, typename _Alloc>
 	struct GetContainerLastType<std::unordered_map<T, U, _Hasher, _Keyeq, _Alloc>>
-	{
-		using type = typename GetContainerLastType<U>::type;
-	};
-	template<typename T, typename U>
-	struct GetContainerLastType<SHashMap<T, U>>
 	{
 		using type = typename GetContainerLastType<U>::type;
 	};
@@ -259,18 +188,8 @@ namespace sh::core::reflection
 	{
 		using type = typename GetContainerLastType<T>::type;
 	};
-	template<typename T>
-	struct GetContainerLastType<SSet<T>>
-	{
-		using type = typename GetContainerLastType<T>::type;
-	};
 	template<typename T, typename _Hasher, typename _Keyeq, typename _Alloc>
 	struct GetContainerLastType<std::unordered_set<T, _Hasher, _Keyeq, _Alloc>>
-	{
-		using type = typename GetContainerLastType<T>::type;
-	};
-	template<typename T>
-	struct GetContainerLastType<SHashSet<T>>
 	{
 		using type = typename GetContainerLastType<T>::type;
 	};

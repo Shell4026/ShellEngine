@@ -1,7 +1,9 @@
 ﻿#include "Component/Render/TextRenderer.h"
-#include "GameObject.h"
+#include "World.h"
 
 #include "Core/Util.h"
+
+#include "Render/Model.h"
 namespace sh::game
 {
     TextRenderer::TextRenderer(GameObject& owner) :

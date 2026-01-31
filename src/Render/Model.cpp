@@ -1,5 +1,5 @@
 ﻿#include "Model.h"
-#include "Core/GarbageCollection.h"
+#include "Core/Logger.h"
 
 #include <queue>
 namespace sh::render
@@ -19,6 +19,8 @@ namespace sh::render
 				mesh->Destroy();
 		}
 		Super::Destroy();
+		std::vector<int> a;
+		a.push_back(0);
 	}
 	SH_RENDER_API void Model::AddMeshes(std::unique_ptr<Node>&& node)
 	{

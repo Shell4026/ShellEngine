@@ -20,6 +20,7 @@ namespace sh::core
 
 		objIdxMap[obj->GetUUID()] = objs.size();
 		objs.push_back(obj);
+		objPtrs.insert(obj);
 	}
 	SH_CORE_API void SObjectManager::UnRegisterSObject(const SObject* obj)
 	{
@@ -32,6 +33,7 @@ namespace sh::core
 		const std::size_t last = objs.size() - 1;
 
 		objIdxMap.erase(it);
+		objPtrs.erase(obj);
 
 		if (idx != last)
 		{
@@ -49,5 +51,13 @@ namespace sh::core
 		if (it == objIdxMap.end())
 			return nullptr;
 		return objs[it->second];
+	}
+	SH_CORE_API auto SObjectManager::IsSObject(void* ptr) -> bool
+	{
+		std::shared_lock<std::shared_mutex> lock{ mu };
+		auto it = objPtrs.find(reinterpret_cast<SObject*>(ptr));
+		if (it == objPtrs.end())
+			return false;
+		return true;
 	}
 }//namespace

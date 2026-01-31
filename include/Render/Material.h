@@ -5,11 +5,13 @@
 #include "IRenderResource.h"
 #include "MaterialPropertyBlock.h"
 #include "MaterialData.h"
+#include "RenderTexture.h"
 
 #include "Core/SObject.h"
 #include "Core/Reflection.hpp"
 #include "Core/SContainer.hpp"
 #include "Core/Util.h"
+#include "Core/Logger.h"
 
 #include "glm/mat4x4.hpp"
 

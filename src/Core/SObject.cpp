@@ -1,8 +1,8 @@
 ﻿#include "SObject.h"
 #include "GarbageCollection.h"
-#include "Observer.hpp"
 #include "Util.h"
 #include "AssetResolver.h"
+#include "Logger.h"
 
 #include <tuple>
 namespace sh::core
@@ -25,7 +25,6 @@ namespace sh::core
 		bPendingKill(false),
 		uuid(UUID::Generate()), name("Unknown")
 	{
-		
 	}
 	SH_CORE_API SObject::SObject(const SObject& other) :
 		uuid(UUID::Generate()), name(other.name)
@@ -88,10 +87,11 @@ namespace sh::core
 
 	SH_CORE_API void SObject::Destroy()
 	{
+		static GarbageCollection& gc = *GarbageCollection::GetInstance();
 		if (bPendingKill)
 			return;
+
 		bPendingKill = true;
-		GarbageCollection& gc = *GarbageCollection::GetInstance();
 		gc.RemoveRootSet(this);
 
 		OnDestroy();
@@ -99,7 +99,7 @@ namespace sh::core
 
 	SH_CORE_API void SObject::OnDestroy()
 	{
-		GarbageCollection& gc = *GarbageCollection::GetInstance();
+		static GarbageCollection& gc = *GarbageCollection::GetInstance();
 		gc.AddToPendingKillList(this);
 		onDestroy.Notify(this);
 	}

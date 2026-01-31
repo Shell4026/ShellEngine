@@ -2,6 +2,8 @@
 #include "Asset/FontAsset.h"
 
 #include "Core/FileSystem.h"
+#include "Core/Reflection.hpp"
+#include "Core/Logger.h"
 
 namespace sh::game
 {

@@ -4,6 +4,7 @@
 
 #include "Core/Util.h"
 #include "Core/SContainer.hpp"
+#include "Core/Logger.h"
 
 namespace sh::render
 {

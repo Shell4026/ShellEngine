@@ -85,6 +85,11 @@ namespace sh::game
 			if (core::IsValid(obj))
 				obj->Destroy();
 		}
+		for (auto& obj : addedObjs)
+		{
+			if (obj.IsValid())
+				obj->Destroy();
+		}
 		objIdx.clear();
 		objs.clear();
 		cameras.clear();

@@ -8,7 +8,7 @@
 #include "Drawable.h"
 
 #include "Core/Util.h"
-#include "Core/ThreadPool.h"
+#include "Core/Logger.h"
 
 #include <cassert>
 #include <cstdint>

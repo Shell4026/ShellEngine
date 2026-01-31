@@ -31,7 +31,7 @@ public:
     PROPERTY(numbers)
     std::vector<int> numbers;
     PROPERTY(set)
-    sh::core::SSet<int> set;
+    std::set<int> set;
     PROPERTY(ptr)
     int* ptr;
     PROPERTY(sobjectPtr)
@@ -39,7 +39,7 @@ public:
     PROPERTY(sobjectArr)
     std::array<Derived*, 2> sobjectArr;
     PROPERTY(map)
-    sh::core::SMap<std::string, int> map;
+    std::map<std::string, int> map;
     PROPERTY(constPtr)
     const int* constPtr;
     PROPERTY(constInt)

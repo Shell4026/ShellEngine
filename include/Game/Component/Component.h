@@ -5,6 +5,7 @@
 
 #include "Core/Util.h"
 #include "Core/SObject.h"
+#include "Core/Logger.h"
 
 #include <type_traits>
 

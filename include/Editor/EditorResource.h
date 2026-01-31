@@ -5,13 +5,10 @@
 
 #include "Game/GUITexture.h"
 
-namespace sh::render
-{
-	class Shader;
-	class Material;
-	class Texture;
-	class Model;
-}
+#include "Render/Shader.h"
+#include "Render/Material.h"
+#include "Render/Texture.h"
+#include "Render/Model.h"
 namespace sh::editor
 {
 	class Project;

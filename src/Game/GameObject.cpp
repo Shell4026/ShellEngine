@@ -1,4 +1,5 @@
 ﻿#include "GameObject.h"
+#include "World.h"
 #include "Prefab.h"
 #include "ComponentModule.h"
 #include "Component/Component.h"

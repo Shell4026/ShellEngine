@@ -1,5 +1,6 @@
 ﻿#include "Asset/FontGenerator.h"
 
+#include "Core/Logger.h"
 #include "Core/Util.h"
 
 #include "Render/Texture.h"

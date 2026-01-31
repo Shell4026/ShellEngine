@@ -4,6 +4,8 @@
 #include "ComponentModule.h"
 #include "Octree.h"
 #include "UICamera.h"
+#include "GameObject.h"
+#include "Component/Render/Camera.h"
 
 #include "Core/NonCopyable.h"
 #include "Core/SObject.h"
@@ -40,9 +42,7 @@ namespace sh::render
 
 namespace sh::game
 {
-	class GameObject;
 	class Component;
-	class Camera;
 	class ImGUImpl;
 
 	class World : public sh::core::SObject, public sh::core::INonCopyable

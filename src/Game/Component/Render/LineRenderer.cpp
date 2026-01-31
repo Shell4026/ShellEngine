@@ -3,7 +3,7 @@
 
 #include "Render/Mesh.h"
 
-#include "GameObject.h"
+#include "World.h"
 
 #include "Core/Logger.h"
 

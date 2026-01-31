@@ -1,5 +1,5 @@
 ﻿#include "Component/Render/Camera.h"
-#include "GameObject.h"
+#include "World.h"
 
 #include "Render/IRenderContext.h"
 

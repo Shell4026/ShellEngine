@@ -4,6 +4,7 @@
 #include <Network/StringPacket.h>
 
 #include "Core/ThreadPool.h"
+#include "Core/Logger.h"
 
 namespace sh::game
 {

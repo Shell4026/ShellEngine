@@ -8,6 +8,7 @@
 #include "Core/Asset.h"
 #include "Core/AssetImporter.h"
 #include "Core/AssetExporter.h"
+#include "Core/Logger.h"
 
 #include "Render/Renderer.h"
 #include "Render/Model.h"

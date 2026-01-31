@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Export.h"
+#include "Texture.h"
 
 #include "Core/ISerializable.h"
 #include "Core/SContainer.hpp"
@@ -12,8 +13,6 @@
 
 namespace sh::render
 {
-	class Texture;
-
 	/// @brief 메테리얼에서 프로퍼티 값을 보관하는 객체
 	class MaterialPropertyBlock : public core::ISerializable
 	{

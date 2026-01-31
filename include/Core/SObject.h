@@ -1,11 +1,11 @@
 ﻿#pragma once
 #include "Export.h"
-#include "Reflection.hpp"
 #include "ISerializable.h"
 #include "SObjectManager.h"
 #include "Observer.hpp"
 #include "UUID.h"
 #include "Name.h"
+#include "Reflection/STypeInfo.hpp"
 
 #include <string>
 #include <utility>
@@ -14,13 +14,11 @@
 
 namespace sh::core
 {
-	class GarbageCollection;
-
 	/// @brief 엔진에서 쓰는 기본 객체. 리플렉션과 가비지 컬렉터를 쓰려면 해당 객체를 상속해야한다.
 	class SObject : public ISerializable
 	{
 		SCLASS(SObject)
-		friend GarbageCollection;
+		friend class GarbageCollection;
 	public:
 		/// @brief 복사 생성자. UUID는 복사하지 않는다.
 		/// @param other 다른 객체

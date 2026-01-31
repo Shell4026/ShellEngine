@@ -2,6 +2,8 @@
 #include "UI/Inspector.h"
 #include "AssetDatabase.h"
 
+#include "Game/World.h"
+
 #include "External/imgui/misc/cpp/imgui_stdlib.h"
 #include "imgui.h"
 

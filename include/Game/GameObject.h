@@ -2,9 +2,9 @@
 #include "Export.h"
 #include "IObject.h"
 #include "WorldEvents.hpp"
-#include "World.h"
 #include "Component/Component.h"
 #include "Component/Transform.h"
+#include "Component/Phys/Collider.h"
 
 #include "Core/Reflection.hpp"
 #include "Core/Util.h"
@@ -15,6 +15,7 @@
 
 namespace sh::game
 {
+	class World;
 	class GameObject : public core::SObject, public IObject
 	{
 		SCLASS(GameObject)

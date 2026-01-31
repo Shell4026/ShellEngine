@@ -2,9 +2,9 @@
 #include "../Export.h"
 
 #include "Core/Asset.h"
+#include "Core/SContainer.hpp"
 
 #include "Render/Mesh.h"
-
 namespace sh::game
 {
 	class MeshAsset : public core::Asset

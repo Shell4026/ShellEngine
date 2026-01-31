@@ -1,5 +1,7 @@
 ﻿#include "Component/Network/UdpServer.h"
 
+#include "Core/Logger.h"
+
 #include "Network/StringPacket.h"
 namespace sh::game
 {

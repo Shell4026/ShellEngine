@@ -2,6 +2,7 @@
 #include "Asset/TextAsset.h"
 
 #include "Core/FileSystem.h"
+#include "Core/Reflection.hpp"
 
 namespace sh::game
 {

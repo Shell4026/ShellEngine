@@ -5,16 +5,12 @@
 #include "Core/EventSubscriber.h"
 
 #include "Game/WorldEvents.hpp"
+#include "Game/World.h"
 
 #include <list>
 #include <unordered_map>
 #include <string_view>
 #include <string>
-namespace sh::game
-{
-	class GameObject;
-	class World;
-}
 namespace sh::editor
 {
 	class EditorWorld;

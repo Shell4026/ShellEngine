@@ -3,6 +3,7 @@
 #include "EditorWorld.h"
 
 #include "Core/FileSystem.h"
+#include "Core/Logger.h"
 
 #include <filesystem>
 #include <algorithm>
