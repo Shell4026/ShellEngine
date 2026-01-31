@@ -84,14 +84,11 @@ namespace sh::editor
 		renderer.SetScriptableRenderer(*customRenderer);
 		auto& editorRenderer = static_cast<EditorRenderer&>(*customRenderer);
 
-		game::GameObject* uicamObj = AddGameObject("UICamera");
-		uicamObj->transform->SetPosition({ 2.f, 2.f, 2.f });
-		uicamObj->hideInspector = true;
-		uicamObj->bNotSave = true;
-		game::Camera* cam = uicamObj->AddComponent<game::Camera>();
-		cam->SetDepth(1000);
+		auto& uiCamera = GetUICamera();
+		uiCamera.SetPriority(1000);
+		renderer.AddCamera(uiCamera);
 
-		editorRenderer.SetImGUICamera(cam->GetNative());
+		editorRenderer.SetImGUICamera(uiCamera);
 	}
 	SH_EDITOR_API void EditorWorld::InitResource()
 	{

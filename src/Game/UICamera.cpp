@@ -6,8 +6,8 @@ namespace sh::game
 	UICamera::UICamera()
 	{
 		SetOrthographic(true);
-		pos[core::ThreadType::Render] = pos[core::ThreadType::Game] = { 0.f, 0.f, 1.0f };
-		to[core::ThreadType::Render] = to[core::ThreadType::Game] = { 0.f, 0.f, 0.0f };
+		pos[core::ThreadType::Render] = pos[core::ThreadType::Game] = { 0.f, 0.f, 0.0f };
+		to[core::ThreadType::Render] = to[core::ThreadType::Game] = { 0.f, 0.f, -1.0f };
 
 		bufferData[core::ThreadType::Game].matProj =
 			glm::orthoRH_ZO(0.f, 13.66f, 0.0f, 7.68f, 0.01f, 1000.f);
