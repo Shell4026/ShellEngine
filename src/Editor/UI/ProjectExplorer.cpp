@@ -99,6 +99,14 @@ namespace sh::editor
 			return EditorResource::GetInstance()->GetIcon(EditorResource::Icon::Mesh);
 		case AssetExtensions::Type::Material:
 			return EditorResource::GetInstance()->GetIcon(EditorResource::Icon::Material);
+		case AssetExtensions::Type::Texture:
+			return EditorResource::GetInstance()->GetIcon(EditorResource::Icon::Image);
+		case AssetExtensions::Type::Shader:
+			return EditorResource::GetInstance()->GetIcon(EditorResource::Icon::Shader);
+		case AssetExtensions::Type::World:
+			return EditorResource::GetInstance()->GetIcon(EditorResource::Icon::World);
+		case AssetExtensions::Type::Prefab:
+			return EditorResource::GetInstance()->GetIcon(EditorResource::Icon::Prefab);
 		default:
 			return EditorResource::GetInstance()->GetIcon(EditorResource::Icon::File);
 		}

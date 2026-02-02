@@ -53,11 +53,23 @@ namespace sh::editor
 		assert(meshTex != nullptr);
 		auto materialTex = static_cast<render::Texture*>(project.loadedAssets.AddResource(core::UUID::Generate(), static_cast<render::Texture*>(texLoader.Load("textures/MaterialIcon.png"))));
 		assert(materialTex != nullptr);
+		auto imageTex = static_cast<render::Texture*>(project.loadedAssets.AddResource(core::UUID::Generate(), static_cast<render::Texture*>(texLoader.Load("textures/image.png"))));
+		assert(imageTex != nullptr);
+		auto shaderTex = static_cast<render::Texture*>(project.loadedAssets.AddResource(core::UUID::Generate(), static_cast<render::Texture*>(texLoader.Load("textures/shaderIcon.png"))));
+		assert(imageTex != nullptr);
+		auto worldTex = static_cast<render::Texture*>(project.loadedAssets.AddResource(core::UUID::Generate(), static_cast<render::Texture*>(texLoader.Load("textures/worldIcon.png"))));
+		assert(imageTex != nullptr);
+		auto prefabTex = static_cast<render::Texture*>(project.loadedAssets.AddResource(core::UUID::Generate(), static_cast<render::Texture*>(texLoader.Load("textures/prefabIcon.png"))));
+		assert(imageTex != nullptr);
 
 		folderIcon.Create(ctx, *folderTex);
 		fileIcon.Create(ctx, *fileTex);
 		meshIcon.Create(ctx, *meshTex);
 		materialIcon.Create(ctx, *materialTex);
+		imageIcon.Create(ctx, *imageTex);
+		shaderIcon.Create(ctx, *shaderTex);
+		worldIcon.Create(ctx, *worldTex);
+		prefabIcon.Create(ctx, *prefabTex);
 
 		auto lineShader = shaders.insert_or_assign("Line", static_cast<render::Shader*>(shaderLoader.Load("shaders/line.shader"))).first->second;
 		auto errorShader = shaders.insert_or_assign("ErrorShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/error.shader"))).first->second;
@@ -147,6 +159,14 @@ namespace sh::editor
 			return &meshIcon;
 		case Icon::Material:
 			return &materialIcon;
+		case Icon::Image:
+			return &imageIcon;
+		case Icon::Shader:
+			return &shaderIcon;
+		case Icon::World:
+			return &worldIcon;
+		case Icon::Prefab:
+			return &prefabIcon;
 		default:
 			return nullptr;
 		}

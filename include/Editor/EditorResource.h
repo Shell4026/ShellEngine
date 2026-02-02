@@ -15,20 +15,17 @@ namespace sh::editor
 
 	class EditorResource : public core::Singleton<EditorResource>
 	{
-	private:
-		game::GUITexture folderIcon, fileIcon, meshIcon, materialIcon;
-
-		core::SMap<std::string, render::Shader*> shaders;
-		core::SMap<std::string, render::Material*> materials;
-		core::SMap<std::string, render::Texture*> textures;
-		core::SMap<std::string, render::Model*> models;
 	public:
 		enum class Icon
 		{
 			Folder,
 			File,
 			Mesh,
-			Material
+			Material,
+			Image,
+			Shader,
+			World,
+			Prefab
 		};
 	public:
 		SH_EDITOR_API void LoadAllAssets(Project& project);
@@ -40,5 +37,12 @@ namespace sh::editor
 		SH_EDITOR_API auto GetModel(const std::string& name) -> render::Model*;
 
 		SH_EDITOR_API void ExtractAllAssetToLibrary(Project& project);
+	private:
+		game::GUITexture folderIcon, fileIcon, meshIcon, materialIcon, imageIcon, shaderIcon, worldIcon, prefabIcon;
+
+		core::SMap<std::string, render::Shader*> shaders;
+		core::SMap<std::string, render::Material*> materials;
+		core::SMap<std::string, render::Texture*> textures;
+		core::SMap<std::string, render::Model*> models;
 	};
 }//namespace
