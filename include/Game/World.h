@@ -81,7 +81,6 @@ namespace sh::game
 
 		SH_GAME_API void RegisterCamera(Camera* cam);
 		SH_GAME_API void UnRegisterCamera(Camera* cam);
-		SH_GAME_API auto GetCameras() const -> const std::unordered_set<Camera*>&;
 		SH_GAME_API void SetMainCamera(Camera* cam);
 		SH_GAME_API	auto GetMainCamera() const -> Camera*;
 
@@ -125,6 +124,7 @@ namespace sh::game
 		SH_GAME_API void Play();
 		SH_GAME_API void Stop();
 
+		SH_GAME_API auto GetCameras() const -> const core::SVector<Camera*>& { return cameras; }
 		SH_GAME_API auto IsPlaying() const -> bool;
 		SH_GAME_API auto IsStart() const -> bool;
 		SH_GAME_API auto IsLoaded() const -> bool;
@@ -146,7 +146,7 @@ namespace sh::game
 		core::EventBus eventBus;
 		std::unordered_map<GameObject*, std::size_t> objIdx;
 		std::vector<GameObject*> objs;
-		core::SHashSet<Camera*> cameras;
+		core::SVector<Camera*> cameras;
 
 		std::unique_ptr<render::ScriptableRenderer> customRenderer;
 	private:
@@ -155,7 +155,7 @@ namespace sh::game
 
 		core::memory::MemoryPool<GameObject> objPool;
 
-		std::vector<core::SObjWeakPtr<GameObject, void>> addedObjs; // 루프 도중 추가 된 객체
+		std::vector<core::SObjWeakPtr<GameObject>> addedObjs; // 루프 도중 추가 된 객체
 
 		float _deltaTime = 0.f;
 		float _fixedDeltaTime = 0.f;

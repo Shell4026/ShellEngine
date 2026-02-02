@@ -295,7 +295,12 @@ namespace sh::game
 	{
 		if (!core::IsValid(cam))
 			return;
-		cameras.insert(cam);
+		for (int i = 0; i < cameras.size(); ++i)
+		{
+			if (cameras[i] == cam)
+				return;
+		}
+		cameras.push_back(cam);
 		renderer.AddCamera(cam->GetNative());
 
 		eventBus.Publish(events::CameraEvent{ *cam, events::CameraEvent::Type::Added });
@@ -304,21 +309,16 @@ namespace sh::game
 	{
 		if (cam == nullptr)
 			return;
-		cameras.erase(cam);
+		cameras.erase(std::remove(cameras.begin(), cameras.end(), cam), cameras.end()); // O(n)
 		renderer.RemoveCamera(cam->GetNative());
 
 		eventBus.Publish(events::CameraEvent{ *cam, events::CameraEvent::Type::Removed });
 	}
-	SH_GAME_API auto World::GetCameras() const -> const std::unordered_set<Camera*>&
-	{
-		return cameras;
-	}
 	SH_GAME_API void World::SetMainCamera(Camera* cam)
 	{
-		if (core::IsValid(cam))
-		{
-			mainCamera = cam;
-		}
+		if (!core::IsValid(cam))
+			return;
+		mainCamera = cam;
 	}
 	SH_GAME_API auto World::GetMainCamera() const -> Camera*
 	{
