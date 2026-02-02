@@ -108,6 +108,8 @@ namespace sh::game
 		const float pitch = glm::degrees(asin(forward.y));
 		xdir = pitch;
 		ydir = yaw;
+		lastXdir = xdir;
+		lastYdir = ydir;
 	}
 
 	void EditorCamera::HandleMouseInput()
@@ -116,19 +118,28 @@ namespace sh::game
 
 		Zoom();
 
+		if (Input::GetMousePressed(Input::MouseType::Left) ||
+			Input::GetKeyPressed(Input::KeyCode::LAlt) && Input::GetMouseDown(Input::MouseType::Left))
+		{
+			leftPressedPos = Input::mousePosition;
+			leftMousePressed = true;
+		}
+		if (Input::GetMouseReleased(Input::MouseType::Left) || Input::GetKeyReleased(Input::KeyCode::LAlt))
+		{
+			leftMousePressed = false;
+			lastXdir = xdir;
+			lastYdir = ydir;
+		}
+
 		if (Input::GetKeyDown(Input::KeyCode::LAlt))
 		{
+			
 			if (Input::GetMouseDown(Input::MouseType::Left))
 			{
 				HandleLeftMouseDrag();
 			}
-			else
-			{
-				leftMousePressed = false;
-				lastXdir = xdir;
-				lastYdir = ydir;
-			}
 		}
+
 		if (Input::GetMouseDown(Input::MouseType::Middle))
 		{
 			HandleMiddleMouseDrag();
@@ -142,12 +153,6 @@ namespace sh::game
 
 	void EditorCamera::HandleLeftMouseDrag()
 	{
-		if (!leftMousePressed)
-		{
-			leftMousePressed = true;
-			leftPressedPos = Input::mousePosition;
-		}
-
 		glm::vec2 delta = Input::mousePosition - leftPressedPos;
 		xdir = lastXdir + rotationSpeed * delta.y;
 		ydir = lastYdir + rotationSpeed * delta.x;
