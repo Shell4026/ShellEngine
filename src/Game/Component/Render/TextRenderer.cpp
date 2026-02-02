@@ -61,6 +61,13 @@ namespace sh::game
             Setup();
         }
     }
+    SH_GAME_API auto TextRenderer::Serialize() const -> core::Json
+    {
+        auto json = Super::Serialize();
+        json["MeshRenderer"].erase("mesh");
+
+        return json;
+    }
     SH_GAME_API void TextRenderer::SetText(const std::string& text)
     {
         txt = text;
