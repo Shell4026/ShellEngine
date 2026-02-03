@@ -7,9 +7,13 @@
 
 #include "Core/FileSystem.h"
 
+#include "Render/Font.h"
+
 #include "Game/GUITexture.h"
 #include "Game/Prefab.h"
 #include "Game/GameManager.h"
+#include "Game/TextObject.h"
+#include "Game/BinaryObject.h"
 
 namespace sh::editor
 {
@@ -316,6 +320,9 @@ namespace sh::editor
 				core::reflection::GetType<EditorWorld>().name,
 				core::reflection::GetType<game::Prefab>().name,
 				core::reflection::GetType<game::World>().name,
+				core::reflection::GetType<render::Font>().name,
+				core::reflection::GetType<game::TextObject>().name,
+				core::reflection::GetType<game::BinaryObject>().name,
 			};
 			for (const std::string_view& assetType : assetTypes)
 			{

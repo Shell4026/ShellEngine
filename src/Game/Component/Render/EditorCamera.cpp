@@ -31,8 +31,7 @@ namespace sh::game
 
 	SH_GAME_API void EditorCamera::BeginUpdate()
 	{
-		if (bFocus)
-			HandleMouseInput();
+		HandleMouseInput();
 		ClampAngles();
 		UpdateCameraPosition();
 		Super::BeginUpdate();
@@ -153,6 +152,8 @@ namespace sh::game
 
 	void EditorCamera::HandleLeftMouseDrag()
 	{
+		if (!bFocus)
+			return;
 		glm::vec2 delta = Input::mousePosition - leftPressedPos;
 		xdir = lastXdir + rotationSpeed * delta.y;
 		ydir = lastYdir + rotationSpeed * delta.x;
@@ -160,6 +161,8 @@ namespace sh::game
 
 	void EditorCamera::HandleMiddleMouseDrag()
 	{
+		if (!bFocus)
+			return;
 		if (!middleMousePressed)
 		{
 			middleMousePressed = true;
@@ -178,6 +181,8 @@ namespace sh::game
 
 	void EditorCamera::Zoom()
 	{
+		if (!bFocus)
+			return;
 		float delta = 1.f;
 		if (Input::mouseWheelDelta > 0)
 			delta = 0.9f;
