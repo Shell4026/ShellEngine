@@ -121,8 +121,25 @@ namespace sh::editor
 				if (core::IsValid(objPtr))
 				{
 					auto prefab = game::Prefab::CreatePrefab(*objPtr);
-					assetDatabase.CreateAsset(projectExplorer.GetCurrentPath() / fmt::format("{}.prefab", prefab->GetName().ToString()), *prefab);
-					projectExplorer.Refresh();
+					const auto exportDir = projectExplorer.GetCurrentPath() / fmt::format("{}.prefab", prefab->GetName().ToString());
+					if (std::filesystem::exists(exportDir))
+					{
+						auto opt = assetDatabase.GetAssetUUID(exportDir);
+						assert(opt.has_value());
+						if (opt.has_value())
+						{
+							auto sobjPtr = core::SObjectManager::GetInstance()->GetSObject(opt.value());
+							auto oldPrefabPtr = static_cast<game::Prefab*>(sobjPtr);
+							*oldPrefabPtr = std::move(*prefab);
+							assetDatabase.SetDirty(oldPrefabPtr);
+							assetDatabase.SaveAllAssets();
+						}
+					}
+					else
+					{
+						assetDatabase.CreateAsset(exportDir, *prefab);
+						projectExplorer.Refresh();
+					}
 				}
 			}
 			ImGui::EndDragDropTarget();
