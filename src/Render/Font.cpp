@@ -3,21 +3,18 @@
 namespace sh::render
 {
 	Font::Font(const CreateInfo& ci) :
-		fontData(ci.fontData),
 		atlases(ci.atlases),
 		glyphs(ci.glyphs),
 		ascent(ci.ascent), descent(ci.descent), scale(ci.scale), lineGap(ci.lineGap)
 	{
 	}
 	Font::Font(CreateInfo&& ci) noexcept :
-		fontData(std::move(ci.fontData)),
 		atlases(std::move(ci.atlases)),
 		glyphs(std::move(ci.glyphs)),
 		ascent(ci.ascent), descent(ci.descent), scale(ci.scale), lineGap(ci.lineGap)
 	{
 	}
 	Font::Font(Font&& other) noexcept :
-		fontData(std::move(other.fontData)),
 		atlases(std::move(other.atlases)),
 		glyphs(std::move(other.glyphs)),
 		ascent(other.ascent), descent(other.descent), scale(other.scale), lineGap(other.lineGap)
@@ -29,7 +26,6 @@ namespace sh::render
 		if (this == &other)
 			return *this;
 
-		fontData = std::move(other.fontData);
 		atlases = std::move(other.atlases);
 		glyphs = std::move(other.glyphs);
 
@@ -76,6 +72,7 @@ namespace sh::render
 
 		Super::Deserialize(json);
 		const core::Json& fontJson = json["Font"];
+
 		ascent = fontJson.value("ascent", 0.f);
 		descent = fontJson.value("descent", 0.f);
 		lineGap = fontJson.value("lineGap", 0.f);
@@ -106,7 +103,6 @@ namespace sh::render
 
 	SH_RENDER_API void Font::Clear()
 	{
-		fontData.clear();
 		atlases.clear();
 		glyphs.clear();
 		ascent = descent = lineGap = 0.f;

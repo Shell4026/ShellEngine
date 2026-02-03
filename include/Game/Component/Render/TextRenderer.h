@@ -24,9 +24,12 @@ namespace sh::game
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 		SH_GAME_API auto Serialize() const -> core::Json override;
 
+		SH_GAME_API void SetFont(render::Font* font);
+
 		SH_GAME_API void SetText(const std::string& text);
 		SH_GAME_API void SetText(std::string&& text);
 
+		SH_GAME_API auto GetFont() const -> render::Font* { return font; }
 		SH_GAME_API auto GetText() const -> const std::string& { return txt; }
 	private:
 		void Setup();

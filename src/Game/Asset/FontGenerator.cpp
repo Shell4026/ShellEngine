@@ -146,7 +146,6 @@ namespace sh::game
         }
 
         render::Font::CreateInfo fontCi{};
-        fontCi.fontData = fontData;
         fontCi.atlases = std::move(results);
         fontCi.glyphs = std::move(glyphs);
         fontCi.ascent = ascent;

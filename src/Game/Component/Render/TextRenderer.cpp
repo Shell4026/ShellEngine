@@ -68,6 +68,12 @@ namespace sh::game
 
         return json;
     }
+    SH_GAME_API void TextRenderer::SetFont(render::Font* font)
+    {
+        this->font = font;
+        SetMesh(nullptr);
+        Setup();
+    }
     SH_GAME_API void TextRenderer::SetText(const std::string& text)
     {
         txt = text;
