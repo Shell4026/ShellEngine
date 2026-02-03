@@ -46,268 +46,6 @@
 #include <chrono>
 namespace sh::editor
 {
-	auto AssetDatabase::HasMetaFile(const std::filesystem::path& dir) -> std::optional<std::filesystem::path>
-	{
-		if (!std::filesystem::exists(dir))
-			return std::nullopt;
-		std::filesystem::path metaFileDir = Meta::CreateMetaDirectory(dir);
-		if (!std::filesystem::exists(metaFileDir))
-			return std::nullopt;
-		return metaFileDir;
-	}
-	void AssetDatabase::SaveMaterial(render::Material* mat, const std::filesystem::path& dir)
-	{
-		if (!core::IsValid(mat))
-			return;
-
-		core::Json matJson{ mat->Serialize() };
-
-		std::ofstream os{ dir };
-		os << std::setw(4) << matJson;
-		os.close();
-
-		Meta meta{};
-		meta.Save(*mat, Meta::CreateMetaDirectory(dir), false);
-	}
-
-	SH_EDITOR_API auto AssetDatabase::ImportAsset(const std::filesystem::path& dir) -> core::SObject*
-	{
-		if (!std::filesystem::exists(dir))
-			return nullptr;
-		if (std::filesystem::is_directory(dir))
-			return nullptr;
-		
-		const std::string extension = dir.extension().string();
-
-		auto type = AssetExtensions::CheckType(extension);
-		if (type == AssetExtensions::Type::Texture)
-		{
-			static game::TextureLoader loader{ *project->renderer.GetContext() };
-			render::Texture* texPtr = static_cast<render::Texture*>(LoadAsset(dir, loader, true));
-			if (texPtr != nullptr)
-				project->loadedAssets.AddResource(texPtr->GetUUID(), texPtr);
-			return texPtr;
-		}
-		if (type == AssetExtensions::Type::Model)
-		{
-			static game::ModelLoader loader{ *project->renderer.GetContext() };
-
-			const bool isAssetChanged = IsAssetChanged(dir);
-			render::Model* modelPtr = static_cast<render::Model*>(LoadAsset(dir, loader, true));
-			if (modelPtr != nullptr)
-			{
-				project->loadedAssets.AddResource(modelPtr->GetUUID(), modelPtr);
-
-				if (isAssetChanged)
-				{
-					for (const auto& mesh : modelPtr->GetMeshes())
-					{
-						if (mesh == nullptr)
-							continue;
-						const std::filesystem::path cachePath{ libPath / fmt::format("{}.asset", mesh->GetUUID().ToString()) };
-						ExportAsset(*mesh, cachePath);
-						paths.insert_or_assign(mesh->GetUUID(), AssetInfo{ std::filesystem::path{}, std::filesystem::relative(cachePath, projectPath) });
-					}
-				}
-			}
-			return modelPtr;
-		}
-		if (type == AssetExtensions::Type::Shader)
-		{
-			assert(project->renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan);
-			if (project->renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan)
-			{
-				static render::vk::VulkanShaderPassBuilder passBuilder{ static_cast<render::vk::VulkanContext&>(*project->renderer.GetContext()) };
-				static game::ShaderLoader loader{ &passBuilder };
-				loader.SetCachePath(projectPath / "temp");
-				render::Shader* const shaderPtr = static_cast<render::Shader*>(LoadAsset(dir, loader, false));
-				if (shaderPtr != nullptr)
-					project->loadedAssets.AddResource(shaderPtr->GetUUID(), shaderPtr);
-				return shaderPtr;
-			}
-		}
-		if (type == AssetExtensions::Type::Material)
-		{
-			static game::MaterialLoader loader{ *project->renderer.GetContext() };
-			render::Material* const matPtr = static_cast<render::Material*>(LoadAsset(dir, loader, false));
-			if (matPtr != nullptr)
-				project->loadedAssets.AddResource(matPtr->GetUUID(), matPtr);
-			return matPtr;
-		}
-		if (type == AssetExtensions::Type::World)
-		{
-			static game::WorldLoader loader{ project->renderer, project->gui };
-			game::World* const worldPtr = static_cast<game::World*>(LoadAsset(dir, loader, false));
-			if (worldPtr != nullptr)
-				project->loadedAssets.AddResource(worldPtr->GetUUID(), worldPtr);
-			return worldPtr;
-		}
-		if (type == AssetExtensions::Type::Prefab)
-		{
-			static game::PrefabLoader loader{};
-			game::Prefab* const prefabPtr = static_cast<game::Prefab*>(LoadAsset(dir, loader, false));
-			if (prefabPtr != nullptr)
-				project->loadedAssets.AddResource(prefabPtr->GetUUID(), prefabPtr);
-			return prefabPtr;
-		}
-		if (type == AssetExtensions::Type::Text)
-		{
-			static game::TextLoader loader{};
-			game::TextObject* const textObjPtr = static_cast<game::TextObject*>(LoadAsset(dir, loader, false));
-			if (textObjPtr != nullptr)
-				project->loadedAssets.AddResource(textObjPtr->GetUUID(), textObjPtr);
-			return textObjPtr;
-		}
-		if (type == AssetExtensions::Type::Font)
-		{
-			static game::FontLoader loader{};
-			render::Font* const fontPtr = static_cast<render::Font*>(LoadAsset(dir, loader, false));
-			if (fontPtr != nullptr)
-				project->loadedAssets.AddResource(fontPtr->GetUUID(), fontPtr);
-			return fontPtr;
-		}
-		return nullptr;
-	}
-
-	SH_EDITOR_API void AssetDatabase::SaveAllAssets()
-	{
-		for (auto obj : dirtyObjs)
-		{
-			if (!core::IsValid(obj))
-				continue;
-
-			auto it = paths.find(obj->GetUUID());
-			if (it == paths.end())
-				continue;
-			const auto& [originalPath, cachePath] = it->second;
-
-			if (!std::filesystem::exists(projectPath / originalPath))
-			{
-				SH_ERROR_FORMAT("{} is not exists!", originalPath.u8string());
-				continue;
-			}
-			uint64_t writeTime = std::filesystem::last_write_time(projectPath / originalPath).time_since_epoch().count();
-
-			if (obj->GetType() == render::Material::GetStaticType())
-			{
-				SaveMaterial(static_cast<render::Material*>(obj), projectPath / originalPath);
-			}
-			else if (obj->GetType() == render::Texture::GetStaticType())
-			{
-				render::Texture* texture = reinterpret_cast<render::Texture*>(obj);
-				Meta meta{};
-				meta.SaveWithObj(*texture, Meta::CreateMetaDirectory(projectPath / originalPath), false);
-			}
-			else if (obj->GetType().IsChildOf(game::World::GetStaticType()))
-			{
-				const game::World* world = static_cast<game::World*>(obj);
-
-				const auto worldPath = projectPath / originalPath;
-
-				std::ofstream os{ worldPath };
-				os << std::setw(4) << world->Serialize();
-				os.close();
-
-				Meta meta{};
-				meta.Save(*world, Meta::CreateMetaDirectory(projectPath / originalPath), false);
-			}
-		}
-		dirtyObjs.clear();
-	}
-
-	void AssetDatabase::LoadAllAssetsHelper(const std::filesystem::path& dir, bool recursive)
-	{
-		for (auto& entry : std::filesystem::directory_iterator(dir))
-		{
-			if (entry.is_directory())
-			{
-				if (recursive)
-					LoadAllAssetsHelper(entry.path(), recursive);
-			}
-			else if (entry.is_regular_file())
-			{
-				const std::string extension = entry.path().extension().u8string();
-				if (extension == ".meta")
-					continue;
-
-				int priority = 0;
-				auto type = AssetExtensions::CheckType(extension);
-				switch (type)
-				{
-				case AssetExtensions::Type::Material: [[fallthrough]];
-				case AssetExtensions::Type::Font:
-				{
-					priority = -1;
-					break;
-				}
-				default:
-					priority = 0;
-				}
-				loadingAssetsQueue.push(AssetLoadData{ priority, entry.path() });
-			}
-		}
-	}
-	auto AssetDatabase::LoadAsset(const std::filesystem::path& path, core::IAssetLoader& loader, bool bMetaSaveWithObj) -> core::SObject*
-	{
-		std::filesystem::path metaDir{ Meta::CreateMetaDirectory(path) };
-		std::filesystem::path relativePath{ std::filesystem::relative(path, projectPath) };
-		const int64_t writeTime = std::filesystem::last_write_time(path).time_since_epoch().count();
-
-		Meta meta{};
-		if (meta.Load(metaDir))
-		{
-			auto it = paths.find(meta.GetUUID());
-			if (it != paths.end())
-			{
-				const auto& [filePath, assetPath] = it->second;
-				std::unique_ptr<core::Asset> asset = core::AssetImporter::Load(projectPath / assetPath);
-				if (asset != nullptr)
-				{
-					int64_t assetWriteTime = asset->GetWriteTime();
-					bool bMetaChanged = meta.IsChanged();
-					if (assetWriteTime == writeTime && !bMetaChanged) // 다른 경우 에셋이 변경됐다는 뜻
-					{
-						core::SObject* objPtr = loader.Load(*asset.get());
-						if (objPtr == nullptr)
-							return nullptr;
-
-						objPtr->SetName(path.stem().u8string());
-
-						uuids.insert_or_assign(relativePath, objPtr->GetUUID());
-						return objPtr;
-					}
-					else
-					{
-						SH_INFO_FORMAT("Asset {} was changed!", relativePath.u8string());
-					}
-				}
-			}
-		}
-		core::SObject* objPtr = loader.Load(path);
-		if (objPtr == nullptr)
-			return nullptr;
-
-		if (meta.IsLoad())
-			meta.DeserializeSObject(*objPtr);
-		else
-		{
-			objPtr->SetName(path.stem().u8string());
-		}
-
-		std::filesystem::path cachePath{ libPath / fmt::format("{}.asset", objPtr->GetUUID().ToString()) };
-		if (!ExportAsset(*objPtr, cachePath, writeTime))
-			return nullptr;
-
-		uuids.insert_or_assign(relativePath, objPtr->GetUUID());
-		paths.insert_or_assign(objPtr->GetUUID(), AssetInfo{ relativePath, std::filesystem::relative(cachePath, projectPath) });
-
-		if (bMetaSaveWithObj)
-			meta.SaveWithObj(*objPtr, metaDir);
-		else
-			meta.Save(*objPtr, metaDir);
-
-		return objPtr;
-	}
 	AssetDatabase::AssetDatabase()
 	{
 		projectPath = std::filesystem::current_path();
@@ -321,9 +59,11 @@ namespace sh::editor
 			}
 		);
 	}
+
 	SH_EDITOR_API void AssetDatabase::SetProject(Project& project)
 	{
 		this->project = &project;
+		InitImporters();
 	}
 	SH_EDITOR_API void AssetDatabase::SaveDatabase(const std::filesystem::path& dir)
 	{
@@ -381,6 +121,46 @@ namespace sh::editor
 		projectPath = dir;
 		libPath = projectPath / "Library";
 	}
+	SH_EDITOR_API void AssetDatabase::SaveAllAssets()
+	{
+		for (auto obj : dirtyObjs)
+		{
+			if (!core::IsValid(obj))
+				continue;
+
+			auto it = paths.find(obj->GetUUID());
+			if (it == paths.end())
+				continue;
+			const auto& [originalPath, cachePath] = it->second;
+
+			if (!std::filesystem::exists(projectPath / originalPath))
+			{
+				SH_ERROR_FORMAT("{} is not exists!", originalPath.u8string());
+				continue;
+			}
+			const uint64_t writeTime = std::filesystem::last_write_time(projectPath / originalPath).time_since_epoch().count();
+			const std::string ext = originalPath.extension().u8string();
+			const AssetExtensions::Type type = AssetExtensions::CheckType(ext);
+
+			const AssetLoaderRegistry::Importer* const importer = assetLoaders.GetLoader(type);
+			if (importer->bObjDataInMeta)
+			{
+				Meta meta{};
+				meta.SaveWithObj(*obj, Meta::CreateMetaDirectory(projectPath / originalPath), false);
+			}
+			else
+			{
+				std::ofstream os{ projectPath / originalPath };
+				os << std::setw(4) << obj->Serialize();
+				os.close();
+
+				Meta meta{};
+				meta.Save(*obj, Meta::CreateMetaDirectory(projectPath / originalPath), false);
+			}
+			ExportAsset(*obj, projectPath / cachePath, writeTime);
+		}
+		dirtyObjs.clear();
+	}
 	SH_EDITOR_API void AssetDatabase::LoadAllAssets(const std::filesystem::path& dir, bool recursive)
 	{
 		LoadAllAssetsHelper(dir, recursive);
@@ -392,6 +172,42 @@ namespace sh::editor
 			ImportAsset(data.path);
 		}
 		SaveDatabase(project->GetLibraryPath() / "AssetDB.json");
+	}
+	SH_EDITOR_API auto AssetDatabase::ImportAsset(const std::filesystem::path& dir) -> core::SObject*
+	{
+		if (!std::filesystem::exists(dir))
+			return nullptr;
+		if (std::filesystem::is_directory(dir))
+			return nullptr;
+
+		const std::string extension = dir.extension().string();
+
+		auto type = AssetExtensions::CheckType(extension);
+		AssetLoaderRegistry::Importer* const importerPtr = assetLoaders.GetLoader(type);
+		if (importerPtr == nullptr)
+			return nullptr;
+
+		core::SObject* const objPtr = LoadAsset(dir, *importerPtr->loader, importerPtr->bObjDataInMeta);
+		if (objPtr != nullptr)
+			project->loadedAssets.AddResource(objPtr->GetUUID(), objPtr);
+
+		// 모델 파일은 특수처리 필요
+		if (type == AssetExtensions::Type::Model)
+		{
+			if (objPtr != nullptr && IsAssetChanged(dir))
+			{
+				render::Model* const modelPtr = static_cast<render::Model*>(objPtr);
+				for (const auto& mesh : modelPtr->GetMeshes())
+				{
+					if (mesh == nullptr)
+						continue;
+					const std::filesystem::path cachePath{ libPath / fmt::format("{}.asset", mesh->GetUUID().ToString()) };
+					ExportAsset(*mesh, cachePath);
+					paths.insert_or_assign(mesh->GetUUID(), AssetInfo{ std::filesystem::path{}, std::filesystem::relative(cachePath, projectPath) });
+				}
+			}
+		}
+		return objPtr;
 	}
 
 	SH_EDITOR_API bool AssetDatabase::CreateAsset(const std::filesystem::path& dir, const core::SObject& obj)
@@ -620,5 +436,119 @@ namespace sh::editor
 		const bool bMetaChanged = meta.IsChanged();
 
 		return (assetWriteTime != writeTime) || bMetaChanged;
+	}
+
+	void AssetDatabase::InitImporters()
+	{
+		assert(project->renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan); // TODO
+		static render::vk::VulkanShaderPassBuilder passBuilder{ static_cast<render::vk::VulkanContext&>(*project->renderer.GetContext()) };
+		auto shaderLoader = std::make_unique<game::ShaderLoader>(&passBuilder);
+		shaderLoader->SetCachePath(projectPath / "temp");
+
+		assetLoaders.Clear();
+		assetLoaders.RegisterLoader(AssetExtensions::Type::Model, std::make_unique<game::ModelLoader>(*project->renderer.GetContext()), 2, true);
+		assetLoaders.RegisterLoader(AssetExtensions::Type::Texture, std::make_unique<game::TextureLoader>(*project->renderer.GetContext()), 2, true);
+		assetLoaders.RegisterLoader(AssetExtensions::Type::Shader, std::move(shaderLoader), 2, false);
+		assetLoaders.RegisterLoader(AssetExtensions::Type::Text, std::make_unique<game::TextLoader>(), 2, false);
+
+		assetLoaders.RegisterLoader(AssetExtensions::Type::Material, std::make_unique<game::MaterialLoader>(*project->renderer.GetContext()), 1, false);
+		assetLoaders.RegisterLoader(AssetExtensions::Type::Font, std::make_unique<game::FontLoader>(), 1, false);
+		assetLoaders.RegisterLoader(AssetExtensions::Type::Prefab, std::make_unique<game::PrefabLoader>(), 1, false);
+
+		assetLoaders.RegisterLoader(AssetExtensions::Type::World, std::make_unique<game::WorldLoader>(project->renderer, project->gui), 0, false);
+	}
+	auto AssetDatabase::HasMetaFile(const std::filesystem::path& dir) -> std::optional<std::filesystem::path>
+	{
+		if (!std::filesystem::exists(dir))
+			return std::nullopt;
+		std::filesystem::path metaFileDir = Meta::CreateMetaDirectory(dir);
+		if (!std::filesystem::exists(metaFileDir))
+			return std::nullopt;
+		return metaFileDir;
+	}
+	void AssetDatabase::LoadAllAssetsHelper(const std::filesystem::path& dir, bool recursive)
+	{
+		for (auto& entry : std::filesystem::directory_iterator(dir))
+		{
+			if (entry.is_directory())
+			{
+				if (recursive)
+					LoadAllAssetsHelper(entry.path(), recursive);
+			}
+			else if (entry.is_regular_file())
+			{
+				const std::string extension = entry.path().extension().u8string();
+				if (extension == ".meta")
+					continue;
+
+				int priority = 0;
+				const auto type = AssetExtensions::CheckType(extension);
+				const auto const importer = assetLoaders.GetLoader(type);
+				if (importer != nullptr)
+					priority = importer->priority;
+				loadingAssetsQueue.push(AssetLoadData{ priority, entry.path() });
+			}
+		}
+	}
+	auto AssetDatabase::LoadAsset(const std::filesystem::path& path, core::IAssetLoader& loader, bool bMetaSaveWithObj) -> core::SObject*
+	{
+		std::filesystem::path metaDir{ Meta::CreateMetaDirectory(path) };
+		std::filesystem::path relativePath{ std::filesystem::relative(path, projectPath) };
+		const int64_t writeTime = std::filesystem::last_write_time(path).time_since_epoch().count();
+
+		Meta meta{};
+		if (meta.Load(metaDir))
+		{
+			auto it = paths.find(meta.GetUUID());
+			if (it != paths.end())
+			{
+				const auto& [filePath, assetPath] = it->second;
+				std::unique_ptr<core::Asset> asset = core::AssetImporter::Load(projectPath / assetPath);
+				if (asset != nullptr)
+				{
+					int64_t assetWriteTime = asset->GetWriteTime();
+					bool bMetaChanged = meta.IsChanged();
+					if (assetWriteTime == writeTime && !bMetaChanged) // 다른 경우 에셋이 변경됐다는 뜻
+					{
+						core::SObject* objPtr = loader.Load(*asset.get());
+						if (objPtr == nullptr)
+							return nullptr;
+
+						objPtr->SetName(path.stem().u8string());
+
+						uuids.insert_or_assign(relativePath, objPtr->GetUUID());
+						return objPtr;
+					}
+					else
+					{
+						SH_INFO_FORMAT("Asset {} was changed!", relativePath.u8string());
+					}
+				}
+			}
+		}
+		core::SObject* objPtr = loader.Load(path);
+		if (objPtr == nullptr)
+			return nullptr;
+
+		if (meta.IsLoad())
+			meta.DeserializeSObject(*objPtr);
+		else
+		{
+			objPtr->SetName(path.stem().u8string());
+		}
+
+		std::filesystem::path cachePath{ libPath / fmt::format("{}.asset", objPtr->GetUUID().ToString()) };
+		if (!ExportAsset(*objPtr, cachePath, writeTime))
+			return nullptr;
+
+		uuids.insert_or_assign(relativePath, objPtr->GetUUID());
+		paths.insert_or_assign(objPtr->GetUUID(), AssetInfo{ relativePath, std::filesystem::relative(cachePath, projectPath) });
+
+		if (bMetaSaveWithObj)
+			meta.SaveWithObj(*objPtr, metaDir);
+		else
+			meta.Save(*objPtr, metaDir);
+
+		return objPtr;
 	}
 }//namespace

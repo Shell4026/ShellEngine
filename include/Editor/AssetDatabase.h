@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Export.h"
+#include "AssetLoaderRegistry.h"
 
 #include "Core/Singleton.hpp"
 #include "Core/ISerializable.h"
@@ -85,11 +86,11 @@ namespace sh::editor
 	protected:
 		SH_EDITOR_API AssetDatabase();
 	private:
+		void InitImporters();
 		/// @brief 파일의 메타 파일이 존재 하는지?
 		/// @param dir 파일 경로
 		/// @return 있다면 메타 파일의 경로를 반환, 없다면 nullopt 반환
-		auto HasMetaFile(const std::filesystem::path& dir) -> std::optional<std::filesystem::path>;
-		void SaveMaterial(render::Material* mat, const std::filesystem::path& dir);
+		auto HasMetaFile(const std::filesystem::path& dir) -> std::optional<std::filesystem::path>;\
 		void LoadAllAssetsHelper(const std::filesystem::path& dir, bool recursive);
 		auto LoadAsset(const std::filesystem::path& path, core::IAssetLoader& loader, bool bMetaSaveWithObj) -> core::SObject*;
 	private:
@@ -136,5 +137,7 @@ namespace sh::editor
 		std::priority_queue<AssetLoadData> loadingAssetsQueue{};
 
 		core::Observer<false, const core::SObject*>::Listener onDestroyListener;
+
+		AssetLoaderRegistry assetLoaders;
 	};
 }//namespace

@@ -24,4 +24,29 @@ namespace sh::editor
 			return Type::None;
 		return it->second;
 	}
+	SH_EDITOR_API auto AssetExtensions::ToString(Type type) -> const char*
+	{
+		switch (type)
+		{
+		case Type::None:
+			return "None";
+		case Type::Model:
+			return "Model";
+		case Type::Texture:
+			return "Texture";
+		case Type::Material:
+			return "Material";
+		case Type::World:
+			return "World";
+		case Type::Shader:
+			return "Shader";
+		case Type::Prefab:
+			return "Prefab";
+		case Type::Text:
+			return "Text";
+		case Type::Font:
+			return "Font";
+		}
+		return "None";
+	}
 }//namespace
