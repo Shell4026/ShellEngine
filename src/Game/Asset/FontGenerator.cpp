@@ -138,7 +138,7 @@ namespace sh::game
         results.reserve(pages.size());
         for (auto& page : pages)
         {
-            render::Texture* tex = core::SObject::Create<render::Texture>(render::TextureFormat::R8, page.width, page.height);
+            render::Texture* tex = core::SObject::Create<render::Texture>(render::TextureFormat::R8, page.width, page.height, false);
             tex->SetPixelData(std::move(page.pixels));
             tex->Build(ctx);
 

@@ -20,6 +20,9 @@ namespace sh::render
 		ascent(other.ascent), descent(other.descent), scale(other.scale), lineGap(other.lineGap)
 	{
 	}
+	Font::~Font()
+	{
+	}
 
 	SH_RENDER_API auto Font::operator=(Font&& other) noexcept -> Font&
 	{

@@ -197,7 +197,7 @@ namespace sh::editor
 				if (!std::filesystem::exists(atlasMetaDir))
 				{
 					Meta atlasMeta{};
-					atlasMeta.Save(*tex, atlasMetaDir);
+					atlasMeta.SaveWithObj(*tex, atlasMetaDir);
 				}
 			}
 		}

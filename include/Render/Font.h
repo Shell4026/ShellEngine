@@ -42,6 +42,7 @@ namespace sh::render
 		SH_RENDER_API Font(const CreateInfo& ci);
 		SH_RENDER_API Font(CreateInfo&& ci) noexcept;
 		SH_RENDER_API Font(Font&& other) noexcept;
+		SH_RENDER_API ~Font();
 
 		SH_RENDER_API auto operator=(Font&& other) noexcept -> Font&;
 

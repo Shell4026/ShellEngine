@@ -108,8 +108,11 @@ namespace sh::game
             SetMaterialPropertyBlock(std::make_unique<render::MaterialPropertyBlock>());
         propBlock = GetMaterialPropertyBlock();
 
-        propBlock->SetProperty("tex", font->GetAtlases()[0]);
-        UpdatePropertyBlockData();
+        if (!font->GetAtlases().empty())
+        {
+            propBlock->SetProperty("tex", font->GetAtlases()[0]);
+            UpdatePropertyBlockData();
+        }
     }
     auto TextRenderer::CreateQuad() -> render::Mesh*
     {
