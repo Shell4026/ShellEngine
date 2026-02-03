@@ -2,8 +2,6 @@
 #include "Export.h"
 
 #include "Core/SObject.h"
-
-#include <regex>
 namespace sh::game
 {
 	class World;
@@ -15,10 +13,13 @@ namespace sh::game
 	public:
 		SH_GAME_API Prefab();
 
+		SH_GAME_API auto Serialize() const -> core::Json override;
+		SH_GAME_API void Deserialize(const core::Json& json) override;
+
 		SH_GAME_API auto AddToWorld(World& world) -> GameObject*;
 
-		SH_GAME_API auto Serialize() const->core::Json override;
-		SH_GAME_API void Deserialize(const core::Json& json) override;
+		SH_GAME_API auto operator=(const Prefab& other) -> Prefab&;
+		SH_GAME_API auto operator=(Prefab&& other) noexcept -> Prefab&;
 
 		SH_GAME_API static auto CreatePrefab(const GameObject& obj) -> Prefab*;
 	private:

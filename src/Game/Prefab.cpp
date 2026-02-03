@@ -11,6 +11,21 @@ namespace sh::game
 		rootObjUUID(core::UUID::GenerateEmptyUUID())
 	{
 	}
+	SH_GAME_API auto Prefab::Serialize() const -> core::Json
+	{
+		core::Json mainJson = Super::Serialize();
+		mainJson["rootObj"] = rootObjUUID.ToString();
+		mainJson["Prefab"] = prefabJson;
+		return mainJson;
+	}
+	SH_GAME_API void Prefab::Deserialize(const core::Json& json)
+	{
+		Super::Deserialize(json);
+		if (json.contains("rootObj"))
+			rootObjUUID = core::UUID{ json["rootObj"].get<std::string>() };
+		if (json.contains("Prefab"))
+			prefabJson = json["Prefab"];
+	}
 	SH_GAME_API auto Prefab::AddToWorld(World& world) -> GameObject*
 	{
 		if (prefabJson.is_discarded())
@@ -87,20 +102,17 @@ namespace sh::game
 		auto resultObj = static_cast<GameObject*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ changedRootUUIDStr }));
 		return resultObj;
 	}
-	SH_GAME_API auto Prefab::Serialize() const -> core::Json
+	SH_GAME_API auto Prefab::operator=(const Prefab& other) -> Prefab&
 	{
-		core::Json mainJson = Super::Serialize();
-		mainJson["rootObj"] = rootObjUUID.ToString();
-		mainJson["Prefab"] = prefabJson;
-		return mainJson;
+		rootObjUUID = other.rootObjUUID;
+		prefabJson = other.prefabJson;
+		return *this;
 	}
-	SH_GAME_API void Prefab::Deserialize(const core::Json& json)
+	SH_GAME_API auto Prefab::operator=(Prefab&& other) noexcept -> Prefab&
 	{
-		Super::Deserialize(json);
-		if (json.contains("rootObj"))
-			rootObjUUID = core::UUID{ json["rootObj"].get<std::string>() };
-		if (json.contains("Prefab"))
-			prefabJson = json["Prefab"];
+		rootObjUUID = other.rootObjUUID;
+		prefabJson = std::move(other.prefabJson);
+		return *this;
 	}
 	SH_GAME_API auto Prefab::CreatePrefab(const GameObject& obj) -> Prefab*
 	{
@@ -135,7 +147,6 @@ namespace sh::game
 	}
 	void Prefab::ChangeUUIDS(const std::unordered_map<std::string, std::string>& changed, core::Json& json)
 	{
-		static std::regex uuidRegex{ "^[0-9a-f]{32}$", std::regex::optimize };
 		if (json.is_object())
 		{
 			for (auto const& [key, val] : json.items())
@@ -153,12 +164,12 @@ namespace sh::game
 		else if (json.is_string())
 		{
 			const std::string& value = json.get_ref<const std::string&>();
-			if (std::regex_match(value, uuidRegex))
-			{
-				auto it = changed.find(value);
-				if (it != changed.end())
-					json = it->second;
-			}
+			if (value.length() != 32)
+				return;
+
+			auto it = changed.find(value);
+			if (it != changed.end())
+				json = it->second;
 		}
 	}
 }
