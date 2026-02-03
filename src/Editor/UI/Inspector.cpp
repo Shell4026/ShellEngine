@@ -385,20 +385,23 @@ namespace sh::editor
 							}
 							else
 							{
-								// 부모 타입하고도 일치 하는지 검사
+								// 부모 타입하고는 일치 하는지 검사
 								core::SObject** dataPtr = reinterpret_cast<core::SObject**>(currentPayload->Data);
 								if (dataPtr != nullptr)
 								{
 									auto type = &(*dataPtr)->GetType();
 									while (type != nullptr)
 									{
-										const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(std::string{ type->type.name }.c_str());
-										if (payload != nullptr)
+										if (type->type.name == propTypeName) // 맞으면 페이로드 허용
 										{
-											*obj = *reinterpret_cast<core::SObject**>(payload->Data);
-											propertyOwner.OnPropertyChanged(prop);
-											AssetDatabase::GetInstance()->SetDirty(&propertyOwner);
-											AssetDatabase::GetInstance()->SaveAllAssets();
+											const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(currentPayload->DataType);
+											if (payload != nullptr)
+											{
+												*obj = *reinterpret_cast<core::SObject**>(payload->Data);
+												propertyOwner.OnPropertyChanged(prop);
+												AssetDatabase::GetInstance()->SetDirty(&propertyOwner);
+												AssetDatabase::GetInstance()->SaveAllAssets();
+											}
 										}
 										type = type->super;
 									}
