@@ -11,22 +11,9 @@ namespace sh::game
 {
 	class Input
 	{
-	private:
-		static std::bitset<100> keyPressing;
-		static std::bitset<100> keyPressingOneFrame;
-		static std::bitset<100> keyReleasingOneFrame;
-		static std::bitset<3> mousePressing;
-		static std::bitset<3> mousePressingOneFrame;
-		static std::bitset<3> mouseReleasingOneFrame;
-		static glm::vec2 mousePos;
-		static glm::vec2 mouseDelta;
-		static float wheelDelta;
 	public:
 		using KeyCode = window::Event::KeyType;
 		using MouseType = window::Event::MouseType;
-		SH_GAME_API static const glm::vec2& mousePosition;
-		SH_GAME_API static const glm::vec2& mousePositionDelta;
-		SH_GAME_API static const float& mouseWheelDelta;
 	public:
 		SH_GAME_API static void Update();
 		/// @brief 이벤트를 받아서 상태를 업데이트 하는 함수.
@@ -60,5 +47,20 @@ namespace sh::game
 		/// @param MouseType 마우스 타입 enum
 		/// @return 뗏으면 true, 아니면 false.
 		SH_GAME_API static bool GetMouseReleased(MouseType mouseType);
+		SH_GAME_API static void ResetKeyState();
+	public:
+		SH_GAME_API static const glm::vec2& mousePosition;
+		SH_GAME_API static const glm::vec2& mousePositionDelta;
+		SH_GAME_API static const float& mouseWheelDelta;
+	private:
+		static std::bitset<100> keyPressing;
+		static std::bitset<100> keyPressingOneFrame;
+		static std::bitset<100> keyReleasingOneFrame;
+		static std::bitset<3> mousePressing;
+		static std::bitset<3> mousePressingOneFrame;
+		static std::bitset<3> mouseReleasingOneFrame;
+		static glm::vec2 mousePos;
+		static glm::vec2 mouseDelta;
+		static float wheelDelta;
 	};
 }

@@ -104,4 +104,9 @@ namespace sh::game
 	{
 		return mouseReleasingOneFrame[static_cast<uint32_t>(mouseType)];
 	}
+	SH_GAME_API void Input::ResetKeyState()
+	{
+		keyReleasingOneFrame = keyPressing;
+		keyPressing.reset();
+	}
 }

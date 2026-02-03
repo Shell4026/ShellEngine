@@ -126,6 +126,7 @@ namespace sh
 				break;
 			case sh::window::Event::EventType::WindowFocusOut:
 				SH_INFO("FocusOut");
+				sh::game::Input::ResetKeyState();
 				break;
 			}
 		}
