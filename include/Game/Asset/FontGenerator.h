@@ -37,6 +37,14 @@ namespace sh::game
             std::string_view u8str,
             Options opt
         ) -> render::Font*;
+        SH_GAME_API static auto GenerateFont(
+            const render::IRenderContext& ctx,
+            const std::vector<uint8_t>& fontData,
+            const std::vector<uint32_t> unicodes,
+            Options opt
+        ) -> render::Font*;
+
+        SH_GAME_API static auto ExtractUnicode(std::string_view u8str) -> std::vector<uint32_t>;
     private:
         static auto NewPage(const Options& opt) -> AtlasPage;
     };

@@ -3,6 +3,7 @@
 
 #include "Core/FileSystem.h"
 #include "Core/Logger.h"
+#include "Core/Util.h"
 
 #include "Game/Asset/FontGenerator.h"
 
@@ -13,7 +14,6 @@ namespace sh::editor
 	FontGeneratorUI::FontGeneratorUI(const render::IRenderContext& ctx) :
 		renderCtx(ctx)
 	{
-		explorer.SetExtensionFilter({ ".ttf", ".otf" });
 	}
 	SH_EDITOR_API void FontGeneratorUI::SetAssetPath(const std::filesystem::path& assetPath)
 	{
@@ -32,6 +32,7 @@ namespace sh::editor
 		padding = 2;
 		atlasWidth = 1024;
 		atlasHeight = 1024;
+		unicodes.clear();
 	}
 	SH_EDITOR_API void FontGeneratorUI::Open()
 	{
@@ -55,6 +56,7 @@ namespace sh::editor
 			}
 			if (ImGui::Button("Open Font File"))
 			{
+				explorer.SetExtensionFilter({ ".ttf", ".otf" });
 				explorer.PushCallbackQueue(
 					[this](const std::filesystem::path& path)
 					{
@@ -92,68 +94,41 @@ namespace sh::editor
 
 				ImGui::Text("Characters");
 				ImGui::InputText("##fontstrs", &str);
+				if (ImGui::Button("Add from file(UTF-8)"))
+				{
+					explorer.ClearExtensionFilter();
+					explorer.PushCallbackQueue(
+						[this](const std::filesystem::path& path)
+						{
+							auto opt = core::FileSystem::LoadText(path);
+							if (!opt.has_value())
+								return;
 
+							std::set<uint32_t> uniSet;
+							uniSet.insert(unicodes.begin(), unicodes.end());
+							auto tmp = game::FontGenerator::ExtractUnicode(opt.value());
+							uniSet.insert(tmp.begin(), tmp.end());
+							unicodes.clear();
+							unicodes.reserve(uniSet.size());
+							unicodes.insert(unicodes.begin(), uniSet.begin(), uniSet.end());
+						}
+					);
+					explorer.Open(ExplorerUI::OpenMode::Select);
+				}
+				ImGui::SameLine();
+				if (ImGui::Button("Clear unicodes"))
+					unicodes.clear();
+
+				if (!unicodes.empty())
+					ImGui::Text("Unicode count: %d", unicodes.size());
+
+				ImGui::Separator();
 				if (ImGui::Button("Generate font data"))
 				{
 					explorer.PushCallbackQueue(
 						[this](const std::filesystem::path& path)
 						{
-							game::FontGenerator::Options option{};
-							option.fontSize = fontSize;
-							option.padding = padding;
-							option.atlasW = atlasWidth;
-							option.atlasH = atlasHeight;
-							option.bAllowMultiPage = true;
-
-							render::Font* font = game::FontGenerator::GenerateFont(renderCtx, fontData, str, option);
-							if (font == nullptr)
-							{
-								SH_ERROR_FORMAT("Failed to generate font!: {}", fontPath.u8string());
-								return;
-							}
-							const std::string fileName = path.stem().u8string();
-
-							font->SetName(fileName);
-
-							const std::filesystem::path exportedFontPath = path.parent_path() / std::filesystem::u8path(fileName + ".font");
-							std::vector<std::filesystem::path> exportedAtlasPaths;
-
-							if (!core::FileSystem::SaveText(font->Serialize(), exportedFontPath))
-							{
-								SH_ERROR_FORMAT("Failed to export font: {}", exportedFontPath.u8string());
-								return;
-							}
-
-							int idx = 0;
-							for (auto tex : font->GetAtlases())
-							{
-								std::filesystem::path exportPath = path.parent_path() / std::filesystem::u8path(fileName + std::to_string(idx++) + ".png");
-								tex->SetName(exportPath.stem().u8string());
-								tex->ExportToPNG(exportPath);
-								exportedAtlasPaths.push_back(std::move(exportPath));
-							}
-
-							// 에셋 폴더내에 생성했다면 메타 파일 생성
-							const std::filesystem::path relativePath = std::filesystem::relative(path, assetPath);
-							if (!relativePath.empty())
-							{
-								const auto fontMetaDir = Meta::CreateMetaDirectory(exportedFontPath);
-								if (!std::filesystem::exists(fontMetaDir))
-								{
-									Meta meta{};
-									meta.Save(*font, Meta::CreateMetaDirectory(exportedFontPath));
-								}
-								int idx = 0;
-								for (auto tex : font->GetAtlases())
-								{
-									const auto atlasMetaDir = Meta::CreateMetaDirectory(exportedAtlasPaths[idx++]);
-									if (!std::filesystem::exists(atlasMetaDir))
-									{
-										Meta atlasMeta{};
-										atlasMeta.Save(*tex, atlasMetaDir);
-									}
-								}
-							}
+							ExportFont(path);
 						}
 					);
 					explorer.ResetSelected();
@@ -164,5 +139,67 @@ namespace sh::editor
 		ImGui::End();
 
 		explorer.Render();
+	}
+	void FontGeneratorUI::ExportFont(const std::filesystem::path& path)
+	{
+		game::FontGenerator::Options option{};
+		option.fontSize = fontSize;
+		option.padding = padding;
+		option.atlasW = atlasWidth;
+		option.atlasH = atlasHeight;
+		option.bAllowMultiPage = true;
+
+		auto tempUnicodes = game::FontGenerator::ExtractUnicode(str);
+		unicodes.insert(unicodes.end(), tempUnicodes.begin(), tempUnicodes.end());
+
+		render::Font* font = game::FontGenerator::GenerateFont(renderCtx, fontData, unicodes, option);
+		if (font == nullptr)
+		{
+			SH_ERROR_FORMAT("Failed to generate font!: {}", fontPath.u8string());
+			return;
+		}
+		const std::string fileName = path.stem().u8string();
+
+		font->SetName(fileName);
+
+		const std::filesystem::path exportedFontPath = path.parent_path() / std::filesystem::u8path(fileName + ".font");
+		std::vector<std::filesystem::path> exportedAtlasPaths;
+
+		if (!core::FileSystem::SaveText(font->Serialize(), exportedFontPath))
+		{
+			SH_ERROR_FORMAT("Failed to export font: {}", exportedFontPath.u8string());
+			return;
+		}
+
+		int idx = 0;
+		for (auto tex : font->GetAtlases())
+		{
+			std::filesystem::path exportPath = path.parent_path() / std::filesystem::u8path(fileName + std::to_string(idx++) + ".png");
+			tex->SetName(exportPath.stem().u8string());
+			tex->ExportToPNG(exportPath);
+			exportedAtlasPaths.push_back(std::move(exportPath));
+		}
+
+		// 에셋 폴더내에 생성했다면 메타 파일 생성
+		const std::filesystem::path relativePath = std::filesystem::relative(path, assetPath);
+		if (!relativePath.empty())
+		{
+			const auto fontMetaDir = Meta::CreateMetaDirectory(exportedFontPath);
+			if (!std::filesystem::exists(fontMetaDir))
+			{
+				Meta meta{};
+				meta.Save(*font, Meta::CreateMetaDirectory(exportedFontPath));
+			}
+			int idx = 0;
+			for (auto tex : font->GetAtlases())
+			{
+				const auto atlasMetaDir = Meta::CreateMetaDirectory(exportedAtlasPaths[idx++]);
+				if (!std::filesystem::exists(atlasMetaDir))
+				{
+					Meta atlasMeta{};
+					atlasMeta.Save(*tex, atlasMetaDir);
+				}
+			}
+		}
 	}
 }//namespace

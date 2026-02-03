@@ -15,6 +15,12 @@ namespace sh::game
         std::string_view u8str,
         Options opt) -> render::Font*
     {
+        std::vector<uint32_t> unicodes = ExtractUnicode(u8str);
+        return GenerateFont(ctx, fontData, unicodes, opt);
+    }
+
+    SH_GAME_API auto FontGenerator::GenerateFont(const render::IRenderContext& ctx, const std::vector<uint8_t>& fontData, const std::vector<uint32_t> unicodes, Options opt) -> render::Font*
+    {
         if (fontData.empty())
             return {};
 
@@ -104,8 +110,6 @@ namespace sh::game
                 if (!allocInPageFn(bitmapW, bitmapH, packX, packY, pageIndex))
                     return false;
 
-                SH_INFO_FORMAT("unicode: {}, x: {}", unicode, packX);
-
                 AtlasPage& page = pages[pageIndex];
 
                 for (int row = 0; row < bitmapH; ++row)
@@ -127,15 +131,8 @@ namespace sh::game
                 return true;
             };
 
-        const char* start = u8str.data();
-        const char* end = start + u8str.size();
-        while (start < end)
-        {
-            uint32_t unicode = 0;
-            start = core::Util::UTF8ToUnicode(start, end, unicode);
-
-            createGlyphFn(unicode);
-        }
+        for (uint32_t code : unicodes)
+            createGlyphFn(code);
 
         std::vector<render::Texture*> results;
         results.reserve(pages.size());
@@ -158,6 +155,27 @@ namespace sh::game
         fontCi.scale = scale;
 
         return core::SObject::Create<render::Font>(std::move(fontCi));
+    }
+
+    SH_GAME_API auto FontGenerator::ExtractUnicode(std::string_view u8str) -> std::vector<uint32_t>
+    {
+        std::vector<uint32_t> unicodes;
+
+        std::set<uint32_t> codeSet;
+        const char* start = u8str.data();
+        const char* end = u8str.data() + u8str.size();
+        while (start != end)
+        {
+            uint32_t code;
+            start = core::Util::UTF8ToUnicode(start, end, code);
+            codeSet.insert(code);
+        }
+
+        unicodes.reserve(codeSet.size());
+        for (uint32_t code : codeSet)
+            unicodes.push_back(code);
+
+        return unicodes;
     }
 
     auto FontGenerator::NewPage(const Options& opt) -> AtlasPage

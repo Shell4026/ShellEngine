@@ -20,6 +20,8 @@ namespace sh::editor
 		SH_EDITOR_API void Open();
 		SH_EDITOR_API void Render();
 	private:
+		void ExportFont(const std::filesystem::path& path);
+	private:
 		const render::IRenderContext& renderCtx;
 		ExplorerUI explorer;
 
@@ -32,6 +34,7 @@ namespace sh::editor
 		uint32_t atlasWidth = 1024;
 		uint32_t atlasHeight = 1024;
 		std::string str;
+		std::vector<uint32_t> unicodes;
 
 		bool bShow = false;
 	};
