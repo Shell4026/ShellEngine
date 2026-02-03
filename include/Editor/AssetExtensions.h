@@ -18,9 +18,11 @@ namespace sh::editor
 			Shader,
 			Prefab,
 			Text,
-			Font
+			Font,
+			Binary
 		};
 	public:
+		SH_EDITOR_API static void AddExtension(const std::string& ext, Type type);
 		SH_EDITOR_API static auto CheckType(const std::string& extension) -> Type;
 		SH_EDITOR_API static auto ToString(Type type) -> const char*;
 	private:

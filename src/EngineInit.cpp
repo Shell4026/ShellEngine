@@ -37,6 +37,7 @@
 #include "Game/Asset/WorldLoader.h"
 #include "Game/Asset/PrefabLoader.h"
 #include "Game/Asset/TextLoader.h"
+#include "Game/Asset/BinaryLoader.h"
 #include "Game/Asset/FontLoader.h"
 
 #include "Game/Asset/TextureAsset.h"
@@ -47,6 +48,7 @@
 #include "Game/Asset/WorldAsset.h"
 #include "Game/Asset/PrefabAsset.h"
 #include "Game/Asset/TextAsset.h"
+#include "Game/Asset/BinaryAsset.h"
 #include "Game/Asset/FontAsset.h"
 #endif
 
@@ -197,6 +199,7 @@ namespace sh
 		assetLoaderFactory->RegisterLoader(game::WorldAsset::ASSET_NAME, std::make_unique<game::WorldLoader>(*renderer, *gui));
 		assetLoaderFactory->RegisterLoader(game::PrefabAsset::ASSET_NAME, std::make_unique<game::PrefabLoader>());
 		assetLoaderFactory->RegisterLoader(game::TextAsset::ASSET_NAME, std::make_unique<game::TextLoader>());
+		assetLoaderFactory->RegisterLoader(game::BinaryAsset::ASSET_NAME, std::make_unique<game::BinaryLoader>());
 		assetLoaderFactory->RegisterLoader(game::FontAsset::ASSET_NAME, std::make_unique<game::FontLoader>());
 
 		core::AssetResolverRegistry::SetResolver(

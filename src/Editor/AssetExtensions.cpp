@@ -14,9 +14,14 @@ namespace sh::editor
 		{".prefab", Type::Prefab},
 		{".txt", Type::Text},
 		{".json", Type::Text},
-		{".font", Type::Font}
+		{".font", Type::Font},
+		{".ttf", Type::Binary}
 	};
 
+	SH_EDITOR_API void AssetExtensions::AddExtension(const std::string& ext, Type type)
+	{
+		extensions.insert({ ext, type });
+	}
 	SH_EDITOR_API auto AssetExtensions::CheckType(const std::string& extension) -> AssetExtensions::Type
 	{
 		auto it = extensions.find(extension);
@@ -46,6 +51,8 @@ namespace sh::editor
 			return "Text";
 		case Type::Font:
 			return "Font";
+		case Type::Binary:
+			return "Binary";
 		}
 		return "None";
 	}

@@ -29,18 +29,21 @@ namespace sh::game
 
 		const std::vector<uint8_t>& rawData = textAsset.GetRawData();
 		
-		TextObject* textObj = core::SObject::Create<TextObject>();
-		textObj->text.resize(rawData.size());
-		std::memcpy(textObj->text.data(), rawData.data(), rawData.size());
-
-		if (!textObj->SetUUID(asset.GetAssetUUID()))
+		if (auto oldObj = core::SObjectManager::GetInstance()->GetSObject(asset.GetAssetUUID()); oldObj != nullptr)
 		{
-			TextObject* oldTextObj = core::reflection::Cast<TextObject>(core::SObjectManager::GetInstance()->GetSObject(asset.GetAssetUUID()));
+			TextObject* oldTextObj = core::reflection::Cast<TextObject>(oldObj);
 			if (oldTextObj == nullptr)
 				return nullptr;
-
-			*oldTextObj = std::move(*textObj);
+			oldTextObj->text.clear();
+			oldTextObj->text.resize(rawData.size());
+			std::memcpy(oldTextObj->text.data(), rawData.data(), rawData.size());
+			return oldTextObj;
 		}
+
+		TextObject* textObj = core::SObject::Create<TextObject>();
+		textObj->SetUUID(asset.GetAssetUUID());
+		textObj->text.resize(rawData.size());
+		std::memcpy(textObj->text.data(), rawData.data(), rawData.size());
 		return textObj;
 	}
 	SH_GAME_API auto TextLoader::GetAssetName() const -> const char*

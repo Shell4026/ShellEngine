@@ -24,6 +24,7 @@
 #include "Game/Asset/ShaderLoader.h"
 #include "Game/Asset/WorldLoader.h"
 #include "Game/Asset/PrefabLoader.h"
+#include "Game/Asset/BinaryLoader.h"
 #include "Game/Asset/TextLoader.h"
 #include "Game/Asset/FontLoader.h"
 
@@ -34,6 +35,7 @@
 #include "Game/Asset/ShaderAsset.h"
 #include "Game/Asset/WorldAsset.h"
 #include "Game/Asset/PrefabAsset.h"
+#include "Game/Asset/BinaryAsset.h"
 #include "Game/Asset/TextAsset.h"
 #include "Game/Asset/FontAsset.h"
 
@@ -373,12 +375,17 @@ namespace sh::editor
 			assetType = game::ShaderAsset::ASSET_NAME;
 		else if (obj.GetType() == game::Prefab::GetStaticType())
 			assetType = game::PrefabAsset::ASSET_NAME;
+		else if (obj.GetType() == game::BinaryObject::GetStaticType())
+			assetType = game::BinaryAsset::ASSET_NAME;
 		else if (obj.GetType() == game::TextObject::GetStaticType())
 			assetType = game::TextAsset::ASSET_NAME;
 		else if (obj.GetType() == render::Font::GetStaticType())
 			assetType = game::FontAsset::ASSET_NAME;
 		else
+		{
+			SH_ERROR_FORMAT("Failed to export asset (type: {})", obj.GetType().name.ToString());
 			return false;
+		}
 
 		auto asset = core::Factory<core::Asset>::GetInstance()->Create(assetType);
 		if (asset == nullptr)
@@ -449,6 +456,7 @@ namespace sh::editor
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Model, std::make_unique<game::ModelLoader>(*project->renderer.GetContext()), 2, true);
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Texture, std::make_unique<game::TextureLoader>(*project->renderer.GetContext()), 2, true);
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Shader, std::move(shaderLoader), 2, false);
+		assetLoaders.RegisterLoader(AssetExtensions::Type::Binary, std::make_unique<game::BinaryLoader>(), 2, false);
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Text, std::make_unique<game::TextLoader>(), 2, false);
 
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Material, std::make_unique<game::MaterialLoader>(*project->renderer.GetContext()), 1, false);
