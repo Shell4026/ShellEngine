@@ -22,7 +22,7 @@ namespace sh::game
 	{
 		Super::Deserialize(json);
 		if (json.contains("rootObj"))
-			rootObjUUID = core::UUID{ json["rootObj"].get<std::string>() };
+			rootObjUUID = core::UUID{ json["rootObj"].get_ref<const std::string&>() };
 		if (json.contains("Prefab"))
 			prefabJson = json["Prefab"];
 	}
@@ -94,12 +94,13 @@ namespace sh::game
 		// 역직렬화
 		for (auto& objJson : objJsons)
 		{
-			GameObject* obj = static_cast<GameObject*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ objJson["uuid"].get<std::string>() }));
+			GameObject* obj = static_cast<GameObject*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ objJson["uuid"].get_ref<const std::string&>() }));
 			if (obj != nullptr)
 				obj->Deserialize(objJson);
 		}
 		const std::string& changedRootUUIDStr = changedUUID[rootObjUUID.ToString()];
 		auto resultObj = static_cast<GameObject*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ changedRootUUIDStr }));
+		resultObj->PropagateEnable();
 		return resultObj;
 	}
 	SH_GAME_API auto Prefab::operator=(const Prefab& other) -> Prefab&
