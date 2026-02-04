@@ -259,23 +259,23 @@ namespace sh::game
 	SH_GAME_API void GameObject::Deserialize(const core::Json& json)
 	{
 		Super::Deserialize(json);
-		core::SObjectManager* objManager = core::SObjectManager::GetInstance();
+		static core::SObjectManager& objManager = *core::SObjectManager::GetInstance();
 		for (auto& compJson : json["Components"])
 		{
-			const std::string uuid = compJson["uuid"].get<std::string>();
-			Component* comp = static_cast<Component*>(objManager->GetSObject(core::UUID{ uuid }));
+			const std::string& uuid = compJson["uuid"].get_ref<const std::string&>();
+			Component* const comp = static_cast<Component*>(objManager.GetSObject(core::UUID{ uuid }));
 			if (core::IsValid(comp))
 				comp->Deserialize(compJson);
 			else
 			{
-				std::string compName{ compJson["name"].get<std::string>() };
+				const std::string& compName{ compJson["name"].get_ref<const std::string&>() };
 				auto compType = ComponentModule::GetInstance()->GetComponent(compName);
 				if (compType == nullptr)
 				{
 					SH_ERROR_FORMAT("Not found component - {}", compName);
 					continue;
 				}
-				Component* component = compType->Create(*this);
+				Component* const component = compType->Create(*this);
 				component->SetUUID(core::UUID{ uuid });
 				AddComponent(component);
 			}
