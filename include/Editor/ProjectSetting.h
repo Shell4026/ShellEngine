@@ -3,6 +3,7 @@
 
 #include "Core/ISerializable.h"
 #include "Core/SContainer.hpp"
+#include "Core/UUID.h"
 
 #include "Game/World.h"
 
@@ -24,6 +25,7 @@ namespace sh::editor
 	public:
 		core::SObjWeakPtr<game::World> startingWorld = nullptr;
 		std::string projectName;
+		core::UUID lastWorldUUID;
 	private:
 		int version;
 	};

@@ -165,9 +165,16 @@ namespace sh::editor
 		gameManager.LoadUserModule(binaryPath / "ShellEngineUser", true);
 		LoadEditorPlugin(binaryPath / "ShellEngineUserEditor", true);
 
-		NewWorld("New World");
+		ChangeSourcePath(dir); // CMakeLists.txt의 엔진 경로 바꾸는 함수
 
-		ChangeSourcePath(dir);
+		if (!setting.lastWorldUUID.IsEmpty())
+		{
+			auto opt = assetDatabase.GetAssetOriginalPath(setting.lastWorldUUID);
+			if (opt.has_value())
+				LoadWorld(opt.value());
+		}
+		else
+			NewWorld("New World");
 	}
 
 	SH_EDITOR_API void Project::NewWorld(const std::string& name)
@@ -218,6 +225,8 @@ namespace sh::editor
 
 		auto& gameManager = *game::GameManager::GetInstance();
 		gameManager.LoadWorld(world->GetUUID());
+
+		setting.lastWorldUUID = world->GetUUID();
 	}
 	SH_EDITOR_API auto Project::IsProjectOpen() const -> bool
 	{

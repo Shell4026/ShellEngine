@@ -12,7 +12,8 @@
 namespace sh::editor
 {
 	ProjectSetting::ProjectSetting() :
-		version(0)
+		version(0),
+		lastWorldUUID(core::UUID::GenerateEmptyUUID())
 	{
 	}
 	ProjectSetting::~ProjectSetting()
@@ -24,6 +25,7 @@ namespace sh::editor
 		json["version"] = version;
 		if (startingWorld.IsValid())
 			json["startingWorld"] = startingWorld->GetUUID().ToString();
+		json["lastWorld"] = lastWorldUUID.ToString();
 		return json;
 	}
 	SH_EDITOR_API void ProjectSetting::Deserialize(const core::Json& json)
@@ -36,16 +38,13 @@ namespace sh::editor
 			if (core::IsValid(worldObj))
 				startingWorld = static_cast<game::World*>(worldObj);
 		}
+		if (json.contains("lastWorld"))
+			lastWorldUUID = core::UUID{ json["lastWorld"].get_ref<const std::string&>() };
 	}
 	SH_EDITOR_API void ProjectSetting::Save(const std::filesystem::path& path)
 	{
 		SH_INFO_FORMAT("Save project setting: {}", path.u8string());
-		if (std::ofstream os{ path })
-		{
-			os << std::setw(4) << Serialize();
-			os.close();
-		}
-		else
+		if (!core::FileSystem::SaveText(Serialize(), path))
 			SH_ERROR_FORMAT("Save error! {}", path.u8string());
 	}
 	SH_EDITOR_API void ProjectSetting::Load(const std::filesystem::path& path)
