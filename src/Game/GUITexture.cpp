@@ -111,7 +111,8 @@ namespace sh::game
 	{
 		assert(context->GetRenderAPIType() == render::RenderAPI::Vulkan);
 
-		UpdateDrawList();
+		if (drawList != nullptr)
+			UpdateDrawList();
 
 		drawList = nullptr;
 		bDirty = false;
