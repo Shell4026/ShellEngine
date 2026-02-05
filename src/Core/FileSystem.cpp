@@ -51,6 +51,34 @@ namespace sh::core
 		while (!std::filesystem::create_directory(path / name))
 			name = std::string{ folderName } + std::to_string(num++);
 	}
+	SH_CORE_API auto FileSystem::GetExecutableDirectory() -> std::filesystem::path
+	{
+#if WIN32
+		std::vector<wchar_t> pathBuffer(MAX_PATH);
+		DWORD size = GetModuleFileNameW(NULL, pathBuffer.data(), static_cast<DWORD>(pathBuffer.size()));
+
+		// 경로가 MAX_PATH보다 길 경우 재시도
+		while (size == pathBuffer.size()) {
+			pathBuffer.resize(pathBuffer.size() * 2);
+			size = GetModuleFileNameW(NULL, pathBuffer.data(), static_cast<DWORD>(pathBuffer.size()));
+		}
+
+		return std::filesystem::path(pathBuffer.data()).parent_path();
+#elif  __linux__
+		std::vector<char> pathBuffer(PATH_MAX);
+		ssize_t count = readlink("/proc/self/exe", pathBuffer.data(), pathBuffer.size());
+
+		if (count == -1) 
+		{
+			SH_ERROR("readlink failed: /proc/self/exe ");
+			return "";
+		}
+
+		return std::filesystem::u8path(std::string(path_buffer.data(), count)).parent_path();
+#else
+		return "";
+#endif
+	}
 
 	SH_CORE_API auto FileSystem::CreateUniqueFileName(const std::filesystem::path& path, const std::filesystem::path& _fileName) -> std::string
 	{

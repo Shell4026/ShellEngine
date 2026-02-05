@@ -1,23 +1,25 @@
 ﻿#pragma once
-
 #include "Export.h"
 
 #include "Game/Component/Component.h"
 
-class RotateObject : public sh::game::Component
+namespace sh::game
 {
-	COMPONENT(RotateObject, "user")
-private:
-	PROPERTY(speed)
-	float speed;
-	PROPERTY(xspeed)
-	float xspeed = 0;
-	PROPERTY(zspeed)
-	float zspeed = 0;
-public:
-	SH_USER_API RotateObject(sh::game::GameObject& owner);
-	SH_USER_API ~RotateObject();
+	class RotateObject : public Component
+	{
+		COMPONENT(RotateObject, "user")
+	public:
+		SH_USER_API RotateObject(GameObject& owner);
+		SH_USER_API ~RotateObject();
 
-	SH_USER_API void OnEnable() override;
-	SH_USER_API void Update() override;
-};
+		SH_USER_API void OnEnable() override;
+		SH_USER_API void Update() override;
+	private:
+		PROPERTY(speed)
+		float speed;
+		PROPERTY(xspeed)
+		float xspeed = 0;
+		PROPERTY(zspeed)
+		float zspeed = 0;
+	};
+}//namespace

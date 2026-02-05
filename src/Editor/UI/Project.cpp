@@ -6,6 +6,7 @@
 
 #include "Core/FileSystem.h"
 #include "Core/GarbageCollection.h"
+#include "Core/ModuleLoader.h"
 
 #include "Render/Renderer.h"
 
@@ -20,61 +21,22 @@ namespace sh::editor
 
 		loadedAssets(renderer),
 		rootPath(std::filesystem::current_path()),
-		assetDatabase(*AssetDatabase::GetInstance())
+		assetDatabase(*AssetDatabase::GetInstance()),
+		engineDirRegex("set\\(ENGINE_DIR .*?\\)", std::regex::optimize)
 	{
+		exePath = core::FileSystem::GetExecutableDirectory();
 		LoadLatestProjectPath();
 	}
 
 	Project::~Project()
 	{
+		core::ModuleLoader loader{};
+		loader.Clean(editorPlugin);
+
 		setting.Save(rootPath / "ProjectSetting.json");
 		assetDatabase.SaveDatabase(libraryPath / "AssetDB.json");
 
 		loadedAssets.Clean();
-	}
-	void Project::RenderNameBar()
-	{
-		ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_ChildBg, ImVec4{ 0.2, 0.2, 0.2, 1 });
-
-		ImGui::BeginChild("Namebar", ImVec2{0, 0});
-		ImGui::SetCursorPosX(5.0f);
-		ImGui::Text(projectExplorer.GetSelected().u8string().c_str());
-		ImGui::EndChild();
-
-		ImGui::PopStyleColor();
-	}
-
-	void Project::CopyProjectTemplate(const std::filesystem::path& targetDir)
-	{
-		std::filesystem::path projectTemplate{ std::filesystem::current_path() / "ProjectTemplate" };
-		core::FileSystem::CopyAllFiles(projectTemplate, targetDir);
-
-		auto cmake = core::FileSystem::LoadText(targetDir / "CMakeLists.txt");
-		if (cmake.has_value())
-		{
-			std::string cmakeStr = std::move(cmake.value());
-			std::string directoryStr = "\"Here is directory\"";
-			auto it = cmakeStr.find(directoryStr);
-			cmakeStr = cmakeStr.replace(it, directoryStr.length(), std::filesystem::current_path().u8string());
-			core::FileSystem::SaveText(cmakeStr, targetDir / "CMakeLists.txt");
-		}
-	}
-
-	void Project::SaveLatestProjectPath(const std::filesystem::path& path)
-	{
-		if (path.empty())
-			return;
-
-		core::FileSystem::SaveText(path.u8string(), "latestProjectPath");
-	}
-
-	auto Project::LoadLatestProjectPath() -> std::filesystem::path
-	{
-		auto opt = core::FileSystem::LoadText("latestProjectPath");
-		if (opt.has_value())
-			return std::filesystem::u8path(opt.value());
-		else
-			return {};
 	}
 
 	SH_EDITOR_API void Project::Update()
@@ -167,9 +129,7 @@ namespace sh::editor
 		
 		CopyProjectTemplate(dir);
 
-		rootPath = dir;
-		projectExplorer.SetRoot(rootPath);
-		projectExplorer.Refresh();
+		OpenProject(dir);
 	}
 
 	SH_EDITOR_API void Project::OpenProject(const std::filesystem::path& dir)
@@ -180,14 +140,16 @@ namespace sh::editor
 		libraryPath = rootPath / "Library";
 		tempPath = rootPath / "temp";
 
-		if (!std::filesystem::exists(assetPath) || !std::filesystem::exists(assetPath) || !std::filesystem::exists(assetPath))
+		const auto settingPath = rootPath / "ProjectSetting.json";
+
+		if (!std::filesystem::exists(assetPath) || !std::filesystem::exists(settingPath))
 		{
 			SH_ERROR_FORMAT("Wrong project directory: {}", dir.u8string());
 			return;
 		}
 		isOpen = true;
 
-		projectExplorer.SetRoot(rootPath);
+		projectExplorer.SetRoot(assetPath);
 		projectExplorer.Refresh();
 
 		assetDatabase.SetProject(*this);
@@ -195,14 +157,17 @@ namespace sh::editor
 		assetDatabase.SetProjectDirectory(rootPath);
 		assetDatabase.LoadAllAssets(assetPath, true);
 
-		setting.Load(rootPath / "ProjectSetting.json");
+		setting.Load(settingPath);
 		
 		SaveLatestProjectPath(dir);
 
 		auto& gameManager = *game::GameManager::GetInstance();
 		gameManager.LoadUserModule(binaryPath / "ShellEngineUser", true);
+		LoadEditorPlugin(binaryPath / "ShellEngineUserEditor", true);
 
 		NewWorld("New World");
+
+		ChangeSourcePath(dir);
 	}
 
 	SH_EDITOR_API void Project::NewWorld(const std::string& name)
@@ -262,22 +227,6 @@ namespace sh::editor
 	{
 		game::GameManager::GetInstance()->ReloadUserModule();
 	}
-	SH_EDITOR_API auto Project::GetProjectPath() const -> const std::filesystem::path&
-	{
-		return rootPath;
-	}
-	SH_EDITOR_API auto Project::GetAssetPath() const -> const std::filesystem::path&
-	{
-		return assetPath;
-	}
-	SH_EDITOR_API auto Project::GetBinPath() const -> const std::filesystem::path&
-	{
-		return binaryPath;
-	}
-	SH_EDITOR_API auto Project::GetLibraryPath() const -> const std::filesystem::path&
-	{
-		return libraryPath;
-	}
 	SH_EDITOR_API auto Project::GetLatestProjectPath() -> std::filesystem::path
 	{
 		return LoadLatestProjectPath();
@@ -300,4 +249,113 @@ namespace sh::editor
 		else
 			SH_ERROR("Set the starting world first!");
 	}
-}
+
+	void Project::RenderNameBar()
+	{
+		ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_ChildBg, ImVec4{ 0.2, 0.2, 0.2, 1 });
+
+		ImGui::BeginChild("Namebar", ImVec2{ 0, 0 });
+		ImGui::SetCursorPosX(5.0f);
+		ImGui::Text(projectExplorer.GetSelected().u8string().c_str());
+		ImGui::EndChild();
+
+		ImGui::PopStyleColor();
+	}
+	void Project::CopyProjectTemplate(const std::filesystem::path& targetDir)
+	{
+		std::filesystem::path projectTemplate{ exePath / "ProjectTemplate" };
+		core::FileSystem::CopyAllFiles(projectTemplate, targetDir);
+
+		ChangeSourcePath(targetDir);
+	}
+	void Project::LoadEditorPlugin(const std::filesystem::path& pluginPath, bool bCopy)
+	{
+		std::filesystem::path dllPath = pluginPath;
+#if _WIN32
+		if (pluginPath.has_extension())
+		{
+			if (pluginPath.extension() != ".dll")
+				dllPath = pluginPath.parent_path() / std::filesystem::u8path(pluginPath.stem().u8string() + ".dll");
+		}
+		else
+			dllPath = std::filesystem::u8path(pluginPath.u8string() + ".dll");
+
+		if (!std::filesystem::exists(dllPath))
+		{
+			SH_INFO_FORMAT("{} not found", dllPath.u8string());
+			return;
+		}
+		if (bCopy)
+		{
+			auto pdbPath = pluginPath.parent_path() / std::filesystem::path(pluginPath.stem().u8string() + ".pdb");
+			if (std::filesystem::exists(pdbPath))
+				std::filesystem::remove(pdbPath);
+			std::filesystem::path tempPath = pluginPath.parent_path() / "tempEditor.dll";
+			std::filesystem::copy_file(dllPath, tempPath, std::filesystem::copy_options::overwrite_existing);
+
+			dllPath = std::move(tempPath);
+			originalPluginPath = pluginPath;
+		}
+#elif __linux__
+		if (pluginPath.has_extension())
+		{
+			if (pluginPath.extension() != ".so")
+				dllPath = pluginPath.parent_path() / std::filesystem::u8path("lib" + pluginPath.stem().u8string() + ".so");
+		}
+		else
+			dllPath = std::filesystem::current_path() / pluginPath.parent_path() / std::filesystem::u8path("lib" + pluginPath.stem().u8string() + ".so");
+
+		if (!std::filesystem::exists(dllPath))
+		{
+			SH_INFO_FORMAT("{} not found", dllPath.u8string());
+			return;
+		}
+		if (bCopy)
+		{
+			std::filesystem::path tempPath = pluginPath.parent_path() / "tempEditor.so";
+			std::filesystem::copy_file(dllPath, tempPath, std::filesystem::copy_options::overwrite_existing);
+
+			dllPath = std::move(tempPath);
+			originalPluginPath = pluginPath;
+		}
+#endif
+
+		core::ModuleLoader loader{};
+		auto plugin = loader.Load(dllPath);
+		if (!plugin.has_value())
+			SH_ERROR_FORMAT("Failed to load module: {}", dllPath.u8string());
+		else
+		{
+			editorPlugin = std::move(plugin.value());
+		}
+	}
+
+	void Project::ChangeSourcePath(const std::filesystem::path& projectRootPath)
+	{
+		auto cmake = core::FileSystem::LoadText(projectRootPath / "CMakeLists.txt");
+		if (cmake.has_value())
+		{
+			std::string cmakeStr = std::move(cmake.value());
+			const std::string replacement = fmt::format("set(ENGINE_DIR {})", exePath.generic_u8string());
+			cmakeStr = std::regex_replace(cmakeStr, engineDirRegex, replacement);
+			core::FileSystem::SaveText(cmakeStr, projectRootPath / "CMakeLists.txt");
+		}
+	}
+
+	void Project::SaveLatestProjectPath(const std::filesystem::path& path)
+	{
+		if (path.empty())
+			return;
+
+		core::FileSystem::SaveText(path.u8string(), "latestProjectPath");
+	}
+
+	auto Project::LoadLatestProjectPath() -> std::filesystem::path
+	{
+		auto opt = core::FileSystem::LoadText("latestProjectPath");
+		if (opt.has_value())
+			return std::filesystem::u8path(opt.value());
+		else
+			return {};
+	}
+}//namespace

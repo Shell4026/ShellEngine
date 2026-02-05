@@ -1,0 +1,235 @@
+{
+    "cam": {
+        "Camera": {
+            "depth": 0,
+            "fov": 60.0,
+            "lookPos": [
+                0.0,
+                0.0,
+                0.0
+            ],
+            "projection": 0,
+            "renderTexture": "180635b4e4d1a98ebb0064ab47dc452a"
+        },
+        "Component": {
+            "hideInspector": false,
+            "priority": 0
+        },
+        "EditorCamera": {
+            "distance": 7.244863510131836
+        },
+        "SObject": {},
+        "name": "EditorCamera",
+        "type": "EditorCamera",
+        "uuid": "49b6e267952bf7cbfe326fe9d8017299",
+        "version": 1
+    },
+    "camPos": [
+        2.2565512657165527,
+        4.759199619293213,
+        4.974539279937744
+    ],
+    "editorObjs": [],
+    "name": "World",
+    "objs": [
+        {
+            "Components": [
+                {
+                    "Component": {
+                        "hideInspector": false,
+                        "priority": 0
+                    },
+                    "SObject": {},
+                    "Transform": {
+                        "quat": [
+                            0.0,
+                            0.0,
+                            0.0,
+                            1.0
+                        ],
+                        "vPosition": [
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "vRotation": [
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "vScale": [
+                            5.0,
+                            1.0,
+                            5.0
+                        ]
+                    },
+                    "name": "Unknown",
+                    "type": "Transform",
+                    "uuid": "b44e6e7898be2c02285711b9fdd04c4a",
+                    "version": 1
+                },
+                {
+                    "Component": {
+                        "hideInspector": false,
+                        "priority": 0
+                    },
+                    "MeshRenderer": {
+                        "mat": "ed351337b72281ef5f457457b65b8060",
+                        "mesh": "bbc4ef7ec45dce223297a224f8093f20",
+                        "renderTag": 1
+                    },
+                    "SObject": {},
+                    "name": "MeshRenderer",
+                    "type": "MeshRenderer",
+                    "uuid": "b2a3ec6fa22673f1d505269011493b71",
+                    "version": 1
+                }
+            ],
+            "GameObject": {
+                "bEditorOnly": false,
+                "bEnable": true,
+                "bStatic": false,
+                "hideInspector": false
+            },
+            "name": "Cube",
+            "type": "GameObject",
+            "uuid": "01aa951d8dafee78706b05d275f48b08",
+            "version": 1
+        },
+        {
+            "Components": [
+                {
+                    "Component": {
+                        "hideInspector": false,
+                        "priority": 0
+                    },
+                    "SObject": {},
+                    "Transform": {
+                        "quat": [
+                            0.0,
+                            0.0,
+                            0.0,
+                            1.0
+                        ],
+                        "vPosition": [
+                            0.0,
+                            2.0,
+                            0.0
+                        ],
+                        "vRotation": [
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "vScale": [
+                            1.0,
+                            1.0,
+                            1.0
+                        ]
+                    },
+                    "name": "Unknown",
+                    "type": "Transform",
+                    "uuid": "e606e7a9aaf0006dfcbde7cf9aa5e2b9",
+                    "version": 1
+                },
+                {
+                    "Component": {
+                        "hideInspector": false,
+                        "priority": 0
+                    },
+                    "PointLight": {
+                        "intensity": 1.0,
+                        "range": 4.0
+                    },
+                    "SObject": {},
+                    "name": "PointLight",
+                    "type": "PointLight",
+                    "uuid": "ce042c273824748a5b90874ab3cb2403",
+                    "version": 1
+                }
+            ],
+            "GameObject": {
+                "bEditorOnly": false,
+                "bEnable": true,
+                "bStatic": false,
+                "hideInspector": false
+            },
+            "name": "Light",
+            "type": "GameObject",
+            "uuid": "034cc967fe0412b031c04155de682b19",
+            "version": 1
+        },
+        {
+            "Components": [
+                {
+                    "Component": {
+                        "hideInspector": false,
+                        "priority": 0
+                    },
+                    "SObject": {},
+                    "Transform": {
+                        "quat": [
+                            0.0,
+                            0.0,
+                            0.0,
+                            1.0
+                        ],
+                        "vPosition": [
+                            2.0,
+                            2.0,
+                            2.0
+                        ],
+                        "vRotation": [
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "vScale": [
+                            1.0,
+                            1.0,
+                            1.0
+                        ]
+                    },
+                    "name": "Unknown",
+                    "type": "Transform",
+                    "uuid": "8a7c0cadb9a86ca9690bf19cf851f221",
+                    "version": 1
+                },
+                {
+                    "Camera": {
+                        "depth": 0,
+                        "fov": 60.0,
+                        "lookPos": [
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "projection": 0
+                    },
+                    "Component": {
+                        "hideInspector": false,
+                        "priority": 0
+                    },
+                    "SObject": {},
+                    "name": "Camera",
+                    "type": "Camera",
+                    "uuid": "9945d707ba86250259f1d5721ef434fa",
+                    "version": 1
+                }
+            ],
+            "GameObject": {
+                "bEditorOnly": false,
+                "bEnable": true,
+                "bStatic": false,
+                "hideInspector": false
+            },
+            "name": "Camera",
+            "type": "GameObject",
+            "uuid": "72fff2c07f59927205ef7fe7b9d65ce8",
+            "version": 1
+        }
+    ],
+    "type": "EditorWorld",
+    "uuid": "c3a4ec39f722e6d2704dceb7afbdc3c8",
+    "version": 1
+}

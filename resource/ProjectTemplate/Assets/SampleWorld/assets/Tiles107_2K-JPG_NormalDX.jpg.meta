@@ -1,0 +1,19 @@
+{
+    "metaHash": 0,
+    "name": "Tiles107_2K-JPG_NormalDX",
+    "obj": {
+        "Texture": {
+            "aniso": 1,
+            "bGenerateMipmap": true,
+            "bSRGB": false,
+            "filtering": 1
+        },
+        "name": "Tiles107_2K-JPG_NormalDX",
+        "type": "Texture",
+        "uuid": "05d320be6d0c3a57ec078815a45cd58b",
+        "version": 1
+    },
+    "typeHash": 17680227326398108413,
+    "uuid": "05d320be6d0c3a57ec078815a45cd58b",
+    "version": 1
+}

@@ -13,6 +13,7 @@ namespace sh::core
 	public:
 		SH_CORE_API static auto GetDesktopDirectory() -> std::string;
 		SH_CORE_API static auto GetHomeDirectory() -> std::string;
+		SH_CORE_API static auto GetExecutableDirectory() -> std::filesystem::path;
 		/// @brief 해당 경로에 폴더를 만드는 함수. 이미 존재한다면 뒤에 숫자를 붙인다.
 		/// @param path 경로
 		/// @param name 폴더 이름

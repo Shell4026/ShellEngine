@@ -1,0 +1,19 @@
+{
+    "metaHash": 0,
+    "name": "Tiles107_2K-JPG_AmbientOcclusion",
+    "obj": {
+        "Texture": {
+            "aniso": 1,
+            "bGenerateMipmap": true,
+            "bSRGB": true,
+            "filtering": 1
+        },
+        "name": "Tiles107_2K-JPG_AmbientOcclusion",
+        "type": "Texture",
+        "uuid": "7317a408959d6a4c5a8b1eea23dc4302",
+        "version": 1
+    },
+    "typeHash": 17680227326398108413,
+    "uuid": "7317a408959d6a4c5a8b1eea23dc4302",
+    "version": 1
+}

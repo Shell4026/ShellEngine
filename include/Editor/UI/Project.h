@@ -1,15 +1,17 @@
 ﻿#pragma once
 #include "Editor/Export.h"
-#include "ProjectSetting.h"
+#include "Editor/ProjectSetting.h"
 #include "ProjectExplorer.h"
 
 #include "Core/SContainer.hpp"
 #include "Core/NonCopyable.h"
+#include "Core/Plugin.h"
 
 #include "Game/ResourceManager.hpp"
 
 #include <string>
 #include <filesystem>
+#include <regex>
 namespace sh::render
 {
 	class Renderer;
@@ -46,10 +48,10 @@ namespace sh::editor
 
 		SH_EDITOR_API void ReloadModule();
 
-		SH_EDITOR_API auto GetProjectPath() const -> const std::filesystem::path&;
-		SH_EDITOR_API auto GetAssetPath() const -> const std::filesystem::path&;
-		SH_EDITOR_API auto GetBinPath() const -> const std::filesystem::path&;
-		SH_EDITOR_API auto GetLibraryPath() const -> const std::filesystem::path&;
+		SH_EDITOR_API auto GetProjectPath() const -> const std::filesystem::path& { return rootPath; }
+		SH_EDITOR_API auto GetAssetPath() const -> const std::filesystem::path& { return assetPath; }
+		SH_EDITOR_API auto GetBinPath() const -> const std::filesystem::path& { return binaryPath; }
+		SH_EDITOR_API auto GetLibraryPath() const -> const std::filesystem::path& { return libraryPath; }
 
 		SH_EDITOR_API auto GetProjectSetting() const -> ProjectSetting&;
 
@@ -62,6 +64,8 @@ namespace sh::editor
 		void RenderNameBar();
 
 		void CopyProjectTemplate(const std::filesystem::path& targetDir);
+		void ChangeSourcePath(const std::filesystem::path& projectRootPath);
+		void LoadEditorPlugin(const std::filesystem::path& pluginPath, bool bCopy);
 
 		static void SaveLatestProjectPath(const std::filesystem::path& path);
 		static auto LoadLatestProjectPath() -> std::filesystem::path;
@@ -71,6 +75,7 @@ namespace sh::editor
 
 		game::ResourceManager<core::SObject, core::UUID> loadedAssets;
 	private:
+		std::filesystem::path exePath;
 		std::filesystem::path rootPath;
 		std::filesystem::path assetPath;
 		std::filesystem::path binaryPath;
@@ -81,6 +86,11 @@ namespace sh::editor
 		AssetDatabase& assetDatabase;
 
 		ProjectSetting setting;
+
+		std::filesystem::path originalPluginPath;
+		core::Plugin editorPlugin;
+
+		const std::regex engineDirRegex;
 
 		bool isOpen = false;
 		bool bSettingUI = false;
