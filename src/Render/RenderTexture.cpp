@@ -38,6 +38,7 @@ namespace sh::render
 		{
 			CreateBuffers();
 			bChangeSize = false;
+			onBufferUpdate.Notify(this);
 		}
 	}
 	SH_RENDER_API void RenderTexture::OnPropertyChanged(const core::reflection::Property& property)

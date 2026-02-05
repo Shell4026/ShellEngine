@@ -32,11 +32,11 @@ namespace sh::editor
 		struct FileItem
 		{
 			std::filesystem::path path;
-			const game::GUITexture* icon = nullptr;
+			game::GUITexture* icon = nullptr;
 			bool isDirectory = false;
 		};
 
-		auto GetIcon(const std::filesystem::path& path) const -> const game::GUITexture*;
+		auto GetIcon(const std::filesystem::path& path) const -> game::GUITexture*;
 		/// @brief 경로의 파일의 이름의 폰트 크기가 maxSize가 넘어가면 잘라내는 함수
 		/// @param path 파일 경로
 		/// @param maxSize 최대 길이

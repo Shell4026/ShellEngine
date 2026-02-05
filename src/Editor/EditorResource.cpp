@@ -2,6 +2,7 @@
 #include "UI/Project.h"
 
 #include "Core/AssetExporter.h"
+#include "Core/GarbageCollection.h"
 
 #include "Render/VulkanImpl/VulkanContext.h"
 #include "Render/VulkanImpl/VulkanShaderPassBuilder.h"
@@ -34,6 +35,11 @@ namespace sh::editor
 			}
 		}
 	}
+	EditorResource::~EditorResource()
+	{
+		for (auto icon : icons)
+			icon->Destroy();
+	}
 	SH_EDITOR_API void EditorResource::LoadAllAssets(Project& project)
 	{
 		auto& ctx = *project.renderer.GetContext();
@@ -62,14 +68,36 @@ namespace sh::editor
 		auto prefabTex = static_cast<render::Texture*>(project.loadedAssets.AddResource(core::UUID::Generate(), static_cast<render::Texture*>(texLoader.Load("textures/prefabIcon.png"))));
 		assert(imageTex != nullptr);
 
-		folderIcon.Create(ctx, *folderTex);
-		fileIcon.Create(ctx, *fileTex);
-		meshIcon.Create(ctx, *meshTex);
-		materialIcon.Create(ctx, *materialTex);
-		imageIcon.Create(ctx, *imageTex);
-		shaderIcon.Create(ctx, *shaderTex);
-		worldIcon.Create(ctx, *worldTex);
-		prefabIcon.Create(ctx, *prefabTex);
+		auto& gc = *core::GarbageCollection::GetInstance();
+
+		auto folderIcon = icons.emplace_back(core::SObject::Create<game::GUITexture>());
+		gc.SetRootSet(folderIcon);
+		auto fileIcon = icons.emplace_back(core::SObject::Create<game::GUITexture>());
+		gc.SetRootSet(fileIcon);
+		auto meshIcon = icons.emplace_back(core::SObject::Create<game::GUITexture>());
+		gc.SetRootSet(meshIcon);
+		auto materialIcon = icons.emplace_back(core::SObject::Create<game::GUITexture>());
+		gc.SetRootSet(materialIcon);
+		auto imageIcon = icons.emplace_back(core::SObject::Create<game::GUITexture>());
+		gc.SetRootSet(imageIcon);
+		auto shaderIcon = icons.emplace_back(core::SObject::Create<game::GUITexture>());
+		gc.SetRootSet(shaderIcon);
+		auto worldIcon = icons.emplace_back(core::SObject::Create<game::GUITexture>());
+		gc.SetRootSet(worldIcon);
+		auto prefabIcon = icons.emplace_back(core::SObject::Create<game::GUITexture>());
+		gc.SetRootSet(prefabIcon);
+
+		folderIcon->Create(*folderTex);
+		fileIcon->Create(*fileTex);
+		meshIcon->Create(*meshTex);
+		materialIcon->Create(*materialTex);
+		imageIcon->Create(*imageTex);
+		shaderIcon->Create(*shaderTex);
+		worldIcon->Create(*worldTex);
+		prefabIcon->Create(*prefabTex);
+
+		for (auto icon : icons)
+			icon->SetName("icon");
 
 		auto lineShader = shaders.insert_or_assign("Line", static_cast<render::Shader*>(shaderLoader.Load("shaders/line.shader"))).first->second;
 		auto errorShader = shaders.insert_or_assign("ErrorShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/error.shader"))).first->second;
@@ -147,26 +175,26 @@ namespace sh::editor
 		uiTextMat->SetProperty("color", glm::vec3{ 1.f, 1.f, 1.f });
 	}
 
-	SH_EDITOR_API auto EditorResource::GetIcon(Icon icon) const -> const game::GUITexture*
+	SH_EDITOR_API auto EditorResource::GetIcon(Icon icon) -> game::GUITexture*
 	{
 		switch (icon)
 		{
 		case Icon::Folder:
-			return &folderIcon;
+			return icons[0];
 		case Icon::File:
-			return &fileIcon;
+			return icons[1];
 		case Icon::Mesh:
-			return &meshIcon;
+			return icons[2];
 		case Icon::Material:
-			return &materialIcon;
+			return icons[3];
 		case Icon::Image:
-			return &imageIcon;
+			return icons[4];
 		case Icon::Shader:
-			return &shaderIcon;
+			return icons[5];
 		case Icon::World:
-			return &worldIcon;
+			return icons[6];
 		case Icon::Prefab:
-			return &prefabIcon;
+			return icons[7];
 		default:
 			return nullptr;
 		}

@@ -508,19 +508,36 @@ namespace sh::core
         {
             core::GarbageCollection::GetInstance()->AddPointerTracking(*this);
         }
-        SObjWeakPtr(T* obj)
+        SObjWeakPtr(T* obj) :
+            obj(obj)
         {
             core::GarbageCollection::GetInstance()->AddPointerTracking(*this);
-            this->obj = obj;
         }
-        SObjWeakPtr(const SObjWeakPtr& other)
+        SObjWeakPtr(const SObjWeakPtr& other) noexcept :
+            obj(other.obj)
         {
             core::GarbageCollection::GetInstance()->AddPointerTracking(*this);
-            obj = other.obj;
+        }
+        SObjWeakPtr(SObjWeakPtr&& other) noexcept :
+            obj(other.obj)
+        {
+            core::GarbageCollection::GetInstance()->AddPointerTracking(*this);
+            other.obj = nullptr;
         }
         ~SObjWeakPtr()
         {
             core::GarbageCollection::GetInstance()->RemovePointerTracking(*this);
+        }
+        auto operator=(const SObjWeakPtr& other) noexcept -> SObjWeakPtr&
+        {
+            obj = other.obj;
+            return *this;
+        }
+        auto operator=(SObjWeakPtr&& other) noexcept -> SObjWeakPtr&
+        {
+            obj = other.obj;
+            other.obj = nullptr;
+            return *this;
         }
         auto operator=(T* obj) -> SObjWeakPtr&
         {

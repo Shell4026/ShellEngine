@@ -19,7 +19,7 @@ namespace sh::editor
 		customInspectorManager = CustomInspectorManager::GetInstance();
 	}
 
-	SH_EDITOR_API auto Inspector::GetIcon(std::string_view typeName) -> const game::GUITexture*
+	SH_EDITOR_API auto Inspector::GetIcon(std::string_view typeName) -> game::GUITexture*
 	{
 		if (typeName == core::reflection::TypeTraits::GetTypeName<render::Mesh>())
 		{
@@ -299,7 +299,7 @@ namespace sh::editor
 		if (icon)
 		{
 			ImGui::SameLine();
-			ImGui::Image(*icon, ImVec2{ iconSize, iconSize });
+			icon->Draw(ImVec2{ iconSize, iconSize });
 		}
 	}
 	SH_EDITOR_API void Inspector::RenderSObjPtrContainerProperty(const core::reflection::Property& prop, core::SObject& propertyOwner)

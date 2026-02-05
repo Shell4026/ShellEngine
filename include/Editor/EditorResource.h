@@ -28,9 +28,10 @@ namespace sh::editor
 			Prefab
 		};
 	public:
+		SH_EDITOR_API ~EditorResource();
 		SH_EDITOR_API void LoadAllAssets(Project& project);
 
-		SH_EDITOR_API auto GetIcon(Icon icon) const -> const game::GUITexture*;
+		SH_EDITOR_API auto GetIcon(Icon icon) -> game::GUITexture*;
 		SH_EDITOR_API auto GetShader(const std::string& name) -> render::Shader*;
 		SH_EDITOR_API auto GetMaterial(const std::string& name) -> render::Material*;
 		SH_EDITOR_API auto GetTexture(const std::string& name) -> render::Texture*;
@@ -38,7 +39,7 @@ namespace sh::editor
 
 		SH_EDITOR_API void ExtractAllAssetToLibrary(Project& project);
 	private:
-		game::GUITexture folderIcon, fileIcon, meshIcon, materialIcon, imageIcon, shaderIcon, worldIcon, prefabIcon;
+		std::vector<game::GUITexture*> icons;
 
 		core::SMap<std::string, render::Shader*> shaders;
 		core::SMap<std::string, render::Material*> materials;

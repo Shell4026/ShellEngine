@@ -20,6 +20,7 @@
 #include "Editor/EditorResource.h"
 #include "Editor/EditorWorld.h"
 #include "Editor/AssetDatabase.h"
+#include "Editor/UI/CustomInspector.h"
 #else
 #include "Core/AssetBundle.h"
 #include "Core/AssetResolver.h"
@@ -65,12 +66,13 @@ namespace sh
 	void EngineInit::Clean()
 	{
 		SH_INFO("Engine shutdown");
+		gameManager->Destroy();
 #if SH_EDITOR
 		project.reset();
 		editor::AssetDatabase::Destroy();
 		editor::EditorResource::Destroy();
+		editor::CustomInspectorManager::Destroy();
 #endif
-		gameManager->Destroy();
 		renderer->WaitForCurrentFrame();
 
 		while(gc->GetRootSetCount() != gc->GetObjectCount())

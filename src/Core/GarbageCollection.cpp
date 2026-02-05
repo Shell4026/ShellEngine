@@ -180,14 +180,14 @@ namespace sh::core
 		if (!bPendingKill)
 			return;
 
-		for (auto& objPtr : pendingKillObjs)
+		for (int i = 0; i < pendingKillObjs.size(); ++i)
 		{
+			auto objPtr = pendingKillObjs[i];
 			assert(rootSetIdx.find(objPtr) == rootSetIdx.end());
-
 			if (objPtr == nullptr)
 				continue;
 			if (!objPtr->bPlacementNew)
-				delete objPtr;
+				delete objPtr; // 여기서 pendingKillObjs에 요소가 추가 될 가능성이 있음
 			else
 				std::destroy_at(objPtr);
 			objPtr = nullptr;

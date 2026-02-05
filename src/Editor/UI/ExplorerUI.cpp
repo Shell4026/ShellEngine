@@ -61,7 +61,7 @@ namespace sh::editor
     {
         float height = ImGui::GetTextLineHeight();
         auto folderIcon = EditorResource::GetInstance()->GetIcon(EditorResource::Icon::Folder);
-        ImGui::Image(*folderIcon, ImVec2{ height , height });
+        folderIcon->Draw(ImVec2{ height , height });
     }
     inline void ExplorerUI::RenderLeftSide()
     {

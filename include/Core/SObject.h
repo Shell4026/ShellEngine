@@ -91,7 +91,7 @@ namespace sh::core
 	private:
 		SH_CORE_API static void RegisterToManager(SObject* ptr);
 	public:
-		mutable Observer<false, const SObject*> onDestroy;
+		mutable Observer<false, const SObject*> onDestroy; // 객체가 제거 되는 Sync타이밍에 호출 된다.
 	protected:
 		bool bPlacementNew = false;
 	private:

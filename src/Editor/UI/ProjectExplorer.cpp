@@ -91,7 +91,7 @@ namespace sh::editor
 	{
 		return selected;
 	}
-	auto ProjectExplorer::GetIcon(const std::filesystem::path& path) const -> const game::GUITexture*
+	auto ProjectExplorer::GetIcon(const std::filesystem::path& path) const -> game::GUITexture*
 	{
 		if (std::filesystem::is_directory(path))
 			return EditorResource::GetInstance()->GetIcon(EditorResource::Icon::Folder);
@@ -141,7 +141,7 @@ namespace sh::editor
 
 		ImGui::BeginGroup();
 		ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Button, iconBackgroundColor);
-		ImGui::ImageButton(fi.path.u8string().c_str(), *fi.icon, ImVec2{ iconSize, iconSize });
+		fi.icon->DrawButton(fi.path.u8string().c_str(), ImVec2{ iconSize, iconSize });
 
 		if (!bChangeFolderState && ImGui::IsItemHovered() && (ImGui::IsMouseReleased(ImGuiMouseButton_::ImGuiMouseButton_Left) || ImGui::IsMouseReleased(ImGuiMouseButton_::ImGuiMouseButton_Right)))
 		{
@@ -178,7 +178,8 @@ namespace sh::editor
 	void  ProjectExplorer::RenderParent()
 	{
 		ImGui::BeginGroup();
-		ImGui::ImageButton("../", *EditorResource::GetInstance()->GetIcon(EditorResource::Icon::Folder), ImVec2{ iconSize, iconSize }, ImVec2{ 0,0 }, ImVec2{ 1,1 }, iconBackgroundColor);
+		EditorResource::GetInstance()->GetIcon(EditorResource::Icon::Folder)->
+			DrawButton("../", ImVec2{ iconSize, iconSize }, ImVec2{ 0,0 }, ImVec2{ 1,1 }, iconBackgroundColor);
 		if (ImGui::IsItemHovered() && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
 		{
 			ImGui::EndGroup();

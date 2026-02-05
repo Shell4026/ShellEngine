@@ -82,6 +82,8 @@ namespace sh::render
 		SH_RENDER_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 
 		SH_RENDER_API void ExportToPNG(const std::filesystem::path& path);
+
+		SH_RENDER_API auto GetContext() const -> const IRenderContext* { return context; }
 	private:
 		void CreateTextureBuffer();
 		auto CheckSRGB() const -> bool;
