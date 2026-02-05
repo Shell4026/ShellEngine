@@ -13,6 +13,7 @@ Vulkan 기반으로 개발중인 크로스 플랫폼 3D/2D 게임 엔진입니�
 
 - **멀티스레딩 아키텍처** [상세](https://github.com/Shell4026/ShellEngine/blob/main/Multithreading.md)
   - 게임 스레드와 렌더 스레드 분리
+    - ImGUI의 멀티스레드 지원 [상세](https://github.com/Shell4026/ShellEngine/blob/main/ImGUI.md)
   - **이중 버퍼링**, **지연 동기화** 구조를 통한 프레임 간 안전한 데이터 교환
   - 한 프레임 후 Sync 타이밍에 맞춰 가비지 컬렉션 및 메모리 정리 수행
   - 나눌 수 있는 작업은 Task로 분리 후 스레드 풀에 넣어 병렬적으로 수행
