@@ -3,6 +3,7 @@
 
 #include "Core/Logger.h"
 #include "Core/ThreadSyncManager.h"
+#include "Core/GarbageCollection.h"
 
 #include "Game/ImGUImpl.h"
 #include "Game/Input.h"
@@ -12,9 +13,7 @@
 #include "Game/GameManager.h"
 
 #include "Render/RenderTexture.h"
-#include "Render/VulkanImpl/VulkanImageBuffer.h"
 
-#include "External/imgui/backends/imgui_impl_vulkan.h"
 #include "External/imgui/ImGuizmo.h"
 
 #include <glm/gtc/type_ptr.hpp>
@@ -30,9 +29,10 @@ namespace sh::editor
 	{
 		renderTex = world.GetGameObject("EditorCamera")->GetComponent<game::EditorCamera>()->GetRenderTexture();
 
-		auto vkImgBuffer = static_cast<render::vk::VulkanImageBuffer*>(renderTex->GetTextureBuffer());
-
-		viewportTexture = ImGui_ImplVulkan_AddTexture(vkImgBuffer->GetSampler(), vkImgBuffer->GetImageView(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		viewportTexture = core::SObject::Create<game::GUITexture>();
+		viewportTexture->SetName("viewport");
+		viewportTexture->Create(*renderTex);
+		core::GarbageCollection::GetInstance()->SetRootSet(viewportTexture);
 
 		pickingListener.SetCallback([&world](game::PickingCamera::PixelData pixel)
 			{
@@ -152,7 +152,8 @@ namespace sh::editor
 			}
 			ChangeViewportSize();
 		}
-		ImGui::Image(viewportTexture, { width, height });
+		if (viewportTexture->IsValid())
+			viewportTexture->Draw(ImVec2{ width, height });
 
 		const float windowWidth = (float)ImGui::GetWindowWidth();
 		const float viewManipulateRight = ImGui::GetWindowPos().x + windowWidth;
@@ -200,21 +201,19 @@ namespace sh::editor
 
 	SH_EDITOR_API void Viewport::Clean()
 	{
-		if (viewportTexture)
-		{
-			ImGui_ImplVulkan_RemoveTexture(static_cast<VkDescriptorSet>(viewportTexture));
-			viewportTexture = nullptr;
-		}
+		if (viewportTexture != nullptr)
+			viewportTexture->Destroy();
+		viewportTexture = nullptr;
 	}
 
 	SH_EDITOR_API void Viewport::SyncDirty()
 	{
-		if (bDirty)
-			return;
+		//if (bDirty)
+		//	return;
 
-		core::ThreadSyncManager::PushSyncable(*this, -1);
+		//core::ThreadSyncManager::PushSyncable(*this, -1);
 
-		bDirty = true;
+		//bDirty = true;
 	}
 	SH_EDITOR_API auto Viewport::Play(bool bStartWorld) -> bool
 	{
@@ -309,23 +308,23 @@ namespace sh::editor
 	}
 	SH_EDITOR_API void Viewport::Sync()
 	{
-		if (viewportTexture != nullptr)
-			ImGui_ImplVulkan_RemoveTexture(static_cast<VkDescriptorSet>(viewportTexture));
-		VkDescriptorSet viewportDescSetLast = static_cast<VkDescriptorSet>(viewportTexture);
+		//if (viewportTexture != nullptr)
+		//	ImGui_ImplVulkan_RemoveTexture(static_cast<VkDescriptorSet>(viewportTexture));
+		//VkDescriptorSet viewportDescSetLast = static_cast<VkDescriptorSet>(viewportTexture);
 
-		auto vkImgBuffer = static_cast<render::vk::VulkanImageBuffer*>(renderTex->GetTextureBuffer());
-		viewportTexture = ImGui_ImplVulkan_AddTexture(vkImgBuffer->GetSampler(), vkImgBuffer->GetImageView(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		//auto vkImgBuffer = static_cast<render::vk::VulkanImageBuffer*>(renderTex->GetTextureBuffer());
+		//viewportTexture = ImGui_ImplVulkan_AddTexture(vkImgBuffer->GetSampler(), vkImgBuffer->GetImageView(), VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
-		if (viewportDescSetLast != nullptr)
-		{
-			for (auto& cmdBuffer : imguiDrawList->CmdBuffer)
-			{
-				if (cmdBuffer.TextureId == (ImTextureID)viewportDescSetLast)
-					cmdBuffer.TextureId = viewportTexture;
-			}
-			viewportDescSetLast = nullptr;
-		}
-		bDirty = false;
+		//if (viewportDescSetLast != nullptr)
+		//{
+		//	for (auto& cmdBuffer : imguiDrawList->CmdBuffer)
+		//	{
+		//		if (cmdBuffer.TextureId == (ImTextureID)viewportDescSetLast)
+		//			cmdBuffer.TextureId = viewportTexture;
+		//	}
+		//	viewportDescSetLast = nullptr;
+		//}
+		//bDirty = false;
 	}
 	void Viewport::ChangeViewportSize()
 	{

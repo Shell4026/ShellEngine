@@ -8,6 +8,7 @@
 #include "Render/RenderTexture.h"
 
 #include "Game/Component/Render/PickingCamera.h"
+#include "Game/GUITexture.h"
 
 #include "imgui.h"
 
@@ -71,7 +72,7 @@ namespace sh::editor
 		render::RenderTexture* renderTex;
 		render::RenderTexture* outlineTex = nullptr;
 
-		ImTextureID viewportTexture = nullptr;
+		game::GUITexture* viewportTexture = nullptr;
 
 		game::EditorCamera* editorCamera = nullptr;
 		game::PickingCamera* pickingCamera = nullptr;
