@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "Export.h"
+#include "Editor/Export.h"
 
 #include "Core/ISyncable.h"
 #include "Core/Observer.hpp"

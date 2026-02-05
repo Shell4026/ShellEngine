@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "Export.h"
+#include "Editor/Export.h"
 
 #include "Core/SContainer.hpp"
 #include "Core/EventSubscriber.h"
