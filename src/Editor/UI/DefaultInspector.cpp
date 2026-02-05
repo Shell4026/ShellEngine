@@ -265,10 +265,19 @@ namespace sh::editor
 		}
 		ImGui::Separator();
 	}
+	TextureInspector::TextureInspector()
+	{
+		previewTex = core::SObject::Create<game::GUITexture>();
+		previewTex->SetName("preview");
+		core::GarbageCollection::GetInstance()->SetRootSet(previewTex);
+	}
+	TextureInspector::~TextureInspector()
+	{
+	}
 	SH_EDITOR_API void TextureInspector::RenderUI(void* obj, int idx)
 	{
 		using namespace render;
-		Texture* texture = reinterpret_cast<Texture*>(obj);
+		Texture* const texture = reinterpret_cast<Texture*>(obj);
 		TextureFormat format = texture->GetTextureFormat();
 
 		std::string formatText = "";
@@ -348,6 +357,21 @@ namespace sh::editor
 				AssetDatabase::GetInstance()->SetDirty(texture);
 				AssetDatabase::GetInstance()->SaveAllAssets();
 			}
+		}
+		ImGui::Separator();
+
+		if (core::IsValid(texture) && lastTex != texture)
+		{
+			previewTex->Create(*texture);
+			lastTex = texture;
+		}
+
+		const float texAspect = (float)texture->GetWidth() / (float)texture->GetHeight();
+		const auto area = ImGui::GetContentRegionAvail();
+		if (area.x > 1.f && texAspect > 0.01f)
+		{
+			if (previewTex->IsValid())
+				previewTex->Draw(ImVec2{ area.x * 0.9f, (area.x * 0.9f) / texAspect });
 		}
 	}
 	SH_EDITOR_API void CameraInspector::RenderUI(void* obj, int idx)

@@ -8,6 +8,7 @@
 #include "Game/GameObject.h"
 #include "Game/Component/Render/Camera.h"
 #include "Game/TextObject.h"
+#include "Game/GUITexture.h"
 
 #include <unordered_map>
 namespace sh::editor
@@ -36,7 +37,12 @@ namespace sh::editor
 	{
 		INSPECTOR(TextureInspector, render::Texture)
 	public:
+		SH_EDITOR_API TextureInspector();
+		SH_EDITOR_API ~TextureInspector();
 		SH_EDITOR_API void RenderUI(void* obj, int idx) override;
+	private:
+		const render::Texture* lastTex = nullptr;
+		game::GUITexture* previewTex = nullptr;
 	};
 
 	class CameraInspector : public ICustomInspector
