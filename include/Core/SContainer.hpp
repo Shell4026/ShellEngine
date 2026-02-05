@@ -201,11 +201,11 @@ namespace sh::core
                 {
                     std::queue<SObject*> bfs;
 
-                    for (auto it = begin(); it != end();)
+                    for (auto it = this->begin(); it != this->end();)
                     {
                         const SObject* obj = static_cast<const SObject*>(*it);
                         if (obj == nullptr) { ++it; continue; }
-                        if (obj->IsPendingKill()) { it = erase(it); continue; }
+                        if (obj->IsPendingKill()) { it = this->erase(it); continue; }
 
                         bfs.push(const_cast<SObject*>(obj));
                         ++it;
@@ -268,11 +268,11 @@ namespace sh::core
                 {
                     std::queue<SObject*> bfs;
 
-                    for (auto it = begin(); it != end();)
+                    for (auto it = this->begin(); it != this->end();)
                     {
                         const SObject* obj = static_cast<const SObject*>(*it);
                         if (obj == nullptr) { ++it; continue; }
-                        if (obj->IsPendingKill()) { it = erase(it); continue; }
+                        if (obj->IsPendingKill()) { it = this->erase(it); continue; }
 
                         bfs.push(const_cast<SObject*>(obj));
                         ++it;
@@ -335,7 +335,7 @@ namespace sh::core
                 {
                     std::queue<SObject*> bfs;
 
-                    for (auto it = begin(); it != end();)
+                    for (auto it = this->begin(); it != this->end();)
                     {
                         const SObject* obj = nullptr;
                         if constexpr (std::is_convertible_v<T, const SObject*>)
@@ -344,7 +344,7 @@ namespace sh::core
                             obj = static_cast<const SObject*>(it->second);
 
                         if (obj == nullptr) { ++it; continue; }
-                        if (obj->IsPendingKill()) { it = erase(it); continue; }
+                        if (obj->IsPendingKill()) { it = this->erase(it); continue; }
 
                         bfs.push(const_cast<SObject*>(obj));
                         ++it;
@@ -407,7 +407,7 @@ namespace sh::core
                 {
                     std::queue<SObject*> bfs;
 
-                    for (auto it = begin(); it != end();)
+                    for (auto it = this->begin(); it != this->end();)
                     {
                         const SObject* obj = nullptr;
                         if constexpr (std::is_convertible_v<T, const SObject*>)
@@ -416,7 +416,7 @@ namespace sh::core
                             obj = static_cast<const SObject*>(it->second);
 
                         if (obj == nullptr) { ++it; continue; }
-                        if (obj->IsPendingKill()) { it = erase(it); continue; }
+                        if (obj->IsPendingKill()) { it = this->erase(it); continue; }
 
                         bfs.push(const_cast<SObject*>(obj));
                         ++it;
@@ -480,11 +480,11 @@ namespace sh::core
                 {
                     std::queue<SObject*> bfs;
 
-                    for (auto it = begin(); it != end();)
+                    for (auto it = this->begin(); it != this->end();)
                     {
                         const SObject* obj = static_cast<const SObject*>(*it);
                         if (obj == nullptr) { ++it; continue; }
-                        if (obj->IsPendingKill()) { it = erase(it); continue; }
+                        if (obj->IsPendingKill()) { it = this->erase(it); continue; }
 
                         bfs.push(const_cast<SObject*>(obj));
                         ++it;

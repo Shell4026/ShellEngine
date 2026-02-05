@@ -491,7 +491,7 @@ namespace sh::editor
 
 				int priority = 0;
 				const auto type = AssetExtensions::CheckType(extension);
-				const auto const importer = assetLoaders.GetLoader(type);
+				const auto importer = assetLoaders.GetLoader(type);
 				if (importer != nullptr)
 					priority = importer->priority;
 				loadingAssetsQueue.push(AssetLoadData{ priority, entry.path() });
