@@ -4,11 +4,10 @@
 #include "Core/ISerializable.h"
 #include "Core/SContainer.hpp"
 
-#include <filesystem>
-#include <string>
-
 #include "Game/World.h"
 
+#include <filesystem>
+#include <string>
 namespace sh::editor
 {
 	class ProjectSetting : public core::ISerializable
@@ -22,10 +21,9 @@ namespace sh::editor
 
 		SH_EDITOR_API void Save(const std::filesystem::path& path);
 		SH_EDITOR_API void Load(const std::filesystem::path& path);
-
-		SH_EDITOR_API void RenderUI(bool& bOpen, const std::filesystem::path& rootPath);
 	public:
 		core::SObjWeakPtr<game::World> startingWorld = nullptr;
+		std::string projectName;
 	private:
 		int version;
 	};

@@ -2,6 +2,7 @@
 #include "EditorWorld.h"
 #include "AssetDatabase.h"
 #include "BuildSystem.h"
+#include "UI/ProjectSettingUI.h"
 
 #include "Core/FileSystem.h"
 #include "Core/GarbageCollection.h"
@@ -154,7 +155,7 @@ namespace sh::editor
 		ImGui::End();
 
 		if (bSettingUI)
-			setting.RenderUI(bSettingUI, rootPath);
+			ProjectSettingUI::RenderUI(setting, rootPath, bSettingUI);
 	}
 
 	SH_EDITOR_API void Project::CreateNewProject(const std::filesystem::path& dir)
