@@ -36,7 +36,6 @@ namespace sh::game
 
 	GUITexture::~GUITexture()
 	{
-		SH_INFO("~GUITexture()");
 	}
 
 	SH_GAME_API void GUITexture::OnDestroy()

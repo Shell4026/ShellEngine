@@ -11,6 +11,7 @@
 #include "Game/World.h"
 #include "Game/ImGUImpl.h"
 #include "Game/ResourceManager.hpp"
+#include "Game/ComponentLoader.h"
 
 #include <unordered_map>
 #include <filesystem>
@@ -43,7 +44,7 @@ namespace sh::game
 
 		SH_GAME_API auto GetMainWorld() const -> World*;
 		SH_GAME_API auto GetWorld(const core::UUID& uuid) const -> World*;
-		SH_GAME_API auto GetWorlds() const -> const std::unordered_map<core::UUID, World*>;
+		SH_GAME_API auto GetWorlds() const -> const std::unordered_map<core::UUID, World*> { return worlds; }
 		
 		/// @brief 현재 로드된 모든 월드를 업데이트 하는 함수. (루프에서 사용)
 		SH_GAME_API void UpdateWorlds(float dt);
@@ -57,8 +58,7 @@ namespace sh::game
 		/// @param uuid 월드 UUID
 		SH_GAME_API void UnloadWorld(const core::UUID& uuid);
 
-		SH_GAME_API void LoadUserModule(const std::filesystem::path& path, bool bCopy = false);
-		SH_GAME_API void ReloadUserModule();
+		SH_GAME_API void LoadUserModule(const std::filesystem::path& path);
 
 		SH_GAME_API void StartWorlds();
 		SH_GAME_API void StopWorlds();
@@ -91,9 +91,7 @@ namespace sh::game
 		core::SHashMap<core::UUID, World*> worlds;
 		std::unordered_map<core::UUID, std::vector<core::UUID>> worldUUIDs;
 
-		std::filesystem::path originalPluginPath;
-		std::unique_ptr<core::Plugin> userPlugin;
-		std::vector<std::pair<std::string, const core::reflection::STypeInfo*>> userComponents;
+		ComponentLoader componentLoader;
 
 		World* loadingSingleWorld = nullptr;
 		std::queue<World*> loadingWorldQueue; // Mode = additive인 월드

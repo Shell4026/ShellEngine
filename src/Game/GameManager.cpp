@@ -52,12 +52,7 @@ namespace sh::game
 		core::GarbageCollection::GetInstance()->Collect();
 		core::GarbageCollection::GetInstance()->DestroyPendingKillObjs();
 
-		if (userPlugin != nullptr)
-		{
-			core::ModuleLoader loader{};
-			loader.Clean(*userPlugin.get());
-			userPlugin.reset();
-		}
+		componentLoader.UnloadPlugin();
 
 		worlds.clear();
 		mainWorld.Reset();
@@ -72,10 +67,6 @@ namespace sh::game
 		if (it == worlds.end())
 			return nullptr;
 		return it->second;
-	}
-	SH_GAME_API auto GameManager::GetWorlds() const -> const std::unordered_map<core::UUID, World*>
-	{
-		return worlds;
 	}
 	SH_GAME_API void GameManager::UpdateWorlds(float dt)
 	{
@@ -279,124 +270,9 @@ namespace sh::game
 			defaultAssets.push_back(errorMatPtr);
 	}
 
-	SH_GAME_API void GameManager::LoadUserModule(const std::filesystem::path& path, bool bCopy)
+	SH_GAME_API void GameManager::LoadUserModule(const std::filesystem::path& path)
 	{
-		game::ComponentModule* componentModule = game::ComponentModule::GetInstance();
-		std::filesystem::path dllPath = path;
-#if _WIN32
-		if (path.has_extension())
-		{
-			if (path.extension() != ".dll")
-				dllPath = path.parent_path() / std::filesystem::u8path(path.stem().u8string() + ".dll");
-		}
-		else
-			dllPath = std::filesystem::u8path(path.u8string() + ".dll");
-
-		if (!std::filesystem::exists(dllPath))
-		{
-			SH_INFO_FORMAT("{} not found", dllPath.u8string());
-			return;
-		}
-		if (bCopy)
-		{
-			auto pdbPath = path.parent_path() / std::filesystem::path(path.stem().u8string() + ".pdb");
-			if (std::filesystem::exists(pdbPath))
-				std::filesystem::remove(pdbPath);
-			std::filesystem::path pluginPath = path.parent_path() / "temp.dll";
-			std::filesystem::copy_file(dllPath, pluginPath, std::filesystem::copy_options::overwrite_existing);
-
-			dllPath = std::move(pluginPath);
-			originalPluginPath = path;
-		}
-#elif __linux__
-		if (path.has_extension())
-		{
-			if (path.extension() != ".so")
-				dllPath = path.parent_path() / std::filesystem::u8path("lib" + path.stem().u8string() + ".so");
-	}
-		else
-			dllPath = std::filesystem::current_path() / path.parent_path() / std::filesystem::u8path("lib" + path.stem().u8string() + ".so");
-
-		if (!std::filesystem::exists(dllPath))
-		{
-			SH_INFO_FORMAT("{} not found", dllPath.u8string());
-			return;
-		}
-		if (bCopy)
-		{
-			std::filesystem::path pluginPath = path.parent_path() / "temp.so";
-			std::filesystem::copy_file(dllPath, pluginPath, std::filesystem::copy_options::overwrite_existing);
-
-			dllPath = std::move(pluginPath);
-			originalPluginPath = path;
-		}
-#endif
-		core::ModuleLoader loader{};
-		auto plugin = loader.Load(dllPath);
-		assert(plugin.has_value());
-		if (!plugin.has_value())
-			SH_ERROR_FORMAT("Can't load module: {}", dllPath.u8string());
-		else
-		{
-			userPlugin = std::make_unique<core::Plugin>(std::move(plugin.value()));
-
-			for (const auto& componentInfo : componentModule->GetWaitingComponents())
-				userComponents.push_back({ componentInfo.name, &componentInfo.type });
-
-			componentModule->RegisterWaitingComponents();
-		}
-	}
-	SH_GAME_API void GameManager::ReloadUserModule()
-	{
-		static bool bReloading = false;
-
-		if (!bReloading)
-		{
-			afterUpdateTaskQueue.push
-			(
-				[&]()
-				{
-					std::filesystem::path pluginPath = "ShellEngineUser";
-					if (userPlugin != nullptr && userPlugin->handle != nullptr)
-					{
-						pluginPath = originalPluginPath.empty() ? userPlugin->path : originalPluginPath;
-						for (auto& [uuid, worldPtr] : worlds)
-						{
-							// 1. 월드 현재 상태 저장
-							worldPtr->SaveWorldPoint(worldPtr->Serialize());
-							// 2. 유저 코드에 있는 컴포넌트와 같은 컴포넌트들을 모두 제거 후 메모리에서 해제
-							for (auto obj : worldPtr->GetGameObjects())
-							{
-								for (auto component : obj->GetComponents())
-								{
-									if (component == nullptr)
-										continue;
-									for (auto& userComponent : userComponents)
-									{
-										if (component->GetType() == *userComponent.second)
-											component->Destroy();
-									}
-								}
-							}
-							core::GarbageCollection::GetInstance()->Collect();
-							core::GarbageCollection::GetInstance()->DestroyPendingKillObjs();
-						}
-						// 3. DLL 언로드
-						userComponents.clear();
-						core::ModuleLoader loader{};
-						loader.Clean(*userPlugin.get());
-						userPlugin.reset();
-					}
-					// 4. 다시 불러오고 월드 복원
-					LoadUserModule(pluginPath, originalPluginPath.empty() ? false : true);
-					for (auto& [uuid, worldPtr] : worlds)
-						worldPtr->LoadWorldPoint();
-
-					bReloading = false;
-				}
-			);
-			bReloading = true;
-		}
+		componentLoader.LoadPlugin(path);
 	}
 	SH_GAME_API void GameManager::StartWorlds()
 	{

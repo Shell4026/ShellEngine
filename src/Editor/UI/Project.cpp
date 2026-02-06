@@ -30,8 +30,7 @@ namespace sh::editor
 
 	Project::~Project()
 	{
-		core::ModuleLoader loader{};
-		loader.Clean(editorPlugin);
+		componentLoader.UnloadPlugin();
 
 		setting.Save(rootPath / "ProjectSetting.json");
 		assetDatabase.SaveDatabase(libraryPath / "AssetDB.json");
@@ -161,9 +160,7 @@ namespace sh::editor
 		
 		SaveLatestProjectPath(dir);
 
-		auto& gameManager = *game::GameManager::GetInstance();
-		gameManager.LoadUserModule(binaryPath / "ShellEngineUser", true);
-		LoadEditorPlugin(binaryPath / "ShellEngineUserEditor", true);
+		LoadEditorPlugin();
 
 		ChangeSourcePath(dir); // CMakeLists.txt의 엔진 경로 바꾸는 함수
 
@@ -238,17 +235,49 @@ namespace sh::editor
 		if (bReloading)
 			return;
 		bReloading = true;
+
 		game::GameManager::GetInstance()->AddAterUpdateTask(
 			[this]()
 			{
-				core::ModuleLoader loader{};
-				loader.Clean(editorPlugin);
-				LoadEditorPlugin(binaryPath / "ShellEngineUserEditor", true);
+				if (componentLoader.IsLoaded())
+				{
+					for (auto& [uuid, worldPtr] : game::GameManager::GetInstance()->GetWorlds())
+					{
+						if (worldPtr == nullptr)
+							continue;
+						// 1. 월드 현재 상태 저장
+						worldPtr->SaveWorldPoint(worldPtr->Serialize(), "temp");
+						// 2. 유저 코드에 있는 컴포넌트와 같은 컴포넌트들을 모두 제거 후 메모리에서 해제
+						for (auto obj : worldPtr->GetGameObjects())
+						{
+							for (auto component : obj->GetComponents())
+							{
+								if (component == nullptr)
+									continue;
+								for (auto& userComponent : componentLoader.GetLoadedComponents())
+								{
+									if (component->GetType() == *userComponent.type)
+										component->Destroy();
+								}
+							}
+						}
+						core::GarbageCollection::GetInstance()->Collect();
+						core::GarbageCollection::GetInstance()->DestroyPendingKillObjs();
+					}
+					// 3. 플러그인 언로드
+					componentLoader.UnloadPlugin();
+				}
+				// 4. 플러그인 로드 후 월드 복원
+				LoadEditorPlugin();
+				for (auto& [uuid, worldPtr] : game::GameManager::GetInstance()->GetWorlds())
+				{
+					worldPtr->LoadWorldPoint("temp");
+					worldPtr->ClearWorldPoint("temp");
+				}
+
 				bReloading = false;
 			}
 		);
-		game::GameManager::GetInstance()->ReloadUserModule();
-
 	}
 	SH_EDITOR_API auto Project::GetLatestProjectPath() -> std::filesystem::path
 	{
@@ -291,66 +320,18 @@ namespace sh::editor
 
 		ChangeSourcePath(targetDir);
 	}
-	void Project::LoadEditorPlugin(const std::filesystem::path& pluginPath, bool bCopy)
+	void Project::LoadEditorPlugin()
 	{
-		std::filesystem::path dllPath = pluginPath;
-#if _WIN32
-		if (pluginPath.has_extension())
-		{
-			if (pluginPath.extension() != ".dll")
-				dllPath = pluginPath.parent_path() / std::filesystem::u8path(pluginPath.stem().u8string() + ".dll");
-		}
-		else
-			dllPath = std::filesystem::u8path(pluginPath.u8string() + ".dll");
+		const auto pluginPath = game::ComponentLoader::CreatePluginPath(binaryPath / "ShellEngineUser");
+		const auto editorPluginPath = game::ComponentLoader::CreatePluginPath(binaryPath / "ShellEngineUserEditor");
 
-		if (!std::filesystem::exists(dllPath))
-		{
-			SH_INFO_FORMAT("{} not found", dllPath.u8string());
-			return;
-		}
-		if (bCopy)
-		{
-			auto pdbPath = pluginPath.parent_path() / std::filesystem::path(pluginPath.stem().u8string() + ".pdb");
-			if (std::filesystem::exists(pdbPath))
-				std::filesystem::remove(pdbPath);
-			std::filesystem::path tempPath = pluginPath.parent_path() / "tempEditor.dll";
-			std::filesystem::copy_file(dllPath, tempPath, std::filesystem::copy_options::overwrite_existing);
+		const auto tempPluginPath = game::ComponentLoader::CreatePluginPath(tempPath / "ShellEngineUser");
+		const auto tempEditorPluginPath = game::ComponentLoader::CreatePluginPath(tempPath / "ShellEngineUserEditor");
 
-			dllPath = std::move(tempPath);
-			originalPluginPath = pluginPath;
-		}
-#elif __linux__
-		if (pluginPath.has_extension())
-		{
-			if (pluginPath.extension() != ".so")
-				dllPath = pluginPath.parent_path() / std::filesystem::u8path("lib" + pluginPath.stem().u8string() + ".so");
-		}
-		else
-			dllPath = std::filesystem::current_path() / pluginPath.parent_path() / std::filesystem::u8path("lib" + pluginPath.stem().u8string() + ".so");
+		std::filesystem::copy_file(pluginPath, tempPluginPath, std::filesystem::copy_options::overwrite_existing);
+		std::filesystem::copy_file(editorPluginPath, tempEditorPluginPath, std::filesystem::copy_options::overwrite_existing);
 
-		if (!std::filesystem::exists(dllPath))
-		{
-			SH_INFO_FORMAT("{} not found", dllPath.u8string());
-			return;
-		}
-		if (bCopy)
-		{
-			std::filesystem::path tempPath = pluginPath.parent_path() / "tempEditor.so";
-			std::filesystem::copy_file(dllPath, tempPath, std::filesystem::copy_options::overwrite_existing);
-
-			dllPath = std::move(tempPath);
-			originalPluginPath = pluginPath;
-		}
-#endif
-
-		core::ModuleLoader loader{};
-		auto plugin = loader.Load(dllPath);
-		if (!plugin.has_value())
-			SH_ERROR_FORMAT("Failed to load module: {}", dllPath.u8string());
-		else
-		{
-			editorPlugin = std::move(plugin.value());
-		}
+		componentLoader.LoadPlugin(tempEditorPluginPath);
 	}
 
 	void Project::ChangeSourcePath(const std::filesystem::path& projectRootPath)

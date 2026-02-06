@@ -8,6 +8,7 @@
 #include "Core/Plugin.h"
 
 #include "Game/ResourceManager.hpp"
+#include "Game/ComponentLoader.h"
 
 #include <string>
 #include <filesystem>
@@ -65,7 +66,7 @@ namespace sh::editor
 
 		void CopyProjectTemplate(const std::filesystem::path& targetDir);
 		void ChangeSourcePath(const std::filesystem::path& projectRootPath);
-		void LoadEditorPlugin(const std::filesystem::path& pluginPath, bool bCopy);
+		void LoadEditorPlugin();
 
 		static void SaveLatestProjectPath(const std::filesystem::path& path);
 		static auto LoadLatestProjectPath() -> std::filesystem::path;
@@ -87,10 +88,9 @@ namespace sh::editor
 
 		ProjectSetting setting;
 
-		std::filesystem::path originalPluginPath;
-		core::Plugin editorPlugin;
-
 		const std::regex engineDirRegex;
+
+		game::ComponentLoader componentLoader;
 
 		bool isOpen = false;
 		bool bSettingUI = false;

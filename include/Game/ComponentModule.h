@@ -6,6 +6,7 @@
 #include "Core/Singleton.hpp"
 #include "Core/SContainer.hpp"
 #include "Core/Reflection.hpp"
+#include "Core/Logger.h"
 
 #include <string>
 #include <string_view>
@@ -59,6 +60,9 @@ namespace sh::game
 		}
 		std::string newName{ std::move(group) };
 		if (GetComponent(newName) == nullptr)
-			waitingComponents.push_back({ newName, T::GetStaticType(), std::make_unique<ComponentType<T>>(newName)});
+		{
+			SH_INFO_FORMAT("Register component: {}", newName);
+			waitingComponents.push_back({ newName, T::GetStaticType(), std::make_unique<ComponentType<T>>(newName) });
+		}
 	}
 }
