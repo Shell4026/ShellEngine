@@ -234,7 +234,21 @@ namespace sh::editor
 	}
 	SH_EDITOR_API void Project::ReloadModule()
 	{
+		static bool bReloading = false;
+		if (bReloading)
+			return;
+		bReloading = true;
+		game::GameManager::GetInstance()->AddAterUpdateTask(
+			[this]()
+			{
+				core::ModuleLoader loader{};
+				loader.Clean(editorPlugin);
+				LoadEditorPlugin(binaryPath / "ShellEngineUserEditor", true);
+				bReloading = false;
+			}
+		);
 		game::GameManager::GetInstance()->ReloadUserModule();
+
 	}
 	SH_EDITOR_API auto Project::GetLatestProjectPath() -> std::filesystem::path
 	{

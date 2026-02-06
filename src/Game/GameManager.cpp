@@ -249,6 +249,10 @@ namespace sh::game
 	{
 		immortalWorld->Clear();
 	}
+	SH_GAME_API void GameManager::AddAterUpdateTask(const std::function<void()>& fn)
+	{
+		afterUpdateTaskQueue.push(fn);
+	}
 	GameManager::~GameManager()
 	{
 		Clean();

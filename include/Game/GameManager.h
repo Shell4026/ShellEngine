@@ -75,6 +75,8 @@ namespace sh::game
 		/// @param obj 게임 오브젝트
 		SH_GAME_API void SetImmortalObject(GameObject& obj);
 		SH_GAME_API void ClearImmortalObjects();
+
+		SH_GAME_API void AddAterUpdateTask(const std::function<void()>& fn);
 	protected:
 		SH_GAME_API GameManager() = default;
 		SH_GAME_API ~GameManager();
