@@ -184,10 +184,12 @@ namespace sh::editor
 
 		const std::string extension = dir.extension().string();
 
-		auto type = AssetExtensions::CheckType(extension);
+		const auto type = AssetExtensions::CheckType(extension);
 		AssetLoaderRegistry::Importer* const importerPtr = assetLoaders.GetLoader(type);
 		if (importerPtr == nullptr)
 			return nullptr;
+
+		const bool bAssetChanged = IsAssetChanged(dir);
 
 		core::SObject* const objPtr = LoadAsset(dir, *importerPtr->loader, importerPtr->bObjDataInMeta);
 		if (objPtr != nullptr)
@@ -196,7 +198,7 @@ namespace sh::editor
 		// 모델 파일은 특수처리 필요
 		if (type == AssetExtensions::Type::Model)
 		{
-			if (objPtr != nullptr && IsAssetChanged(dir))
+			if (objPtr != nullptr && bAssetChanged)
 			{
 				render::Model* const modelPtr = static_cast<render::Model*>(objPtr);
 				for (const auto& mesh : modelPtr->GetMeshes())

@@ -294,7 +294,7 @@ namespace sh::editor
 	SH_EDITOR_API void Project::Build()
 	{
 		BuildSystem builder{};
-		if (setting.startingWorld.IsValid())
+		if (!setting.startingWorldUUID.IsEmpty())
 		{
 			builder.Build(*this, binaryPath);
 		}

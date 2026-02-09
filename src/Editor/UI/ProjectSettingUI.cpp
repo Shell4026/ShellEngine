@@ -12,8 +12,15 @@ namespace sh::editor
 		ImGui::Begin("Project Setting", &bOpen);
 
 		ImGui::Text("Starting world");
-		std::string startingWorldStr = setting.startingWorld == nullptr ? "None" : setting.startingWorld->GetName().ToString();
-		ImGui::Button(startingWorldStr.c_str(), ImVec2{ -1, 20 });
+		std::string startingWorldName;
+		if (setting.startingWorldUUID.IsEmpty())
+			startingWorldName = "Empty";
+		else
+		{
+			auto objPtr = core::SObjectManager::GetInstance()->GetSObject(setting.startingWorldUUID);
+			startingWorldName = objPtr->GetName().ToString();
+		}
+		ImGui::Button(startingWorldName.c_str(), ImVec2{ -1, 20 });
 		if (ImGui::BeginDragDropTarget())
 		{
 			const std::string worldType{ core::reflection::TypeTraits::GetTypeName<game::World>() };
@@ -25,7 +32,7 @@ namespace sh::editor
 				auto pathOpt = assetDatabase.GetAssetOriginalPath(sobjPtr->GetUUID());
 				if (pathOpt.has_value())
 				{
-					setting.startingWorld = static_cast<game::World*>(sobjPtr);
+					setting.startingWorldUUID = sobjPtr->GetUUID();
 					setting.Save(rootPath / "ProjectSetting.json");
 				}
 			}
@@ -41,7 +48,7 @@ namespace sh::editor
 						auto pathOpt = assetDatabase.GetAssetOriginalPath(sobjPtr->GetUUID());
 						if (pathOpt.has_value())
 						{
-							setting.startingWorld = static_cast<game::World*>(sobjPtr);
+							setting.startingWorldUUID = sobjPtr->GetUUID();
 							setting.Save(rootPath / "ProjectSetting.json");
 						}
 					}

@@ -13,6 +13,7 @@ namespace sh::editor
 {
 	ProjectSetting::ProjectSetting() :
 		version(0),
+		startingWorldUUID(core::UUID::GenerateEmptyUUID()),
 		lastWorldUUID(core::UUID::GenerateEmptyUUID())
 	{
 	}
@@ -23,8 +24,7 @@ namespace sh::editor
 	{
 		core::Json json;
 		json["version"] = version;
-		if (startingWorld.IsValid())
-			json["startingWorld"] = startingWorld->GetUUID().ToString();
+		json["startingWorld"] = startingWorldUUID.ToString();
 		json["lastWorld"] = lastWorldUUID.ToString();
 		return json;
 	}
@@ -33,11 +33,7 @@ namespace sh::editor
 		if (json.contains("version"))
 			version = json["version"];
 		if (json.contains("startingWorld"))
-		{
-			core::SObject* worldObj = core::SObjectManager::GetInstance()->GetSObject(core::UUID{ json["startingWorld"].get<std::string>()});
-			if (core::IsValid(worldObj))
-				startingWorld = static_cast<game::World*>(worldObj);
-		}
+			startingWorldUUID = core::UUID{ json["startingWorld"].get_ref<const std::string&>() };
 		if (json.contains("lastWorld"))
 			lastWorldUUID = core::UUID{ json["lastWorld"].get_ref<const std::string&>() };
 	}

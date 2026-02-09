@@ -35,7 +35,12 @@ namespace sh::editor
         core::AssetBundle bundle;
 
         std::vector<game::World*> worldPtrs;
-        worldPtrs.push_back(project.GetProjectSetting().startingWorld.Get());
+
+        if (!project.GetProjectSetting().startingWorldUUID.IsEmpty())
+        {
+            auto objPtr = core::SObjectManager::GetInstance()->GetSObject(project.GetProjectSetting().startingWorldUUID);
+            worldPtrs.push_back(static_cast<game::World*>(objPtr));
+        }
         for (int i = 0; i < worldPtrs.size(); ++i)
         {
             auto worldPtr = worldPtrs[i];
@@ -164,9 +169,9 @@ namespace sh::editor
         game::GameManager& manager = *game::GameManager::GetInstance();
         ProjectSetting& projectSetting = currentProject->GetProjectSetting();
 
-        core::Json mainJson{};
-        if (projectSetting.startingWorld != nullptr)
-            mainJson["starting"] = projectSetting.startingWorld->GetUUID().ToString();
+        core::Json mainJson;
+        if (!projectSetting.startingWorldUUID.IsEmpty())
+            mainJson["starting"] = projectSetting.startingWorldUUID.ToString();
         for (const auto& [worldUUIDStr, uuids] : worldUUIDs)
         {
             core::Json worldUUIDs{};

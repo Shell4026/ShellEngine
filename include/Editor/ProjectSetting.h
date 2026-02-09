@@ -23,8 +23,8 @@ namespace sh::editor
 		SH_EDITOR_API void Save(const std::filesystem::path& path);
 		SH_EDITOR_API void Load(const std::filesystem::path& path);
 	public:
-		core::SObjWeakPtr<game::World> startingWorld = nullptr;
 		std::string projectName;
+		core::UUID startingWorldUUID;
 		core::UUID lastWorldUUID;
 	private:
 		int version;
