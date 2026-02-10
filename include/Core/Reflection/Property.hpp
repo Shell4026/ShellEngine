@@ -33,6 +33,7 @@ namespace sh::core
 		static constexpr const char* constant = "const";
 		static constexpr const char* noSave = "noSave";
 		static constexpr const char* sync = "sync";
+		static constexpr const char* sobjPtr = "sobjPtr";
 	};
 }//namespace
 
@@ -560,6 +561,7 @@ namespace sh::core::reflection
 			bool bConst = false;
 			bool bVisible = true;
 			bool bNoSave = false;
+			bool bSObjPtr = false;
 		} option;
 
 		const std::string_view name;
@@ -575,6 +577,8 @@ namespace sh::core::reflection
 					retOption.bVisible = false;
 				else if (option == "noSave")
 					retOption.bNoSave = true;
+				else if (option == "sobjPtr")
+					retOption.bSObjPtr = true;
 			}
 			return retOption;
 		}
@@ -602,8 +606,8 @@ namespace sh::core::reflection
 			isPointer(std::is_pointer_v<T>),
 			isContainer(IsContainer<T>::value),
 			isSObject(IsSObject<T>::value),
-			isSObjectPointer(std::is_convertible_v<T, const SObject*>),
-			isSObjectPointerContainer(reflection::IsContainer<T>::value && std::is_convertible_v<typename reflection::GetContainerLastType<T>::type, const SObject*>),
+			isSObjectPointer(createInfo.option.bSObjPtr || std::is_convertible_v<T, const SObject*>),
+			isSObjectPointerContainer(createInfo.option.bSObjPtr || reflection::IsContainer<T>::value && std::is_convertible_v<typename reflection::GetContainerLastType<T>::type, const SObject*>),
 			isEnum(std::is_enum_v<T>)
 		{
 			// 메모) 템플릿 인자로 인해 클래스 맴버 변수 별로 메모리 상에 하나만 존재하게 된다.
