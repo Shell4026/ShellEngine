@@ -36,7 +36,8 @@ assert(derived.GetType() == Derived::GetStaticType());
 assert(derived.GetType().IsChildOf(Base::GetStaticType())); // Base의 자식 객체다.
 assert(*derived.GetType().super == Base::GetStaticType()); // derived인스턴스의 부모 클래스는 Base다.
 ```
-클래스 내 변수를 리플렉션에 노출 시키려면 PROPERTY()매크로를 통해 알려줘야합니다.
+클래스 내 변수를 리플렉션에 노출 시키려면 PROPERTY()매크로를 통해 알려줘야합니다.</br>
+리플렉션에 노출 된 SObject타입의 포인터 프로퍼티는 가비지 컬렉터에서 추적됩니다.</br>
 ```c++
 PROPERTY(number, sh::core::PropertyOption::constant)
 int number;
@@ -58,6 +59,13 @@ assert(*intPtr == 42);
 assert(numbersProperty->type.name == core::reflection::GetTypeName<std::vector<int>>());
 *intPtr = 27; // 값 변경
 assert(dereived.number == 27);
+```
+전방 선언을 한 SObject타입의 포인터가 있다면 컴파일 시간에 타입을 추론 할 수 없어 명시적으로 프로퍼티 옵션에 SObject라고 알려줘야 합니다.</br>
+```c++
+class ThisIsSObject;
+...
+PROPERTY(ptr, sh::core::PropertyOption::sobjPtr)
+ThisIsSObject* ptr = nullptr;
 ```
 컨테이너 프로퍼티는 반복자를 통해 순회 할 수 있습니다.
 ```c++
