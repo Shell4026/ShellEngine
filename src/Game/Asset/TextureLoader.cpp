@@ -42,7 +42,7 @@ namespace sh::game
 		context(context)
 	{
 	}
-	SH_GAME_API auto TextureLoader::Load(const std::filesystem::path& filePath) -> core::SObject*
+	SH_GAME_API auto TextureLoader::Load(const std::filesystem::path& filePath) const -> core::SObject*
 	{
 		int width, height, channel;
 		int info = stbi_info(filePath.string().c_str(), &width, &height, &channel);
@@ -66,7 +66,7 @@ namespace sh::game
 
 		return texture;
 	}
-	SH_GAME_API auto TextureLoader::Load(const core::Asset& asset) -> core::SObject*
+	SH_GAME_API auto TextureLoader::Load(const core::Asset& asset) const -> core::SObject*
 	{
 		if (std::strcmp(asset.GetType(), ASSET_NAME) != 0)
 		{

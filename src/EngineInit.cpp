@@ -40,6 +40,7 @@
 #include "Game/Asset/TextLoader.h"
 #include "Game/Asset/BinaryLoader.h"
 #include "Game/Asset/FontLoader.h"
+#include "Game/Asset/ScriptableObjectLoader.h"
 
 #include "Game/Asset/TextureAsset.h"
 #include "Game/Asset/MaterialAsset.h"
@@ -51,6 +52,7 @@
 #include "Game/Asset/TextAsset.h"
 #include "Game/Asset/BinaryAsset.h"
 #include "Game/Asset/FontAsset.h"
+#include "Game/Asset/ScriptableObjectAsset.h"
 #endif
 
 namespace sh
@@ -198,11 +200,12 @@ namespace sh
 		assetLoaderFactory->RegisterLoader(game::MeshAsset::ASSET_NAME, std::make_unique<game::MeshLoader>(*renderer->GetContext()));
 		assetLoaderFactory->RegisterLoader(game::MaterialAsset::ASSET_NAME, std::make_unique<game::MaterialLoader>(*renderer->GetContext()));
 		assetLoaderFactory->RegisterLoader(game::ShaderAsset::ASSET_NAME, std::make_unique<game::ShaderLoader>(&vkShaderPassBuilder));
-		assetLoaderFactory->RegisterLoader(game::WorldAsset::ASSET_NAME, std::make_unique<game::WorldLoader>(*renderer, *gui));
+		assetLoaderFactory->RegisterLoader(game::WorldAsset::ASSET_NAME, std::make_unique<game::WorldLoader>());
 		assetLoaderFactory->RegisterLoader(game::PrefabAsset::ASSET_NAME, std::make_unique<game::PrefabLoader>());
 		assetLoaderFactory->RegisterLoader(game::TextAsset::ASSET_NAME, std::make_unique<game::TextLoader>());
 		assetLoaderFactory->RegisterLoader(game::BinaryAsset::ASSET_NAME, std::make_unique<game::BinaryLoader>());
 		assetLoaderFactory->RegisterLoader(game::FontAsset::ASSET_NAME, std::make_unique<game::FontLoader>());
+		assetLoaderFactory->RegisterLoader(game::ScriptableObjectAsset::ASSET_NAME, std::make_unique<game::ScriptableObjectLoader>());
 
 		core::AssetResolverRegistry::SetResolver(
 			[this](const core::UUID& uuid) -> core::SObject*
@@ -210,7 +213,8 @@ namespace sh
 				auto asset = assetBundle->LoadAsset(uuid);
 				if (asset == nullptr)
 					return nullptr;
-				auto assetLoader = game::AssetLoaderFactory::GetInstance()->GetLoader(asset->GetType());
+				static game::AssetLoaderFactory& factory = *game::AssetLoaderFactory::GetInstance();
+				auto assetLoader = factory.GetLoader(asset->GetType());
 				if (assetLoader == nullptr)
 					return nullptr;
 				core::SObject* assetPtr = assetLoader->Load(*asset);

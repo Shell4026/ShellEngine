@@ -14,7 +14,7 @@ namespace sh::game
 		context(context)
 	{
 	}
-	SH_GAME_API auto MaterialLoader::Load(const std::filesystem::path& path) -> core::SObject*
+	SH_GAME_API auto MaterialLoader::Load(const std::filesystem::path& path) const -> core::SObject*
 	{
 		auto file = core::FileSystem::LoadText(path);
 		if (!file.has_value())
@@ -32,7 +32,7 @@ namespace sh::game
 
 		return mat;
 	}
-	SH_GAME_API auto MaterialLoader::Load(const core::Asset& asset) -> core::SObject*
+	SH_GAME_API auto MaterialLoader::Load(const core::Asset& asset) const -> core::SObject*
 	{
 		if (std::strcmp(asset.GetType(), MaterialAsset::ASSET_NAME) != 0)
 			return nullptr;

@@ -10,7 +10,6 @@
 
 #include "Game/World.h"
 #include "Game/ImGUImpl.h"
-#include "Game/ResourceManager.hpp"
 #include "Game/ComponentLoader.h"
 
 #include <unordered_map>

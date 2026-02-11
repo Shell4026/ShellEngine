@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "Export.h"
-#include "ResourceManager.hpp"
 #include "ComponentModule.h"
 #include "Octree.h"
 #include "UICamera.h"

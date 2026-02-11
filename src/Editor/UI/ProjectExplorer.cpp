@@ -1,5 +1,5 @@
 ﻿#include "UI/ProjectExplorer.h"
-#include "UI/Project.h"
+#include "Project.h"
 #include "EditorResource.h"
 #include "AssetExtensions.h"
 #include "AssetDatabase.h"
@@ -14,6 +14,7 @@
 #include "Game/GameManager.h"
 #include "Game/TextObject.h"
 #include "Game/BinaryObject.h"
+#include "Game/ScriptableObject.h"
 
 namespace sh::editor
 {
@@ -196,27 +197,12 @@ namespace sh::editor
 	}
 	void ProjectExplorer::RenderRightClickPopup()
 	{
+		static AssetDatabase& assetDatabase = *AssetDatabase::GetInstance();
 		if (ImGui::BeginPopupContextWindow("ProjectRightClickPopup"))
 		{
 			if (ImGui::BeginMenu("Create"))
 			{
-				if (ImGui::MenuItem("Folder"))
-				{
-					core::FileSystem::CreateFolder(currentPath, "NewFolder");
-					Refresh();
-				}
-				if (ImGui::MenuItem("Material"))
-				{
-					static render::Shader* defaultShader = EditorResource::GetInstance()->GetShader("ErrorShader");
-					assert(defaultShader);
-					std::string name{ core::FileSystem::CreateUniqueFileName(currentPath, "NewMaterial.mat") };
-
-					auto mat = core::SObject::Create<render::Material>(defaultShader);
-					mat->SetName(name);
-					mat->Build(*game::GameManager::GetInstance()->GetRenderer().GetContext());
-					AssetDatabase::GetInstance()->CreateAsset(currentPath / name, *mat);
-					Refresh();
-				}
+				RenderCreateMenu();
 				ImGui::EndMenu();
 			}
 			if (!selected.empty())
@@ -234,7 +220,7 @@ namespace sh::editor
 						}
 						else
 						{
-							auto uuidOpt = AssetDatabase::GetInstance()->GetAssetUUID(selected);
+							auto uuidOpt = assetDatabase.GetAssetUUID(selected);
 							if (uuidOpt.has_value())
 							{
 								const std::filesystem::path metaPath = parent / std::filesystem::u8path(selected.filename().u8string() + ".meta");
@@ -243,7 +229,10 @@ namespace sh::editor
 								if (std::filesystem::exists(metaPath))
 									std::filesystem::rename(metaPath, parent / std::filesystem::u8path(name + ".meta"));
 
-								AssetDatabase::GetInstance()->AssetWasMoved(uuidOpt.value(), newPath);
+								assetDatabase.AssetWasMoved(uuidOpt.value(), newPath);
+
+								auto objPtr = core::SObjectManager::GetInstance()->GetSObject(uuidOpt.value());
+								objPtr->SetName(name);
 
 								selected = newPath;
 
@@ -277,6 +266,45 @@ namespace sh::editor
 				Refresh();
 			}
 			ImGui::EndPopup();
+		}
+	}
+	void ProjectExplorer::RenderCreateMenu()
+	{
+		static AssetDatabase& assetDatabase = *AssetDatabase::GetInstance();
+		if (ImGui::MenuItem("Folder"))
+		{
+			core::FileSystem::CreateFolder(currentPath, "newFolder");
+			Refresh();
+		}
+		if (ImGui::MenuItem("Material"))
+		{
+			static render::Shader* defaultShader = EditorResource::GetInstance()->GetShader("ErrorShader");
+			assert(defaultShader);
+			std::string name{ core::FileSystem::CreateUniqueFileName(currentPath, "NewMaterial.mat") };
+
+			auto mat = core::SObject::Create<render::Material>(defaultShader);
+			mat->SetName(name);
+			mat->Build(*game::GameManager::GetInstance()->GetRenderer().GetContext());
+			assetDatabase.CreateAsset(currentPath / name, *mat);
+			Refresh();
+		}
+		if (ImGui::BeginMenu("ScriptableObject"))
+		{
+			static auto& factory = *game::ScriptableObject::Factory::GetInstance();
+			for (const auto& [name, fn] : factory.GetFactories())
+			{
+				if (ImGui::MenuItem(name.c_str()))
+				{
+					const std::string name{ core::FileSystem::CreateUniqueFileName(currentPath, "ScriptableObject.srpo") };
+
+					auto srpObjPtr = fn();
+					srpObjPtr->SetName("ScriptableObject");
+					if (srpObjPtr != nullptr)
+						assetDatabase.CreateAsset(currentPath / name, *srpObjPtr);
+					Refresh();
+				}
+			}
+			ImGui::EndMenu();
 		}
 	}
 	void ProjectExplorer::SetItemDragTarget(const std::filesystem::path& path)

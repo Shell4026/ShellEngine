@@ -1,7 +1,7 @@
 ﻿#include "BuildSystem.h"
 #include "AssetDatabase.h"
 #include "Meta.h"
-#include "UI/Project.h"
+#include "Project.h"
 #include "EditorResource.h"
 
 #include "Core/AssetBundle.h"

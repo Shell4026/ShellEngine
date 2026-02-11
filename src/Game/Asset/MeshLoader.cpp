@@ -7,11 +7,11 @@ namespace sh::game
 		ctx(ctx)
 	{
 	}
-	SH_GAME_API auto MeshLoader::Load(const std::filesystem::path& filePath) -> core::SObject*
+	SH_GAME_API auto MeshLoader::Load(const std::filesystem::path& filePath) const -> core::SObject*
 	{
 		return nullptr;
 	}
-	SH_GAME_API auto MeshLoader::Load(const core::Asset& asset) -> core::SObject*
+	SH_GAME_API auto MeshLoader::Load(const core::Asset& asset) const -> core::SObject*
 	{
 		if (std::strcmp(asset.GetType(), GetAssetName()) != 0)
 			return nullptr;

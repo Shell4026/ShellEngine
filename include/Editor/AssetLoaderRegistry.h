@@ -20,7 +20,7 @@ namespace sh::editor
 		};
 	public:
 		SH_EDITOR_API void RegisterLoader(AssetExtensions::Type ext, std::unique_ptr<core::IAssetLoader>&& loader, int priority, bool bObjDataInMeta);
-		SH_EDITOR_API auto GetLoader(AssetExtensions::Type ext) -> Importer*;
+		SH_EDITOR_API auto GetLoader(AssetExtensions::Type ext) const -> const Importer*;
 		SH_EDITOR_API void Clear();
 	private:
 		std::unordered_map<AssetExtensions::Type, Importer> loaders;

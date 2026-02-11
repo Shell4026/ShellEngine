@@ -2,7 +2,7 @@
 #include "Core/ModuleLoader.h"
 
 #if SH_EDITOR
-#include "Editor/UI/Project.h"
+#include "Editor/Project.h"
 #endif
 #include <memory>
 namespace sh

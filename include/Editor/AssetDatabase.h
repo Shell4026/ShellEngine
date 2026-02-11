@@ -2,6 +2,7 @@
 #include "Export.h"
 #include "AssetLoaderRegistry.h"
 
+#include "Core/SObject.h"
 #include "Core/Singleton.hpp"
 #include "Core/ISerializable.h"
 #include "Core/IAssetLoader.h"
@@ -13,25 +14,22 @@
 #include <optional>
 #include <queue>
 #include <optional>
-namespace sh::core
-{
-	class SObject;
-}
 namespace sh::render
 {
 	class Texture;
 	class Mesh;
 	class Model;
 	class Material;
+	class IRenderContext;
 }
 namespace sh::game
 {
 	class World;
+	class ImGUImpl;
 }
 
 namespace sh::editor
 {
-	class Project;
 	class AssetDatabase : public core::Singleton<AssetDatabase>
 	{
 		friend core::Singleton<AssetDatabase>;
@@ -42,12 +40,11 @@ namespace sh::editor
 			std::filesystem::path cachePath; // ProjectPath의 상대 경로로 저장해야함!
 		};
 	public:
-		SH_EDITOR_API void SetProject(Project& project);
+		SH_EDITOR_API void Init(const std::filesystem::path& projectPath, const render::IRenderContext& ctx, const game::ImGUImpl& imgui);
 
 		SH_EDITOR_API void SaveDatabase(const std::filesystem::path& dir);
 		SH_EDITOR_API auto LoadDatabase(const std::filesystem::path& dir) -> bool;
 
-		SH_EDITOR_API void SetProjectDirectory(const std::filesystem::path& dir);
 		/// @brief 변경 사항이 있는 에셋을 모두 저장하는 함수
 		/// @brief SetDirty()를 통해 알려줘야 한다.
 		SH_EDITOR_API void SaveAllAssets();
@@ -83,16 +80,18 @@ namespace sh::editor
 		SH_EDITOR_API auto ExportAsset(const core::SObject& obj, const std::filesystem::path& path, int64_t writeTime = 0) const -> bool;
 
 		SH_EDITOR_API auto IsAssetChanged(const std::filesystem::path& assetPath) -> bool;
+		SH_EDITOR_API auto GetAssetImporter(AssetExtensions::Type type) const -> const AssetLoaderRegistry::Importer*;
 	protected:
 		SH_EDITOR_API AssetDatabase();
-	private:
-		void InitImporters();
 		/// @brief 파일의 메타 파일이 존재 하는지?
 		/// @param dir 파일 경로
 		/// @return 있다면 메타 파일의 경로를 반환, 없다면 nullopt 반환
 		auto HasMetaFile(const std::filesystem::path& dir) -> std::optional<std::filesystem::path>;\
 		void LoadAllAssetsHelper(const std::filesystem::path& dir, bool recursive);
 		auto LoadAsset(const std::filesystem::path& path, core::IAssetLoader& loader, bool bMetaSaveWithObj) -> core::SObject*;
+	public:
+		core::Observer<false, core::SObject*> onAssetImported;
+		core::Observer<false, core::UUID> onAssetRemoved;
 	private:
 		struct AssetLoadData
 		{
@@ -126,8 +125,6 @@ namespace sh::editor
 				return *this;
 			}
 		};
-		Project* project = nullptr;
-
 		std::filesystem::path projectPath;
 		std::filesystem::path libPath;
 

@@ -10,7 +10,7 @@ namespace sh::game
 	FontLoader::FontLoader()
 	{
 	}
-	SH_GAME_API auto FontLoader::Load(const std::filesystem::path& filePath) -> core::SObject*
+	SH_GAME_API auto FontLoader::Load(const std::filesystem::path& filePath) const -> core::SObject*
 	{
 		auto file = core::FileSystem::LoadText(filePath);
 		if (!file.has_value())
@@ -27,7 +27,7 @@ namespace sh::game
 
 		return font;
 	}
-	SH_GAME_API auto FontLoader::Load(const core::Asset& asset) -> core::SObject*
+	SH_GAME_API auto FontLoader::Load(const core::Asset& asset) const -> core::SObject*
 	{
 		if (std::strcmp(asset.GetType(), FontAsset::ASSET_NAME) != 0)
 			return nullptr;

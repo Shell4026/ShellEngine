@@ -44,18 +44,18 @@ namespace sh::game
 	public:
 		const render::IRenderContext& context;
 	private:
-		auto CalculateTangent(
+		static auto CalculateTangent(
 			const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2,
-			const glm::vec2& uv0, const glm::vec2& uv1, const glm::vec2& uv2) const->glm::vec3;
-		void CreateTangents(std::vector<render::Mesh::Vertex>& verts, const std::vector<uint32_t>& indices);
+			const glm::vec2& uv0, const glm::vec2& uv1, const glm::vec2& uv2) -> glm::vec3;
+		static void CreateTangents(std::vector<render::Mesh::Vertex>& verts, const std::vector<uint32_t>& indices);
 	protected:
-		SH_GAME_API auto LoadObj(const std::filesystem::path& dir) -> render::Model*;
-		SH_GAME_API auto LoadGLTF(const std::filesystem::path& dir) -> render::Model*;
+		SH_GAME_API auto LoadObj(const std::filesystem::path& dir) const -> render::Model*;
+		SH_GAME_API auto LoadGLTF(const std::filesystem::path& dir) const -> render::Model*;
 	public:
 		SH_GAME_API ModelLoader(const render::IRenderContext& context);
 
-		SH_GAME_API auto Load(const std::filesystem::path& filename) -> core::SObject* override;
-		SH_GAME_API auto Load(const core::Asset& asset) -> core::SObject* override;
+		SH_GAME_API auto Load(const std::filesystem::path& filename) const -> core::SObject* override;
+		SH_GAME_API auto Load(const core::Asset& asset) const -> core::SObject* override;
 
 		SH_GAME_API auto GetAssetName() const -> const char*;
 	};

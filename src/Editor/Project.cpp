@@ -1,4 +1,4 @@
-﻿#include "UI/Project.h"
+﻿#include "Project.h"
 #include "EditorWorld.h"
 #include "AssetDatabase.h"
 #include "BuildSystem.h"
@@ -14,28 +14,47 @@
 #include "Game/GameManager.h"
 #include "Game/Prefab.h"
 #include "Game/World.h"
+#include "Game/ScriptableObject.h"
 namespace sh::editor
 {
 	Project::Project(render::Renderer& renderer, game::ImGUImpl& gui) :
 		renderer(renderer), gui(gui),
 
-		loadedAssets(renderer),
 		rootPath(std::filesystem::current_path()),
 		assetDatabase(*AssetDatabase::GetInstance()),
 		engineDirRegex("set\\(ENGINE_DIR .*?\\)", std::regex::optimize)
 	{
 		exePath = core::FileSystem::GetExecutableDirectory();
+		onAssetImportedListener.SetCallback(
+			[this](core::SObject* objPtr)
+			{
+				if (objPtr == nullptr)
+					return;
+				if (objPtr->GetType().IsChildOf(game::ScriptableObject::GetStaticType()))
+					loadedScriptableObjects.insert(objPtr);
+				loadedAssets.push_back(objPtr);
+			}
+		);
+
 		LoadLatestProjectPath();
 	}
 
 	Project::~Project()
 	{
+		for (auto objPtr : loadedAssets)
+		{
+			if (objPtr == nullptr)
+				continue;
+			objPtr->Destroy();
+		}
+		core::GarbageCollection::GetInstance()->Collect();
+		core::GarbageCollection::GetInstance()->DestroyPendingKillObjs();
 		componentLoader.UnloadPlugin();
 
 		setting.Save(rootPath / "ProjectSetting.json");
 		assetDatabase.SaveDatabase(libraryPath / "AssetDB.json");
 
-		loadedAssets.Clean();
+		loadedAssets.clear();
 	}
 
 	SH_EDITOR_API void Project::Update()
@@ -151,16 +170,16 @@ namespace sh::editor
 		projectExplorer.SetRoot(assetPath);
 		projectExplorer.Refresh();
 
-		assetDatabase.SetProject(*this);
+		LoadEditorPlugin();
+
+		assetDatabase.Init(rootPath, *renderer.GetContext(), gui);
+		assetDatabase.onAssetImported.Register(onAssetImportedListener);
 		assetDatabase.LoadDatabase(libraryPath / "AssetDB.json");
-		assetDatabase.SetProjectDirectory(rootPath);
 		assetDatabase.LoadAllAssets(assetPath, true);
 
 		setting.Load(settingPath);
 		
 		SaveLatestProjectPath(dir);
-
-		LoadEditorPlugin();
 
 		ChangeSourcePath(dir); // CMakeLists.txt의 엔진 경로 바꾸는 함수
 
@@ -239,15 +258,15 @@ namespace sh::editor
 		game::GameManager::GetInstance()->AddAterUpdateTask(
 			[this]()
 			{
+				std::vector<core::UUID> scriptableObjects;
 				if (componentLoader.IsLoaded())
 				{
+					// 1. 월드 상태 저장 후 유저 컴포넌트들을 모두 제거 후 메모리에서 해제
 					for (auto& [uuid, worldPtr] : game::GameManager::GetInstance()->GetWorlds())
 					{
 						if (worldPtr == nullptr)
 							continue;
-						// 1. 월드 현재 상태 저장
 						worldPtr->SaveWorldPoint(worldPtr->Serialize(), "temp");
-						// 2. 유저 코드에 있는 컴포넌트와 같은 컴포넌트들을 모두 제거 후 메모리에서 해제
 						for (auto obj : worldPtr->GetGameObjects())
 						{
 							for (auto component : obj->GetComponents())
@@ -261,14 +280,31 @@ namespace sh::editor
 								}
 							}
 						}
-						core::GarbageCollection::GetInstance()->Collect();
-						core::GarbageCollection::GetInstance()->DestroyPendingKillObjs();
 					}
+					// 2. 유저 ScriptableObject들도 모두 제거
+					for (auto objPtr : loadedScriptableObjects)
+					{
+						scriptableObjects.push_back(objPtr->GetUUID());
+						objPtr->Destroy();
+					}
+					loadedScriptableObjects.clear();
+
+					core::GarbageCollection::GetInstance()->Collect();
+					core::GarbageCollection::GetInstance()->DestroyPendingKillObjs();
 					// 3. 플러그인 언로드
 					componentLoader.UnloadPlugin();
 				}
-				// 4. 플러그인 로드 후 월드 복원
+				// 4. 플러그인 로드 후 복원
 				LoadEditorPlugin();
+
+				for (const auto& uuid : scriptableObjects)
+				{
+					const auto assetInfo = assetDatabase.GetAssetPath(uuid);
+					if (assetInfo == nullptr)
+						continue;
+					assetDatabase.ImportAsset(assetInfo->originalPath);
+				}
+
 				for (auto& [uuid, worldPtr] : game::GameManager::GetInstance()->GetWorlds())
 				{
 					worldPtr->LoadWorldPoint("temp");

@@ -1,7 +1,6 @@
 ﻿#include "AssetDatabase.h"
 #include "AssetExtensions.h"
 #include "Meta.h"
-#include "UI/Project.h"
 #include "EditorWorld.h"
 
 #include "Core/FileSystem.h"
@@ -27,6 +26,7 @@
 #include "Game/Asset/BinaryLoader.h"
 #include "Game/Asset/TextLoader.h"
 #include "Game/Asset/FontLoader.h"
+#include "Game/Asset/ScriptableObjectLoader.h"
 
 #include "Game/Asset/TextureAsset.h"
 #include "Game/Asset/ModelAsset.h"
@@ -38,6 +38,7 @@
 #include "Game/Asset/BinaryAsset.h"
 #include "Game/Asset/TextAsset.h"
 #include "Game/Asset/FontAsset.h"
+#include "Game/Asset/ScriptableObjectAsset.h"
 
 #include <istream>
 #include <ostream>
@@ -62,11 +63,6 @@ namespace sh::editor
 		);
 	}
 
-	SH_EDITOR_API void AssetDatabase::SetProject(Project& project)
-	{
-		this->project = &project;
-		InitImporters();
-	}
 	SH_EDITOR_API void AssetDatabase::SaveDatabase(const std::filesystem::path& dir)
 	{
 		core::Json json{};
@@ -118,11 +114,6 @@ namespace sh::editor
 		}
 		return true;
 	}
-	SH_EDITOR_API void AssetDatabase::SetProjectDirectory(const std::filesystem::path& dir)
-	{
-		projectPath = dir;
-		libPath = projectPath / "Library";
-	}
 	SH_EDITOR_API void AssetDatabase::SaveAllAssets()
 	{
 		for (auto obj : dirtyObjs)
@@ -173,27 +164,29 @@ namespace sh::editor
 			loadingAssetsQueue.pop();
 			ImportAsset(data.path);
 		}
-		SaveDatabase(project->GetLibraryPath() / "AssetDB.json");
+		SaveDatabase(libPath / "AssetDB.json");
 	}
 	SH_EDITOR_API auto AssetDatabase::ImportAsset(const std::filesystem::path& dir) -> core::SObject*
 	{
-		if (!std::filesystem::exists(dir))
+		std::filesystem::path abPath = dir;
+		if (dir.is_relative())
+			abPath = projectPath / abPath;
+
+		if (!std::filesystem::exists(abPath))
 			return nullptr;
-		if (std::filesystem::is_directory(dir))
+		if (std::filesystem::is_directory(abPath))
 			return nullptr;
 
-		const std::string extension = dir.extension().string();
+		const std::string extension = abPath.extension().string();
 
 		const auto type = AssetExtensions::CheckType(extension);
-		AssetLoaderRegistry::Importer* const importerPtr = assetLoaders.GetLoader(type);
+		const AssetLoaderRegistry::Importer* const importerPtr = assetLoaders.GetLoader(type);
 		if (importerPtr == nullptr)
 			return nullptr;
 
-		const bool bAssetChanged = IsAssetChanged(dir);
+		const bool bAssetChanged = IsAssetChanged(abPath);
 
-		core::SObject* const objPtr = LoadAsset(dir, *importerPtr->loader, importerPtr->bObjDataInMeta);
-		if (objPtr != nullptr)
-			project->loadedAssets.AddResource(objPtr->GetUUID(), objPtr);
+		core::SObject* const objPtr = LoadAsset(abPath, *importerPtr->loader, importerPtr->bObjDataInMeta);
 
 		// 모델 파일은 특수처리 필요
 		if (type == AssetExtensions::Type::Model)
@@ -211,6 +204,9 @@ namespace sh::editor
 				}
 			}
 		}
+		if (objPtr != nullptr)
+			onAssetImported.Notify(objPtr);
+
 		return objPtr;
 	}
 
@@ -220,7 +216,7 @@ namespace sh::editor
 			return false;
 
 		const std::filesystem::path relativePath = std::filesystem::relative(dir, projectPath);
-		const std::filesystem::path cachePath = project->GetLibraryPath() / fmt::format("{}.asset", obj.GetUUID().ToString());
+		const std::filesystem::path cachePath = libPath / fmt::format("{}.asset", obj.GetUUID().ToString());
 
 		if (!ExportAsset(obj, cachePath))
 			return false;
@@ -238,7 +234,7 @@ namespace sh::editor
 		Meta meta{};
 		meta.Save(obj, Meta::CreateMetaDirectory(dir));
 
-		project->loadedAssets.AddResource(obj.GetUUID(), const_cast<core::SObject*>(&obj));
+		onAssetImported.Notify(const_cast<core::SObject*>(&obj));
 
 		return true;
 	}
@@ -256,7 +252,7 @@ namespace sh::editor
 
 		it->second.originalPath = relativePath;
 
-		SaveDatabase(project->GetLibraryPath() / "AssetDB.json");
+		SaveDatabase(libPath / "AssetDB.json");
 	}
 
 	SH_EDITOR_API void AssetDatabase::DeleteAsset(const core::UUID& uuid)
@@ -278,9 +274,9 @@ namespace sh::editor
 		uuids.erase(it->second.originalPath);
 		paths.erase(it);
 
-		project->loadedAssets.DestroyResource(uuid);
+		onAssetRemoved.Notify(uuid);
 
-		SaveDatabase(project->GetLibraryPath() / "AssetDB.json");
+		SaveDatabase(libPath / "AssetDB.json");
 	}
 
 	SH_EDITOR_API void AssetDatabase::MoveAssetToDirectory(const core::UUID& uuid, const std::filesystem::path& directoryPath)
@@ -383,6 +379,8 @@ namespace sh::editor
 			assetType = game::TextAsset::ASSET_NAME;
 		else if (obj.GetType() == render::Font::GetStaticType())
 			assetType = game::FontAsset::ASSET_NAME;
+		else if (obj.GetType().IsChildOf(game::ScriptableObject::GetStaticType()))
+			assetType = game::ScriptableObjectAsset::ASSET_NAME;
 		else
 		{
 			SH_ERROR_FORMAT("Failed to export asset (type: {})", obj.GetType().name.ToString());
@@ -446,26 +444,34 @@ namespace sh::editor
 
 		return (assetWriteTime != writeTime) || bMetaChanged;
 	}
-
-	void AssetDatabase::InitImporters()
+	SH_EDITOR_API auto AssetDatabase::GetAssetImporter(AssetExtensions::Type type) const -> const AssetLoaderRegistry::Importer*
 	{
+		return assetLoaders.GetLoader(type);
+	}
+
+	void AssetDatabase::Init(const std::filesystem::path& projectPath, const render::IRenderContext& ctx, const game::ImGUImpl& imgui)
+	{
+		this->projectPath = projectPath;
+		libPath = projectPath / "Library";
+
 		assert(project->renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan); // TODO
-		static render::vk::VulkanShaderPassBuilder passBuilder{ static_cast<render::vk::VulkanContext&>(*project->renderer.GetContext()) };
+		static render::vk::VulkanShaderPassBuilder passBuilder{ static_cast<const render::vk::VulkanContext&>(ctx) };
 		auto shaderLoader = std::make_unique<game::ShaderLoader>(&passBuilder);
 		shaderLoader->SetCachePath(projectPath / "temp");
 
 		assetLoaders.Clear();
-		assetLoaders.RegisterLoader(AssetExtensions::Type::Model, std::make_unique<game::ModelLoader>(*project->renderer.GetContext()), 2, true);
-		assetLoaders.RegisterLoader(AssetExtensions::Type::Texture, std::make_unique<game::TextureLoader>(*project->renderer.GetContext()), 2, true);
+		assetLoaders.RegisterLoader(AssetExtensions::Type::Model, std::make_unique<game::ModelLoader>(ctx), 2, true);
+		assetLoaders.RegisterLoader(AssetExtensions::Type::Texture, std::make_unique<game::TextureLoader>(ctx), 2, true);
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Shader, std::move(shaderLoader), 2, false);
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Binary, std::make_unique<game::BinaryLoader>(), 2, false);
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Text, std::make_unique<game::TextLoader>(), 2, false);
 
-		assetLoaders.RegisterLoader(AssetExtensions::Type::Material, std::make_unique<game::MaterialLoader>(*project->renderer.GetContext()), 1, false);
+		assetLoaders.RegisterLoader(AssetExtensions::Type::Material, std::make_unique<game::MaterialLoader>(ctx), 1, false);
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Font, std::make_unique<game::FontLoader>(), 1, false);
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Prefab, std::make_unique<game::PrefabLoader>(), 1, false);
 
-		assetLoaders.RegisterLoader(AssetExtensions::Type::World, std::make_unique<game::WorldLoader>(project->renderer, project->gui), 0, false);
+		assetLoaders.RegisterLoader(AssetExtensions::Type::World, std::make_unique<game::WorldLoader>(), 0, false);
+		assetLoaders.RegisterLoader(AssetExtensions::Type::ScriptableObject, std::make_unique<game::ScriptableObjectLoader>(), -1, false);
 	}
 	auto AssetDatabase::HasMetaFile(const std::filesystem::path& dir) -> std::optional<std::filesystem::path>
 	{

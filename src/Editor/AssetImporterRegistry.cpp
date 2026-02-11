@@ -17,7 +17,7 @@ namespace sh::editor
 		importer.bObjDataInMeta = bObjDataInMeta;
 		loaders.insert({ ext, std::move(importer) });
 	}
-	SH_EDITOR_API auto AssetLoaderRegistry::GetLoader(AssetExtensions::Type ext) -> Importer*
+	SH_EDITOR_API auto AssetLoaderRegistry::GetLoader(AssetExtensions::Type ext) const -> const Importer*
 	{
 		if (ext == AssetExtensions::Type::None)
 			return nullptr;

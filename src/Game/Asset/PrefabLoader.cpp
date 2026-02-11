@@ -11,7 +11,7 @@ namespace sh::game
 	SH_GAME_API PrefabLoader::PrefabLoader()
 	{
 	}
-	SH_GAME_API auto PrefabLoader::Load(const std::filesystem::path& path) -> core::SObject*
+	SH_GAME_API auto PrefabLoader::Load(const std::filesystem::path& path) const -> core::SObject*
 	{
 		auto file = core::FileSystem::LoadText(path);
 		if (!file.has_value())
@@ -28,7 +28,7 @@ namespace sh::game
 
 		return prefab;
 	}
-	SH_GAME_API auto PrefabLoader::Load(const core::Asset& asset) -> core::SObject*
+	SH_GAME_API auto PrefabLoader::Load(const core::Asset& asset) const -> core::SObject*
 	{
 		if (std::strcmp(asset.GetType(), PrefabAsset::ASSET_NAME) != 0)
 			return nullptr;

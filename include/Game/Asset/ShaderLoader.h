@@ -17,11 +17,6 @@ namespace sh::game
 {
 	class ShaderLoader : public core::IAssetLoader
 	{
-	private:
-		static constexpr const char* ASSET_NAME = "shad";
-
-		std::filesystem::path cachePath;
-		render::ShaderPassBuilder* passBuilder;
 	public:
 		SH_GAME_API ShaderLoader(render::ShaderPassBuilder* builder);
 		SH_GAME_API ~ShaderLoader();
@@ -29,8 +24,13 @@ namespace sh::game
 		SH_GAME_API void SetCachePath(const std::filesystem::path& path);
 		SH_GAME_API auto GetCachePath() const -> const std::filesystem::path&;
 
-		SH_GAME_API auto Load(const std::filesystem::path& filePath) -> core::SObject* override;
-		SH_GAME_API auto Load(const core::Asset& asset) -> core::SObject* override;
+		SH_GAME_API auto Load(const std::filesystem::path& filePath) const -> core::SObject* override;
+		SH_GAME_API auto Load(const core::Asset& asset) const -> core::SObject* override;
 		SH_GAME_API auto GetAssetName() const -> const char* override;
+	private:
+		static constexpr const char* ASSET_NAME = "shad";
+
+		std::filesystem::path cachePath;
+		render::ShaderPassBuilder* passBuilder;
 	};
 }

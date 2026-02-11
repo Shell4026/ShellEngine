@@ -19,7 +19,8 @@ namespace sh::editor
 			Prefab,
 			Text,
 			Font,
-			Binary
+			Binary,
+			ScriptableObject
 		};
 	public:
 		SH_EDITOR_API static void AddExtension(const std::string& ext, Type type);

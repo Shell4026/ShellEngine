@@ -38,6 +38,8 @@ namespace sh::core
 		/// @return 성공 시 ReturnType이 포인터 형식이면 그대로 반환, 아니라면 std::optional<ReturnType>을 반환한다.
 		/// @return 실패 시 ReturnType이 포인터 형식이라면 nullptr, 아니라면 nullopt를 던진다.
 		auto Create(const Key& key) const -> CreateReturnType;
+
+		auto GetFactories() const -> const std::unordered_map<Key, AssetFactoryFn>& { return factories; }
 	};
 	template<typename T, typename ReturnType, typename Key>
 	inline auto Factory<T, ReturnType, Key>::HasKey(const Key& key) const -> bool

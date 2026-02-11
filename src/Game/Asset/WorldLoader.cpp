@@ -1,21 +1,18 @@
 ﻿#include "Asset/WorldLoader.h"
 #include "Asset/WorldAsset.h"
 #include "World.h"
-#include "ComponentModule.h"
 
 #include "Core/FileSystem.h"
-#include "Core/SObjectManager.h"
 #include "Core/Factory.hpp"
 #include "Core/Logger.h"
 
 #include <cstring>
 namespace sh::game
 {
-	WorldLoader::WorldLoader(render::Renderer& renderer, ImGUImpl& guiContext) :
-		renderer(renderer), componentModule(*game::ComponentModule::GetInstance()), guiContext(guiContext)
+	WorldLoader::WorldLoader()
 	{
 	}
-	auto WorldLoader::Load(const std::filesystem::path& path) -> core::SObject*
+	auto WorldLoader::Load(const std::filesystem::path& path) const -> core::SObject*
 	{
 		auto textOpt = core::FileSystem::LoadText(path);
 		if (!textOpt.has_value())
@@ -38,7 +35,7 @@ namespace sh::game
 		return world;
 	}
 
-	auto WorldLoader::Load(const core::Asset& asset) -> core::SObject*
+	auto WorldLoader::Load(const core::Asset& asset) const -> core::SObject*
 	{
 		if (std::strcmp(asset.GetType(), WorldAsset::ASSET_NAME) != 0)
 		{

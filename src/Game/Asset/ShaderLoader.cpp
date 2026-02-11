@@ -37,7 +37,7 @@ namespace sh::game
 		return cachePath;
 	}
 
-	SH_GAME_API auto ShaderLoader::Load(const std::filesystem::path& path) -> core::SObject*
+	SH_GAME_API auto ShaderLoader::Load(const std::filesystem::path& path) const -> core::SObject*
 	{
 		auto src = core::FileSystem::LoadText(path);
 		if (!src.has_value())
@@ -111,7 +111,7 @@ namespace sh::game
 		return shader;
 	}
 
-	SH_GAME_API auto ShaderLoader::Load(const core::Asset& asset) -> core::SObject*
+	SH_GAME_API auto ShaderLoader::Load(const core::Asset& asset) const -> core::SObject*
 	{
 		if (std::strcmp(asset.GetType(), ASSET_NAME) != 0)
 		{

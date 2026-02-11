@@ -1,7 +1,7 @@
 ﻿#include "EditorWorld.h"
 #include "EditorResource.h"
 #include "EditorRenderer.h"
-#include "UI/Project.h"
+#include "Project.h"
 #include "AssetDatabase.h"
 
 #include "Component/EditorUI.h"

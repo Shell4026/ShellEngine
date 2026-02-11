@@ -9,7 +9,7 @@ namespace sh::game
 	SH_GAME_API TextLoader::TextLoader()
 	{
 	}
-	SH_GAME_API auto TextLoader::Load(const std::filesystem::path& path) -> core::SObject*
+	SH_GAME_API auto TextLoader::Load(const std::filesystem::path& path) const -> core::SObject*
 	{
 		auto file = core::FileSystem::LoadText(path);
 		if (!file.has_value())
@@ -20,7 +20,7 @@ namespace sh::game
 
 		return textObj;
 	}
-	SH_GAME_API auto TextLoader::Load(const core::Asset& asset) -> core::SObject*
+	SH_GAME_API auto TextLoader::Load(const core::Asset& asset) const -> core::SObject*
 	{
 		if (std::strcmp(asset.GetType(), TextAsset::ASSET_NAME) != 0)
 			return nullptr;

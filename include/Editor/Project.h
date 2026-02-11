@@ -1,13 +1,12 @@
 ﻿#pragma once
 #include "Editor/Export.h"
 #include "Editor/ProjectSetting.h"
-#include "ProjectExplorer.h"
+#include "UI/ProjectExplorer.h"
 
 #include "Core/SContainer.hpp"
 #include "Core/NonCopyable.h"
 #include "Core/Plugin.h"
 
-#include "Game/ResourceManager.hpp"
 #include "Game/ComponentLoader.h"
 
 #include <string>
@@ -74,7 +73,7 @@ namespace sh::editor
 		render::Renderer& renderer;
 		game::ImGUImpl& gui;
 
-		game::ResourceManager<core::SObject, core::UUID> loadedAssets;
+		core::SVector<core::SObject*> loadedAssets;
 	private:
 		std::filesystem::path exePath;
 		std::filesystem::path rootPath;
@@ -91,6 +90,9 @@ namespace sh::editor
 		const std::regex engineDirRegex;
 
 		game::ComponentLoader componentLoader;
+
+		core::SSet<core::SObject*> loadedScriptableObjects;
+		core::Observer<false, core::SObject*>::Listener onAssetImportedListener;
 
 		bool isOpen = false;
 		bool bSettingUI = false;

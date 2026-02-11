@@ -15,7 +15,8 @@ namespace sh::editor
 		{".txt", Type::Text},
 		{".json", Type::Text},
 		{".font", Type::Font},
-		{".ttf", Type::Binary}
+		{".ttf", Type::Binary},
+		{".srpo", Type::ScriptableObject}
 	};
 
 	SH_EDITOR_API void AssetExtensions::AddExtension(const std::string& ext, Type type)
@@ -53,6 +54,8 @@ namespace sh::editor
 			return "Font";
 		case Type::Binary:
 			return "Binary";
+		case Type::ScriptableObject:
+			return "ScriptableObject";
 		}
 		return "None";
 	}

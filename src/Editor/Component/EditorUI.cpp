@@ -1,6 +1,6 @@
 ﻿#include "Component/EditorUI.h"
 #include "Component/EditorControl.h"
-#include "UI/Project.h"
+#include "Project.h"
 #include "UI/BundleViewer.h"
 #include "EditorWorld.h"
 

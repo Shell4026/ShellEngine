@@ -1,5 +1,5 @@
 ﻿#include "EditorResource.h"
-#include "UI/Project.h"
+#include "Project.h"
 
 #include "Core/AssetExporter.h"
 #include "Core/GarbageCollection.h"
@@ -51,21 +51,21 @@ namespace sh::editor
 		game::ModelLoader modelLoader{ *renderer.GetContext() };
 		game::ShaderLoader shaderLoader{ &shaderBuilder };
 
-		auto folderTex = static_cast<render::Texture*>(project.loadedAssets.AddResource(core::UUID::Generate(), static_cast<render::Texture*>(texLoader.Load("textures/folder.png"))));
+		auto folderTex = static_cast<render::Texture*>(project.loadedAssets.emplace_back(static_cast<render::Texture*>(texLoader.Load("textures/folder.png"))));
 		assert(folderTex != nullptr);
-		auto fileTex = static_cast<render::Texture*>(project.loadedAssets.AddResource(core::UUID::Generate(), static_cast<render::Texture*>(texLoader.Load("textures/file.png"))));
+		auto fileTex = static_cast<render::Texture*>(project.loadedAssets.emplace_back(static_cast<render::Texture*>(texLoader.Load("textures/file.png"))));
 		assert(fileTex != nullptr);
-		auto meshTex = static_cast<render::Texture*>(project.loadedAssets.AddResource(core::UUID::Generate(), static_cast<render::Texture*>(texLoader.Load("textures/meshIcon.png"))));
+		auto meshTex = static_cast<render::Texture*>(project.loadedAssets.emplace_back(static_cast<render::Texture*>(texLoader.Load("textures/meshIcon.png"))));
 		assert(meshTex != nullptr);
-		auto materialTex = static_cast<render::Texture*>(project.loadedAssets.AddResource(core::UUID::Generate(), static_cast<render::Texture*>(texLoader.Load("textures/MaterialIcon.png"))));
+		auto materialTex = static_cast<render::Texture*>(project.loadedAssets.emplace_back(static_cast<render::Texture*>(texLoader.Load("textures/MaterialIcon.png"))));
 		assert(materialTex != nullptr);
-		auto imageTex = static_cast<render::Texture*>(project.loadedAssets.AddResource(core::UUID::Generate(), static_cast<render::Texture*>(texLoader.Load("textures/image.png"))));
+		auto imageTex = static_cast<render::Texture*>(project.loadedAssets.emplace_back(static_cast<render::Texture*>(texLoader.Load("textures/image.png"))));
 		assert(imageTex != nullptr);
-		auto shaderTex = static_cast<render::Texture*>(project.loadedAssets.AddResource(core::UUID::Generate(), static_cast<render::Texture*>(texLoader.Load("textures/shaderIcon.png"))));
+		auto shaderTex = static_cast<render::Texture*>(project.loadedAssets.emplace_back(static_cast<render::Texture*>(texLoader.Load("textures/shaderIcon.png"))));
 		assert(imageTex != nullptr);
-		auto worldTex = static_cast<render::Texture*>(project.loadedAssets.AddResource(core::UUID::Generate(), static_cast<render::Texture*>(texLoader.Load("textures/worldIcon.png"))));
+		auto worldTex = static_cast<render::Texture*>(project.loadedAssets.emplace_back(static_cast<render::Texture*>(texLoader.Load("textures/worldIcon.png"))));
 		assert(imageTex != nullptr);
-		auto prefabTex = static_cast<render::Texture*>(project.loadedAssets.AddResource(core::UUID::Generate(), static_cast<render::Texture*>(texLoader.Load("textures/prefabIcon.png"))));
+		auto prefabTex = static_cast<render::Texture*>(project.loadedAssets.emplace_back(static_cast<render::Texture*>(texLoader.Load("textures/prefabIcon.png"))));
 		assert(imageTex != nullptr);
 
 		auto& gc = *core::GarbageCollection::GetInstance();

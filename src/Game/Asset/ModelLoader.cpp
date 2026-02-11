@@ -21,7 +21,7 @@
 #include <limits>
 namespace sh::game
 {
-	SH_GAME_API auto ModelLoader::LoadObj(const std::filesystem::path& path) -> render::Model*
+	SH_GAME_API auto ModelLoader::LoadObj(const std::filesystem::path& path) const -> render::Model*
 	{
 		tinyobj::attrib_t attrib;
 		std::vector<tinyobj::shape_t> shapes;
@@ -108,7 +108,7 @@ namespace sh::game
 		model->AddMeshes(std::move(rootNode));
 		return model;
 	}
-	SH_GAME_API auto ModelLoader::LoadGLTF(const std::filesystem::path& dir) -> render::Model*
+	SH_GAME_API auto ModelLoader::LoadGLTF(const std::filesystem::path& dir) const -> render::Model*
 	{
 		static tinygltf::TinyGLTF gltfContext;
 		tinygltf::Model gltfModel;
@@ -282,7 +282,7 @@ namespace sh::game
 	}
 	auto ModelLoader::CalculateTangent(
 		const glm::vec3& v0, const glm::vec3& v1, const glm::vec3& v2,
-		const glm::vec2& uv0, const glm::vec2& uv1, const glm::vec2& uv2) const -> glm::vec3
+		const glm::vec2& uv0, const glm::vec2& uv1, const glm::vec2& uv2) -> glm::vec3
 	{
 		glm::vec3 e0 = v1 - v0;
 		glm::vec3 e1 = v2 - v0;
@@ -325,7 +325,7 @@ namespace sh::game
 	{
 	}
 
-	SH_GAME_API auto ModelLoader::Load(const std::filesystem::path& path) -> core::SObject*
+	SH_GAME_API auto ModelLoader::Load(const std::filesystem::path& path) const -> core::SObject*
 	{
 		std::string ext = path.extension().string();
 		if (ext == ".obj")
@@ -335,7 +335,7 @@ namespace sh::game
 		return nullptr;
 	}
 
-	SH_GAME_API auto ModelLoader::Load(const core::Asset& asset) -> core::SObject*
+	SH_GAME_API auto ModelLoader::Load(const core::Asset& asset) const -> core::SObject*
 	{
 		if (std::strcmp(asset.GetType(), ASSET_NAME) != 0)
 		{

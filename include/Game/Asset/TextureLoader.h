@@ -20,15 +20,15 @@ namespace sh::game
 	private:
 		static constexpr const char* ASSET_NAME = "tex";
 	public:
-		const render::IRenderContext& context;
-	private:
-		auto GenerateMipmaps(uint8_t* pixels, uint32_t width, uint32_t height) -> std::vector<std::vector<uint8_t>>;
-	public:
 		SH_GAME_API TextureLoader(const render::IRenderContext& context);
 		SH_GAME_API ~TextureLoader() = default;
-		SH_GAME_API auto Load(const std::filesystem::path& filePath) -> core::SObject* override;
-		SH_GAME_API auto Load(const core::Asset& asset) -> core::SObject* override;
+		SH_GAME_API auto Load(const std::filesystem::path& filePath) const -> core::SObject* override;
+		SH_GAME_API auto Load(const core::Asset& asset) const -> core::SObject* override;
 
 		SH_GAME_API auto GetAssetName() const -> const char* override;
+	public:
+		const render::IRenderContext& context;
+	private:
+		static auto GenerateMipmaps(uint8_t* pixels, uint32_t width, uint32_t height) -> std::vector<std::vector<uint8_t>>;
 	};
 }

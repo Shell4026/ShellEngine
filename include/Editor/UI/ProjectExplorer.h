@@ -47,6 +47,7 @@ namespace sh::editor
 		auto RenderItem(const FileItem& fi, float& cursorX, float spacing, float width) -> bool;
 		void RenderParent();
 		void RenderRightClickPopup();
+		void RenderCreateMenu();
 
 		void SetItemDragTarget(const std::filesystem::path& path);
 		void SetFolderDragTarget(const std::filesystem::path& folderPath);
