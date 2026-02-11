@@ -330,10 +330,7 @@ namespace sh::editor
 
 			auto sobjPtr = reinterpret_cast<core::SObject*>(item);
 			
-			if (sobjPtr->GetType().IsChildOf(game::ScriptableObject::GetStaticType())) // ScriptableObject를 상속 받는 오브젝트만 특수처리
-				payloadName = game::ScriptableObject::GetStaticType().type.name;
-			else
-				payloadName = sobjPtr->GetType().type.name;
+			payloadName = sobjPtr->GetType().type.name;
 
 			ImGui::SetDragDropPayload(payloadName.c_str(), &item, sizeof(void*));
 
