@@ -3,6 +3,7 @@
 
 #include "Core/SObject.h"
 #include "Core/Factory.hpp"
+#include "Core/Logger.h"
 
 #include <memory>
 #include <string>
@@ -15,6 +16,7 @@ struct _SRPO_Registry_##T\
 	{\
 		auto& stype = T::GetStaticType();\
 		auto& factory = *Factory::GetInstance();\
+		SH_INFO_FORMAT("UnRegister {}", stype.type.name);\
 		factory.UnRegister(std::string{ stype.type.name });\
 	}\
 	static auto GetStatic() -> _SRPO_Registry_##T*\

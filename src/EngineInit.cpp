@@ -15,6 +15,7 @@
 #include "Game/Component/Component.h"
 #include "Game/ComponentModule.h"
 #include "Game/GameManager.h"
+#include "Game/ScriptableObject.h"
 
 #if SH_EDITOR
 #include "Editor/EditorResource.h"
@@ -143,6 +144,8 @@ namespace sh
 		SH_INFO("Engine start");
 		game::ComponentModule* componentModule = game::ComponentModule::GetInstance();
 		componentModule->RegisterWaitingComponents();
+
+		SH_INFO_FORMAT("Init {} type", game::ScriptableObject::GetStaticType().name.ToString()); // 타입이 존재하는 곳을 메인 static 영역에 지정하기 위해..
 
 		SH_INFO_FORMAT("System thread count: {}", std::thread::hardware_concurrency());
 
