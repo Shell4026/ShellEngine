@@ -714,6 +714,8 @@ namespace sh::editor
 		{
 			if (auto obj = selectedObjs[0]; core::IsValid(obj))
 			{
+				if (!core::IsValid(obj))
+					return;
 				static std::string name;
 				name = obj->GetName().ToString();
 

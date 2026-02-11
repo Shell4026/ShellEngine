@@ -284,6 +284,8 @@ namespace sh::editor
 					// 2. 유저 ScriptableObject들도 모두 제거
 					for (auto objPtr : loadedScriptableObjects)
 					{
+						if (objPtr == nullptr)
+							continue;
 						scriptableObjects.push_back(objPtr->GetUUID());
 						objPtr->Destroy();
 					}
