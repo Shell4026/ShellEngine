@@ -81,6 +81,8 @@ namespace sh::editor
 
 		SH_EDITOR_API auto IsAssetChanged(const std::filesystem::path& assetPath) -> bool;
 		SH_EDITOR_API auto GetAssetImporter(AssetExtensions::Type type) const -> const AssetLoaderRegistry::Importer*;
+
+		SH_EDITOR_API auto GetGUIContext() const -> const game::ImGUImpl* { return guiCtx; }
 	protected:
 		SH_EDITOR_API AssetDatabase();
 		/// @brief 파일의 메타 파일이 존재 하는지?
@@ -125,6 +127,8 @@ namespace sh::editor
 				return *this;
 			}
 		};
+		const game::ImGUImpl* guiCtx = nullptr;
+
 		std::filesystem::path projectPath;
 		std::filesystem::path libPath;
 

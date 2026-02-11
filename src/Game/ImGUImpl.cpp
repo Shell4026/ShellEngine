@@ -25,31 +25,6 @@ namespace sh::game
 			abort();
 	}
 
-	void ImGUImpl::Sync()
-	{
-		ImDrawData* src = ImGui::GetDrawData();
-		if (src == nullptr || !src->Valid)
-			return;
-
-		ClearDrawData();
-
-		// CmdLists 제외 복사
-		ImVector<ImDrawList*> temp;
-		temp.swap(src->CmdLists);
-		drawData = *src;
-		temp.swap(src->CmdLists);
-
-		// CmdLists 요소 복사
-		drawData.CmdLists.resize(src->CmdLists.Size);
-		for (int i = 0; i < drawData.CmdListsCount; ++i)
-		{
-			ImDrawList* copy = src->CmdLists[i]->CloneOutput();
-			drawData.CmdLists[i] = copy;
-		}
-
-		bDirty = false;
-	}
-
 	ImGUImpl::ImGUImpl(window::Window& window, render::Renderer& renderer) :
 		window(window), renderer(renderer),
 		drawData(),
@@ -383,5 +358,29 @@ namespace sh::game
 		core::ThreadSyncManager::PushSyncable(*this, render::Renderer::SYNC_PRIORITY + 1);
 
 		bDirty = true;
+	}
+	SH_GAME_API void ImGUImpl::Sync()
+	{
+		ImDrawData* src = ImGui::GetDrawData();
+		if (src == nullptr || !src->Valid)
+			return;
+
+		ClearDrawData();
+
+		// CmdLists 제외 복사
+		ImVector<ImDrawList*> temp;
+		temp.swap(src->CmdLists);
+		drawData = *src;
+		temp.swap(src->CmdLists);
+
+		// CmdLists 요소 복사
+		drawData.CmdLists.resize(src->CmdLists.Size);
+		for (int i = 0; i < drawData.CmdListsCount; ++i)
+		{
+			ImDrawList* copy = src->CmdLists[i]->CloneOutput();
+			drawData.CmdLists[i] = copy;
+		}
+
+		bDirty = false;
 	}
 }//namespace

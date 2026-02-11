@@ -63,6 +63,31 @@ namespace sh::editor
 		);
 	}
 
+	SH_EDITOR_API void AssetDatabase::Init(const std::filesystem::path& projectPath, const render::IRenderContext& ctx, const game::ImGUImpl& imgui)
+	{
+		this->projectPath = projectPath;
+		this->guiCtx = &imgui;
+		libPath = projectPath / "Library";
+
+		assert(project->renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan); // TODO
+		static render::vk::VulkanShaderPassBuilder passBuilder{ static_cast<const render::vk::VulkanContext&>(ctx) };
+		auto shaderLoader = std::make_unique<game::ShaderLoader>(&passBuilder);
+		shaderLoader->SetCachePath(projectPath / "temp");
+
+		assetLoaders.Clear();
+		assetLoaders.RegisterLoader(AssetExtensions::Type::Model, std::make_unique<game::ModelLoader>(ctx), 2, true);
+		assetLoaders.RegisterLoader(AssetExtensions::Type::Texture, std::make_unique<game::TextureLoader>(ctx), 2, true);
+		assetLoaders.RegisterLoader(AssetExtensions::Type::Shader, std::move(shaderLoader), 2, false);
+		assetLoaders.RegisterLoader(AssetExtensions::Type::Binary, std::make_unique<game::BinaryLoader>(), 2, false);
+		assetLoaders.RegisterLoader(AssetExtensions::Type::Text, std::make_unique<game::TextLoader>(), 2, false);
+
+		assetLoaders.RegisterLoader(AssetExtensions::Type::Material, std::make_unique<game::MaterialLoader>(ctx), 1, false);
+		assetLoaders.RegisterLoader(AssetExtensions::Type::Font, std::make_unique<game::FontLoader>(), 1, false);
+		assetLoaders.RegisterLoader(AssetExtensions::Type::Prefab, std::make_unique<game::PrefabLoader>(), 1, false);
+
+		assetLoaders.RegisterLoader(AssetExtensions::Type::World, std::make_unique<game::WorldLoader>(), 0, false);
+		assetLoaders.RegisterLoader(AssetExtensions::Type::ScriptableObject, std::make_unique<game::ScriptableObjectLoader>(), -1, false);
+	}
 	SH_EDITOR_API void AssetDatabase::SaveDatabase(const std::filesystem::path& dir)
 	{
 		core::Json json{};
@@ -452,31 +477,6 @@ namespace sh::editor
 	SH_EDITOR_API auto AssetDatabase::GetAssetImporter(AssetExtensions::Type type) const -> const AssetLoaderRegistry::Importer*
 	{
 		return assetLoaders.GetLoader(type);
-	}
-
-	void AssetDatabase::Init(const std::filesystem::path& projectPath, const render::IRenderContext& ctx, const game::ImGUImpl& imgui)
-	{
-		this->projectPath = projectPath;
-		libPath = projectPath / "Library";
-
-		assert(project->renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan); // TODO
-		static render::vk::VulkanShaderPassBuilder passBuilder{ static_cast<const render::vk::VulkanContext&>(ctx) };
-		auto shaderLoader = std::make_unique<game::ShaderLoader>(&passBuilder);
-		shaderLoader->SetCachePath(projectPath / "temp");
-
-		assetLoaders.Clear();
-		assetLoaders.RegisterLoader(AssetExtensions::Type::Model, std::make_unique<game::ModelLoader>(ctx), 2, true);
-		assetLoaders.RegisterLoader(AssetExtensions::Type::Texture, std::make_unique<game::TextureLoader>(ctx), 2, true);
-		assetLoaders.RegisterLoader(AssetExtensions::Type::Shader, std::move(shaderLoader), 2, false);
-		assetLoaders.RegisterLoader(AssetExtensions::Type::Binary, std::make_unique<game::BinaryLoader>(), 2, false);
-		assetLoaders.RegisterLoader(AssetExtensions::Type::Text, std::make_unique<game::TextLoader>(), 2, false);
-
-		assetLoaders.RegisterLoader(AssetExtensions::Type::Material, std::make_unique<game::MaterialLoader>(ctx), 1, false);
-		assetLoaders.RegisterLoader(AssetExtensions::Type::Font, std::make_unique<game::FontLoader>(), 1, false);
-		assetLoaders.RegisterLoader(AssetExtensions::Type::Prefab, std::make_unique<game::PrefabLoader>(), 1, false);
-
-		assetLoaders.RegisterLoader(AssetExtensions::Type::World, std::make_unique<game::WorldLoader>(), 0, false);
-		assetLoaders.RegisterLoader(AssetExtensions::Type::ScriptableObject, std::make_unique<game::ScriptableObjectLoader>(), -1, false);
 	}
 	auto AssetDatabase::HasMetaFile(const std::filesystem::path& dir) -> std::optional<std::filesystem::path>
 	{

@@ -1,15 +1,18 @@
 ﻿#pragma once
 #include "Editor/Export.h"
+#include "Editor/AssetDatabase.h"
 
 #include "Core/Singleton.hpp"
 #include "Core/Reflection.hpp"
 #include "Core/SObject.h"
 
+#include "Game/ImGUImpl.h"
+
 #include <type_traits>
 #include <unordered_map>
 #include <memory>
 
-/// @brief ICustomInspector를 상속 후 클래스 선언의 내부에 넣으면 에디터 Inspector에서 어떻게 보여질지 정의 할 수 있다.
+/// @brief CustomInspector를 상속 후 클래스 선언의 내부에 넣으면 에디터 Inspector에서 어떻게 보여질지 정의 할 수 있다.
 /// @brief void RenderUI(void* obj)를 오버라이딩 하고 그 함수에서 구현하면 된다.
 /// @param Class 클래스
 /// @param Type Inspector에 보여질 객체 타입
@@ -38,16 +41,18 @@ private:\
 
 namespace sh::editor
 {
-	struct ICustomInspector
+	struct CustomInspector
 	{
-		virtual ~ICustomInspector() = default;
-		virtual void RenderUI(void* obj, int idx) = 0;
+		virtual ~CustomInspector() = default;
+		virtual void RenderUI(void* obj, int idx)
+		{
+			static AssetDatabase& assetDB = *AssetDatabase::GetInstance();
+			ImGui::SetCurrentContext(assetDB.GetGUIContext()->GetContext());
+		}
 	};
 
 	class CustomInspectorManager : public core::Singleton<CustomInspectorManager>
 	{
-	private:
-		std::unordered_map<const core::reflection::STypeInfo*, std::unique_ptr<ICustomInspector>> map;
 	public:
 		template<typename T, typename U>
 		void Register()
@@ -60,6 +65,8 @@ namespace sh::editor
 			map.erase(&T::GetStaticType());
 		}
 
-		SH_EDITOR_API auto GetCustomInspector(const core::reflection::STypeInfo& type) const -> ICustomInspector*;
+		SH_EDITOR_API auto GetCustomInspector(const core::reflection::STypeInfo& type) const -> CustomInspector*;
+	private:
+		std::unordered_map<const core::reflection::STypeInfo*, std::unique_ptr<CustomInspector>> map;
 	};
 }//namespace

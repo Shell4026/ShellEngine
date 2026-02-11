@@ -56,7 +56,7 @@ namespace sh::editor
 			}
 			if (bOpenComponent && core::IsValid(component))
 			{
-				ICustomInspector* customInspector = CustomInspectorManager::GetInstance()->GetCustomInspector(component->GetType());
+				CustomInspector* customInspector = CustomInspectorManager::GetInstance()->GetCustomInspector(component->GetType());
 				if (customInspector != nullptr)
 					customInspector->RenderUI(component, componentsIdx);
 				else

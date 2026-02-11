@@ -2,7 +2,7 @@
 
 namespace sh::editor
 {
-	auto sh::editor::CustomInspectorManager::GetCustomInspector(const core::reflection::STypeInfo& type) const -> ICustomInspector*
+	auto sh::editor::CustomInspectorManager::GetCustomInspector(const core::reflection::STypeInfo& type) const -> CustomInspector*
 	{
 		auto it = map.find(&type);
 		if (it == map.end())

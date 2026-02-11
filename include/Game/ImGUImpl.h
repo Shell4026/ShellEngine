@@ -24,18 +24,6 @@ namespace sh::game
 	/// 현재 Vulkan만 구현 돼있음.
 	class ImGUImpl : public core::ISyncable
 	{
-	private:
-		window::Window& window;
-		render::Renderer& renderer;
-
-		ImDrawData drawData;
-
-		bool bInit;
-		bool bDirty;
-	private:
-		void WindowInit();
-	protected:
-		SH_GAME_API void Sync() override;
 	public:
 		//TODO: 다른 렌더러 구현
 		SH_GAME_API ImGUImpl(window::Window& window, render::Renderer& renderer);
@@ -57,5 +45,17 @@ namespace sh::game
 		SH_GAME_API auto GetDrawData() -> ImDrawData&;
 
 		SH_GAME_API void SyncDirty() override;
+	protected:
+		SH_GAME_API void Sync() override;
+	private:
+		void WindowInit();
+	private:
+		window::Window& window;
+		render::Renderer& renderer;
+
+		ImDrawData drawData;
+
+		bool bInit;
+		bool bDirty;
 	};
 }

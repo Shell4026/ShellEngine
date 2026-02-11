@@ -17,24 +17,6 @@
 #include <filesystem>
 namespace sh::editor
 {
-	void EditorResource::ExtractAllAssetToLibrary(Project& project)
-	{
-		for (auto& [name, shaderPtr] : shaders)
-		{
-			if (!core::IsValid(shaderPtr))
-				continue;
-
-			game::ShaderAsset asset{ *shaderPtr };
-			auto writeTime = std::filesystem::file_time_type::clock::now();
-			asset.SetWriteTime(writeTime.time_since_epoch().count());
-
-			const auto path = project.GetLibraryPath() / (shaderPtr->GetUUID().ToString() + ".asset");
-			if (core::AssetExporter::Save(asset, path, true))
-			{
-				std::filesystem::last_write_time(path, writeTime);
-			}
-		}
-	}
 	EditorResource::~EditorResource()
 	{
 		for (auto icon : icons)
@@ -229,5 +211,23 @@ namespace sh::editor
 		if (it == models.end())
 			return nullptr;
 		return it->second;
+	}
+	SH_EDITOR_API void EditorResource::ExtractAllAssetToLibrary(Project& project)
+	{
+		for (auto& [name, shaderPtr] : shaders)
+		{
+			if (!core::IsValid(shaderPtr))
+				continue;
+
+			game::ShaderAsset asset{ *shaderPtr };
+			auto writeTime = std::filesystem::file_time_type::clock::now();
+			asset.SetWriteTime(writeTime.time_since_epoch().count());
+
+			const auto path = project.GetLibraryPath() / (shaderPtr->GetUUID().ToString() + ".asset");
+			if (core::AssetExporter::Save(asset, path, true))
+			{
+				std::filesystem::last_write_time(path, writeTime);
+			}
+		}
 	}
 }//namespace

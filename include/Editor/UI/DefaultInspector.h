@@ -13,7 +13,7 @@
 #include <unordered_map>
 namespace sh::editor
 {
-	class GameObjectInspector : public ICustomInspector
+	class GameObjectInspector : public CustomInspector
 	{
 		INSPECTOR(GameObjectInspector, game::GameObject)
 	public:
@@ -26,14 +26,14 @@ namespace sh::editor
 		bool bAddComponent = false;
 	};
 
-	class MaterialInspector : public ICustomInspector
+	class MaterialInspector : public CustomInspector
 	{
 		INSPECTOR(MaterialInspector, render::Material)
 	public:
 		SH_EDITOR_API void RenderUI(void* obj, int idx) override;
 	};
 
-	class TextureInspector : public ICustomInspector
+	class TextureInspector : public CustomInspector
 	{
 		INSPECTOR(TextureInspector, render::Texture)
 	public:
@@ -45,14 +45,14 @@ namespace sh::editor
 		game::GUITexture* previewTex = nullptr;
 	};
 
-	class CameraInspector : public ICustomInspector
+	class CameraInspector : public CustomInspector
 	{
 		INSPECTOR(CameraInspector, game::Camera)
 	public:
 		SH_EDITOR_API void RenderUI(void* obj, int idx) override;
 	};
 
-	class TextInspector : public ICustomInspector
+	class TextInspector : public CustomInspector
 	{
 		INSPECTOR(TextInspector, game::TextObject)
 	public:

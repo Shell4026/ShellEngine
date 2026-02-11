@@ -726,8 +726,8 @@ namespace sh::editor
 
 				ImGui::Separator();
 
-				ICustomInspector* customInspector = customInspectorManager->GetCustomInspector(obj->GetType());
-				if (customInspector)
+				CustomInspector* customInspector = customInspectorManager->GetCustomInspector(obj->GetType());
+				if (customInspector != nullptr)
 					customInspector->RenderUI(obj, 0);
 				else
 					RenderProperties(obj->GetType(), *obj, 0);
