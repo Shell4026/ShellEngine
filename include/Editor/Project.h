@@ -93,7 +93,6 @@ namespace sh::editor
 
 		core::SSet<core::SObject*> loadedScriptableObjects;
 		core::Observer<false, core::SObject*>::Listener onAssetImportedListener;
-
 		bool isOpen = false;
 		bool bSettingUI = false;
 	};

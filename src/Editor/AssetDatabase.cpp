@@ -274,7 +274,12 @@ namespace sh::editor
 		uuids.erase(it->second.originalPath);
 		paths.erase(it);
 
-		onAssetRemoved.Notify(uuid);
+		auto objPtr = core::SObjectManager::GetInstance()->GetSObject(uuid);
+		if (objPtr != nullptr)
+		{
+			objPtr->Destroy();
+			onAssetRemoved.Notify(uuid);
+		}
 
 		SaveDatabase(libPath / "AssetDB.json");
 	}
