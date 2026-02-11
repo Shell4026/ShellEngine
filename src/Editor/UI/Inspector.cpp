@@ -13,10 +13,45 @@
 
 namespace sh::editor
 {
-	SH_EDITOR_API Inspector::Inspector(EditorWorld& world) :
+	Inspector::Inspector(EditorWorld& world) :
 		world(world)
 	{
 		customInspectorManager = CustomInspectorManager::GetInstance();
+	}
+
+	SH_EDITOR_API void Inspector::Update()
+	{
+
+	}
+	SH_EDITOR_API void Inspector::Render()
+	{
+		ImGuiWindowFlags style =
+			ImGuiWindowFlags_::ImGuiWindowFlags_NoCollapse;
+
+		ImGui::Begin("Inspector", nullptr, style);
+
+		auto& selectedObjs = world.GetSelectedObjects();
+		if (selectedObjs.size() > 0)
+		{
+			if (auto obj = selectedObjs[0]; core::IsValid(obj))
+			{
+				if (!core::IsValid(obj))
+					return;
+				static std::string name;
+				name = obj->GetName().ToString();
+
+				ImGui::Text("%s", obj->GetUUID().ToString().c_str());
+				ImGui::SetNextItemWidth(100);
+				if (ImGui::InputText("Name", &name))
+					obj->SetName(name);
+
+				ImGui::Separator();
+
+				RenderPropertiesCustomInspector(obj->GetType(), *obj, 0);
+			}
+		}
+
+		ImGui::End();
 	}
 
 	SH_EDITOR_API auto Inspector::GetIcon(std::string_view typeName) -> game::GUITexture*
@@ -26,6 +61,41 @@ namespace sh::editor
 			return EditorResource::GetInstance()->GetIcon(EditorResource::Icon::Mesh);
 		}
 		return nullptr;
+	}
+	void Inspector::RenderPropertiesCustomInspector(const core::reflection::STypeInfo& type, core::SObject& obj, int idx)
+	{
+		static CustomInspectorManager& manager = *CustomInspectorManager::GetInstance();
+		auto currentType = &type;
+		do
+		{
+			if (currentType == nullptr)
+				break;
+
+			CustomInspector* customInspector = manager.GetCustomInspector(*currentType);
+			if (customInspector != nullptr)
+				customInspector->RenderUI(&obj, idx);
+			else
+			{
+				auto& props = currentType->GetProperties();
+				for (auto& prop : props)
+				{
+					if (prop->bVisibleProperty == false)
+						continue;
+
+					const std::string& propName = prop->GetName().ToString();
+					// SObject 포인터 형식, 드래그 앤 드랍 기능
+					if (prop->isSObjectPointer)
+						RenderSObjectPtrProperty(*prop, obj, propName);
+					else if (prop->isSObjectPointerContainer)
+						RenderSObjPtrContainerProperty(*prop, obj);
+					else if (prop->isContainer && prop->type != core::reflection::GetType<std::string>()) // string도 컨테이너 취급 받아서 예외처리
+						RenderContainerProperty(*prop, obj, propName);
+					else
+						RenderProperty(*prop, obj, idx);
+				}
+			}
+			currentType = const_cast<core::reflection::STypeInfo*>(currentType->super);
+		} while (currentType);
 	}
 	SH_EDITOR_API void Inspector::RenderProperties(const core::reflection::STypeInfo& type, core::SObject& obj, int idx)
 	{
@@ -696,44 +766,5 @@ namespace sh::editor
 			}
 			ImGui::TreePop();
 		}
-	}
-
-	SH_EDITOR_API void Inspector::Update()
-	{
-		
-	}
-	SH_EDITOR_API void Inspector::Render()
-	{
-		ImGuiWindowFlags style =
-			ImGuiWindowFlags_::ImGuiWindowFlags_NoCollapse;
-
-		ImGui::Begin("Inspector", nullptr, style);
-
-		auto& selectedObjs = world.GetSelectedObjects();
-		if (selectedObjs.size() > 0)
-		{
-			if (auto obj = selectedObjs[0]; core::IsValid(obj))
-			{
-				if (!core::IsValid(obj))
-					return;
-				static std::string name;
-				name = obj->GetName().ToString();
-
-				ImGui::Text("%s", obj->GetUUID().ToString().c_str());
-				ImGui::SetNextItemWidth(100);
-				if (ImGui::InputText("Name", &name))
-					obj->SetName(name);
-
-				ImGui::Separator();
-
-				CustomInspector* customInspector = customInspectorManager->GetCustomInspector(obj->GetType());
-				if (customInspector != nullptr)
-					customInspector->RenderUI(obj, 0);
-				else
-					RenderProperties(obj->GetType(), *obj, 0);
-			}
-		}
-
-		ImGui::End();
 	}
 }//namespace
