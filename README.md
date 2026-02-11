@@ -9,7 +9,7 @@ Vulkan 기반으로 개발중인 크로스 플랫폼 3D/2D 게임 엔진입니�
 ## 특징
 - **Vulkan 기반 렌더링 시스템**  
   - 로우레벨 Vulkan API를 직접 사용하여 고성능 그래픽 파이프라인 구현
-  - 추후 확장을 고려한 렌더러 추상화 구조 설계
+  - 추후 확장을 고려한 렌더 그래프 기반 구조
 
 - **멀티스레딩 아키텍처** [상세](https://github.com/Shell4026/ShellEngine/blob/main/Multithreading.md)
   - 게임 스레드와 렌더 스레드 분리
@@ -30,9 +30,10 @@ Vulkan 기반으로 개발중인 크로스 플랫폼 3D/2D 게임 엔진입니�
 
 - **에디터 통합 개발** [상세](https://github.com/Shell4026/ShellEngine/blob/main/Editor.md)
   - 런타임 리플렉션을 활용한 오브젝트 계층 구조(Hierarchy) 및 속성 편집(Inspector) 구현
-  - Unity 스타일의 편집 환경 제공
+    - 사용자 커스텀 Inspector [상세](https://github.com/Shell4026/ShellEngine/blob/main/CustomInspector.md)
+  - Unity 스타일의 편집 환경
   - 객체 조작 방식은 Blender와 유사
-  - 빌드 시스템을 통해 에셋을 내보낼 수 있음
+  - 빌드 시스템
 
 - **컴포넌트 기반 아키텍처** [상세](https://github.com/Shell4026/ShellEngine/blob/main/Component.md)
   - Unity와 유사한 컴포넌트-엔티티 구조
@@ -57,6 +58,7 @@ https://youtu.be/SEiktv0WtOM
 ## 프로젝트 구조 흐름
 
 ![흐름도](https://github.com/user-attachments/assets/79eef4d4-5b85-4093-8597-183433164c18)
+> [!NOTE]
 > 멀티 스레딩 구조로, 게임 스레드와 렌더 스레드로 나눠져 있습니다. </br>
 > 각 스레드는 작업이 끝난 후 Sync타이밍에 버퍼를 교환하며 가비지 컬렉터가 작동합니다.
 > 자세한 사항은 '특징'의 멀티 스레딩 아키텍쳐를 참조 하세요.

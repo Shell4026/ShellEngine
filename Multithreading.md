@@ -38,11 +38,14 @@ SH_RENDER_API void Texture::Sync()
   bDirty.clear(std::memory_order::memory_order_relaxed);
 }
 ```
-해당 코드는 Texture코드의 일부입니다. 텍스쳐는 여러 스레드에서 접근 할 가능성을 가지며 동기화가 필요합니다. 이러한 객체는 core::ISyncable인터페이스를 상속 후 SyncDirty()와 Sync()를 오버라이딩 하여 구현해야 합니다.
+해당 코드는 Texture코드의 일부입니다. 텍스쳐는 여러 스레드에서 접근 할 가능성을 가지며 동기화가 필요합니다. </br>
+이러한 객체는 core::ISyncable인터페이스를 상속 후 SyncDirty()와 Sync()를 오버라이딩 하여 구현해야 합니다.
 
-SyncDirty는 텍스쳐의 사이즈가 변경 된 경우와 같이 두 스레드가 공유 해야 할 자원이 변경 됐음을 알리는 함수입니다.
+**SyncDirty**는 두 스레드가 공유 해야 할 자원이 변경 됐음을 알리는 함수입니다.
+> [!IMPORTANT]
+> SyncDirty 함수에서 core::ThreadSyncManager::PushSyncable를 통해 동기화 될 객체를 넣어줘야 하며, 중복으로 들어가지 않게 주의해야합니다.
 
-Sync함수가 동기화 타이밍에 수행 되는 함수이며 이 함수 내부에서 동기화 코드를 작성하면 동기화 타이밍에 호출됩니다.
+**Sync**함수가 동기화 타이밍에 수행 되는 함수이며 이 함수 내부에서 동기화 코드를 작성하면 동기화 타이밍에 호출됩니다.
 
 # 동기화 방식
 위의 예시인 텍스쳐 클래스의 동기화 방식은 Sync 타이밍 때 값을 재설정하는 **지연된 업데이트** 방식이라고 부르며, 스레드 별로 변수를 두고 swap 하는 방식인 더블 버퍼링 방식도 쓸 수 있습니다.
@@ -55,7 +58,7 @@ SH_RENDER_API void Renderer::Sync()
   std::swap(drawcall[core::ThreadType::Game], drawcall[core::ThreadType::Render]);
 }
 ```
-swap방식은 메모리를 더 먹지만 매우 빠르니 필요한 곳에 쓰면 됩니다.
+> swap방식은 메모리를 추가로 먹지만 매우 빠르게 작동하니 성능에 중요한 곳에서 사용하면 좋습니다.
 
 # 스레드 풀
 core모듈의 ThreadPool클래스를 이용하여 작업을 할당하고 future로 값을 받아올 수 있습니다.

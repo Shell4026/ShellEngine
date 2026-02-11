@@ -8,6 +8,9 @@
 
 OnEnable과 OnDisable은 객체가 활성화/비활성화 되는 즉시 실행 됩니다.
 
+> [!NOTE]
+> 루프중에 생성된 객체는 다음 루프가 시작 된 후부터 함수들이 실행됩니다.
+
 # 플레이
 ![image](https://github.com/user-attachments/assets/c5749b0d-bb95-4d84-b44f-2f0f1822f8bb)
 
@@ -31,10 +34,8 @@ Tools - Bundle Viewer를 통해 에셋 번들에 어떤 에셋이 들어갔는�
 # 조작 가이드 영상
 [![Video Label](http://img.youtube.com/vi/SEiktv0WtOM/0.jpg)](https://youtu.be/SEiktv0WtOM)</br>
 https://youtu.be/SEiktv0WtOM
-# 조작 영상(구)
-[![Video Label](http://img.youtube.com/vi/D48w8sa7JFQ/0.jpg)](https://youtu.be/D48w8sa7JFQ?si=d-AvSkDpJbcnExlB)
 
-# 조작 방법
+## 조작 방법
 시점 회전: alt + 마우스 좌클릭</br>
 시점 확대/축소: 마우스 휠 굴리기</br>
 시점 이동: 마우스 휠 누른채 마우스 이동</br>

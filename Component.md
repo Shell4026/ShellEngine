@@ -1,11 +1,24 @@
 # 개요
 유니티와 유사한 컴포넌트 시스템입니다. sh::game::component 클래스를 상속 후 COMPONENT매크로를 통해 컴포넌트로 등록합니다.
+```cpp
+COMPONENT(컴포넌트 클래스, "그룹")
+```
 
-PROPERTY매크로를 변수 위에 두면 에디터내에서 노출됩니다.
+컴포넌트 내 PROPERTY매크로를 변수 위에 두면 에디터내에서 노출됩니다.
+```cpp
+PROPERTY(damage)
+int damage = 0;
+```
+> [!NOTE]
+> core::PropertyOption::invisible를 사용하면 에디터 내에서 표시는 안 되게 하면서 직렬화나 GC추적을 사용 할 수 있습니다.
+> ```cpp
+> PROPERTY(target, core::PropertyOption::invisible)
+> Enemy* target = nullptr;
+> ```
 
-리플렉션 시스템과 직렬화-역직렬화를 통해 유저가 짠 코드를 즉각적으로 볼 수 있는 핫-로드 기능을 지원합니다.
+## 핫리로드
+리플렉션 시스템과 직렬화-역직렬화를 통해 유저가 짠 코드를 즉각적으로 볼 수 있는 핫-리로드 기능을 지원합니다.
 
-## 핫로드 영상
 https://github.com/user-attachments/assets/41223f10-49be-48cd-997d-c135991a62fa
 
 # 코드 작성법
@@ -56,44 +69,7 @@ SH_USER_API void RotateObject::Update()
 
 https://github.com/user-attachments/assets/333185c3-021d-49ae-b09d-198a3cfa1e04
 
-## 커스텀 Inspector 코드 예시
-[헤더]
-```c++
-#pragma once
-#include "ExportEditor.h"
-#include "RotateObject.h"
+## 커스텀 Inspector
+사용자가 작성한 컴포넌트를 에디터에서 제공하는 기본 Inspector렌더링 외에 직접 작성 할 수 있습니다.
 
-#include "Editor/UI/CustomInspector.h"
-
-namespace sh::editor
-{
-	class RotateObjectInspector : public ICustomInspector
-	{
-		INSPECTOR(RotateObjectInspector, game::RotateObject)
-	public:
-		SH_EDIT_API void RenderUI(void* obj, int idx) override;
-	};
-}//namespace
-```
-[cpp]
-```c++
-#include "RotateObjectInspector.h"
-
-#include "Editor/UI/Inspector.h"
-
-#include "Game/ImGUImpl.h"
-#include "Game/World.h"
-namespace sh::editor
-{
-	SH_EDIT_API void RotateObjectInspector::RenderUI(void* obj, int idx)
-	{
-		game::RotateObject* rotateObjPtr = reinterpret_cast<game::RotateObject*>(obj);
-		ImGui::SetCurrentContext(rotateObjPtr->gameObject.world.GetUiContext().GetContext()); // 필수
-		ImGui::Text("This is RotateObject!!!");
-		Inspector::RenderProperties(rotateObjPtr->GetType(), *rotateObjPtr, idx); // 기본 프로퍼티 렌더링 방법
-	}
-}//namespace
-```
-[결과]
-
-<img width="203" height="522" alt="image" src="https://github.com/user-attachments/assets/0c67ec08-2ec5-4d42-90dc-b7db09cbb83b" />
+자세한 사항은 [CustomInspector.md](https://github.com/Shell4026/ShellEngine/edit/main/CustomInspector.md)에서 참고하세요.

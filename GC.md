@@ -34,6 +34,15 @@ std::vector<GameObject*> otherObjs;
 ```
 해당 포인터가 가르키고 있는 객체가 지워진다면 가비지 컬렉터에서 해당 포인터를 nullptr로 바꾸므로 댕글링 포인터를 방지 할 수 있습니다.
 
+> [!WARNING]
+> 전방 선언을 한 클래스의 경우 컴파일 시간에 SObject인지 알 수 없으므로 **sobjPtr** 옵션을 통해 SObject라고 명시해줘야 합니다.
+> ```c++
+> class ThisIsSObject;
+> ...
+> PROPERTY(ptr, core::PropertyOption::sobjPtr)
+> ThisIsSObject* ptr = nullptr;
+> ```
+
 또한 core/Scontainer.hpp에 존재하는 컨테이너들을 이용한다면 프로퍼티에 등록 할 필요 없이 객체를 추적 할 수 있습니다. </br>
 Vector와 Array객체와 같은 요소의 삭제가 느린 컨테이너의 요소가 제거 되면 nullptr로 바뀌며, 삭제가 빠른 자료구조들은 객체가 제거(erase) 됩니다.</br>
 일반 컨테이너를 프로퍼티에 등록해도 같은 효과를 냅니다.
