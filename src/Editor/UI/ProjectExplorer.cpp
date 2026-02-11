@@ -328,7 +328,13 @@ namespace sh::editor
 				return;
 			}
 
-			payloadName = reinterpret_cast<core::SObject*>(item)->GetType().type.name;
+			auto sobjPtr = reinterpret_cast<core::SObject*>(item);
+			
+			if (sobjPtr->GetType().IsChildOf(game::ScriptableObject::GetStaticType())) // ScriptableObject를 상속 받는 오브젝트만 특수처리
+				payloadName = game::ScriptableObject::GetStaticType().type.name;
+			else
+				payloadName = sobjPtr->GetType().type.name;
+
 			ImGui::SetDragDropPayload(payloadName.c_str(), &item, sizeof(void*));
 
 			ImGui::Text("%s", path.filename().u8string().c_str());
@@ -352,6 +358,7 @@ namespace sh::editor
 				core::reflection::GetType<render::Font>().name,
 				core::reflection::GetType<game::TextObject>().name,
 				core::reflection::GetType<game::BinaryObject>().name,
+				core::reflection::GetType<game::ScriptableObject>().name,
 			};
 			for (const std::string_view& assetType : assetTypes)
 			{
