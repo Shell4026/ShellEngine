@@ -66,8 +66,6 @@ namespace sh::window
 		std::queue<Event> events;
 
 		unsigned int fps;
-		float maxFrameMs;
-		std::chrono::high_resolution_clock::time_point startTime, endTime;
 		float deltaTime;
 
 		uint32_t wsize;
