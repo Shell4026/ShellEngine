@@ -3,6 +3,7 @@
 #include "ThreadPool.h"
 #include "SContainer.hpp"
 #include "Logger.h"
+#include "GCObject.h"
 
 #include <queue>
 
@@ -30,28 +31,6 @@ namespace sh::core
 		rootSets.push_back(obj);
 		rootSetIdx.insert_or_assign(obj, idx);
 	}
-	SH_CORE_API auto GarbageCollection::GetRootSet() const -> const std::vector<SObject*>&
-	{
-		return rootSets;
-	}
-	SH_CORE_API auto GarbageCollection::GetRootSetCount() const -> uint64_t
-	{
-		return rootSets.size();
-	}
-	SH_CORE_API void GarbageCollection::SetUpdateTick(uint32_t tick)
-	{
-		updatePeriodTick = tick;
-		this->tick = 0;
-	}
-	SH_CORE_API auto GarbageCollection::GetUpdateTick() const -> uint32_t
-	{
-		return updatePeriodTick;
-	}
-	SH_CORE_API auto GarbageCollection::GetCurrentTick() const -> uint32_t
-	{
-		return tick;
-	}
-
 	SH_CORE_API void GarbageCollection::RemoveRootSet(const SObject* obj)
 	{
 		std::lock_guard<std::mutex> lock{ mu };
@@ -71,6 +50,11 @@ namespace sh::core
 			rootSetIdx[moved] = idx;
 		}
 		rootSets.pop_back();
+	}
+	SH_CORE_API void GarbageCollection::SetUpdateTick(uint32_t tick)
+	{
+		updatePeriodTick = tick;
+		this->tick = 0;
 	}
 
 	SH_CORE_API void GarbageCollection::Update()
@@ -104,15 +88,17 @@ namespace sh::core
 
 		const bool bThreadPoolInit = ThreadPool::GetInstance()->IsInit();
 
+		CollectReferenceObjs();
+
 		if (trackingContainers.size() > 8 && bThreadPoolInit)
 			MarkTrackedContainersWithMultiThread();
 		else
 			MarkTrackedContainers(trackingContainers.begin(), trackingContainers.end());
 
-		if (rootSets.size() > 128 && bThreadPoolInit)
+		if (refObjs.size() > 128 && bThreadPoolInit)
 			MarkWithMultiThread();
 		else
-			Mark(0, rootSets.size());
+			Mark(0, refObjs.size());
 
 		// 모든 SObject를 순회하며 마킹이 안 됐으면 보류 목록에 추가
 		// TODO: 나중에 멀티 스레드로 바꿀 때 메모리 오더 바꾸기
@@ -178,7 +164,7 @@ namespace sh::core
 	SH_CORE_API void GarbageCollection::DestroyPendingKillObjs()
 	{
 		if (!bPendingKill)
-			return;
+			Collect();
 
 		for (int i = 0; i < pendingKillObjs.size(); ++i)
 		{
@@ -201,7 +187,7 @@ namespace sh::core
 	{
 		while (!bfs.empty())
 		{
-			SObject* obj = bfs.front();
+			SObject* const obj = bfs.front();
 			bfs.pop();
 
 			if (!obj)
@@ -212,6 +198,30 @@ namespace sh::core
 			MarkProperties(obj, bfs);
 		}
 	}
+	SH_CORE_API void GarbageCollection::AddGCObject(GCObject& obj)
+	{
+		if (gcObjIdx.find(&obj) != gcObjIdx.end())
+			return;
+
+		gcObjIdx.insert({ &obj, gcObjs.size() });
+		gcObjs.push_back(obj);
+	}
+	SH_CORE_API void GarbageCollection::RemoveGCObject(GCObject& obj)
+	{
+		if (auto it = gcObjIdx.find(&obj); it != gcObjIdx.end())
+		{
+			std::size_t idx = it->second;
+			gcObjIdx.erase(it);
+
+			if (idx != gcObjs.size() - 1)
+			{
+				gcObjs[idx] = gcObjs.back();
+				gcObjIdx[&gcObjs.back().get()] = idx;
+			}
+			gcObjs.pop_back();
+		}
+	}
+
 	SH_CORE_API void GarbageCollection::AddContainerTracking(const TrackedContainer& container)
 	{
 		trackingContainers.insert({ container.ptr, container });
@@ -220,25 +230,27 @@ namespace sh::core
 	{
 		trackingContainers.erase(containerPtr);
 	}
-
-	void GarbageCollection::TraceRef(SObject*& ref, std::queue<SObject*>& bfs)
+	void GarbageCollection::CollectReferenceObjs()
 	{
-		if (ref == nullptr)
-			return;
-		if (ref->bPendingKill)
+		refObjs.clear();
+		refObjs.reserve(rootSets.size() + gcObjs.size() * 2);
+
+		for (SObject* objPtr : rootSets)
 		{
-			ref = nullptr;
-			return;
+			if (!core::IsValid(objPtr))
+				continue;
+			refObjs.push_back(*objPtr);
 		}
-		bfs.push(ref);
+
+		for (GCObject& gcObj : gcObjs)
+			gcObj.PushReferenceObjects(*this);
 	}
 	void GarbageCollection::Mark(std::size_t start, std::size_t end)
 	{
 		std::queue<SObject*> bfs{};
 		for (std::size_t i = start; i < end; ++i)
 		{
-			if (rootSets[i] != nullptr)
-				bfs.push(rootSets[i]);
+			bfs.push(&refObjs[i].get());
 
 			MarkBFS(bfs);
 		}
@@ -307,15 +319,15 @@ namespace sh::core
 	{
 		const auto threadPool = core::ThreadPool::GetInstance();
 		const int threadNum = threadPool->GetThreadNum();
-		const std::size_t perThreadTaskCount = (rootSets.size() + threadNum - 1) / threadNum;
+		const std::size_t perThreadTaskCount = (refObjs.size() + threadNum - 1) / threadNum;
 
 		std::array<std::future<void>, ThreadPool::MAX_THREAD> taskFutures;
 		std::size_t p = 0;
 		int futureIdx = 0;
-		while (p < rootSets.size())
+		while (p < refObjs.size())
 		{
 			const size_t start = p;
-			const size_t end = std::min(p + perThreadTaskCount, rootSets.size());
+			const size_t end = std::min(p + perThreadTaskCount, refObjs.size());
 			taskFutures[futureIdx++] = (threadPool->AddTask(
 				[&, start, end]
 				{

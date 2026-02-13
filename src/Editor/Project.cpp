@@ -293,6 +293,8 @@ namespace sh::editor
 
 					core::GarbageCollection::GetInstance()->Collect();
 					core::GarbageCollection::GetInstance()->DestroyPendingKillObjs();
+					core::GarbageCollection::GetInstance()->Collect(); // 남아 있는 GCObject들도 제거해 줘야 해서 한번 더 호출
+					core::GarbageCollection::GetInstance()->DestroyPendingKillObjs();
 					// 3. 플러그인 언로드
 					componentLoader.UnloadPlugin();
 				}

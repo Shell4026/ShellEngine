@@ -30,6 +30,16 @@ public:
 	PROPERTY(objectArray)
 	std::array<TestObject*, 3> objectArray{ nullptr, nullptr, nullptr };
 
+	struct TestStruct : sh::core::GCObject
+	{
+		TestObject* tptr = nullptr;
+
+		void PushReferenceObjects(sh::core::GarbageCollection& gc) override
+		{
+			gc.PushReferenceObject(tptr);
+		}
+	} testStruct;
+
 	TestObject(int id = 0) : id(id) {}
 	~TestObject() override {
 		// 소멸 시 id를 0으로 만들어 소멸되었음을 외부에서 확인할 수 있도록 함
@@ -278,4 +288,55 @@ TEST_F(GCTest, ShouldDestroyChildrenBeforeParent)
 	// 모든 객체가 소멸되었는지 확인
 	ASSERT_EQ(gc->GetObjectCount(), 0);
 	ASSERT_FALSE(isWorldAlive);
+}
+
+TEST_F(GCTest, GCObjectTest)
+{
+	TestObject* root = sh::core::SObject::Create<TestObject>(100);
+	TestObject* obj1 = sh::core::SObject::Create<TestObject>(50);
+	TestObject* obj2 = sh::core::SObject::Create<TestObject>(25);
+	obj1->child = obj2;
+
+	gc->SetRootSet(root);
+	root->testStruct.tptr = obj1;
+	gc->Collect();
+	// testStruct는 GCObject이고 tptr을 추적하게 설정해놨으므로 obj는 살아있어야 한다
+	EXPECT_FALSE(obj1->IsPendingKill());
+	// obj2는 obj의 자식이므로 마찬가지로 생존 해야 한다
+	EXPECT_FALSE(obj2->IsPendingKill());
+	gc->RemoveRootSet(root);
+	gc->Collect();
+
+	EXPECT_TRUE(root->IsPendingKill());
+	// root가 완전히 소멸하기전 까지는 살아있음
+	EXPECT_FALSE(obj1->IsPendingKill());
+	EXPECT_FALSE(obj2->IsPendingKill());
+	gc->DestroyPendingKillObjs();
+	gc->Collect();
+	// testStruct가 root가 소멸하면서 사라졌으므로 obj를 추적할 수 없으므로 삭제 돼야함
+	EXPECT_TRUE(obj1->IsPendingKill());
+	EXPECT_TRUE(obj2->IsPendingKill());
+	gc->DestroyPendingKillObjs();
+
+	EXPECT_EQ(gc->GetObjectCount(), 0);
+}
+
+TEST_F(GCTest, GCObjectDanglingPointerTest)
+{
+	TestObject* root = sh::core::SObject::Create<TestObject>(100);
+	TestObject* obj = sh::core::SObject::Create<TestObject>(50);
+	gc->SetRootSet(root);
+	root->testStruct.tptr = obj;
+
+	obj->Destroy();
+	gc->Collect();
+
+	// tptr은 GCObject에서 추적하던 대상이고 가르키던 obj가 삭제 됐으므로 nullptr로 바뀌어야 함
+	EXPECT_TRUE(root->testStruct.tptr == nullptr);
+
+	// 정리
+	gc->RemoveRootSet(root);
+	gc->Collect();
+	gc->DestroyPendingKillObjs();
+	EXPECT_EQ(gc->GetObjectCount(), 0);
 }

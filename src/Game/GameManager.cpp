@@ -51,6 +51,8 @@ namespace sh::game
 
 		core::GarbageCollection::GetInstance()->Collect();
 		core::GarbageCollection::GetInstance()->DestroyPendingKillObjs();
+		core::GarbageCollection::GetInstance()->Collect(); // 남아 있는 GCObject들도 제거 해줘야 해서 한번 더 호출
+		core::GarbageCollection::GetInstance()->DestroyPendingKillObjs();
 
 		componentLoader.UnloadPlugin();
 

@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "SObject.h"
+#include "GCObject.h"
 #include "GarbageCollection.h"
 #include "Reflection/TypeTraits.hpp"
 
@@ -22,65 +23,13 @@ namespace sh::core
 	/// @brief [주의] 절대 std::vector의 다형성 용도로 사용하면 안 된다.
 	/// @tparam SObject* 타입
 	template<typename T, typename = std::enable_if_t<std::is_convertible_v<T, const SObject*>>>
-    class SVector : public std::vector<T>
+    class SVector : public std::vector<T>, public GCObject
     {
     public:
-        SVector() :
-            std::vector<T>()
+        void PushReferenceObjects(GarbageCollection& gc) override
         {
-            AddToGC();
-        }
-        template<class... Args>
-        SVector(Args&&... args) :
-            std::vector<T>(std::forward<Args>(args)...)
-        {
-            AddToGC();
-        }
-        SVector(const SVector& other) :
-            std::vector<T>(other)
-        {
-            AddToGC();
-        }
-        SVector(SVector&& other) noexcept :
-            std::vector<T>(std::move(other))
-        {
-            AddToGC();
-        }
-        ~SVector()
-        {
-            core::GarbageCollection::GetInstance()->RemoveContainerTracking(this);
-        }
-        auto operator=(const SVector& other) -> SVector&
-        {
-            std::vector<T>::operator=(other);
-            return *this;
-        }
-        auto operator=(SVector&& other) noexcept -> SVector&
-        {
-            std::vector<T>::operator=(std::move(other));
-            return *this;
-        }
-    private:
-        void AddToGC()
-        {
-            core::GarbageCollection::TrackedContainer container{};
-            container.ptr = this;
-            container.markFn =
-                [this](core::GarbageCollection& gc)
-                {
-                    std::queue<SObject*> bfs;
-
-                    for (auto& elem : *this)
-                    {
-                        const SObject* obj = static_cast<const SObject*>(elem);
-                        if (obj == nullptr) continue;
-                        if (obj->IsPendingKill()) { elem = nullptr; continue; }
-
-                        bfs.push(const_cast<SObject*>(obj));
-                    }
-                    gc.MarkBFS(bfs);
-                };
-            core::GarbageCollection::GetInstance()->AddContainerTracking(container);
+            for (auto& elem : *this)
+                gc.PushReferenceObject(elem);
         }
     };
     /// @brief 쓰레기 수집을 지원하는 std::array와 동일한 역할을 하는 컨테이너.
@@ -89,64 +38,13 @@ namespace sh::core
     /// @tparam T 타입
     /// @tparam size 배열 사이즈
     template<typename T, std::size_t size, typename = std::enable_if_t<std::is_convertible_v<T, const SObject*>>>
-    class SArray : public std::array<T, size>
+    class SArray : public std::array<T, size>, public GCObject
     {
     public:
-        SArray()
+        void PushReferenceObjects(GarbageCollection& gc) override
         {
-            AddToGC();
-        }
-        template<class... Args>
-        SArray(Args&&... args) :
-            std::array<T, size>(std::forward<Args>(args)...)
-        {
-            AddToGC();
-        }
-        SArray(const SArray& other) :
-            std::array<T, size>(other)
-        {
-            AddToGC();
-        }
-        SArray(SArray&& other) noexcept :
-            std::array<T, size>(std::move(other))
-        {
-            AddToGC();
-        }
-        ~SArray()
-        {
-            core::GarbageCollection::GetInstance()->RemoveContainerTracking(this);
-        }
-        auto operator=(const SArray& other) -> SArray&
-        {
-            std::array<T, size>::operator=(other);
-            return *this;
-        }
-        auto operator=(SArray&& other) noexcept -> SArray&
-        {
-            std::array<T, size>::operator=(std::move(other));
-            return *this;
-        }
-    private:
-        void AddToGC()
-        {
-            core::GarbageCollection::TrackedContainer container{};
-            container.ptr = this;
-            container.markFn =
-                [this](core::GarbageCollection& gc)
-                {
-                    std::queue<SObject*> bfs;
-
-                    for (auto& elem : *this)
-                    {
-                        const SObject* obj = static_cast<const SObject*>(elem);
-                        if (obj == nullptr) continue;
-                        if (obj->IsPendingKill()) { elem = nullptr; continue; }
-
-                        bfs.push(const_cast<SObject*>(obj));
-                    }
-                    gc.MarkBFS(bfs);
-                };
-            core::GarbageCollection::GetInstance()->AddContainerTracking(container);
+            for (auto& elem : *this)
+                gc.PushReferenceObject(elem);
         }
     };
     /// @brief 쓰레기 수집을 지원하는 std::set과 동일한 역할을 하는 컨테이너.
