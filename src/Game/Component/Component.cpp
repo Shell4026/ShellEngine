@@ -85,14 +85,12 @@ namespace sh::game
 	SH_GAME_API auto Component::Serialize() const -> core::Json
 	{
 		core::Json mainJson = Super::Serialize();
+
 		const core::reflection::STypeInfo* type = &GetType();
 
 		while (type != nullptr)
 		{
-			core::Json* json = nullptr;
-			if (!mainJson.contains(type->name.ToString()))
-				mainJson[type->name.ToString()] = core::Json::object();
-			json = &mainJson[type->name.ToString()];
+			core::Json& json = mainJson[type->name.ToString()];
 
 			for (auto& prop : type->GetProperties())
 			{
@@ -103,58 +101,62 @@ namespace sh::game
 				const core::Name& name = prop->GetName();
 
 				if (propType == core::reflection::GetType<Vec4>())
-					core::SerializeProperty(*json, name, *prop->Get<Vec4>(*this));
+					core::SerializeProperty(json, name, *prop->Get<Vec4>(*this));
 				else if (propType == core::reflection::GetType<Vec3>())
-					core::SerializeProperty(*json, name, *prop->Get<Vec3>(*this));
+					core::SerializeProperty(json, name, *prop->Get<Vec3>(*this));
 				else if (propType == core::reflection::GetType<Vec2>())
-					core::SerializeProperty(*json, name, *prop->Get<Vec2>(*this));
+					core::SerializeProperty(json, name, *prop->Get<Vec2>(*this));
 				else if (prop->isContainer)
 				{
-					auto arrJson = core::Json::array();
+					auto& containerJson = json[name];
 					if (*prop->containerElementType == core::reflection::GetType<Vec4>())
 					{
-						core::Json vecJson;
 						for (auto it = prop->Begin(*this); it != prop->End(*this); ++it)
 						{
+							core::Json vecJson;
 							vecJson.push_back(it.Get<Vec4>()->x);
 							vecJson.push_back(it.Get<Vec4>()->y);
 							vecJson.push_back(it.Get<Vec4>()->z);
 							vecJson.push_back(it.Get<Vec4>()->w);
+
+							containerJson.push_back(std::move(vecJson));
 						}
-						arrJson.push_back(std::move(vecJson));
 					}
 					else if (*prop->containerElementType == core::reflection::GetType<Vec3>())
 					{
-						core::Json vecJson;
 						for (auto it = prop->Begin(*this); it != prop->End(*this); ++it)
 						{
+							core::Json vecJson;
 							vecJson.push_back(it.Get<Vec3>()->x);
 							vecJson.push_back(it.Get<Vec3>()->y);
 							vecJson.push_back(it.Get<Vec3>()->z);
+
+							containerJson.push_back(std::move(vecJson));
 						}
-						arrJson.push_back(std::move(vecJson));
 					}
 					else if (*prop->containerElementType == core::reflection::GetType<Vec2>())
 					{
-						core::Json vecJson;
 						for (auto it = prop->Begin(*this); it != prop->End(*this); ++it)
 						{
+							core::Json vecJson;
 							vecJson.push_back(it.Get<Vec2>()->x);
 							vecJson.push_back(it.Get<Vec2>()->y);
+
+							containerJson.push_back(std::move(vecJson));
 						}
-						arrJson.push_back(std::move(vecJson));
 					}
-					if (!arrJson.empty())
-						json->operator[](name) = std::move(arrJson);
 				}
 			}
 			type = type->super;
 		}
+
+		mainJson["fullType"] = GetType().type.name;
 		return mainJson;
 	}
 	SH_GAME_API void Component::Deserialize(const core::Json& json)
 	{
 		Super::Deserialize(json);
+
 		const core::reflection::STypeInfo* type = &GetType();
 		while (type)
 		{
@@ -171,29 +173,52 @@ namespace sh::game
 				const core::reflection::TypeInfo& propType = prop->type;
 				const core::Name& name = prop->GetName();
 
-				if (propType == core::reflection::GetType<Vec4>())
+				if (propType == core::reflection::GetType<Vec4>() && compJson[name].size() == 4)
 				{
 					if (core::DeserializeProperty(compJson, name, *prop->Get<Vec4>(*this)))
 						OnPropertyChanged(*prop.get());
 				}
-				else if (propType == core::reflection::GetType<Vec3>())
+				else if (propType == core::reflection::GetType<Vec3>() && compJson[name].size() == 3)
 				{
 					if (core::DeserializeProperty(compJson, name, *prop->Get<Vec3>(*this)))
 						OnPropertyChanged(*prop.get());
 				}
-				else if (propType == core::reflection::GetType<Vec2>())
+				else if (propType == core::reflection::GetType<Vec2>() && compJson[name].size() == 2)
 				{
 					if (core::DeserializeProperty(compJson, name, *prop->Get<Vec2>(*this)))
 						OnPropertyChanged(*prop.get());
 				}
-				// TODO
-				//else if (prop->isContainer)
-				//{
-				//	auto& containerJson = compJson[name];
-				//	if (*prop->containerElementType == core::reflection::GetType<Vec4>())
-				//	{
-				//	}
-				//}
+				else if (prop->isContainer)
+				{
+					const auto& containerJson = compJson[name];
+					if (*prop->containerElementType == core::reflection::GetType<Vec4>())
+					{
+						prop->ClearContainer(*this);
+						for (auto& vecJson : containerJson)
+						{
+							if (vecJson.size() == 4)
+								prop->InsertToContainer(*this, Vec4{ vecJson[0], vecJson[1], vecJson[2], vecJson[3] });
+						}
+					}
+					else if (*prop->containerElementType == core::reflection::GetType<Vec3>())
+					{
+						prop->ClearContainer(*this);
+						for (auto& vecJson : containerJson)
+						{
+							if (vecJson.size() == 3)
+								prop->InsertToContainer(*this, Vec3{ vecJson[0], vecJson[1], vecJson[2] });
+						}
+					}
+					else if (*prop->containerElementType == core::reflection::GetType<Vec2>())
+					{
+						prop->ClearContainer(*this);
+						for (auto& vecJson : containerJson)
+						{
+							if (vecJson.size() == 2)
+								prop->InsertToContainer(*this, Vec3{ vecJson[0], vecJson[1] });
+						}
+					}
+				}
 			}
 			type = type->super;
 		}
