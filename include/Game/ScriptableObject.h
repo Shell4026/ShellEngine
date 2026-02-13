@@ -39,6 +39,7 @@ namespace sh::game
 		SCLASS(ScriptableObject)
 	public:
 		SH_GAME_API auto Serialize() const -> core::Json override;
+		SH_GAME_API void Deserialize(const core::Json& json) override;
 	public:
 		using Factory = sh::core::Factory<ScriptableObject, ScriptableObject*, std::string>;
 	};
