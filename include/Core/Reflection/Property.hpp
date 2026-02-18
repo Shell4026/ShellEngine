@@ -606,7 +606,7 @@ namespace sh::core::reflection
 			isPointer(std::is_pointer_v<T>),
 			isContainer(IsContainer<T>::value),
 			isSObject(IsSObject<T>::value),
-			isSObjectPointer(createInfo.option.bSObjPtr || std::is_convertible_v<T, const SObject*>),
+			isSObjectPointer(createInfo.option.bSObjPtr & !reflection::IsContainer<T>::value || std::is_convertible_v<T, const SObject*>),
 			isSObjectPointerContainer(createInfo.option.bSObjPtr || reflection::IsContainer<T>::value && std::is_convertible_v<typename reflection::GetContainerLastType<T>::type, const SObject*>),
 			isEnum(std::is_enum_v<T>)
 		{

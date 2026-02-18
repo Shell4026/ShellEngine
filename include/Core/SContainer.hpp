@@ -458,11 +458,7 @@ namespace sh::core
         {
             return obj != other.obj;
         }
-        auto operator->() -> T*
-        {
-            return obj;
-        }
-        auto operator->() const -> const T*
+        auto operator->() const -> T*
         {
             return obj;
         }

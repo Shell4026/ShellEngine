@@ -90,15 +90,15 @@ namespace sh::core
 		/// @brief 이전에 GC를 수행하는데 걸린 시간(ms)을 반환 하는 함수
 		SH_CORE_API auto GetElapsedTime() -> uint32_t { return elapseTime; }
 
-		template<typename T>
-		void AddPointerTracking(SObjWeakPtr<T>& ptr)
+		template<typename T, typename IsSObject>
+		void AddPointerTracking(SObjWeakPtr<T, IsSObject>& ptr)
 		{
 			std::lock_guard<std::mutex> lock{ mu };
 
 			trackingPtrs.insert(reinterpret_cast<void*>(&ptr));
 		}
-		template<typename T>
-		void RemovePointerTracking(SObjWeakPtr<T>& ptr)
+		template<typename T, typename IsSObject>
+		void RemovePointerTracking(SObjWeakPtr<T, IsSObject>& ptr)
 		{
 			std::lock_guard<std::mutex> lock{ mu };
 			trackingPtrs.erase(&ptr);
