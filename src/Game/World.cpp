@@ -56,9 +56,9 @@ namespace sh::game
 	SH_GAME_API void World::SetupRenderer()
 	{
 		uiCamera.SetPriority(1000);
-		renderer.AddCamera(uiCamera);
 		if (customRenderer == nullptr)
 		{
+			renderer.AddCamera(uiCamera);
 			customRenderer = std::make_unique<GameRenderer>(*renderer.GetContext(), GetUiContext());
 			renderer.SetScriptableRenderer(*customRenderer);
 		}
