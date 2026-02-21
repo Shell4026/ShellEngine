@@ -126,26 +126,12 @@ namespace sh::core
 		SObjectManager& objManager = *SObjectManager::GetInstance();
 		if (objManager.GetSObject(uuid) != nullptr)
 		{
-			SH_ERROR_FORMAT("UUID({}) already exists!", uuid.ToString());
+			//SH_ERROR_FORMAT("UUID({}) already exists!", uuid.ToString());
 			return false;
 		}
 
 		objManager.UnRegisterSObject(this);
 		this->uuid = uuid;
-		RegisterToManager(this);
-		return true;
-	}
-	SH_CORE_API auto SObject::SetUUID(UUID&& uuid) -> bool
-	{
-		SObjectManager& objManager = *SObjectManager::GetInstance();
-		if (objManager.GetSObject(uuid) != nullptr)
-		{
-			SH_ERROR_FORMAT("UUID({}) already exists!", uuid.ToString());
-			return false;
-		}
-
-		objManager.UnRegisterSObject(this);
-		this->uuid = std::move(uuid);
 		RegisterToManager(this);
 		return true;
 	}

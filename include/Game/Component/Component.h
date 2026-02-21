@@ -69,9 +69,9 @@ namespace sh::game
 		SH_GAME_API void BeginUpdate() override {}
 		SH_GAME_API void Update() override {}
 		SH_GAME_API void LateUpdate() override {}
-		SH_GAME_API void OnCollisionEnter(Collider& collider) override {}
-		SH_GAME_API void OnCollisionStay(Collider& collider) override {}
-		SH_GAME_API void OnCollisionExit(Collider& collider) override {}
+		SH_GAME_API virtual void OnCollisionEnter(const Collision& collider) {}
+		SH_GAME_API virtual void OnCollisionStay(const Collision& collider) {}
+		SH_GAME_API virtual void OnCollisionExit(const Collision& collider) {}
 		SH_GAME_API virtual void OnTriggerEnter(Collider& collider) {};
 		SH_GAME_API virtual void OnTriggerStay(Collider& collider) {};
 		SH_GAME_API virtual void OnTriggerExit(Collider& collider) {};

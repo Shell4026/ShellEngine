@@ -12,6 +12,7 @@
 #include "Core/SContainer.hpp"
 #include "Core/Memory/MemoryPool.hpp"
 #include "Core/EventBus.h"
+#include "Core/EventSubscriber.h"
 #include "Core/Factory.hpp"
 
 #include "Render/Shader.h"
@@ -20,6 +21,7 @@
 #include "Render/Texture.h"
 
 #include "Physics/PhysWorld.h"
+#include "Physics/PhysicsEvent.h"
 
 #include <string>
 #include <vector>
@@ -131,14 +133,15 @@ namespace sh::game
 		SH_GAME_API auto GetUICamera() const -> const UICamera& { return uiCamera; }
 
 		SH_GAME_API virtual void ReallocateUUIDS();
+
+		SH_GAME_API auto GetFixedAccumulator() const -> float { return dtAccumulator; }
 	protected:
 		SH_GAME_API void CleanObjs();
 	private:
 		auto AllocateGameObject() -> GameObject*;
 	public:
 		render::Renderer& renderer;
-		const float& deltaTime = _deltaTime;
-		const float& fixedDeltaTime = _fixedDeltaTime;
+		const float& deltaTime = dt;
 	public:
 		const ComponentModule& componentModule;
 	protected:
@@ -156,8 +159,8 @@ namespace sh::game
 
 		std::vector<core::SObjWeakPtr<GameObject>> addedObjs; // 루프 도중 추가 된 객체
 
-		float _deltaTime = 0.f;
-		float _fixedDeltaTime = 0.f;
+		float dt = 0.f;
+		float dtAccumulator = 0.f;
 
 		PROPERTY(mainCamera)
 		Camera* mainCamera = nullptr;
@@ -173,6 +176,8 @@ namespace sh::game
 		std::unordered_map<std::string, core::Json> savePoints;
 
 		UICamera uiCamera;
+
+		core::EventSubscriber<phys::PhysicsEvent> physEventSubscriber;
 
 		bool bStartLoop = false;
 		bool bWaitPlaying = false;

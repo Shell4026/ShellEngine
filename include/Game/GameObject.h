@@ -4,7 +4,6 @@
 #include "WorldEvents.hpp"
 #include "Component/Component.h"
 #include "Component/Transform.h"
-#include "Component/Phys/Collider.h"
 
 #include "Core/Reflection.hpp"
 #include "Core/Util.h"
@@ -16,6 +15,7 @@
 namespace sh::game
 {
 	class World;
+	class Collider;
 	class GameObject : public core::SObject, public IObject
 	{
 		SCLASS(GameObject)
@@ -42,11 +42,11 @@ namespace sh::game
 		SH_GAME_API void BeginUpdate() override;
 		SH_GAME_API void Update() override;
 		SH_GAME_API void LateUpdate() override;
-		/// @brief FixedUpdate 다음에 호출 된다. OnCollision 함수들을 호출한다.
-		SH_GAME_API void ProcessCollisionFunctions();
-		SH_GAME_API void OnCollisionEnter(Collider& collider) override;
-		SH_GAME_API void OnCollisionStay(Collider& collider) override {};
-		SH_GAME_API void OnCollisionExit(Collider& collider) override;
+		SH_GAME_API void OnCollisionEnter(Collision&& collision);
+		SH_GAME_API void OnCollisionStay(Collision&& collision);
+		SH_GAME_API void OnCollisionExit(Collision&& collision);
+		SH_GAME_API void OnTriggerEnter(Collider& collider);
+		SH_GAME_API void OnTriggerExit(Collider& collider);
 
 		SH_GAME_API auto Serialize() const -> core::Json override;
 		SH_GAME_API void Deserialize(const core::Json& json) override;
@@ -65,6 +65,9 @@ namespace sh::game
 		SH_GAME_API void RequestSortComponents();
 
 		SH_GAME_API auto Clone() const -> GameObject&;
+
+		/// @brief FixedUpdate 다음에 호출 된다. OnCollision 함수들을 호출한다.
+		SH_GAME_API void ProcessCollisionFunctions();
 
 		SH_GAME_API auto GetComponents() const -> const std::vector<Component*>& { return components; }
 		SH_GAME_API auto IsActive() const -> bool { return bParentEnable && bEnable; }
@@ -106,7 +109,7 @@ namespace sh::game
 			bfs.push(transform);
 			while (!bfs.empty())
 			{
-				Transform* trans = bfs.front();
+				Transform* const trans = bfs.front();
 				bfs.pop();
 				GameObject* obj = &trans->gameObject;
 				for (Component* component : obj->components)
@@ -139,9 +142,35 @@ namespace sh::game
 		alignas(alignof(Transform)) std::array<uint8_t, sizeof(Transform)> transformBuffer;
 		core::SVector<Component*> components;
 
-		core::SSet<Collider*> enterColliders;
-		core::SSet<Collider*> stayColliders;
-		core::SSet<Collider*> exitColliders;
+		enum class ProcessingState
+		{
+			Enter,
+			Stay,
+			Exit
+		};
+		struct ProccessingTrigger
+		{
+			ProcessingState state;
+			core::SObjWeakPtr<Collider, void> collider;
+
+			ProccessingTrigger(ProcessingState state, Collider* colliderPtr) :
+				state(state), collider(colliderPtr)
+			{
+			}
+		};
+		struct ProccessingCollision
+		{
+			ProcessingState state;
+			Collision collision;
+
+			ProccessingCollision(ProcessingState state, Collision&& collision) :
+				state(state), collision(std::move(collision))
+			{
+			}
+		};
+		std::unordered_map<Collider*, std::size_t> processingColliderIdxs;
+		std::vector<ProccessingTrigger> processingTriggers;
+		std::vector<ProccessingCollision> processingCollisions;
 		PROPERTY(bEnable)
 		bool bEnable;
 		bool bParentEnable = true;

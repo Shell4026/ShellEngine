@@ -2,9 +2,11 @@
 #include "GameObject.h"
 #include "ImGUImpl.h"
 #include "WorldEvents.hpp"
-#include "Component/Render/Camera.h"
 #include "AssetLoaderFactory.h"
 #include "GameRenderer.h"
+#include "Component/Phys/RigidBody.h"
+#include "Component/Phys/Collider.h"
+#include "Component/Render/Camera.h"
 
 #include "Core/GarbageCollection.h"
 #include "Core/Util.h"
@@ -24,6 +26,73 @@ namespace sh::game
 	{
 		SetName("World");
 		gc = core::GarbageCollection::GetInstance();
+
+		physEventSubscriber.SetCallback(
+			[](const phys::PhysicsEvent& evt)
+			{
+				const auto callCollisionFn =
+					[](const phys::PhysicsEvent& evt, RigidBody* rb1Ptr, Collider* collider2Ptr)
+					{
+						if (core::IsValid(rb1Ptr))
+						{
+							if (evt.type == phys::PhysicsEvent::Type::CollisionEnter ||
+								evt.type == phys::PhysicsEvent::Type::CollisionStay ||
+								evt.type == phys::PhysicsEvent::Type::CollisionExit)
+							{
+								if (evt.contactCount < Collision::ARRAY_SIZE)
+								{
+									std::array<phys::ContactPoint, Collision::ARRAY_SIZE> contactPoint;
+									for (uint32_t i = 0; i < evt.contactCount; ++i)
+										evt.getContactPointFn(contactPoint[i], i);
+
+									Collision collision{ contactPoint };
+									collision.collider = collider2Ptr;
+									collision.contactCount = evt.contactCount;
+									if (evt.type == phys::PhysicsEvent::Type::CollisionEnter)
+										rb1Ptr->gameObject.OnCollisionEnter(std::move(collision));
+									else if (evt.type == phys::PhysicsEvent::Type::CollisionStay)
+										rb1Ptr->gameObject.OnCollisionStay(std::move(collision));
+									else if (evt.type == phys::PhysicsEvent::Type::CollisionExit)
+										rb1Ptr->gameObject.OnCollisionExit(std::move(collision));
+								}
+								else
+								{
+									std::vector<phys::ContactPoint> contactPoint(evt.contactCount);
+									for (uint32_t i = 0; i < evt.contactCount; ++i)
+										evt.getContactPointFn(contactPoint[i], i);
+
+									Collision collision{ std::move(contactPoint) };
+									collision.collider = collider2Ptr;
+									collision.contactCount = evt.contactCount;
+									if (evt.type == phys::PhysicsEvent::Type::CollisionEnter)
+										rb1Ptr->gameObject.OnCollisionEnter(std::move(collision));
+									if (evt.type == phys::PhysicsEvent::Type::CollisionStay)
+										rb1Ptr->gameObject.OnCollisionStay(std::move(collision));
+									else if (evt.type == phys::PhysicsEvent::Type::CollisionExit)
+										rb1Ptr->gameObject.OnCollisionExit(std::move(collision));
+								}
+							}
+							else
+							{
+								if (!core::IsValid(collider2Ptr))
+									return;
+								if (evt.type == phys::PhysicsEvent::Type::TriggerEnter)
+									rb1Ptr->gameObject.OnTriggerEnter(*collider2Ptr);
+								else if (evt.type == phys::PhysicsEvent::Type::TriggerExit)
+									rb1Ptr->gameObject.OnTriggerExit(*collider2Ptr);
+							}
+						}
+					};
+				RigidBody* const rb1Ptr = RigidBody::GetRigidBodyUsingHandle(evt.rigidBody1Handle);
+				RigidBody* const rb2Ptr = RigidBody::GetRigidBodyUsingHandle(evt.rigidBody2Handle);
+				Collider* const collider1Ptr = Collider::GetColliderUsingHandle(evt.collider1Handle);
+				Collider* const collider2Ptr = Collider::GetColliderUsingHandle(evt.collider2Handle);
+
+				callCollisionFn(evt, rb1Ptr, collider2Ptr);
+				callCollisionFn(evt, rb2Ptr, collider1Ptr);
+			}
+		);
+		physWorld.bus.Subscribe(physEventSubscriber);
 	}
 	SH_GAME_API World::~World()
 	{
@@ -186,7 +255,7 @@ namespace sh::game
 	}
 	SH_GAME_API void World::Update(float deltaTime)
 	{
-		_deltaTime = deltaTime;
+		dt = deltaTime;
 		if (!bStartLoop)
 			bStartLoop = true;
 
@@ -230,8 +299,8 @@ namespace sh::game
 				continue;
 			obj->BeginUpdate();
 		}
-		_fixedDeltaTime += _deltaTime;
-		while (_fixedDeltaTime >= FIXED_TIME)
+		dtAccumulator += dt;
+		while (dtAccumulator >= FIXED_TIME)
 		{
 			if (bPlaying)
 			{
@@ -245,7 +314,7 @@ namespace sh::game
 					continue;
 				obj->FixedUpdate();
 			}
-			_fixedDeltaTime -= FIXED_TIME;
+			dtAccumulator -= FIXED_TIME;
 		}
 		for (auto& obj : objs)
 		{
@@ -591,4 +660,4 @@ namespace sh::game
 		}
 		SetUUID(core::UUID::Generate());
 	}
-}
+}//namespace

@@ -21,8 +21,6 @@ namespace sh::game
 
 		SH_GAME_API void OnDestroy() override;
 
-		SH_GAME_API auto GetNative() const -> void* override;
-
 		SH_GAME_API void SetRadius(float r);
 		SH_GAME_API auto GetRadius() const -> float;
 
@@ -31,6 +29,9 @@ namespace sh::game
 		SH_GAME_API void Update() override;
 
 		SH_GAME_API void DisplayArea(bool bDisplay = true);
+	protected:
+		SH_GAME_API void DestroyShape() override;
+		SH_GAME_API auto GetShape() const -> void* override;
 	private:
 		struct Impl;
 		std::unique_ptr<Impl> impl;

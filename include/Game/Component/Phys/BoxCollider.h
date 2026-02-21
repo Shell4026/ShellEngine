@@ -18,8 +18,6 @@ namespace sh::game
 
 		SH_GAME_API void OnDestroy() override;
 
-		SH_GAME_API auto GetNative() const -> void* override;
-
 		SH_GAME_API void SetSize(const Vec3& size);
 		SH_GAME_API auto GetSize() const -> const Vec3&;
 
@@ -28,6 +26,9 @@ namespace sh::game
 		SH_GAME_API void Update() override;
 
 		SH_GAME_API void DisplayArea(bool bDisplay = true);
+	protected:
+		SH_GAME_API void DestroyShape() override;
+		SH_GAME_API auto GetShape() const -> void* override;
 	private:
 		struct Impl;
 		std::unique_ptr<Impl> impl;

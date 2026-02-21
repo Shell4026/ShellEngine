@@ -48,11 +48,6 @@ namespace sh::game
 		//}
 		Super::OnDestroy();
 	}
-
-	SH_GAME_API auto ConvexCollider::GetNative() const -> void*
-	{
-		return impl->shape;
-	}
 	//SH_GAME_API void ConvexCollider::DisplayArea(bool bDisplay)
 	//{
 	//	bDisplayArea = bDisplay;
@@ -117,7 +112,8 @@ namespace sh::game
 		const auto& objScale = gameObject.transform->GetWorldScale();
 		impl->shape = ctx->createConvexMeshShape(impl->convexMesh, { objScale.x, objScale.y, objScale.z });
 	}
-	void ConvexCollider::DestroyShape()
+
+	SH_GAME_API void ConvexCollider::DestroyShape()
 	{
 		auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld()->GetContext());
 		if (impl->shape != nullptr)
@@ -126,5 +122,9 @@ namespace sh::game
 			ctx->destroyConvexMesh(impl->convexMesh);
 		impl->shape = nullptr;
 		impl->convexMesh = nullptr;
+	}
+	SH_GAME_API auto ConvexCollider::GetShape() const -> void*
+	{
+		return impl->shape;
 	}
 }//namespace

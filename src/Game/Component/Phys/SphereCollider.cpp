@@ -30,9 +30,6 @@ namespace sh::game
 	}
 	SH_GAME_API ShpereCollider::~ShpereCollider()
 	{
-		SH_INFO("~ShpereCollider");
-		auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld()->GetContext());
-		ctx->destroySphereShape(impl->shape);
 	}
 
 	SH_GAME_API void ShpereCollider::OnDestroy()
@@ -44,12 +41,6 @@ namespace sh::game
 		}
 		Super::OnDestroy();
 	}
-
-	SH_GAME_API auto ShpereCollider::GetNative() const -> void*
-	{
-		return impl->shape;
-	}
-
 	SH_GAME_API void ShpereCollider::SetRadius(float r)
 	{
 		radius = r;
@@ -90,5 +81,20 @@ namespace sh::game
 			if (debugRenderer != nullptr && debugRenderer->IsActive())
 				debugRenderer->SetActive(false);
 		}
+	}
+
+	SH_GAME_API void ShpereCollider::DestroyShape()
+	{
+		if (impl->shape != nullptr)
+		{
+			SH_INFO("DestroyShape()");
+			auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld()->GetContext());
+			ctx->destroySphereShape(impl->shape);
+			impl->shape = nullptr;
+		}
+	}
+	SH_GAME_API auto ShpereCollider::GetShape() const -> void*
+	{
+		return impl->shape;
 	}
 }//namespace

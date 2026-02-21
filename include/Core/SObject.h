@@ -45,7 +45,6 @@ namespace sh::core
 		/// @param uuid UUID 객체
 		/// @return 성공 시 true, 실패 시 false
 		SH_CORE_API auto SetUUID(const UUID& uuid) -> bool;
-		SH_CORE_API auto SetUUID(UUID&& uuid) -> bool;
 		SH_CORE_API auto GetUUID() const -> const UUID&;
 
 		SH_CORE_API auto Serialize() const -> Json override;

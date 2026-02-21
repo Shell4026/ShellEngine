@@ -5,8 +5,6 @@
 #include "CollisionTag.hpp"
 
 #include "Core/EventBus.h"
-#include "Core/IEvent.h"
-#include "Core/Reflection.hpp"
 
 #include <glm/vec3.hpp>
 
@@ -21,25 +19,6 @@ namespace sh::phys
 	public:
 		using ContextHandle = void*;
 		using PhysicsWorldHandle = void*;
-		struct PhysicsEvent : core::IEvent
-		{
-			auto GetTypeHash() const -> std::size_t
-			{
-				return core::reflection::GetType<PhysicsEvent>().hash;
-			}
-
-			void* rigidBody1Handle = nullptr;
-			void* rigidBody2Handle = nullptr;
-			enum class Type
-			{
-				CollisionEnter,
-				CollisionStay,
-				CollisionExit,
-				TriggerEnter,
-				TriggerStay,
-				TriggerExit
-			} type;
-		};
 	public:
 		SH_PHYS_API PhysWorld();
 		SH_PHYS_API PhysWorld(PhysWorld&& other) noexcept;

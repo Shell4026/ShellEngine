@@ -1,4 +1,5 @@
 ﻿#include "PhysWorld.h"
+#include "PhysicsEvent.h"
 
 #include "Core/Logger.h"
 
@@ -51,21 +52,37 @@ namespace sh::phys
 			if (bus == nullptr)
 				return;
 
-			for (uint32_t i = 0; i < callbackData.getNbContactPairs(); i++)
+			for (uint32_t i = 0; i < callbackData.getNbContactPairs(); ++i)
 			{
 				const auto& pair = callbackData.getContactPair(i);
 				auto type = pair.getEventType();
 
-				PhysWorld::PhysicsEvent evt{};
+				PhysicsEvent evt{};
 				evt.rigidBody1Handle = pair.getBody1();
 				evt.rigidBody2Handle = pair.getBody2();
+				evt.collider1Handle = pair.getCollider1();
+				evt.collider2Handle = pair.getCollider2();
 
 				if (type == reactphysics3d::CollisionCallback::ContactPair::EventType::ContactStart)
-					evt.type = PhysWorld::PhysicsEvent::Type::CollisionEnter;
+					evt.type = PhysicsEvent::Type::CollisionEnter;
 				else if (type == reactphysics3d::CollisionCallback::ContactPair::EventType::ContactStay)
-					evt.type = PhysWorld::PhysicsEvent::Type::CollisionStay;
+					evt.type = PhysicsEvent::Type::CollisionStay;
 				else if (type == reactphysics3d::CollisionCallback::ContactPair::EventType::ContactExit)
-					evt.type = PhysWorld::PhysicsEvent::Type::CollisionExit;
+					evt.type = PhysicsEvent::Type::CollisionExit;
+
+				evt.contactCount = pair.getNbContactPoints();
+				evt.getContactPointFn =
+					[&](phys::ContactPoint& cp, uint32_t idx)
+					{
+						auto contactPoint = pair.getContactPoint(idx);
+						const auto& localPoint1 = contactPoint.getLocalPointOnCollider1();
+						const auto& localPoint2 = contactPoint.getLocalPointOnCollider2();
+						const auto& normal = contactPoint.getWorldNormal();
+						cp.localPointOnCollider1 = { localPoint1.x, localPoint1.y, localPoint1.z };
+						cp.localPointOnCollider2 = { localPoint2.x, localPoint2.y, localPoint2.z };
+						cp.penetrationDepth = contactPoint.getPenetrationDepth();
+						cp.worldNormal = { normal.x, normal.y, normal.z };
+					};
 
 				bus->Publish(evt);
 			}
@@ -81,16 +98,20 @@ namespace sh::phys
 				const auto& pair = callbackData.getOverlappingPair(i);
 				auto type = pair.getEventType();
 
-				PhysWorld::PhysicsEvent evt{};
+				if (type == reactphysics3d::OverlapCallback::OverlapPair::EventType::OverlapStay)
+					continue;
+
+				PhysicsEvent evt{};
 				evt.rigidBody1Handle = pair.getBody1();
 				evt.rigidBody2Handle = pair.getBody2();
+				evt.collider1Handle = pair.getCollider1();
+				evt.collider2Handle = pair.getCollider2();
+				evt.contactCount = 0;
 
 				if (type == reactphysics3d::OverlapCallback::OverlapPair::EventType::OverlapStart)
-					evt.type = PhysWorld::PhysicsEvent::Type::CollisionEnter;
-				else if (type == reactphysics3d::OverlapCallback::OverlapPair::EventType::OverlapStay)
-					evt.type = PhysWorld::PhysicsEvent::Type::CollisionStay;
+					evt.type = PhysicsEvent::Type::TriggerEnter;
 				else if (type == reactphysics3d::OverlapCallback::OverlapPair::EventType::OverlapExit)
-					evt.type = PhysWorld::PhysicsEvent::Type::CollisionExit;
+					evt.type = PhysicsEvent::Type::TriggerExit;
 
 				bus->Publish(evt);
 			}

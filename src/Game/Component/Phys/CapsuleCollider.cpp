@@ -34,9 +34,6 @@ namespace sh::game
 	}
 	SH_GAME_API CapsuleCollider::~CapsuleCollider()
 	{
-		SH_INFO("~CapsuleCollider");
-		auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld()->GetContext());
-		ctx->destroyCapsuleShape(impl->shape);
 	}
 
 	SH_GAME_API void CapsuleCollider::OnDestroy()
@@ -47,15 +44,6 @@ namespace sh::game
 			debugRenderer = nullptr;
 		}
 		Super::OnDestroy();
-	}
-
-	SH_GAME_API void CapsuleCollider::Awake()
-	{
-	}
-
-	SH_GAME_API auto CapsuleCollider::GetNative() const -> void*
-	{
-		return impl->shape;
 	}
 
 	SH_GAME_API void CapsuleCollider::SetRadius(float r)
@@ -124,5 +112,20 @@ namespace sh::game
 			if (debugRenderer != nullptr && debugRenderer->IsActive())
 				debugRenderer->SetActive(false);
 		}
+	}
+
+	SH_GAME_API void CapsuleCollider::DestroyShape()
+	{
+		if (impl->shape != nullptr)
+		{
+			SH_INFO("DestroyShape()");
+			auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld()->GetContext());
+			ctx->destroyCapsuleShape(impl->shape);
+			impl->shape = nullptr;
+		}
+	}
+	SH_GAME_API auto CapsuleCollider::GetShape() const -> void*
+	{
+		return impl->shape;
 	}
 }//namespace

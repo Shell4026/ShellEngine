@@ -156,86 +156,78 @@ namespace sh::game
 		}
 	}
 
-	SH_GAME_API void GameObject::ProcessCollisionFunctions()
+	SH_GAME_API void GameObject::OnCollisionEnter(Collision&& collision)
 	{
-		for (auto collider : enterColliders)
+		auto it = processingColliderIdxs.find(collision.collider);
+		if (it == processingColliderIdxs.end())
 		{
-			bool bTrigger = collider->IsTrigger();
-			if (!core::IsValid(collider))
-				continue;
-
-			for (auto& component : components)
-			{
-				if (core::IsValid(component) && component->IsActive())
-				{
-					if (world.IsPlaying() || component->canPlayInEditor)
-					{
-						if (!bTrigger)
-							component->OnCollisionEnter(*collider);
-						else
-							component->OnTriggerEnter(*collider);
-					}
-				}
-			}
+			processingColliderIdxs.emplace(collision.collider, processingCollisions.size());
+			processingCollisions.emplace_back(ProcessingState::Enter, std::move(collision));
 		}
-		for (auto collider : stayColliders)
+		else
 		{
-			bool bTrigger = collider->IsTrigger();
-			if (!core::IsValid(collider))
-				continue;
-
-			for (auto& component : components)
-			{
-				if (core::IsValid(component) && component->IsActive())
-				{
-					if (world.IsPlaying() || component->canPlayInEditor)
-					{
-						if (!bTrigger)
-							component->OnCollisionStay(*collider);
-						else
-							component->OnTriggerStay(*collider);
-					}
-				}
-			}
-		}
-		for (auto collider : exitColliders)
-		{
-			bool bTrigger = collider->IsTrigger();
-			if (!core::IsValid(collider))
-				continue;
-
-			stayColliders.erase(collider);
-
-			for (auto& component : components)
-			{
-				if (core::IsValid(component) && component->IsActive())
-				{
-					if (world.IsPlaying() || component->canPlayInEditor)
-					{
-						if (!bTrigger)
-							component->OnCollisionExit(*collider);
-						else
-							component->OnTriggerExit(*collider);
-					}
-				}
-			}
-		}
-		enterColliders.clear();
-		exitColliders.clear();
-	}
-
-	SH_GAME_API void GameObject::OnCollisionEnter(Collider& collider)
-	{
-		if (stayColliders.find(&collider) == stayColliders.end())
-		{
-			enterColliders.insert(&collider);
-			stayColliders.insert(&collider);
+			const std::size_t idx = it->second;
+			processingCollisions[idx].state = ProcessingState::Enter;
+			processingCollisions[idx].collision = std::move(collision);
 		}
 	}
-
-	SH_GAME_API void GameObject::OnCollisionExit(Collider& collider)
+	SH_GAME_API void GameObject::OnCollisionStay(Collision&& collision)
 	{
-		exitColliders.insert(&collider);
+		auto it = processingColliderIdxs.find(collision.collider);
+		if (it == processingColliderIdxs.end())
+		{
+			processingColliderIdxs.emplace(collision.collider, processingCollisions.size());
+			processingCollisions.emplace_back(ProcessingState::Stay, std::move(collision));
+		}
+		else
+		{
+			const std::size_t idx = it->second;
+			processingCollisions[idx].state = ProcessingState::Stay;
+			processingCollisions[idx].collision = std::move(collision);
+		}
+	}
+	SH_GAME_API void GameObject::OnCollisionExit(Collision&& collision)
+	{
+		auto it = processingColliderIdxs.find(collision.collider);
+		if (it == processingColliderIdxs.end())
+		{
+			processingColliderIdxs.emplace(collision.collider, processingCollisions.size());
+			processingCollisions.emplace_back(ProcessingState::Exit, std::move(collision));
+		}
+		else
+		{
+			const std::size_t idx = it->second;
+			processingCollisions[idx].state = ProcessingState::Exit;
+			processingCollisions[idx].collision = std::move(collision);
+		}
+	}
+	SH_GAME_API void GameObject::OnTriggerEnter(Collider& collider)
+	{
+		//SH_INFO_FORMAT("{}: enter to {}", GetName().ToString(), collider.gameObject.GetName().ToString());
+		auto it = processingColliderIdxs.find(&collider);
+		if (it == processingColliderIdxs.end())
+		{
+			processingColliderIdxs.emplace(&collider, processingTriggers.size());
+			processingTriggers.emplace_back(ProcessingState::Enter, &collider);
+		}
+		else
+		{
+			processingTriggers[it->second].state = ProcessingState::Enter;
+		}
+	}
+	SH_GAME_API void GameObject::OnTriggerExit(Collider& collider)
+	{
+		//SH_INFO_FORMAT("{}: exit to {}", GetName().ToString(), collider.gameObject.GetName().ToString());
+		auto it = processingColliderIdxs.find(&collider);
+		if (it == processingColliderIdxs.end())
+		{
+			processingColliderIdxs.emplace(&collider, processingTriggers.size());
+			processingTriggers.emplace_back(ProcessingState::Exit, &collider);
+		}
+		else
+		{
+			processingTriggers[it->second].state = ProcessingState::Exit;
+		}
 	}
 
 	SH_GAME_API auto GameObject::Serialize() const -> core::Json
@@ -362,6 +354,157 @@ namespace sh::game
 		auto objPtr = prefab->AddToWorld(world);
 
 		return *objPtr;
+	}
+
+	SH_GAME_API void GameObject::ProcessCollisionFunctions()
+	{
+		const auto callTriggerFn =
+			[this](Collider* colliderPtr, ProcessingState state, bool& bErase)
+			{
+				for (auto& component : components)
+				{
+					if (!core::IsValid(component) || !component->IsActive())
+						continue;
+					if (world.IsPlaying() || component->canPlayInEditor)
+					{
+						if (state == ProcessingState::Enter)
+							component->OnTriggerEnter(*colliderPtr);
+						else if (state == ProcessingState::Stay)
+							component->OnTriggerStay(*colliderPtr);
+						else if (state == ProcessingState::Exit)
+						{
+							component->OnTriggerExit(*colliderPtr);
+							bErase = true;
+						}
+					}
+				}
+			};
+
+		// 순회하면서 함수를 호출하고 유효하지 않은 콜라이더는 제거 O(N)
+		std::size_t p0 = 0;
+		std::size_t p1 = 0;
+
+		while (p1 < processingTriggers.size())
+		{
+			auto& processingTrigger = processingTriggers[p1];
+			Collider* const colliderPtr = processingTrigger.collider.Get();
+			if (colliderPtr != nullptr && colliderPtr->IsPendingKill())
+			{
+				processingTrigger.state = ProcessingState::Exit;
+				bool bErase = true;
+				callTriggerFn(colliderPtr, processingTrigger.state, bErase);
+				processingColliderIdxs.erase(colliderPtr);
+				++p1;
+				continue;
+			}
+
+			if (!colliderPtr->gameObject.IsActive())
+			{
+				if (processingTrigger.state == ProcessingState::Enter || processingTrigger.state == ProcessingState::Stay)
+				{
+					processingTrigger.state = ProcessingState::Exit;
+					bool bErase = true;
+					callTriggerFn(colliderPtr, processingTrigger.state, bErase);
+				}
+				processingColliderIdxs.erase(colliderPtr);
+				++p1;
+				continue;
+			}
+
+			bool bErase = false;
+			callTriggerFn(colliderPtr, processingTrigger.state, bErase);
+
+			if (processingTrigger.state == ProcessingState::Enter)
+				processingTrigger.state = ProcessingState::Stay;
+
+			if (bErase)
+			{
+				processingColliderIdxs.erase(colliderPtr);
+				++p1;
+				continue;
+			}
+			if (p0 != p1)
+			{
+				processingColliderIdxs[colliderPtr] = p0;
+				processingTriggers[p0] = std::move(processingTriggers[p1]);
+			}
+			++p0;
+			++p1;
+		}
+		processingTriggers.erase(processingTriggers.begin() + p0, processingTriggers.end());
+
+		const auto callCollisionFn =
+			[this](const Collision& collision, ProcessingState state, bool& bErase)
+			{
+				for (auto& component : components)
+				{
+					if (!core::IsValid(component) || !component->IsActive())
+						continue;
+					if (world.IsPlaying() || component->canPlayInEditor)
+					{
+						if (state == ProcessingState::Enter)
+							component->OnCollisionEnter(collision);
+						else if (state == ProcessingState::Stay)
+							component->OnCollisionStay(collision);
+						else if (state == ProcessingState::Exit)
+						{
+							component->OnCollisionExit(collision);
+							bErase = true;
+						}
+					}
+				}
+			};
+		p0 = 0;
+		p1 = 0;
+
+		while (p1 < processingCollisions.size())
+		{
+			auto& processingCollision = processingCollisions[p1];
+			Collider* const colliderPtr = processingCollision.collision.collider;
+			if (colliderPtr != nullptr && colliderPtr->IsPendingKill())
+			{
+				processingCollision.state = ProcessingState::Exit;
+				bool bErase = true;
+				callCollisionFn(processingCollision.collision, processingCollision.state, bErase);
+				processingColliderIdxs.erase(colliderPtr);
+				++p1;
+				continue;
+			}
+
+			if (!colliderPtr->gameObject.IsActive())
+			{
+				if (processingCollision.state == ProcessingState::Enter || processingCollision.state == ProcessingState::Stay)
+				{
+					processingCollision.state = ProcessingState::Exit;
+					bool bErase = true;
+					callCollisionFn(processingCollision.collision, processingCollision.state, bErase);
+				}
+				processingColliderIdxs.erase(colliderPtr);
+				++p1;
+				continue;
+			}
+
+			bool bErase = false;
+			callCollisionFn(processingCollision.collision, processingCollision.state, bErase);
+
+			if (processingCollision.state == ProcessingState::Enter)
+				processingCollision.state = ProcessingState::Stay;
+
+			if (bErase)
+			{
+				processingColliderIdxs.erase(colliderPtr);
+				++p1;
+				continue;
+			}
+			if (p0 != p1)
+			{
+				processingColliderIdxs[colliderPtr] = p0;
+				processingCollisions[p0] = std::move(processingCollisions[p1]);
+			}
+			++p0;
+			++p1;
+		}
+		processingCollisions.erase(processingCollisions.begin() + p0, processingCollisions.end());
 	}
 
 	void GameObject::SortComponents()

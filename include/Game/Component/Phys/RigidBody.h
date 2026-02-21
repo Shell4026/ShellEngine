@@ -2,13 +2,6 @@
 #include "Game/Export.h"
 #include "Game/Vector.h"
 #include "Game/Component/Component.h"
-#include "Collider.h"
-
-#include "Core/SContainer.hpp"
-#include "Core/Observer.hpp"
-#include "Core/EventSubscriber.h"
-
-#include "Physics/PhysWorld.h"
 
 #include <glm/gtc/quaternion.hpp>
 
@@ -29,18 +22,14 @@ namespace sh::game
 		SH_GAME_API void OnEnable() override;
 		SH_GAME_API void OnDisable() override;
 		SH_GAME_API void OnDestroy() override;
-		SH_GAME_API void BeginUpdate() override;
 		SH_GAME_API void FixedUpdate() override;
 		SH_GAME_API void Update() override;
-		SH_GAME_API void LateUpdate() override;
+		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 
 		/// @brief 물리 법칙에 따라 움직이지만 질량이 무한대인 상태로 설정할지
 		/// @param set true 또는 false
 		SH_GAME_API void SetKinematic(bool set);
 		SH_GAME_API void SetUsingGravity(bool use);
-
-		SH_GAME_API void SetCollider(Collider* colliderComponent);
-		SH_GAME_API auto GetCollider() const -> Collider*;
 
 		SH_GAME_API void SetMass(float mass);
 		SH_GAME_API void SetLinearVelocity(const game::Vec3& v);
@@ -59,8 +48,6 @@ namespace sh::game
 		/// @param dir 1이면 해당 축의 움직임을 제한, 0이면 허용
 		SH_GAME_API void SetAxisLock(const game::Vec3& axis);
 		SH_GAME_API auto GetAxisLock() const -> const game::Vec3&;
-		SH_GAME_API void SetBouncy(float bouncy);
-		SH_GAME_API auto GetBouncy() const -> float;
 
 		SH_GAME_API bool IsKinematic() const;
 		SH_GAME_API bool IsGravityUse() const;
@@ -87,16 +74,13 @@ namespace sh::game
 		/// @return 월드 좌표
 		SH_GAME_API auto GetPhysicsPosition() const -> game::Vec3;
 
-		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
+		SH_GAME_API auto CheckOverlap(const RigidBody& other) const -> bool;
 
-		SH_GAME_API static auto GetRigidBodyFromHandle(RigidBodyHandle handle) -> RigidBody*;
+		SH_GAME_API static auto GetRigidBodyUsingHandle(RigidBodyHandle handle) -> RigidBody*;
 	private:
 		void Interpolate();
 	private:
 		struct Impl;
-
-		PROPERTY(collision)
-		Collider* collision = nullptr;
 
 		std::unique_ptr<Impl> impl;
 
@@ -106,8 +90,6 @@ namespace sh::game
 		game::Vec3 axisLock{ 0.f, 0.f, 0.f };
 		PROPERTY(mass)
 		float mass = 1.0f;
-		PROPERTY(bouncy)
-		float bouncy = 0.2f;
 		PROPERTY(linearDamping)
 		float linearDamping = 0.f;
 		PROPERTY(angularDamping)
@@ -124,10 +106,12 @@ namespace sh::game
 		glm::quat prevRot;
 		glm::quat currRot;
 
-		core::Observer<false, const SObject*>::Listener colliderDestroyListener;
-		core::EventSubscriber<phys::PhysWorld::PhysicsEvent> physEventSubscriber;
-
-		core::SSet<Collider*> hitCollidersCache;
+		struct LastState
+		{
+			glm::vec3 torque;
+			glm::vec3 vel;
+			glm::vec3 angularVel;
+		} lastState;
 
 		static std::unordered_map<RigidBodyHandle, RigidBody*> nativeMap;
 	};

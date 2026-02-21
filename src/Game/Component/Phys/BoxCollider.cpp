@@ -32,9 +32,6 @@ namespace sh::game
 	}
 	SH_GAME_API BoxCollider::~BoxCollider()
 	{
-		SH_INFO("~BoxCollider");
-		auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld()->GetContext());
-		ctx->destroyBoxShape(impl->shape);
 	}
 
 	SH_GAME_API void BoxCollider::OnDestroy()
@@ -45,11 +42,6 @@ namespace sh::game
 			debugRenderer = nullptr;
 		}
 		Super::OnDestroy();
-	}
-
-	SH_GAME_API auto BoxCollider::GetNative() const -> void*
-	{
-		return impl->shape;
 	}
 
 	SH_GAME_API void BoxCollider::SetSize(const Vec3& size)
@@ -90,5 +82,19 @@ namespace sh::game
 			if (debugRenderer != nullptr && debugRenderer->IsActive())
 				debugRenderer->SetActive(false);
 		}
+	}
+	SH_GAME_API void BoxCollider::DestroyShape()
+	{
+		if (impl->shape != nullptr)
+		{
+			SH_INFO("DestroyShape()");
+			auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld()->GetContext());
+			ctx->destroyBoxShape(impl->shape);
+			impl->shape = nullptr;
+		}
+	}
+	SH_GAME_API auto BoxCollider::GetShape() const -> void*
+	{
+		return impl->shape;
 	}
 }//namespace

@@ -23,16 +23,16 @@ namespace sh::game
 		SH_GAME_API void Start() override;
 		SH_GAME_API void OnDestroy() override;
 
-		SH_GAME_API auto GetNative() const -> void* override;
-
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 
 		SH_GAME_API void Update() override;
 
 		//SH_GAME_API void DisplayArea(bool bDisplay = true);
+	protected:
+		SH_GAME_API void DestroyShape() override;
+		SH_GAME_API auto GetShape() const -> void* override;
 	private:
 		void CreateShape();
-		void DestroyShape();
 	private:
 		struct Impl;
 		std::unique_ptr<Impl> impl;

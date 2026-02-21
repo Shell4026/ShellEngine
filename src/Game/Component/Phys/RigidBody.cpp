@@ -1,8 +1,10 @@
 ﻿#include "Component/Phys/RigidBody.h"
-
+#include "Component/Phys/Collider.h"
 #include "World.h"
 
 #include "Core/Logger.h"
+
+#include "Physics/PhysWorld.h"
 
 #include "reactphysics3d/reactphysics3d.h"
 
@@ -13,7 +15,6 @@ namespace sh::game
 
 	struct RigidBody::Impl
 	{
-		reactphysics3d::Collider* collider = nullptr;
 		reactphysics3d::RigidBody* rigidbody = nullptr;
 	};
 
@@ -36,47 +37,9 @@ namespace sh::game
 
 		nativeMap.insert({ impl->rigidbody, this });
 
-		colliderDestroyListener.SetCallback(
-			[&](const core::SObject* obj)
-			{
-				const Collider* colliderComponent = static_cast<const Collider*>(obj);
-				if (impl->collider != nullptr)
-				{
-					if (impl->rigidbody != nullptr)
-						impl->rigidbody->removeCollider(impl->collider);
-					impl->collider = nullptr;
-				}
-			}
-		);
-
-		physEventSubscriber.SetCallback(
-			[this](const phys::PhysWorld::PhysicsEvent& evt)
-			{
-				if (evt.rigidBody1Handle == impl->rigidbody || evt.rigidBody2Handle == impl->rigidbody)
-				{
-					RigidBodyHandle otherHandle = (evt.rigidBody1Handle == impl->rigidbody) ? evt.rigidBody2Handle : evt.rigidBody1Handle;
-					auto it = nativeMap.find(otherHandle);
-					if (it == nativeMap.end()) // 일어날 수가 있나?
-						return;
-					Collider* collider = it->second->GetCollider();
-					if (!core::IsValid(collider))
-						return;
-
-					if (evt.type == phys::PhysWorld::PhysicsEvent::Type::CollisionEnter || evt.type == phys::PhysWorld::PhysicsEvent::Type::TriggerEnter)
-					{
-						gameObject.OnCollisionEnter(*collider);
-						hitCollidersCache.insert(collider);
-					}
-					else if (evt.type == phys::PhysWorld::PhysicsEvent::Type::CollisionExit || evt.type == phys::PhysWorld::PhysicsEvent::Type::TriggerExit)
-					{
-						gameObject.OnCollisionExit(*collider);
-						hitCollidersCache.erase(collider);
-					}
-				}
-			}
-		);
-
-		owner.world.GetPhysWorld()->bus.Subscribe(physEventSubscriber);
+		lastState.torque = { 0.f, 0.f, 0.f };
+		lastState.vel = { 0.f, 0.f, 0.f };
+		lastState.angularVel = { 0.f, 0.f, 0.f };
 	}
 	SH_GAME_API RigidBody::~RigidBody()
 	{
@@ -84,62 +47,49 @@ namespace sh::game
 	}
 	SH_GAME_API void RigidBody::Awake()
 	{
-		impl->rigidbody->setTransform(reactphysics3d::Transform::identity());
+		if (!gameObject.IsActive() || !IsActive())
+			impl->rigidbody->setIsActive(false);
 		//impl->rigidbody->setLinearVelocity({ 0.f, 0.f, 0.f });
+
+		ResetPhysicsTransform();
+
+		auto colliders = gameObject.GetComponentsInChildren<Collider>(true);
+		for (Collider* collider : colliders)
+		{
+			if (!core::IsValid(collider->GetRigidbody()))
+				collider->Setup();
+		}
 	}
 	SH_GAME_API void RigidBody::Start()
 	{
-		ResetPhysicsTransform();
 	}
 	SH_GAME_API void RigidBody::OnEnable()
 	{
 		impl->rigidbody->setIsActive(true);
+		impl->rigidbody->setIsSleeping(false);
+		impl->rigidbody->applyWorldTorque({ lastState.torque.x, lastState.torque.y, lastState.torque.z });
+		impl->rigidbody->setLinearVelocity({ lastState.vel.x, lastState.vel.y, lastState.vel.z });
+		impl->rigidbody->setAngularVelocity({ lastState.angularVel.x, lastState.angularVel.y, lastState.angularVel.z });
 	}
 	SH_GAME_API void RigidBody::OnDisable()
 	{
 		impl->rigidbody->setIsActive(false);
-		for (auto hitCollider : hitCollidersCache)
-		{
-			if (!core::IsValid(hitCollider))
-				continue;
-			gameObject.OnCollisionExit(*hitCollider);
-			for (auto rb : hitCollider->GetRigidbodies())
-			{
-				auto it = rb->hitCollidersCache.find(collision);
-				if (it != rb->hitCollidersCache.end())
-				{
-					rb->hitCollidersCache.erase(it);
-					rb->gameObject.OnCollisionExit(*collision);
-				}
-			}
-		}
-		hitCollidersCache.clear();
+		const auto& torque = impl->rigidbody->getTorque();
+		const auto vel = impl->rigidbody->getLinearVelocity();
+		const auto avel = impl->rigidbody->getAngularVelocity();
+		lastState.torque = { torque.x, torque.y, torque.z };
+		lastState.vel = { vel.x, vel.y, vel.z };
+		lastState.angularVel = { avel.x, avel.y, avel.z };
 	}
 	SH_GAME_API void RigidBody::OnDestroy()
 	{
 		nativeMap.erase(impl->rigidbody);
 
-		if (impl->collider != nullptr)
-		{
-			auto& handles = collision->handles;
-			auto it = std::find(handles.begin(), handles.end(), Collider::Handle{ this, impl->collider });
-			if (it != handles.end())
-				handles.erase(it);
-
-			impl->rigidbody->removeCollider(impl->collider);
-		}
-
-		auto world = reinterpret_cast<reactphysics3d::PhysicsWorld*>(gameObject.world.GetPhysWorld()->GetNative());
-		world->destroyRigidBody(impl->rigidbody);
+		auto physWorld = reinterpret_cast<reactphysics3d::PhysicsWorld*>(gameObject.world.GetPhysWorld()->GetNative());
+		physWorld->destroyRigidBody(impl->rigidbody);
 		impl->rigidbody = nullptr;
 
 		Super::OnDestroy();
-	}
-	SH_GAME_API void RigidBody::BeginUpdate()
-	{
-		// collision이 유효하지 않게 되면 콜라이더 재설정
-		if (impl->collider != nullptr && !core::IsValid(collision))
-			SetCollider(nullptr);
 	}
 	SH_GAME_API void RigidBody::FixedUpdate()
 	{
@@ -155,8 +105,23 @@ namespace sh::game
 	{
 		Interpolate();
 	}
-	SH_GAME_API void RigidBody::LateUpdate()
+	SH_GAME_API void RigidBody::OnPropertyChanged(const core::reflection::Property& prop)
 	{
+		Super::OnPropertyChanged(prop);
+		if (prop.GetName() == core::Util::ConstexprHash("bGravity"))
+			SetUsingGravity(bGravity);
+		else if (prop.GetName() == core::Util::ConstexprHash("bKinematic"))
+			SetKinematic(bKinematic);
+		else if (prop.GetName() == core::Util::ConstexprHash("mass"))
+			SetMass(mass);
+		else if (prop.GetName() == core::Util::ConstexprHash("linearDamping"))
+			SetLinearDamping(linearDamping);
+		else if (prop.GetName() == core::Util::ConstexprHash("angularDamping"))
+			SetAngularDamping(angularDamping);
+		else if (prop.GetName() == core::Util::ConstexprHash("angularLock"))
+			SetAngularLock(angularLock);
+		else if (prop.GetName() == core::Util::ConstexprHash("axisLock"))
+			SetAxisLock(axisLock);
 	}
 
 	SH_GAME_API void RigidBody::SetKinematic(bool set)
@@ -171,77 +136,6 @@ namespace sh::game
 	{
 		bGravity = use;
 		impl->rigidbody->enableGravity(bGravity);
-	}
-	SH_GAME_API void RigidBody::SetCollider(Collider* colliderComponent)
-	{
-		if (impl->rigidbody == nullptr)
-			return;
-
-		if (collision != nullptr)
-		{
-			collision->onDestroy.UnRegister(colliderDestroyListener);
-			auto& handles = collision->handles;
-			auto it = std::find(handles.begin(), handles.end(), Collider::Handle{ this, impl->collider });
-			if (it != handles.end())
-				handles.erase(it);
-		}
-
-		collision = colliderComponent;
-
-		if (collision != nullptr)
-			collision->onDestroy.Register(colliderDestroyListener);
-
-		if (impl->collider != nullptr)
-		{
-			impl->rigidbody->removeCollider(impl->collider);
-			impl->collider = nullptr;
-		}
-
-		if (!core::IsValid(collision))
-			return;
-
-		const auto ComputeLocalToBodyFn = 
-			[&](const GameObject& colliderGO) -> reactphysics3d::Transform
-			{
-				const glm::vec3 rbWorldPos = gameObject.transform->GetWorldPosition();
-				glm::quat rbWorldQuat = gameObject.transform->GetWorldQuat();
-				rbWorldQuat = glm::normalize(rbWorldQuat);
-
-				const glm::vec3 colWorldPos = colliderGO.transform->GetWorldPosition();
-				glm::quat colWorldQuat = colliderGO.transform->GetWorldQuat();
-				colWorldQuat = glm::normalize(colWorldQuat);
-
-				const glm::quat invRb = glm::inverse(rbWorldQuat);
-				glm::quat localQuat = invRb * colWorldQuat;
-				localQuat = glm::normalize(localQuat);
-
-				const glm::vec3 localPos = invRb * (colWorldPos - rbWorldPos);
-
-				return reactphysics3d::Transform{
-					reactphysics3d::Vector3{ localPos.x, localPos.y, localPos.z },
-					reactphysics3d::Quaternion{ localQuat.x, localQuat.y, localQuat.z, localQuat.w }
-				};
-			};
-		reactphysics3d::Transform localToBody = reactphysics3d::Transform::identity();
-
-		auto shape = reinterpret_cast<reactphysics3d::CollisionShape*>(collision->GetNative());
-
-		// 리지드 바디랑 콜라이더랑 같은 오브젝트에 있으면 transform은 identity
-		if (&colliderComponent->gameObject != &gameObject)
-			localToBody = ComputeLocalToBodyFn(collision->gameObject);
-
-		impl->collider = impl->rigidbody->addCollider(shape, localToBody);
-		impl->collider->getMaterial().setBounciness(bouncy);
-		impl->collider->setCollisionCategoryBits(static_cast<uint16_t>(collision->GetCollisionTag()));
-		impl->collider->setCollideWithMaskBits(collision->GetAllowCollisions());
-		impl->collider->setIsTrigger(collision->IsTrigger());
-
-		collision->handles.push_back({ this, impl->collider });
-	}
-
-	SH_GAME_API auto RigidBody::GetCollider() const -> Collider*
-	{
-		return collision;
 	}
 
 	SH_GAME_API void RigidBody::SetMass(float mass)
@@ -321,18 +215,6 @@ namespace sh::game
 		return axisLock;
 	}
 
-	SH_GAME_API void RigidBody::SetBouncy(float bouncy)
-	{
-		this->bouncy = std::clamp(bouncy, 0.f, 1.f);
-		if (impl->collider != nullptr)
-			impl->collider->getMaterial().setBounciness(bouncy);
-	}
-
-	SH_GAME_API auto RigidBody::GetBouncy() const -> float
-	{
-		return bouncy;
-	}
-
 	SH_GAME_API bool RigidBody::IsKinematic() const
 	{
 		return bKinematic;
@@ -369,7 +251,7 @@ namespace sh::game
 
 	SH_GAME_API auto RigidBody::GetForce() const -> game::Vec3
 	{
-		auto& f = impl->rigidbody->getForce();
+		const auto& f = impl->rigidbody->getForce();
 		return game::Vec3{ f.x, f.y, f.z };
 	}
 
@@ -397,40 +279,14 @@ namespace sh::game
 	{
 		gameObject.transform->UpdateMatrix();
 
-		const Vec3& rbWorldPos = gameObject.transform->GetWorldPosition();
-		const glm::quat& rbWorldQuat = gameObject.transform->GetWorldQuat();
-
-		if (core::IsValid(collision) && impl->collider != nullptr)
-		{
-			if (&collision->gameObject != &gameObject)
-			{
-				const glm::vec3 colWPos = collision->gameObject.transform->GetWorldPosition();
-				auto colWQuat = collision->gameObject.transform->GetWorldQuat();
-				colWQuat = glm::normalize(colWQuat);
-
-				const glm::quat invRb = glm::inverse(rbWorldQuat);
-				glm::quat localQuat = glm::normalize(invRb * colWQuat);
-				const glm::vec3 localPos = invRb * (colWPos - glm::vec3(rbWorldPos.x, rbWorldPos.y, rbWorldPos.z));
-
-				impl->collider->setLocalToBodyTransform(
-					reactphysics3d::Transform
-					{
-						reactphysics3d::Vector3{ localPos.x, localPos.y, localPos.z },
-						reactphysics3d::Quaternion{ localQuat.x, localQuat.y, localQuat.z, localQuat.w }
-					}
-				);
-			}
-			else
-			{
-				impl->collider->setLocalToBodyTransform(reactphysics3d::Transform::identity());
-			}
-		}
+		const Vec3& worldPos = gameObject.transform->GetWorldPosition();
+		const glm::quat& worldQuat = gameObject.transform->GetWorldQuat();
 
 		// rb 월드 트랜스폼 리셋
 		impl->rigidbody->setTransform(
 			reactphysics3d::Transform{
-				reactphysics3d::Vector3{ rbWorldPos.x, rbWorldPos.y, rbWorldPos.z },
-				reactphysics3d::Quaternion{ rbWorldQuat.x, rbWorldQuat.y, rbWorldQuat.z, rbWorldQuat.w }
+				reactphysics3d::Vector3{ worldPos.x, worldPos.y, worldPos.z },
+				reactphysics3d::Quaternion{ worldQuat.x, worldQuat.y, worldQuat.z, worldQuat.w }
 			}
 		);
 
@@ -454,47 +310,16 @@ namespace sh::game
 		return { p.x, p.y, p.z };
 	}
 
-	SH_GAME_API void RigidBody::OnPropertyChanged(const core::reflection::Property& prop)
+	SH_GAME_API auto RigidBody::CheckOverlap(const RigidBody& other) const -> bool
 	{
-		Super::OnPropertyChanged(prop);
-		if (prop.GetName() == core::Util::ConstexprHash("collision"))
-		{
-			SetCollider(collision);
-		}
-		else if (prop.GetName() == core::Util::ConstexprHash("bGravity"))
-		{
-			SetUsingGravity(bGravity);
-		}
-		else if (prop.GetName() == core::Util::ConstexprHash("bKinematic"))
-		{
-			SetKinematic(bKinematic);
-		}
-		else if (prop.GetName() == core::Util::ConstexprHash("mass"))
-		{
-			SetMass(mass);
-		}
-		else if (prop.GetName() == core::Util::ConstexprHash("linearDamping"))
-		{
-			SetLinearDamping(linearDamping);
-		}
-		else if (prop.GetName() == core::Util::ConstexprHash("angularDamping"))
-		{
-			SetAngularDamping(angularDamping);
-		}
-		else if (prop.GetName() == core::Util::ConstexprHash("angularLock"))
-		{
-			SetAngularLock(angularLock);
-		}
-		else if (prop.GetName() == core::Util::ConstexprHash("axisLock"))
-		{
-			SetAxisLock(axisLock);
-		}
-		else if (prop.GetName() == core::Util::ConstexprHash("bouncy"))
-		{
-			SetBouncy(bouncy);
-		}
+		if (this == &other)
+			return true;
+
+		auto world = reinterpret_cast<reactphysics3d::PhysicsWorld*>(gameObject.world.GetPhysWorld()->GetNative());
+		return world->testOverlap(impl->rigidbody, other.impl->rigidbody);
 	}
-	SH_GAME_API auto RigidBody::GetRigidBodyFromHandle(RigidBodyHandle handle) -> RigidBody*
+
+	SH_GAME_API auto RigidBody::GetRigidBodyUsingHandle(RigidBodyHandle handle) -> RigidBody*
 	{
 		auto it = nativeMap.find(handle);
 		if (it == nativeMap.end())
@@ -509,7 +334,7 @@ namespace sh::game
 
 		if (!bKinematic && bInterpolation)
 		{
-			float alpha = std::clamp(gameObject.world.fixedDeltaTime / gameObject.world.FIXED_TIME, 0.f, 1.f);
+			float alpha = std::clamp(gameObject.world.GetFixedAccumulator() / gameObject.world.FIXED_TIME, 0.f, 1.f);
 			glm::vec3 interpPos = glm::mix(prevPos, currPos, alpha);
 			glm::quat interpRot = glm::slerp(prevRot, currRot, alpha);
 			interpRot = glm::normalize(interpRot);

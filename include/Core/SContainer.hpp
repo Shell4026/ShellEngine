@@ -428,11 +428,15 @@ namespace sh::core
         }
         auto operator=(const SObjWeakPtr& other) noexcept -> SObjWeakPtr&
         {
+            if (&other == this)
+                return *this;
             obj = other.obj;
             return *this;
         }
         auto operator=(SObjWeakPtr&& other) noexcept -> SObjWeakPtr&
         {
+            if (&other == this)
+                return *this;
             obj = other.obj;
             other.obj = nullptr;
             return *this;
