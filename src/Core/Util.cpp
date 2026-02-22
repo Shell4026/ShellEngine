@@ -56,13 +56,6 @@ namespace sh::core {
 		return result;
 	}
 
-	bool IsValid(const SObject* obj)
-	{
-		if (obj == nullptr)
-			return false;
-		return !obj->IsPendingKill();
-	}
-
 	auto Util::AlignTo(uint32_t value, uint32_t alignment) -> uint32_t
 	{
 		// ex) value = 20, alignment = 16

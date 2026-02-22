@@ -182,7 +182,7 @@ namespace sh
 		core::ThreadPool::GetInstance()->Init(std::max(2u, std::thread::hardware_concurrency() / 2));
 		core::ThreadSyncManager::Init();
 #if SH_EDITOR
-		game::Component::SetEditor(true);
+		game::Component::SetIsEditor(true);
 
 		project = std::make_unique<editor::Project>(*renderer, *gui);
 

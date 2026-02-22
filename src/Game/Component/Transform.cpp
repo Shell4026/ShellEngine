@@ -4,6 +4,8 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include "glm/mat4x4.hpp"
 #include "glm/gtx/orthonormalize.hpp"
+#include "glm/gtx/norm.hpp"
+
 #include <algorithm>
 #include <cmath>
 namespace sh::game
@@ -26,13 +28,13 @@ namespace sh::game
 
 	}
 
-	SH_GAME_API Transform::Transform(Transform&& other) noexcept:
+	SH_GAME_API Transform::Transform(Transform&& other) noexcept :
 		Component(std::move(other)),
 		position(vPosition), scale(vScale), rotation(vRotation), localToWorldMatrix(matModel),
 
 		worldPosition(other.worldPosition), worldRotation(other.worldRotation), worldScale(other.worldScale),
-		vPosition(std::move(other.vPosition)), vScale(std::move(other.vScale)), vRotation(std::move(other.vRotation)),
-		matModel(std::move(other.matModel)), quat(std::move(other.quat)),
+		vPosition(other.vPosition), vScale(other.vScale), vRotation(other.vRotation),
+		matModel(other.matModel), quat(other.quat), worldQuat(other.worldQuat),
 		parent(other.parent), childs(std::move(other.childs)),
 		bUpdateMatrix(other.bUpdateMatrix),
 
@@ -69,17 +71,11 @@ namespace sh::game
 
 		Super::OnDestroy();
 	}
-
 	SH_GAME_API void Transform::Awake()
 	{
 		Super::Awake();
 		UpdateMatrix();
 	}
-
-	SH_GAME_API void Transform::Start()
-	{
-	}
-
 	SH_GAME_API void Transform::BeginUpdate()
 	{
 		if (bUpdateMatrix)
@@ -87,20 +83,78 @@ namespace sh::game
 			UpdateMatrix();
 		}
 	}
+	SH_GAME_API auto Transform::Serialize() const -> core::Json
+	{
+		core::Json mainJson = Super::Serialize();
+		core::Json& transformJson = mainJson["Transform"];
+		transformJson["quat"] = { quat.x, quat.y, quat.z, quat.w };
+		if (parent)
+			transformJson["parent"] = parent->GetUUID().ToString();
+
+		return mainJson;
+	}
+	SH_GAME_API void Transform::Deserialize(const core::Json& json)
+	{
+		const core::Json& transformJson = json["Transform"];
+		if (transformJson.contains("parent"))
+		{
+			std::string uuid = transformJson["parent"].get<std::string>();
+			SetParent(static_cast<Transform*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuid })));
+		}
+
+		Super::Deserialize(json);
+
+		if (transformJson.contains("quat") && transformJson["quat"].is_array() && transformJson["quat"].size() == 4)
+		{
+			quat.x = json["Transform"]["quat"][0].get<float>();
+			quat.y = json["Transform"]["quat"][1].get<float>();
+			quat.z = json["Transform"]["quat"][2].get<float>();
+			quat.w = json["Transform"]["quat"][3].get<float>();
+		}
+
+		UpdateMatrix();
+	}
+	SH_GAME_API void Transform::OnPropertyChanged(const core::reflection::Property& property)
+	{
+		Super::OnPropertyChanged(property);
+		if (IsEditor())
+		{
+			if (property.GetName() == core::Util::ConstexprHash("vRotation"))
+			{
+				quat = glm::quat{ glm::radians(glm::vec3{ vRotation }) };
+			}
+		}
+		bUpdateMatrix = true;
+	}
 
 	SH_GAME_API void Transform::UpdateMatrix()
 	{
-		if (vRotation.x >= 360)
+		if (IsEditor())
+		{
 			vRotation.x = std::fmod(vRotation.x, 360.f);
-		if (vRotation.y >= 360)
 			vRotation.y = std::fmod(vRotation.y, 360.f);
-		if (vRotation.z >= 360)
 			vRotation.z = std::fmod(vRotation.z, 360.f);
+		}
 
-		matModel = glm::translate(glm::mat4{ 1.0f }, glm::vec3{ vPosition }) * glm::mat4_cast(quat) * glm::scale(glm::mat4{ 1.0f }, glm::vec3{ vScale });
-		if (parent)
+		const glm::mat4 t = glm::translate(glm::mat4{ 1.0f }, glm::vec3{ vPosition });
+		const glm::mat4 tInv = glm::translate(glm::mat4{ 1.0f }, -glm::vec3{ vPosition });
+		const glm::mat4 r = glm::mat4_cast(quat);
+		const glm::mat4 rInv = glm::transpose(r);
+		const glm::mat4 s = glm::scale(glm::mat4{ 1.0f }, glm::vec3{ vScale });
+		matModel = t * r * s;
+		if (vScale.x < 1e-6f || vScale.y < 1e-6f || vScale.z < 1e-6f)
+			matModelInv = rInv * tInv;
+		else
+		{
+			const glm::mat4 sInv = glm::scale(glm::mat4{ 1.0f }, glm::vec3{ 1.0f / vScale });
+			matModelInv = sInv * rInv * tInv;
+		}
+
+		if (parent != nullptr)
 		{
 			matModel = parent->matModel * matModel;
+			matModelInv = matModelInv * parent->matModelInv;
+
 			worldPosition = glm::vec3(matModel[3]);
 			worldQuat = parent->worldQuat * quat;
 			worldScale = parent->worldScale * vScale;
@@ -116,30 +170,30 @@ namespace sh::game
 				worldRotation = vRotation;
 		}
 
-		for (auto it = childs.begin(); it != childs.end();)
+		// 두포인터를 이용한 함수를 호출하면서 유효하지 않은 자식은 삭제
+		std::size_t p0 = 0;
+		std::size_t p1 = 0;
+		while (p1 < childs.size())
 		{
-			Transform* child = *it;
-			if (core::IsValid(child))
+			Transform* const child = childs[p1];
+			if (!core::IsValid(child))
 			{
-				child->UpdateMatrix();
-				++it;
+				++p1;
+				continue;
 			}
-			else
-				it = childs.erase(it);
+			if (p0 != p1)
+				childs[p0] = childs[p1];
+			child->UpdateMatrix();
+			++p0;
+			++p1;
 		}
+		if (p0 != p1)
+			childs.erase(childs.begin() + p0, childs.end());
 
 		onMatrixUpdate.Notify(matModel);
 		bUpdateMatrix = false;
 	}
 
-	SH_GAME_API auto Transform::GetParent() const -> Transform*
-	{
-		return parent;
-	}
-	SH_GAME_API auto Transform::GetChildren() const -> const std::vector<Transform*>&
-	{
-		return childs;
-	}
 	SH_GAME_API void Transform::ReorderChildAbove(Transform* child)
 	{
 		auto it = std::find(childs.begin(), childs.end(), child);
@@ -198,9 +252,39 @@ namespace sh::game
 	}
 	SH_GAME_API void Transform::SetRotation(const glm::quat& rot)
 	{
-		quat = glm::normalize(rot);
+		const float len2 = glm::length2(rot);
+		if (std::abs(len2 - 1.0f) < 0.001f)
+			this->quat = rot;
+		else
+			this->quat = glm::normalize(rot);
+
 		if (IsEditor())
 			vRotation = glm::degrees(glm::eulerAngles(quat));
+		bUpdateMatrix = true;
+	}
+
+	SH_GAME_API void Transform::SetQuaternion(const glm::quat& quat)
+	{
+		const float len2 = glm::length2(quat);
+		if (std::abs(len2 - 1.0f) < 0.001f)
+			this->quat = quat;
+		else
+			this->quat = glm::normalize(quat);
+		
+		if (IsEditor())
+			vRotation = glm::degrees(glm::eulerAngles(this->quat));
+		bUpdateMatrix = true;
+	}
+
+	SH_GAME_API void Transform::SetQuaternion(float x, float y, float z, float w)
+	{
+		quat = glm::quat{ w, x, y, z };
+		const float len2 = glm::length2(quat);
+		if (std::abs(len2 - 1.0f) >= 0.001f)
+			quat = glm::normalize(quat);
+
+		if (IsEditor())
+			vRotation = glm::degrees(glm::eulerAngles(this->quat));
 		bUpdateMatrix = true;
 	}
 
@@ -353,76 +437,6 @@ namespace sh::game
 			parent = parent->parent;
 		}
 		return false;
-	}
-
-	SH_GAME_API auto Transform::GetQuat() const -> const glm::quat&
-	{
-		return quat;
-	}
-	SH_GAME_API auto Transform::GetWorldQuat() const -> const glm::quat&
-	{
-		return worldQuat;
-	}
-	SH_GAME_API auto Transform::GetWorldPosition() const -> const Vec3&
-	{
-		return worldPosition;
-	}
-	SH_GAME_API auto Transform::GetWorldRotation() const -> const Vec3&
-	{
-		return worldRotation;
-	}
-	SH_GAME_API auto Transform::GetWorldScale() const -> const Vec3&
-	{
-		return worldScale;
-	}
-	SH_GAME_API auto Transform::GetWorldToLocalMatrix() const -> glm::mat4
-	{
-		return glm::inverse(matModel);
-	}
-
-	SH_GAME_API auto Transform::Serialize() const -> core::Json
-	{
-		core::Json mainJson = Super::Serialize();
-		core::Json& transformJson = mainJson["Transform"];
-		transformJson["quat"] = {quat.x, quat.y, quat.z, quat.w};
-		if (parent)
-			transformJson["parent"] = parent->GetUUID().ToString();
-
-		return mainJson;
-	}
-	SH_GAME_API void Transform::Deserialize(const core::Json& json)
-	{
-		const core::Json& transformJson = json["Transform"];
-		if (transformJson.contains("parent"))
-		{
-			std::string uuid = transformJson["parent"].get<std::string>();
-			SetParent(static_cast<Transform*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuid })));
-		}
-
-		Super::Deserialize(json);
-		
-		if (transformJson.contains("quat") && transformJson["quat"].is_array() && transformJson["quat"].size() == 4)
-		{
-			quat.x = json["Transform"]["quat"][0].get<float>();
-			quat.y = json["Transform"]["quat"][1].get<float>();
-			quat.z = json["Transform"]["quat"][2].get<float>();
-			quat.w = json["Transform"]["quat"][3].get<float>();
-		}
-
-		UpdateMatrix();
-	}
-
-	SH_GAME_API void Transform::OnPropertyChanged(const core::reflection::Property& property)
-	{
-		Super::OnPropertyChanged(property);
-		if (IsEditor())
-		{
-			if (property.GetName() == core::Util::ConstexprHash("vRotation"))
-			{
-				quat = glm::quat{ glm::radians(glm::vec3{ vRotation }) };
-			}
-		}
-		bUpdateMatrix = true;
 	}
 
 	void Transform::RemoveChild(const Transform& child)

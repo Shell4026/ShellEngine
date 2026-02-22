@@ -76,11 +76,6 @@ namespace sh::core
 		::operator delete(ptr, size);
 	}
 
-	SH_CORE_API auto SObject::IsPendingKill() const -> bool
-	{
-		return bPendingKill;
-	}
-
 	SH_CORE_API void SObject::OnPropertyChanged(const reflection::Property& prop)
 	{
 	}
@@ -116,11 +111,6 @@ namespace sh::core
 	{
 		this->name = std::move(name);
 	}
-	SH_CORE_API auto SObject::GetName() const -> const Name&
-	{
-		return name;
-	}
-
 	SH_CORE_API auto SObject::SetUUID(const UUID& uuid) -> bool
 	{
 		SObjectManager& objManager = *SObjectManager::GetInstance();
@@ -134,10 +124,6 @@ namespace sh::core
 		this->uuid = uuid;
 		RegisterToManager(this);
 		return true;
-	}
-	SH_CORE_API auto SObject::GetUUID() const -> const UUID&
-	{
-		return uuid;
 	}
 
 	SH_CORE_API auto SObject::Serialize() const -> core::Json
@@ -244,7 +230,7 @@ namespace sh::core
 		}
 		return mainJson;
 	}
-	SH_CORE_API void SObject::Deserialize(const nlohmann::json& json)
+	SH_CORE_API void SObject::Deserialize(const Json& json)
 	{
 		const reflection::STypeInfo* stypeInfo = &GetType();
 		if (stypeInfo->name != json["type"].get_ref<const std::string&>())

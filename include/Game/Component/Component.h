@@ -83,10 +83,10 @@ namespace sh::game
 		SH_GAME_API auto Serialize() const -> core::Json override;
 		SH_GAME_API void Deserialize(const core::Json& json) override;
 
-		SH_GAME_API static void SetEditor(bool bEditor);
+		SH_GAME_API static void SetIsEditor(bool bEditor);
 		/// @brief 현재 에디터에서 실행중인지 반환
 		/// @return 에디터라면 True, 아니라면 False
-		SH_GAME_API static auto IsEditor() -> bool;
+		SH_GAME_API static auto IsEditor() -> bool { return bEditor; }
 	public:
 		GameObject& gameObject;
 		World& world;

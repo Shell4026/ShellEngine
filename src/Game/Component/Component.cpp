@@ -223,12 +223,8 @@ namespace sh::game
 			type = type->super;
 		}
 	}
-	SH_GAME_API void Component::SetEditor(bool bEditor)
+	SH_GAME_API void Component::SetIsEditor(bool bEditor)
 	{
 		Component::bEditor = bEditor;
 	}
-	SH_GAME_API auto Component::IsEditor() -> bool
-	{
-		return bEditor;
-	}
-}
+}//namespace

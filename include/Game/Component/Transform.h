@@ -19,14 +19,17 @@ namespace sh::game
 
 		SH_GAME_API auto operator=(const Transform& other) -> Transform&;
 
+		SH_GAME_API void OnDestroy() override;
 		SH_GAME_API void Awake() override;
-		SH_GAME_API void Start() override;
 		SH_GAME_API void BeginUpdate() override;
+		
+		SH_GAME_API auto Serialize() const -> core::Json override;
+		SH_GAME_API void Deserialize(const core::Json& json) override;
+		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& property) override;
 
+		/// @brief 행렬을 즉시 업데이트 하는 함수. 행렬은 원래 BeginUpdate시점에서 계산 된다.
 		SH_GAME_API void UpdateMatrix();
 
-		SH_GAME_API auto GetParent() const -> Transform*;
-		SH_GAME_API auto GetChildren() const -> const std::vector<Transform*>&;
 		/// @brief 자식 객체를 배열상에서 한칸 왼쪽으로 미는 함수
 		/// @brief 제일 왼쪽이면 아무 일도 일어나지 않는다.
 		SH_GAME_API void ReorderChildAbove(Transform* child);
@@ -37,6 +40,8 @@ namespace sh::game
 		SH_GAME_API void SetScale(float scale);
 		SH_GAME_API void SetRotation(const Vec3& rot);
 		SH_GAME_API void SetRotation(const glm::quat& rot);
+		SH_GAME_API void SetQuaternion(const glm::quat& quat);
+		SH_GAME_API void SetQuaternion(float x, float y, float z, float w);
 		SH_GAME_API void SetModelMatrix(const glm::mat4& matrix);
 
 		SH_GAME_API void SetWorldPosition(const Vec3& pos);
@@ -44,23 +49,20 @@ namespace sh::game
 		SH_GAME_API void SetWorldRotation(const Vec3& rot);
 		SH_GAME_API void SetWorldRotation(const glm::quat& rot);
 
-		SH_GAME_API auto GetQuat() const -> const glm::quat&;
-		SH_GAME_API auto GetWorldQuat() const -> const glm::quat&;
-		SH_GAME_API auto GetWorldPosition() const -> const Vec3&;
-		SH_GAME_API auto GetWorldRotation() const -> const Vec3&;
-		SH_GAME_API auto GetWorldScale() const -> const Vec3&;
-		SH_GAME_API auto GetWorldToLocalMatrix() const -> glm::mat4;
-
 		SH_GAME_API void SetParent(Transform* newParent, bool keepWorld = true);
 		SH_GAME_API auto HasChild(const Transform& child) const -> bool;
 		SH_GAME_API auto IsAncestorOf(const Transform& transform) const -> bool;
 
-		SH_GAME_API void OnDestroy() override;
-
-		SH_GAME_API auto Serialize() const -> core::Json override;
-		SH_GAME_API void Deserialize(const core::Json& json) override;
-
-		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& property) override;
+		SH_GAME_API auto GetParent() const -> Transform* { return parent; }
+		SH_GAME_API auto GetChildren() const -> const std::vector<Transform*>& { return childs; }
+		SH_GAME_API auto GetQuat() const -> const glm::quat& { return quat; }
+		SH_GAME_API auto GetWorldQuat() const -> const glm::quat& { return worldQuat; }
+		SH_GAME_API auto GetWorldPosition() const -> const Vec3& { return worldPosition; }
+		SH_GAME_API auto GetWorldRotation() const -> const Vec3& { return worldRotation; }
+		SH_GAME_API auto GetWorldScale() const -> const Vec3& { return worldScale; }
+		/// @brief 모델 행렬의 역행렬을 반환한다.
+		/// @return 모델 행렬의 역행렬
+		SH_GAME_API auto GetWorldToLocalMatrix() const -> const glm::mat4& { return matModelInv; }
 	private:
 		void RemoveChild(const Transform& child);
 	public:
@@ -83,6 +85,7 @@ namespace sh::game
 		Vec3 worldScale;
 
 		glm::mat4 matModel;
+		glm::mat4 matModelInv;
 
 		glm::quat quat;
 		glm::quat worldQuat;

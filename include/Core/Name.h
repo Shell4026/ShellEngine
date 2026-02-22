@@ -38,6 +38,15 @@ namespace sh::core
 		SH_CORE_API operator const std::string& () const;
 		SH_CORE_API auto ToString() const -> const std::string&;
 	};
+
+	static auto operator==(std::string_view str, const sh::core::Name& name) -> bool
+	{
+		return name == str;
+	}
+	static auto operator!=(std::string_view str, const sh::core::Name& name) -> bool
+	{
+		return name != str;
+	}
 }//namespace
 
 namespace std
@@ -50,13 +59,4 @@ namespace std
 			return name.hash;
 		}
 	};
-
-	static auto operator==(std::string_view str, const sh::core::Name& name) -> bool
-	{
-		return name == str;
-	}
-	static auto operator!=(std::string_view str, const sh::core::Name& name) -> bool
-	{
-		return name != str;
-	}
 }

@@ -13,12 +13,12 @@ TEST(SpinLockTest, LockTest)
 	int num = 0;
 	auto func = [&](int n)
 		{
-			lock.Lock();
+			lock.lock();
 			for (int i = 0; i < n; ++i)
 			{
 				num += 1;
 			}
-			lock.UnLock();
+			lock.unlock();
 		};
 	const int n = 4;
 	const int r = 100'000;

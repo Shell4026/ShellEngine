@@ -138,11 +138,6 @@ namespace sh::core
 		inline static std::mt19937 gen{ seed() };
 	};
 
-	/// @brief 해당 SObject가 nullptr이거나 앞으로 지워질 객체인지 검증 하는 함수.
-	/// @param obj SObject 포인터
-	/// @return 유효하면 true, 아니면 false
-	SH_CORE_API bool IsValid(const SObject* obj);
-
 	template <class... T>
 	constexpr bool alwaysFalse = false;
 }

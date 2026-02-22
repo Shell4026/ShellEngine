@@ -28,8 +28,6 @@ namespace sh::core
 
 		SH_CORE_API auto operator=(SObject&& other) noexcept -> SObject&;
 
-		SH_CORE_API auto IsPendingKill() const -> bool;
-
 		/// @brief GC에게 제거를 맡긴다.
 		SH_CORE_API virtual void Destroy();
 		/// @brief GC에서 소멸 되기전에 호출된다.
@@ -39,16 +37,18 @@ namespace sh::core
 		SH_CORE_API void SetName(std::string_view name);
 		SH_CORE_API void SetName(const core::Name& name);
 		SH_CORE_API void SetName(core::Name&& name);
-		SH_CORE_API auto GetName() const -> const Name&;
 
 		/// @brief UUID를 재설정한다. 이미 존재하는 UUID로 설정 시 실패한다.
 		/// @param uuid UUID 객체
 		/// @return 성공 시 true, 실패 시 false
 		SH_CORE_API auto SetUUID(const UUID& uuid) -> bool;
-		SH_CORE_API auto GetUUID() const -> const UUID&;
 
 		SH_CORE_API auto Serialize() const -> Json override;
 		SH_CORE_API void Deserialize(const Json& json) override;
+
+		SH_CORE_API auto GetName() const -> const Name& { return name; }
+		SH_CORE_API auto GetUUID() const -> const UUID& { return uuid; }
+		SH_CORE_API auto IsPendingKill() const -> bool { return bPendingKill; }
 
 		/// @brief SObject 객체를 생성한다. 생성시 GC에 등록되며 사용되지 않을 시 소멸된다.
 		/// @tparam T SObject를 상속 받는 객체
@@ -99,6 +99,16 @@ namespace sh::core
 		std::atomic_flag bMark;
 		bool bPendingKill;
 	};
+
+	/// @brief 해당 SObject가 nullptr이거나 앞으로 지워질 객체인지 검증 하는 함수.
+	/// @param obj SObject 포인터
+	/// @return 유효하면 true, 아니면 false
+	inline bool IsValid(const SObject* obj)
+	{
+		if (obj == nullptr)
+			return false;
+		return !obj->IsPendingKill();
+	}
 
 	template<>
 	inline void SerializeProperty(core::Json& json, const std::string& key, SObject* const& value)

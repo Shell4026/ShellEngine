@@ -1,5 +1,7 @@
 ﻿#include "Name.h"
 #include "Util.h"
+
+#include <mutex>
 namespace sh::core
 {
 	std::unordered_map<std::size_t, std::string> Name::map{};
