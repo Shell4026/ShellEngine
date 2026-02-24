@@ -175,7 +175,7 @@ namespace sh::editor
 		assetDatabase.Init(rootPath, *renderer.GetContext(), gui);
 		assetDatabase.onAssetImported.Register(onAssetImportedListener);
 		assetDatabase.LoadDatabase(libraryPath / "AssetDB.json");
-		assetDatabase.LoadAllAssets(assetPath, true);
+		assetDatabase.LoadAllAssets(assetPath, true, false);
 
 		setting.Load(settingPath);
 		
@@ -185,9 +185,9 @@ namespace sh::editor
 
 		if (!setting.lastWorldUUID.IsEmpty())
 		{
-			auto opt = assetDatabase.GetAssetOriginalPath(setting.lastWorldUUID);
-			if (opt.has_value())
-				LoadWorld(opt.value());
+			auto assetInfoPtr = assetDatabase.GetAssetPath(setting.lastWorldUUID);
+			if (assetInfoPtr != nullptr)
+				LoadWorld(assetInfoPtr->originalPath);
 		}
 		else
 			NewWorld("New World");

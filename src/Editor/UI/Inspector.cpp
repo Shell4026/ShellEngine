@@ -43,7 +43,10 @@ namespace sh::editor
 				ImGui::Text("%s", obj->GetUUID().ToString().c_str());
 				ImGui::SetNextItemWidth(100);
 				if (ImGui::InputText("Name", &name))
+				{
 					obj->SetName(name);
+					AssetDatabase::GetInstance()->SetDirty(obj);
+				}
 
 				ImGui::Separator();
 

@@ -51,8 +51,14 @@ namespace sh::editor
 		/// @brief 해당 경로에 있는 에셋을 모두 불러오는 함수
 		/// @param dir 경로
 		/// @param recursive 하위 경로도 포함 할 것인지
-		SH_EDITOR_API void LoadAllAssets(const std::filesystem::path& dir, bool recursive);
-		SH_EDITOR_API auto ImportAsset(const std::filesystem::path& dir) -> core::SObject*;
+		/// @param bOverLoad 이미 불러온 객체가 있다면 새로 로드 할 것인지
+		SH_EDITOR_API void LoadAllAssets(const std::filesystem::path& dir, bool recursive, bool bOverLoad = false);
+		/// @brief 경로에서 에셋을 임포트 하여 SObject객체를 생성하는 함수.
+		/// @brief 이전에 로드한적이 있는 에셋은 변경 사항이 없으면 캐싱된 Asset파일로 불러온다.
+		/// @param dir 에셋 경로(절대 경로 / 상대 경로)
+		/// @param bOverLoad 이미 불러온 객체가 있다면 새로 로드 할 것인지
+		/// @return SObject로 인스턴스화 된 에셋 객체. bOverLoad가 false고 이미 불러온 객체가 있다면 해당 객체를 반환
+		SH_EDITOR_API auto ImportAsset(const std::filesystem::path& dir, bool bOverLoad = true) -> core::SObject*;
 		SH_EDITOR_API bool CreateAsset(const std::filesystem::path& dir, const core::SObject& obj);
 		/// @brief 해당 에셋의 경로가 바뀌었음을 알리는 함수.
 		/// @param uuid UUID
@@ -61,11 +67,16 @@ namespace sh::editor
 		SH_EDITOR_API void DeleteAsset(const core::UUID& uuid);
 		SH_EDITOR_API void MoveAssetToDirectory(const core::UUID& uuid, const std::filesystem::path& directoryPath);
 
+		/// @brief 해당 UUID를 가진 에셋의 Asset파일을 로드해서 반환하는 함수.
+		/// @param uuid 에셋 UUID
+		/// @return Asset클래스
 		SH_EDITOR_API auto GetAsset(const core::UUID& uuid) -> std::unique_ptr<core::Asset>;
-		SH_EDITOR_API auto GetAssetOriginalPath(const core::UUID& uuid) const -> std::optional<std::filesystem::path>;
+		/// @brief 해당 UUID를 가진 에셋의 경로를 반환한다.
+		/// @param uuid UUID
+		/// @return 에셋의 상대 경로 정보. 없으면 nullptr
 		SH_EDITOR_API auto GetAssetPath(const core::UUID& uuid) const -> const AssetInfo*;
 		/// @brief 해당 경로의 파일의 에셋의 UUID를 반환한다.
-		/// @param assetPath 에셋 경로
+		/// @param assetPath 에셋 경로 (절대 경로 / 상태 경로)
 		/// @return 에셋이 로드 돼 있지 않다면 nullopt반환, 로드 돼 있다면 UUID를 반환
 		SH_EDITOR_API auto GetAssetUUID(const std::filesystem::path& assetPath) -> std::optional<core::UUID>;
 		/// @brief 에셋에 변경 사항이 존재한다고 알리는 함수

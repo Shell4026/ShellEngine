@@ -115,13 +115,14 @@ namespace sh::editor
 
 		paths.clear();
 
-		core::Json json{ core::Json::parse(opt.value()) };
+		core::Json json = core::Json::parse(opt.value());
 		if (json.empty())
 		{
 			SH_ERROR_FORMAT("Parsing failed: {}", dir.u8string());
 		}
 		if (json.is_array())
 			json = json[0];
+
 		for (auto it = json.begin(); it != json.end(); ++it)
 		{
 			core::UUID uuid{ it.key() };
@@ -179,7 +180,7 @@ namespace sh::editor
 		}
 		dirtyObjs.clear();
 	}
-	SH_EDITOR_API void AssetDatabase::LoadAllAssets(const std::filesystem::path& dir, bool recursive)
+	SH_EDITOR_API void AssetDatabase::LoadAllAssets(const std::filesystem::path& dir, bool recursive, bool bOverLoad)
 	{
 		LoadAllAssetsHelper(dir, recursive);
 
@@ -187,15 +188,27 @@ namespace sh::editor
 		{
 			AssetLoadData data = std::move(const_cast<AssetLoadData&>(loadingAssetsQueue.top()));
 			loadingAssetsQueue.pop();
-			ImportAsset(data.path);
+
+			ImportAsset(data.path, bOverLoad);
 		}
 		SaveDatabase(libPath / "AssetDB.json");
 	}
-	SH_EDITOR_API auto AssetDatabase::ImportAsset(const std::filesystem::path& dir) -> core::SObject*
+	SH_EDITOR_API auto AssetDatabase::ImportAsset(const std::filesystem::path& dir, bool bOverLoad) -> core::SObject*
 	{
 		std::filesystem::path abPath = dir;
 		if (dir.is_relative())
 			abPath = projectPath / abPath;
+
+		if (!bOverLoad)
+		{
+			auto uuidOpt = GetAssetUUID(abPath);
+			if (uuidOpt.has_value())
+			{
+				core::SObject* const sobjPtr = core::SObjectManager::GetInstance()->GetSObject(uuidOpt.value());
+				if (sobjPtr != nullptr)
+					return sobjPtr;
+			}
+		}
 
 		if (!std::filesystem::exists(abPath))
 			return nullptr;
@@ -347,16 +360,6 @@ namespace sh::editor
 
 		return core::AssetImporter::Load(projectPath / it->second.cachePath);
 	}
-
-	SH_EDITOR_API auto AssetDatabase::GetAssetOriginalPath(const core::UUID& uuid) const -> std::optional<std::filesystem::path>
-	{
-		auto it = paths.find(uuid);
-		if (it == paths.end())
-			return std::nullopt;
-
-		return it->second.originalPath;
-	}
-
 	SH_EDITOR_API auto AssetDatabase::GetAssetPath(const core::UUID& uuid) const -> const AssetInfo*
 	{
 		auto it = paths.find(uuid);

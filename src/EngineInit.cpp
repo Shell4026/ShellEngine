@@ -5,6 +5,7 @@
 #include "Core/ThreadSyncManager.h"
 #include "Core/ThreadPool.h"
 #include "Core/Factory.hpp"
+#include "Core/AssetResolver.h"
 
 #include "Window/Window.h"
 #include "Render/VulkanImpl/VulkanRenderer.h"
@@ -24,7 +25,6 @@
 #include "Editor/UI/CustomInspector.h"
 #else
 #include "Core/AssetBundle.h"
-#include "Core/AssetResolver.h"
 
 #include "Render/VulkanImpl/VulkanShaderPassBuilder.h"
 #include "Render/VulkanImpl/VulkanContext.h"
@@ -183,6 +183,22 @@ namespace sh
 		core::ThreadSyncManager::Init();
 #if SH_EDITOR
 		game::Component::SetIsEditor(true);
+
+		// 에셋이 다른 에셋을 필요로 하고 있지만 로드가 안 된 상태에서 호출될 것이다.
+		// 두 에셋이 순환 참조를 하고 있을 때 무한 루프에 빠질 걱정은 할 필요 없다.
+		// 한 에셋을 로드 할 때 UUID를 먼저 지정한 후에 resolver를 호출 하기 때문
+		core::AssetResolverRegistry::SetResolver(
+			[this](const core::UUID& uuid) -> core::SObject*
+			{
+				SH_INFO_FORMAT("Using resolver: {}", uuid.ToString());
+				static auto& assetDatabase = *editor::AssetDatabase::GetInstance();
+				auto assetInfoPtr = assetDatabase.GetAssetPath(uuid);
+				if (assetInfoPtr == nullptr)
+					return nullptr;
+
+				return assetDatabase.ImportAsset(assetInfoPtr->originalPath);
+			}
+		);
 
 		project = std::make_unique<editor::Project>(*renderer, *gui);
 

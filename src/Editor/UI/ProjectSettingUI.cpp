@@ -28,9 +28,9 @@ namespace sh::editor
 			const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(worldType.c_str());
 			if (payload != nullptr)
 			{
-				core::SObject* sobjPtr = *reinterpret_cast<core::SObject**>(payload->Data);
-				auto pathOpt = assetDatabase.GetAssetOriginalPath(sobjPtr->GetUUID());
-				if (pathOpt.has_value())
+				const core::SObject* const sobjPtr = *reinterpret_cast<core::SObject**>(payload->Data);
+				auto assetInfoPtr = assetDatabase.GetAssetPath(sobjPtr->GetUUID());
+				if (assetInfoPtr != nullptr)
 				{
 					setting.startingWorldUUID = sobjPtr->GetUUID();
 					setting.Save(rootPath / "ProjectSetting.json");
@@ -45,8 +45,8 @@ namespace sh::editor
 					payload = ImGui::AcceptDragDropPayload(currentPayload->DataType);
 					if (payload != nullptr)
 					{
-						auto pathOpt = assetDatabase.GetAssetOriginalPath(sobjPtr->GetUUID());
-						if (pathOpt.has_value())
+						auto assetInfoPtr = assetDatabase.GetAssetPath(sobjPtr->GetUUID());
+						if (assetInfoPtr != nullptr)
 						{
 							setting.startingWorldUUID = sobjPtr->GetUUID();
 							setting.Save(rootPath / "ProjectSetting.json");
