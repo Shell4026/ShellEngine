@@ -14,24 +14,67 @@ namespace sh::editor
 	{
 	}
 
-    SH_EDITOR_API void ExplorerUI::SetLatestPath(const std::filesystem::path& path)
+    SH_EDITOR_API void ExplorerUI::Update()
+	{
+	}
+    SH_EDITOR_API void ExplorerUI::Render()
     {
-        latest = path;
-    }
+        if (!bOpen)
+            return;
+        UpdateDirectoryEntries();
+        ImGui::SetNextWindowSize(ImVec2(800, 500), ImGuiCond_::ImGuiCond_Once);
+        ImGui::Begin("File Explorer", &bOpen, ImGuiWindowFlags_::ImGuiWindowFlags_NoDocking);
 
-    SH_EDITOR_API void ExplorerUI::ResetSelected()
+        RenderLeftSide();
+        ImGui::SameLine();
+        RenderRightSide();
+
+        ImGui::End();
+        if (!bOpen)
+        {
+            while (!callbacks.empty())
+                callbacks.pop();
+        }
+    }
+    SH_EDITOR_API void ExplorerUI::Open(OpenMode mode, Flag flag)
     {
-        selected.clear();
+        this->mode = mode;
+        this->flag = flag;
+        bOpen = true;
+    }
+    SH_EDITOR_API void ExplorerUI::Close()
+    {
+        bOpen = false;
+        while (!callbacks.empty())
+            callbacks.pop();
+    }
+    SH_EDITOR_API void ExplorerUI::SetExtensionFilter(const std::string& extension)
+    {
+        ClearExtensionFilter();
+        extensionFilters.push_back(extension);
+    }
+    SH_EDITOR_API void ExplorerUI::SetExtensionFilter(const std::initializer_list<std::string>& extensions)
+    {
+        ClearExtensionFilter();
+        extensionFilters.assign(extensions);
+    }
+    SH_EDITOR_API void ExplorerUI::ClearExtensionFilter()
+    {
+        extensionFilters.clear();
+    }
+    SH_EDITOR_API void ExplorerUI::PushCallbackQueue(const std::function<void(std::filesystem::path dir)>& func)
+    {
+        callbacks.push(func);
     }
 
     void ExplorerUI::UpdateDirectoryEntries()
-	{
+    {
         if (!std::filesystem::exists(currentPath))
             return;
-        auto a = {1, 2 ,3};
+        auto a = { 1, 2 ,3 };
         folders.clear();
         files.clear();
-		for (const auto& entry : std::filesystem::directory_iterator(currentPath)) 
+        for (const auto& entry : std::filesystem::directory_iterator(currentPath))
         {
             if (std::filesystem::is_directory(entry))
             {
@@ -51,19 +94,19 @@ namespace sh::editor
                         files.push_back(entry.path().filename());
                 }
             }
-			//directoryEntries.push_back(entry.path().filename().string());
-		}
+            //directoryEntries.push_back(entry.path().filename().string());
+        }
         std::sort(folders.begin(), folders.end());
         std::sort(files.begin(), files.end());
-	}
+    }
 
-    inline void ExplorerUI::DrawFolderIcon()
+    void ExplorerUI::DrawFolderIcon()
     {
         float height = ImGui::GetTextLineHeight();
         auto folderIcon = EditorResource::GetInstance()->GetIcon(EditorResource::Icon::Folder);
         folderIcon->Draw(ImVec2{ height , height });
     }
-    inline void ExplorerUI::RenderLeftSide()
+    void ExplorerUI::RenderLeftSide()
     {
         static ImGuiChildFlags childFlags = ImGuiChildFlags_::ImGuiChildFlags_ResizeX | ImGuiChildFlags_::ImGuiChildFlags_Border;
         ImGui::BeginChild("Menus", ImVec2{ 100, 0 }, childFlags);
@@ -87,7 +130,7 @@ namespace sh::editor
         }
         ImGui::EndChild();
     }
-    inline void ExplorerUI::RenderRightSide()
+    void ExplorerUI::RenderRightSide()
     {
         ImGui::BeginGroup();
         // 주소창
@@ -172,7 +215,6 @@ namespace sh::editor
 
         ImGui::EndGroup();
     }
-
     void ExplorerUI::SelectFile()
     {
         bOpen = false;
@@ -185,51 +227,5 @@ namespace sh::editor
                 func(currentPath / selected);
             callbacks.pop();
         }
-    }
-
-    SH_EDITOR_API void ExplorerUI::Update()
-	{
-	}
-    SH_EDITOR_API void ExplorerUI::Render()
-    {
-        if (!bOpen)
-            return;
-        UpdateDirectoryEntries();
-        ImGui::SetNextWindowSize(ImVec2(800, 500), ImGuiCond_::ImGuiCond_Once);
-        ImGui::Begin("File Explorer", &bOpen, ImGuiWindowFlags_::ImGuiWindowFlags_NoDocking);
-
-        RenderLeftSide();
-        ImGui::SameLine();
-        RenderRightSide();
-
-        ImGui::End();
-    }
-    SH_EDITOR_API void ExplorerUI::Open(OpenMode mode, Flag flag)
-    {
-        this->mode = mode;
-        this->flag = flag;
-        bOpen = true;
-    }
-    SH_EDITOR_API void ExplorerUI::SetCurrentPath(const std::filesystem::path& path)
-    {
-        currentPath = path;
-    }
-    SH_EDITOR_API void ExplorerUI::SetExtensionFilter(const std::string& extension)
-    {
-        ClearExtensionFilter();
-        extensionFilters.push_back(extension);
-    }
-    SH_EDITOR_API void ExplorerUI::SetExtensionFilter(const std::initializer_list<std::string>& extensions)
-    {
-        ClearExtensionFilter();
-        extensionFilters.assign(extensions);
-    }
-    SH_EDITOR_API void ExplorerUI::ClearExtensionFilter()
-    {
-        extensionFilters.clear();
-    }
-    SH_EDITOR_API void ExplorerUI::PushCallbackQueue(const std::function<void(std::filesystem::path dir)>& func)
-    {
-        callbacks.push(func);
     }
 }//namespace

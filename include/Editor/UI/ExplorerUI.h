@@ -32,8 +32,12 @@ namespace sh::editor
 		SH_EDITOR_API void Render();
 
 		SH_EDITOR_API void Open(OpenMode mode = OpenMode::Select, Flag flag = FlagEnum::None);
+		SH_EDITOR_API void Close();
 
-		SH_EDITOR_API void SetCurrentPath(const std::filesystem::path& path);
+		/// @brief 최근 선택 경로로 표기할 경로를 지정한다.
+		/// @param path 경로
+		SH_EDITOR_API void SetLatestPath(const std::filesystem::path& path) { latest = path; }
+		SH_EDITOR_API void SetCurrentPath(const std::filesystem::path& path) { currentPath = path; }
 		/// @brief 해당 확장자의 파일만 보여지게 된다.
 		/// @brief 사용법: SetExtensionFilter(".exe");
 		/// @param extension 확장자
@@ -49,10 +53,7 @@ namespace sh::editor
 		/// @brief 콜백 함수를 큐에 집어넣고 호출 시 제거한다.
 		/// @param func 콜백 함수
 		SH_EDITOR_API void PushCallbackQueue(const std::function<void(std::filesystem::path dir)>& func);
-		/// @brief 최근 선택 경로로 표기할 경로를 지정한다.
-		/// @param path 경로
-		SH_EDITOR_API void SetLatestPath(const std::filesystem::path& path);
-		SH_EDITOR_API void ResetSelected();
+		SH_EDITOR_API void ResetSelected() { selected.clear(); }
 	private:
 		void UpdateDirectoryEntries();
 		void DrawFolderIcon();

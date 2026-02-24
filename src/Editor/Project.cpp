@@ -140,6 +140,12 @@ namespace sh::editor
 
 	SH_EDITOR_API void Project::CreateNewProject(const std::filesystem::path& dir)
 	{
+		if (IsProjectPath(dir))
+		{
+			SH_ERROR_FORMAT("{} is already exist!", dir.u8string());
+			return;
+		}
+
 		if (!std::filesystem::create_directory(dir))
 		{
 			SH_INFO_FORMAT("Can't create directory: {}", dir.u8string());
@@ -160,7 +166,7 @@ namespace sh::editor
 
 		const auto settingPath = rootPath / "ProjectSetting.json";
 
-		if (!std::filesystem::exists(assetPath) || !std::filesystem::exists(settingPath))
+		if (!IsProjectPath(dir))
 		{
 			SH_ERROR_FORMAT("Wrong project directory: {}", dir.u8string());
 			return;
@@ -319,14 +325,6 @@ namespace sh::editor
 			}
 		);
 	}
-	SH_EDITOR_API auto Project::GetLatestProjectPath() -> std::filesystem::path
-	{
-		return LoadLatestProjectPath();
-	}
-	SH_EDITOR_API auto Project::GetProjectSetting() const -> ProjectSetting&
-	{
-		return const_cast<ProjectSetting&>(setting);
-	}
 	SH_EDITOR_API void Project::OpenSettingUI()
 	{
 		bSettingUI = true;
@@ -342,6 +340,19 @@ namespace sh::editor
 			SH_ERROR("Set the starting world first!");
 	}
 
+	SH_EDITOR_API auto Project::IsProjectPath(const std::filesystem::path& path) -> bool
+	{
+		const auto assetPath = path / "Assets";
+		const auto settingPath = path / "ProjectSetting.json";
+		if (!std::filesystem::exists(assetPath) || !std::filesystem::exists(settingPath))
+			return false;
+		return true;
+	}
+	SH_EDITOR_API auto Project::GetLatestProjectPath() -> std::filesystem::path
+	{
+		return LoadLatestProjectPath();
+	}
+
 	void Project::RenderNameBar()
 	{
 		ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_ChildBg, ImVec4{ 0.2, 0.2, 0.2, 1 });
@@ -355,7 +366,7 @@ namespace sh::editor
 	}
 	void Project::CopyProjectTemplate(const std::filesystem::path& targetDir)
 	{
-		std::filesystem::path projectTemplate{ exePath / "ProjectTemplate" };
+		const std::filesystem::path projectTemplate{ exePath / "ProjectTemplate" };
 		core::FileSystem::CopyAllFiles(projectTemplate, targetDir);
 
 		ChangeSourcePath(targetDir);

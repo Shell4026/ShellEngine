@@ -48,17 +48,21 @@ namespace sh::editor
 
 		SH_EDITOR_API void ReloadModule();
 
-		SH_EDITOR_API auto GetProjectPath() const -> const std::filesystem::path& { return rootPath; }
-		SH_EDITOR_API auto GetAssetPath() const -> const std::filesystem::path& { return assetPath; }
-		SH_EDITOR_API auto GetBinPath() const -> const std::filesystem::path& { return binaryPath; }
-		SH_EDITOR_API auto GetLibraryPath() const -> const std::filesystem::path& { return libraryPath; }
-
-		SH_EDITOR_API auto GetProjectSetting() const -> ProjectSetting&;
-
 		SH_EDITOR_API void OpenSettingUI();
 		
 		SH_EDITOR_API void Build();
 
+		SH_EDITOR_API auto GetProjectPath() const -> const std::filesystem::path& { return rootPath; }
+		SH_EDITOR_API auto GetAssetPath() const -> const std::filesystem::path& { return assetPath; }
+		SH_EDITOR_API auto GetBinPath() const -> const std::filesystem::path& { return binaryPath; }
+		SH_EDITOR_API auto GetLibraryPath() const -> const std::filesystem::path& { return libraryPath; }
+		SH_EDITOR_API auto GetProjectSetting() const -> const ProjectSetting& { return setting; }
+		SH_EDITOR_API auto GetProjectSetting() -> ProjectSetting& { return setting; }
+
+		/// @brief 해당 경로가 프로젝트 경로인지
+		/// @param path 경로
+		/// @return 프로젝트가 존재하면 true 아니면 false
+		SH_EDITOR_API static auto IsProjectPath(const std::filesystem::path& path) -> bool;
 		SH_EDITOR_API static auto GetLatestProjectPath() -> std::filesystem::path;
 	private:
 		void RenderNameBar();
