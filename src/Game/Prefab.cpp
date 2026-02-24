@@ -55,6 +55,8 @@ namespace sh::game
 		}
 
 		// 생성만 하는 과정
+		std::vector<std::pair<GameObject*, std::reference_wrapper<core::Json>>> added;
+		added.reserve(objJsons.size());
 		for (auto& objJson : objJsons)
 		{
 			if (objJson.contains("GameObject"))
@@ -66,8 +68,10 @@ namespace sh::game
 						continue;
 				}
 			}
-			GameObject* obj = world.AddGameObject(objJson["name"].get<std::string>());
+			GameObject* const obj = world.AddGameObject(objJson["name"].get<std::string>());
 			obj->SetUUID(core::UUID{ objJson["uuid"].get<std::string>() });
+			added.push_back({ obj, objJson });
+
 			for (auto& compJson : objJson["Components"])
 			{
 				const std::string& name{ compJson["name"].get_ref<const std::string&>() };
@@ -86,21 +90,30 @@ namespace sh::game
 					SH_ERROR_FORMAT("Not found component - {}", type);
 					continue;
 				}
-				Component* component = compType->Create(*obj);
+				Component* const component = compType->Create(*obj);
 				component->SetUUID(core::UUID{ uuid });
 				obj->AddComponent(component);
 			}
 		}
 		// 역직렬화
-		for (auto& objJson : objJsons)
+		for (auto& [obj, json] : added)
 		{
-			GameObject* obj = static_cast<GameObject*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ objJson["uuid"].get_ref<const std::string&>() }));
 			if (obj != nullptr)
-				obj->Deserialize(objJson);
+				obj->Deserialize(json.get());
 		}
 		const std::string& changedRootUUIDStr = changedUUID[rootObjUUID.ToString()];
 		auto resultObj = static_cast<GameObject*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ changedRootUUIDStr }));
 		resultObj->PropagateEnable();
+
+		// Awake 호출
+		for (auto& [obj, json] : added)
+		{
+			if (obj == nullptr)
+				continue;
+			obj->Awake();
+			if (obj->IsActive())
+				obj->OnEnable();
+		}
 		return resultObj;
 	}
 	SH_GAME_API auto Prefab::operator=(const Prefab& other) -> Prefab&

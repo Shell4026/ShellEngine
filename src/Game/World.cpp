@@ -174,9 +174,6 @@ namespace sh::game
 			return nullptr;
 
 		GameObject* obj = CreateAt<GameObject>(ptr, *this, std::string{ name }, GameObject::CreateKey{});
-		obj->Awake();
-		if (obj->IsActive())
-			obj->OnEnable();
 		addedObjs.push_back(obj);
 		gc->SetRootSet(obj);
 
@@ -274,7 +271,6 @@ namespace sh::game
 				objs.push_back(addedObj.Get());
 			}
 		}
-
 		addedObjs.clear();
 
 		for (auto& obj : objs)
