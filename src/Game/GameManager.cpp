@@ -123,8 +123,14 @@ namespace sh::game
 						gui->ClearDrawData();
 
 						loadingSingleWorld->SetupRenderer();
-						loadingSingleWorld->InitResource();
-						loadingSingleWorld->LoadWorldPoint();
+						if (loadingSingleWorld->GetWorldPoint("default") != nullptr)
+						{
+							loadingSingleWorld->LoadWorldPoint();
+						}
+						else
+						{
+							loadingSingleWorld->InitResource();
+						}
 						if (bPlayWorld)
 							loadingSingleWorld->Play();
 						loadingSingleWorld->Start();
