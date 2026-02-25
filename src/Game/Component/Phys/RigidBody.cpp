@@ -52,16 +52,15 @@ namespace sh::game
 		//impl->rigidbody->setLinearVelocity({ 0.f, 0.f, 0.f });
 
 		ResetPhysicsTransform();
-
+	}
+	SH_GAME_API void RigidBody::Start()
+	{
 		auto colliders = gameObject.GetComponentsInChildren<Collider>(true);
 		for (Collider* collider : colliders)
 		{
 			if (!core::IsValid(collider->GetRigidbody()))
 				collider->Setup();
 		}
-	}
-	SH_GAME_API void RigidBody::Start()
-	{
 	}
 	SH_GAME_API void RigidBody::OnEnable()
 	{
