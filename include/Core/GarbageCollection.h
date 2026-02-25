@@ -36,12 +36,6 @@ namespace sh::core
 	{
 		friend Singleton<GarbageCollection>;
 	public:
-		struct TrackedContainer
-		{
-			void* ptr = nullptr;
-			std::function<void(GarbageCollection& gc)> markFn;
-		};
-	public:
 		SH_CORE_API ~GarbageCollection();
 
 		/// @brief 루트셋으로 지정하는 함수. 루트셋 객체는 참조하고 있는 객체가 없어도 메모리에서 유지된다.
@@ -79,12 +73,8 @@ namespace sh::core
 		SH_CORE_API void AddGCObject(GCObject& obj);
 		SH_CORE_API void RemoveGCObject(GCObject& obj);
 
-		SH_CORE_API void AddContainerTracking(const TrackedContainer& container);
-		SH_CORE_API void RemoveContainerTracking(void* containerPtr);
-
 		SH_CORE_API auto GetRootSet() const -> const std::vector<SObject*>& { return rootSets; }
 		SH_CORE_API auto GetRootSetCount() const -> uint64_t { return rootSets.size(); }
-		SH_CORE_API auto GetTrackedContainerCount() const -> std::size_t { return trackingContainers.size(); }
 		SH_CORE_API auto GetUpdateTick() const -> uint32_t { return updatePeriodTick; }
 		SH_CORE_API auto GetCurrentTick() const -> uint32_t { return tick; }
 		/// @brief 이전에 GC를 수행하는데 걸린 시간(ms)을 반환 하는 함수
@@ -94,24 +84,33 @@ namespace sh::core
 		void AddPointerTracking(SObjWeakPtr<T, IsSObject>& ptr)
 		{
 			std::lock_guard<std::mutex> lock{ mu };
-
-			trackingPtrs.insert(reinterpret_cast<void*>(&ptr));
+			auto it = trackingWeakPtrIdxs.find(&ptr);
+			if (it != trackingWeakPtrIdxs.end())
+				return;
+			trackingWeakPtrIdxs.insert({ &ptr, trackingWeakPtrs.size() });
+			trackingWeakPtrs.push_back(&ptr);
 		}
 		template<typename T, typename IsSObject>
 		void RemovePointerTracking(SObjWeakPtr<T, IsSObject>& ptr)
 		{
 			std::lock_guard<std::mutex> lock{ mu };
-			trackingPtrs.erase(&ptr);
-		}
+			auto it = trackingWeakPtrIdxs.find(&ptr);
+			if (it == trackingWeakPtrIdxs.end())
+				return;
 
-		void RemoveContainerTracking(const void* containerPtr)
-		{
-			std::lock_guard<std::mutex> lock{ mu };
-			auto it = trackingContainers.find(const_cast<void*>(containerPtr));
-			if (it != trackingContainers.end())
-				trackingContainers.erase(it);
-		}
+			const std::size_t idx = it->second;
+			trackingWeakPtrIdxs.erase(it);
 
+			if (idx != trackingWeakPtrs.size() - 1)
+			{
+				trackingWeakPtrIdxs[trackingWeakPtrs.back()] = idx;
+				trackingWeakPtrs[idx] = trackingWeakPtrs.back();
+			}
+			trackingWeakPtrs.pop_back();
+		}
+		/// @brief GC의 마킹 대상에 추가 한다. pendingKill상태일 시 nullptr로 바꾼다.
+		/// @tparam SObjectT SObject 타입
+		/// @param sobjPtr SObject 포인터의 참조
 		template<typename SObjectT, typename Check = std::enable_if_t<std::is_base_of_v<SObject, SObjectT>>>
 		void PushReferenceObject(SObjectT*& sobjPtr)
 		{
@@ -136,8 +135,6 @@ namespace sh::core
 		void Mark(std::size_t start, std::size_t end);
 		void MarkProperties(SObject* obj, std::queue<SObject*>& bfs);
 		void MarkWithMultiThread();
-		void MarkTrackedContainers(std::unordered_map<void*, TrackedContainer>::iterator begin, std::unordered_map<void*, TrackedContainer>::iterator end);
-		void MarkTrackedContainersWithMultiThread();
 		void ContainerMark(std::queue<SObject*>& bfs, SObject* parent, int depth, int maxDepth, sh::core::reflection::PropertyIterator<false>& it);
 		void CheckPtrs();
 	public:
@@ -150,10 +147,8 @@ namespace sh::core
 		std::unordered_map<GCObject*, std::size_t> gcObjIdx;
 		std::vector<std::reference_wrapper<GCObject>> gcObjs;
 		std::vector<std::reference_wrapper<SObject>> refObjs;
-
-		std::unordered_map<void*, TrackedContainer> trackingContainers; // key = 컨테이너 포인터
-
-		std::unordered_set<void*> trackingPtrs;
+		std::unordered_map<void*, std::size_t> trackingWeakPtrIdxs;
+		std::vector<void*> trackingWeakPtrs;
 
 		std::mutex mu;
 

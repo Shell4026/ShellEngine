@@ -9,6 +9,6 @@ namespace sh::core
 	public:
 		SH_CORE_API GCObject();
 		SH_CORE_API virtual ~GCObject();
-		SH_CORE_API virtual void PushReferenceObjects(GarbageCollection& gc) {};
+		SH_CORE_API virtual void PushReferenceObjects(GarbageCollection& gc) = 0;
 	};
 }//namespace

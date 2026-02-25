@@ -52,65 +52,22 @@ namespace sh::core
     /// @brief [주의] 절대 std::set의 다형성 용도로 사용하면 안 된다.
     /// @tparam T 타입
     template<typename T, typename = std::enable_if_t<std::is_convertible_v<T, const SObject*>>>
-    class SSet : public std::set<T>
+    class SSet : public std::set<T>, public GCObject
     {
     public:
-        SSet()
+        void PushReferenceObjects(GarbageCollection& gc) override
         {
-            AddToGC();
-        }
-        template<class... Args>
-        SSet(Args&&... args) :
-            std::set<T>(std::forward<Args>(args)...)
-        {
-            AddToGC();
-        }
-        SSet(const SSet& other) :
-            std::set<T>(other)
-        {
-            AddToGC();
-        }
-        SSet(SSet&& other) noexcept:
-            std::set<T>(std::move(other))
-        {
-            AddToGC();
-        }
-        ~SSet()
-        {
-            core::GarbageCollection::GetInstance()->RemoveContainerTracking(this);
-        }
-        auto operator=(const SSet& other) -> SSet&
-        {
-            std::set<T>::operator=(other);
-            return *this;
-        }
-        auto operator=(SSet&& other) noexcept -> SSet&
-        {
-            std::set<T>::operator=(std::move(other));
-            return *this;
-        }
-    private:
-        void AddToGC()
-        {
-            core::GarbageCollection::TrackedContainer container{};
-            container.ptr = this;
-            container.markFn =
-                [this](core::GarbageCollection& gc)
+            for (auto it = this->begin(); it != this->end();)
+            {
+                T elem = *it;
+                if (elem->IsPendingKill())
                 {
-                    std::queue<SObject*> bfs;
-
-                    for (auto it = this->begin(); it != this->end();)
-                    {
-                        const SObject* obj = static_cast<const SObject*>(*it);
-                        if (obj == nullptr) { ++it; continue; }
-                        if (obj->IsPendingKill()) { it = this->erase(it); continue; }
-
-                        bfs.push(const_cast<SObject*>(obj));
-                        ++it;
-                    }
-                    gc.MarkBFS(bfs);
-                };
-            core::GarbageCollection::GetInstance()->AddContainerTracking(container);
+                    it = this->erase(it);
+                    continue;
+                }
+                gc.PushReferenceObject(elem);
+                ++it;
+            }
         }
     };
     /// @brief 쓰레기 수집을 지원하는 std::unordered_set과 동일한 역할을 하는 컨테이너.
@@ -119,65 +76,22 @@ namespace sh::core
     /// @tparam T 키 타입
     /// @tparam U 값 타입
     template<typename T, typename = std::enable_if_t<std::is_convertible_v<T, const SObject*>>>
-    class SHashSet : public std::unordered_set<T>
+    class SHashSet : public std::unordered_set<T>, public GCObject
     {
     public:
-        SHashSet()
+        void PushReferenceObjects(GarbageCollection& gc) override
         {
-            AddToGC();
-        }
-        template<class... Args>
-        SHashSet(Args&&... args) :
-            std::unordered_set<T>(std::forward<Args>(args)...)
-        {
-            AddToGC();
-        }
-        SHashSet(const SHashSet& other) :
-            std::unordered_set<T>(other)
-        {
-            AddToGC();
-        }
-        SHashSet(SHashSet&& other) noexcept :
-            std::unordered_set<T>(std::move(other))
-        {
-            AddToGC();
-        }
-        ~SHashSet()
-        {
-            core::GarbageCollection::GetInstance()->RemoveContainerTracking(this);
-        }
-        auto operator=(const SHashSet& other) -> SHashSet&
-        {
-            std::unordered_set<T>::operator=(other);
-            return *this;
-        }
-        auto operator=(SHashSet&& other) noexcept -> SHashSet&
-        {
-            std::unordered_set<T>::operator=(std::move(other));
-            return *this;
-        }
-    private:
-        void AddToGC()
-        {
-            core::GarbageCollection::TrackedContainer container{};
-            container.ptr = this;
-            container.markFn =
-                [this](core::GarbageCollection& gc)
+            for (auto it = this->begin(); it != this->end();)
+            {
+                T elem = *it;
+                if (elem->IsPendingKill())
                 {
-                    std::queue<SObject*> bfs;
-
-                    for (auto it = this->begin(); it != this->end();)
-                    {
-                        const SObject* obj = static_cast<const SObject*>(*it);
-                        if (obj == nullptr) { ++it; continue; }
-                        if (obj->IsPendingKill()) { it = this->erase(it); continue; }
-
-                        bfs.push(const_cast<SObject*>(obj));
-                        ++it;
-                    }
-                    gc.MarkBFS(bfs);
-                };
-            core::GarbageCollection::GetInstance()->AddContainerTracking(container);
+                    it = this->erase(it);
+                    continue;
+                }
+                gc.PushReferenceObject(elem);
+                ++it;
+            }
         }
     };
     /// @brief 쓰레기 수집을 지원하는 std::map과 동일한 역할을 하는 컨테이너.
@@ -186,70 +100,35 @@ namespace sh::core
     /// @tparam T 키 타입
     /// @tparam U 값 타입
     template<typename T, typename U, typename = std::enable_if_t<std::is_convertible_v<T, const SObject*> || std::is_convertible_v<U, const SObject*>>>
-    class SMap : public std::map<T, U>
+    class SMap : public std::map<T, U>, public GCObject
     {
     public:
-        SMap()
+        void PushReferenceObjects(GarbageCollection& gc) override
         {
-            AddToGC();
-        }
-        template<class... Args>
-        SMap(Args&&... args) :
-            std::map<T, U>(std::forward<Args>(args)...)
-        {
-            AddToGC();
-        }
-        SMap(const SMap& other) :
-            std::map<T, U>(other)
-        {
-            AddToGC();
-        }
-        SMap(SMap&& other) noexcept :
-            std::map<T, U>(std::move(other))
-        {
-            AddToGC();
-        }
-        ~SMap()
-        {
-            core::GarbageCollection::GetInstance()->RemoveContainerTracking(this);
-        }
-        auto operator=(const SMap& other) -> SMap&
-        {
-            std::map<T, U>::operator=(other);
-            return *this;
-        }
-        auto operator=(SMap&& other) noexcept -> SMap&
-        {
-            std::map<T, U>::operator=(std::move(other));
-            return *this;
-        }
-    private:
-        void AddToGC()
-        {
-            core::GarbageCollection::TrackedContainer container{};
-            container.ptr = this;
-            container.markFn =
-                [this](core::GarbageCollection& gc)
+            for (auto it = this->begin(); it != this->end();)
+            {
+                if constexpr (std::is_convertible_v<T, const SObject*>)
                 {
-                    std::queue<SObject*> bfs;
-
-                    for (auto it = this->begin(); it != this->end();)
+                    T elem = it->first;
+                    if (elem->IsPendingKill())
                     {
-                        const SObject* obj = nullptr;
-                        if constexpr (std::is_convertible_v<T, const SObject*>)
-                            obj = static_cast<const SObject*>(it->first);
-                        else if constexpr (std::is_convertible_v<U, const SObject*>)
-                            obj = static_cast<const SObject*>(it->second);
-
-                        if (obj == nullptr) { ++it; continue; }
-                        if (obj->IsPendingKill()) { it = this->erase(it); continue; }
-
-                        bfs.push(const_cast<SObject*>(obj));
-                        ++it;
+                        it = this->erase(it);
+                        continue;
                     }
-                    gc.MarkBFS(bfs);
-                };
-            core::GarbageCollection::GetInstance()->AddContainerTracking(container);
+                    gc.PushReferenceObject(elem);
+                }
+                else
+                {
+                    U elem = it->second;
+                    if (elem->IsPendingKill())
+                    {
+                        it = this->erase(it);
+                        continue;
+                    }
+                    gc.PushReferenceObject(elem);
+                }
+                ++it;
+            }
         }
     };
     /// @brief 쓰레기 수집을 지원하는 std::unordered_map과 동일한 역할을 하는 컨테이너.
@@ -258,70 +137,35 @@ namespace sh::core
     /// @tparam T 키 타입
     /// @tparam U 값 타입
     template<typename T, typename U, typename = std::enable_if_t<std::is_convertible_v<T, const SObject*> || std::is_convertible_v<U, const SObject*>>>
-    class SHashMap : public std::unordered_map<T, U>
+    class SHashMap : public std::unordered_map<T, U>, public GCObject
     {
     public:
-        SHashMap()
+        void PushReferenceObjects(GarbageCollection& gc) override
         {
-            AddToGC();
-        }
-        template<class... Args>
-        SHashMap(Args&&... args) :
-            std::unordered_map<T, U>(std::forward<Args>(args)...)
-        {
-            AddToGC();
-        }
-        SHashMap(const SHashMap& other) :
-            std::unordered_map<T, U>(other)
-        {
-            AddToGC();
-        }
-        SHashMap(SHashMap&& other) :
-            std::unordered_map<T, U>(std::move(other))
-        {
-            AddToGC();
-        }
-        ~SHashMap()
-        {
-            core::GarbageCollection::GetInstance()->RemoveContainerTracking(this);
-        }
-        auto operator=(const SHashMap& other) -> SHashMap&
-        {
-            std::unordered_map<T, U>::operator=(other);
-            return *this;
-        }
-        auto operator=(SHashMap&& other) noexcept -> SHashMap&
-        {
-            std::unordered_map<T, U>::operator=(std::move(other));
-            return *this;
-        }
-    private:
-        void AddToGC()
-        {
-            core::GarbageCollection::TrackedContainer container{};
-            container.ptr = this;
-            container.markFn =
-                [this](core::GarbageCollection& gc)
+            for (auto it = this->begin(); it != this->end();)
+            {
+                if constexpr (std::is_convertible_v<T, const SObject*>)
                 {
-                    std::queue<SObject*> bfs;
-
-                    for (auto it = this->begin(); it != this->end();)
+                    T elem = it->first;
+                    if (elem->IsPendingKill())
                     {
-                        const SObject* obj = nullptr;
-                        if constexpr (std::is_convertible_v<T, const SObject*>)
-                            obj = static_cast<const SObject*>(it->first);
-                        else if constexpr (std::is_convertible_v<U, const SObject*>)
-                            obj = static_cast<const SObject*>(it->second);
-
-                        if (obj == nullptr) { ++it; continue; }
-                        if (obj->IsPendingKill()) { it = this->erase(it); continue; }
-
-                        bfs.push(const_cast<SObject*>(obj));
-                        ++it;
+                        it = this->erase(it);
+                        continue;
                     }
-                    gc.MarkBFS(bfs);
-                };
-            core::GarbageCollection::GetInstance()->AddContainerTracking(container);
+                    gc.PushReferenceObject(elem);
+                }
+                else
+                {
+                    U elem = it->second;
+                    if (elem->IsPendingKill())
+                    {
+                        it = this->erase(it);
+                        continue;
+                    }
+                    gc.PushReferenceObject(elem);
+                }
+                ++it;
+            }
         }
     };
 
@@ -331,65 +175,22 @@ namespace sh::core
     /// @tparam T 키 타입
     /// @tparam U 값 타입
     template<typename T, typename = std::enable_if_t<std::is_convertible_v<T, const SObject*>>>
-    class SList : public std::list<T>
+    class SList : public std::list<T>, public GCObject
     {
     public:
-        SList()
+        void PushReferenceObjects(GarbageCollection& gc) override
         {
-            AddToGC();
-        }
-        template<class... Args>
-        SList(Args&&... args) :
-            std::list<T>(std::forward<Args>(args)...)
-        {
-            AddToGC();
-        }
-        SList(const SList& other) :
-            std::list<T>(other)
-        {
-            AddToGC();
-        }
-        SList(SList&& other) noexcept :
-            std::list<T>(std::move(other))
-        {
-            AddToGC();
-        }
-        ~SList()
-        {
-            core::GarbageCollection::GetInstance()->RemoveContainerTracking(this);
-        }
-        auto operator=(const SList& other) -> SList&
-        {
-            std::list<T>::operator=(other);
-            return *this;
-        }
-        auto operator=(SList&& other) noexcept -> SList&
-        {
-            std::list<T>::operator=(std::move(other));
-            return *this;
-        }
-    private:
-        void AddToGC()
-        {
-            core::GarbageCollection::TrackedContainer container{};
-            container.ptr = this;
-            container.markFn =
-                [this](core::GarbageCollection& gc)
+            for (auto it = this->begin(); it != this->end();)
+            {
+                T elem = *it;
+                if (elem->IsPendingKill())
                 {
-                    std::queue<SObject*> bfs;
-
-                    for (auto it = this->begin(); it != this->end();)
-                    {
-                        const SObject* obj = static_cast<const SObject*>(*it);
-                        if (obj == nullptr) { ++it; continue; }
-                        if (obj->IsPendingKill()) { it = this->erase(it); continue; }
-
-                        bfs.push(const_cast<SObject*>(obj));
-                        ++it;
-                    }
-                    gc.MarkBFS(bfs);
-                };
-            core::GarbageCollection::GetInstance()->AddContainerTracking(container);
+                    it = this->erase(it);
+                    continue;
+                }
+                gc.PushReferenceObject(elem);
+                ++it;
+            }
         }
     };
 

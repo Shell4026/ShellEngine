@@ -132,8 +132,6 @@ TEST(ContainerTest, Test)
 		gc->DestroyPendingKillObjs();
 		EXPECT_EQ(gc->GetObjectCount(), 0);
 	}
-	EXPECT_EQ(gc->GetTrackedContainerCount(), 0);
-
 	//SHashMap<SObject*, int> hashMap0;
 	//SHashMap<int, SObject*> hashMap1;
 	//hashMap0[objInContainer] = 0;

@@ -90,11 +90,6 @@ namespace sh::core
 
 		CollectReferenceObjs();
 
-		if (trackingContainers.size() > 8 && bThreadPoolInit)
-			MarkTrackedContainersWithMultiThread();
-		else
-			MarkTrackedContainers(trackingContainers.begin(), trackingContainers.end());
-
 		if (refObjs.size() > 128 && bThreadPoolInit)
 			MarkWithMultiThread();
 		else
@@ -168,7 +163,7 @@ namespace sh::core
 
 		for (int i = 0; i < pendingKillObjs.size(); ++i)
 		{
-			auto objPtr = pendingKillObjs[i];
+			SObject* objPtr = pendingKillObjs[i];
 			assert(rootSetIdx.find(objPtr) == rootSetIdx.end());
 			if (objPtr == nullptr)
 				continue;
@@ -222,14 +217,6 @@ namespace sh::core
 		}
 	}
 
-	SH_CORE_API void GarbageCollection::AddContainerTracking(const TrackedContainer& container)
-	{
-		trackingContainers.insert({ container.ptr, container });
-	}
-	SH_CORE_API void GarbageCollection::RemoveContainerTracking(void* containerPtr)
-	{
-		trackingContainers.erase(containerPtr);
-	}
 	void GarbageCollection::CollectReferenceObjs()
 	{
 		refObjs.clear();
@@ -339,40 +326,6 @@ namespace sh::core
 		for (int i = 0; i < futureIdx; ++i)
 			taskFutures[i].wait();
 	}
-	void GarbageCollection::MarkTrackedContainers(std::unordered_map<void*, TrackedContainer>::iterator begin, std::unordered_map<void*, TrackedContainer>::iterator end)
-	{
-		for (auto it = begin; it != end; ++it)
-		{
-			const TrackedContainer& container = it->second;
-			container.markFn(*this);
-		}
-	}
-	void GarbageCollection::MarkTrackedContainersWithMultiThread()
-	{
-		const auto threadPool = core::ThreadPool::GetInstance();
-		const int threadNum = threadPool->GetThreadNum();
-		const std::size_t perThreadTaskCount = (trackingContainers.size() + threadNum - 1) / threadNum;
-
-		auto it = trackingContainers.begin();
-
-		std::array<std::future<void>, ThreadPool::MAX_THREAD> taskFutures;
-		int futureIdx = 0;
-		while (it != trackingContainers.end())
-		{
-			auto startIt = it;
-			for (std::size_t i = 0; i < perThreadTaskCount && it != trackingContainers.end(); ++i)
-				++it;
-			auto endIt = it;
-			taskFutures[futureIdx++] = (threadPool->AddTask(
-				[&, startIt, endIt]
-				{
-					MarkTrackedContainers(startIt, endIt);
-				}
-			));
-		}
-		for (int i = 0; i < futureIdx; ++i)
-			taskFutures[i].wait();
-	}
 	void GarbageCollection::ContainerMark(std::queue<SObject*>& bfs, SObject* parent, int depth, int maxDepth, sh::core::reflection::PropertyIterator<false>& it)
 	{
 		if (depth == maxDepth)
@@ -407,7 +360,7 @@ namespace sh::core
 	}
 	void GarbageCollection::CheckPtrs()
 	{
-		for (auto ptr : trackingPtrs)
+		for (void* ptr : trackingWeakPtrs)
 		{
 			SObjWeakPtr<SObject>& weakPtr = *reinterpret_cast<SObjWeakPtr<SObject>*>(ptr);
 			if (weakPtr == nullptr)
