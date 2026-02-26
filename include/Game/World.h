@@ -90,7 +90,7 @@ namespace sh::game
 		SH_GAME_API auto GetLightOctree() const -> const Octree&;
 
 		SH_GAME_API virtual void Start();
-		SH_GAME_API void Update(float deltaTime);
+		SH_GAME_API virtual void Update(double deltaTime);
 		SH_GAME_API virtual void BeforeSync();
 		SH_GAME_API virtual void AfterSync();
 		/// @brief 동기화 전에 실행될 작업을 지정한다. 작업은 1회만 실행된다.
@@ -134,14 +134,14 @@ namespace sh::game
 
 		SH_GAME_API virtual void ReallocateUUIDS();
 
-		SH_GAME_API auto GetFixedAccumulator() const -> float { return dtAccumulator; }
+		SH_GAME_API auto GetFixedAccumulator() const -> double { return dtAccumulator; }
 	protected:
 		SH_GAME_API void CleanObjs();
 	private:
 		auto AllocateGameObject() -> GameObject*;
 	public:
 		render::Renderer& renderer;
-		const float& deltaTime = dt;
+		const double& deltaTime = dt;
 	public:
 		const ComponentModule& componentModule;
 	protected:
@@ -159,8 +159,8 @@ namespace sh::game
 
 		std::vector<core::SObjWeakPtr<GameObject>> addedObjs; // 루프 도중 추가 된 객체
 
-		float dt = 0.f;
-		float dtAccumulator = 0.f;
+		double dt = 0.0;
+		double dtAccumulator = 0.0;
 
 		PROPERTY(mainCamera)
 		Camera* mainCamera = nullptr;

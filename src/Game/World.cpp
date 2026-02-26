@@ -250,7 +250,7 @@ namespace sh::game
 	{
 		bOnStart = true;
 	}
-	SH_GAME_API void World::Update(float deltaTime)
+	SH_GAME_API void World::Update(double deltaTime)
 	{
 		dt = deltaTime;
 		if (!bStartLoop)

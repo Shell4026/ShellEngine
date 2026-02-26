@@ -60,7 +60,7 @@ namespace sh::game
 		io.BackendFlags |=
 			ImGuiBackendFlags_::ImGuiBackendFlags_HasMouseCursors;
 		io.BackendPlatformName = "ShellEngine";
-		io.DisplaySize = ImVec2{ static_cast<float>(window.width), static_cast<float>(window.height) };
+		io.DisplaySize = ImVec2{ static_cast<float>(window.GetWidth()), static_cast<float>(window.GetHeight()) };
 		io.ConfigFlags |= 
 			ImGuiConfigFlags_::ImGuiConfigFlags_DockingEnable | 
 			ImGuiConfigFlags_::ImGuiConfigFlags_NavEnableKeyboard;
@@ -124,7 +124,7 @@ namespace sh::game
 	SH_GAME_API void ImGUImpl::Resize()
 	{
 		ImGuiIO& io = ImGui::GetIO();
-		io.DisplaySize = ImVec2{ static_cast<float>(window.width), static_cast<float>(window.height) };
+		io.DisplaySize = ImVec2{ static_cast<float>(window.GetWidth()), static_cast<float>(window.GetHeight()) };
 	}
 
 	SH_GAME_API void ImGUImpl::ProcessEvent(window::Event event)

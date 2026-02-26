@@ -6,23 +6,17 @@
 #include <thread>
 
 namespace sh::window {
-	Window::Window() :
-		width(wsize), height(hsize),
-
-		isOpen(false),
-		fps(60), deltaTime(0.0f),
-		wsize(0), hsize(0)
+	Window::Window()
 	{
 	}
-
 	Window::~Window()
 	{
 		this->Close();
 	}
 
-	void Window::Create(const std::string& title, int wsize, int hsize, StyleFlag style)
+	SH_WINDOW_API void Window::Create(const std::string& title, int wsize, int hsize, StyleFlag style)
 	{
-		if (isOpen)
+		if (bOpen)
 			return;
 
 		std::cout << "Init\n";
@@ -31,13 +25,9 @@ namespace sh::window {
 		winImpl = WindowFactory::CreateWindowImpl();
 		handle = winImpl->Create(title, wsize, hsize, style);
 
-		this->wsize = wsize;
-		this->hsize = hsize;
-
-		isOpen = true;
+		bOpen = true;
 	}
-
-	bool Window::PollEvent(Event& event)
+	SH_WINDOW_API bool Window::PollEvent(Event& event)
 	{
 		if (winImpl.get() == nullptr)
 			return false;
@@ -49,41 +39,23 @@ namespace sh::window {
 		else
 		{
 			event = winImpl->PopEvent();
-			if (event.type == Event::EventType::Resize)
-			{
-				wsize = GetWidth();
-				hsize = GetHeight();
-			}
 			return true;
 		}
 		return false;
 	}
-
-	bool Window::IsOpen() const
-	{
-		return isOpen;
-	}
-
-	void Window::Close()
+	SH_WINDOW_API void Window::Close()
 	{
 		if (winImpl.get() == nullptr)
 			return;
 
-		isOpen = false;
+		bOpen = false;
 		winImpl.reset();
 	}
-
-	void Window::SetFps(unsigned int fps)
+	SH_WINDOW_API void Window::SetFps(unsigned int fps)
 	{
 		this->fps = fps;
 	}
-
-	auto Window::GetDeltaTime() const -> float
-	{
-		return deltaTime;
-	}
-
-	void Window::ProcessFrame()
+	SH_WINDOW_API void Window::ProcessFrame()
 	{
 		using Clock = std::chrono::steady_clock;
 		static bool bInit = false;
@@ -129,22 +101,18 @@ namespace sh::window {
 		deltaTime = std::chrono::duration<double>(now1 - last).count();
 		last = now1;
 	}
-
-	auto Window::GetNativeHandle() const -> WinHandle
-	{
-		return handle;
-	}
-
-	void Window::SetTitle(std::string_view title)
+	SH_WINDOW_API void Window::SetTitle(std::string_view title)
 	{
 		winImpl->SetTitle(title);
 	}
-
 	SH_WINDOW_API void Window::SetSize(int width, int height)
 	{
 		winImpl->Resize(width, height);
 	}
-
+	SH_WINDOW_API void Window::UseSystemTimer(bool bUse)
+	{
+		bUsingSysTimer = bUse;
+	}
 	SH_WINDOW_API auto Window::GetWidth() const -> uint32_t
 	{
 		return winImpl->GetWidth();
@@ -153,12 +121,4 @@ namespace sh::window {
 	{
 		return winImpl->GetHeight();
 	}
-	SH_WINDOW_API void Window::UseSystemTimer(bool bUse)
-	{
-		bUsingSysTimer = bUse;
-	}
-	SH_WINDOW_API auto Window::IsUseingSystemTimer() const -> bool
-	{
-		return bUsingSysTimer;
-	}
-}
+}//namespace

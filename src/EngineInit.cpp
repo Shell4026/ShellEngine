@@ -112,7 +112,7 @@ namespace sh
 				bStop = true;
 				break;
 			case sh::window::Event::EventType::Resize:
-				if (window->width == 0)
+				if (window->GetWidth() == 0)
 				{
 					renderer->Pause(true);
 				}
@@ -120,7 +120,7 @@ namespace sh
 				{
 					renderer->Pause(false);
 					renderThread->AddBeginTaskFromOtherThread(
-						[&, width = window->width, height = window->height]
+						[renderer = renderer.get(), width = window->GetWidth(), height = window->GetHeight()]
 						{
 							renderer->GetContext()->SetViewport({ 0, 0.f }, { width, height }); 
 						}
@@ -160,7 +160,7 @@ namespace sh
 		SH_INFO("Renderer initialization");
 		renderer = std::make_unique<sh::render::vk::VulkanRenderer>();
 		renderer->Init(*window);
-		renderer->GetContext()->SetViewport({ 150.f, 0.f }, { window->width - 150.f, window->height - 180 });
+		renderer->GetContext()->SetViewport({ 150.f, 0.f }, { window->GetWidth() - 150.f, window->GetHeight() - 180});
 
 		SH_INFO("UIContext initialization");
 		gui = std::make_unique<game::ImGUImpl>(*window, static_cast<render::vk::VulkanRenderer&>(*renderer));

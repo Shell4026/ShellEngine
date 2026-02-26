@@ -31,6 +31,18 @@ namespace sh
 
 	class EngineInit
 	{
+	public:
+		EngineInit();
+		~EngineInit();
+
+		void Start();
+		void Clean();
+	private:
+		void LoadModule();
+		void InitResource();
+		void ProcessInput();
+		void Loop();
+		void SyncThread();
 	private:
 		core::ModuleLoader moduleLoader;
 
@@ -52,17 +64,5 @@ namespace sh
 		int limitFps = 144;
 
 		bool bStop = false;
-	private:
-		inline void LoadModule();
-		inline void InitResource();
-		inline void ProcessInput();
-		inline void Loop();
-		inline void SyncThread();
-	public:
-		EngineInit();
-		~EngineInit();
-
-		void Start();
-		void Clean();
 	};
 }

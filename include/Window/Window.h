@@ -37,26 +37,20 @@ namespace sh::window
 		SH_WINDOW_API void ProcessFrame();
 
 		SH_WINDOW_API void SetFps(unsigned int fps);
-		SH_WINDOW_API auto GetDeltaTime() const -> float;
-		SH_WINDOW_API bool IsOpen() const;
-
-		SH_WINDOW_API auto GetNativeHandle() const -> WinHandle;
-
 		SH_WINDOW_API void SetTitle(std::string_view title);
-
 		SH_WINDOW_API void SetSize(int width, int height);
-
-		SH_WINDOW_API auto GetWidth() const -> uint32_t;
-		SH_WINDOW_API auto GetHeight() const -> uint32_t;
 
 		/// @brief 프레임을 맞출 때 시스템 타이머를 사용한다.
 		/// @brief 주의) 백그라운드 상태에서 프레임이 느려질 수 있음
 		/// @param bUse true면 시스템 타이머를, false면 바쁜 대기를 사용
 		SH_WINDOW_API void UseSystemTimer(bool bUse);
-		SH_WINDOW_API auto IsUseingSystemTimer() const -> bool;
-	public:
-		const uint32_t& width;
-		const uint32_t& height;
+		
+		SH_WINDOW_API auto IsUsingSystemTimer() const -> bool { return bUsingSysTimer; }
+		SH_WINDOW_API auto GetNativeHandle() const -> WinHandle { return handle; }
+		SH_WINDOW_API auto GetDeltaTime() const -> double { return deltaTime; }
+		SH_WINDOW_API auto GetWidth() const -> uint32_t;
+		SH_WINDOW_API auto GetHeight() const -> uint32_t;
+		SH_WINDOW_API auto IsOpen() const -> bool { return bOpen; }
 	private:
 		std::unique_ptr<WindowImpl> winImpl;
 		WinHandle handle;
@@ -65,13 +59,10 @@ namespace sh::window
 
 		std::queue<Event> events;
 
-		unsigned int fps;
-		float deltaTime;
+		unsigned int fps = 60;
+		double deltaTime = 0.0;
 
-		uint32_t wsize;
-		uint32_t hsize;
-
-		bool isOpen;
+		bool bOpen = false;
 		bool bUsingSysTimer = true;
 	};
 }//namespace

@@ -46,7 +46,7 @@ namespace sh::game
 		SH_GAME_API auto GetWorlds() const -> const std::unordered_map<core::UUID, World*> { return worlds; }
 		
 		/// @brief 현재 로드된 모든 월드를 업데이트 하는 함수. (루프에서 사용)
-		SH_GAME_API void UpdateWorlds(float dt);
+		SH_GAME_API void UpdateWorlds(double dt);
 
 		/// @brief 월드를 불러온다. 현재 루프가 끝난 후에 작동된다.
 		/// @param mode 월드를 불러오는 동작 방식

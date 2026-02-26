@@ -21,8 +21,8 @@ namespace sh::editor
 	}
 	SH_EDITOR_API void AssetExplorer::Render()
 	{
-		float width = world.renderer.GetWindow().width / 2;
-		float height = world.renderer.GetWindow().height / 2;
+		float width = world.renderer.GetWindow().GetWidth() / 2.f;
+		float height = world.renderer.GetWindow().GetHeight() / 2.f;
 		ImGui::SetNextWindowSize(ImVec2{ width, height }, ImGuiCond_::ImGuiCond_Appearing);
 		ImGui::Begin(fmt::format("AssetExplorer{}", static_cast<int>(type)).c_str());
 

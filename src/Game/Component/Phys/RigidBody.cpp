@@ -332,9 +332,9 @@ namespace sh::game
 
 		if (!bKinematic && bInterpolation)
 		{
-			float alpha = std::clamp(gameObject.world.GetFixedAccumulator() / gameObject.world.FIXED_TIME, 0.f, 1.f);
+			double alpha = std::clamp(gameObject.world.GetFixedAccumulator() / gameObject.world.FIXED_TIME, 0.0, 1.0);
 			glm::vec3 interpPos = glm::mix(prevPos, currPos, alpha);
-			glm::quat interpRot = glm::slerp(prevRot, currRot, alpha);
+			glm::quat interpRot = glm::slerp(prevRot, currRot, static_cast<float>(alpha));
 			interpRot = glm::normalize(interpRot);
 
 			gameObject.transform->SetWorldPosition(interpPos);

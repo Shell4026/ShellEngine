@@ -70,7 +70,7 @@ namespace sh::game
 			return nullptr;
 		return it->second;
 	}
-	SH_GAME_API void GameManager::UpdateWorlds(float dt)
+	SH_GAME_API void GameManager::UpdateWorlds(double dt)
 	{
 		gui->Begin();
 		for (auto& [uuid, worldPtr] : worlds)
