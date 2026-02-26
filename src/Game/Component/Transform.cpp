@@ -51,6 +51,7 @@ namespace sh::game
 		vScale = other.vScale;
 		vRotation = other.vRotation;
 		matModel = other.matModel;
+		matModelInv = other.matModelInv;
 		quat = other.quat;
 		
 		bUpdateMatrix = true;
@@ -98,7 +99,7 @@ namespace sh::game
 		const core::Json& transformJson = json["Transform"];
 		if (transformJson.contains("parent"))
 		{
-			std::string uuid = transformJson["parent"].get<std::string>();
+			const std::string& uuid = transformJson["parent"].get_ref<const std::string&>();
 			SetParent(static_cast<Transform*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuid })));
 		}
 
@@ -129,6 +130,10 @@ namespace sh::game
 
 	SH_GAME_API void Transform::UpdateMatrix()
 	{
+		if (!bUpdateMatrix)
+			return;
+		bUpdateMatrix = false;
+
 		if (IsEditor())
 		{
 			vRotation.x = std::fmod(vRotation.x, 360.f);
@@ -183,6 +188,7 @@ namespace sh::game
 			}
 			if (p0 != p1)
 				childs[p0] = childs[p1];
+			child->bUpdateMatrix = true;
 			child->UpdateMatrix();
 			++p0;
 			++p1;
@@ -191,7 +197,6 @@ namespace sh::game
 			childs.erase(childs.begin() + p0, childs.end());
 
 		onMatrixUpdate.Notify(matModel);
-		bUpdateMatrix = false;
 	}
 
 	SH_GAME_API void Transform::ReorderChildAbove(Transform* child)
@@ -239,15 +244,11 @@ namespace sh::game
 	SH_GAME_API void Transform::SetRotation(const Vec3& rot)
 	{
 		vRotation = rot;
+		vRotation.x = std::fmod(vRotation.x, 360.f);
+		vRotation.y = std::fmod(vRotation.y, 360.f);
+		vRotation.z = std::fmod(vRotation.z, 360.f);
 
-		if (vRotation.x >= 360)
-			vRotation.x = std::fmod(vRotation.x, 360.f);
-		if (vRotation.y >= 360)
-			vRotation.y = std::fmod(vRotation.y, 360.f);
-		if (vRotation.z >= 360)
-			vRotation.z = std::fmod(vRotation.z, 360.f);
-
-		quat = glm::quat{ glm::radians(glm::vec3{ rot }) };
+		quat = glm::quat{ glm::radians(glm::vec3{ vRotation }) };
 		bUpdateMatrix = true;
 	}
 	SH_GAME_API void Transform::SetRotation(const glm::quat& rot)
@@ -348,7 +349,7 @@ namespace sh::game
 		bUpdateMatrix = true;
 	}
 
-	SH_GAME_API void Transform::SetParent(Transform* newParent, bool keepWorld)
+	SH_GAME_API void Transform::SetParent(Transform* newParent, bool bKeepWorldSpace)
 	{
 		if (newParent == this)
 			return;
@@ -380,7 +381,7 @@ namespace sh::game
 		if (parent != nullptr)
 			parent->childs.push_back(this);
 
-		if (keepWorld)
+		if (bKeepWorldSpace)
 		{
 			if (parent != nullptr)
 			{
@@ -409,15 +410,10 @@ namespace sh::game
 				quat = glm::normalize(oldWorldQuat);
 				vScale = oldWorldScale;
 			}
+		}
+		if (IsEditor())
+			vRotation = glm::degrees(glm::eulerAngles(quat));
 
-			if (IsEditor())
-				vRotation = glm::degrees(glm::eulerAngles(quat));
-		}
-		else
-		{
-			if (IsEditor())
-				vRotation = glm::degrees(glm::eulerAngles(quat));
-		}
 		bUpdateMatrix = true;
 		UpdateMatrix();
 	}

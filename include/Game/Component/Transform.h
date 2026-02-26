@@ -49,7 +49,7 @@ namespace sh::game
 		SH_GAME_API void SetWorldRotation(const Vec3& rot);
 		SH_GAME_API void SetWorldRotation(const glm::quat& rot);
 
-		SH_GAME_API void SetParent(Transform* newParent, bool keepWorld = true);
+		SH_GAME_API void SetParent(Transform* newParent, bool bKeepWorldSpace = true);
 		SH_GAME_API auto HasChild(const Transform& child) const -> bool;
 		SH_GAME_API auto IsAncestorOf(const Transform& transform) const -> bool;
 
