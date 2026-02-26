@@ -148,15 +148,17 @@ namespace sh::game
 			Stay,
 			Exit
 		};
-		struct ProccessingTrigger
+		struct ProccessingTrigger : core::GCObject
 		{
 			ProcessingState state;
-			core::SObjWeakPtr<Collider, void> collider;
+			Collider* collider = nullptr;
 
 			ProccessingTrigger(ProcessingState state, Collider* colliderPtr) :
 				state(state), collider(colliderPtr)
 			{
 			}
+
+			SH_GAME_API void PushReferenceObjects(core::GarbageCollection& gc) override;
 		};
 		struct ProccessingCollision
 		{

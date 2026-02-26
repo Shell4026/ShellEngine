@@ -387,8 +387,14 @@ namespace sh::game
 		while (p1 < processingTriggers.size())
 		{
 			auto& processingTrigger = processingTriggers[p1];
-			Collider* const colliderPtr = processingTrigger.collider.Get();
-			if (colliderPtr != nullptr && colliderPtr->IsPendingKill())
+			Collider* const colliderPtr = processingTrigger.collider;
+			if (colliderPtr == nullptr)
+			{
+				processingColliderIdxs.erase(colliderPtr);
+				++p1;
+				continue;
+			}
+			if (colliderPtr->IsPendingKill())
 			{
 				processingTrigger.state = ProcessingState::Exit;
 				bool bErase = true;
@@ -397,7 +403,6 @@ namespace sh::game
 				++p1;
 				continue;
 			}
-
 			if (!colliderPtr->gameObject.IsActive())
 			{
 				if (processingTrigger.state == ProcessingState::Enter || processingTrigger.state == ProcessingState::Stay)
@@ -527,5 +532,9 @@ namespace sh::game
 				return left->GetPriority() > right->GetPriority();
 			}
 		);
+	}
+	SH_GAME_API void GameObject::ProccessingTrigger::PushReferenceObjects(core::GarbageCollection& gc)
+	{
+		gc.PushReferenceObject(collider);
 	}
 }

@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include "Export.h"
 
+#include "Core/GCObject.h"
+
 #include "Physics/ContactPoint.h"
 
 #include <array>
@@ -9,7 +11,7 @@
 namespace sh::game
 {
 	class Collider;
-	struct Collision
+	struct Collision : core::GCObject
 	{
 		static constexpr std::size_t ARRAY_SIZE = 6;
 
@@ -17,6 +19,8 @@ namespace sh::game
 		SH_GAME_API Collision(std::vector<phys::ContactPoint>&& contactPoints);
 		SH_GAME_API Collision(Collision&& other) noexcept;
 		SH_GAME_API auto operator=(Collision&& other) noexcept -> Collision&;
+
+		SH_GAME_API void PushReferenceObjects(core::GarbageCollection& gc) override;
 
 		SH_GAME_API auto GetContactPoint(uint32_t idx) const -> const phys::ContactPoint&;
 

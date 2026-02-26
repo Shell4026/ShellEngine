@@ -1,4 +1,5 @@
 ﻿#include "Collision.h"
+#include "Component/Phys/Collider.h"
 
 namespace sh::game
 {
@@ -22,6 +23,10 @@ namespace sh::game
 		contactCount = other.contactCount;
 		contacts = std::move(other.contacts);
 		return *this;
+	}
+	SH_GAME_API void Collision::PushReferenceObjects(core::GarbageCollection& gc)
+	{
+		gc.PushReferenceObject(collider);
 	}
 	SH_GAME_API auto Collision::GetContactPoint(uint32_t idx) const -> const phys::ContactPoint&
 	{
