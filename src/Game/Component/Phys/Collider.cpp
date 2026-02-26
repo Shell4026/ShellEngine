@@ -25,9 +25,6 @@ namespace sh::game
 		);
 		canPlayInEditor = true;
 	}
-	SH_GAME_API void Collider::Awake()
-	{
-	}
 	SH_GAME_API void Collider::OnDestroy()
 	{
 		if (rigidBody != nullptr)

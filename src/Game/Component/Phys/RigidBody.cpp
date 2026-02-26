@@ -50,11 +50,10 @@ namespace sh::game
 		if (!gameObject.IsActive() || !IsActive())
 			impl->rigidbody->setIsActive(false);
 		//impl->rigidbody->setLinearVelocity({ 0.f, 0.f, 0.f });
-
-		ResetPhysicsTransform();
 	}
 	SH_GAME_API void RigidBody::Start()
 	{
+		ResetPhysicsTransform();
 		auto colliders = gameObject.GetComponentsInChildren<Collider>(true);
 		for (Collider* collider : colliders)
 		{

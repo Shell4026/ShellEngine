@@ -21,7 +21,6 @@ namespace sh::game
 		SH_GAME_API Collider(GameObject& owner);
 		SH_GAME_API virtual ~Collider() = default;
 
-		SH_GAME_API void Awake() override;
 		SH_GAME_API void OnDestroy() override;
 
 		SH_GAME_API void SetTrigger(bool bTrigger);
