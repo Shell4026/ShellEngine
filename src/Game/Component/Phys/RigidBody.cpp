@@ -34,6 +34,7 @@ namespace sh::game
 		impl->rigidbody = world->createRigidBody(transform);
 		impl->rigidbody->setType(reactphysics3d::BodyType::DYNAMIC);
 		impl->rigidbody->enableGravity(bGravity);
+		impl->rigidbody->setIsActive(false);
 
 		nativeMap.insert({ impl->rigidbody, this });
 
@@ -45,14 +46,10 @@ namespace sh::game
 	{
 		SH_INFO("~RigidBody");
 	}
-	SH_GAME_API void RigidBody::Awake()
-	{
-		if (!gameObject.IsActive() || !IsActive())
-			impl->rigidbody->setIsActive(false);
-		//impl->rigidbody->setLinearVelocity({ 0.f, 0.f, 0.f });
-	}
 	SH_GAME_API void RigidBody::Start()
 	{
+		impl->rigidbody->setIsActive(true);
+
 		ResetPhysicsTransform();
 		auto colliders = gameObject.GetComponentsInChildren<Collider>(true);
 		for (Collider* collider : colliders)
@@ -108,6 +105,8 @@ namespace sh::game
 		Super::OnPropertyChanged(prop);
 		if (prop.GetName() == core::Util::ConstexprHash("bGravity"))
 			SetUsingGravity(bGravity);
+		else if (prop.GetName() == core::Util::ConstexprHash("bStatic"))
+			SetStatic(bStatic);
 		else if (prop.GetName() == core::Util::ConstexprHash("bKinematic"))
 			SetKinematic(bKinematic);
 		else if (prop.GetName() == core::Util::ConstexprHash("mass"))
@@ -122,9 +121,23 @@ namespace sh::game
 			SetAxisLock(axisLock);
 	}
 
-	SH_GAME_API void RigidBody::SetKinematic(bool set)
+	SH_GAME_API void RigidBody::SetStatic(bool bSet)
 	{
-		bKinematic = set;
+		bStatic = bSet;
+		if (bSet)
+			bKinematic = false;
+
+		if (bStatic)
+			impl->rigidbody->setType(reactphysics3d::BodyType::STATIC);
+		else
+			impl->rigidbody->setType(reactphysics3d::BodyType::DYNAMIC);
+	}
+	SH_GAME_API void RigidBody::SetKinematic(bool bSet)
+	{
+		bKinematic = bSet;
+		if (bSet)
+			bStatic = false;
+
 		if (bKinematic)
 			impl->rigidbody->setType(reactphysics3d::BodyType::KINEMATIC);
 		else
@@ -194,10 +207,6 @@ namespace sh::game
 		// reactPhysics에선 0이 허용, 1이 잠금이기 때문에 반전 시켜야함.
 		impl->rigidbody->setAngularLockAxisFactor({ 1.0f - angularLock.x , 1.0f - angularLock.y, 1.0f - angularLock.z });
 	}
-	SH_GAME_API auto RigidBody::GetAngularLock() const -> const game::Vec3&
-	{
-		return angularLock;
-	}
 	SH_GAME_API void RigidBody::SetAxisLock(const game::Vec3& dir)
 	{
 		axisLock = dir;
@@ -208,25 +217,14 @@ namespace sh::game
 		// reactPhysics에선 0이 허용, 1이 잠금이기 때문에 반전 시켜야함.
 		impl->rigidbody->setLinearLockAxisFactor({ 1.0f - axisLock.x, 1.0f - axisLock.y, 1.0f - axisLock.z });
 	}
-	SH_GAME_API auto RigidBody::GetAxisLock() const -> const game::Vec3&
+	SH_GAME_API void RigidBody::SetSleep()
 	{
-		return axisLock;
+		impl->rigidbody->setIsSleeping(true);
 	}
-
-	SH_GAME_API bool RigidBody::IsKinematic() const
+	SH_GAME_API void RigidBody::SetInterpolation(bool bUse)
 	{
-		return bKinematic;
+		this->bInterpolation = bUse;
 	}
-	SH_GAME_API bool RigidBody::IsGravityUse() const
-	{
-		return bGravity;
-	}
-
-	SH_GAME_API auto RigidBody::GetMass() const -> float
-	{
-		return impl->rigidbody->getMass();
-	}
-
 	SH_GAME_API auto RigidBody::GetLinearDamping() const -> float
 	{
 		return impl->rigidbody->getLinearDamping();
@@ -240,39 +238,20 @@ namespace sh::game
 		auto v = impl->rigidbody->getLinearVelocity();
 		return game::Vec3{ v.x, v.y, v.z };
 	}
-
 	SH_GAME_API auto RigidBody::GetAngularVelocity() const -> game::Vec3
 	{
 		auto v = impl->rigidbody->getAngularVelocity();
 		return game::Vec3{ v.x, v.y, v.z };
 	}
-
 	SH_GAME_API auto RigidBody::GetForce() const -> game::Vec3
 	{
 		const auto& f = impl->rigidbody->getForce();
 		return game::Vec3{ f.x, f.y, f.z };
 	}
-
-	SH_GAME_API void RigidBody::SetSleep()
-	{
-		impl->rigidbody->setIsSleeping(true);
-	}
-
-	SH_GAME_API void RigidBody::SetInterpolation(bool bUse)
-	{
-		this->bInterpolation = bUse;
-	}
-
-	SH_GAME_API auto RigidBody::GetInterpolation() const -> bool
-	{
-		return bInterpolation;
-	}
-
 	SH_GAME_API auto RigidBody::GetNativeHandle() const -> RigidBodyHandle
 	{
 		return impl->rigidbody;
 	}
-
 	SH_GAME_API void RigidBody::ResetPhysicsTransform()
 	{
 		gameObject.transform->UpdateMatrix();
@@ -290,7 +269,6 @@ namespace sh::game
 
 		ResetInterpolationState();
 	}
-
 	SH_GAME_API void RigidBody::ResetInterpolationState()
 	{
 		const Vec3& objPos = gameObject.transform->GetWorldPosition();
@@ -301,13 +279,11 @@ namespace sh::game
 		currPos = objPos;
 		currRot = objQuat;
 	}
-
 	SH_GAME_API auto RigidBody::GetPhysicsPosition() const -> game::Vec3
 	{
 		const auto& p = impl->rigidbody->getTransform().getPosition();
 		return { p.x, p.y, p.z };
 	}
-
 	SH_GAME_API auto RigidBody::CheckOverlap(const RigidBody& other) const -> bool
 	{
 		if (this == &other)
@@ -316,7 +292,6 @@ namespace sh::game
 		auto world = reinterpret_cast<reactphysics3d::PhysicsWorld*>(gameObject.world.GetPhysWorld()->GetNative());
 		return world->testOverlap(impl->rigidbody, other.impl->rigidbody);
 	}
-
 	SH_GAME_API auto RigidBody::GetRigidBodyUsingHandle(RigidBodyHandle handle) -> RigidBody*
 	{
 		auto it = nativeMap.find(handle);
@@ -324,6 +299,7 @@ namespace sh::game
 			return nullptr;
 		return it->second;
 	}
+
 	void RigidBody::Interpolate()
 	{
 		// 바뀌지 않았으니 보간x

@@ -17,7 +17,6 @@ namespace sh::game
 		SH_GAME_API RigidBody(GameObject& owner);
 		SH_GAME_API ~RigidBody();
 		
-		SH_GAME_API void Awake() override;
 		SH_GAME_API void Start() override;
 		SH_GAME_API void OnEnable() override;
 		SH_GAME_API void OnDisable() override;
@@ -26,10 +25,12 @@ namespace sh::game
 		SH_GAME_API void Update() override;
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 
+		/// @brief 질량이 무한대고 수동으로 움직여야 하는 상태로 설정하는 함수
+		SH_GAME_API void SetStatic(bool bSet);
 		/// @brief 물리 법칙에 따라 움직이지만 질량이 무한대인 상태로 설정할지
 		/// @param set true 또는 false
-		SH_GAME_API void SetKinematic(bool set);
-		SH_GAME_API void SetUsingGravity(bool use);
+		SH_GAME_API void SetKinematic(bool bSet);
+		SH_GAME_API void SetUsingGravity(bool bUse);
 
 		SH_GAME_API void SetMass(float mass);
 		SH_GAME_API void SetLinearVelocity(const game::Vec3& v);
@@ -43,26 +44,26 @@ namespace sh::game
 		/// @brief 특정 축의 회전 움직임을 제한한다.
 		/// @param dir 1이면 해당 축의 움직임을 제한, 0이면 허용
 		SH_GAME_API void SetAngularLock(const game::Vec3& dir);
-		SH_GAME_API auto GetAngularLock() const -> const game::Vec3&;
 		/// @brief 특정 축의 움직임을 제한한다.
 		/// @param dir 1이면 해당 축의 움직임을 제한, 0이면 허용
 		SH_GAME_API void SetAxisLock(const game::Vec3& axis);
-		SH_GAME_API auto GetAxisLock() const -> const game::Vec3&;
+		SH_GAME_API void SetSleep();
+		SH_GAME_API void SetInterpolation(bool bUse);
 
-		SH_GAME_API bool IsKinematic() const;
-		SH_GAME_API bool IsGravityUse() const;
+		SH_GAME_API auto IsStatic() const -> bool { return bStatic; }
+		SH_GAME_API auto IsKinematic() const -> bool { return bKinematic; }
+		SH_GAME_API auto IsGravityUse() const -> bool { return bGravity; }
 
-		SH_GAME_API auto GetMass() const -> float;
+		SH_GAME_API auto GetAngularLock() const -> const game::Vec3& { return angularLock; }
+		SH_GAME_API auto GetAxisLock() const -> const game::Vec3& { return axisLock; }
+		SH_GAME_API auto GetMass() const -> float { return mass; }
 		SH_GAME_API auto GetLinearDamping() const -> float;
 		SH_GAME_API auto GetAngularDamping() const -> float;
 		SH_GAME_API auto GetLinearVelocity() const -> game::Vec3;
 		SH_GAME_API auto GetAngularVelocity() const -> game::Vec3;
 		SH_GAME_API auto GetForce() const -> game::Vec3;
 
-		SH_GAME_API void SetSleep();
-
-		SH_GAME_API void SetInterpolation(bool bUse);
-		SH_GAME_API auto GetInterpolation() const -> bool;
+		SH_GAME_API auto GetInterpolation() const -> bool { return bInterpolation; }
 
 		SH_GAME_API auto GetNativeHandle() const -> RigidBodyHandle;
 
@@ -94,6 +95,8 @@ namespace sh::game
 		float linearDamping = 0.f;
 		PROPERTY(angularDamping)
 		float angularDamping = 0.1f;
+		PROPERTY(bStatic)
+		bool bStatic = false;
 		PROPERTY(bKinematic)
 		bool bKinematic = false;
 		PROPERTY(bGravity)
