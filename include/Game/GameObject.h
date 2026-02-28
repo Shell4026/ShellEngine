@@ -90,19 +90,20 @@ namespace sh::game
 			return static_cast<T*>(ptr);
 		}
 		template<typename T>
-		auto GetComponent() const -> T*
+		auto GetComponent(bool bDerivedComponent = false) const -> T*
 		{
 			for (Component* component : components)
 			{
 				if (!core::IsValid(component))
 					continue;
-				if (component->GetType() == T::GetStaticType())
+				if (!bDerivedComponent && component->GetType() == T::GetStaticType() ||
+					bDerivedComponent && component->GetType().IsChildOf(T::GetStaticType()))
 					return static_cast<T*>(component);
 			}
 			return nullptr;
 		}
 		template<typename T>
-		auto GetComponentsInChildren(bool bIncludeDerived = false) const -> std::vector<T*>
+		auto GetComponentsInChildren(bool bDerivedComponent = false) const -> std::vector<T*>
 		{
 			std::vector<T*> result{};
 			std::queue<Transform*> bfs{};
@@ -116,8 +117,8 @@ namespace sh::game
 				{
 					if (!core::IsValid(component))
 						continue;
-					if (!bIncludeDerived && component->GetType() == T::GetStaticType() ||
-						bIncludeDerived && component->GetType().IsChildOf(T::GetStaticType()))
+					if (!bDerivedComponent && component->GetType() == T::GetStaticType() ||
+						bDerivedComponent && component->GetType().IsChildOf(T::GetStaticType()))
 						result.push_back(static_cast<T*>(component));
 				}
 				for (Transform* child : trans->GetChildren())
