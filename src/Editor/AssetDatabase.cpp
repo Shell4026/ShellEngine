@@ -69,7 +69,7 @@ namespace sh::editor
 		this->guiCtx = &imgui;
 		libPath = projectPath / "Library";
 
-		assert(project->renderer.GetContext()->GetRenderAPIType() == render::RenderAPI::Vulkan); // TODO
+		assert(ctx.GetRenderAPIType() == render::RenderAPI::Vulkan); // TODO
 		static render::vk::VulkanShaderPassBuilder passBuilder{ static_cast<const render::vk::VulkanContext&>(ctx) };
 		auto shaderLoader = std::make_unique<game::ShaderLoader>(&passBuilder);
 		shaderLoader->SetCachePath(projectPath / "temp");

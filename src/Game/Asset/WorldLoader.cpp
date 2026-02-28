@@ -17,6 +17,8 @@ namespace sh::game
 		auto textOpt = core::FileSystem::LoadText(path);
 		if (!textOpt.has_value())
 			return nullptr;
+		if (textOpt.value().empty())
+			return nullptr;
 
 		core::Json json = core::Json::parse(textOpt.value());
 		if (json.is_discarded())

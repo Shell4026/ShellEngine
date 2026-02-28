@@ -258,7 +258,7 @@ namespace sh::editor
 		}
 		auto& gameManager = *game::GameManager::GetInstance();
 		for (auto& [uuid, worldPtr] : gameManager.GetWorlds())
-			worldPtr->SaveWorldPoint(worldPtr->Serialize());
+			worldPtr->SaveWorldPoint(worldPtr->Serialize(), "temp");
 
 		//renderTex = &world.GetGameViewTexture();
 		mainCam->SetRenderTexture(renderTex);
@@ -298,7 +298,7 @@ namespace sh::editor
 		gameManager.StopWorlds();
 		gameManager.ClearImmortalObjects();
 		for (auto& [uuid, worldPtr] : gameManager.GetWorlds())
-			worldPtr->LoadWorldPoint();
+			worldPtr->LoadWorldPoint("temp");
 
 		bPlaying = false;
 	}

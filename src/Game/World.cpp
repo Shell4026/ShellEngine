@@ -415,22 +415,27 @@ namespace sh::game
 
 	SH_GAME_API auto World::Serialize() const -> core::Json
 	{
-		core::Json mainJson = Super::Serialize();
-
-		core::Json objsJson = core::Json::array();
-		for (auto obj : objs)
+		if (IsLoaded())
 		{
-			if (obj->bNotSave || !core::IsValid(obj))
-				continue;
-			objsJson.push_back(obj->Serialize());
+			core::Json mainJson = Super::Serialize();
+			core::Json& objsJson = mainJson["objs"];
+			for (auto obj : objs)
+			{
+				if (obj->bNotSave || !core::IsValid(obj))
+					continue;
+				objsJson.push_back(obj->Serialize());
+			}
+			return mainJson;
 		}
-		mainJson["objs"] = std::move(objsJson);
-		return mainJson;
+		const core::Json* worldPointPtr = GetWorldPoint();
+		if (worldPointPtr == nullptr || worldPointPtr->empty() || worldPointPtr->is_discarded())
+			return core::Json();
+
+		return *worldPointPtr;
 	}
 	SH_GAME_API void World::Deserialize(const core::Json& json)
 	{
 		bLoaded = true;
-
 		Super::Deserialize(json);
 
 		if (!json.contains("objs"))

@@ -257,28 +257,34 @@ namespace sh::editor
 
 	SH_EDITOR_API auto EditorWorld::Serialize() const -> core::Json
 	{
-		core::Json mainJson = Super::Serialize();
+		if (IsLoaded())
+		{
+			core::Json mainJson = SObject::Serialize();
 
-		core::Json objsJson = core::Json::array();
-		core::Json editorObjsJson = core::Json::array();
-		for (auto obj : objs)
-		{
-			if (obj->bNotSave || !core::IsValid(obj))
-				continue;
-			if (obj->bEditorOnly)
-				editorObjsJson.push_back(obj->Serialize());
-			else
-				objsJson.push_back(obj->Serialize());
+			core::Json& objsJson = mainJson["objs"];
+			core::Json& editorObjsJson = mainJson["editorObjs"];
+			for (auto obj : objs)
+			{
+				if (obj->bNotSave || !core::IsValid(obj))
+					continue;
+				if (obj->bEditorOnly)
+					editorObjsJson.push_back(obj->Serialize());
+				else
+					objsJson.push_back(obj->Serialize());
+			}
+			if (core::IsValid(editorCamera))
+			{
+				const game::Vec3& camPos = editorCamera->gameObject.transform->GetWorldPosition();
+ 				mainJson["camPos"] = { camPos.x ,camPos.y, camPos.z };
+				mainJson["cam"] = editorCamera->Serialize();
+			}
+			return mainJson;
 		}
-		mainJson["objs"] = std::move(objsJson);
-		mainJson["editorObjs"] = std::move(editorObjsJson);
-		if (core::IsValid(editorCamera))
-		{
-			const game::Vec3& camPos = editorCamera->gameObject.transform->GetWorldPosition();
-			mainJson["camPos"] = { camPos.x ,camPos.y, camPos.z };
-			mainJson["cam"] = editorCamera->Serialize();
-		}
-		return mainJson;
+		const core::Json* worldPointPtr = GetWorldPoint();
+		if (worldPointPtr == nullptr || worldPointPtr->empty() || worldPointPtr->is_discarded())
+			return core::Json();
+
+		return *worldPointPtr;
 	}
 	SH_EDITOR_API void EditorWorld::Deserialize(const core::Json& json)
 	{

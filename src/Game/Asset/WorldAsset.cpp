@@ -35,28 +35,14 @@ namespace sh::game
 		if (!core::IsValid(worldPtr))
 			return;
 
-		if (worldPtr->IsLoaded())
-		{
-			auto json = worldPtr->Serialize();
+		auto json = worldPtr->Serialize();
+		if (json.empty() || json.is_discarded())
+			return;
 
-			if (bConvertWorldType)
-				json["type"] = game::World::GetStaticType().name.ToString();
+		if(bConvertWorldType)
+			json["type"] = game::World::GetStaticType().name.ToString();
 
-			data = core::Json::to_bson(json);
-		}
-		else
-		{
-			const core::Json* worldPointPtr = worldPtr->GetWorldPoint();
-			if (worldPointPtr == nullptr || worldPointPtr->empty() || worldPointPtr->is_discarded())
-				return;
-
-			core::Json worldPoint = *worldPointPtr;
-
-			if (bConvertWorldType)
-				worldPoint["type"] = game::World::GetStaticType().name.ToString();
-
-			data = core::Json::to_bson(worldPoint);
-		}
+		data = core::Json::to_bson(json);
 	}
 
 	auto WorldAsset::ParseAssetData() -> bool

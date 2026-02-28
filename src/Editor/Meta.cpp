@@ -66,9 +66,10 @@ namespace sh::editor
 		assert(IsLoad());
 		if (json.contains("uuid"))
 			obj.SetUUID(core::UUID{ json["uuid"].get_ref<const std::string&>() });
-		if (!json.contains("obj"))
-			return false;
-		obj.Deserialize(json["obj"]);
+		if (json.contains("name"))
+			obj.SetName(json["name"].get_ref<const std::string&>());
+		if (json.contains("obj"))
+			obj.Deserialize(json["obj"]);
 		return true;
 	}
 	SH_EDITOR_API void Meta::SaveWithObj(const core::SObject& obj, const std::filesystem::path& path, bool bCalcHash)

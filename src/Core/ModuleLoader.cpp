@@ -53,6 +53,8 @@ namespace sh::core
 	}
 	SH_CORE_API void ModuleLoader::Clean(const Plugin& plugin)
 	{
+		if (plugin.handle == nullptr)
+			return;
 #if _WIN32
 		auto result = FreeLibrary(reinterpret_cast<HMODULE>(plugin.handle));
 		assert(result);

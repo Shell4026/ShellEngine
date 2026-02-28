@@ -198,7 +198,7 @@ namespace sh::game
 			for (const auto& [worldUUID, uuids] : worldJson.items())
 			{
 				for (const auto& uuid : uuids)
-					worldUUIDs[core::UUID{ worldUUID }].push_back(core::UUID{ uuid.get<std::string>()});
+					worldUUIDs[core::UUID{ worldUUID }].push_back(core::UUID{ uuid.get_ref<const std::string&>()});
 			}
 		}
 
@@ -207,7 +207,7 @@ namespace sh::game
 
 		if (json.contains("starting"))
 		{
-			const core::UUID startingWorldUUID{ json["starting"].get<std::string>() };
+			const core::UUID startingWorldUUID{ json["starting"].get_ref<const std::string&>() };
 			auto worldAsset = bundle.LoadAsset(startingWorldUUID);
 			if (worldAsset == nullptr)
 				return false;

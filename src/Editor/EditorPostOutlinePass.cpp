@@ -38,9 +38,8 @@ namespace sh::editor
 
 	SH_EDITOR_API void EditorPostOutlinePass::Configure(const render::RenderTarget& renderData)
 	{
-		if (drawable == nullptr)
+		if (drawable == nullptr && mat != nullptr)
 		{
-			assert(mat != nullptr);
 			drawable = core::SObject::Create<render::Drawable>(*mat, *plane);
 			drawable->Build(ctx);
 

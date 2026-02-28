@@ -120,6 +120,8 @@ namespace sh::game
 		if (Input::GetMousePressed(Input::MouseType::Left) ||
 			Input::GetKeyPressed(Input::KeyCode::LAlt) && Input::GetMouseDown(Input::MouseType::Left))
 		{
+			lastXdir = xdir;
+			lastYdir = ydir;
 			leftPressedPos = Input::mousePosition;
 			leftMousePressed = true;
 		}
