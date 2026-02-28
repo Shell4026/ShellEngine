@@ -6,9 +6,7 @@ namespace sh::game
 	bool Component::bEditor = false;
 
 	SH_GAME_API Component::Component(GameObject& object) :
-		gameObject(object), world(object.world),
-		
-		bInit(false), bEnable(true)
+		gameObject(object), world(object.world)
 	{
 	}
 
@@ -38,50 +36,6 @@ namespace sh::game
 		return *this;
 	}
 
-	SH_GAME_API auto Component::IsActive() const -> bool
-	{
-		return bEnable;
-	}
-
-	SH_GAME_API void Component::SetActive(bool b)
-	{
-		bEnable = b;
-		if (bEnable)
-		{
-			if (world.IsStart())
-			{
-				if (world.IsPlaying() || canPlayInEditor)
-					OnEnable();
-			}
-		}
-	}
-
-	SH_GAME_API auto Component::IsInit() const -> bool
-	{
-		return bInit;
-	}
-
-	SH_GAME_API auto Component::IsStart() const -> bool
-	{
-		return bStart;
-	}
-
-	SH_GAME_API void Component::OnDestroy()
-	{
-		Super::OnDestroy();
-	}
-
-	SH_GAME_API void Component::SetPriority(int priority)
-	{
-		this->priority = priority;
-		gameObject.RequestSortComponents();
-	}
-
-	SH_GAME_API auto Component::GetPriority() const -> int
-	{
-		return priority;
-	}
-
 	SH_GAME_API auto Component::Serialize() const -> core::Json
 	{
 		core::Json mainJson = Super::Serialize();
@@ -99,16 +53,17 @@ namespace sh::game
 
 				const core::reflection::TypeInfo& propType = prop->type;
 				const core::Name& name = prop->GetName();
+				const std::string& nameStr = name.ToString();
 
 				if (propType == core::reflection::GetType<Vec4>())
-					core::SerializeProperty(json, name, *prop->Get<Vec4>(*this));
+					core::SerializeProperty(json, nameStr, *prop->Get<Vec4>(*this));
 				else if (propType == core::reflection::GetType<Vec3>())
-					core::SerializeProperty(json, name, *prop->Get<Vec3>(*this));
+					core::SerializeProperty(json, nameStr, *prop->Get<Vec3>(*this));
 				else if (propType == core::reflection::GetType<Vec2>())
-					core::SerializeProperty(json, name, *prop->Get<Vec2>(*this));
+					core::SerializeProperty(json, nameStr, *prop->Get<Vec2>(*this));
 				else if (prop->isContainer)
 				{
-					auto& containerJson = json[name];
+					auto& containerJson = json[nameStr];
 					if (*prop->containerElementType == core::reflection::GetType<Vec4>())
 					{
 						for (auto it = prop->Begin(*this); it != prop->End(*this); ++it)
@@ -172,25 +127,26 @@ namespace sh::game
 					continue;
 				const core::reflection::TypeInfo& propType = prop->type;
 				const core::Name& name = prop->GetName();
+				const std::string& nameStr = name.ToString();
 
-				if (propType == core::reflection::GetType<Vec4>() && compJson[name].size() == 4)
+				if (propType == core::reflection::GetType<Vec4>() && compJson[nameStr].size() == 4)
 				{
-					if (core::DeserializeProperty(compJson, name, *prop->Get<Vec4>(*this)))
+					if (core::DeserializeProperty(compJson, nameStr, *prop->Get<Vec4>(*this)))
 						OnPropertyChanged(*prop.get());
 				}
-				else if (propType == core::reflection::GetType<Vec3>() && compJson[name].size() == 3)
+				else if (propType == core::reflection::GetType<Vec3>() && compJson[nameStr].size() == 3)
 				{
-					if (core::DeserializeProperty(compJson, name, *prop->Get<Vec3>(*this)))
+					if (core::DeserializeProperty(compJson, nameStr, *prop->Get<Vec3>(*this)))
 						OnPropertyChanged(*prop.get());
 				}
-				else if (propType == core::reflection::GetType<Vec2>() && compJson[name].size() == 2)
+				else if (propType == core::reflection::GetType<Vec2>() && compJson[nameStr].size() == 2)
 				{
-					if (core::DeserializeProperty(compJson, name, *prop->Get<Vec2>(*this)))
+					if (core::DeserializeProperty(compJson, nameStr, *prop->Get<Vec2>(*this)))
 						OnPropertyChanged(*prop.get());
 				}
 				else if (prop->isContainer)
 				{
-					const auto& containerJson = compJson[name];
+					const auto& containerJson = compJson[nameStr];
 					if (*prop->containerElementType == core::reflection::GetType<Vec4>())
 					{
 						prop->ClearContainer(*this);
@@ -223,6 +179,26 @@ namespace sh::game
 			type = type->super;
 		}
 	}
+
+	SH_GAME_API void Component::SetActive(bool b)
+	{
+		bEnable = b;
+		if (bEnable)
+		{
+			if (world.IsStart())
+			{
+				if (world.IsPlaying() || canPlayInEditor)
+					OnEnable();
+			}
+		}
+	}
+
+	SH_GAME_API void Component::SetPriority(int priority)
+	{
+		this->priority = priority;
+		gameObject.RequestSortComponents();
+	}
+
 	SH_GAME_API void Component::SetIsEditor(bool bEditor)
 	{
 		Component::bEditor = bEditor;

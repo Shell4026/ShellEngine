@@ -16,7 +16,7 @@ namespace sh::game
 
 		worldPosition{ 0.f, 0.f, 0.f }, worldRotation{ 0.f, 0.f, 0.f }, worldScale{ 1.f, 1.f, 1.f },
 		vPosition{ 0.f, 0.f, 0.f }, vScale{ 1.0f, 1.0f, 1.0f }, vRotation{ 0.f, 0.f, 0.f },
-		matModel(), quat(glm::radians(glm::vec3{ vRotation })), worldQuat(quat),
+		quat(glm::radians(glm::vec3{ vRotation })), worldQuat(quat),
 		parent(nullptr), childs(),
 		bUpdateMatrix(false)
 	{
@@ -74,7 +74,10 @@ namespace sh::game
 	}
 	SH_GAME_API void Transform::Awake()
 	{
-		Super::Awake();
+		UpdateMatrix();
+	}
+	SH_GAME_API void Transform::Start()
+	{
 		UpdateMatrix();
 	}
 	SH_GAME_API void Transform::BeginUpdate()

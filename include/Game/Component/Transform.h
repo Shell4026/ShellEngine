@@ -21,6 +21,7 @@ namespace sh::game
 
 		SH_GAME_API void OnDestroy() override;
 		SH_GAME_API void Awake() override;
+		SH_GAME_API void Start() override;
 		SH_GAME_API void BeginUpdate() override;
 		
 		SH_GAME_API auto Serialize() const -> core::Json override;
@@ -84,8 +85,8 @@ namespace sh::game
 		Vec3 worldRotation;
 		Vec3 worldScale;
 
-		glm::mat4 matModel;
-		glm::mat4 matModelInv;
+		glm::mat4 matModel{ 1.f };
+		glm::mat4 matModelInv{ 1.f };
 
 		glm::quat quat;
 		glm::quat worldQuat;

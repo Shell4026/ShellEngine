@@ -53,13 +53,8 @@ namespace sh::game
 
 		SH_GAME_API auto operator=(const Component& other) -> Component&;
 
-		SH_GAME_API auto IsActive() const -> bool;
-		SH_GAME_API virtual void SetActive(bool b);
-
-		SH_GAME_API auto IsInit() const -> bool;
-		SH_GAME_API auto IsStart() const -> bool;
-
-		SH_GAME_API void OnDestroy() override;
+		SH_GAME_API auto Serialize() const -> core::Json override;
+		SH_GAME_API void Deserialize(const core::Json& json) override;
 
 		SH_GAME_API void Awake() override {}
 		SH_GAME_API void Start() override {}
@@ -75,13 +70,16 @@ namespace sh::game
 		SH_GAME_API virtual void OnTriggerEnter(Collider& collider) {};
 		SH_GAME_API virtual void OnTriggerStay(Collider& collider) {};
 		SH_GAME_API virtual void OnTriggerExit(Collider& collider) {};
+
+		SH_GAME_API virtual void SetActive(bool b);
 		/// @brief 우선 순위가 높을수록 다른 컴포넌트보다 우선 실행 된다.
 		/// @param priority 우선 순위
 		SH_GAME_API void SetPriority(int priority);
-		SH_GAME_API auto GetPriority() const -> int;
-
-		SH_GAME_API auto Serialize() const -> core::Json override;
-		SH_GAME_API void Deserialize(const core::Json& json) override;
+		
+		SH_GAME_API auto GetPriority() const -> int { return priority; }
+		SH_GAME_API auto IsActive() const -> bool { return bEnable; }
+		SH_GAME_API auto IsInit() const -> bool { return bInit; }
+		SH_GAME_API auto IsStart() const -> bool { return bStart; }
 
 		SH_GAME_API static void SetIsEditor(bool bEditor);
 		/// @brief 현재 에디터에서 실행중인지 반환
@@ -98,8 +96,8 @@ namespace sh::game
 		PROPERTY(priority, core::PropertyOption::invisible)
 		int priority = 0;
 
-		bool bEnable;
-		bool bInit;
+		bool bEnable = true;
+		bool bInit = false;
 		bool bStart = false;
 
 		static bool bEditor;
