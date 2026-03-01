@@ -3,6 +3,7 @@
 #include "Export.h"
 
 #include "glm/vec3.hpp"
+#include "glm/mat4x4.hpp"
 
 namespace sh::render
 {
@@ -28,17 +29,22 @@ namespace sh::render
 		/// @return 충돌 시 true, 아닐 시 false
 		SH_RENDER_API bool Intersects(const AABB& other) const;
 
-		SH_RENDER_API auto GetMin() const -> const glm::vec3&;
-		SH_RENDER_API auto GetMax() const -> const glm::vec3&;
-		SH_RENDER_API auto GetCenter() const -> const glm::vec3&;
 		SH_RENDER_API auto GetWorldAABB(const glm::mat4& modelMatrix) const -> AABB;
-		SH_RENDER_API auto GetRadius() const -> float;
+		
+		SH_RENDER_API auto GetRadius() const -> float { return radius; }
+		SH_RENDER_API auto GetMin() const -> const glm::vec3& { return min; }
+		SH_RENDER_API auto GetMax() const -> const glm::vec3& { return max; }
+		SH_RENDER_API auto GetCenter() const -> const glm::vec3& { return center; }
 
 		/// @brief 두 바운딩 박스를 포함하는 새 바운딩 박스를 만드는 함수.
 		/// @param other 다른 바운딩 박스
 		/// @return 새 바운딩 박스
 		SH_RENDER_API static auto Encapsulate(const AABB& a, const AABB& b) -> AABB;
 	private:
+		void NormalizeBounds();
+		void UpdateCenter();
+	private:
 		glm::vec3 min, max, center;
+		float radius = 1.f;
 	};
 }//namespace

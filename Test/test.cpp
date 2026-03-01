@@ -4,6 +4,7 @@
 #include "SingletonTest.hpp"
 #include "ContainerTest.hpp"
 #include "AllocatorTest.hpp"
+#include "AABBTest.hpp"
 #include "OctreeTest.hpp"
 #include "ShaderParserTest.hpp"
 #include "SpinLockTest.hpp"

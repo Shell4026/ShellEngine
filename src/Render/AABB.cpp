@@ -12,20 +12,26 @@ namespace sh::render
 	SH_RENDER_API AABB::AABB(float x1, float y1, float z1, float x2, float y2, float z2) :
 		min(x1, y1, z1), max(x2, y2, z2)
 	{
-		center = (min + max) / 2.0f;
+		NormalizeBounds();
+		UpdateCenter();
+		radius = glm::length(max - center);
 	}
 
 	SH_RENDER_API void AABB::Set(const glm::vec3& min, const glm::vec3& max)
 	{
 		this->min = min;
 		this->max = max;
-		center = (min + max) / 2.0f;
+		NormalizeBounds();
+		UpdateCenter();
+		radius = glm::length(max - center);
 	}
 	SH_RENDER_API void AABB::Expand(float amount)
 	{
 		this->min -= amount;
 		this->max += amount;
-		center = (min + max) / 2.0f;
+		NormalizeBounds();
+		UpdateCenter();
+		radius = glm::length(max - center);
 	}
 
 	SH_RENDER_API bool AABB::Contains(const glm::vec3& point) const
@@ -47,19 +53,6 @@ namespace sh::render
 		if (max.z < other.min.z || min.z > other.max.z)
 			return false;
 		return true;
-	}
-
-	SH_RENDER_API auto AABB::GetMin() const -> const glm::vec3&
-	{
-		return min;
-	}
-	SH_RENDER_API auto AABB::GetMax() const -> const glm::vec3&
-	{
-		return max;
-	}
-	SH_RENDER_API auto AABB::GetCenter() const -> const glm::vec3&
-	{
-		return center;
 	}
 	SH_RENDER_API auto AABB::GetWorldAABB(const glm::mat4& modelMatrix) const -> AABB
 	{
@@ -103,11 +96,6 @@ namespace sh::render
 
 		return AABB{ newMin, newMax };
 	}
-	SH_RENDER_API auto AABB::GetRadius() const -> float
-	{
-		return glm::length(max - center);
-	}
-
 	SH_RENDER_API auto AABB::Encapsulate(const AABB& a, const AABB& b) -> AABB
 	{
 		AABB aabb{};
@@ -122,5 +110,18 @@ namespace sh::render
 		aabb.center = (aabb.min + aabb.max) / 2.0f;
 
 		return aabb;
+	}
+	void AABB::NormalizeBounds()
+	{
+		if (min.x > max.x)
+			std::swap(min.x, max.x);
+		if (min.y > max.y)
+			std::swap(min.y, max.y);
+		if (min.z > max.z)
+			std::swap(min.z, max.z);
+	}
+	void AABB::UpdateCenter()
+	{
+		center = (min + max) / 2.0f;
 	}
 }//namespace

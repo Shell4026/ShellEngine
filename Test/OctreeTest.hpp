@@ -4,50 +4,83 @@
 #include "Game/IOctreeElement.h"
 
 #include <gtest/gtest.h>
-#include <random>
+#include <algorithm>
 
-TEST(OctreeTest, InsertTest)
+namespace
 {
-	using namespace sh;
-	class Element : public game::IOctreeElement
+	class TestElement : public sh::game::IOctreeElement
 	{
 	private:
-		game::Vec3 pos;
-		render::AABB aabb;
+		sh::game::Vec3 pos;
+		sh::render::AABB aabb;
 	public:
-		Element(game::Vec3 pos):
+		TestElement(const sh::game::Vec3& pos, const sh::game::Vec3& halfExtents) :
 			pos(pos),
-			aabb(-1, -1, -1, 1, 1, 1)
+			aabb(pos - halfExtents, pos + halfExtents)
 		{
-			aabb.Set(pos + aabb.GetMin(), pos + aabb.GetMax());
 		}
-		auto GetPos() const -> const game::Vec3& override
+		auto GetPos() const -> const sh::game::Vec3& override
 		{
 			return pos;
 		}
-		bool Intersect(const render::AABB& other) const override
+		bool Intersect(const sh::render::AABB& other) const override
 		{
 			return aabb.Intersects(other);
 		}
 	};
-	
-	std::array<std::unique_ptr<Element>, 100> elements;
-	std::random_device seed{};
-	std::mt19937 device{ seed() };
-	for (int i = 0; i < 100; ++i)
-	{
-		std::uniform_real_distribution<float> rnd(-100, 100);
-		float x = rnd(device);
-		float y = rnd(device);
-		float z = rnd(device);
-		elements[i] = std::make_unique<Element>(game::Vec3{ x, y, z });
-	}
+}
 
-	game::Octree octree{ render::AABB{ -100, -100, -100, 100, 100, 100 }, 10 };
-	for (int i = 0; i < 100; ++i)
-	{
-		bool check = octree.Insert(*elements[i]);
-		EXPECT_TRUE(check);
-	}
-	auto list = octree.Query(*elements[0]);
+TEST(OctreeTest, KeepStraddlingObjectInCurrentNode)
+{
+	sh::game::Octree octree{ sh::render::AABB{ -100, -100, -100, 100, 100, 100 }, 1 };
+	TestElement childOnly{ sh::game::Vec3{ -60, -60, -60 }, sh::game::Vec3{ 5, 5, 5 } };
+	TestElement straddling{ sh::game::Vec3{ 0, 0, 0 }, sh::game::Vec3{ 30, 30, 30 } };
+
+	EXPECT_TRUE(octree.Insert(childOnly));
+	EXPECT_TRUE(octree.Insert(straddling));
+
+	const auto& rootElements = octree.GetElements();
+	ASSERT_EQ(rootElements.size(), 1);
+	EXPECT_EQ(rootElements[0], &straddling);
+}
+
+TEST(OctreeTest, QueryIncludesObjectsStoredInInternalNode)
+{
+	sh::game::Octree octree{ sh::render::AABB{ -100, -100, -100, 100, 100, 100 }, 1 };
+	TestElement childOnly{ sh::game::Vec3{ -60, -60, -60 }, sh::game::Vec3{ 5, 5, 5 } };
+	TestElement straddling{ sh::game::Vec3{ 0, 0, 0 }, sh::game::Vec3{ 30, 30, 30 } };
+
+	EXPECT_TRUE(octree.Insert(childOnly));
+	EXPECT_TRUE(octree.Insert(straddling));
+
+	auto queried = octree.Query(sh::render::AABB{ -10, -10, -10, 10, 10, 10 });
+	EXPECT_TRUE(std::find(queried.begin(), queried.end(), &straddling) != queried.end());
+}
+
+TEST(OctreeTest, InsertSameObjectTwiceDoesNotDuplicate)
+{
+	sh::game::Octree octree{ sh::render::AABB{ -100, -100, -100, 100, 100, 100 }, 10 };
+	TestElement element{ sh::game::Vec3{ 10, 10, 10 }, sh::game::Vec3{ 1, 1, 1 } };
+
+	EXPECT_TRUE(octree.Insert(element));
+	EXPECT_TRUE(octree.Insert(element));
+
+	const auto& elements = octree.GetElements();
+	ASSERT_EQ(elements.size(), 1);
+	EXPECT_EQ(elements[0], &element);
+}
+
+TEST(OctreeTest, EraseRemovesObjectFromTree)
+{
+	sh::game::Octree octree{ sh::render::AABB{ -100, -100, -100, 100, 100, 100 }, 1 };
+	TestElement childOnly{ sh::game::Vec3{ -60, -60, -60 }, sh::game::Vec3{ 5, 5, 5 } };
+	TestElement straddling{ sh::game::Vec3{ 0, 0, 0 }, sh::game::Vec3{ 30, 30, 30 } };
+
+	EXPECT_TRUE(octree.Insert(childOnly));
+	EXPECT_TRUE(octree.Insert(straddling));
+	EXPECT_TRUE(octree.Erase(straddling));
+	EXPECT_FALSE(octree.Erase(straddling));
+
+	auto queried = octree.Query(sh::render::AABB{ -10, -10, -10, 10, 10, 10 });
+	EXPECT_TRUE(std::find(queried.begin(), queried.end(), &straddling) == queried.end());
 }

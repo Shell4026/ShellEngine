@@ -1,14 +1,12 @@
 ﻿#pragma once
-
 #include "Export.h"
 #include "Vector.h"
-
-#include "Core/SContainer.hpp"
 
 #include "Render/AABB.h"
 
 #include <array>
 #include <memory>
+#include <vector>
 
 namespace sh::game
 {
@@ -26,20 +24,19 @@ namespace sh::game
 		SH_GAME_API auto Query(const glm::vec3& pos) -> Octree*;
 		SH_GAME_API auto Query(IOctreeElement& obj) -> std::vector<Octree*>;
 		SH_GAME_API auto Query(const render::AABB& aabb) -> std::vector<IOctreeElement*>;
-		SH_GAME_API bool Insert(IOctreeElement& obj);
-		SH_GAME_API bool Erase(IOctreeElement& obj);
+		SH_GAME_API void Query(const IOctreeElement& obj, std::vector<Octree*>& vec);
+		SH_GAME_API void Query(const render::AABB& aabb, std::vector<IOctreeElement*>& vec);
+		SH_GAME_API auto Insert(IOctreeElement& obj) -> bool;
+		SH_GAME_API auto Erase(IOctreeElement& obj) -> bool;
 
-		SH_GAME_API bool IsLeaf() const;
-
-		SH_GAME_API auto GetRoot() const -> Octree&;
-		SH_GAME_API auto GetElements() const -> const std::unordered_set<IOctreeElement*>&;
-		SH_GAME_API auto GetElements() -> std::unordered_set<IOctreeElement*>&;
-		SH_GAME_API auto GetBounds() const -> const render::AABB&;
+		SH_GAME_API auto IsLeaf() const -> bool { return childs[0] == nullptr; }
+		SH_GAME_API auto GetRoot() const -> Octree& { return *root; }
+		SH_GAME_API auto GetElements() const -> const std::vector<IOctreeElement*>& { return objs; }
+		SH_GAME_API auto GetElements() -> std::vector<IOctreeElement*>& { return objs; }
+		SH_GAME_API auto GetBounds() const -> const render::AABB& { return aabb; }
 	private:
 		void Subdivide();
 		bool InsertIntoChildren(IOctreeElement& obj);
-		void Query(const IOctreeElement& obj, std::vector<Octree*>& vec);
-		void Query(const render::AABB& aabb, std::vector<IOctreeElement*>& vec);
 	private:
 		std::size_t capacity;
 		uint32_t depth;
@@ -49,9 +46,9 @@ namespace sh::game
 
 		std::array<std::unique_ptr<Octree>, 8> childs;
 
-		std::unordered_set<IOctreeElement*> objs;
+		std::vector<IOctreeElement*> objs;
 
 		Octree* root;
 		Octree* parent = nullptr;
 	};
-}
+}//namespace
