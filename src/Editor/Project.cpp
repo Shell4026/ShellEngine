@@ -381,10 +381,17 @@ namespace sh::editor
 		const auto tempPluginPath = game::ComponentLoader::CreatePluginPath(tempPath / "ShellEngineUser");
 		const auto tempEditorPluginPath = game::ComponentLoader::CreatePluginPath(tempPath / "ShellEngineUserEditor");
 
-		std::filesystem::copy_file(pluginPath, tempPluginPath, std::filesystem::copy_options::overwrite_existing);
-		std::filesystem::copy_file(editorPluginPath, tempEditorPluginPath, std::filesystem::copy_options::overwrite_existing);
-
-		componentLoader.LoadPlugin(tempEditorPluginPath);
+		if (std::filesystem::exists(pluginPath))
+			std::filesystem::copy_file(pluginPath, tempPluginPath, std::filesystem::copy_options::overwrite_existing);
+		if (std::filesystem::exists(editorPluginPath))
+		{
+			std::filesystem::copy_file(editorPluginPath, tempEditorPluginPath, std::filesystem::copy_options::overwrite_existing);
+			componentLoader.LoadPlugin(tempEditorPluginPath);
+		}
+		else
+		{
+			componentLoader.LoadPlugin(tempPluginPath);
+		}
 	}
 
 	void Project::ChangeSourcePath(const std::filesystem::path& projectRootPath)

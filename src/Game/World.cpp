@@ -137,6 +137,7 @@ namespace sh::game
 	SH_GAME_API void World::InitResource()
 	{
 		SH_INFO("Init resource");
+		bLoaded = true;
 	}
 	auto World::AllocateGameObject() -> GameObject*
 	{

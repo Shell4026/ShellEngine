@@ -284,8 +284,11 @@ namespace sh::editor
 		if (!bPlaying)
 			return;
 		game::Camera* cam = world.GetMainCamera();
-		cam->SetRenderTexture(nullptr);
-		cam->SetActive(false);
+		if (core::IsValid(cam))
+		{
+			cam->SetRenderTexture(nullptr);
+			cam->SetActive(false);
+		}
 
 		//renderTex = world.GetGameObject("EditorCamera")->GetComponent<game::EditorCamera>()->GetRenderTexture();
 		//ChangeViewportSize();
