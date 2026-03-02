@@ -4,6 +4,7 @@
 #include "ScriptableRenderer.h"
 
 #include "Core/ISyncable.h"
+#include "Core/LockFreeMPSCQueue.h"
 #include "Core/SContainer.hpp"
 
 #include "glm/vec2.hpp"
@@ -12,11 +13,11 @@
 #include <memory>
 #include <array>
 #include <map>
-#include <queue>
 #include <set>
 #include <utility>
 #include <functional>
 #include <thread>
+#include <variant>
 namespace sh::window
 {
 	class Window;
@@ -55,7 +56,7 @@ namespace sh::render
 		SH_RENDER_API virtual auto GetContext() const->IRenderContext* = 0;
 
 		/// @brief 드로우 객체를 큐에 집어 넣는다.
-		/// @brief 큐에 들어간 객체는 sync 타이밍에 렌더러에 들어간다.
+		/// @brief 큐에 들어간 객체는 렌더 스레드 프레임 시작 시 반영된다.
 		/// @param drawable 드로우 객체 포인터
 		SH_RENDER_API void PushDrawAble(Drawable* drawable);
 
@@ -67,10 +68,10 @@ namespace sh::render
 
 		SH_RENDER_API void SetScriptableRenderer(ScriptableRenderer& renderer);
 		SH_RENDER_API auto GetScriptableRenderer() const -> ScriptableRenderer* { return renderer; }
-		/// @brief 카메라를 추가한다. 동기화 타이밍 때 추가 된다.
+		/// @brief 카메라를 추가한다. 렌더 스레드에서 반영된다.
 		/// @param camera 카메라 참조
 		SH_RENDER_API void AddCamera(const Camera& camera);
-		/// @brief 카메라를 제거한다. 동기화 타이밍 때 제거 된다.
+		/// @brief 카메라를 제거한다. 렌더 스레드에서 반영된다.
 		/// @param camera 카메라 참조
 		SH_RENDER_API void RemoveCamera(const Camera& camera);
 
@@ -83,6 +84,7 @@ namespace sh::render
 		virtual void OnCameraRemoved(const Camera* camera) {};
 
 		SH_RENDER_API void SetDrawCallCount(uint32_t drawcall);
+		SH_RENDER_API void DrainRenderCommands();
 	protected:
 		struct CameraCompare
 		{
@@ -93,16 +95,19 @@ namespace sh::render
 				return left->GetPriority() < right->GetPriority();
 			}
 		};
-		struct CameraProcess
+		struct RenderCommand
 		{
-			const Camera* cameraPtr;
-			enum class Mode
+			enum class Type
 			{
-				Create,
-				Destroy
-			} mode;
+				PushDrawable,
+				AddCamera,
+				RemoveCamera
+			};
+			Type type = Type::PushDrawable;
+			std::variant<core::SObjWeakPtr<Drawable, void>, const Camera*> data;
 		};
-		std::queue<Drawable*> drawableQueue;
+
+		core::LockFreeMPSCQueue<RenderCommand> renderCommands;
 		std::vector<Drawable*> drawables;
 		std::set<const Camera*, CameraCompare> cameras;
 		std::vector<std::function<void()>> drawCalls;
@@ -112,7 +117,6 @@ namespace sh::render
 		ScriptableRenderer* renderer = nullptr;
 	private:
 		sh::window::Window* window;
-		std::queue<CameraProcess> cameraQueue;
 
 		core::SyncArray<uint32_t> drawcall;
 

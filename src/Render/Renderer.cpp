@@ -1,7 +1,6 @@
 ﻿#include "Renderer.h"
 #include "Drawable.h"
 
-#include "Core/Util.h"
 #include "Core/ThreadSyncManager.h"
 
 #include <cassert>
@@ -27,32 +26,6 @@ namespace sh::render
 	}
 	SH_RENDER_API void Renderer::Sync()
 	{
-		drawables.clear();
-
-		while (!drawableQueue.empty())
-		{
-			Drawable* drawable = drawableQueue.front();
-			drawableQueue.pop();
-			if (!core::IsValid(drawable) || !drawable->CheckAssetValid())
-				continue;
-
-			drawables.push_back(drawable);
-		}
-		while (!cameraQueue.empty())
-		{
-			CameraProcess process = cameraQueue.front();
-			cameraQueue.pop();
-			if (process.mode == CameraProcess::Mode::Create)
-			{
-				cameras.insert(process.cameraPtr);
-				OnCameraAdded(process.cameraPtr);
-			}
-			else
-			{
-				cameras.erase(process.cameraPtr);
-				OnCameraRemoved(process.cameraPtr);
-			}
-		}
 		if (bDrawCallDirty)
 			drawcall[core::ThreadType::Game] = drawcall[core::ThreadType::Render];
 
@@ -68,8 +41,8 @@ namespace sh::render
 	SH_RENDER_API void Renderer::Clear()
 	{
 		renderer = nullptr;
-		drawableQueue = std::queue<Drawable*>{};
-		cameraQueue = std::queue<CameraProcess>{};
+		renderCommands.Clear();
+		drawables.clear();
 		drawcall = core::SyncArray<uint32_t>{};
 
 		cameras.clear();
@@ -82,6 +55,9 @@ namespace sh::render
 		if (!bFirstRender)
 			threadId = std::this_thread::get_id();
 		bFirstRender = true;
+
+		drawables.clear();
+		DrainRenderCommands();
 	}
 	SH_RENDER_API void Renderer::Pause(bool b)
 	{
@@ -93,8 +69,10 @@ namespace sh::render
 		if (!core::IsValid(drawable))
 			return;
 
-		drawableQueue.push(drawable);
-		SyncDirty();
+		RenderCommand cmd{};
+		cmd.type = RenderCommand::Type::PushDrawable;
+		cmd.data = drawable;
+		renderCommands.Push(std::move(cmd));
 	}
 
 	SH_RENDER_API auto Renderer::GetWindow() const -> sh::window::Window&
@@ -114,13 +92,17 @@ namespace sh::render
 	}
 	SH_RENDER_API void Renderer::AddCamera(const Camera& camera)
 	{
-		cameraQueue.push({ &camera, CameraProcess::Mode::Create });
-		SyncDirty();
+		RenderCommand cmd{};
+		cmd.type = RenderCommand::Type::AddCamera;
+		cmd.data = &camera;
+		renderCommands.Push(std::move(cmd));
 	}
 	SH_RENDER_API void Renderer::RemoveCamera(const Camera& camera)
 	{
-		cameraQueue.push({ &camera, CameraProcess::Mode::Destroy });
-		SyncDirty();
+		RenderCommand cmd{};
+		cmd.type = RenderCommand::Type::RemoveCamera;
+		cmd.data = &camera;
+		renderCommands.Push(std::move(cmd));
 	}
 
 	SH_RENDER_API auto Renderer::GetDrawCall(core::ThreadType thread) const -> uint32_t
@@ -138,4 +120,43 @@ namespace sh::render
 		bDrawCallDirty = true;
 		SyncDirty();
 	}
-}
+
+	SH_RENDER_API void Renderer::DrainRenderCommands()
+	{
+		renderCommands.Drain(
+			[this](RenderCommand& cmd)
+			{
+				switch (cmd.type)
+				{
+				case RenderCommand::Type::PushDrawable:
+				{
+					Drawable* drawable = std::get<0>(cmd.data).Get();
+					if (!core::IsValid(drawable) || !drawable->CheckAssetValid())
+						return;
+					drawables.push_back(drawable);
+					break;
+				}
+				case RenderCommand::Type::AddCamera:
+				{
+					const Camera* camera = std::get<1>(cmd.data);
+					if (camera == nullptr)
+						return;
+					auto [it, inserted] = cameras.insert(camera);
+					if (inserted)
+						OnCameraAdded(camera);
+					break;
+				}
+				case RenderCommand::Type::RemoveCamera:
+				{
+					const Camera* camera = std::get<1>(cmd.data);
+					if (camera == nullptr)
+						return;
+					if (cameras.erase(camera) != 0)
+						OnCameraRemoved(camera);
+					break;
+				}
+				}
+			}
+		);
+	}
+}//namespace
