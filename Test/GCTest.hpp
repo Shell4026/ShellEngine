@@ -304,6 +304,7 @@ TEST_F(GCTest, GCObjectTest)
 	EXPECT_FALSE(obj1->IsPendingKill());
 	// obj2는 obj의 자식이므로 마찬가지로 생존 해야 한다
 	EXPECT_FALSE(obj2->IsPendingKill());
+	gc->DestroyPendingKillObjs();
 	gc->RemoveRootSet(root);
 	gc->Collect();
 
