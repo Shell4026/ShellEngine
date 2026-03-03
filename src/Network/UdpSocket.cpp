@@ -110,28 +110,33 @@ namespace sh::network
 			{
 				if (!ec && receivedBytes > 0)
 				{
-					const core::Json json = core::Json::from_bson(buffer.data(), receivedBytes, true, true);
-					if (json.contains("id"))
+					const core::Json json = core::Json::from_bson(buffer.data(), receivedBytes, true, false);
+					if (json.empty() || json.is_discarded())
+						SH_ERROR("Error packet has been received! (Failed to parsing)");
+					else
 					{
-						static auto conatinerFactory = Packet::Factory::GetInstance();
-						auto packet = conatinerFactory->Create(json["id"]);
-						if (packet != nullptr)
+						if (json.contains("id"))
 						{
-							packet->Deserialize(json);
-							std::lock_guard<std::mutex> lock{ mu };
+							static auto conatinerFactory = Packet::Factory::GetInstance();
+							auto packet = conatinerFactory->Create(json["id"]);
+							if (packet != nullptr)
+							{
+								packet->Deserialize(json);
+								std::lock_guard<std::mutex> lock{ mu };
 
-							NetworkContext::Message message{};
-							message.senderIp = impl->receivedFrom.address().to_string();
-							message.senderPort = static_cast<uint16_t>(impl->receivedFrom.port());
-							message.packet = std::move(packet);
+								NetworkContext::Message message{};
+								message.senderIp = impl->receivedFrom.address().to_string();
+								message.senderPort = static_cast<uint16_t>(impl->receivedFrom.port());
+								message.packet = std::move(packet);
 
-							receivedMessage.push(std::move(message));
+								receivedMessage.push(std::move(message));
+							}
+							else
+								SH_ERROR("An unregistered packet has been received!");
 						}
 						else
-							SH_ERROR("An unregistered packet has been received!");
+							SH_ERROR("Error packet has been received! (No ID)");
 					}
-					else
-						SH_ERROR("Error packet has been received! (No ID.)");
 				}
 				Receive();
 			}

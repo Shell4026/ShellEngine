@@ -18,9 +18,12 @@ namespace sh::network
 		asio::io_context& ioCtx = *reinterpret_cast<asio::io_context*>(ctx.GetNativeHandle());
 		
 		asio::ip::tcp::socket socket{ ioCtx };
-		socket.open(asio::ip::tcp::v4());
-
-		impl = std::make_unique<Impl>(Impl{ std::move(socket) });
+		asio::error_code ec;
+		socket.open(asio::ip::tcp::v4(), ec);
+		if (ec)
+			SH_ERROR_FORMAT("open failed: {}", ec.message());
+		else
+			impl = std::make_unique<Impl>(Impl{ std::move(socket) });
 
 		header.fill(0);
 	}
@@ -56,9 +59,9 @@ namespace sh::network
 	}
 	SH_NET_API void TcpSocket::Connect(const std::string& ip, uint16_t port)
 	{
-		asio::ip::tcp::endpoint endPoint{ asio::ip::make_address(ip), port };
 		this->ip = ip;
 		this->port = port;
+		asio::ip::tcp::endpoint endPoint{ asio::ip::make_address(this->ip), this->port };
 
 		impl->socket.async_connect(endPoint,
 			[this](asio::error_code ec)
