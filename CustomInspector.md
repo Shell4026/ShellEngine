@@ -31,10 +31,9 @@ namespace sh::editor
 {
 	SH_EDIT_API void RotateObjectInspector::RenderUI(void* obj, int idx)
 	{
-		CustomInspector::RednerUI(obj, idx); // 중요
+		CustomInspector::RenderUI(obj, idx); // 반드시 호출
 		
 		game::RotateObject* rotateObjPtr = reinterpret_cast<game::RotateObject*>(obj);
-		ImGui::SetCurrentContext(rotateObjPtr->gameObject.world.GetUiContext().GetContext()); // 필수
 		ImGui::Text("This is RotateObject!!!");
 		Inspector::RenderProperties(rotateObjPtr->GetType(), *rotateObjPtr, idx); // 기본 프로퍼티 렌더링 방법
 	}
