@@ -67,7 +67,7 @@ namespace sh::render
 		assert(shader != nullptr);
 		for (const auto& [name, propInfo] : shader->GetProperties())
 		{
-			if (propInfo.bLocalProperty == true)
+			if (propInfo.bLocalProperty)
 				continue;
 
 			if (propInfo.type == core::reflection::GetType<int>() || propInfo.type == core::reflection::GetType<float>())

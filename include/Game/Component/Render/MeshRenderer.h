@@ -55,7 +55,7 @@ namespace sh::game
 		SH_GAME_API virtual void UpdateDrawable();
 	private:
 		void SearchLocalProperties();
-		void SetDefaultLocalTexture();
+		void SetDefaultLocalProperties();
 
 		template<typename T>
 		void SetData(const T& data, std::vector<uint8_t>& uniformData, std::size_t offset, std::size_t size)

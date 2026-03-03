@@ -930,7 +930,7 @@ namespace sh::render
 
 		if (varNode.type != ShaderAST::VariableType::Sampler)
 		{
-			auto it = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(), [&](const ShaderAST::UBONode& uboNode)
+			auto it = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(), [](const ShaderAST::UBONode& uboNode)
 				{
 					return uboNode.name == "UBO";
 				}
@@ -939,7 +939,8 @@ namespace sh::render
 			{
 				ShaderAST::UBONode uboNode{};
 				uboNode.set = set;
-				uboNode.binding = lastMaterialUniformBinding++;
+				uboNode.binding = (set == static_cast<uint32_t>(ShaderAST::VariableAttribute::Local)) ?
+					lastObjectUniformBinding++ : lastMaterialUniformBinding++;
 				uboNode.name = "UBO";
 				uboNode.bSampler = false;
 				uboNode.vars.push_back(std::move(varNode));

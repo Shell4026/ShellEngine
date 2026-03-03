@@ -36,7 +36,7 @@ namespace sh::game
 				{
 					if (propertyBlock == nullptr)
 						propertyBlock = std::make_unique<render::MaterialPropertyBlock>();
-					SetDefaultLocalTexture();
+					SetDefaultLocalProperties();
 				}
 			}
 		);
@@ -97,7 +97,7 @@ namespace sh::game
 			{
 				if (propertyBlock == nullptr)
 					propertyBlock = std::make_unique<render::MaterialPropertyBlock>();
-				SetDefaultLocalTexture();
+				SetDefaultLocalProperties();
 			}
 		}
 		else
@@ -148,7 +148,7 @@ namespace sh::game
 	SH_GAME_API void MeshRenderer::SetMaterialPropertyBlock(std::unique_ptr<render::MaterialPropertyBlock>&& block)
 	{
 		propertyBlock = std::move(block);
-		SetDefaultLocalTexture();
+		SetDefaultLocalProperties();
 	}
 
 	SH_GAME_API auto MeshRenderer::GetMaterialPropertyBlock() const -> render::MaterialPropertyBlock*
@@ -329,7 +329,7 @@ namespace sh::game
 		}
 	}
 
-	void MeshRenderer::SetDefaultLocalTexture()
+	void MeshRenderer::SetDefaultLocalProperties()
 	{
 		if (!core::IsValid(mat))
 			return;
@@ -340,16 +340,24 @@ namespace sh::game
 		if (propertyBlock == nullptr)
 			propertyBlock = std::make_unique<render::MaterialPropertyBlock>();
 
-		for (auto& [propName, propInfo] : shader->GetProperties())
+		for (const auto& [propName, propInfo] : shader->GetProperties())
 		{
-			if (propInfo.type == core::reflection::GetType<render::Texture>())
-			{
-				propertyBlock->SetProperty(propName, static_cast<render::Texture*>(core::SObject::GetSObjectUsingResolver(core::UUID{ "bbc4ef7ec45dce223297a224f8093f18" })));
-				UpdatePropertyBlockData();
-			}
-		}
-	}
+			if (!propInfo.bLocalProperty)
+				continue;
 
+			if (propInfo.type == core::reflection::GetType<int>() || propInfo.type == core::reflection::GetType<float>())
+				propertyBlock->SetProperty(propName, 0.f);
+			else if (propInfo.type == core::reflection::GetType<glm::vec4>())
+				propertyBlock->SetProperty(propName, glm::vec4{ 0.f });
+			else if (propInfo.type == core::reflection::GetType<glm::vec3>())
+				propertyBlock->SetProperty(propName, glm::vec3{ 0.f });
+			else if (propInfo.type == core::reflection::GetType<glm::vec2>())
+				propertyBlock->SetProperty(propName, glm::vec2{ 0.f });
+			else if (propInfo.type == core::reflection::GetType<render::Texture>())
+				propertyBlock->SetProperty(propName, static_cast<render::Texture*>(core::SObject::GetSObjectUsingResolver(core::UUID{ "bbc4ef7ec45dce223297a224f8093f18" })));
+		}
+		UpdatePropertyBlockData();
+	}
 	void MeshRenderer::FillLightStruct(render::Drawable& drawable, render::Shader& shader) const
 	{
 		Light lightStruct{};
