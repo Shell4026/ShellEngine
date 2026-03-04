@@ -324,6 +324,13 @@ namespace sh::editor
 				{
 					game::GameObject* obj = *reinterpret_cast<game::GameObject**>(ImGui::GetDragDropPayload()->Data);
 
+					if (obj->transform->GetType().type.name == propertyTypeName)
+					{
+						ImGui::SetDragDropPayload(std::string{ obj->transform->GetType().type.name }.c_str(), &obj->transform, sizeof(game::Transform*));
+						ImGui::EndDragDropTarget();
+						return;
+					}
+
 					std::vector<game::Component* const*> list{};
 					for (game::Component* const& payloadComponent : obj->GetComponents())
 					{
