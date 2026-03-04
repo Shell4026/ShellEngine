@@ -53,23 +53,25 @@ namespace sh::render
 		core::Json intJson{};
 		for (auto& [name, value] : scalarProperties)
 			intJson[name] = value;
-		propertiesJson["scalar"] = intJson;
+		propertiesJson["scalar"] = std::move(intJson);
 
 		core::Json vectorJson{};
 		for (auto& [name, value] : vecProperties)
 			vectorJson[name] = { value.x, value.y, value.z, value.w };
-		propertiesJson["vector"] = vectorJson;
+		propertiesJson["vector"] = std::move(vectorJson);
 
-		// TODO
-		//core::Json matrixJson{};
-		//for (auto& [name, value] : matProperties)
-		//	
-		//propertiesJson["matrix"] = matrixJson;
+		core::Json matrixJson{};
+		for (auto& [name, value] : matProperties)
+		{
+			for (int i = 0; i < 4; ++i)
+				matrixJson[name].push_back({ value[i].x, value[i].y, value[i].z, value[i].w });
+		}
+		propertiesJson["matrix"] = std::move(matrixJson);
 
 		core::Json texJson{};
 		for (auto& [name, value] : textureProperties)
 			texJson[name] = value->GetUUID().ToString();
-		propertiesJson["textures"] = texJson;
+		propertiesJson["textures"] = std::move(texJson);
 
 		return propertiesJson;
 	}
@@ -98,6 +100,24 @@ namespace sh::render
 					);
 					SetProperty(name, vecValue);
 				}
+			}
+		}
+		if (json.contains("matrix"))
+		{
+			const auto& matJson = json["matrix"];
+			for (const auto& [name, value] : matJson.items())
+			{
+				if (!value.is_array() || value.size() != 4)
+					continue;
+				glm::mat4 mat{ 0.f };
+				for (int i = 0; i < 4; ++i)
+				{
+					const core::Json& col = value[i];
+					if (!col.is_array() || col.size() != 4)
+						continue;
+					mat[i] = { value[i][0], value[i][1], value[i][2], value[i][3] };
+				}
+				SetProperty(name, mat);
 			}
 		}
 		if (json.contains("textures"))
