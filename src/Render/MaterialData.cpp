@@ -54,6 +54,7 @@ namespace sh::render
 		if (perPassData.empty())
 		{
 			syncDatas.clear();
+			bDirty = false;
 			return;
 		}
 
@@ -82,6 +83,17 @@ namespace sh::render
 		syncData.binding = binding;
 		syncData.data.resize(dataSize);
 		std::memcpy(syncData.data.data(), data, syncData.data.size());
+
+		syncDatas.push_back(SyncData{ std::move(syncData) });
+		SyncDirty();
+	}
+	SH_RENDER_API void MaterialData::SetUniformData(const ShaderPass& shaderPass, UniformStructLayout::Type type, uint32_t binding, const std::vector<uint8_t>& data)
+	{
+		SyncData::BufferSyncData syncData{};
+		syncData.pass = &shaderPass;
+		syncData.set = static_cast<uint32_t>(type);
+		syncData.binding = binding;
+		syncData.data = data;
 
 		syncDatas.push_back(SyncData{ std::move(syncData) });
 		SyncDirty();
