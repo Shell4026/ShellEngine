@@ -54,7 +54,7 @@ namespace sh::editor
 	private:
 		Project& project;
 
-		PROPERTY(selectedObjs, core::PropertyOption::invisible)
+		PROPERTY(selectedObjs, core::PropertyOption::invisible, core::PropertyOption::noSave)
 		std::vector<core::SObject*> selectedObjs;
 
 		PROPERTY(viewportTexture, core::PropertyOption::noSave)

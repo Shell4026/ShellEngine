@@ -283,6 +283,7 @@ namespace sh::editor
 	}
 	SH_EDITOR_API void EditorWorld::Deserialize(const core::Json& json)
 	{
+		ClearSelectedObjects();
 		// 에디터Only 오브젝트들을 objs로 옮겨서 에디터상에선 역직렬화 되게
 		core::Json copyJson = json;
 		for (core::Json& editorObjJson : copyJson["editorObjs"])
