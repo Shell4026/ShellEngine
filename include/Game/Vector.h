@@ -1,19 +1,14 @@
 ﻿#pragma once
-
-#include "Export.h"
-
 #include "Core/ISerializable.h"
 
 #include "glm/vec2.hpp"
 #include "glm/vec3.hpp"
 #include "glm/vec4.hpp"
-//#include "reactphysics3d/mathematics/Vector2.h"
-//#include "reactphysics3d/mathematics/Vector3.h"
 
 #include <cassert>
 #include <type_traits>
 #include <initializer_list>
-
+#include <tuple>
 namespace sh::game
 {
     template <typename, typename = void>
@@ -132,26 +127,6 @@ namespace sh::game
             else if constexpr (N >= 1)
                 return glm::vec4{ x, 0.f, 0.f, 0.f };
         }
-        //operator reactphysics3d::Vector2() const
-        //{
-        //    static_assert(N >= 1);
-
-        //    if constexpr (N >= 2)
-        //        return reactphysics3d::Vector2{ x, y };
-        //    else if constexpr (N >= 1)
-        //        return reactphysics3d::Vector2{ x, 0.f };
-        //}
-        //operator reactphysics3d::Vector3() const
-        //{
-        //    static_assert(N >= 1);
-
-        //    if constexpr (N >= 3)
-        //        return reactphysics3d::Vector3{ x, y, z };
-        //    else if constexpr (N >= 2)
-        //        return reactphysics3d::Vector3{ x, y, 0.f };
-        //    else if constexpr (N >= 1)
-        //        return reactphysics3d::Vector3{ x, 0.f, 0.f };
-        //}
         bool operator==(const Vec<N>& other) const
         {
             return x == other.x && y == other.y && z == other.z;
@@ -305,6 +280,72 @@ namespace sh::game
     using Vec2 = Vec<2>;
     using Vec3 = Vec<3>;
     using Vec4 = Vec<4>;
+
+    template <std::size_t I>
+    constexpr auto get(Vec2& v) noexcept -> float&
+    {
+        if constexpr (I == 0) return v.x;
+        else return v.y;
+    }
+    template <std::size_t I>
+    constexpr auto get(const Vec2& v) noexcept -> const float&
+    {
+        if constexpr (I == 0) return v.x;
+        else return v.y;
+    }
+    template <std::size_t I>
+    constexpr auto get(Vec2&& v) noexcept -> float&&
+    {
+        if constexpr (I == 0) return std::move(v.x);
+        else return std::move(v.y);
+    }
+
+    template <std::size_t I>
+    constexpr auto get(Vec3& v) noexcept -> float&
+    {
+        if constexpr (I == 0) return v.x;
+        else if constexpr (I == 1) return v.y;
+        else return v.z;
+    }
+    template <std::size_t I>
+    constexpr auto get(const Vec3& v) noexcept -> const float&
+    {
+        if constexpr (I == 0) return v.x;
+        else if constexpr (I == 1) return v.y;
+        else return v.z;
+    }
+    template <std::size_t I>
+    constexpr auto get(Vec3&& v) noexcept -> float&&
+    {
+        if constexpr (I == 0) return std::move(v.x);
+        else if constexpr (I == 1) return std::move(v.y);
+        else return std::move(v.z);
+    }
+
+    template <std::size_t I>
+    constexpr auto get(Vec4& v) noexcept -> float&
+    {
+        if constexpr (I == 0) return v.x;
+        else if constexpr (I == 1) return v.y;
+        else if constexpr (I == 2) return v.z;
+        else return v.w;
+    }
+    template <std::size_t I>
+    constexpr auto get(const Vec4& v) noexcept -> const float&
+    {
+        if constexpr (I == 0) return v.x;
+        else if constexpr (I == 1) return v.y;
+        else if constexpr (I == 2) return v.z;
+        else return v.w;
+    }
+    template <std::size_t I>
+    constexpr auto get(Vec4&& v) noexcept -> float&&
+    {
+        if constexpr (I == 0) return std::move(v.x);
+        else if constexpr (I == 1) return std::move(v.y);
+        else if constexpr (I == 2) return std::move(v.z);
+        else return std::move(v.w);
+    }
 }//namespace
 
 namespace sh::core
@@ -329,4 +370,29 @@ namespace sh::core
         }
         return false;
     }
-}
+}//namespace
+
+namespace std // 구조적 바인딩 지원
+{
+    template<>
+    struct tuple_size<sh::game::Vec2> : std::integral_constant<std::size_t, 2> {};
+    template<>
+    struct tuple_size<sh::game::Vec3> : std::integral_constant<std::size_t, 3> {};
+    template<>
+    struct tuple_size<sh::game::Vec4> : std::integral_constant<std::size_t, 4> {};
+
+    template<std::size_t I>
+    struct tuple_element<I, sh::game::Vec2> { using type = float; };
+    template<std::size_t I>
+    struct tuple_element<I, const sh::game::Vec2> { using type = float; };
+
+    template<std::size_t I>
+    struct tuple_element<I, sh::game::Vec3> { using type = float; };
+    template<std::size_t I>
+    struct tuple_element<I, const sh::game::Vec3> { using type = float; };
+
+    template<std::size_t I>
+    struct tuple_element<I, sh::game::Vec4> { using type = float; };
+    template<std::size_t I>
+    struct tuple_element<I, const sh::game::Vec4> { using type = float; };
+}//namespace std
