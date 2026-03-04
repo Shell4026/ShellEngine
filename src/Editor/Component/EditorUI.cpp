@@ -21,7 +21,7 @@ namespace sh::editor
 	using namespace sh::game;
 
 	EditorUI::EditorUI(GameObject& owner) :
-		UI(owner),
+		Component(owner),
 
 		hierarchyWidth(0), hierarchyHeight(0),
 		explorer(),
@@ -233,7 +233,7 @@ namespace sh::editor
 
 	SH_EDITOR_API void EditorUI::Update()
 	{
-		Super::Update();
+		gameObject.world.GetUiContext().SyncDirty();
 		if (project->IsProjectOpen())
 		{
 			hierarchy->Render();

@@ -7,7 +7,6 @@
 #include "../UI/BundleViewer.h"
 #include "../UI/FontGeneratorUI.h"
 
-#include "Game/Component/UI.h"
 #include "Game/World.h"
 
 #include <vector>
@@ -16,7 +15,7 @@
 namespace sh::editor
 {
 	class Project;
-	class EditorUI : public game::UI
+	class EditorUI : public game::Component
 	{
 		COMPONENT(EditorUI, "Editor")	
 	public:
