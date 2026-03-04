@@ -26,7 +26,8 @@ namespace sh::editor
 		SH_EDITOR_API void Render();
 
 		SH_EDITOR_API static auto GetIcon(std::string_view typeName) -> game::GUITexture*;
-		SH_EDITOR_API static void RenderPropertiesCustomInspector(const core::reflection::STypeInfo& type, core::SObject& obj, int idx);
+		SH_EDITOR_API static void RenderPropertiesCustomInspector(const core::reflection::STypeInfo& type, const std::vector<core::SObject*>& objs, int idx);
+
 		SH_EDITOR_API static void RenderProperties(const core::reflection::STypeInfo& type, core::SObject& obj, int idx);
 		SH_EDITOR_API static void RenderProperty(const core::reflection::Property& prop, core::SObject& owner, int idx);
 		SH_EDITOR_API static void RenderSObjectPtrProperty(const core::reflection::Property& prop, core::SObject& propertyOwner, const std::string& name,

@@ -361,7 +361,8 @@ namespace sh::editor
 
 		ImGui::BeginChild("Namebar", ImVec2{ 0, 0 });
 		ImGui::SetCursorPosX(5.0f);
-		ImGui::Text(projectExplorer.GetSelected().u8string().c_str());
+		if (!projectExplorer.GetSelected().empty())
+			ImGui::Text(projectExplorer.GetSelected().back().u8string().c_str());
 		ImGui::EndChild();
 
 		ImGui::PopStyleColor();

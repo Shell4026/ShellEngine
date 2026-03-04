@@ -27,7 +27,7 @@ namespace sh::editor
 
 		SH_EDITOR_API void SetSelected(const std::filesystem::path& path);
 		SH_EDITOR_API void ResetSelected();
-		SH_EDITOR_API auto GetSelected() const -> const std::filesystem::path&;
+		SH_EDITOR_API auto GetSelected() const -> const std::vector<std::filesystem::path>& { return selected; }
 	private:
 		struct FileItem
 		{
@@ -52,8 +52,9 @@ namespace sh::editor
 		void SetItemDragTarget(const std::filesystem::path& path);
 		void SetFolderDragTarget(const std::filesystem::path& folderPath);
 
-		void OnItemClicked(const std::filesystem::path& path);
+		void OnItemClicked(const std::filesystem::path& path, bool bMultiple);
 
+		static auto GetSObjectFromPath(const std::filesystem::path& path) -> core::SObject*;
 		template<typename T>
 		static void sortList(std::vector<T>& v)
 		{
@@ -62,7 +63,7 @@ namespace sh::editor
 	private:
 		std::filesystem::path rootPath;
 		std::filesystem::path currentPath;
-		std::filesystem::path selected;
+		std::vector<std::filesystem::path> selected;
 		std::vector<FileItem> folders;
 		std::vector<FileItem> files;
 		std::vector<std::string> invisibleExtensions;

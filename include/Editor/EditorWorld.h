@@ -33,7 +33,6 @@ namespace sh::editor
 		SH_EDITOR_API void InitResource() override;
 
 		SH_EDITOR_API void AddSelectedObject(core::SObject* obj);
-		SH_EDITOR_API auto GetSelectedObjects() const -> const core::SVector<SObject*>&;
 		SH_EDITOR_API void ClearSelectedObjects();
 
 		SH_EDITOR_API auto IsSelected(core::SObject* obj) const -> bool;
@@ -46,6 +45,8 @@ namespace sh::editor
 
 		SH_EDITOR_API auto Serialize() const -> core::Json override;
 		SH_EDITOR_API void Deserialize(const core::Json& json) override;
+
+		SH_EDITOR_API auto GetSelectedObjects() const -> const std::vector<SObject*>& { return selectedObjs; }
 	private:
 		void AddEditorControlsToSelected(core::SObject& obj);
 		void RemoveEditorControls(core::SObject& obj);
@@ -53,7 +54,8 @@ namespace sh::editor
 	private:
 		Project& project;
 
-		core::SVector<core::SObject*> selectedObjs;
+		PROPERTY(selectedObjs, core::PropertyOption::invisible)
+		std::vector<core::SObject*> selectedObjs;
 
 		PROPERTY(viewportTexture, core::PropertyOption::noSave)
 		render::RenderTexture* viewportTexture = nullptr;

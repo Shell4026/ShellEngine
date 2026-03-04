@@ -17,9 +17,9 @@ namespace sh::editor
 	{
 		INSPECTOR(GameObjectInspector, game::GameObject)
 	public:
-		SH_EDITOR_API void RenderUI(void* obj, int idx) override;
+		SH_EDITOR_API void RenderUI(const std::vector<core::SObject*>& objs, int idx) override;
 	private:
-		void RenderAddComponent(game::GameObject& gameObject);
+		void RenderAddComponent(const std::vector<game::GameObject*>& gameObjects);
 		auto GetComponentGroupAndName(std::string_view fullname) -> std::pair<std::string, std::string>;
 	private:
 		std::unordered_map<std::string, std::vector<std::string>> componentItems;
@@ -30,7 +30,7 @@ namespace sh::editor
 	{
 		INSPECTOR(MaterialInspector, render::Material)
 	public:
-		SH_EDITOR_API void RenderUI(void* obj, int idx) override;
+		SH_EDITOR_API void RenderUI(const std::vector<core::SObject*>& objs, int idx) override;
 	};
 
 	class TextureInspector : public CustomInspector
@@ -39,7 +39,7 @@ namespace sh::editor
 	public:
 		SH_EDITOR_API TextureInspector();
 		SH_EDITOR_API ~TextureInspector();
-		SH_EDITOR_API void RenderUI(void* obj, int idx) override;
+		SH_EDITOR_API void RenderUI(const std::vector<core::SObject*>& objs, int idx) override;
 	private:
 		const render::Texture* lastTex = nullptr;
 		game::GUITexture* previewTex = nullptr;
@@ -49,13 +49,13 @@ namespace sh::editor
 	{
 		INSPECTOR(CameraInspector, game::Camera)
 	public:
-		SH_EDITOR_API void RenderUI(void* obj, int idx) override;
+		SH_EDITOR_API void RenderUI(const std::vector<core::SObject*>& objs, int idx) override;
 	};
 
 	class TextInspector : public CustomInspector
 	{
 		INSPECTOR(TextInspector, game::TextObject)
 	public:
-		SH_EDITOR_API void RenderUI(void* obj, int idx) override;
+		SH_EDITOR_API void RenderUI(const std::vector<core::SObject*>& objs, int idx) override;
 	};
 }//namespace

@@ -33,24 +33,41 @@ namespace sh::editor
 		auto& selectedObjs = world.GetSelectedObjects();
 		if (selectedObjs.size() > 0)
 		{
-			if (auto obj = selectedObjs[0]; core::IsValid(obj))
+			bool bSameTypes = true;
+			const auto& mainType = selectedObjs[0]->GetType();
+			for (auto obj : selectedObjs)
 			{
-				if (!core::IsValid(obj))
-					return;
-				static std::string name;
-				name = obj->GetName().ToString();
-
-				ImGui::Text("%s", obj->GetUUID().ToString().c_str());
-				ImGui::SetNextItemWidth(100);
-				if (ImGui::InputText("Name", &name))
+				if (obj->GetType() != mainType)
 				{
-					obj->SetName(name);
-					AssetDatabase::GetInstance()->SetDirty(obj);
+					bSameTypes = false;
+					break;
 				}
+			}
+			if (bSameTypes)
+			{
+				if (auto objPtr = selectedObjs.back(); core::IsValid(objPtr))
+				{
+					if (!core::IsValid(objPtr))
+						return;
+					static std::string name;
+					name = objPtr->GetName().ToString();
 
-				ImGui::Separator();
+					ImGui::Text("%s", objPtr->GetUUID().ToString().c_str());
+					ImGui::SetNextItemWidth(100);
+					if (ImGui::InputText("Name", &name))
+					{
+						objPtr->SetName(name);
+						AssetDatabase::GetInstance()->SetDirty(objPtr);
+					}
 
-				RenderPropertiesCustomInspector(obj->GetType(), *obj, 0);
+					ImGui::Separator();
+
+					RenderPropertiesCustomInspector(objPtr->GetType(), selectedObjs, 0);
+				}
+			}
+			else
+			{
+				ImGui::Text("Selected multiple objects: %d", selectedObjs.size());
 			}
 		}
 
@@ -65,8 +82,11 @@ namespace sh::editor
 		}
 		return nullptr;
 	}
-	void Inspector::RenderPropertiesCustomInspector(const core::reflection::STypeInfo& type, core::SObject& obj, int idx)
+	void Inspector::RenderPropertiesCustomInspector(const core::reflection::STypeInfo& type, const std::vector<core::SObject*>& objs, int idx)
 	{
+		if (objs.empty())
+			return;
+
 		static CustomInspectorManager& manager = *CustomInspectorManager::GetInstance();
 		auto currentType = &type;
 		do
@@ -76,7 +96,7 @@ namespace sh::editor
 
 			CustomInspector* customInspector = manager.GetCustomInspector(*currentType);
 			if (customInspector != nullptr)
-				customInspector->RenderUI(&obj, idx);
+				customInspector->RenderUI(objs, idx);
 			else
 			{
 				auto& props = currentType->GetProperties();
@@ -88,13 +108,13 @@ namespace sh::editor
 					const std::string& propName = prop->GetName().ToString();
 					// SObject 포인터 형식, 드래그 앤 드랍 기능
 					if (prop->isSObjectPointer)
-						RenderSObjectPtrProperty(*prop, obj, propName);
+						RenderSObjectPtrProperty(*prop, *objs.back(), propName);
 					else if (prop->isSObjectPointerContainer)
-						RenderSObjPtrContainerProperty(*prop, obj);
+						RenderSObjPtrContainerProperty(*prop, *objs.back());
 					else if (prop->isContainer && prop->type != core::reflection::GetType<std::string>()) // string도 컨테이너 취급 받아서 예외처리
-						RenderContainerProperty(*prop, obj, propName);
+						RenderContainerProperty(*prop, *objs.back(), propName);
 					else
-						RenderProperty(*prop, obj, idx);
+						RenderProperty(*prop, *objs.back(), idx);
 				}
 			}
 			currentType = const_cast<core::reflection::STypeInfo*>(currentType->super);

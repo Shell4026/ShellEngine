@@ -44,7 +44,8 @@ namespace sh::editor
 	struct CustomInspector
 	{
 		virtual ~CustomInspector() = default;
-		virtual void RenderUI(void* obj, int idx)
+
+		virtual void RenderUI(const std::vector<core::SObject*>& objs, int idx)
 		{
 			static AssetDatabase& assetDB = *AssetDatabase::GetInstance();
 			ImGui::SetCurrentContext(assetDB.GetGUIContext()->GetContext());

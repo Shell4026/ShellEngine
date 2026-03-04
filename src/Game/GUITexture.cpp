@@ -98,12 +98,13 @@ namespace sh::game
 		drawList = ImGui::GetWindowDrawList();
 	}
 
-	SH_GAME_API void GUITexture::DrawButton(const char* strId, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& bgCol, const ImVec4& tintCol)
+	SH_GAME_API auto GUITexture::DrawButton(const char* strId, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& bgCol, const ImVec4& tintCol) -> bool
 	{
 		if (tex == nullptr)
-			return;
-		ImGui::ImageButton(strId, tex, size, uv0, uv1, bgCol, tintCol);
+			return false;
+		bool bPressed = ImGui::ImageButton(strId, tex, size, uv0, uv1, bgCol, tintCol);
 		drawList = ImGui::GetWindowDrawList();
+		return bPressed;
 	}
 
 	SH_GAME_API void GUITexture::Sync()

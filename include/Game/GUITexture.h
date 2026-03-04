@@ -34,12 +34,12 @@ namespace sh::game
 			const ImVec4& tintCol = ImVec4(1, 1, 1, 1), 
 			const ImVec4& borderCol = ImVec4(0, 0, 0, 0));
 		/// @brief ImGui::ImageButton()와 같다. ImGUI함수 호출중에 호출할 것
-		SH_GAME_API void DrawButton(const char* strId, 
+		SH_GAME_API auto DrawButton(const char* strId, 
 			const ImVec2& size,
 			const ImVec2& uv0 = ImVec2(0, 0), 
 			const ImVec2& uv1 = ImVec2(1, 1), 
 			const ImVec4& bgCol = ImVec4(0, 0, 0, 0), 
-			const ImVec4& tintCol = ImVec4(1, 1, 1, 1));
+			const ImVec4& tintCol = ImVec4(1, 1, 1, 1)) -> bool;
 	protected:
 		SH_GAME_API void Sync() override;
 		SH_GAME_API void SyncDirty() override;

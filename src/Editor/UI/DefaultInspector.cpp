@@ -11,31 +11,42 @@
 #include <algorithm>
 namespace sh::editor
 {
-	SH_EDITOR_API void GameObjectInspector::RenderUI(void* obj, int idx)
+	SH_EDITOR_API void GameObjectInspector::RenderUI(const std::vector<core::SObject*>& objs, int idx)
 	{
-		auto gameObjPtr = static_cast<game::GameObject*>(obj);
-		if (!core::IsValid(gameObjPtr))
+		auto mainGameObjPtr = static_cast<game::GameObject*>(objs.back());
+		auto& gameObjs = reinterpret_cast<const std::vector<game::GameObject*>&>(objs);
+		if (!core::IsValid(mainGameObjPtr))
 			return;
 
-		bool bActive = gameObjPtr->activeSelf;
+		bool bActive = mainGameObjPtr->activeSelf;
 		if (ImGui::Checkbox("##active", &bActive))
-			gameObjPtr->SetActive(bActive);
+		{
+			for (auto gameObjPtr : gameObjs)
+				if (gameObjPtr != nullptr)
+					gameObjPtr->SetActive(bActive);
+		}
 		ImGui::SameLine();
 		ImGui::Text("Active");
 		
-		ImGui::Checkbox("##editorOnly", &gameObjPtr->bEditorOnly);
+		bool bEditorOnly = mainGameObjPtr->bEditorOnly;
+		if (ImGui::Checkbox("##editorOnly", &bEditorOnly))
+		{
+			for (auto gameObjPtr : gameObjs)
+				if (gameObjPtr != nullptr)
+					gameObjPtr->bEditorOnly = bEditorOnly;
+		}
 		ImGui::SameLine();
 		ImGui::Text("EditorOnly");
 
 		ImGui::Separator();
 		
-		Inspector::RenderProperties(gameObjPtr->transform->GetType(), *gameObjPtr->transform, 0);
+		Inspector::RenderProperties(mainGameObjPtr->transform->GetType(), *mainGameObjPtr->transform, 0);
 		ImGui::Separator();
 		ImGui::Text("Components");
 
 		// 드래그 드랍으로 도중에 컴포넌트가 추가 되는 일이 발생한다.
 		// 그로인해 반복자가 깨지므로 컴포넌트 배열을 복사 해둬야 한다.
-		std::vector<game::Component*> components = gameObjPtr->GetComponents();
+		std::vector<game::Component*> components = mainGameObjPtr->GetComponents();
 		int componentsIdx = 1;
 		for (auto component : components)
 		{
@@ -56,20 +67,21 @@ namespace sh::editor
 			}
 			if (bOpenComponent && core::IsValid(component))
 			{
-				Inspector::RenderPropertiesCustomInspector(component->GetType(), *component, componentsIdx);
+				std::vector<core::SObject*> components{ component };
+				Inspector::RenderPropertiesCustomInspector(component->GetType(), components, componentsIdx);
 			}
 			++componentsIdx;
 		}//for auto& component
 		ImGui::Separator();
 
-		RenderAddComponent(*gameObjPtr);
+		RenderAddComponent(gameObjs);
 	}
-	void GameObjectInspector::RenderAddComponent(game::GameObject& gameObject)
+	void GameObjectInspector::RenderAddComponent(const std::vector<game::GameObject*>& gameObjs)
 	{
 		if (ImGui::Button("Add Component", { -FLT_MIN, 0.0f }))
 		{
 			componentItems.clear();
-			auto& components = gameObject.world.componentModule.GetComponents();
+			auto& components = gameObjs.back()->world.componentModule.GetComponents();
 			for (auto& [fullname, _] : components)
 			{
 				auto [group, name] = GetComponentGroupAndName(fullname);
@@ -101,7 +113,9 @@ namespace sh::editor
 							std::string searchName = name;
 							if (!group.empty())
 								searchName = group + "/" + name;
-							gameObject.AddComponent(gameObject.world.componentModule.GetComponents().at(searchName)->Create(gameObject));
+							for (auto objPtr : gameObjs)
+								if (objPtr != nullptr)
+									objPtr->AddComponent(objPtr->world.componentModule.GetComponents().at(searchName)->Create(*objPtr));
 							bAddComponent = false;
 						}
 					}
@@ -125,11 +139,25 @@ namespace sh::editor
 		}
 		return { std::move(group), std::move(name) };
 	}
-	SH_EDITOR_API void MaterialInspector::RenderUI(void* obj, int idx)
+	SH_EDITOR_API void MaterialInspector::RenderUI(const std::vector<core::SObject*>& objs, int idx)
 	{
 		ImGui::Separator();
-		render::Material* mat = reinterpret_cast<render::Material*>(obj);
-		render::Shader* shader = mat->GetShader();
+		render::Material* mat = reinterpret_cast<render::Material*>(objs.back());
+		const auto& mats = reinterpret_cast<const std::vector<render::Material*>&>(objs);
+
+		render::Shader* const shader = mat->GetShader();
+		bool bSameShaders = true;
+		for (auto matPtr : mats)
+		{
+			if (matPtr == nullptr)
+				continue;
+			if (matPtr->GetShader() != shader)
+			{
+				bSameShaders = false;
+				break;
+			}
+		}
+
 		{
 			float iconSize = 20;
 			float buttonWidth = ImGui::GetContentRegionAvail().x - iconSize;
@@ -150,15 +178,19 @@ namespace sh::editor
 				if (payload)
 				{
 					render::Shader* shader = *reinterpret_cast<render::Shader**>(payload->Data);
-					mat->SetShader(shader);
+					for (auto matPtr : mats)
+						if (matPtr != nullptr)
+							matPtr->SetShader(shader);
 					AssetDatabase::GetInstance()->SetDirty(mat);
 					AssetDatabase::GetInstance()->SaveAllAssets();
 				}
 				ImGui::EndDragDropTarget();
 			}
 		}
-		if (core::IsValid(shader))
+
+		if (core::IsValid(shader) && bSameShaders)
 		{
+			bool bChanged = false;
 			for (auto& [name, propInfo] : shader->GetProperties())
 			{
 				ImGui::Text(name.c_str());
@@ -167,9 +199,10 @@ namespace sh::editor
 					float parameter = mat->GetProperty<float>(name).value_or(0.f);
 					if (ImGui::InputFloat(("##input_" + name).c_str(), &parameter))
 					{
-						mat->SetProperty(name, parameter);
-						AssetDatabase::GetInstance()->SetDirty(mat);
-						AssetDatabase::GetInstance()->SaveAllAssets();
+						for (auto matPtr : mats)
+							if (matPtr != nullptr)
+								matPtr->SetProperty(name, parameter);
+						bChanged = true;
 					}
 				}
 				else if (propInfo.type == core::reflection::GetType<glm::vec2>())
@@ -177,9 +210,10 @@ namespace sh::editor
 					glm::vec2 v = mat->GetProperty<glm::vec2>(name).value_or(glm::vec2{ 0.f, 0.f });
 					if (ImGui::InputFloat2(("##input_" + name).c_str(), &v[0]))
 					{
-						mat->SetProperty(name, v);
-						AssetDatabase::GetInstance()->GetInstance()->SetDirty(mat);
-						AssetDatabase::GetInstance()->SaveAllAssets();
+						for (auto matPtr : mats)
+							if (matPtr != nullptr)
+								matPtr->SetProperty(name, v);
+						bChanged = true;
 					}
 				}
 				else if (propInfo.type == core::reflection::GetType<glm::vec3>())
@@ -187,9 +221,10 @@ namespace sh::editor
 					glm::vec3 v = mat->GetProperty<glm::vec3>(name).value_or(glm::vec3{ 0.f });
 					if (ImGui::InputFloat3(("##input_" + name).c_str(), &v[0]))
 					{
-						mat->SetProperty(name, v);
-						AssetDatabase::GetInstance()->SetDirty(mat);
-						AssetDatabase::GetInstance()->SaveAllAssets();
+						for (auto matPtr : mats)
+							if (matPtr != nullptr)
+								matPtr->SetProperty(name, v);
+						bChanged = true;
 					}
 				}
 				else if (propInfo.type == core::reflection::GetType<glm::vec4>())
@@ -197,9 +232,10 @@ namespace sh::editor
 					glm::vec4 v = mat->GetProperty<glm::vec4>(name).value_or(glm::vec4{ 0.f });
 					if (ImGui::InputFloat4(("##input_" + name).c_str(), &v[0]))
 					{
-						mat->SetProperty(name, v);
-						AssetDatabase::GetInstance()->SetDirty(mat);
-						AssetDatabase::GetInstance()->SaveAllAssets();
+						for (auto matPtr : mats)
+							if (matPtr != nullptr)
+								matPtr->SetProperty(name, v);
+						bChanged = true;
 					}
 				}
 				else if (propInfo.type == core::reflection::GetType<render::Texture>())
@@ -208,7 +244,7 @@ namespace sh::editor
 					float buttonWidth = ImGui::GetContentRegionAvail().x - iconSize;
 
 					auto texProp = mat->GetProperty<const render::Texture*>(name);
-					const render::Texture* tex = texProp.value();
+					const render::Texture* const tex = texProp.value();
 					std::string texName = "Empty";
 					if (core::IsValid(tex))
 						texName = tex->GetName().ToString();
@@ -220,12 +256,13 @@ namespace sh::editor
 					{
 						auto p = ImGui::GetCurrentContext()->DragDropPayload;
 						const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(std::string{ core::reflection::TypeTraits::GetTypeName<render::Texture>() }.c_str());
-						if (payload)
+						if (payload != nullptr)
 						{
 							const render::Texture* texture = *reinterpret_cast<render::Texture**>(payload->Data);
-							mat->SetProperty(name, texture);
-							AssetDatabase::GetInstance()->SetDirty(mat);
-							AssetDatabase::GetInstance()->SaveAllAssets();
+							for (auto matPtr : mats)
+								if (matPtr != nullptr)
+									matPtr->SetProperty(name, texture);
+							bChanged = true;
 						}
 
 						ImGui::EndDragDropTarget();
@@ -247,9 +284,10 @@ namespace sh::editor
 							ImGui::Text("%s", name.c_str());
 							if (ImGui::InputInt(("##constant_" + name).c_str(), &dataValue, 0, 0))
 							{
-								mat->SetConstant(name, dataValue);
-								AssetDatabase::GetInstance()->SetDirty(mat);
-								AssetDatabase::GetInstance()->SaveAllAssets();
+								for (auto matPtr : mats)
+									if (matPtr != nullptr)
+										matPtr->SetConstant(name, dataValue);
+								bChanged = true;
 							}
 						}
 
@@ -258,6 +296,13 @@ namespace sh::editor
 				ImGui::TreePop();
 			}
 			
+			if (bChanged)
+			{
+				for (auto matPtr : mats)
+					if (matPtr != nullptr)
+						AssetDatabase::GetInstance()->SetDirty(matPtr);
+				AssetDatabase::GetInstance()->SaveAllAssets();
+			}
 		}
 		ImGui::Separator();
 	}
@@ -270,11 +315,14 @@ namespace sh::editor
 	TextureInspector::~TextureInspector()
 	{
 	}
-	SH_EDITOR_API void TextureInspector::RenderUI(void* obj, int idx)
+	SH_EDITOR_API void TextureInspector::RenderUI(const std::vector<core::SObject*>& objs, int idx)
 	{
 		using namespace render;
-		Texture* const texture = reinterpret_cast<Texture*>(obj);
+		Texture* const texture = reinterpret_cast<Texture*>(objs.back());
+		auto& textures = reinterpret_cast<const std::vector<Texture*>&>(objs);
 		TextureFormat format = texture->GetTextureFormat();
+
+		bool bChanged = false;
 
 		std::string formatText = "";
 		switch (format)
@@ -309,38 +357,53 @@ namespace sh::editor
 			if (bSRGB)
 			{
 				if (format == TextureFormat::RGB24)
-					texture->ChangeTextureFormat(TextureFormat::SRGB24);
+				{
+					for (auto texPtr : textures)
+						if (texPtr != nullptr)
+							texPtr->ChangeTextureFormat(TextureFormat::SRGB24);
+				}
 				else if(format == TextureFormat::RGBA32)
-					texture->ChangeTextureFormat(TextureFormat::SRGBA32);
+				{
+					for (auto texPtr : textures)
+						if (texPtr != nullptr)
+							texPtr->ChangeTextureFormat(TextureFormat::SRGBA32);
+				}
 			}
 			else
 			{
 				if (format == TextureFormat::SRGB24)
-					texture->ChangeTextureFormat(TextureFormat::RGB24);
+				{
+					for (auto texPtr : textures)
+						if (texPtr != nullptr)
+							texPtr->ChangeTextureFormat(TextureFormat::RGB24);
+				}
 				else if (format == TextureFormat::SRGBA32)
-					texture->ChangeTextureFormat(TextureFormat::RGBA32);
+				{
+					for (auto texPtr : textures)
+						if (texPtr != nullptr)
+							texPtr->ChangeTextureFormat(TextureFormat::RGBA32);
+				}
 			}
-
-			AssetDatabase::GetInstance()->SetDirty(texture);
-			AssetDatabase::GetInstance()->SaveAllAssets();
+			bChanged = true;
 		}
 		bool bGenerateMipmap = texture->IsGenerateMipmap();
 		ImGui::Text("Generate mipmap");
 		if (ImGui::Checkbox("##mipmap", &bGenerateMipmap))
 		{
-			texture->SetGenerateMipmap(bGenerateMipmap);
-			AssetDatabase::GetInstance()->SetDirty(texture);
-			AssetDatabase::GetInstance()->SaveAllAssets();
+			for (auto texPtr : textures)
+				if (texPtr != nullptr)
+					texPtr->SetGenerateMipmap(bGenerateMipmap);
+			bChanged = true;
 		}
 		int anisoLevel = texture->GetAnisoLevel();
 		ImGui::Text("Aniso");
 		if (ImGui::InputInt("##Aniso", &anisoLevel))
 		{
 			anisoLevel = std::clamp(anisoLevel, 0, 12);
-			texture->SetAnisoLevel(anisoLevel);
-
-			AssetDatabase::GetInstance()->SetDirty(texture);
-			AssetDatabase::GetInstance()->SaveAllAssets();
+			for (auto texPtr : textures)
+				if (texPtr != nullptr)
+					texPtr->SetAnisoLevel(anisoLevel);
+			bChanged = true;
 		}
 		ImGui::Text("Filtering");
 		{
@@ -349,9 +412,10 @@ namespace sh::editor
 			current = static_cast<int>(texture->GetFiltering());
 			if (ImGui::ListBox(fmt::format("##filtering{}", idx).c_str(), &current, filters, IM_ARRAYSIZE(filters), 4))
 			{
-				texture->SetFiltering(static_cast<render::Texture::Filtering>(current));
-				AssetDatabase::GetInstance()->SetDirty(texture);
-				AssetDatabase::GetInstance()->SaveAllAssets();
+				for (auto texPtr : textures)
+					if (texPtr != nullptr)
+						texPtr->SetFiltering(static_cast<render::Texture::Filtering>(current));
+				bChanged = true;
 			}
 		}
 		ImGui::Separator();
@@ -369,10 +433,17 @@ namespace sh::editor
 			if (previewTex->IsValid())
 				previewTex->Draw(ImVec2{ area.x * 0.9f, (area.x * 0.9f) / texAspect });
 		}
+		if (bChanged)
+		{
+			for (auto texPtr : textures)
+				if (texPtr != nullptr)
+					AssetDatabase::GetInstance()->SetDirty(texture);
+			AssetDatabase::GetInstance()->SaveAllAssets();
+		}
 	}
-	SH_EDITOR_API void CameraInspector::RenderUI(void* obj, int idx)
+	SH_EDITOR_API void CameraInspector::RenderUI(const std::vector<core::SObject*>& objs, int idx)
 	{
-		game::Component* component = reinterpret_cast<game::Component*>(obj);
+		game::Component* component = reinterpret_cast<game::Component*>(objs.back());
 		const core::reflection::STypeInfo* currentType = &component->GetType();
 		do
 		{
@@ -398,9 +469,9 @@ namespace sh::editor
 		} 
 		while (currentType != nullptr);
 	}
-	SH_EDITOR_API void TextInspector::RenderUI(void* obj, int idx)
+	SH_EDITOR_API void TextInspector::RenderUI(const std::vector<core::SObject*>& objs, int idx)
 	{
-		game::TextObject* textObj = reinterpret_cast<game::TextObject*>(obj);
+		game::TextObject* textObj = reinterpret_cast<game::TextObject*>(objs.back());
 		ImGui::InputTextMultiline(fmt::format("##textBox{}", idx).c_str(), &textObj->text);
 	}
 }//namespace

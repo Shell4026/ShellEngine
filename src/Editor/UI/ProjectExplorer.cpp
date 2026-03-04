@@ -15,6 +15,7 @@
 #include "Game/TextObject.h"
 #include "Game/BinaryObject.h"
 #include "Game/ScriptableObject.h"
+#include "Game/Input.h"
 
 namespace sh::editor
 {
@@ -82,15 +83,12 @@ namespace sh::editor
 	}
 	SH_EDITOR_API void ProjectExplorer::SetSelected(const std::filesystem::path& path)
 	{
-		selected = path;
+		selected.clear();
+		selected.push_back(path);
 	}
 	SH_EDITOR_API void ProjectExplorer::ResetSelected()
 	{
 		selected.clear();
-	}
-	SH_EDITOR_API auto ProjectExplorer::GetSelected() const -> const std::filesystem::path&
-	{
-		return selected;
 	}
 	auto ProjectExplorer::GetIcon(const std::filesystem::path& path) const -> game::GUITexture*
 	{
@@ -141,12 +139,16 @@ namespace sh::editor
 		}
 
 		ImGui::BeginGroup();
-		ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Button, iconBackgroundColor);
+		if (std::find(selected.begin(), selected.end(), fi.path) == selected.end())
+			ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Button, iconBackgroundColor);
+		else
+			ImGui::PushStyleColor(ImGuiCol_::ImGuiCol_Button, ImVec4{ 0.54f, 0.79f, 0.99f, 1.0f });
 		fi.icon->DrawButton(fi.path.u8string().c_str(), ImVec2{ iconSize, iconSize });
 
 		if (!bChangeFolderState && ImGui::IsItemHovered() && (ImGui::IsMouseReleased(ImGuiMouseButton_::ImGuiMouseButton_Left) || ImGui::IsMouseReleased(ImGuiMouseButton_::ImGuiMouseButton_Right)))
 		{
-			OnItemClicked(fi.path);
+			const bool bMultiple = game::Input::GetKeyDown(game::Input::KeyCode::Shift, true);
+			OnItemClicked(fi.path, bMultiple);
 		}
 
 		ImGui::PopStyleColor();
@@ -209,23 +211,23 @@ namespace sh::editor
 			{
 				if (ImGui::BeginMenu("Rename"))
 				{
-					std::string name = selected.filename().u8string();
-					const std::filesystem::path parent = selected.parent_path();
+					std::string name = selected.back().filename().u8string();
+					const std::filesystem::path parent = selected.back().parent_path();
 					if (ImGui::InputText("##Rename", &name, ImGuiInputTextFlags_::ImGuiInputTextFlags_EnterReturnsTrue))
 					{
-						if (std::filesystem::is_directory(selected))
+						if (std::filesystem::is_directory(selected.back()))
 						{
 							// TODO...
 							// 하위 파일들을 전부 찾아내고 assetdatabase를 갱신해야함
 						}
 						else
 						{
-							auto uuidOpt = assetDatabase.GetAssetUUID(selected);
+							auto uuidOpt = assetDatabase.GetAssetUUID(selected.back());
 							if (uuidOpt.has_value())
 							{
-								const std::filesystem::path metaPath = parent / std::filesystem::u8path(selected.filename().u8string() + ".meta");
+								const std::filesystem::path metaPath = parent / std::filesystem::u8path(selected.back().filename().u8string() + ".meta");
 								const std::filesystem::path newPath = parent / std::filesystem::u8path(name);
-								std::filesystem::rename(selected, newPath);
+								std::filesystem::rename(selected.back(), newPath);
 								if (std::filesystem::exists(metaPath))
 									std::filesystem::rename(metaPath, parent / std::filesystem::u8path(name + ".meta"));
 
@@ -234,7 +236,7 @@ namespace sh::editor
 								auto objPtr = core::SObjectManager::GetInstance()->GetSObject(uuidOpt.value());
 								objPtr->SetName(name);
 
-								selected = newPath;
+								selected.back() = newPath;
 
 								Refresh();
 							}
@@ -244,7 +246,7 @@ namespace sh::editor
 				}
 				if (ImGui::MenuItem("Delete"))
 				{
-					auto uuidOpt = AssetDatabase::GetInstance()->GetAssetUUID(selected);
+					auto uuidOpt = AssetDatabase::GetInstance()->GetAssetUUID(selected.back());
 					if (uuidOpt.has_value())
 					{
 						AssetDatabase::GetInstance()->DeleteAsset(uuidOpt.value());
@@ -255,7 +257,7 @@ namespace sh::editor
 					}
 					else
 					{
-						std::filesystem::remove(selected);
+						std::filesystem::remove(selected.back());
 						selected.clear();
 						Refresh();
 					}
@@ -371,23 +373,32 @@ namespace sh::editor
 			ImGui::EndDragDropTarget();
 		}
 	}
-	void ProjectExplorer::OnItemClicked(const std::filesystem::path& path)
+	void ProjectExplorer::OnItemClicked(const std::filesystem::path& path, bool bMultiple)
 	{
-		selected = path;
-		auto uuidStrOpt = AssetDatabase::GetInstance()->GetAssetUUID(path);
-		if (uuidStrOpt)
+		if (!bMultiple)
+			SetSelected(path);
+		else
+			selected.push_back(path);
+
+		auto const objPtr = GetSObjectFromPath(path);
+		if (core::IsValid(objPtr))
 		{
-			auto objPtr = core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuidStrOpt.value() });
-			if (core::IsValid(objPtr))
+			auto& gameManager = *game::GameManager::GetInstance();
+			for (auto& [uuid, worldPtr] : gameManager.GetWorlds())
 			{
-				auto& gameManager = *game::GameManager::GetInstance();
-				for (auto& [uuid, worldPtr] : gameManager.GetWorlds())
-				{
-					auto& world = static_cast<EditorWorld&>(*worldPtr);
+				auto& world = static_cast<EditorWorld&>(*worldPtr);
+				if (!bMultiple)
 					world.ClearSelectedObjects();
-					world.AddSelectedObject(objPtr);
-				}
+				world.AddSelectedObject(objPtr);
 			}
 		}
+	}
+
+	auto ProjectExplorer::GetSObjectFromPath(const std::filesystem::path& path) -> core::SObject*
+	{
+		auto uuidStrOpt = AssetDatabase::GetInstance()->GetAssetUUID(path);
+		if (!uuidStrOpt.has_value())
+			return nullptr;
+		return core::SObjectManager::GetInstance()->GetSObject(core::UUID{ uuidStrOpt.value() });
 	}
 }//namespace

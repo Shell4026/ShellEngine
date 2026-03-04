@@ -196,11 +196,6 @@ namespace sh::editor
 		AddEditorControlsToSelected(*obj);
 	}
 
-	SH_EDITOR_API auto EditorWorld::GetSelectedObjects() const -> const core::SVector<SObject*>&
-	{
-		return selectedObjs;
-	}
-
 	SH_EDITOR_API void EditorWorld::ClearSelectedObjects()
 	{
 		for (auto obj : selectedObjs)
