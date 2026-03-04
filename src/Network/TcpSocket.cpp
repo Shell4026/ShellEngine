@@ -129,7 +129,7 @@ namespace sh::network
 	}
 	SH_NET_API auto TcpSocket::IsOpen() const -> bool
 	{
-		return impl->socket.is_open();
+		return impl != nullptr && impl->socket.is_open();
 	}
 	TcpSocket::TcpSocket(void* nativeSocketPtr)
 	{

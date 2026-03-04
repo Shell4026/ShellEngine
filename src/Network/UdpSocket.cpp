@@ -93,7 +93,7 @@ namespace sh::network
 	}
 	SH_NET_API auto UdpSocket::IsOpen() const -> bool
 	{
-		return impl->udpSocket.is_open();
+		return impl != nullptr && impl->udpSocket.is_open();
 	}
 	void UdpSocket::Receive()
 	{
