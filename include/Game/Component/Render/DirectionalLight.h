@@ -1,6 +1,6 @@
 ﻿#pragma once
 #include "Game/Export.h"
-#include "ILight.h"
+#include "Game/ILight.h"
 #include "Game/Component/Component.h"
 
 namespace sh::game
