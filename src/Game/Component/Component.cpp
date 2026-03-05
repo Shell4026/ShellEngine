@@ -146,6 +146,8 @@ namespace sh::game
 				}
 				else if (prop->isContainer)
 				{
+					if (!compJson.contains(nameStr))
+						continue;
 					const auto& containerJson = compJson[nameStr];
 					if (*prop->containerElementType == core::reflection::GetType<Vec4>())
 					{

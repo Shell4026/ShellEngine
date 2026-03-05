@@ -91,26 +91,28 @@ namespace sh::game
 				if (prop->bNoSaveProperty)
 					continue;
 				const core::reflection::TypeInfo& propType = prop->type;
-				const core::Name& name = prop->GetName();
+				const std::string& nameStr = prop->GetName().ToString();
 
-				if (propType == core::reflection::GetType<Vec4>() && compJson[name].size() == 4)
+				if (propType == core::reflection::GetType<Vec4>() && compJson[nameStr].size() == 4)
 				{
-					if (core::DeserializeProperty(compJson, name, *prop->Get<Vec4>(*this)))
+					if (core::DeserializeProperty(compJson, nameStr, *prop->Get<Vec4>(*this)))
 						OnPropertyChanged(*prop.get());
 				}
-				else if (propType == core::reflection::GetType<Vec3>() && compJson[name].size() == 3)
+				else if (propType == core::reflection::GetType<Vec3>() && compJson[nameStr].size() == 3)
 				{
-					if (core::DeserializeProperty(compJson, name, *prop->Get<Vec3>(*this)))
+					if (core::DeserializeProperty(compJson, nameStr, *prop->Get<Vec3>(*this)))
 						OnPropertyChanged(*prop.get());
 				}
-				else if (propType == core::reflection::GetType<Vec2>() && compJson[name].size() == 2)
+				else if (propType == core::reflection::GetType<Vec2>() && compJson[nameStr].size() == 2)
 				{
-					if (core::DeserializeProperty(compJson, name, *prop->Get<Vec2>(*this)))
+					if (core::DeserializeProperty(compJson, nameStr, *prop->Get<Vec2>(*this)))
 						OnPropertyChanged(*prop.get());
 				}
 				else if (prop->isContainer)
 				{
-					const auto& containerJson = compJson[name];
+					if (!compJson.contains(nameStr))
+						continue;
+					const auto& containerJson = compJson[nameStr];
 					if (*prop->containerElementType == core::reflection::GetType<Vec4>())
 					{
 						prop->ClearContainer(*this);
