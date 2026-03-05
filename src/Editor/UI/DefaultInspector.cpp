@@ -147,6 +147,7 @@ namespace sh::editor
 
 		render::Shader* const shader = mat->GetShader();
 		bool bSameShaders = true;
+		bool bChanged = false;
 		for (auto matPtr : mats)
 		{
 			if (matPtr == nullptr)
@@ -181,8 +182,7 @@ namespace sh::editor
 					for (auto matPtr : mats)
 						if (matPtr != nullptr)
 							matPtr->SetShader(shader);
-					AssetDatabase::GetInstance()->SetDirty(mat);
-					AssetDatabase::GetInstance()->SaveAllAssets();
+					bChanged = true;
 				}
 				ImGui::EndDragDropTarget();
 			}
@@ -190,7 +190,6 @@ namespace sh::editor
 
 		if (core::IsValid(shader) && bSameShaders)
 		{
-			bool bChanged = false;
 			for (auto& [name, propInfo] : shader->GetProperties())
 			{
 				ImGui::Text(name.c_str());
@@ -437,7 +436,7 @@ namespace sh::editor
 		{
 			for (auto texPtr : textures)
 				if (texPtr != nullptr)
-					AssetDatabase::GetInstance()->SetDirty(texture);
+					AssetDatabase::GetInstance()->SetDirty(texPtr);
 			AssetDatabase::GetInstance()->SaveAllAssets();
 		}
 	}
