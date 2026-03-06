@@ -128,6 +128,8 @@ namespace sh::game
 		}
 	private:
 		void SortComponents();
+		void RebuildProcessingTriggerIdxs();
+		void RebuildProcessingCollisionIdxs();
 	public:
 		World& world;
 		Transform* const transform;
@@ -171,7 +173,8 @@ namespace sh::game
 			{
 			}
 		};
-		std::unordered_map<Collider*, std::size_t> processingColliderIdxs;
+		std::unordered_map<Collider*, std::size_t> processingTriggerIdxs;
+		std::unordered_map<Collider*, std::size_t> processingCollisionIdxs;
 		std::vector<ProccessingTrigger> processingTriggers;
 		std::vector<ProccessingCollision> processingCollisions;
 		PROPERTY(bEnable)
