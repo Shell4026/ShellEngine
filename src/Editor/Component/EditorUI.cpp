@@ -43,6 +43,69 @@ namespace sh::editor
 		bundleViewer = std::make_unique<BundleViewer>();
 		fontGeneratorUI = std::make_unique<FontGeneratorUI>(*world.renderer.GetContext());
 	}
+	SH_EDITOR_API void EditorUI::BeginUpdate()
+	{
+		Super::BeginUpdate();
+		if (project->IsProjectOpen())
+		{
+			project->Update();
+			viewport->Update();
+			hierarchy->Update();
+			inspector->Update();
+		}
+		SetDockNode();
+	}
+	SH_EDITOR_API void EditorUI::Update()
+	{
+		gameObject.world.GetUiContext().SyncDirty();
+		if (project->IsProjectOpen())
+		{
+			hierarchy->Render();
+			inspector->Render();
+			project->Render();
+			viewport->Render();
+		}
+		else
+		{
+			const auto flag = 
+				ImGuiWindowFlags_::ImGuiWindowFlags_NoResize | 
+				ImGuiWindowFlags_::ImGuiWindowFlags_NoInputs | 
+				ImGuiWindowFlags_::ImGuiWindowFlags_NoDocking |
+				ImGuiWindowFlags_::ImGuiWindowFlags_NoDecoration |
+				ImGuiWindowFlags_::ImGuiWindowFlags_NoMouseInputs |
+				ImGuiWindowFlags_::ImGuiWindowFlags_NoSavedSettings;
+			ImGui::SetNextWindowPos(ImVec2{ 0, 0 }, ImGuiCond_::ImGuiCond_Always);
+			ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize, ImGuiCond_::ImGuiCond_Always);
+			ImGui::Begin("#background", nullptr, flag);
+
+			ImGui::End();
+		}
+
+		DrawMenu();
+
+		explorer->Render();
+		bundleViewer->Render();
+		fontGeneratorUI->Render();
+	}
+
+	SH_EDITOR_API auto EditorUI::GetViewport() -> Viewport&
+	{
+		return *viewport;
+	}
+
+	SH_EDITOR_API auto EditorUI::GetHierarchy() -> Hierarchy&
+	{
+		return *hierarchy;
+	}
+
+	SH_EDITOR_API void EditorUI::Clean()
+	{
+		viewport->Clean();
+	}
+	SH_EDITOR_API void EditorUI::SetProject(Project& project)
+	{
+		this->project = &project;
+	}
 
 	void EditorUI::SetDockNode()
 	{
@@ -182,104 +245,74 @@ namespace sh::editor
 				}
 				ImGui::EndMenu();
 			}
-			if (ImGui::BeginMenu("Tools"))
-			{
-				if (ImGui::MenuItem("Bundle Viewer"))
-				{
-					if (project->IsProjectOpen())
-						bundleViewer->GetExplorer()->SetCurrentPath(project->GetBinPath());
-					bundleViewer->Open();
-				}
-				if (ImGui::MenuItem("Font Generator"))
-				{
-					fontGeneratorUI->SetAssetPath(project->GetAssetPath());
-					fontGeneratorUI->Open();
-				}
-				ImGui::Separator();
-				if (ImGui::BeginMenu("Snap"))
-				{
-					static bool bEnabled = true;
-					bEnabled = EditorControl::GetSnap();
-					if (ImGui::MenuItem("Enabled", "", &bEnabled))
-						EditorControl::SetSnap(bEnabled);
-					static float snapDis = 0.25f;
-					snapDis = EditorControl::GetSnapDistance();
-					if (ImGui::InputFloat("Snap distance", &snapDis))
-						EditorControl::SetSnapDistance(snapDis);
-					static float snapAngle = 15.0f;
-					snapAngle = EditorControl::GetSnapAngle();
-					if (ImGui::InputFloat("Snap angle", &snapAngle))
-						EditorControl::SetSnapAngle(snapAngle);
-					ImGui::EndMenu();
-				}
-				ImGui::EndMenu();
-			}
+			DrawEditorMenu();
+			DrawToolMenu();
 			ImGui::EndMainMenuBar();
 		}
 	}
 
-	SH_EDITOR_API void EditorUI::BeginUpdate()
+	void EditorUI::DrawToolMenu()
 	{
-		Super::BeginUpdate();
-		if (project->IsProjectOpen())
+		if (ImGui::BeginMenu("Tools"))
 		{
-			project->Update();
-			viewport->Update();
-			hierarchy->Update();
-			inspector->Update();
+			if (ImGui::MenuItem("Bundle Viewer"))
+			{
+				if (project->IsProjectOpen())
+					bundleViewer->GetExplorer()->SetCurrentPath(project->GetBinPath());
+				bundleViewer->Open();
+			}
+			if (ImGui::MenuItem("Font Generator"))
+			{
+				fontGeneratorUI->SetAssetPath(project->GetAssetPath());
+				fontGeneratorUI->Open();
+			}
+			ImGui::Separator();
+			if (ImGui::BeginMenu("Snap"))
+			{
+				static bool bEnabled = true;
+				bEnabled = EditorControl::GetSnap();
+				if (ImGui::MenuItem("Enabled", "", &bEnabled))
+					EditorControl::SetSnap(bEnabled);
+				static float snapDis = 0.25f;
+				snapDis = EditorControl::GetSnapDistance();
+				if (ImGui::InputFloat("Snap distance", &snapDis))
+					EditorControl::SetSnapDistance(snapDis);
+				static float snapAngle = 15.0f;
+				snapAngle = EditorControl::GetSnapAngle();
+				if (ImGui::InputFloat("Snap angle", &snapAngle))
+					EditorControl::SetSnapAngle(snapAngle);
+				ImGui::EndMenu();
+			}
+			ImGui::EndMenu();
 		}
-		SetDockNode();
 	}
-
-	SH_EDITOR_API void EditorUI::Update()
+	void EditorUI::DrawEditorMenu()
 	{
-		gameObject.world.GetUiContext().SyncDirty();
-		if (project->IsProjectOpen())
+		if (ImGui::BeginMenu("Editor"))
 		{
-			hierarchy->Render();
-			inspector->Render();
-			project->Render();
-			viewport->Render();
+			if (ImGui::BeginMenu("EditorOnly"))
+			{
+				if (ImGui::MenuItem("Enable All"))
+				{
+					for (auto objPtr : world.GetGameObjects())
+					{
+						if (!objPtr->bEditorOnly)
+							continue;
+						objPtr->SetActive(true);
+					}
+				}
+				if (ImGui::MenuItem("Disable All"))
+				{
+					for (auto objPtr : world.GetGameObjects())
+					{
+						if (!objPtr->bEditorOnly)
+							continue;
+						objPtr->SetActive(false);
+					}
+				}
+				ImGui::EndMenu();
+			}
+			ImGui::EndMenu();
 		}
-		else
-		{
-			const auto flag = 
-				ImGuiWindowFlags_::ImGuiWindowFlags_NoResize | 
-				ImGuiWindowFlags_::ImGuiWindowFlags_NoInputs | 
-				ImGuiWindowFlags_::ImGuiWindowFlags_NoDocking |
-				ImGuiWindowFlags_::ImGuiWindowFlags_NoDecoration |
-				ImGuiWindowFlags_::ImGuiWindowFlags_NoMouseInputs |
-				ImGuiWindowFlags_::ImGuiWindowFlags_NoSavedSettings;
-			ImGui::SetNextWindowPos(ImVec2{ 0, 0 }, ImGuiCond_::ImGuiCond_Always);
-			ImGui::SetNextWindowSize(ImGui::GetIO().DisplaySize, ImGuiCond_::ImGuiCond_Always);
-			ImGui::Begin("#background", nullptr, flag);
-
-			ImGui::End();
-		}
-
-		DrawMenu();
-
-		explorer->Render();
-		bundleViewer->Render();
-		fontGeneratorUI->Render();
 	}
-
-	SH_EDITOR_API auto EditorUI::GetViewport() -> Viewport&
-	{
-		return *viewport;
-	}
-
-	SH_EDITOR_API auto EditorUI::GetHierarchy() -> Hierarchy&
-	{
-		return *hierarchy;
-	}
-
-	SH_EDITOR_API void EditorUI::Clean()
-	{
-		viewport->Clean();
-	}
-	SH_EDITOR_API void EditorUI::SetProject(Project& project)
-	{
-		this->project = &project;
-	}
-}
+}//namespace

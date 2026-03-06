@@ -35,6 +35,8 @@ namespace sh::editor
 	private:
 		void SetDockNode();
 		void DrawMenu();
+		void DrawToolMenu();
+		void DrawEditorMenu();
 	private:
 		float hierarchyWidth;
 		float hierarchyHeight;
