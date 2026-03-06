@@ -98,6 +98,7 @@ namespace sh::game
 	{
 		SH_INFO_FORMAT("~World {}", GetUUID().ToString());
 		Clear();
+		physWorld.bus.Unsubscribe(physEventSubscriber);
 		physWorld.Clean();
 	}
 
