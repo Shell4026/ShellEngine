@@ -12,7 +12,8 @@
 	{\
 		_AssetRegistry_##className()\
 		{\
-			sh::core::Factory<Asset>::GetInstance()->Register(assetType, [] { return std::make_unique<className>(); });\
+			if (!sh::core::Factory<Asset>::GetInstance()->HasKey(assetType))\
+				sh::core::Factory<Asset>::GetInstance()->Register(assetType, [] { return std::make_unique<className>(); });\
 		}\
 	} static inline assetRegistry{};
 
