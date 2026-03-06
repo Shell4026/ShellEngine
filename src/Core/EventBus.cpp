@@ -24,13 +24,17 @@ namespace sh::core
     }
     SH_CORE_API void EventBus::Unsubscribe(ISubscriber& subscriber)
     {
-        subscriber.eventBus = nullptr;
         const auto eventTypeHash = subscriber.GetEventTypeHash();
-        if (listeners.count(eventTypeHash))
-        {
-            auto& subscribers = listeners.at(eventTypeHash);
-            subscribers.erase(std::remove(subscribers.begin(), subscribers.end(), &subscriber), subscribers.end());
-        }
+        auto it = listeners.find(eventTypeHash);
+        if (it == listeners.end())
+            return;
+        auto& subscribers = it->second;
+        auto removeIt = std::remove(subscribers.begin(), subscribers.end(), &subscriber);
+        if (removeIt == subscribers.end())
+            return;
+
+        subscriber.eventBus = nullptr;
+        subscribers.erase(removeIt, subscribers.end());
     }
     SH_CORE_API void EventBus::Publish(const IEvent& event)
     {
