@@ -48,6 +48,10 @@ namespace sh::sound
 		SH_SOUND_API void SetVelocity(const std::array<float, 3>& velocity);
 		SH_SOUND_API void SetRelative(bool relative);
 
+		SH_SOUND_API void SetReferenceDistance(float dis);
+		SH_SOUND_API void SetRolloffFactor(float factor);
+		SH_SOUND_API void SetMaxDistance(float dis);
+
 		SH_SOUND_API void SetPlaybackOffset(float seconds);
 		SH_SOUND_API auto GetPlaybackOffset() const -> float;
 

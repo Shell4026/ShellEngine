@@ -139,6 +139,24 @@ namespace sh::game
 		ApplySettings();
 	}
 
+	SH_GAME_API void AudioSource::SetRolloffFactor(float factor)
+	{
+		rolloffFactor = factor;
+		ApplySettings();
+	}
+
+	SH_GAME_API void AudioSource::SetReferenceDistance(float dis)
+	{
+		referenceDistance = dis;
+		ApplySettings();
+	}
+
+	SH_GAME_API void AudioSource::SetMaxDistance(float dis)
+	{
+		maxDistance = dis;
+		ApplySettings();
+	}
+
 	SH_GAME_API auto AudioSource::IsPlaying() const -> bool
 	{
 		return source != nullptr && source->GetState() == sound::SoundState::Playing;
@@ -180,6 +198,9 @@ namespace sh::game
 		source->SetGain(volume);
 		source->SetPitch(pitch);
 		source->SetRelative(bRelative);
+		source->SetRolloffFactor(rolloffFactor);
+		source->SetReferenceDistance(referenceDistance);
+		source->SetMaxDistance(maxDistance);
 	}
 
 	void AudioSource::UpdateSourceTransform()

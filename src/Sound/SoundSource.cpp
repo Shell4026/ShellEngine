@@ -191,6 +191,24 @@ namespace sh::sound
 		ThrowIfAlError("setting sound source relative mode");
 	}
 
+	SH_SOUND_API void SoundSource::SetReferenceDistance(float dis)
+	{
+		alSourcef(impl->source, AL_REFERENCE_DISTANCE, dis);
+		ThrowIfAlError("setting sound source reference distance");
+	}
+
+	SH_SOUND_API void SoundSource::SetRolloffFactor(float factor)
+	{
+		alSourcef(impl->source, AL_ROLLOFF_FACTOR, factor);
+		ThrowIfAlError("setting sound source rolloff factor");
+	}
+
+	SH_SOUND_API void SoundSource::SetMaxDistance(float dis)
+	{
+		alSourcef(impl->source, AL_MAX_DISTANCE, 50.0f);
+		ThrowIfAlError("setting sound source max distance");
+	}
+
 	SH_SOUND_API void SoundSource::SetPlaybackOffset(float seconds)
 	{
 		if (seconds < 0.f)
