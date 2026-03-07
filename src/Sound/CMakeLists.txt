@@ -1,0 +1,44 @@
+﻿message("Build ShellEngine Sound")
+
+file(GLOB_RECURSE SRC CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/include/Sound/*.h ${CMAKE_SOURCE_DIR}/include/Sound/*.hpp)
+
+add_library(ShellEngineSound SHARED ${SRC} ${HEADERS})
+add_library(ShellEngine::Sound ALIAS ShellEngineSound)
+
+if(WIN32)
+set_target_properties(ShellEngineSound PROPERTIES 
+	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/lib"
+	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
+elseif(UNIX)
+set_target_properties(ShellEngineSound PROPERTIES 
+	ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin/lib"
+	LIBRARY_OUTPUT_DIRECTORY  "${CMAKE_BINARY_DIR}/bin")
+endif()
+
+set(ALSOFT_EXAMPLES OFF CACHE BOOL "" FORCE)
+set(ALSOFT_UTILS OFF CACHE BOOL "" FORCE)
+set(ALSOFT_INSTALL OFF CACHE BOOL "" FORCE)
+set(ALSOFT_NO_CONFIG_UTIL ON CACHE BOOL "" FORCE)
+
+FetchContent_Declare(
+  OpenAL
+  GIT_REPOSITORY "https://github.com/kcat/openal-soft"
+  GIT_TAG "1.25.1"
+)
+FetchContent_MakeAvailable(OpenAL)
+
+target_link_libraries(ShellEngineSound PRIVATE ShellEngine::Core)
+
+if(TARGET OpenAL::OpenAL)
+	target_link_libraries(ShellEngineSound PUBLIC OpenAL::OpenAL)
+elseif(TARGET OpenAL)
+	target_link_libraries(ShellEngineSound PUBLIC OpenAL)
+else()
+	message(FATAL_ERROR "OpenAL target was not created by FetchContent")
+endif()
+
+target_precompile_headers(ShellEngineSound PRIVATE "${CMAKE_SOURCE_DIR}/include/Sound/pch.h")
+
+target_include_directories(ShellEngineSound PUBLIC ${CMAKE_SOURCE_DIR}/include)
+target_include_directories(ShellEngineSound PRIVATE ${CMAKE_SOURCE_DIR}/include/Sound)

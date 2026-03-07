@@ -10,6 +10,8 @@
 #include "Window/Window.h"
 #include "Render/VulkanImpl/VulkanRenderer.h"
 
+#include "Sound/SoundSystem.h"
+
 #include "Game/ImGUImpl.h"
 #include "Game/RenderThread.h"
 #include "Game/Input.h"
@@ -85,6 +87,7 @@ namespace sh
 		}
 		gui.reset();
 		renderer.reset();
+		sound::SoundSystem::Destroy();
 
 		window.reset();
 	}
@@ -161,6 +164,9 @@ namespace sh
 		renderer = std::make_unique<sh::render::vk::VulkanRenderer>();
 		renderer->Init(*window);
 		renderer->GetContext()->SetViewport({ 150.f, 0.f }, { window->GetWidth() - 150.f, window->GetHeight() - 180});
+
+		SH_INFO("SoundSystem initialization");
+		sound::SoundSystem::GetInstance()->Init();
 
 		SH_INFO("UIContext initialization");
 		gui = std::make_unique<game::ImGUImpl>(*window, static_cast<render::vk::VulkanRenderer&>(*renderer));
