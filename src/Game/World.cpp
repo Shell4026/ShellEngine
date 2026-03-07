@@ -140,15 +140,6 @@ namespace sh::game
 		SH_INFO("Init resource");
 		bLoaded = true;
 	}
-	auto World::AllocateGameObject() -> GameObject*
-	{
-		while (!deallocatedObjs.empty())
-		{
-			objPool.DeAllocate(deallocatedObjs.front());
-			deallocatedObjs.pop();
-		}
-		return objPool.Allocate();
-	}
 	SH_GAME_API void World::CleanObjs()
 	{
 		for (auto obj : objs)
@@ -662,5 +653,14 @@ namespace sh::game
 				changeObjUUIDfn(obj.Get());
 		}
 		SetUUID(core::UUID::Generate());
+	}
+	auto World::AllocateGameObject() -> GameObject*
+	{
+		while (!deallocatedObjs.empty())
+		{
+			objPool.DeAllocate(deallocatedObjs.front());
+			deallocatedObjs.pop();
+		}
+		return objPool.Allocate();
 	}
 }//namespace

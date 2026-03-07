@@ -246,6 +246,25 @@ namespace sh::sound
 		return std::string{ name };
 	}
 
+	SH_SOUND_API auto SoundSystem::GetListenerPosition() const -> std::array<float, 3>
+	{
+		float x, y, z;
+		alGetListener3f(AL_POSITION, &x, &y, &z);
+		return { x, y, z };
+	}
+	SH_SOUND_API auto SoundSystem::GetListenerForward() const -> std::array<float, 3>
+	{
+		float ori[6];
+		alGetListenerfv(AL_ORIENTATION, ori);
+		return { ori[0], ori[1], ori[2] };
+	}
+	SH_SOUND_API auto SoundSystem::GetListenerUp() const -> std::array<float, 3>
+	{
+		float ori[6];
+		alGetListenerfv(AL_ORIENTATION, ori);
+		return { ori[3], ori[4], ori[5] };
+	}
+
 	SH_SOUND_API auto SoundSystem::IsInit() const noexcept -> bool
 	{
 		return impl != nullptr && impl->context != nullptr;

@@ -17,6 +17,8 @@
 #include "Core/ModuleLoader.h"
 #include "Core/ThreadSyncManager.h"
 
+#include "Sound/SoundSystem.h"
+
 #include <algorithm>
 namespace sh::game
 {
@@ -77,6 +79,8 @@ namespace sh::game
 			worldPtr->Update(dt);
 		immortalWorld->Update(dt);
 		gui->End();
+
+		UpdateSoundListener();
 
 		for (auto& [uuid, worldPtr] : worlds)
 			worldPtr->BeforeSync();
@@ -252,6 +256,28 @@ namespace sh::game
 	{
 		afterUpdateTaskQueue.push(fn);
 	}
+
+	SH_GAME_API void GameManager::LoadUserModule(const std::filesystem::path& path)
+	{
+		componentLoader.LoadPlugin(path);
+	}
+	SH_GAME_API void GameManager::StartWorlds()
+	{
+		for (auto& [uuid, worldPtr] : worlds)
+		{
+			worldPtr->Play();
+			worldPtr->Start();
+		}
+		immortalWorld->Play();
+		immortalWorld->Start();
+	}
+	SH_GAME_API void GameManager::StopWorlds()
+	{
+		for (auto& [uuid, worldPtr] : worlds)
+			worldPtr->Stop();
+		immortalWorld->Stop();
+	}
+
 	GameManager::~GameManager()
 	{
 		Clean();
@@ -278,24 +304,26 @@ namespace sh::game
 			defaultAssets.push_back(errorMatPtr);
 	}
 
-	SH_GAME_API void GameManager::LoadUserModule(const std::filesystem::path& path)
+	void GameManager::UpdateSoundListener()
 	{
-		componentLoader.LoadPlugin(path);
-	}
-	SH_GAME_API void GameManager::StartWorlds()
-	{
-		for (auto& [uuid, worldPtr] : worlds)
+		if (mainWorld.IsValid())
 		{
-			worldPtr->Play();
-			worldPtr->Start();
+			const Camera* const mainCameraPtr = mainWorld->GetMainCamera();
+			if (core::IsValid(mainCameraPtr))
+			{
+				SH_INFO_FORMAT("maincam: {}", mainCameraPtr->gameObject.GetName().ToString());
+				auto& soundSystem = *sound::SoundSystem::GetInstance();
+				const auto& worldPos = mainCameraPtr->gameObject.transform->GetWorldPosition();
+				const glm::vec3 forward = glm::normalize(glm::vec3{ mainCameraPtr->GetLookPos() - worldPos });
+				glm::vec3 up{ 0.f, 1.f, 0.f };
+				if (std::abs(glm::dot(forward, up)) > 0.999f)
+					up = { 1.f, 0.f, 0.f };
+				const glm::vec3 right = glm::normalize(glm::cross(forward, up));
+				up = glm::cross(right, forward);
+				soundSystem.SetListenerPosition(worldPos.x, worldPos.y, worldPos.z);
+				soundSystem.SetListenerOrientation({ forward.x, forward.y, forward.z }, { up.x, up.y, up.z });
+				return;
+			}
 		}
-		immortalWorld->Play();
-		immortalWorld->Start();
-	}
-	SH_GAME_API void GameManager::StopWorlds()
-	{
-		for (auto& [uuid, worldPtr] : worlds)
-			worldPtr->Stop();
-		immortalWorld->Stop();
 	}
 }//namespace

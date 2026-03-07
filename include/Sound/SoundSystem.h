@@ -37,6 +37,9 @@ namespace sh::sound
 		SH_SOUND_API void SetDistanceModel(DistanceModel model);
 
 		SH_SOUND_API auto GetDeviceName() const -> std::string;
+		SH_SOUND_API auto GetListenerPosition() const -> std::array<float, 3>;
+		SH_SOUND_API auto GetListenerForward() const -> std::array<float, 3>;
+		SH_SOUND_API auto GetListenerUp() const -> std::array<float, 3>;
 		SH_SOUND_API auto IsInit() const noexcept -> bool;
 
 		SH_SOUND_API static auto GetDefaultDeviceName() -> std::string;

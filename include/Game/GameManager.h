@@ -81,6 +81,7 @@ namespace sh::game
 		SH_GAME_API ~GameManager();
 	private:
 		void LoadDefaultAsset(core::AssetBundle& bundle);
+		void UpdateSoundListener();
 	private:
 		render::Renderer* renderer = nullptr;
 		ImGUImpl* gui = nullptr;
