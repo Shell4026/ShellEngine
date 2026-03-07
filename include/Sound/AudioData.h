@@ -77,4 +77,4 @@ namespace sh::sound
 			return static_cast<float>(samples.size()) / (static_cast<float>(sampleRate) * bytesPerFrame);
 		}
 	};
-}
+}//namespace

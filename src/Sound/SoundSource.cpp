@@ -1,10 +1,11 @@
-#include "Sound/SoundSource.h"
+﻿#include "Sound/SoundSource.h"
 
 #include "Sound/SoundBuffer.h"
 #include "Sound/SoundSystem.h"
 
 #include "fmt/format.h"
 
+#include <AL/al.h>
 #include <AL/alc.h>
 
 #include <stdexcept>
@@ -43,18 +44,23 @@ namespace
 
 namespace sh::sound
 {
-	SH_SOUND_API SoundSource::SoundSource()
+	struct SoundSource::Impl
+	{
+		ALuint source = 0;
+	};
+
+	SH_SOUND_API SoundSource::SoundSource() :
+		impl(std::make_unique<Impl>())
 	{
 		EnsureSoundSystemReady();
 		alGetError();
-		alGenSources(1, &source);
+		alGenSources(1, &impl->source);
 		ThrowIfAlError("creating sound source");
 	}
 
 	SH_SOUND_API SoundSource::SoundSource(SoundSource&& other) noexcept :
-		source(other.source)
+		impl(std::move(other.impl))
 	{
-		other.source = 0;
 	}
 
 	SH_SOUND_API auto SoundSource::operator=(SoundSource&& other) noexcept -> SoundSource&
@@ -63,8 +69,7 @@ namespace sh::sound
 			return *this;
 
 		Release();
-		source = other.source;
-		other.source = 0;
+		impl = std::move(other.impl);
 		return *this;
 	}
 
@@ -75,51 +80,51 @@ namespace sh::sound
 
 	SH_SOUND_API void SoundSource::SetBuffer(const SoundBuffer& buffer)
 	{
-		alSourcei(source, AL_BUFFER, static_cast<ALint>(buffer.GetHandle()));
+		alSourcei(impl->source, AL_BUFFER, static_cast<ALint>(buffer.GetHandle()));
 		ThrowIfAlError("binding sound buffer to source");
 	}
 
 	SH_SOUND_API void SoundSource::ClearBuffer()
 	{
 		Stop();
-		alSourcei(source, AL_BUFFER, 0);
+		alSourcei(impl->source, AL_BUFFER, 0);
 		ThrowIfAlError("clearing sound buffer from source");
 	}
 
 	SH_SOUND_API void SoundSource::Play()
 	{
-		alSourcePlay(source);
+		alSourcePlay(impl->source);
 		ThrowIfAlError("playing sound source");
 	}
 
 	SH_SOUND_API void SoundSource::Pause()
 	{
-		alSourcePause(source);
+		alSourcePause(impl->source);
 		ThrowIfAlError("pausing sound source");
 	}
 
 	SH_SOUND_API void SoundSource::Stop()
 	{
-		alSourceStop(source);
+		alSourceStop(impl->source);
 		ThrowIfAlError("stopping sound source");
 	}
 
 	SH_SOUND_API void SoundSource::Rewind()
 	{
-		alSourceRewind(source);
+		alSourceRewind(impl->source);
 		ThrowIfAlError("rewinding sound source");
 	}
 
 	SH_SOUND_API void SoundSource::SetLoop(bool looping)
 	{
-		alSourcei(source, AL_LOOPING, looping ? AL_TRUE : AL_FALSE);
+		alSourcei(impl->source, AL_LOOPING, looping ? AL_TRUE : AL_FALSE);
 		ThrowIfAlError("setting sound source loop state");
 	}
 
 	SH_SOUND_API auto SoundSource::IsLooping() const -> bool
 	{
 		ALint value = AL_FALSE;
-		alGetSourcei(source, AL_LOOPING, &value);
+		alGetSourcei(impl->source, AL_LOOPING, &value);
 		ThrowIfAlError("querying sound source loop state");
 		return value == AL_TRUE;
 	}
@@ -129,14 +134,14 @@ namespace sh::sound
 		if (gain < 0.f)
 			throw std::invalid_argument{ "Gain must be greater than or equal to zero." };
 
-		alSourcef(source, AL_GAIN, gain);
+		alSourcef(impl->source, AL_GAIN, gain);
 		ThrowIfAlError("setting sound source gain");
 	}
 
 	SH_SOUND_API auto SoundSource::GetGain() const -> float
 	{
 		float gain = 0.f;
-		alGetSourcef(source, AL_GAIN, &gain);
+		alGetSourcef(impl->source, AL_GAIN, &gain);
 		ThrowIfAlError("querying sound source gain");
 		return gain;
 	}
@@ -146,21 +151,21 @@ namespace sh::sound
 		if (pitch <= 0.f)
 			throw std::invalid_argument{ "Pitch must be greater than zero." };
 
-		alSourcef(source, AL_PITCH, pitch);
+		alSourcef(impl->source, AL_PITCH, pitch);
 		ThrowIfAlError("setting sound source pitch");
 	}
 
 	SH_SOUND_API auto SoundSource::GetPitch() const -> float
 	{
 		float pitch = 1.f;
-		alGetSourcef(source, AL_PITCH, &pitch);
+		alGetSourcef(impl->source, AL_PITCH, &pitch);
 		ThrowIfAlError("querying sound source pitch");
 		return pitch;
 	}
 
 	SH_SOUND_API void SoundSource::SetPosition(float x, float y, float z)
 	{
-		alSource3f(source, AL_POSITION, x, y, z);
+		alSource3f(impl->source, AL_POSITION, x, y, z);
 		ThrowIfAlError("setting sound source position");
 	}
 
@@ -171,7 +176,7 @@ namespace sh::sound
 
 	SH_SOUND_API void SoundSource::SetVelocity(float x, float y, float z)
 	{
-		alSource3f(source, AL_VELOCITY, x, y, z);
+		alSource3f(impl->source, AL_VELOCITY, x, y, z);
 		ThrowIfAlError("setting sound source velocity");
 	}
 
@@ -182,7 +187,7 @@ namespace sh::sound
 
 	SH_SOUND_API void SoundSource::SetRelative(bool relative)
 	{
-		alSourcei(source, AL_SOURCE_RELATIVE, relative ? AL_TRUE : AL_FALSE);
+		alSourcei(impl->source, AL_SOURCE_RELATIVE, relative ? AL_TRUE : AL_FALSE);
 		ThrowIfAlError("setting sound source relative mode");
 	}
 
@@ -191,14 +196,14 @@ namespace sh::sound
 		if (seconds < 0.f)
 			throw std::invalid_argument{ "Playback offset must be greater than or equal to zero." };
 
-		alSourcef(source, AL_SEC_OFFSET, seconds);
+		alSourcef(impl->source, AL_SEC_OFFSET, seconds);
 		ThrowIfAlError("setting sound source playback offset");
 	}
 
 	SH_SOUND_API auto SoundSource::GetPlaybackOffset() const -> float
 	{
 		float seconds = 0.f;
-		alGetSourcef(source, AL_SEC_OFFSET, &seconds);
+		alGetSourcef(impl->source, AL_SEC_OFFSET, &seconds);
 		ThrowIfAlError("querying sound source playback offset");
 		return seconds;
 	}
@@ -206,18 +211,21 @@ namespace sh::sound
 	SH_SOUND_API auto SoundSource::GetState() const -> SoundState
 	{
 		ALint state = AL_STOPPED;
-		alGetSourcei(source, AL_SOURCE_STATE, &state);
+		alGetSourcei(impl->source, AL_SOURCE_STATE, &state);
 		ThrowIfAlError("querying sound source state");
 		return ToSoundState(state);
 	}
 
 	void SoundSource::Release() noexcept
 	{
-		if (source != 0)
+		if (!impl)
+			return;
+
+		if (impl->source != 0)
 		{
 			if (alcGetCurrentContext() != nullptr)
-				alDeleteSources(1, &source);
-			source = 0;
+				alDeleteSources(1, &impl->source);
+			impl->source = 0;
 		}
 	}
-}
+}//namespace

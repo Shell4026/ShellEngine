@@ -1,10 +1,11 @@
-#include "Sound/SoundBuffer.h"
+﻿#include "Sound/SoundBuffer.h"
 
 #include "Sound/SoundSystem.h"
 #include "Sound/WavLoader.h"
 
 #include "fmt/format.h"
 
+#include <AL/al.h>
 #include <AL/alc.h>
 
 #include <stdexcept>
@@ -43,23 +44,26 @@ namespace
 
 namespace sh::sound
 {
-	SH_SOUND_API SoundBuffer::SoundBuffer()
+	struct SoundBuffer::Impl
+	{
+		ALuint buffer = 0;
+		AudioFormat format = AudioFormat::Mono16;
+		std::uint32_t sampleRate = 0;
+		float duration = 0.f;
+	};
+
+	SH_SOUND_API SoundBuffer::SoundBuffer() :
+		impl(std::make_unique<Impl>())
 	{
 		EnsureSoundSystemReady();
 		alGetError();
-		alGenBuffers(1, &buffer);
+		alGenBuffers(1, &impl->buffer);
 		ThrowIfAlError("creating sound buffer");
 	}
 
 	SH_SOUND_API SoundBuffer::SoundBuffer(SoundBuffer&& other) noexcept :
-		buffer(other.buffer),
-		format(other.format),
-		sampleRate(other.sampleRate),
-		duration(other.duration)
+		impl(std::move(other.impl))
 	{
-		other.buffer = 0;
-		other.sampleRate = 0;
-		other.duration = 0.f;
 	}
 
 	SH_SOUND_API auto SoundBuffer::operator=(SoundBuffer&& other) noexcept -> SoundBuffer&
@@ -68,15 +72,7 @@ namespace sh::sound
 			return *this;
 
 		Release();
-
-		buffer = other.buffer;
-		format = other.format;
-		sampleRate = other.sampleRate;
-		duration = other.duration;
-
-		other.buffer = 0;
-		other.sampleRate = 0;
-		other.duration = 0.f;
+		impl = std::move(other.impl);
 		return *this;
 	}
 
@@ -96,11 +92,13 @@ namespace sh::sound
 			throw std::invalid_argument{ "Audio data is empty." };
 		if (sampleRate == 0)
 			throw std::invalid_argument{ "Sample rate must be greater than zero." };
+		if (!impl)
+			impl = std::make_unique<Impl>();
 
-		this->format = format;
-		this->sampleRate = sampleRate;
+		impl->format = format;
+		impl->sampleRate = sampleRate;
 
-		alBufferData(buffer,
+		alBufferData(impl->buffer,
 			ToAlFormat(format),
 			data,
 			static_cast<ALsizei>(size),
@@ -110,7 +108,7 @@ namespace sh::sound
 		const std::uint32_t channels = sound::GetChannelCount(format);
 		const std::uint32_t bitsPerSample = sound::GetBitsPerSample(format);
 		const float bytesPerFrame = static_cast<float>(channels * (bitsPerSample / 8));
-		duration = static_cast<float>(size) / (static_cast<float>(sampleRate) * bytesPerFrame);
+		impl->duration = static_cast<float>(size) / (static_cast<float>(sampleRate) * bytesPerFrame);
 	}
 
 	SH_SOUND_API void SoundBuffer::LoadFromFile(const std::filesystem::path& path)
@@ -118,15 +116,43 @@ namespace sh::sound
 		SetData(WavLoader::Load(path));
 	}
 
+	SH_SOUND_API auto SoundBuffer::GetDuration() const noexcept -> float
+	{
+		return impl ? impl->duration : 0.f;
+	}
+
+	SH_SOUND_API auto SoundBuffer::GetFormat() const noexcept -> AudioFormat
+	{
+		return impl ? impl->format : AudioFormat::Mono16;
+	}
+
+	SH_SOUND_API auto SoundBuffer::GetSampleRate() const noexcept -> std::uint32_t
+	{
+		return impl ? impl->sampleRate : 0;
+	}
+
+	SH_SOUND_API auto SoundBuffer::IsValid() const noexcept -> bool
+	{
+		return impl != nullptr && impl->buffer != 0;
+	}
+
+	SH_SOUND_API auto SoundBuffer::GetHandle() const noexcept -> unsigned int
+	{
+		return impl ? impl->buffer : 0;
+	}
+
 	void SoundBuffer::Release() noexcept
 	{
-		if (buffer != 0)
+		if (!impl)
+			return;
+
+		if (impl->buffer != 0)
 		{
 			if (alcGetCurrentContext() != nullptr)
-				alDeleteBuffers(1, &buffer);
-			buffer = 0;
+				alDeleteBuffers(1, &impl->buffer);
+			impl->buffer = 0;
 		}
-		sampleRate = 0;
-		duration = 0.f;
+		impl->sampleRate = 0;
+		impl->duration = 0.f;
 	}
-}
+}//namespace

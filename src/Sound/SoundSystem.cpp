@@ -1,13 +1,13 @@
-#include "Sound/SoundSystem.h"
+﻿#include "Sound/SoundSystem.h"
 
 #include "Core/Logger.h"
 
 #include "fmt/format.h"
 
 #include <AL/al.h>
+#include <AL/alc.h>
 
 #include <stdexcept>
-
 namespace
 {
 	auto GetAlErrorString(ALenum errorCode) -> const char*
@@ -108,6 +108,17 @@ namespace
 
 namespace sh::sound
 {
+	struct SoundSystem::Impl
+	{
+		ALCdevice* device = nullptr;
+		ALCcontext* context = nullptr;
+	};
+
+	SH_SOUND_API SoundSystem::SoundSystem() :
+		impl(std::make_unique<Impl>())
+	{
+	}
+
 	SH_SOUND_API SoundSystem::~SoundSystem()
 	{
 		Shutdown();
@@ -115,34 +126,37 @@ namespace sh::sound
 
 	SH_SOUND_API void SoundSystem::Init(std::string_view deviceName)
 	{
+		if (!impl)
+			impl = std::make_unique<Impl>();
+
 		if (IsInit())
 			return;
 
 		std::string requestedDevice{ deviceName };
-		device = alcOpenDevice(requestedDevice.empty() ? nullptr : requestedDevice.c_str());
-		if (device == nullptr)
+		impl->device = alcOpenDevice(requestedDevice.empty() ? nullptr : requestedDevice.c_str());
+		if (impl->device == nullptr)
 			throw std::runtime_error{ "Failed to open OpenAL device." };
 
-		context = alcCreateContext(device, nullptr);
-		if (context == nullptr)
+		impl->context = alcCreateContext(impl->device, nullptr);
+		if (impl->context == nullptr)
 		{
-			alcCloseDevice(device);
-			device = nullptr;
+			alcCloseDevice(impl->device);
+			impl->device = nullptr;
 			throw std::runtime_error{ "Failed to create OpenAL context." };
 		}
 
-		if (alcMakeContextCurrent(context) == ALC_FALSE)
+		if (alcMakeContextCurrent(impl->context) == ALC_FALSE)
 		{
-			alcDestroyContext(context);
-			alcCloseDevice(device);
-			context = nullptr;
-			device = nullptr;
+			alcDestroyContext(impl->context);
+			alcCloseDevice(impl->device);
+			impl->context = nullptr;
+			impl->device = nullptr;
 			throw std::runtime_error{ "Failed to activate OpenAL context." };
 		}
 
 		try
 		{
-			ThrowIfAlcError(device, "initializing sound system");
+			ThrowIfAlcError(impl->device, "initializing sound system");
 			alGetError();
 
 			alDistanceModel(AL_INVERSE_DISTANCE_CLAMPED);
@@ -161,30 +175,21 @@ namespace sh::sound
 
 	SH_SOUND_API void SoundSystem::Shutdown()
 	{
-		if (context != nullptr)
+		if (!impl)
+			return;
+
+		if (impl->context != nullptr)
 		{
 			alcMakeContextCurrent(nullptr);
-			alcDestroyContext(context);
-			context = nullptr;
+			alcDestroyContext(impl->context);
+			impl->context = nullptr;
 		}
 
-		if (device != nullptr)
+		if (impl->device != nullptr)
 		{
-			alcCloseDevice(device);
-			device = nullptr;
+			alcCloseDevice(impl->device);
+			impl->device = nullptr;
 		}
-	}
-
-	SH_SOUND_API auto SoundSystem::GetDeviceName() const -> std::string
-	{
-		if (device == nullptr)
-			return {};
-
-		const ALCchar* name = alcGetString(device, ALC_DEVICE_SPECIFIER);
-		if (name == nullptr)
-			return {};
-
-		return std::string{ name };
 	}
 
 	SH_SOUND_API void SoundSystem::SetListenerGain(float gain)
@@ -229,6 +234,23 @@ namespace sh::sound
 		ThrowIfAlError("setting distance model");
 	}
 
+	SH_SOUND_API auto SoundSystem::GetDeviceName() const -> std::string
+	{
+		if (!impl || impl->device == nullptr)
+			return {};
+
+		const ALCchar* name = alcGetString(impl->device, ALC_DEVICE_SPECIFIER);
+		if (name == nullptr)
+			return {};
+
+		return std::string{ name };
+	}
+
+	SH_SOUND_API auto SoundSystem::IsInit() const noexcept -> bool
+	{
+		return impl != nullptr && impl->context != nullptr;
+	}
+
 	SH_SOUND_API auto SoundSystem::GetDefaultDeviceName() -> std::string
 	{
 		const ALCchar* name = alcGetString(nullptr, ALC_DEFAULT_DEVICE_SPECIFIER);
@@ -246,4 +268,4 @@ namespace sh::sound
 		const ALCchar* deviceNames = alcGetString(nullptr, ALC_DEVICE_SPECIFIER);
 		return ParseDeviceList(deviceNames);
 	}
-}
+}//namespace

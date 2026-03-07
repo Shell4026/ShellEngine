@@ -3,9 +3,8 @@
 
 #include "Core/NonCopyable.h"
 
-#include <AL/al.h>
-
 #include <array>
+#include <memory>
 
 namespace sh::sound
 {
@@ -53,10 +52,10 @@ namespace sh::sound
 		SH_SOUND_API auto GetPlaybackOffset() const -> float;
 
 		SH_SOUND_API auto GetState() const -> SoundState;
-		SH_SOUND_API auto GetHandle() const noexcept -> ALuint { return source; }
 	private:
 		void Release() noexcept;
 	private:
-		ALuint source = 0;
+		struct Impl;
+		std::unique_ptr<Impl> impl;
 	};
-}
+}//namespace
