@@ -17,6 +17,8 @@
 #include "Game/ScriptableObject.h"
 #include "Game/Input.h"
 
+#include "Sound/SoundSource.h"
+
 namespace sh::editor
 {
 	ProjectExplorer::ProjectExplorer()
@@ -358,6 +360,7 @@ namespace sh::editor
 				core::reflection::GetType<game::TextObject>().name,
 				core::reflection::GetType<game::BinaryObject>().name,
 				core::reflection::GetType<game::ScriptableObject>().name,
+				core::reflection::GetType<sound::SoundSource>().name
 			};
 			for (const std::string_view& assetType : assetTypes)
 			{
@@ -368,6 +371,25 @@ namespace sh::editor
 					AssetDatabase::GetInstance()->MoveAssetToDirectory(objPtr->GetUUID(), folderPath);
 					Refresh();
 					break;
+				}
+				else if (payload == nullptr && assetType == core::reflection::GetType<game::ScriptableObject>().name)
+				{
+					auto curPayloadPtr = ImGui::GetDragDropPayload();
+					if (curPayloadPtr != nullptr)
+					{
+						core::SObject* const objPtr = *reinterpret_cast<core::SObject**>(curPayloadPtr->Data);
+						if (objPtr->GetType().IsChildOf(game::ScriptableObject::GetStaticType()))
+						{
+							payload = ImGui::AcceptDragDropPayload(std::string{ objPtr->GetType().type.name }.c_str());
+							if (payload != nullptr && payload->Data != nullptr)
+							{
+								core::SObject* objPtr = *reinterpret_cast<core::SObject**>(payload->Data);
+								AssetDatabase::GetInstance()->MoveAssetToDirectory(objPtr->GetUUID(), folderPath);
+								Refresh();
+								break;
+							}
+						}
+					}
 				}
 			}
 			ImGui::EndDragDropTarget();
