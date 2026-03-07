@@ -1,5 +1,6 @@
 ﻿#include "Sound/SoundBuffer.h"
 
+#include "Sound/OggLoader.h"
 #include "Sound/SoundSystem.h"
 #include "Sound/WavLoader.h"
 
@@ -8,6 +9,8 @@
 #include <AL/al.h>
 #include <AL/alc.h>
 
+#include <algorithm>
+#include <cctype>
 #include <stdexcept>
 
 namespace
@@ -113,7 +116,17 @@ namespace sh::sound
 
 	SH_SOUND_API void SoundBuffer::LoadFromFile(const std::filesystem::path& path)
 	{
-		SetData(WavLoader::Load(path));
+		std::string ext = path.extension().u8string();
+		std::transform(ext.begin(), ext.end(), ext.begin(),
+			[](unsigned char ch)
+			{
+				return static_cast<char>(std::tolower(ch));
+			});
+
+		if (ext == ".ogg")
+			SetData(OggLoader::Load(path));
+		else
+			SetData(WavLoader::Load(path));
 	}
 
 	SH_SOUND_API auto SoundBuffer::GetDuration() const noexcept -> float

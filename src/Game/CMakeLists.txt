@@ -20,6 +20,7 @@ target_link_libraries(ShellEngineGame PUBLIC ShellEngine::Window)
 target_link_libraries(ShellEngineGame PUBLIC ShellEngine::Render)
 target_link_libraries(ShellEngineGame PUBLIC ShellEngine::Physics)
 target_link_libraries(ShellEngineGame PUBLIC ShellEngine::Network)
+target_link_libraries(ShellEngineGame PUBLIC ShellEngine::Sound)
 target_link_libraries(ShellEngineGame PUBLIC IMGUI)
 
 target_precompile_headers(ShellEngineGame PRIVATE ${CMAKE_SOURCE_DIR}/include/Game/PCH.h)

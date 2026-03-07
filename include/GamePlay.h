@@ -20,6 +20,7 @@
 #include "Game/Asset/PrefabAsset.h"
 #include "Game/Asset/ScriptableObjectAsset.h"
 #include "Game/Asset/ShaderAsset.h"
+#include "Game/Asset/SoundAsset.h"
 #include "Game/Asset/TextAsset.h"
 #include "Game/Asset/TextureAsset.h"
 #include "Game/Asset/WorldAsset.h"
@@ -46,6 +47,7 @@
 #include "Game/Component/Render/MeshRenderer.h"
 #include "Game/Component/Render/PointLight.h"
 #include "Game/Component/Render/TextRenderer.h"
+#include "Game/Component/Sound/AudioSource.h"
 
 #include "Physics/ContactPoint.h"
 #include "Physics/HitPoint.h"
@@ -62,3 +64,5 @@
 #include "Render/RenderTagList.h"
 #include "Render/Shader.h"
 #include "Render/Texture.h"
+
+#include "Sound/SoundClip.h"

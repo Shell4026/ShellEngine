@@ -43,6 +43,7 @@
 #include "Game/Asset/TextLoader.h"
 #include "Game/Asset/BinaryLoader.h"
 #include "Game/Asset/FontLoader.h"
+#include "Game/Asset/SoundLoader.h"
 #include "Game/Asset/ScriptableObjectLoader.h"
 
 #include "Game/Asset/TextureAsset.h"
@@ -55,6 +56,7 @@
 #include "Game/Asset/TextAsset.h"
 #include "Game/Asset/BinaryAsset.h"
 #include "Game/Asset/FontAsset.h"
+#include "Game/Asset/SoundAsset.h"
 #include "Game/Asset/ScriptableObjectAsset.h"
 #endif
 
@@ -230,6 +232,7 @@ namespace sh
 		assetLoaderFactory->RegisterLoader(game::TextAsset::ASSET_NAME, std::make_unique<game::TextLoader>());
 		assetLoaderFactory->RegisterLoader(game::BinaryAsset::ASSET_NAME, std::make_unique<game::BinaryLoader>());
 		assetLoaderFactory->RegisterLoader(game::FontAsset::ASSET_NAME, std::make_unique<game::FontLoader>());
+		assetLoaderFactory->RegisterLoader(game::SoundAsset::ASSET_NAME, std::make_unique<game::SoundLoader>());
 		assetLoaderFactory->RegisterLoader(game::ScriptableObjectAsset::ASSET_NAME, std::make_unique<game::ScriptableObjectLoader>());
 
 		core::AssetResolverRegistry::SetResolver(

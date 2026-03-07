@@ -7,7 +7,7 @@
 
 namespace sh::sound
 {
-	class WavLoader
+	class OggLoader
 	{
 	public:
 		SH_SOUND_API static auto Load(const std::filesystem::path& path) -> AudioData;

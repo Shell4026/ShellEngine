@@ -1,4 +1,4 @@
-#include "Sound/WavLoader.h"
+﻿#include "Sound/WavLoader.h"
 
 #include "fmt/format.h"
 
@@ -137,4 +137,4 @@ namespace sh::sound
 
 		return result;
 	}
-}
+}//namespace

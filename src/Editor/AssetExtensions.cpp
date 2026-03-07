@@ -16,6 +16,8 @@ namespace sh::editor
 		{".json", Type::Text},
 		{".font", Type::Font},
 		{".ttf", Type::Binary},
+		{".ogg", Type::Sound},
+		{".wav", Type::Sound},
 		{".srpo", Type::ScriptableObject}
 	};
 
@@ -54,6 +56,8 @@ namespace sh::editor
 			return "Font";
 		case Type::Binary:
 			return "Binary";
+		case Type::Sound:
+			return "Sound";
 		case Type::ScriptableObject:
 			return "ScriptableObject";
 		}

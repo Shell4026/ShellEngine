@@ -24,6 +24,7 @@
 #include "Game/Asset/WorldLoader.h"
 #include "Game/Asset/PrefabLoader.h"
 #include "Game/Asset/BinaryLoader.h"
+#include "Game/Asset/SoundLoader.h"
 #include "Game/Asset/TextLoader.h"
 #include "Game/Asset/FontLoader.h"
 #include "Game/Asset/ScriptableObjectLoader.h"
@@ -36,9 +37,12 @@
 #include "Game/Asset/WorldAsset.h"
 #include "Game/Asset/PrefabAsset.h"
 #include "Game/Asset/BinaryAsset.h"
+#include "Game/Asset/SoundAsset.h"
 #include "Game/Asset/TextAsset.h"
 #include "Game/Asset/FontAsset.h"
 #include "Game/Asset/ScriptableObjectAsset.h"
+
+#include "Sound/SoundClip.h"
 
 #include <istream>
 #include <ostream>
@@ -79,6 +83,7 @@ namespace sh::editor
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Texture, std::make_unique<game::TextureLoader>(ctx), 2, true);
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Shader, std::move(shaderLoader), 2, false);
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Binary, std::make_unique<game::BinaryLoader>(), 2, false);
+		assetLoaders.RegisterLoader(AssetExtensions::Type::Sound, std::make_unique<game::SoundLoader>(), 2, false);
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Text, std::make_unique<game::TextLoader>(), 2, false);
 
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Material, std::make_unique<game::MaterialLoader>(ctx), 1, false);
@@ -412,6 +417,8 @@ namespace sh::editor
 			assetType = game::TextAsset::ASSET_NAME;
 		else if (obj.GetType() == render::Font::GetStaticType())
 			assetType = game::FontAsset::ASSET_NAME;
+		else if (obj.GetType() == sound::SoundClip::GetStaticType())
+			assetType = game::SoundAsset::ASSET_NAME;
 		else if (obj.GetType().IsChildOf(game::ScriptableObject::GetStaticType()))
 			assetType = game::ScriptableObjectAsset::ASSET_NAME;
 		else

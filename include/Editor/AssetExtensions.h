@@ -20,6 +20,7 @@ namespace sh::editor
 			Text,
 			Font,
 			Binary,
+			Sound,
 			ScriptableObject
 		};
 	public:
