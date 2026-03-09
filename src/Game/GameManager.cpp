@@ -311,7 +311,6 @@ namespace sh::game
 			const Camera* const mainCameraPtr = mainWorld->GetMainCamera();
 			if (core::IsValid(mainCameraPtr))
 			{
-				SH_INFO_FORMAT("maincam: {}", mainCameraPtr->gameObject.GetName().ToString());
 				auto& soundSystem = *sound::SoundSystem::GetInstance();
 				const auto& worldPos = mainCameraPtr->gameObject.transform->GetWorldPosition();
 				const glm::vec3 forward = glm::normalize(glm::vec3{ mainCameraPtr->GetLookPos() - worldPos });
