@@ -1,12 +1,15 @@
 ﻿#pragma once
 #include "Game/Export.h"
-
 #include "Game/Component/Component.h"
+
+#include "Core/Observer.hpp"
 
 #include "Sound/SoundClip.h"
 #include "Sound/SoundSource.h"
+#include "Sound/SoundSourcePool.h"
 
 #include <memory>
+#include <vector>
 namespace sh::game
 {
 	class AudioSource : public Component
@@ -16,8 +19,6 @@ namespace sh::game
 		SH_GAME_API AudioSource(GameObject& owner);
 		SH_GAME_API ~AudioSource() override;
 
-		SH_GAME_API void Awake() override;
-		SH_GAME_API void OnEnable() override;
 		SH_GAME_API void Start() override;
 		SH_GAME_API void Update() override;
 		SH_GAME_API void OnDestroy() override;
@@ -26,6 +27,7 @@ namespace sh::game
 		SH_GAME_API void SetClip(sound::SoundClip* clip);
 
 		SH_GAME_API void Play();
+		SH_GAME_API void PlayOneshot(const sound::SoundClip& clip);
 		SH_GAME_API void Pause();
 		SH_GAME_API void Stop();
 		SH_GAME_API void Rewind();
@@ -47,11 +49,19 @@ namespace sh::game
 		SH_GAME_API auto GetPitch() const -> float { return pitch; }
 		SH_GAME_API auto GetClip() const -> sound::SoundClip* { return clip; }
 	private:
-		void EnsureSource();
 		void ApplyClip();
 		void ApplySettings();
+		void ApplySettings(sound::SoundSource& source, bool looping) const;
 		void UpdateSourceTransform();
+		void UpdateSourceTransform(sound::SoundSource& source) const;
+		void CleanupOneShotSources();
+		void StopOneShotSources();
 	private:
+		sound::SoundSource source;
+		std::vector<sound::SoundSourcePool::Handle> oneShotSources;
+
+		core::Observer<false, const core::SObject*>::Listener onClipDestroyListener;
+
 		PROPERTY(clip)
 		sound::SoundClip* clip = nullptr;
 		PROPERTY(volume)
@@ -70,7 +80,5 @@ namespace sh::game
 		bool bPlayOnAwake = false;
 		PROPERTY(bRelative)
 		bool bRelative = false;
-
-		std::unique_ptr<sound::SoundSource> source;
 	};
 }//namespace

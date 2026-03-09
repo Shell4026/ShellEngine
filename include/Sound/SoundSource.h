@@ -4,6 +4,7 @@
 #include "Core/NonCopyable.h"
 
 #include <array>
+#include <cstdint>
 #include <memory>
 
 namespace sh::sound
@@ -59,7 +60,6 @@ namespace sh::sound
 	private:
 		void Release() noexcept;
 	private:
-		struct Impl;
-		std::unique_ptr<Impl> impl;
+		uint32_t handle = 0;
 	};
 }//namespace

@@ -1,4 +1,4 @@
-#include "Sound/SoundClip.h"
+﻿#include "Sound/SoundClip.h"
 
 #include "Sound/OggLoader.h"
 #include "Sound/WavLoader.h"

@@ -2,6 +2,8 @@
 
 #include "Core/Logger.h"
 
+#include "Sound/SoundSourcePool.h"
+
 #include "fmt/format.h"
 
 #include <AL/al.h>
@@ -177,6 +179,8 @@ namespace sh::sound
 	{
 		if (!impl)
 			return;
+
+		SoundSourcePool::Destroy();
 
 		if (impl->context != nullptr)
 		{
