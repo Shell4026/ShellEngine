@@ -24,11 +24,13 @@ while (_fixedDeltaTime >= FIXED_TIME)
 ```
 ## 충돌 체크
 ```c++
-void OnCollisionEnter(Collider& collider);
-void OnCollisionStay(Collider& collider);
-void OnCollisionExit(Collider& collider);
+void OnCollisionEnter(const Collision& collider);
+void OnCollisionStay(const Collision& collider);
+void OnCollisionExit(const Collision& collider);
 void OnTriggerEnter(Collider& collider);
 void OnTriggerStay(Collider& collider);
 void OnTriggerExit(Collider& collider);
 ```
 해당 함수들을 override한 후 rigidbody가 붙어 있는 게임 오브젝트에 컴포넌트를 추가하면 충돌 신호를 받을 수 있습니다.
+
+Collision에는 충돌된 위치의 정점과 노말, 침투 깊이등의 정보를 추가로 얻을 수 있습니다.

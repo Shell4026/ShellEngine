@@ -72,4 +72,4 @@ https://github.com/user-attachments/assets/333185c3-021d-49ae-b09d-198a3cfa1e04
 ## 커스텀 Inspector
 사용자가 작성한 컴포넌트를 에디터에서 제공하는 기본 Inspector렌더링 외에 직접 작성 할 수 있습니다.
 
-자세한 사항은 [CustomInspector.md](https://github.com/Shell4026/ShellEngine/edit/main/CustomInspector.md)에서 참고하세요.
+자세한 사항은 [CustomInspector.md](CustomInspector.md)에서 참고하세요.
