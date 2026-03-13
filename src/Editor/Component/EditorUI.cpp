@@ -10,6 +10,7 @@
 #include "Game/GameObject.h"
 #include "Game/World.h"
 #include "Game/Asset/FontGenerator.h"
+#include "Game/Input.h"
 
 #include "Render/VulkanImpl/VulkanTextureBuffer.h"
 #include "Render/RenderTexture.h"
@@ -48,6 +49,15 @@ namespace sh::editor
 		Super::BeginUpdate();
 		if (project->IsProjectOpen())
 		{
+			if (!viewport->IsPlaying())
+			{
+				auto& commandHistory = project->GetCommandHistory();
+				if (game::Input::GetKeyDown(game::Input::KeyCode::LCtrl) && game::Input::GetKeyPressed(game::Input::KeyCode::Z))
+					commandHistory.Undo();
+				if (game::Input::GetKeyDown(game::Input::KeyCode::LCtrl) && game::Input::GetKeyPressed(game::Input::KeyCode::Y))
+					commandHistory.Redo();
+			}
+
 			project->Update();
 			viewport->Update();
 			hierarchy->Update();
@@ -288,7 +298,7 @@ namespace sh::editor
 	}
 	void EditorUI::DrawEditorMenu()
 	{
-		if (ImGui::BeginMenu("Editor"))
+		if (ImGui::BeginMenu("Edit"))
 		{
 			if (ImGui::BeginMenu("EditorOnly"))
 			{
@@ -312,6 +322,22 @@ namespace sh::editor
 				}
 				ImGui::EndMenu();
 			}
+			auto& commandHistory = project->GetCommandHistory();
+			const bool canUndo = commandHistory.CanUndo();
+			const bool canRedo = commandHistory.CanRedo();
+
+			std::string undoLabel = "Undo";
+			if (canUndo)
+				undoLabel += " " + std::string{ commandHistory.GetUndoName() };
+
+			std::string redoLabel = "Redo";
+			if (canRedo)
+				redoLabel += " " + std::string{ commandHistory.GetRedoName() };
+
+			if (ImGui::MenuItem(undoLabel.c_str(), "Ctrl+Z", false, canUndo))
+				commandHistory.Undo();
+			if (ImGui::MenuItem(redoLabel.c_str(), "Ctrl+Y", false, canRedo))
+				commandHistory.Redo();
 			ImGui::EndMenu();
 		}
 	}

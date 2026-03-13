@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Editor/Export.h"
+#include "Editor/CommandHistory.h"
 #include "Editor/ProjectSetting.h"
 #include "UI/ProjectExplorer.h"
 
@@ -59,6 +60,8 @@ namespace sh::editor
 		SH_EDITOR_API auto GetProjectSetting() const -> const ProjectSetting& { return setting; }
 		SH_EDITOR_API auto GetProjectSetting() -> ProjectSetting& { return setting; }
 		SH_EDITOR_API auto GetLoadedAsset() const -> const core::SVector<core::SObject*>& { return loadedAssets; }
+		SH_EDITOR_API auto GetCommandHistory() -> CommandHistory& { return commandHistory; }
+		SH_EDITOR_API auto GetCommandHistory() const -> const CommandHistory& { return commandHistory; }
 
 		/// @brief 해당 경로가 프로젝트 경로인지
 		/// @param path 경로
@@ -91,6 +94,7 @@ namespace sh::editor
 		AssetDatabase& assetDatabase;
 
 		ProjectSetting setting;
+		CommandHistory commandHistory;
 
 		const std::regex engineDirRegex;
 
