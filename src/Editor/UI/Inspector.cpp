@@ -289,20 +289,19 @@ namespace sh::editor
 		if (buttonWidth < 0)
 			buttonWidth = 0;
 
+		core::SObject* const propertyObjPtr = *parameter;
+
 		const char* objName = "None";
-		if (core::IsValid(*parameter))
+		if (core::IsValid(propertyObjPtr))
 		{
-			if ((*parameter)->GetName().ToString().empty())
+			if (propertyObjPtr->GetName().ToString().empty())
 				objName = "Unknown";
 			else
-				objName = (*parameter)->GetName().ToString().c_str();
+				objName = propertyObjPtr->GetName().ToString().c_str();
 		}
 		if (ImGui::Button(objName, ImVec2{ buttonWidth, iconSize }))
 		{
-			if (prop.type == core::reflection::GetType<const render::Mesh*>())
-			{
-				//world.GetEditorUI()->OpenUI<AssetExplorer>(world, imgui);
-			}
+
 		}
 		if (ImGui::BeginDragDropTarget())
 		{

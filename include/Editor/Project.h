@@ -58,6 +58,7 @@ namespace sh::editor
 		SH_EDITOR_API auto GetLibraryPath() const -> const std::filesystem::path& { return libraryPath; }
 		SH_EDITOR_API auto GetProjectSetting() const -> const ProjectSetting& { return setting; }
 		SH_EDITOR_API auto GetProjectSetting() -> ProjectSetting& { return setting; }
+		SH_EDITOR_API auto GetLoadedAsset() const -> const core::SVector<core::SObject*>& { return loadedAssets; }
 
 		/// @brief 해당 경로가 프로젝트 경로인지
 		/// @param path 경로
