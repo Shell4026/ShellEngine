@@ -40,12 +40,14 @@ namespace sh::game
 		float moveSpeed;
 
 		glm::vec3 lastLookPos;
+		glm::vec3 middleDragRight;
+		glm::vec3 middleDragUp;
 
 		glm::vec2 leftPressedPos;
 		glm::vec2 middlePressedPos;
 
-		bool leftMousePressed;
-		bool middleMousePressed;
+		bool leftMousePressed = false;
+		bool middleMousePressed = false;
 		bool bFocus = false;
 	};
 }//namespace

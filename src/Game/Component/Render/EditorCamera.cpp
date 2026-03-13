@@ -13,7 +13,7 @@ namespace sh::game
 		xdir(45.f), ydir(90.f),
 		lastXdir(xdir), lastYdir(ydir),
 		leftPressedPos(), middlePressedPos(),
-		lastLookPos(lookPos),
+		lastLookPos(lookPos), middleDragRight(), middleDragUp(),
 		rotationSpeed(0.2f), moveSpeed(0.02f)
 	{
 		auto& type = GetStaticType();
@@ -102,6 +102,7 @@ namespace sh::game
 	SH_GAME_API void EditorCamera::SetPosition(const game::Vec3& pos)
 	{
 		gameObject.transform->SetWorldPosition(pos);
+		gameObject.transform->UpdateMatrix();
 		const glm::vec3 forward = glm::normalize(glm::vec3{ gameObject.transform->GetWorldPosition() - lookPos });
 		const float yaw = glm::degrees(atan2(forward.z, forward.x));
 		const float pitch = glm::degrees(asin(forward.y));
@@ -169,16 +170,18 @@ namespace sh::game
 		{
 			middleMousePressed = true;
 			middlePressedPos = Input::mousePosition;
+			lastLookPos = lookPos;
+
+			const glm::vec3 cameraPos = gameObject.transform->GetWorldPosition();
+			const glm::vec3 to = lookPos - cameraPos;
+			middleDragRight = glm::normalize(glm::cross(to, glm::vec3{ GetUpVector() }));
+			middleDragUp = glm::normalize(glm::cross(middleDragRight, to));
 		}
 
-		glm::vec3 to = lookPos - glm::vec3{ gameObject.transform->position };
-		glm::vec3 right = glm::normalize(glm::cross(to, glm::vec3{ GetUpVector() }));
-		glm::vec3 up = glm::normalize(glm::cross(right, to));
-
 		glm::vec2 delta = (Input::mousePosition - middlePressedPos);
-		float dis = glm::length(delta);
-
-		lookPos = lastLookPos + right * (-delta.x * moveSpeed * distance * 0.1f) + up * (delta.y * moveSpeed * distance * 0.1f);
+		lookPos = lastLookPos +
+			middleDragRight * (-delta.x * moveSpeed * distance * 0.1f) +
+			middleDragUp * (delta.y * moveSpeed * distance * 0.1f);
 	}
 
 	void EditorCamera::Zoom()
@@ -217,7 +220,8 @@ namespace sh::game
 		float x = lookPos.x + distance * glm::cos(glm::radians(ydir)) * glm::cos(glm::radians(xdir));
 		float y = lookPos.y + distance * glm::sin(glm::radians(xdir));
 		float z = lookPos.z + distance * glm::sin(glm::radians(ydir)) * glm::cos(glm::radians(xdir));
-		gameObject.transform->SetPosition(x, y, z);
+		gameObject.transform->SetWorldPosition(x, y, z);
+		gameObject.transform->UpdateMatrix();
 	}
 
 	void EditorCamera::FocusAABB(const render::AABB& aabb)

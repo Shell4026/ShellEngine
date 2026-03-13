@@ -283,7 +283,7 @@ namespace sh::editor
 				if (mode == Mode::Scale)
 					gameObject.transform->SetScale(scaleLast);
 				if (mode == Mode::Rotate)
-					gameObject.transform->SetRotation(quatLast);
+					gameObject.transform->SetWorldRotation(quatLast);
 				mode = Mode::None;
 				axis = Axis::None;
 				if (helper)
