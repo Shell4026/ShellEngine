@@ -1,5 +1,7 @@
 ﻿#include "UI/Viewport.h"
 #include "EditorWorld.h"
+#include "LambdaEditorCommand.h"
+#include "Project.h"
 
 #include "Core/Logger.h"
 #include "Core/ThreadSyncManager.h"
@@ -37,19 +39,49 @@ namespace sh::editor
 		pickingListener.SetCallback([&world](game::PickingCamera::PixelData pixel)
 			{
 				//SH_INFO_FORMAT("Pick R:{}, G:{}, B:{}, A:{}", pixel.r, pixel.g, pixel.b, pixel.a);
-				bool bMultiSelect = game::Input::GetKeyDown(game::Input::KeyCode::Shift);
-				if (!bMultiSelect)
-					world.ClearSelectedObjects();
+				const bool bMultiSelect = game::Input::GetKeyDown(game::Input::KeyCode::Shift);
 
 				uint32_t id = pixel;
 				if (id == 0)
 				{
 					if (!bMultiSelect)
-						world.ClearSelectedObjects();
+					{
+						auto command = std::make_unique<LambdaEditorCommand>("Clear selected",
+							[&world]()
+							{
+								world.ClearSelectedObjects();
+							},
+							[&world, selectedObjs = world.GetSelectedObjects()]()
+							{
+								world.SetSelectedObjects(selectedObjs);
+							}
+						);
+						auto& commandHistory = world.GetProject().GetCommandHistory();
+						commandHistory.Execute(std::move(command));
+					}
 				}
 				else if (auto pickingRenderer = game::PickingIdManager::Get(id); pickingRenderer != nullptr)
 				{
-					world.AddSelectedObject(&pickingRenderer->gameObject);
+					auto command = std::make_unique<LambdaEditorCommand>("Selected",
+						[&world, uuid = pickingRenderer->gameObject.GetUUID(), bMultiSelect]()
+						{
+							if (!bMultiSelect)
+								world.ClearSelectedObjects();
+
+							auto sobjPtr = core::SObjectManager::GetInstance()->GetSObject(uuid);
+							if (core::IsValid(sobjPtr))
+								world.AddSelectedObject(static_cast<game::GameObject*>(sobjPtr));
+						},
+						[&world, bMultiSelect, selectedObjs = world.GetSelectedObjects()]()
+						{
+							if (bMultiSelect)
+								world.PopSelectedObject();
+							else
+								world.SetSelectedObjects(selectedObjs);
+						}
+					);
+					auto& commandHistory = world.GetProject().GetCommandHistory();
+					commandHistory.Execute(std::move(command));
 				}
 			}
 		);

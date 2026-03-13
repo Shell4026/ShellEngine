@@ -33,6 +33,8 @@ namespace sh::editor
 		SH_EDITOR_API void InitResource() override;
 
 		SH_EDITOR_API void AddSelectedObject(core::SObject* obj);
+		SH_EDITOR_API void PopSelectedObject();
+		SH_EDITOR_API void SetSelectedObjects(const std::vector<SObject*>& selectedObjs);
 		SH_EDITOR_API void ClearSelectedObjects();
 
 		SH_EDITOR_API auto IsSelected(core::SObject* obj) const -> bool;
@@ -47,6 +49,7 @@ namespace sh::editor
 		SH_EDITOR_API void Deserialize(const core::Json& json) override;
 
 		SH_EDITOR_API auto GetSelectedObjects() const -> const std::vector<SObject*>& { return selectedObjs; }
+		SH_EDITOR_API auto GetProject() const -> Project& { return project; }
 	private:
 		void AddEditorControlsToSelected(core::SObject& obj);
 		void RemoveEditorControls(core::SObject& obj);
