@@ -196,6 +196,23 @@ namespace sh::editor
 		AddEditorControlsToSelected(*obj);
 	}
 
+	SH_EDITOR_API void EditorWorld::PopSelectedObject()
+	{
+		if (selectedObjs.empty())
+			return;
+
+		core::SObject* const objPtr = selectedObjs.back();
+		selectedObjs.pop_back();
+		RemoveEditorControls(*objPtr);
+	}
+
+	SH_EDITOR_API void EditorWorld::SetSelectedObjects(const std::vector<SObject*>& selectedObjs)
+	{
+		ClearSelectedObjects();
+		for (auto obj : selectedObjs)
+			AddSelectedObject(obj);
+	}
+
 	SH_EDITOR_API void EditorWorld::ClearSelectedObjects()
 	{
 		for (auto obj : selectedObjs)
