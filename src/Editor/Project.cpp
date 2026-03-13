@@ -41,6 +41,8 @@ namespace sh::editor
 
 	Project::~Project()
 	{
+		commandHistory.Clear();
+
 		for (auto objPtr : loadedAssets)
 		{
 			if (objPtr == nullptr)
@@ -160,6 +162,8 @@ namespace sh::editor
 
 	SH_EDITOR_API void Project::OpenProject(const std::filesystem::path& dir)
 	{
+		commandHistory.Clear();
+
 		rootPath = dir;
 		assetPath = rootPath / "Assets";
 		binaryPath = rootPath / "bin";
@@ -203,6 +207,8 @@ namespace sh::editor
 
 	SH_EDITOR_API void Project::NewWorld(const std::string& name)
 	{
+		commandHistory.Clear();
+
 		auto& gameManager = *game::GameManager::GetInstance();
 
 		editor::EditorWorld* newWorld = core::SObject::Create<editor::EditorWorld>(*this);
@@ -249,6 +255,7 @@ namespace sh::editor
 
 		auto& gameManager = *game::GameManager::GetInstance();
 		gameManager.LoadWorld(world->GetUUID());
+		commandHistory.Clear();
 
 		setting.lastWorldUUID = world->GetUUID();
 	}
