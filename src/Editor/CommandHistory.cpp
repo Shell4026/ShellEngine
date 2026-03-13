@@ -169,6 +169,8 @@ namespace sh::editor
 		if (!undoStack.empty() && undoStack.back()->MergeWith(*command))
 			return;
 
+		if (undoStack.size() > undoLimit)
+			undoStack.pop_front();
 		undoStack.push_back(std::move(command));
 	}
 
