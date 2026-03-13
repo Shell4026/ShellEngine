@@ -13,6 +13,7 @@
 #undef None
 #endif
 
+#include <cstdint>
 #include <set>
 
 namespace sh::game
@@ -26,10 +27,6 @@ namespace sh::editor
 	class EditorControl : public game::Component
 	{
 		COMPONENT(EditorControl, "Editor")
-	private:
-		inline void MoveControl();
-		inline void ScaleControl();
-		inline void RotateControl();
 	public:
 		SH_EDITOR_API EditorControl(game::GameObject& owner);
 		SH_EDITOR_API ~EditorControl();
@@ -43,29 +40,41 @@ namespace sh::editor
 		SH_EDITOR_API auto Serialize() const -> core::Json override;
 
 		SH_EDITOR_API static void SetSnap(bool bSnap);
-		SH_EDITOR_API static auto GetSnap() -> bool;
 		SH_EDITOR_API static void SetSnapDistance(float dis);
-		SH_EDITOR_API static auto GetSnapDistance() -> float;
 		SH_EDITOR_API static void SetSnapAngle(float degree);
-		SH_EDITOR_API static auto GetSnapAngle() -> float;
-	private:
-		static std::set<EditorControl*> controls;
-		static float snapDis;
-		static float snapAngle;
-		static bool bPivot;
-		static bool bUpdatedControls;
-		static bool bSnap;
 
+		SH_EDITOR_API static auto GetSnap() -> bool { return bSnap; }
+		SH_EDITOR_API static auto GetSnapDistance() -> float { return snapDis; }
+		SH_EDITOR_API static auto GetSnapAngle() -> float { return snapAngle; }
+	private:
 		enum class Mode
 		{
 			None, Move, Rotate, Scale
 		};
+		struct Snapshot
+		{
+			game::Vec3 position;
+			game::Vec3 scale;
+			glm::quat rotation;
+		};
+
+		void MoveControl();
+		void ScaleControl();
+		void RotateControl();
+
+		void BeginManipulation(Mode nextMode);
+		void CompleteManipulation(bool bCancel);
+		void ResetManipulationState();
+		auto HasTransformChanged() const -> bool;
+		auto CreateSnapshot() const -> Snapshot;
+		static auto GetCommandName(Mode mode) -> const char*;
+		static auto GetTransactionName(Mode mode) -> const char*;
+	private:
+		Mode mode = Mode::None;
 		enum class Axis
 		{
 			None, X, Y, Z
-		};
-		Mode mode = Mode::None;
-		Axis axis = Axis::None;
+		} axis = Axis::None;
 
 		PROPERTY(camera)
 		game::Camera* camera = nullptr;
@@ -77,9 +86,21 @@ namespace sh::editor
 		game::Vec3 posLast, scaleLast;
 		glm::quat quatLast;
 		game::Vec2 clickPos;
+		bool bParticipatingManipulation = false;
 
 		game::Vec3 up, right, forward;
 
 		core::EventSubscriber<game::events::WorldEvent> worldEventSubscriber;
+
+		static std::set<EditorControl*> controls;
+		static float snapDis;
+		static float snapAngle;
+		static bool bPivot;
+		static bool bUpdatedControls;
+		static bool bSnap;
+
+		static uint32_t activeManipulationCount;
+		static bool bOwnsHistoryTransaction;
+		static bool bCancelHistoryTransaction;
 	};
 }//namespace

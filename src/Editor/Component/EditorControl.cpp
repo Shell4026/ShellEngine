@@ -1,6 +1,8 @@
 ﻿#include "Component/EditorControl.h"
 #include "Component/EditorUI.h"
+#include "Editor/TransformEditorCommand.h"
 #include "EditorWorld.h"
+#include "Project.h"
 
 #include "Game/Component/Render/Camera.h"
 #include "Game/Component/Render/LineRenderer.h"
@@ -24,29 +26,15 @@ namespace sh::editor
 	bool EditorControl::bUpdatedControls = false;
 	bool EditorControl::bSnap = true;
 
+	uint32_t EditorControl::activeManipulationCount = 0;
+	bool EditorControl::bOwnsHistoryTransaction = false;
+	bool EditorControl::bCancelHistoryTransaction = false;
+
 	using namespace game;
 	SH_EDITOR_API EditorControl::EditorControl(GameObject& owner) :
 		Component(owner)
 	{
-		controls.insert(this);
-
-		if (auto obj = world.GetGameObject("_Helper"); obj == nullptr)
-		{
-			obj = world.AddGameObject("_Helper");
-			obj->hideInspector = true;
-			obj->bNotSave = true;
-			helper = obj->AddComponent<LineRenderer>();
-			helper->SetColor(Vec4{ 1.f, 0.f, 0.f, 1.f });
-			helper->SetStart(Vec3{ -100.f, 0.f, 0.f });
-			helper->SetEnd(Vec3{ 100.f, 0.f, 0.f });
-			helper->SetActive(false);
-		}
-		else
-		{
-			helper = obj->GetComponent<LineRenderer>();
-		}
 		ui = &static_cast<EditorWorld&>(world).GetEditorUI();
-
 		canPlayInEditor = true;
 
 		worldEventSubscriber.SetCallback(
@@ -65,7 +53,209 @@ namespace sh::editor
 		controls.erase(this);
 	}
 
-	inline void EditorControl::MoveControl()
+	SH_EDITOR_API void EditorControl::Awake()
+	{
+		Super::Awake();
+
+		controls.insert(this);
+
+		if (auto obj = world.GetGameObject("_Helper"); obj == nullptr)
+		{
+			obj = world.AddGameObject("_Helper");
+			obj->hideInspector = true;
+			obj->bNotSave = true;
+			helper = obj->AddComponent<LineRenderer>();
+			helper->SetColor(Vec4{ 1.f, 0.f, 0.f, 1.f });
+			helper->SetStart(Vec3{ -100.f, 0.f, 0.f });
+			helper->SetEnd(Vec3{ 100.f, 0.f, 0.f });
+			helper->SetActive(false);
+		}
+		else
+		{
+			helper = obj->GetComponent<LineRenderer>();
+		}
+
+		world.SubscribeEvent(worldEventSubscriber);
+	}
+
+	SH_EDITOR_API void EditorControl::Update()
+	{
+		if (!core::IsValid(camera))
+			return;
+
+		if (mode == Mode::None && Input::GetKeyDown(Input::KeyCode::G))
+		{
+			BeginManipulation(Mode::Move);
+		}
+		if (mode == Mode::None && Input::GetKeyDown(Input::KeyCode::S))
+		{
+			BeginManipulation(Mode::Scale);
+		}
+		if (mode == Mode::None && Input::GetKeyDown(Input::KeyCode::R))
+		{
+			BeginManipulation(Mode::Rotate);
+		}
+		if (mode != Mode::None)
+		{
+			ui->GetViewport().BlockLeftClick(true);
+			ui->GetViewport().BlockRightClick(true);
+			if (Input::GetKeyDown(Input::KeyCode::X))
+			{
+				axis = Axis::X;
+				helper->SetActive(true);
+				helper->SetColor(Vec4{ 1.f, 0.f, 0.f, 1.f });
+				helper->SetStart(Vec3{ -100.f, 0.f, 0.f } + posLast);
+				helper->SetEnd(Vec3{ 100.f, 0.f, 0.f } + posLast);
+			}
+			else if (Input::GetKeyDown(Input::KeyCode::Y))
+			{
+				axis = Axis::Y;
+				helper->SetActive(true);
+				helper->SetColor(Vec4{ 0.f, 1.f, 0.f, 1.f });
+				helper->SetStart(Vec3{ 0.f, -100.f, 0.f } + posLast);
+				helper->SetEnd(Vec3{ 0.f, 100.f, 0.f } + posLast);
+			}
+			else if (Input::GetKeyDown(Input::KeyCode::Z))
+			{
+				axis = Axis::Z;
+				helper->SetActive(true);
+				helper->SetColor(Vec4{ 0.f, 0.f, 1.f, 1.f });
+				helper->SetStart(Vec3{ 0.f, 0.f, -100.f } + posLast);
+				helper->SetEnd(Vec3{ 0.f, 0.f, 100.f } + posLast);
+			}
+
+			if (Input::GetMouseDown(Input::MouseType::Right))
+			{
+				CompleteManipulation(true);
+			}
+			else if (Input::GetMouseDown(Input::MouseType::Left))
+			{
+				CompleteManipulation(false);
+			}
+		}
+
+		switch (mode)
+		{
+		case Mode::Move:
+			MoveControl();
+			break;
+		case Mode::Scale:
+			ScaleControl();
+			break;
+		case Mode::Rotate:
+			RotateControl();
+			break;
+		}
+	}
+	SH_EDITOR_API void EditorControl::LateUpdate()
+	{
+		if (Input::GetMouseReleased(Input::MouseType::Left))
+			ui->GetViewport().BlockLeftClick(false);
+		if (Input::GetMouseReleased(Input::MouseType::Right))
+			ui->GetViewport().BlockRightClick(false);
+	}
+	SH_EDITOR_API void EditorControl::SetCamera(Camera* camera)
+	{
+		this->camera = camera;
+	}
+	SH_EDITOR_API auto EditorControl::Serialize() const -> core::Json
+	{
+		return core::Json{};
+	}
+	SH_EDITOR_API void EditorControl::SetSnap(bool bSnap)
+	{
+		EditorControl::bSnap = bSnap;
+	}
+	SH_EDITOR_API void sh::editor::EditorControl::SetSnapDistance(float dis)
+	{
+		snapDis = dis;
+	}
+	SH_EDITOR_API void EditorControl::SetSnapAngle(float degree)
+	{
+		snapAngle = degree;
+	}
+
+	void EditorControl::BeginManipulation(Mode nextMode)
+	{
+		forward = glm::normalize(glm::vec3{ camera->GetLookPos() - camera->gameObject.transform->position });
+		up = camera->GetUpVector();
+		right = glm::normalize(glm::cross(glm::vec3{ forward }, glm::vec3{ up }));
+		up = glm::normalize(glm::cross(glm::vec3{ right }, glm::vec3{ forward }));
+
+		posLast = gameObject.transform->GetWorldPosition();
+		scaleLast = gameObject.transform->scale;
+		quatLast = gameObject.transform->GetWorldQuat();
+		clickPos = Input::mousePosition;
+		mode = nextMode;
+		bParticipatingManipulation = true;
+
+		auto& commandHistory = static_cast<EditorWorld&>(world).GetProject().GetCommandHistory();
+		if (activeManipulationCount == 0)
+		{
+			bCancelHistoryTransaction = false;
+			if (!commandHistory.IsTransactionOpen())
+			{
+				commandHistory.BeginTransaction(GetTransactionName(nextMode));
+				bOwnsHistoryTransaction = true;
+			}
+			else
+				bOwnsHistoryTransaction = false;
+		}
+		++activeManipulationCount;
+	}
+
+	void EditorControl::CompleteManipulation(bool bCancel)
+	{
+		if (!bParticipatingManipulation)
+		{
+			ResetManipulationState();
+			return;
+		}
+
+		auto& commandHistory = static_cast<EditorWorld&>(world).GetProject().GetCommandHistory();
+		if (bCancel)
+		{
+			if (mode == Mode::Move)
+				gameObject.transform->SetWorldPosition(posLast);
+			if (mode == Mode::Scale)
+				gameObject.transform->SetScale(scaleLast);
+			if (mode == Mode::Rotate)
+				gameObject.transform->SetWorldRotation(quatLast);
+
+			bCancelHistoryTransaction = true;
+		}
+		else if (HasTransformChanged())
+		{
+			const auto after = CreateSnapshot();
+			auto command = std::make_unique<TransformEditorCommand>(
+				gameObject.GetUUID(),
+				GetCommandName(mode),
+				TransformEditorCommand::Snapshot{ posLast, scaleLast, quatLast },
+				TransformEditorCommand::Snapshot{ after.position, after.scale, after.rotation }
+			);
+			commandHistory.Execute(std::move(command));
+		}
+
+		if (activeManipulationCount > 0)
+			--activeManipulationCount;
+		const bool bLastManipulation = activeManipulationCount == 0;
+
+		bParticipatingManipulation = false;
+		ResetManipulationState();
+
+		if (bLastManipulation && bOwnsHistoryTransaction)
+		{
+			if (bCancelHistoryTransaction)
+				commandHistory.CancelTransaction();
+			else
+				commandHistory.EndTransaction();
+
+			bOwnsHistoryTransaction = false;
+			bCancelHistoryTransaction = false;
+		}
+	}
+
+	void EditorControl::MoveControl()
 	{
 		glm::vec3 linePoint = camera->gameObject.transform->position;
 		glm::vec3 facePoint = gameObject.transform->position;
@@ -123,7 +313,7 @@ namespace sh::editor
 
 		gameObject.transform->SetWorldPosition(pos);
 	}
-	inline void EditorControl::ScaleControl()
+	void EditorControl::ScaleControl()
 	{
 		glm::vec3 linePoint = camera->gameObject.transform->position;
 		glm::vec3 facePoint = gameObject.transform->position;
@@ -151,17 +341,17 @@ namespace sh::editor
 
 		gameObject.transform->SetScale(scale);
 	}
-	inline void EditorControl::RotateControl()
+	void EditorControl::RotateControl()
 	{
 		const glm::vec2 start = gameObject.world.renderer.GetContext()->GetViewportStart();
 		const glm::vec2 end = gameObject.world.renderer.GetContext()->GetViewportEnd();
 
-		glm::vec2 screenPos = glm::project(glm::vec3{ gameObject.transform->GetWorldPosition() }, 
+		glm::vec2 screenPos = glm::project(glm::vec3{ gameObject.transform->GetWorldPosition() },
 			camera->GetViewMatrix(), camera->GetProjMatrix(),
 			glm::vec4{ start.x, start.y, end.x, end.y });
 
 		screenPos.y = end.y - screenPos.y;
-		
+
 		const glm::vec2 v = glm::normalize(screenPos - glm::vec2{ clickPos });
 		const glm::vec2 v2 = glm::normalize(screenPos - Input::mousePosition);
 		if (glm::dot((v - v2), (v - v2)) < 0.0001f)
@@ -203,155 +393,62 @@ namespace sh::editor
 		}
 	}
 
-	SH_EDITOR_API void EditorControl::Awake()
+	void EditorControl::ResetManipulationState()
 	{
-		Super::Awake();
-		world.SubscribeEvent(worldEventSubscriber);
+		mode = Mode::None;
+		axis = Axis::None;
+		if (helper)
+			helper->SetActive(false);
 	}
 
-	SH_EDITOR_API void EditorControl::Update()
+	auto EditorControl::HasTransformChanged() const -> bool
 	{
-		if (!core::IsValid(camera))
-			return;
+		const glm::vec3 posDelta = glm::vec3{ gameObject.transform->GetWorldPosition() - posLast };
+		const glm::vec3 scaleDelta = glm::vec3{ gameObject.transform->scale - scaleLast };
+		const float rotDot = std::abs(glm::dot(gameObject.transform->GetWorldQuat(), quatLast));
 
-		if (mode != Mode::Move && Input::GetKeyDown(Input::KeyCode::G))
+		return glm::dot(posDelta, posDelta) > 0.000001f ||
+			glm::dot(scaleDelta, scaleDelta) > 0.000001f ||
+			std::abs(1.0f - rotDot) > 0.000001f;
+	}
+
+	auto EditorControl::CreateSnapshot() const -> Snapshot
+	{
+		return Snapshot
 		{
-			forward = glm::normalize(glm::vec3{ camera->GetLookPos() - camera->gameObject.transform->position });
-			up = camera->GetUpVector();
-			right = glm::normalize(glm::cross(glm::vec3{ forward }, glm::vec3{ up }));
-			up = glm::normalize(glm::cross(glm::vec3{ right }, glm::vec3{ forward }));
+			gameObject.transform->GetWorldPosition(),
+			gameObject.transform->scale,
+			gameObject.transform->GetWorldQuat()
+		};
+	}
 
-			posLast = gameObject.transform->GetWorldPosition();
-			clickPos = Input::mousePosition;
-			mode = Mode::Move;
-		}
-		if (mode != Mode::Scale && Input::GetKeyDown(Input::KeyCode::S))
-		{
-			forward = glm::normalize(glm::vec3{ camera->GetLookPos() - camera->gameObject.transform->position });
-			up = camera->GetUpVector();
-			right = glm::normalize(glm::cross(glm::vec3{ forward }, glm::vec3{ up }));
-			up = glm::normalize(glm::cross(glm::vec3{ right }, glm::vec3{ forward }));
-
-			scaleLast = gameObject.transform->scale;
-			clickPos = Input::mousePosition;
-			mode = Mode::Scale;
-		}
-		if (mode != Mode::Rotate && Input::GetKeyDown(Input::KeyCode::R))
-		{
-			forward = glm::normalize(glm::vec3{ camera->GetLookPos() - camera->gameObject.transform->position });
-			up = camera->GetUpVector();
-			right = glm::normalize(glm::cross(glm::vec3{ forward }, glm::vec3{ up }));
-			up = glm::normalize(glm::cross(glm::vec3{ right }, glm::vec3{ forward }));
-
-			quatLast = gameObject.transform->GetWorldQuat();
-			clickPos = Input::mousePosition;
-			mode = Mode::Rotate;
-		}
-		if (mode != Mode::None)
-		{
-			ui->GetViewport().BlockLeftClick(true);
-			ui->GetViewport().BlockRightClick(true);
-			if (Input::GetKeyDown(Input::KeyCode::X))
-			{
-				axis = Axis::X;
-				helper->SetActive(true);
-				helper->SetColor(Vec4{ 1.f, 0.f, 0.f, 1.f });
-				helper->SetStart(Vec3{ -100.f, 0.f, 0.f } + posLast);
-				helper->SetEnd(Vec3{ 100.f, 0.f, 0.f } + posLast);
-			}
-			else if (Input::GetKeyDown(Input::KeyCode::Y))
-			{
-				axis = Axis::Y;
-				helper->SetActive(true);
-				helper->SetColor(Vec4{ 0.f, 1.f, 0.f, 1.f });
-				helper->SetStart(Vec3{ 0.f, -100.f, 0.f } + posLast);
-				helper->SetEnd(Vec3{ 0.f, 100.f, 0.f } + posLast);
-			}
-			else if (Input::GetKeyDown(Input::KeyCode::Z))
-			{
-				axis = Axis::Z;
-				helper->SetActive(true);
-				helper->SetColor(Vec4{ 0.f, 0.f, 1.f, 1.f });
-				helper->SetStart(Vec3{ 0.f, 0.f, -100.f } + posLast);
-				helper->SetEnd(Vec3{ 0.f, 0.f, 100.f } + posLast);
-			}
-
-			if (Input::GetMouseDown(Input::MouseType::Right))
-			{
-				if (mode == Mode::Move)
-					gameObject.transform->SetWorldPosition(posLast);
-				if (mode == Mode::Scale)
-					gameObject.transform->SetScale(scaleLast);
-				if (mode == Mode::Rotate)
-					gameObject.transform->SetWorldRotation(quatLast);
-				mode = Mode::None;
-				axis = Axis::None;
-				if (helper)
-				{
-					helper->SetActive(false);
-				}
-			}
-			else if (Input::GetMouseDown(Input::MouseType::Left))
-			{
-				mode = Mode::None;
-				axis = Axis::None;
-				if (helper)
-				{
-					helper->SetActive(false);
-				}
-			}
-		}
-
+	auto EditorControl::GetCommandName(Mode mode) -> const char*
+	{
 		switch (mode)
 		{
 		case Mode::Move:
-			MoveControl();
-			break;
-		case Mode::Scale:
-			ScaleControl();
-			break;
+			return "Move";
 		case Mode::Rotate:
-			RotateControl();
-			break;
+			return "Rotate";
+		case Mode::Scale:
+			return "Scale";
+		default:
+			return "Transform";
 		}
 	}
-	SH_EDITOR_API void EditorControl::LateUpdate()
+
+	auto EditorControl::GetTransactionName(Mode mode) -> const char*
 	{
-		if (Input::GetMouseReleased(Input::MouseType::Left))
-			ui->GetViewport().BlockLeftClick(false);
-		if (Input::GetMouseReleased(Input::MouseType::Right))
-			ui->GetViewport().BlockRightClick(false);
-	}
-	SH_EDITOR_API void EditorControl::SetCamera(Camera* camera)
-	{
-		this->camera = camera;
-	}
-	SH_EDITOR_API auto EditorControl::Serialize() const -> core::Json
-	{
-		return core::Json{};
-	}
-	SH_EDITOR_API void EditorControl::SetSnap(bool bSnap)
-	{
-		EditorControl::bSnap = bSnap;
-	}
-	SH_EDITOR_API auto sh::editor::EditorControl::GetSnap() -> bool
-	{
-		return bSnap;
-	}
-	SH_EDITOR_API void sh::editor::EditorControl::SetSnapDistance(float dis)
-	{
-		snapDis = dis;
-	}
-	SH_EDITOR_API auto sh::editor::EditorControl::GetSnapDistance() -> float
-	{
-		return snapDis;
-	}
-	SH_EDITOR_API void EditorControl::SetSnapAngle(float degree)
-	{
-		snapAngle = degree;
-	}
-	SH_EDITOR_API auto EditorControl::GetSnapAngle() -> float
-	{
-		return snapAngle;
+		switch (mode)
+		{
+		case Mode::Move:
+			return "Move objects";
+		case Mode::Rotate:
+			return "Rotate objects";
+		case Mode::Scale:
+			return "Scale objects";
+		default:
+			return "Transform objects";
+		}
 	}
 }//namespace
