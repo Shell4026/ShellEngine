@@ -1,94 +1,122 @@
 # ShellEngine
-![image](https://github.com/user-attachments/assets/c5aa3796-8969-4b63-aee8-8c236fbe6820)
+<img width="1262" height="816" alt="image" src="https://github.com/user-attachments/assets/4f0cca0c-df1f-487c-97f7-94a8eccc1ad3" />
 
-<img width="1913" height="1029" alt="스크린샷 2025-09-15 152351" src="https://github.com/user-attachments/assets/f7e137c6-86a9-4391-ab8c-9b2adc18f6b8" />
-
-Vulkan 기반으로 개발중인 크로스 플랫폼 3D/2D 게임 엔진입니다.</br>
-저수준 그래픽 API를 직접 다루면서, 현대 게임 엔진에 필요한 다양한 시스템을 설계하고 구현하는 것을 목표로 했습니다.
-
-## 특징
-- **Vulkan 기반 렌더링 시스템**  
-  - 로우레벨 Vulkan API를 직접 사용하여 고성능 그래픽 파이프라인 구현
-  - 추후 확장을 고려한 렌더 그래프 기반 구조
-
-- **멀티스레딩 아키텍처** [상세](https://github.com/Shell4026/ShellEngine/blob/main/Multithreading.md)
-  - 게임 스레드와 렌더 스레드 분리
-    - ImGUI의 멀티스레드 지원 [상세](https://github.com/Shell4026/ShellEngine/blob/main/ImGUI.md)
-  - **이중 버퍼링**, **지연 동기화** 구조를 통한 프레임 간 안전한 데이터 교환
-  - 한 프레임 후 Sync 타이밍에 맞춰 가비지 컬렉션 및 메모리 정리 수행
-  - 나눌 수 있는 작업은 Task로 분리 후 스레드 풀에 넣어 병렬적으로 수행
-  - Vulkan 커맨드 버퍼 병렬 기록
-
-- **런타임 리플렉션 시스템** [상세](https://github.com/Shell4026/ShellEngine/blob/main/Reflection.md)  
-  - 객체의 메타데이터를 런타임에 조회 및 수정 가능
-  - 이를 기반으로 에디터 기능, **가비지 컬렉터** 구현
-
-- **간단한 메모리 관리** [상세](https://github.com/Shell4026/ShellEngine/blob/main/GC.md)
-  - 리플렉션 기반 마크 앤 스윕 가비지 컬렉터를 통한 누수 없고 쉬운 메모리 관리
-  - PROPERTY매크로와 쓰레기 수집을 통한 댕글링 포인터 방지
-  - STL 컨테이너를 상속한 가비지 컬렉터용 컨테이너
-
-- **에디터 통합 개발** [상세](https://github.com/Shell4026/ShellEngine/blob/main/Editor.md)
-  - 런타임 리플렉션을 활용한 오브젝트 계층 구조(Hierarchy) 및 속성 편집(Inspector) 구현
-    - 사용자 커스텀 Inspector [상세](https://github.com/Shell4026/ShellEngine/blob/main/CustomInspector.md)
-  - Unity 스타일의 편집 환경
-  - 객체 조작 방식은 Blender와 유사
-  - 빌드 시스템
-
-- **컴포넌트 기반 아키텍처** [상세](https://github.com/Shell4026/ShellEngine/blob/main/Component.md)
-  - Unity와 유사한 컴포넌트-엔티티 구조
-  - 사용자가 작성한 컴포넌트를 DLL로 **핫로드**하여 런타임 중 추가 및 수정 가능
-
-- **간단한 셰이더 언어와 파서** [상세](https://github.com/Shell4026/ShellEngine/blob/main/Shader.md)
-  - 유니티 ShaderLab과 유사한 문법을 가진 셰이더 언어
-  - 하향식 파서를 구현하여 파이프라인 설정을 셰이더 코드에서 할 수 있음
-
-- **Physics 시스템 통합** [상세](https://github.com/Shell4026/ShellEngine/blob/main/Physics.md)
-  - ReactPhysics3D를 연동하여 물리 연산 및 충돌 처리를 지원
-
-- **크로스 플랫폼 지원 (Windows/Linux)**  
-  - Windows 및 Linux 환경에서 빌드 및 실행 가능
-  - 플랫폼 독립적인 창 생성 및 이벤트 처리 모듈화
-  - Windows: win32 api, Linux: x11 lib
-
-## 간단한 에디터 데모 영상
 [![Video Label](http://img.youtube.com/vi/SEiktv0WtOM/0.jpg)](https://youtu.be/SEiktv0WtOM)</br>
-https://youtu.be/SEiktv0WtOM
+[간단한 에디터 데모 영상(Youtube)](https://youtu.be/SEiktv0WtOM)
 
+## 개요
+저수준 그래픽 API를 직접 다루면서 현대 게임 엔진의 핵심 시스템을 설계, 구현하는 것을 목표로 한 1인 개발 프로젝트입니다.
+
+렌더링 파이프라인 / 멀티스레딩 아키텍처 / 메모리 관리 / 에디터 통합 영역을 스스로 설계했습니다.
+
+## 특징 및 문서
+### Vulkan 기반 렌더링 시스템
+로우레벨 Vulkan API를 직접 사용하여 고성능 그래픽 파이프라인을 구현했습니다.</br>
+추후 패스 추가 및 구조 변경이 쉽도록 렌더 그래프 기반 구조를 채택했습니다.
+- Vulkan 커맨드 버퍼 병렬 기록
+---
+### 멀티스레딩 아키텍처 | [상세 문서](Multithreading.md)
+게임 스레드와 렌더 스레드를 분리하여 CPU와 GPU 작업이 병렬로 진행되도록 설계했습니다.
+- 이중 버퍼링 + 지연 동기화: 두 스레드가 서로 블로킹하지 않고 프레임 간 안전하게 데이터를 교환
+- 가비지 컬렉션 타이밍: Sync 타이밍에 맞춰 GC가 실행되어 렌더 중 메모리 해제로 인한 크래시를 방지
+- 스레드 풀: 분리 가능한 작업은 Task로 쪼개 병렬 처리, Vulkan 커맨드 버퍼도 병렬로 기록
+- ImGUI 멀티스레드 지원: 기본적으로 멀티스레드를 지원하지 않는 ImGUI를 수정하여 통합 | [상세 문서](https://github.com/Shell4026/ShellEngine/blob/main/ImGUI.md)
+---
+### 런타임 리플렉션 시스템 | [상세 문서](Reflection.md) | [구현 과정 (velog)](https://velog.io/@shell4026/ShellEngine-%EB%A6%AC%ED%94%8C%EB%A0%89%EC%85%98-%EC%8B%9C%EC%8A%A4%ED%85%9C)
+C++은 기본적으로 런타임 리플렉션을 지원하지 않아 직접 설계, 구현했습니다.
+- 객체의 타입 정보와 멤버 변수 메타데이터를 런타임에 조회, 수정 가능
+- 이를 기반으로 에디터의 Inspector 자동 생성과 가비지 컬렉터를 구현 - 리플렉션 하나로 여러 시스템이 구동되는 구조
+---
+### 리플렉션 기반 가비지 컬렉터 | [상세 문서](GC.md) | [구현 과정 (velog)](https://velog.io/@shell4026/ShellEngine-GC%EB%A5%BC-%EB%A7%8C%EB%93%A4%EA%B8%B0%EA%B9%8C%EC%A7%80)
+C++에서 메모리 관리를 단순화하기 위해 마크 앤 스윕 방식의 GC를 직접 구현했습니다.
+- ```PROPERTY``` 매크로로 등록된 포인터를 리플렉션으로 추적하여 댕글링 포인터를 자동으로 nullptr 처리
+- STL 컨테이너를 상속한 GC 전용 컨테이너로 컨테이너 내 포인터도 안전하게 관리
+- 멀티스레딩 구조의 Sync 타이밍에 동작하여 렌더 중 해제로 인한 문제를 원천 차단
+- ```GCObject```를 상속하여 사용자 정의 구조체 내부의 ```SObject```도 추적 가능
+---
+### 에디터 [상세 문서](Editor.md)
+- 런타임 리플렉션을 활용한 Hierarchy(계층 구조) 및 Inspector(속성 편집) 자동 생성
+- 사용자 정의 Inspector 지원 | [상세 문서](https://github.com/Shell4026/ShellEngine/blob/main/CustomInspector.md)
+- 유저 코드 핫-리로드: 엔진 재시작 없이 런타임 중 컴포넌트 코드 추가, 수정 가능 | [구현 과정 (velog)](https://velog.io/@shell4026/ShellEngine-%ED%95%AB-%EB%A6%AC%EB%A1%9C%EB%93%9C-%EA%B5%AC%ED%98%84-%EA%B3%BC%EC%A0%95)
+- Unity 스타일의 편집 환경 / Blender 스타일의 오브젝트 조작 방식
+- 빌드 시스템
+---
+### 커스텀 셰이더 언어 | [상세 문서](Shader.md)
+Unity ShaderLab과 유사한 문법의 셰이더 언어와 하향식 파서(Top-Down Parser) 를 직접 구현했습니다.</br>
+파이프라인 설정(블렌딩, 컬링 등)을 셰이더 코드 안에서 선언적으로 작성할 수 있습니다.
+
+---
+### 컴포넌트 기반 아키텍처 | [상세 문서](Component.md)
+Unity와 유사한 컴포넌트-엔티티 구조를 채택하여 기능의 조합과 확장이 용이하도록 설계했습니다.
+
+---
+### Physics 시스템 | [상세 문서](Physics.md)
+ReactPhysics3D를 연동하여 물리 연산 및 충돌 처리를 지원합니다.
+
+---
+### 크로스 플랫폼 지원 (Windows / Linux)
+- Windows: Win32 API / Linux: X11
+- 플랫폼 독립적인 창 생성 및 이벤트 처리 모듈화
+  
 ## 프로젝트 구조 흐름
 
 ![흐름도](https://github.com/user-attachments/assets/79eef4d4-5b85-4093-8597-183433164c18)
 > [!NOTE]
-> 멀티 스레딩 구조로, 게임 스레드와 렌더 스레드로 나눠져 있습니다. </br>
-> 각 스레드는 작업이 끝난 후 Sync타이밍에 버퍼를 교환하며 가비지 컬렉터가 작동합니다.
-> 자세한 사항은 '특징'의 멀티 스레딩 아키텍쳐를 참조 하세요.
+> 게임 스레드와 렌더 스레드가 분리되어 동작하며, Sync 타이밍에 버퍼를 교환하고 GC가 실행됩니다.
+> 자세한 사항은 '특징 및 문'의 멀티 스레딩 아키텍쳐를 참조 하세요.
 
 <img width="379" height="731" alt="생명주기 drawio" src="https://github.com/user-attachments/assets/5bf4d552-2ee7-44bf-9cd1-92d051f8fee2" />
 
-
-게임 스레드내의 모든 객체는 해당 생명 주기를 따릅니다.
+게임 스레드내의 모든 객체는  생명 주기를 따릅니다.
 
 ## 구성 요소
 ![구조](https://github.com/user-attachments/assets/2cbb3291-e7cd-4441-86dc-6fe32df651c6)
 
-# 설치
-## Windows
+## 설치
+### Windows
 
 **Required**
+- VulkanSDK : https://vulkan.lunarg.com/sdk/home#windows
+- Visual Studio C++ 빌드 도구(MSVC, cl.exe)
+- CMake
+- Ninja
 
-VulkanSDK : https://vulkan.lunarg.com/sdk/home#windows
+디버그 빌드
+```powershell
+cmake --preset x64-debug
+cmake --build out/build/x64-debug
+```
+릴리즈 빌드
+```powershell
+cmake --preset x64-release
+cmake --build out/build/x64-release
+```
 
-## Linux
+또는
+해당 저장소를 다운 받은 후 Visual Studio에서 폴더를 열고 CMake로 빌드
+
+### Linux
 
 **Required**
+- VulkanSDK : https://vulkan.lunarg.com/sdk/home#linux
 ```
 sudo apt install build-essential ninja-build
-```
-```
 sudo apt install libx11-dev libxext-dev libgl1-mesa-dev
 ```
-VulkanSDK : https://vulkan.lunarg.com/sdk/home#linux
+
+디버그 빌드
+```
+cmake --preset linux-debug
+cmake --build out/build/linux-debug
+```
+
+릴리즈 빌드
+```
+cmake --preset linux-release
+cmake --build out/build/linux-release
+```
 
 # TODO
-- 스켈레탈 메쉬
-- 애니메이션, 애니메이터
+- [ ]스켈레탈 메쉬
+- [ ]애니메이션, 애니메이터
+- [ ]Undo/Redo
