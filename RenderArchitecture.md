@@ -1,4 +1,4 @@
-# ShellEngine 렌더 그래프 기반 렌더링 구조
+# ShellEngine 패스 기반 렌더링 구조
 
 ## 개요
 
