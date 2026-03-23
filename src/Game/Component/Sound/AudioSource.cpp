@@ -1,5 +1,5 @@
 ﻿#include "Component/Sound/AudioSource.h"
-#include "game/GameObject.h"
+#include "Game/GameObject.h"
 
 #include "Core/Reflection.hpp"
 #include "Core/Util.h"

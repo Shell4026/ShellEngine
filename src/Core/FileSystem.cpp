@@ -6,6 +6,9 @@
 #if WIN32
 #include <Windows.h>
 #include <shlobj_core.h>
+#elif __linux__
+#include <limits.h>
+#include <unistd.h>
 #endif
 
 #include <array>
@@ -74,7 +77,7 @@ namespace sh::core
 			return "";
 		}
 
-		return std::filesystem::u8path(std::string(path_buffer.data(), count)).parent_path();
+		return std::filesystem::u8path(std::string(pathBuffer.data(), count)).parent_path();
 #else
 		return "";
 #endif

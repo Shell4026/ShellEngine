@@ -24,7 +24,7 @@ set(ALSOFT_NO_CONFIG_UTIL ON CACHE BOOL "" FORCE)
 FetchContent_Declare(
   OpenAL
   GIT_REPOSITORY "https://github.com/kcat/openal-soft"
-  GIT_TAG "1.25.1"
+  GIT_TAG "1.24.3"
 )
 FetchContent_MakeAvailable(OpenAL)
 
