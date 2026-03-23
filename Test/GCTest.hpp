@@ -49,6 +49,15 @@ public:
 
 // 소멸 순서 테스트를 위한 클래스
 class TestWorld; // Forward declaration
+class ForwardDeclaredWeakObject;
+
+class ForwardDeclaredWeakOwner
+{
+public:
+	~ForwardDeclaredWeakOwner();
+
+	sh::core::SObjWeakPtr<ForwardDeclaredWeakObject> weak;
+};
 
 // 전역 플래그로 World의 생존 여부 추적
 static std::atomic<bool> isWorldAlive = false;
@@ -102,6 +111,13 @@ public:
 		Super::OnDestroy();
 	}
 };
+
+class ForwardDeclaredWeakObject : public sh::core::SObject
+{
+	SCLASS(ForwardDeclaredWeakObject)
+};
+
+inline ForwardDeclaredWeakOwner::~ForwardDeclaredWeakOwner() = default;
 
 // 테스트 환경 초기화 및 정리를 위한 Test Fixture
 class GCTest : public ::testing::Test {
@@ -338,6 +354,26 @@ TEST_F(GCTest, GCObjectDanglingPointerTest)
 	// 정리
 	gc->RemoveRootSet(root);
 	gc->Collect();
+	gc->DestroyPendingKillObjs();
+	EXPECT_EQ(gc->GetObjectCount(), 0);
+}
+
+TEST_F(GCTest, WeakPtrSupportsForwardDeclaredType)
+{
+	ForwardDeclaredWeakOwner owner;
+
+	auto* obj = sh::core::SObject::Create<ForwardDeclaredWeakObject>();
+	owner.weak = obj;
+
+	EXPECT_EQ(owner.weak.Get(), obj);
+	EXPECT_TRUE(owner.weak.IsValid());
+
+	obj->Destroy();
+	gc->Collect();
+
+	EXPECT_EQ(owner.weak.Get(), nullptr);
+	EXPECT_FALSE(owner.weak.IsValid());
+
 	gc->DestroyPendingKillObjs();
 	EXPECT_EQ(gc->GetObjectCount(), 0);
 }

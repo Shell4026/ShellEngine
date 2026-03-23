@@ -17,6 +17,25 @@
 #include <cstring>
 #include <list>
 #include <functional>
+
+namespace detail
+{
+	template<typename T, typename = void>
+	struct IsCompleteType : std::false_type {};
+	template<typename T>
+	struct IsCompleteType<T, std::void_t<decltype(sizeof(T))>> : std::true_type {};
+
+	template<typename T>
+	using RemovePtrCVT = std::remove_cv_t<std::remove_pointer_t<T>>;
+
+	template<typename T>
+	struct IsPotentialSObjectPtr : std::bool_constant<
+		std::is_pointer_v<T>&&
+		std::is_class_v<RemovePtrCVT<T>>
+	> {
+	};
+}
+
 namespace sh::core::reflection
 {
 	class Property;
@@ -26,7 +45,7 @@ namespace sh::core::reflection
 
 namespace sh::core
 {
-	template<typename T, typename IsSObject = std::enable_if_t<std::is_base_of_v<SObject, T>>>
+	template<typename T>
 	class SObjWeakPtr;
 	
 	class GCObject;
@@ -80,8 +99,8 @@ namespace sh::core
 		/// @brief 이전에 GC를 수행하는데 걸린 시간(ms)을 반환 하는 함수
 		SH_CORE_API auto GetElapsedTime() -> uint32_t { return elapseTime; }
 
-		template<typename T, typename IsSObject>
-		void AddPointerTracking(SObjWeakPtr<T, IsSObject>& ptr)
+		template<typename T, typename = std::enable_if_t<detail::IsPotentialSObjectPtr<T*>::value>>
+		void AddPointerTracking(SObjWeakPtr<T>& ptr)
 		{
 			std::lock_guard<std::mutex> lock{ mu };
 			auto it = trackingWeakPtrIdxs.find(&ptr);
@@ -90,8 +109,8 @@ namespace sh::core
 			trackingWeakPtrIdxs.insert({ &ptr, trackingWeakPtrs.size() });
 			trackingWeakPtrs.push_back(&ptr);
 		}
-		template<typename T, typename IsSObject>
-		void RemovePointerTracking(SObjWeakPtr<T, IsSObject>& ptr)
+		template<typename T, typename = std::enable_if_t<detail::IsPotentialSObjectPtr<T*>::value>>
+		void RemovePointerTracking(SObjWeakPtr<T>& ptr)
 		{
 			std::lock_guard<std::mutex> lock{ mu };
 			auto it = trackingWeakPtrIdxs.find(&ptr);

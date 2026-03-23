@@ -104,7 +104,7 @@ namespace sh::render
 				RemoveCamera
 			};
 			Type type = Type::PushDrawable;
-			std::variant<core::SObjWeakPtr<Drawable, void>, const Camera*> data;
+			std::variant<core::SObjWeakPtr<Drawable>, const Camera*> data;
 		};
 
 		core::LockFreeMPSCQueue<RenderCommand> renderCommands;

@@ -11,6 +11,27 @@
 #include <map>
 #include <memory>
 
+namespace
+{
+	class ForwardDeclaredContainerObject;
+
+	class ForwardDeclaredContainerOwner
+	{
+	public:
+		~ForwardDeclaredContainerOwner();
+
+		sh::core::SVector<ForwardDeclaredContainerObject*> objects;
+	};
+
+	class ForwardDeclaredContainerObject : public sh::core::SObject
+	{
+		SCLASS(ForwardDeclaredContainerObject)
+	public:
+	};
+
+	inline ForwardDeclaredContainerOwner::~ForwardDeclaredContainerOwner() = default;
+}
+
 TEST(ContainerTest, Test)
 {
 	using namespace sh::core;
@@ -151,4 +172,23 @@ TEST(ContainerTest, Test)
 	//EXPECT_EQ(hashMap1.size(), 0);
 	//gc->DestroyPendingKillObjs();
 	//EXPECT_EQ(gc->GetObjectCount(), 0);
+}
+
+TEST(ContainerTest, ForwardDeclaration)
+{
+	using namespace sh::core;
+
+	auto gc = GarbageCollection::GetInstance();
+
+	ForwardDeclaredContainerOwner owner;
+	auto* obj = SObject::Create<ForwardDeclaredContainerObject>();
+	owner.objects.push_back(obj);
+
+	gc->Collect();
+	EXPECT_TRUE(IsValid(owner.objects[0]));
+
+	obj->Destroy();
+	gc->Collect();
+	EXPECT_EQ(owner.objects[0], nullptr);
+	gc->DestroyPendingKillObjs();
 }

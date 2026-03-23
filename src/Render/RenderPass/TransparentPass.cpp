@@ -31,7 +31,7 @@ namespace sh::render
 			item.topology = drawable->GetTopology(core::ThreadType::Render);
 			item.drawable = drawable;
 
-			std::get<1>(list.renderData).push_back(item);
+			std::get<std::vector<DrawList::RenderItem>>(list.renderData).push_back(item);
 		}
 
 		const auto& camPos = renderData.camera->GetPos(core::ThreadType::Render);
