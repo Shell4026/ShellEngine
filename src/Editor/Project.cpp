@@ -379,6 +379,15 @@ namespace sh::editor
 		const auto pluginPath = game::ComponentLoader::CreatePluginPath(binaryPath / "ShellEngineUser");
 		const auto editorPluginPath = game::ComponentLoader::CreatePluginPath(binaryPath / "ShellEngineUserEditor");
 
+		if (!std::filesystem::exists(tempPath))
+		{
+			std::error_code ec;
+			if (!std::filesystem::create_directory(tempPath, ec))
+			{
+				SH_ERROR_FORMAT("Failed to create temp path({}): {}", tempPath.u8string(), ec.message());
+				return;
+			}
+		}
 		const auto tempPluginPath = game::ComponentLoader::CreatePluginPath(tempPath / "ShellEngineUser");
 		const auto tempEditorPluginPath = game::ComponentLoader::CreatePluginPath(tempPath / "ShellEngineUserEditor");
 
@@ -391,10 +400,22 @@ namespace sh::editor
 		}
 
 		if (bPluginExist)
-			std::filesystem::copy_file(pluginPath, tempPluginPath, std::filesystem::copy_options::overwrite_existing);
+		{
+			std::error_code ec;
+			if (!std::filesystem::copy_file(pluginPath, tempPluginPath, std::filesystem::copy_options::overwrite_existing, ec))
+			{
+				SH_ERROR_FORMAT("Failed to copy plugin: {}", ec.message());
+				return;
+			}
+		}
 		if (bEditorPluginExist)
 		{
-			std::filesystem::copy_file(editorPluginPath, tempEditorPluginPath, std::filesystem::copy_options::overwrite_existing);
+			std::error_code ec;
+			if (!std::filesystem::copy_file(editorPluginPath, tempEditorPluginPath, std::filesystem::copy_options::overwrite_existing), ec)
+			{
+				SH_ERROR_FORMAT("Failed to copy plugin: {}", ec.message());
+				return;
+			}
 			componentLoader.LoadPlugin(tempEditorPluginPath);
 			return;
 		}
