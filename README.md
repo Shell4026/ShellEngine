@@ -34,14 +34,14 @@ C++에서 메모리 관리를 단순화하기 위해 마크 앤 스윕 방식의
 - 멀티스레딩 구조의 Sync 타이밍에 동작하여 렌더 중 해제로 인한 문제를 원천 차단
 - ```GCObject```를 상속하여 사용자 정의 구조체 내부의 ```SObject```도 추적 가능
 ---
-### 에디터 [상세 문서](Editor.md)
+### 에디터 [상세 문서](Editor.md) | [구현 과정 (velog)](https://velog.io/@shell4026/%EC%97%90%EB%94%94%ED%84%B0-%EA%B0%9C%EB%B0%9C-%EA%B3%BC%EC%A0%95)
 - 런타임 리플렉션을 활용한 Hierarchy(계층 구조) 및 Inspector(속성 편집) 자동 생성
 - 사용자 정의 Inspector 지원 | [상세 문서](https://github.com/Shell4026/ShellEngine/blob/main/CustomInspector.md)
 - 유저 코드 핫-리로드: 엔진 재시작 없이 런타임 중 컴포넌트 코드 추가, 수정 가능 | [구현 과정 (velog)](https://velog.io/@shell4026/ShellEngine-%ED%95%AB-%EB%A6%AC%EB%A1%9C%EB%93%9C-%EA%B5%AC%ED%98%84-%EA%B3%BC%EC%A0%95)
 - Unity 스타일의 편집 환경 / Blender 스타일의 오브젝트 조작 방식
 - 빌드 시스템
 ---
-### 커스텀 셰이더 언어 | [상세 문서](Shader.md)
+### 커스텀 셰이더 언어 | [상세 문서](Shader.md) | [구현 과정 (velog)](https://velog.io/@shell4026/%EC%85%B0%EC%9D%B4%EB%8D%94-%ED%8C%8C%EC%84%9C-%EA%B0%9C%EB%B0%9C-%EA%B3%BC%EC%A0%95)
 Unity ShaderLab과 유사한 문법의 셰이더 언어와 하향식 파서(Top-Down Parser) 를 직접 구현했습니다.</br>
 파이프라인 설정(블렌딩, 컬링 등)을 셰이더 코드 안에서 선언적으로 작성할 수 있습니다.
 
