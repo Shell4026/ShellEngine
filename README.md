@@ -41,7 +41,7 @@ C++에서 메모리 관리를 단순화하기 위해 마크 앤 스윕 방식의
 - Unity 스타일의 편집 환경 / Blender 스타일의 오브젝트 조작 방식
 - 빌드 시스템
 ---
-### 커스텀 셰이더 언어 | [상세 문서](Shader.md)
+### 커스텀 셰이더 언어 | [상세 문서](Shader.md) | [구현 과정 (velog)](https://velog.io/@shell4026/%EC%85%B0%EC%9D%B4%EB%8D%94-%ED%8C%8C%EC%84%9C-%EA%B0%9C%EB%B0%9C-%EA%B3%BC%EC%A0%95)
 Unity ShaderLab과 유사한 문법의 셰이더 언어와 하향식 파서(Top-Down Parser) 를 직접 구현했습니다.</br>
 파이프라인 설정(블렌딩, 컬링 등)을 셰이더 코드 안에서 선언적으로 작성할 수 있습니다.
 
