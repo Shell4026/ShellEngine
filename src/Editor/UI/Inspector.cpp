@@ -4,6 +4,8 @@
 #include "EditorWorld.h"
 #include "EditorResource.h"
 #include "AssetDatabase.h"
+#include "LambdaEditorCommand.h"
+#include "Project.h"
 
 #include "Core/Logger.h"
 #include "Core/SObject.h"
@@ -54,9 +56,24 @@ namespace sh::editor
 
 					ImGui::Text("%s", objPtr->GetUUID().ToString().c_str());
 					ImGui::SetNextItemWidth(100);
-					if (ImGui::InputText("Name", &name))
+					if (ImGui::InputText("Name", &name, ImGuiInputTextFlags_::ImGuiInputTextFlags_EnterReturnsTrue))
 					{
-						objPtr->SetName(name);
+						auto command = std::make_unique<LambdaEditorCommand>("Name changed", 
+							[uuid = objPtr->GetUUID(), nameStr = name]()
+							{
+								auto sobjPtr = core::SObjectManager::GetInstance()->GetSObject(uuid);
+								if (core::IsValid(sobjPtr))
+									sobjPtr->SetName(nameStr);
+							},
+							[uuid = objPtr->GetUUID(), nameStr = objPtr->GetName().ToString()]()
+							{
+								auto sobjPtr = core::SObjectManager::GetInstance()->GetSObject(uuid);
+								if (core::IsValid(sobjPtr))
+									sobjPtr->SetName(nameStr);
+							}
+						);
+						auto& commandHistory = world.GetProject().GetCommandHistory();
+						commandHistory.Execute(std::move(command));
 						AssetDatabase::GetInstance()->SetDirty(objPtr);
 					}
 
