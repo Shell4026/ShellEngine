@@ -3,6 +3,7 @@
 #include "AssetDatabase.h"
 #include "BuildSystem.h"
 #include "UI/ProjectSettingUI.h"
+#include "DragDropHelper.hpp"
 
 #include "Core/FileSystem.h"
 #include "Core/GarbageCollection.h"
@@ -99,10 +100,8 @@ namespace sh::editor
 		// 프리팹 드래그
 		if (ImGui::BeginDragDropTarget())
 		{
-			const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(std::string{ core::reflection::GetType<game::GameObject>().name }.c_str());
-			if (payload != nullptr && payload->Data != nullptr)
+			if (game::GameObject* objPtr = dragdrop::AcceptAsset<game::GameObject>())
 			{
-				game::GameObject* objPtr = *reinterpret_cast<game::GameObject**>(payload->Data);
 				if (core::IsValid(objPtr))
 				{
 					auto prefab = game::Prefab::CreatePrefab(*objPtr);

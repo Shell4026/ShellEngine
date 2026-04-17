@@ -27,7 +27,7 @@ namespace sh::editor
 		/// @brief 뒤늦게 추가 된 기능으로 덮어 씌워진다.
 		/// @param dragItem 드래그 드롭 아이템 이름
 		/// @param func 작동 함수
-		SH_EDITOR_API void RegisterDragItemFunction(const std::string& dragItem, const std::function<void(const ImGuiPayload& payload)>& func);
+		SH_EDITOR_API void RegisterDragItemFunction(const std::string& dragItem, const std::function<void(core::SObject&)>& func);
 
 		SH_EDITOR_API void AddOtherWorld(game::World& world);
 		SH_EDITOR_API void RegisterPopupMenu(std::string_view name, const std::function<void()>& fn);
@@ -54,7 +54,7 @@ namespace sh::editor
 		core::EventSubscriber<game::events::GameObjectEvent> gameObjectEventSubscriber;
 		core::EventSubscriber<game::events::GameObjectEvent> gameObjectEventSubscriberOther;
 
-		std::vector<std::pair<std::string, std::function<void(const ImGuiPayload& payload)>>> dragFunc;
+		std::vector<std::pair<std::string, std::function<void(core::SObject&)>>> dragFunc;
 
 		struct PopupMenu
 		{

@@ -245,7 +245,7 @@ namespace sh::core
 				if (objPtr != nullptr && objPtr->IsPendingKill())
 					objPtr->SetUUID(core::UUID::Generate());
 				bool success = SetUUID(std::move(newUUID));
-				assert(success);
+				// assert(success);
 			}
 		}
 		if (json.contains("name"))

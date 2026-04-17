@@ -1,6 +1,7 @@
 ﻿#include "UI/DefaultInspector.h"
 #include "UI/Inspector.h"
 #include "AssetDatabase.h"
+#include "DragDropHelper.hpp"
 
 #include "Game/World.h"
 
@@ -174,11 +175,8 @@ namespace sh::editor
 
 			if (ImGui::BeginDragDropTarget())
 			{
-				auto p = ImGui::GetCurrentContext()->DragDropPayload;
-				const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(std::string{ core::reflection::TypeTraits::GetTypeName<render::Shader>() }.c_str());
-				if (payload)
+				if (render::Shader* shaderPtr = dragdrop::AcceptAsset<render::Shader>())
 				{
-					render::Shader* shader = *reinterpret_cast<render::Shader**>(payload->Data);
 					for (auto matPtr : mats)
 						if (matPtr != nullptr)
 							matPtr->SetShader(shader);
@@ -253,17 +251,13 @@ namespace sh::editor
 					}
 					if (ImGui::BeginDragDropTarget())
 					{
-						auto p = ImGui::GetCurrentContext()->DragDropPayload;
-						const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(std::string{ core::reflection::TypeTraits::GetTypeName<render::Texture>() }.c_str());
-						if (payload != nullptr)
+						if (render::Texture* texturePtr = dragdrop::AcceptAsset<render::Texture>())
 						{
-							const render::Texture* texture = *reinterpret_cast<render::Texture**>(payload->Data);
 							for (auto matPtr : mats)
 								if (matPtr != nullptr)
-									matPtr->SetProperty(name, texture);
+									matPtr->SetProperty(name, texturePtr);
 							bChanged = true;
 						}
-
 						ImGui::EndDragDropTarget();
 					}
 				}

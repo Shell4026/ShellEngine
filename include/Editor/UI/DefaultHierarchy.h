@@ -12,12 +12,12 @@ namespace sh::editor
 	{
 		HIERARCHY(ModelHierarchy, render::Model)
 	public:
-		SH_EDITOR_API void OnHierarchyDraged(EditorWorld& world, const ImGuiPayload& payload) override;
+		SH_EDITOR_API void OnHierarchyDraged(EditorWorld& world, core::SObject& payload) override;
 	};
 	class PrefabHierarchy : public ICustomHierarchy
 	{
 		HIERARCHY(PrefabHierarchy, game::Prefab)
 	public:
-		SH_EDITOR_API void OnHierarchyDraged(EditorWorld& world, const ImGuiPayload& payload) override;
+		SH_EDITOR_API void OnHierarchyDraged(EditorWorld& world, core::SObject& payload) override;
 	};
 }//namespace

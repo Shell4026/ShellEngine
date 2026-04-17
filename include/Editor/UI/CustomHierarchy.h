@@ -32,7 +32,7 @@ namespace sh::editor
 		virtual ~ICustomHierarchy() = default;
 
 		virtual void OnHierarchyInstantiated(EditorWorld& world) {};
-		virtual void OnHierarchyDraged(EditorWorld& world, const ImGuiPayload& payload) {};
+		virtual void OnHierarchyDraged(EditorWorld& world, core::SObject& payload) {};
 	};
 
 	class CustomHierarchyManager : public core::Singleton<CustomHierarchyManager>

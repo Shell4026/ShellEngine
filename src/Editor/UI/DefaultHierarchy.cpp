@@ -10,13 +10,13 @@
 
 namespace sh::editor
 {
-	SH_EDITOR_API void ModelHierarchy::OnHierarchyDraged(EditorWorld& world, const ImGuiPayload& payload)
+	SH_EDITOR_API void ModelHierarchy::OnHierarchyDraged(EditorWorld& world, core::SObject& payload)
 	{
-		render::Model* model = *reinterpret_cast<render::Model**>(payload.Data);
+		render::Model& model = static_cast<render::Model&>(payload);
 
-		auto obj = world.AddGameObject(model->GetName().ToString());
+		auto obj = world.AddGameObject(model.GetName().ToString());
 
-		auto rootNode = model->GetRootNode();
+		auto rootNode = model.GetRootNode();
 		std::queue<std::pair<const render::Model::Node*, game::GameObject*>> nodeQ;
 		for (auto& child : rootNode->children)
 			nodeQ.push({ child.get(), obj });
@@ -39,9 +39,9 @@ namespace sh::editor
 				nodeQ.push({ child.get(), meshObj });
 		}
 	}
-	SH_EDITOR_API void PrefabHierarchy::OnHierarchyDraged(EditorWorld& world, const ImGuiPayload& payload)
+	SH_EDITOR_API void PrefabHierarchy::OnHierarchyDraged(EditorWorld& world, core::SObject& payload)
 	{
-		game::Prefab* prefabPtr = *reinterpret_cast<game::Prefab**>(payload.Data);
-		prefabPtr->AddToWorld(world);
+		game::Prefab& prefabPtr = static_cast<game::Prefab&>(payload);
+		prefabPtr.AddToWorld(world);
 	}
 }//namespace

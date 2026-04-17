@@ -4,6 +4,7 @@
 #include "AssetExtensions.h"
 #include "AssetDatabase.h"
 #include "EditorWorld.h"
+#include "DragDropHelper.hpp"
 
 #include "Core/FileSystem.h"
 
@@ -314,9 +315,6 @@ namespace sh::editor
 	void ProjectExplorer::SetItemDragTarget(const std::filesystem::path& path)
 	{
 		void* item = nullptr;
-		std::string pathStr = path.u8string();
-		std::string extension = path.extension().u8string();
-		std::string payloadName = "asset";
 
 		if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_::ImGuiDragDropFlags_None))
 		{
@@ -334,9 +332,7 @@ namespace sh::editor
 
 			auto sobjPtr = reinterpret_cast<core::SObject*>(item);
 			
-			payloadName = sobjPtr->GetType().type.name;
-
-			ImGui::SetDragDropPayload(payloadName.c_str(), &item, sizeof(void*));
+			ImGui::SetDragDropPayload("SObject", &item, sizeof(core::SObject*));
 
 			ImGui::Text("%s", path.filename().u8string().c_str());
 			ImGui::EndDragDropSource();
@@ -346,51 +342,10 @@ namespace sh::editor
 	{
 		if (ImGui::BeginDragDropTarget())
 		{
-			const ImGuiPayload* payload = nullptr;
-			const std::string_view assetTypes[] =
+			if (core::SObject* obj = dragdrop::AcceptAnyAsset())
 			{
-				core::reflection::GetType<render::Texture>().name,
-				core::reflection::GetType<render::Material>().name,
-				core::reflection::GetType<render::Model>().name,
-				core::reflection::GetType<render::Shader>().name,
-				core::reflection::GetType<EditorWorld>().name,
-				core::reflection::GetType<game::Prefab>().name,
-				core::reflection::GetType<game::World>().name,
-				core::reflection::GetType<render::Font>().name,
-				core::reflection::GetType<game::TextObject>().name,
-				core::reflection::GetType<game::BinaryObject>().name,
-				core::reflection::GetType<game::ScriptableObject>().name,
-				core::reflection::GetType<sound::SoundSource>().name
-			};
-			for (const std::string_view& assetType : assetTypes)
-			{
-				payload = ImGui::AcceptDragDropPayload(std::string{ assetType }.c_str());
-				if (payload != nullptr && payload->Data != nullptr)
-				{
-					core::SObject* objPtr = *reinterpret_cast<core::SObject**>(payload->Data);
-					AssetDatabase::GetInstance()->MoveAssetToDirectory(objPtr->GetUUID(), folderPath);
-					Refresh();
-					break;
-				}
-				else if (payload == nullptr && assetType == core::reflection::GetType<game::ScriptableObject>().name)
-				{
-					auto curPayloadPtr = ImGui::GetDragDropPayload();
-					if (curPayloadPtr != nullptr)
-					{
-						core::SObject* const objPtr = *reinterpret_cast<core::SObject**>(curPayloadPtr->Data);
-						if (objPtr->GetType().IsChildOf(game::ScriptableObject::GetStaticType()))
-						{
-							payload = ImGui::AcceptDragDropPayload(std::string{ objPtr->GetType().type.name }.c_str());
-							if (payload != nullptr && payload->Data != nullptr)
-							{
-								core::SObject* objPtr = *reinterpret_cast<core::SObject**>(payload->Data);
-								AssetDatabase::GetInstance()->MoveAssetToDirectory(objPtr->GetUUID(), folderPath);
-								Refresh();
-								break;
-							}
-						}
-					}
-				}
+				AssetDatabase::GetInstance()->MoveAssetToDirectory(obj->GetUUID(), folderPath);
+				Refresh();
 			}
 			ImGui::EndDragDropTarget();
 		}

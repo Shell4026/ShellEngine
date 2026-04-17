@@ -6,6 +6,7 @@
 #include "AssetDatabase.h"
 #include "LambdaEditorCommand.h"
 #include "Project.h"
+#include "DragDropHelper.hpp"
 
 #include "Core/Logger.h"
 #include "Core/SObject.h"
@@ -288,6 +289,7 @@ namespace sh::editor
 	SH_EDITOR_API void Inspector::RenderSObjectPtrProperty(const core::reflection::Property& prop, core::SObject& propertyOwner, const std::string& name,
 		core::SObject** objPtr, const core::reflection::TypeInfo* type)
 	{
+		const core::reflection::STypeInfo& propertySTypeInfo = *core::reflection::STypeInfo::ConvertFromTypeInfo(prop.type);
 		const std::string propertyTypeName{ type == nullptr ? prop.pureTypeName : type->name };
 		if (type == nullptr)
 			type = &prop.type;
@@ -322,12 +324,9 @@ namespace sh::editor
 		}
 		if (ImGui::BeginDragDropTarget())
 		{
-			// 드래그로 받는 객체의 타입 이름 == 드래그 중인 객체의 타입 이름이면 받음
-			const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(propertyTypeName.c_str());
-			auto currentPayload = ImGui::GetDragDropPayload();
-			if (payload)
+			if (core::SObject* objPtr = dragdrop::AcceptAsset(propertySTypeInfo))
 			{
-				*parameter = *reinterpret_cast<core::SObject**>(payload->Data);
+				*parameter = objPtr;
 				propertyOwner.OnPropertyChanged(prop);
 				AssetDatabase::GetInstance()->SetDirty(&propertyOwner);
 				AssetDatabase::GetInstance()->SaveAllAssets();
@@ -335,77 +334,27 @@ namespace sh::editor
 			else
 			{
 				// 게임 오브젝트라면 컴포넌트 검사
-				std::string gameObjTypeName{ core::reflection::GetType<game::GameObject>().name };
-				if (gameObjTypeName == ImGui::GetDragDropPayload()->DataType)
+				core::SObject* payloadDataPtr = *reinterpret_cast<core::SObject**>(ImGui::GetDragDropPayload()->Data);
+				if (payloadDataPtr->GetType().IsChildOf(game::GameObject::GetStaticType()))
 				{
-					game::GameObject* obj = *reinterpret_cast<game::GameObject**>(ImGui::GetDragDropPayload()->Data);
-
-					if (obj->transform->GetType().type.name == propertyTypeName)
+					game::GameObject* gameObjPtr = static_cast<game::GameObject*>(payloadDataPtr);
+					if (gameObjPtr->transform->GetType().IsChildOf(propertySTypeInfo))
 					{
-						ImGui::SetDragDropPayload(std::string{ obj->transform->GetType().type.name }.c_str(), &obj->transform, sizeof(game::Transform*));
+						ImGui::SetDragDropPayload("SObject", &gameObjPtr->transform, sizeof(core::SObject*));
 						ImGui::EndDragDropTarget();
 						return;
 					}
-
-					std::vector<game::Component* const*> list{};
-					for (game::Component* const& payloadComponent : obj->GetComponents())
+					for (game::Component* const& payloadComponent : gameObjPtr->GetComponents())
 					{
 						if (!core::IsValid(payloadComponent))
 							continue;
 
 						const core::reflection::STypeInfo* componentType = &payloadComponent->GetType();
-						while (componentType)
+						if (componentType->IsChildOf(propertySTypeInfo))
 						{
-							if (componentType->type.name == propertyTypeName)
-							{
-								// 부모가 해당 컴포넌트인 오브젝트는 여럿일 수 있으므로 후보 리스트에 넣는다.
-								list.push_back(&payloadComponent);
-								break;
-							}
-							componentType = componentType->super;
-						}
-					}
-					bool bFind = false;
-					for (game::Component* const* component : list)
-					{
-						const core::reflection::STypeInfo& componentType = (*component)->GetType();
-						// 정확히 같은 컴포넌트라면
-						if (componentType.type.name == propertyTypeName)
-						{
-							bFind = true;
-							// 페이로드 재설정
-							ImGui::SetDragDropPayload(std::string{ componentType.type.name }.c_str(), component, sizeof(game::Component*));
-							break;
-						}
-					}
-					// 정확히 같은 컴포넌트는 못 찾았으므로 제일 첫번째로 찾은 컴포넌트를 페이로드로 설정
-					if (!bFind && list.size() > 0)
-					{
-						const core::reflection::STypeInfo& componentType = (*list[0])->GetType();
-						ImGui::SetDragDropPayload(std::string{ componentType.type.name }.c_str(), list[0], sizeof(game::Component*));
-					}
-				}
-				else
-				{
-					// 부모 타입하고는 일치 하는지 검사
-					core::SObject** dataPtr = reinterpret_cast<core::SObject**>(currentPayload->Data);
-					if (dataPtr != nullptr)
-					{
-						auto type = &(*dataPtr)->GetType();
-						while (type != nullptr)
-						{
-							if (type->type.name == propertyTypeName) // 맞으면 페이로드 허용
-							{
-								const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(currentPayload->DataType);
-								if (payload != nullptr)
-								{
-									*parameter = *reinterpret_cast<core::SObject**>(payload->Data);
-									propertyOwner.OnPropertyChanged(prop);
-									AssetDatabase::GetInstance()->SetDirty(&propertyOwner);
-									AssetDatabase::GetInstance()->SaveAllAssets();
-								}
-							}
-							type = type->super;
+							ImGui::SetDragDropPayload("SObject", &payloadComponent, sizeof(core::SObject*));
+							ImGui::EndDragDropTarget();
+							return;
 						}
 					}
 				}
@@ -436,19 +385,17 @@ namespace sh::editor
 					const char* name = "None";
 					if (core::IsValid(*obj))
 						name = (*obj)->GetName().ToString().c_str();
-					auto& itType = it.GetType();
+					const core::reflection::TypeInfo& itType = it.GetType();
+					const core::reflection::STypeInfo& propertySTypeInfo = *core::reflection::STypeInfo::ConvertFromTypeInfo(itType);
 					const std::string propTypeName{ it.GetType().name };
 					if (ImGui::Button(name, ImVec2{ buttonWidth, iconSize }))
 					{
 					}
 					if (ImGui::BeginDragDropTarget())
 					{
-						// 드래그로 받는 객체의 타입 == 드래그 중인 객체의 타입이면 받음
-						const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(propTypeName.c_str());
-						auto currentPayload = ImGui::GetDragDropPayload();
-						if (payload)
+						if (core::SObject* objPtr = dragdrop::AcceptAsset(propertySTypeInfo))
 						{
-							*obj = *reinterpret_cast<core::SObject**>(payload->Data);
+							*obj = objPtr;
 							propertyOwner.OnPropertyChanged(prop);
 							AssetDatabase::GetInstance()->SetDirty(&propertyOwner);
 							AssetDatabase::GetInstance()->SaveAllAssets();
@@ -456,70 +403,27 @@ namespace sh::editor
 						else
 						{
 							// 게임 오브젝트라면 컴포넌트 검사
-							std::string gameObjTypeName{ core::reflection::GetType<game::GameObject>().name };
-							if (gameObjTypeName == ImGui::GetDragDropPayload()->DataType)
+							core::SObject* payloadDataPtr = *reinterpret_cast<core::SObject**>(ImGui::GetDragDropPayload()->Data);
+							if (payloadDataPtr->GetType().IsChildOf(game::GameObject::GetStaticType()))
 							{
-								game::GameObject* obj = *reinterpret_cast<game::GameObject**>(ImGui::GetDragDropPayload()->Data);
-
-								std::vector<game::Component* const*> list{};
-								for (game::Component* const& payloadComponent : obj->GetComponents())
+								game::GameObject* gameObjPtr = static_cast<game::GameObject*>(payloadDataPtr);
+								if (gameObjPtr->transform->GetType().IsChildOf(propertySTypeInfo))
+								{
+									ImGui::SetDragDropPayload("SObject", &gameObjPtr->transform, sizeof(core::SObject*));
+									ImGui::EndDragDropTarget();
+									return;
+								}
+								for (game::Component* const& payloadComponent : gameObjPtr->GetComponents())
 								{
 									if (!core::IsValid(payloadComponent))
 										continue;
 
 									const core::reflection::STypeInfo* componentType = &payloadComponent->GetType();
-									while (componentType)
+									if (componentType->IsChildOf(propertySTypeInfo))
 									{
-										if (componentType->type.name == propTypeName)
-										{
-											// 부모가 해당 컴포넌트인 오브젝트는 여럿일 수 있으므로 후보 리스트에 넣는다.
-											list.push_back(&payloadComponent);
-											break;
-										}
-										componentType = componentType->super;
-									}
-								}
-								bool bFind = false;
-								for (game::Component*const* component : list)
-								{
-									const core::reflection::STypeInfo& componentType = (*component)->GetType();
-									// 정확히 같은 컴포넌트라면
-									if (componentType.type.name == propTypeName)
-									{
-										bFind = true;
-										// 페이로드 재설정
-										ImGui::SetDragDropPayload(std::string{ componentType.type.name }.c_str(), component, sizeof(game::Component*));
-										break;
-									}
-								}
-								// 정확히 같은 컴포넌트는 못 찾았으므로 제일 첫번째로 찾은 컴포넌트를 페이로드로 설정
-								if (!bFind && list.size() > 0)
-								{
-									const core::reflection::STypeInfo& componentType = (*list[0])->GetType();
-									ImGui::SetDragDropPayload(std::string{ componentType.type.name }.c_str(), list[0], sizeof(game::Component*));
-								}
-							}
-							else
-							{
-								// 부모 타입하고는 일치 하는지 검사
-								core::SObject** dataPtr = reinterpret_cast<core::SObject**>(currentPayload->Data);
-								if (dataPtr != nullptr)
-								{
-									auto type = &(*dataPtr)->GetType();
-									while (type != nullptr)
-									{
-										if (type->type.name == propTypeName) // 맞으면 페이로드 허용
-										{
-											const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(currentPayload->DataType);
-											if (payload != nullptr)
-											{
-												*obj = *reinterpret_cast<core::SObject**>(payload->Data);
-												propertyOwner.OnPropertyChanged(prop);
-												AssetDatabase::GetInstance()->SetDirty(&propertyOwner);
-												AssetDatabase::GetInstance()->SaveAllAssets();
-											}
-										}
-										type = type->super;
+										ImGui::SetDragDropPayload("SObject", &payloadComponent, sizeof(core::SObject*));
+										ImGui::EndDragDropTarget();
+										return;
 									}
 								}
 							}

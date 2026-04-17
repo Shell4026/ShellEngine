@@ -2,6 +2,7 @@
 #include "UI/CustomHierarchy.h"
 #include "EditorWorld.h"
 #include "EditorResource.h"
+#include "DragDropHelper.hpp"
 
 #include "Game/ImGUImpl.h"
 #include "Game/GameObject.h"
@@ -39,22 +40,23 @@ namespace sh::editor
 		);
 		world.SubscribeEvent(gameObjectEventSubscriber);
 
-		for (auto obj : world.GetGameObjects())
+		for (game::GameObject* objPtr : world.GetGameObjects())
 		{
-			objList.push_back(obj);
+			objList.push_back(objPtr);
 		}
 
 		RegisterDragItemFunction(std::string{ core::reflection::GetType<game::GameObject>().name },
-			[&](const ImGuiPayload& payload)
+			[&](core::SObject& payload)
 			{
-				IM_ASSERT(payload.DataSize == sizeof(game::GameObject*));
-				game::GameObject* draggedObj = *(game::GameObject**)payload.Data;
+				if (!payload.GetType().IsChildOf(game::GameObject::GetStaticType()))
+					return;
+				game::GameObject& draggedObj = static_cast<game::GameObject&>(payload);
 
-				if (draggedObj->transform->GetParent() != nullptr)
-					draggedObj->transform->SetParent(nullptr);
+				if (draggedObj.transform->GetParent() != nullptr)
+					draggedObj.transform->SetParent(nullptr);
 
-				objList.erase(std::find(objList.begin(), objList.end(), draggedObj));
-				objList.push_back(draggedObj);
+				objList.erase(std::find(objList.begin(), objList.end(), &draggedObj));
+				objList.push_back(&draggedObj);
 			}
 		);
 	}
@@ -98,17 +100,16 @@ namespace sh::editor
 		ImGui::InvisibleButton("HierarchyEmptySpace", ImGui::GetContentRegionAvail());
 		if (ImGui::BeginDragDropTarget())
 		{
-			const auto customHierarchyManager = CustomHierarchyManager::GetInstance();
-			for (const auto& [stype, customHierarchy] : customHierarchyManager->map)
+			const CustomHierarchyManager& customHierarchyManager = *CustomHierarchyManager::GetInstance();
+			for (const auto& [stype, customHierarchy] : customHierarchyManager.map)
 			{
-				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(std::string{ stype->type.name }.c_str()))
-					customHierarchy->OnHierarchyDraged(world, *payload);
+				if (core::SObject* objPtr = dragdrop::AcceptAsset(*stype))
+					customHierarchy->OnHierarchyDraged(world, *objPtr);
 			}
 			for (auto& [name, func] : dragFunc)
 			{
-				const std::string typeName{ core::reflection::GetType<game::GameObject>().name };
-				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(typeName.c_str()))
-					func(*payload);
+				if (game::GameObject* gameObjPtr = dragdrop::AcceptAsset<game::GameObject>())
+					func(*gameObjPtr);
 			}
 
 			ImGui::EndDragDropTarget();
@@ -120,7 +121,7 @@ namespace sh::editor
 		ImGui::End();
 	}
 
-	SH_EDITOR_API void Hierarchy::RegisterDragItemFunction(const std::string& dragItem, const std::function<void(const ImGuiPayload& payload)>& func)
+	SH_EDITOR_API void Hierarchy::RegisterDragItemFunction(const std::string& dragItem, const std::function<void(core::SObject&)>& func)
 	{
 		for (auto& [name, _func] : dragFunc)
 		{
@@ -172,45 +173,41 @@ namespace sh::editor
 
 		if (ImGui::BeginDragDropTarget())
 		{
-			const std::string typeName{ core::reflection::GetType<game::GameObject>().name };
-			if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(typeName.c_str()))
+			if (game::GameObject* draggedObjPtr = dragdrop::AcceptAsset<game::GameObject>())
 			{
-				IM_ASSERT(payload->DataSize == sizeof(game::GameObject*));
-				game::GameObject* draggedObj = *(game::GameObject**)payload->Data;
-
 				// 순서 변경
 				if (obj->transform->GetParent() == nullptr)
 				{
-					objList.erase(std::find(objList.begin(), objList.end(), draggedObj));
+					objList.erase(std::find(objList.begin(), objList.end(), draggedObjPtr));
 					auto it = std::find(objList.begin(), objList.end(), obj);
 					if (it != objList.begin())
-						objList.insert(it, draggedObj);
+						objList.insert(it, draggedObjPtr);
 					else
-						objList.push_front(draggedObj);
+						objList.push_front(draggedObjPtr);
 				}
 				else
 				{
-					if (obj->transform->GetParent() == draggedObj->transform->GetParent())
+					if (obj->transform->GetParent() == draggedObjPtr->transform->GetParent())
 					{
 						auto objParent = obj->transform->GetParent();
 						auto objIt = std::find(objParent->GetChildren().begin(), objParent->GetChildren().end(), obj->transform);
-						auto draggedIt = std::find(objParent->GetChildren().begin(), objParent->GetChildren().end(), draggedObj->transform);
+						auto draggedIt = std::find(objParent->GetChildren().begin(), objParent->GetChildren().end(), draggedObjPtr->transform);
 						uint32_t dif = draggedIt - objIt;
 						for (std::size_t i = 0; i < dif; ++i)
 						{
-							objParent->ReorderChildAbove(draggedObj->transform);
+							objParent->ReorderChildAbove(draggedObjPtr->transform);
 						}
 					}
 					else
 					{
 						auto objParent = obj->transform->GetParent();
-						draggedObj->transform->SetParent(objParent);
+						draggedObjPtr->transform->SetParent(objParent);
 						auto objIt = std::find(objParent->GetChildren().begin(), objParent->GetChildren().end(), obj->transform);
-						auto draggedIt = std::find(objParent->GetChildren().begin(), objParent->GetChildren().end(), draggedObj->transform);
+						auto draggedIt = std::find(objParent->GetChildren().begin(), objParent->GetChildren().end(), draggedObjPtr->transform);
 						uint32_t dif = draggedIt - objIt;
 						for (std::size_t i = 0; i < dif; ++i)
 						{
-							objParent->ReorderChildAbove(draggedObj->transform);
+							objParent->ReorderChildAbove(draggedObjPtr->transform);
 						}
 					}
 				}
@@ -288,32 +285,32 @@ namespace sh::editor
 			// 드래그 되는 대상의 시점
 			if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_::ImGuiDragDropFlags_None))
 			{
-				ImGui::SetDragDropPayload(typeName.c_str(), &obj, sizeof(game::GameObject*));
+				ImGui::SetDragDropPayload("SObject", &obj, sizeof(core::SObject*));
 				ImGui::Text("%s", obj->GetName().ToString().c_str());
 				ImGui::EndDragDropSource();
 			}
 			// 드래그 받는 대상의 시점
 			if (ImGui::BeginDragDropTarget())
 			{
-				if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(typeName.c_str()))
+				if (game::GameObject* draggedObjPtr = dragdrop::AcceptAsset<game::GameObject>())
 				{
-					IM_ASSERT(payload->DataSize == sizeof(game::GameObject*));
-					game::GameObject* draggedObj = *reinterpret_cast<game::GameObject**>(payload->Data);
-
-					// 순환 참조 체크, 부모 설정
-					bool circulation = false;
-					game::Transform* parent = obj->transform->GetParent();
-					while (parent)
+					if (core::IsValid(draggedObjPtr))
 					{
-						if (parent == draggedObj->transform)
+						// 순환 참조 체크, 부모 설정
+						bool circulation = false;
+						game::Transform* parent = obj->transform->GetParent();
+						while (parent)
 						{
-							circulation = true;
-							break;
+							if (parent == draggedObjPtr->transform)
+							{
+								circulation = true;
+								break;
+							}
+							parent = parent->GetParent();
 						}
-						parent = parent->GetParent();
+						if (!circulation)
+							draggedObjPtr->transform->SetParent(obj->transform);
 					}
-					if (!circulation)
-						draggedObj->transform->SetParent(obj->transform);
 				}
 				ImGui::EndDragDropTarget();
 			}

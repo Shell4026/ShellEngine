@@ -1,6 +1,7 @@
 ﻿#include "UI/ProjectSettingUI.h"
 #include "ProjectSetting.h"
 #include "AssetDatabase.h"
+#include "DragDropHelper.hpp"
 
 namespace sh::editor
 {
@@ -38,17 +39,14 @@ namespace sh::editor
 			}
 			else
 			{
-				const ImGuiPayload* currentPayload = ImGui::GetDragDropPayload();
-				core::SObject* sobjPtr = *reinterpret_cast<core::SObject**>(currentPayload->Data);
-				if (sobjPtr->GetType().IsChildOf(game::World::GetStaticType()))
+				if (game::World* worldPtr = dragdrop::AcceptAsset<game::World>())
 				{
-					payload = ImGui::AcceptDragDropPayload(currentPayload->DataType);
-					if (payload != nullptr)
+					if (core::IsValid(worldPtr))
 					{
-						auto assetInfoPtr = assetDatabase.GetAssetPath(sobjPtr->GetUUID());
+						auto assetInfoPtr = assetDatabase.GetAssetPath(worldPtr->GetUUID());
 						if (assetInfoPtr != nullptr)
 						{
-							setting.startingWorldUUID = sobjPtr->GetUUID();
+							setting.startingWorldUUID = worldPtr->GetUUID();
 							setting.Save(rootPath / "ProjectSetting.json");
 						}
 					}
