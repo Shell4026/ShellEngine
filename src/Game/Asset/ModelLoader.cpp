@@ -460,6 +460,7 @@ namespace sh::game
 			return nullptr;
 
 		auto model = core::SObject::Create<render::Model>(modelAsset.GetData());
+		model->SetUUID(asset.GetAssetUUID());
 		model->SetSkeletons(modelAsset.GetSkeletonData());
 		return model;
 	}
