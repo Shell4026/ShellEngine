@@ -18,12 +18,28 @@ namespace sh::editor
 	{
 		render::Model& model = static_cast<render::Model&>(payload);
 
-		auto obj = world.AddGameObject(model.GetName().ToString());
+		const auto& nodes = model.GetNodes();
+		const auto& skeletons = model.GetSkeletons();
 
-		auto rootNode = model.GetRootNode();
-		std::queue<std::pair<const render::Model::Node*, game::GameObject*>> nodeQ;
-		for (auto& child : rootNode->children)
-			nodeQ.push({ child.get(), obj });
+		if (nodes.empty())
+			return;
+
+		auto rootObj = world.AddGameObject(model.GetName().ToString());
+
+		// node index -> 생성된 GameObject 매핑 (bone 연결 시 사용)
+		std::vector<game::GameObject*> nodeMap(nodes.size(), nullptr);
+		nodeMap[0] = rootObj;
+
+		struct SkinnedSetup
+		{
+			game::SkinnedMeshRenderer* renderer;
+			int skeletonIdx;
+		};
+		std::vector<SkinnedSetup> skinnedSetups;
+
+		std::queue<std::pair<int, game::GameObject*>> nodeQ; // nodeIdx, parentObj
+		for (int childIdx : nodes[0].childrenIdx)
+			nodeQ.push({ childIdx, rootObj });
 
 		while (!nodeQ.empty())
 		{
