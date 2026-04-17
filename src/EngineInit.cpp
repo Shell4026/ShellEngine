@@ -204,7 +204,9 @@ namespace sh
 				if (assetInfoPtr == nullptr)
 					return nullptr;
 
-				return assetDatabase.ImportAsset(assetInfoPtr->originalPath);
+				if (!assetInfoPtr->originalPath.empty())
+					return assetDatabase.ImportAsset(assetInfoPtr->originalPath);
+				return assetDatabase.ImportAsset(assetInfoPtr->cachePath);
 			}
 		);
 

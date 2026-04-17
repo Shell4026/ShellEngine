@@ -97,7 +97,7 @@ namespace sh::core
 
 		// 모든 SObject를 순회하며 마킹이 안 됐으면 보류 목록에 추가
 		// TODO: 나중에 멀티 스레드로 바꿀 때 메모리 오더 바꾸기
-		for (auto& objPtr : objs)
+		for (SObject* objPtr : objs)
 		{
 			if (!objPtr->bMark.test_and_set(std::memory_order::memory_order_relaxed))
 			{
