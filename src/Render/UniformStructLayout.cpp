@@ -27,6 +27,8 @@ namespace sh::render
 	}
 	SH_RENDER_API auto UniformStructLayout::GetSize() const -> std::size_t
 	{
+		if (members.empty())
+			return 0;
 		if (members.back().offset == 0)
 			return members.back().layoutSize;
 		return members.back().offset + members.back().layoutSize;

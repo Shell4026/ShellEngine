@@ -133,7 +133,7 @@ namespace sh::render
 				uint32_t arrayBaseAlignment = (count > 1) ?
 					std::max(info.baseAlignment, 16u) : info.baseAlignment; // 배열이면 최소 16정렬
 				uint32_t arrayStride = (count > 1) ?
-					arrayBaseAlignment : info.std140Size;
+					core::Util::AlignTo(info.std140Size, arrayBaseAlignment) : info.std140Size;
 				uint32_t totalSize = arrayStride * static_cast<uint32_t>(count);
 
 				UniformMember member{ name, core::reflection::GetType<T>().hash, 0, totalSize, count, (count > 1), false };
