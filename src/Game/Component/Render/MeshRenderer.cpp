@@ -392,9 +392,10 @@ namespace sh::game
 		{
 			for (render::ShaderPass& pass : lightingPass.passes)
 			{
-				if (pass.IsPendingKill() || !pass.IsUsingLight())
+				if (pass.IsPendingKill() || pass.GetLightingBinding() == -1)
 					continue;
-				drawable.GetMaterialData().SetUniformData(pass, render::UniformStructLayout::Type::Object, 0, &lightStruct, sizeof(Light));
+				
+				drawable.GetMaterialData().SetUniformData(pass, render::UniformStructLayout::Type::Object, pass.GetLightingBinding(), &lightStruct, sizeof(Light));
 			}
 		}
 	}
