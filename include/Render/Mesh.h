@@ -54,31 +54,29 @@ namespace sh::render
 		SH_RENDER_API auto operator=(const Mesh& other) -> Mesh&;
 		SH_RENDER_API auto operator=(Mesh&& other) noexcept -> Mesh&;
 
-		SH_RENDER_API void SetVertex(const std::vector<Vertex>& verts);
-		SH_RENDER_API void SetVertex(std::vector<Vertex>&& verts) noexcept;
+		SH_RENDER_API void SetVertex(std::vector<Vertex> verts) noexcept { this->verts = std::move(verts); }
 		SH_RENDER_API void SetVertex(const std::initializer_list<Vertex>& verts);
-		
-		SH_RENDER_API auto GetVertex() const -> const std::vector<Vertex>&;
-		SH_RENDER_API auto GetVertexCount() const -> size_t;
 
-		SH_RENDER_API void SetIndices(const std::vector<uint32_t >&indices);
-		SH_RENDER_API void SetIndices(std::vector<uint32_t>&& indices);
+		SH_RENDER_API void SetIndices(std::vector<uint32_t> indices) noexcept { this->indices = std::move(indices); }
 		SH_RENDER_API void SetIndices(const std::initializer_list<uint32_t>& indices);
-		SH_RENDER_API auto GetIndices() const -> const std::vector<uint32_t>&;
-
-		SH_RENDER_API auto GetFaces() const -> const std::vector<Face>&;
 
 		SH_RENDER_API void Build(const IRenderContext& context) override;
 
-		SH_RENDER_API auto GetVertexBuffer() const ->IVertexBuffer*;
-
-		SH_RENDER_API void SetTopology(Topology topology);
-		SH_RENDER_API auto GetTopology() const -> Topology;
-
-		SH_RENDER_API auto GetBoundingBox() const -> const AABB&;
-		SH_RENDER_API auto GetBoundingBox() -> AABB&;
+		SH_RENDER_API void SetTopology(Topology topology) { this->topology = topology; }
 
 		SH_RENDER_API void CalculateTangents();
+
+		SH_RENDER_API auto GetVertex() const -> const std::vector<Vertex>& { return verts; }
+		SH_RENDER_API auto GetVertexCount() const -> size_t { return verts.size(); }
+		SH_RENDER_API auto GetFaces() const -> const std::vector<Face>& { return faces; }
+		SH_RENDER_API auto GetIndices() const -> const std::vector<uint32_t>& { return indices; }
+		SH_RENDER_API auto GetVertexBuffer() const -> IVertexBuffer* { return buffer.get(); }
+		SH_RENDER_API auto GetTopology() const -> Topology { return topology; }
+		SH_RENDER_API auto GetBoundingBox() const -> const AABB& { return bounding; }
+		SH_RENDER_API auto GetBoundingBox() -> AABB& { return bounding; }
+	protected:
+		SH_RENDER_API void SetVertexBuffer(std::unique_ptr<IVertexBuffer> buf);
+		SH_RENDER_API void CreateFace();
 	public:
 		float lineWidth = 1.f;
 	private:

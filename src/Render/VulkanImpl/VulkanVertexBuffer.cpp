@@ -37,6 +37,8 @@ namespace sh::render::vk
 	}
 	SH_RENDER_API auto VulkanVertexBuffer::operator=(const VulkanVertexBuffer& other) -> VulkanVertexBuffer&
 	{
+		if (&other == this)
+			return *this;
 		vertexBuffer = other.vertexBuffer;
 		indexBuffer = other.indexBuffer;
 
@@ -44,6 +46,8 @@ namespace sh::render::vk
 	}
 	SH_RENDER_API auto VulkanVertexBuffer::operator=(VulkanVertexBuffer&& other) noexcept ->VulkanVertexBuffer&
 	{
+		if (&other == this)
+			return *this;
 		vertexBuffer = std::move(other.vertexBuffer);
 		indexBuffer = std::move(other.indexBuffer);
 		return *this;

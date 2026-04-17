@@ -54,14 +54,6 @@ namespace sh::render
 		return *this;
 	}
 
-	SH_RENDER_API void Mesh::SetVertex(const std::vector<Vertex>& verts)
-	{
-		this->verts = verts;
-	}
-	SH_RENDER_API void Mesh::SetVertex(std::vector<Vertex>&& verts) noexcept
-	{
-		this->verts = std::move(verts);
-	}
 	SH_RENDER_API void Mesh::SetVertex(const std::initializer_list<Vertex>& verts)
 	{
 		this->verts.clear();
@@ -69,23 +61,7 @@ namespace sh::render
 		for (auto& vert : verts)
 			this->verts.push_back(vert);
 	}
-	SH_RENDER_API auto Mesh::GetVertex() const -> const std::vector<Vertex>&
-	{
-		return verts;
-	}
-	SH_RENDER_API auto Mesh::GetVertexCount() const -> size_t
-	{
-		return verts.size();
-	}
 
-	SH_RENDER_API void Mesh::SetIndices(const std::vector<uint32_t>& indices)
-	{
-		this->indices = indices;
-	}
-	SH_RENDER_API void Mesh::SetIndices(std::vector<uint32_t>&& indices)
-	{
-		this->indices = std::move(indices);
-	}
 	SH_RENDER_API void Mesh::SetIndices(const std::initializer_list<uint32_t>& indices)
 	{
 		this->indices.resize(indices.size());
@@ -94,56 +70,14 @@ namespace sh::render
 			this->indices[i] = *(indices.begin() + i);
 		}
 	}
-	SH_RENDER_API auto Mesh::GetIndices() const -> const std::vector<uint32_t>&
-	{
-		return indices;
-	}
-
-	SH_RENDER_API auto Mesh::GetFaces() const -> const std::vector<Face>&
-	{
-		return faces;
-	}
 
 	SH_RENDER_API void Mesh::Build(const IRenderContext& context)
 	{
-		if (topology == Topology::Face)
-		{
-			for (int i = 0; i < indices.size(); i += 3)
-			{
-				Face face{};
-				face.vertexIdx[0] = indices[i + 0];
-				face.vertexIdx[1] = indices[i + 1];
-				face.vertexIdx[2] = indices[i + 2];
-				faces.push_back(face);
-			}
-		}
+		CreateFace();
 
 		buffer = VertexBufferFactory::Create(context, *this);
 	}
 
-	SH_RENDER_API auto Mesh::GetVertexBuffer() const -> IVertexBuffer*
-	{
-		return buffer.get();
-	}
-
-	SH_RENDER_API void Mesh::SetTopology(Topology topology)
-	{
-		this->topology = topology;
-	}
-
-	SH_RENDER_API auto Mesh::GetTopology() const -> Topology
-	{
-		return topology;
-	}
-
-	SH_RENDER_API auto Mesh::GetBoundingBox() const -> const AABB&
-	{
-		return bounding;
-	}
-	SH_RENDER_API auto Mesh::GetBoundingBox() -> AABB&
-	{
-		return bounding;
-	}
 	SH_RENDER_API void Mesh::CalculateTangents()
 	{
 		for (size_t i = 0; i < indices.size(); i += 3) 
@@ -179,4 +113,23 @@ namespace sh::render
 		for (auto& v : verts)
 			v.tangent = glm::normalize(v.tangent);
 	}
-}
+
+	SH_RENDER_API void Mesh::SetVertexBuffer(std::unique_ptr<IVertexBuffer> buf)
+	{
+		buffer = std::move(buf);
+	}
+	SH_RENDER_API void Mesh::CreateFace()
+	{
+		if (topology == Topology::Face)
+		{
+			for (int i = 0; i < indices.size(); i += 3)
+			{
+				Face face{};
+				face.vertexIdx[0] = indices[i + 0];
+				face.vertexIdx[1] = indices[i + 1];
+				face.vertexIdx[2] = indices[i + 2];
+				faces.push_back(face);
+			}
+		}
+	}
+}//namespace
