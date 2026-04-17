@@ -125,7 +125,7 @@ namespace sh::render
 		this->passes = std::move(passes);
 		for (ShaderPass* pass : this->passes)
 		{
-			if (pass->IsUsingLight())
+			if (pass->GetLightingBinding() != -1)
 				bUsingLight = true;
 			const core::Name& lightingPassName = this->passes.back()->GetLightingPassName();
 
@@ -145,7 +145,7 @@ namespace sh::render
 	}
 	void Shader::AddShaderPass(ShaderPass* pass)
 	{
-		if (pass->IsUsingLight())
+		if (pass->GetLightingBinding() != -1)
 			bUsingLight = true;
 
 		passes.push_back(pass);

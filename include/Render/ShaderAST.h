@@ -27,6 +27,7 @@ namespace sh::render
 			Vec4,
 			Vec3,
 			Vec2,
+			IVec4,
 			Float,
 			Int,
 			Sampler,
@@ -98,7 +99,7 @@ namespace sh::render
 			std::vector<std::string> declaration;
 			std::vector<std::string> functions;
 			std::string code;
-			bool bUseLighting = false;
+			int lightingBinding = -1;
 
 			SH_RENDER_API auto Serialize() const -> core::Json override;
 			SH_RENDER_API void Deserialize(const core::Json& json) override;

@@ -60,7 +60,7 @@ namespace sh::render
 
 		for (const auto& syncData : syncDatas)
 		{
-			if (syncData.data.index() == 0) // 버퍼
+			if (std::holds_alternative<SyncData::BufferSyncData>(syncData.data)) // 버퍼
 			{
 				auto& bufferData = std::get<0>(syncData.data);
 				SetUniformDataAtSync(bufferData);

@@ -76,7 +76,7 @@ namespace sh::render
 	{
 		core::Json json;
 		json["type"] = static_cast<int>(type);
-		json["bUseLighting"] = bUseLighting;
+		json["lightingBinding"] = lightingBinding;
 		json["code"] = code;
 
 		// in
@@ -109,7 +109,7 @@ namespace sh::render
 	void ShaderAST::StageNode::Deserialize(const core::Json& json)
 	{
 		type = static_cast<StageType>(json.at("type").get<int>());
-		bUseLighting = json.at("bUseLighting").get<bool>();
+		lightingBinding = json.value("lightingBinding", -1);
 		code = json.at("code").get<std::string>();
 
 		// in

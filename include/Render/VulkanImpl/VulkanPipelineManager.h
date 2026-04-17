@@ -43,15 +43,17 @@ namespace sh::render::vk
 		SH_RENDER_API VulkanPipelineManager(const VulkanContext& context);
 		SH_RENDER_API VulkanPipelineManager(VulkanPipelineManager&& other) = delete;
 		/// @brief 파이프라인을 생성하거나 가져온다. 스레드 안전하다.
-		/// @param pass 렌더 패스
 		/// @param shader 셰이더
+		/// @param renderTargetLayout 렌더 타겟
 		/// @param topology 메쉬 토폴로지
+		/// @param bSkinned 스키닝 메쉬인지
 		/// @param constPtr 상수 데이터 포인터
 		/// @return 파이프라인 핸들
 		SH_RENDER_API auto GetOrCreatePipelineHandle(
 			const VulkanShaderPass& shader,
-			const RenderTargetLayout& renderTargetLayout, 
-			Mesh::Topology topology, 
+			const RenderTargetLayout& renderTargetLayout,
+			Mesh::Topology topology,
+			bool bSkinned = false,
 			const std::vector<uint8_t>* constDataPtr = nullptr) -> PipelineHandle;
 
 		/// @brief vkCmdBindPipeline()의 래퍼 함수. 스레드 안전하다.
@@ -63,6 +65,7 @@ namespace sh::render::vk
 			const VulkanShaderPass& shader,
 			const RenderTargetLayout& renderTargetLayout,
 			Mesh::Topology topology,
+			bool bSkinned,
 			const std::vector<uint8_t>* constDataPtr) -> std::unique_ptr<VulkanPipeline>;
 
 		auto ConvertStencilState(const StencilState& stencilState) const->VkStencilOpState;
@@ -73,10 +76,11 @@ namespace sh::render::vk
 			RenderTargetLayout renderTargetLayout;
 			Mesh::Topology topology;
 			std::size_t constantHash = 0;
+			bool bSkinned = false;
 
 			bool operator==(const PipelineInfo& other) const
 			{
-				return renderTargetLayout == other.renderTargetLayout && shader == other.shader && topology == other.topology && constantHash == other.constantHash;
+				return renderTargetLayout == other.renderTargetLayout && shader == other.shader && topology == other.topology && constantHash == other.constantHash && bSkinned == other.bSkinned;
 			}
 		};
 		struct PipelineInfoHasher
@@ -93,6 +97,7 @@ namespace sh::render::vk
 				hash = Util::CombineHash(hash, hasher(info.shader));
 				hash = Util::CombineHash(hash, intHasher(static_cast<int>(info.topology)));
 				hash = Util::CombineHash(hash, sizeHasher(info.constantHash));
+				hash = Util::CombineHash(hash, std::hash<bool>{}(info.bSkinned));
 
 				return hash;
 			}

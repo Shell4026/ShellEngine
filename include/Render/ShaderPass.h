@@ -45,30 +45,31 @@ namespace sh::render
 		};
 	public:
 		SH_RENDER_API virtual ~ShaderPass();
-		SH_RENDER_API void operator=(ShaderPass&& other) noexcept;
+		SH_RENDER_API auto operator=(ShaderPass&& other) noexcept -> ShaderPass&;
 
 		SH_RENDER_API virtual void Clear() = 0;
 		SH_RENDER_API virtual void Build() = 0;
 
 		SH_RENDER_API auto HasUniformMember(const std::string& name, ShaderStage stage) const -> const UniformStructLayout*;
 
-		SH_RENDER_API auto GetStencilState() const -> const StencilState&;
-		SH_RENDER_API auto GetCullMode() const->CullMode;
-		SH_RENDER_API auto GetZWrite() const -> bool;
+		SH_RENDER_API auto GetStencilState() const -> const StencilState& { return stencilState; }
+		SH_RENDER_API auto GetCullMode() const -> CullMode { return cull; }
+		SH_RENDER_API auto GetZWrite() const -> bool { return bZWrite; }
 		SH_RENDER_API auto GetZTest() const -> bool { return bZTest; }
 		/// @brief RGBA전부 쓰기면 0b1111, R만 쓰기면 0b0001, G만 쓴다면 0b0010, B만 쓴다면 0b0100, A만 쓴다면 0b1000
 		/// @return 컬러 마스크 값
-		SH_RENDER_API auto GetColorMask() const -> uint8_t;
-		SH_RENDER_API auto GetLightingPassName() const -> const core::Name&;
-		SH_RENDER_API auto GetId() const -> int;
-		SH_RENDER_API auto GetShaderType() const->ShaderType;
-		SH_RENDER_API auto GetAttributes() const -> const std::vector<AttributeData>&;
-		SH_RENDER_API auto GetVertexUniforms() const -> const std::vector<UniformStructLayout>&;
-		SH_RENDER_API auto GetFragmentUniforms() const -> const std::vector<UniformStructLayout>&;
-		SH_RENDER_API auto GetSamplerUniforms() const -> const std::vector<UniformStructLayout>&;
-		SH_RENDER_API auto HasConstantUniform() const -> bool;
-		SH_RENDER_API auto IsUsingLight() const -> bool;
-		SH_RENDER_API auto GetConstants() const -> const std::unordered_map<std::string, ConstantInfo>&;
+		SH_RENDER_API auto GetColorMask() const -> uint8_t { return colorMask; }
+		SH_RENDER_API auto GetLightingPassName() const -> const core::Name& { return lightingPassName; }
+		SH_RENDER_API auto GetShaderType() const -> ShaderType { return type; }
+		SH_RENDER_API auto GetAttributes() const -> const std::vector<AttributeData>& { return attrs; }
+		SH_RENDER_API auto GetVertexUniforms() const -> const std::vector<UniformStructLayout>& { return vertexUniforms; }
+		SH_RENDER_API auto GetFragmentUniforms() const -> const std::vector<UniformStructLayout>& { return fragmentUniforms; }
+		SH_RENDER_API auto GetSamplerUniforms() const -> const std::vector<UniformStructLayout>& { return samplerUniforms; }
+		SH_RENDER_API auto HasConstantUniform() const -> bool { return bHasConstant; }
+		/// @brief 라이트 유니폼의 바인딩 번호를 리턴한다.
+		/// @return 라이팅을 안 쓸 시 -1
+		SH_RENDER_API auto GetLightingBinding() const -> int { return lightingBinding; }
+		SH_RENDER_API auto GetConstants() const -> const std::unordered_map<std::string, ConstantInfo>& { return constantNameMap; }
 		SH_RENDER_API auto GetConstantsInfo(const std::string& name) const -> const ConstantInfo*;
 		SH_RENDER_API auto GetConstantSize() const -> std::size_t;
 
@@ -115,10 +116,10 @@ namespace sh::render
 		core::Name lightingPassName;
 		uint8_t colorMask = 7; //0b111
 		std::size_t constantSize = 0;
+		int lightingBinding = -1;
 		bool bZWrite = true;
 		bool bZTest = true;
 		bool bHasConstant = false;
-		bool bUseLighting = false;
 	};
 
 	template<typename T>
@@ -143,4 +144,4 @@ namespace sh::render
 
 		return true;
 	}
-}
+}//namespace

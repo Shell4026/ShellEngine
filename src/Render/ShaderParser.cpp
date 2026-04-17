@@ -2,6 +2,7 @@
 #include "StencilState.h"
 #include "UniformStructLayout.h"
 #include "Mesh.h"
+#include "SkinnedMesh.h"
 
 #include <fmt/core.h>
 
@@ -92,6 +93,8 @@ namespace sh::render
 			return "vec3";
 		case ShaderAST::VariableType::Vec2:
 			return "vec2";
+		case ShaderAST::VariableType::IVec4:
+			return "ivec4";
 		case ShaderAST::VariableType::Float:
 			return "float";
 		case ShaderAST::VariableType::Int:
@@ -584,10 +587,41 @@ namespace sh::render
 
 	auto ShaderParser::ParseFunctionBody(ShaderAST::StageNode& stageNode) -> std::string
 	{
-		auto uboit = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(), [&](const ShaderAST::UBONode& ubo)
+		// uniforms 벡터 수정 후 UBO 이터레이터를 갱신하는 헬퍼
+		auto refreshUboIt = [&]()
 		{
-			return ubo.name == "UBO";
-		});
+			return std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(),
+				[](const ShaderAST::UBONode& ubo) 
+				{ 
+					return ubo.name == "UBO"; 
+				}
+			);
+		};
+
+		// 버텍스 입력 어트리뷰트를 한 번만 등록하는 헬퍼
+		auto ensureInput = [&](bool& bRegistered, const char* name, int binding, ShaderAST::VariableType type)
+		{
+			if (bRegistered)
+				return;
+			auto it = std::find_if(stageNode.in.begin(), stageNode.in.end(),
+				[name](const ShaderAST::LayoutNode& l) 
+				{ 
+					return l.var.name == name; 
+				}
+			);
+			if (it == stageNode.in.end())
+			{
+				ShaderAST::LayoutNode layoutNode{};
+				layoutNode.binding = binding;
+				layoutNode.var.name = name;
+				layoutNode.var.type = type;
+				layoutNode.var.size = 1;
+				stageNode.in.push_back(std::move(layoutNode));
+			}
+			bRegistered = true;
+		};
+
+		auto uboit = refreshUboIt();
 
 		std::string code{};
 		int nested = 1;
@@ -595,16 +629,18 @@ namespace sh::render
 		bool usingNormal = false;
 		bool usingUV = false;
 		bool usingTangent = false;
+		bool usingBoneWeights = false;
+		bool usingBoneIndices = false;
 		bool usingMatrixModel = false;
 		bool usingCamera = false;
 		bool usingLIGHT = false;
+
 		while (nested != 0 || PeekToken().type != ShaderLexer::TokenType::EndOfFile)
 		{
 			auto& token = PeekToken();
 			if (token.type == ShaderLexer::TokenType::RBrace)
 			{
-				--nested;
-				if (nested == 0)
+				if (--nested == 0)
 					break;
 			}
 			else if (token.type == ShaderLexer::TokenType::LBrace)
@@ -615,101 +651,23 @@ namespace sh::render
 					code.pop_back();
 			}
 			else if (CheckToken(ShaderLexer::TokenType::VERTEX))
-			{
-				if (!usingVertex)
-				{
-					auto it = std::find_if(stageNode.in.begin(), stageNode.in.end(), [&](const ShaderAST::LayoutNode& layoutNode)
-						{
-							return layoutNode.var.name == "VERTEX";
-						});
-					if (it == stageNode.in.end())
-					{
-						ShaderAST::LayoutNode layoutNode{};
-						layoutNode.binding = Mesh::VERTEX_ID;
-						layoutNode.var.name = "VERTEX";
-						layoutNode.var.type = ShaderAST::VariableType::Vec3;
-						layoutNode.var.size = 1;
-						stageNode.in.push_back(std::move(layoutNode));
-						usingVertex = true;
-					}
-					else
-						usingVertex = true;
-				}
-			}
+				ensureInput(usingVertex, "VERTEX", Mesh::VERTEX_ID, ShaderAST::VariableType::Vec3);
 			else if (CheckToken(ShaderLexer::TokenType::UV))
-			{
-				if (!usingUV)
-				{
-					auto it = std::find_if(stageNode.in.begin(), stageNode.in.end(), [&](const ShaderAST::LayoutNode& layoutNode)
-							{
-								return layoutNode.var.name == "UV";
-							});
-					if (it == stageNode.in.end())
-					{
-						ShaderAST::LayoutNode layoutNode{};
-						layoutNode.binding = Mesh::UV_ID;
-						layoutNode.var.name = "UV";
-						layoutNode.var.type = ShaderAST::VariableType::Vec2;
-						layoutNode.var.size = 1;
-						stageNode.in.push_back(std::move(layoutNode));
-						usingUV = true;
-					}
-					else
-						usingUV = true;
-				}
-			}
+				ensureInput(usingUV, "UV", Mesh::UV_ID, ShaderAST::VariableType::Vec2);
 			else if (CheckToken(ShaderLexer::TokenType::NORMAL))
-			{
-				if (!usingNormal)
-				{
-					auto it = std::find_if(stageNode.in.begin(), stageNode.in.end(), [&](const ShaderAST::LayoutNode& layoutNode)
-					{
-						return layoutNode.var.name == "NORMAL";
-					});
-					if (it == stageNode.in.end())
-					{
-						ShaderAST::LayoutNode layoutNode{};
-						layoutNode.binding = Mesh::NORMAL_ID;
-						layoutNode.var.name = "NORMAL";
-						layoutNode.var.type = ShaderAST::VariableType::Vec3;
-						layoutNode.var.size = 1;
-						stageNode.in.push_back(std::move(layoutNode));
-						usingNormal = true;
-					}
-					else
-						usingNormal = true;
-				}
-			}
+				ensureInput(usingNormal, "NORMAL", Mesh::NORMAL_ID, ShaderAST::VariableType::Vec3);
 			else if (CheckToken(ShaderLexer::TokenType::TANGENT))
-			{
-				if (!usingTangent)
-				{
-					auto it = std::find_if(stageNode.in.begin(), stageNode.in.end(), [&](const ShaderAST::LayoutNode& layoutNode)
-					{
-						return layoutNode.var.name == "TANGENT";
-					});
-					if (it == stageNode.in.end())
-					{
-						ShaderAST::LayoutNode layoutNode{};
-						layoutNode.binding = Mesh::TANGENT_ID;
-						layoutNode.var.name = "TANGENT";
-						layoutNode.var.type = ShaderAST::VariableType::Vec3;
-						layoutNode.var.size = 1;
-						stageNode.in.push_back(std::move(layoutNode));
-						usingTangent = true;
-					}
-					else
-						usingTangent = true;
-				}
-			}
+				ensureInput(usingTangent, "TANGENT", Mesh::TANGENT_ID, ShaderAST::VariableType::Vec3);
+			else if (CheckToken(ShaderLexer::TokenType::BONE_WEIGHTS))
+				ensureInput(usingBoneWeights, "BONE_WEIGHTS", SkinnedMesh::BONE_WEIGHT_ID, ShaderAST::VariableType::Vec4);
+			else if (CheckToken(ShaderLexer::TokenType::BONE_INDICES))
+				ensureInput(usingBoneIndices, "BONE_INDICES", SkinnedMesh::BONE_INDEX_ID, ShaderAST::VariableType::IVec4);
 			else if (CheckToken(ShaderLexer::TokenType::MATRIX_VIEW) || CheckToken(ShaderLexer::TokenType::MATRIX_PROJ))
 			{
 				if (!usingCamera)
 				{
-					auto it = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(), [&](const ShaderAST::UBONode& ubo)
-					{
-						return ubo.name == "CAMERA";
-					});
+					auto it = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(),
+						[](const ShaderAST::UBONode& ubo) { return ubo.name == "CAMERA"; });
 					if (it == stageNode.uniforms.end())
 					{
 						ShaderAST::UBONode uboNode{};
@@ -720,10 +678,7 @@ namespace sh::render
 						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 1, "view" });
 						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 1, "proj" });
 						stageNode.uniforms.push_back(std::move(uboNode));
-						uboit = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(), [&](const ShaderAST::UBONode& ubo)
-						{
-							return ubo.name == "UBO";
-						});
+						uboit = refreshUboIt();
 					}
 					usingCamera = true;
 				}
@@ -732,10 +687,8 @@ namespace sh::render
 			{
 				if (!usingMatrixModel)
 				{
-					auto it = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(), [&](const ShaderAST::UBONode& ubo)
-					{
-						return ubo.name == "CONSTANTS";
-					});
+					auto it = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(),
+						[](const ShaderAST::UBONode& ubo) { return ubo.name == "CONSTANTS"; });
 					if (it == stageNode.uniforms.end())
 					{
 						ShaderAST::UBONode uboNode{};
@@ -746,10 +699,7 @@ namespace sh::render
 						uboNode.bSampler = false;
 						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 1, "model" });
 						stageNode.uniforms.push_back(std::move(uboNode));
-						uboit = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(), [&](const ShaderAST::UBONode& ubo)
-						{
-							return ubo.name == "UBO";
-						});
+						uboit = refreshUboIt();
 					}
 					usingMatrixModel = true;
 				}
@@ -758,10 +708,8 @@ namespace sh::render
 			{
 				if (!usingLIGHT)
 				{
-					auto it = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(), [&](const ShaderAST::UBONode& ubo)
-					{
-						return ubo.name == "LIGHT";
-					});
+					auto it = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(),
+						[](const ShaderAST::UBONode& ubo) { return ubo.name == "LIGHT"; });
 					if (it == stageNode.uniforms.end())
 					{
 						ShaderAST::UBONode uboNode{};
@@ -773,23 +721,18 @@ namespace sh::render
 						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec4, 10, "pos" });
 						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec4, 10, "other" });
 						stageNode.uniforms.push_back(std::move(uboNode));
-						stageNode.bUseLighting = true;
-						usingLIGHT = true;
-						uboit = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(), [&](const ShaderAST::UBONode& ubo)
-						{
-							return ubo.name == "UBO";
-						});
+						stageNode.lightingBinding = uboNode.binding;
+						uboit = refreshUboIt();
 					}
+					usingLIGHT = true;
 				}
 			}
 			else if (token.type == ShaderLexer::TokenType::Identifier)
 			{
 				if (uboit != stageNode.uniforms.end())
 				{
-					auto varit = std::find_if(uboit->vars.begin(), uboit->vars.end(), [&](const ShaderAST::VariableNode& var)
-					{
-						return var.name == token.text;
-					});
+					auto varit = std::find_if(uboit->vars.begin(), uboit->vars.end(),
+						[&](const ShaderAST::VariableNode& var) { return var.name == token.text; });
 					if (varit != uboit->vars.end())
 						code += "UBO.";
 				}

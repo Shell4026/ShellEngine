@@ -3,11 +3,15 @@
 #include "VulkanSwapChain.h"
 #include "VulkanUniformBuffer.h"
 #include "VulkanVertexBuffer.h"
+#include "VulkanSkinnedVertexBuffer.h"
 #include "VulkanPipelineManager.h"
 #include "VulkanShaderPass.h"
 #include "../Material.h"
 #include "../ShaderPass.h"
 #include "../Drawable.h"
+#include "../SkinnedMesh.h"
+
+#include "Core/Reflection.hpp"
 
 namespace sh::render::vk
 {
@@ -244,14 +248,32 @@ namespace sh::render::vk
 	}
 	void VulkanRenderImpl::DrawMesh(VulkanCommandBuffer& cmd, const ShaderPass& pass, const Mesh& mesh) const
 	{
-		const VulkanVertexBuffer* vkVertexBuffer = static_cast<VulkanVertexBuffer*>(mesh.GetVertexBuffer());
+		const SkinnedMesh* skinnedMesh = core::reflection::Cast<const SkinnedMesh>(&mesh);
+		if (skinnedMesh)
+		{
+			const VulkanSkinnedVertexBuffer* vkSkinnedVB =
+				static_cast<VulkanSkinnedVertexBuffer*>(skinnedMesh->GetVertexBuffer());
 
-		std::array<VkBuffer, 1> buffers = { vkVertexBuffer->GetVertexBuffer().GetBuffer() };
+			VkBuffer buffers[2] = {
+				vkSkinnedVB->GetVertexBuffer().GetBuffer(),
+				vkSkinnedVB->GetBoneBuffer().GetBuffer()
+			};
+			VkDeviceSize offsets[2] = { 0, 0 };
+			vkCmdBindVertexBuffers(cmd.GetCommandBuffer(), 0, 2, buffers, offsets);
+			vkCmdBindIndexBuffer(cmd.GetCommandBuffer(), vkSkinnedVB->GetIndexBuffer().GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(cmd.GetCommandBuffer(), static_cast<uint32_t>(mesh.GetIndices().size()), 1, 0, 0, 0);
+		}
+		else
+		{
+			const VulkanVertexBuffer* vkVertexBuffer = static_cast<VulkanVertexBuffer*>(mesh.GetVertexBuffer());
 
-		VkDeviceSize offsets[1] = { 0 };
-		vkCmdBindVertexBuffers(cmd.GetCommandBuffer(), 0, 1, buffers.data(), offsets);
-		vkCmdBindIndexBuffer(cmd.GetCommandBuffer(), vkVertexBuffer->GetIndexBuffer().GetBuffer(), 0, VkIndexType::VK_INDEX_TYPE_UINT32);
-		vkCmdDrawIndexed(cmd.GetCommandBuffer(), static_cast<uint32_t>(mesh.GetIndices().size()), 1, 0, 0, 0);
+			std::array<VkBuffer, 1> buffers = { vkVertexBuffer->GetVertexBuffer().GetBuffer() };
+
+			VkDeviceSize offsets[1] = { 0 };
+			vkCmdBindVertexBuffers(cmd.GetCommandBuffer(), 0, 1, buffers.data(), offsets);
+			vkCmdBindIndexBuffer(cmd.GetCommandBuffer(), vkVertexBuffer->GetIndexBuffer().GetBuffer(), 0, VkIndexType::VK_INDEX_TYPE_UINT32);
+			vkCmdDrawIndexed(cmd.GetCommandBuffer(), static_cast<uint32_t>(mesh.GetIndices().size()), 1, 0, 0, 0);
+		}
 	}
 	void VulkanRenderImpl::RenderDrawable(VulkanCommandBuffer& cmd, const core::Name& passName, const RenderTarget& renderData, const DrawList& drawList, const RenderTargetLayout& layout) const
 	{
@@ -270,6 +292,18 @@ namespace sh::render::vk
 				const auto passVectorPtr = renderGroup.material->GetShader()->GetShaderPasses(passName);
 				if (passVectorPtr == nullptr)
 					continue;
+
+				// 첫 번째 유효 drawable의 mesh로 스킨드 여부 판단
+				bool bGroupSkinned = false;
+				for (auto drawable : renderGroup.drawables)
+				{
+					if (drawable && drawable->GetMesh())
+					{
+						bGroupSkinned = (core::reflection::Cast<const SkinnedMesh>(drawable->GetMesh()) != nullptr);
+						break;
+					}
+				}
+
 				for (const ShaderPass& pass : *passVectorPtr)
 				{
 					if (pass.IsPendingKill())
@@ -278,7 +312,7 @@ namespace sh::render::vk
 					const std::vector<uint8_t>* constantData = mat->GetConstantData(pass);
 
 					auto pipelineHandle = ctx.GetPipelineManager().
-						GetOrCreatePipelineHandle(static_cast<const VulkanShaderPass&>(pass), layout, renderGroup.topology, constantData);
+						GetOrCreatePipelineHandle(static_cast<const VulkanShaderPass&>(pass), layout, renderGroup.topology, bGroupSkinned, constantData);
 
 					if (lastPipelineHandle != pipelineHandle)
 					{
@@ -329,6 +363,10 @@ namespace sh::render::vk
 				if (passVectorPtr == nullptr)
 					continue;
 
+				bool bItemSkinned = false;
+				if (renderItem.drawable && renderItem.drawable->GetMesh())
+					bItemSkinned = (core::reflection::Cast<const SkinnedMesh>(renderItem.drawable->GetMesh()) != nullptr);
+
 				for (const ShaderPass& pass : *passVectorPtr)
 				{
 					if (pass.IsPendingKill())
@@ -337,7 +375,7 @@ namespace sh::render::vk
 					const std::vector<uint8_t>* constantData = mat->GetConstantData(pass);
 
 					auto pipelineHandle = ctx.GetPipelineManager().
-						GetOrCreatePipelineHandle(static_cast<const VulkanShaderPass&>(pass), layout, renderItem.topology, constantData);
+						GetOrCreatePipelineHandle(static_cast<const VulkanShaderPass&>(pass), layout, renderItem.topology, bItemSkinned, constantData);
 
 					if (lastPipelineHandle != pipelineHandle)
 					{

@@ -1,6 +1,7 @@
 ﻿#include "VulkanPipelineManager.h"
 #include "VulkanShaderPass.h"
 #include "VulkanVertexBuffer.h"
+#include "VulkanSkinnedVertexBuffer.h"
 #include "VulkanContext.h"
 
 namespace sh::render::vk
@@ -44,6 +45,7 @@ namespace sh::render::vk
 		const VulkanShaderPass& shader,
 		const RenderTargetLayout& renderTargetLayout,
 		Mesh::Topology topology,
+		bool bSkinned,
 		const std::vector<uint8_t>* constDataPtr) -> PipelineHandle
 	{
 		std::size_t constantHash = 0;
@@ -54,7 +56,8 @@ namespace sh::render::vk
 				constantHash = core::Util::CombineHash(constantHash, hasher(data));
 		}
 
-		PipelineInfo info{ &shader, renderTargetLayout, topology, constantHash };
+		// 이미 파이프라인이 존재
+		PipelineInfo info{ &shader, renderTargetLayout, topology, constantHash, bSkinned };
 		{
 			std::shared_lock<std::shared_mutex> readLock{ mu };
 			auto it = infoIdx.find(info);
@@ -68,13 +71,14 @@ namespace sh::render::vk
 					std::unique_lock<std::shared_mutex> writeLock{ mu };
 					if (pipelines[it->second].pipelinePtr.get() == nullptr)
 					{
-						pipelines[it->second].pipelinePtr = BuildPipeline(shader, renderTargetLayout, topology, constDataPtr);
+						pipelines[it->second].pipelinePtr = BuildPipeline(shader, renderTargetLayout, topology, bSkinned, constDataPtr);
 						gen = ++pipelines[it->second].generation;
 					}
 				}
 				return PipelineHandle{ it->second, gen };
 			}
 		}
+		// 없으니 새로 생성
 		{
 			std::unique_lock<std::shared_mutex> writeLock{ mu };
 			auto it = infoIdx.find(info);
@@ -87,7 +91,7 @@ namespace sh::render::vk
 			uint32_t gen = 0;
 			if (emptyIdx.empty())
 			{
-				pipelines.push_back(Pipeline{ BuildPipeline(shader, renderTargetLayout, topology, constDataPtr), 0 });
+				pipelines.push_back(Pipeline{ BuildPipeline(shader, renderTargetLayout, topology, bSkinned, constDataPtr), 0 });
 				pipelinesInfo.push_back(info);
 
 				idx = static_cast<uint32_t>(pipelines.size()) - 1;
@@ -97,7 +101,7 @@ namespace sh::render::vk
 				idx = emptyIdx.front();
 				emptyIdx.pop();
 
-				pipelines[idx].pipelinePtr = BuildPipeline(shader, renderTargetLayout, topology, constDataPtr);
+				pipelines[idx].pipelinePtr = BuildPipeline(shader, renderTargetLayout, topology, bSkinned, constDataPtr);
 				gen = ++pipelines[idx].generation;
 			}
 			infoIdx.insert({ info, idx });
@@ -110,6 +114,7 @@ namespace sh::render::vk
 			return PipelineHandle{ idx, gen };
 		}
 	}
+
 	SH_RENDER_API bool VulkanPipelineManager::BindPipeline(VkCommandBuffer cmd, PipelineHandle handle)
 	{
 		VkPipeline vkPipeline = VK_NULL_HANDLE;
@@ -134,6 +139,7 @@ namespace sh::render::vk
 		const VulkanShaderPass& shader, 
 		const RenderTargetLayout& renderTargetLayout, 
 		Mesh::Topology topology, 
+		bool bSkinned, 
 		const std::vector<uint8_t>* constDataPtr) -> std::unique_ptr<VulkanPipeline>
 	{
 		auto pipeline = std::make_unique<VulkanPipeline>(context.GetDevice(), renderTargetLayout);
@@ -165,9 +171,19 @@ namespace sh::render::vk
 		if (constDataPtr != nullptr)
 			pipeline->SetSpecializationConstant(constDataPtr->data());
 
-		pipeline->AddBindingDescription(VulkanVertexBuffer::GetBindingDescription());
-		for (auto& attrDesc : VulkanVertexBuffer::GetAttributeDescriptions())
-			pipeline->AddAttributeDescription(attrDesc);
+		if (!bSkinned)
+		{
+			pipeline->AddBindingDescription(VulkanVertexBuffer::GetBindingDescription());
+			for (auto& attrDesc : VulkanVertexBuffer::GetAttributeDescriptions())
+				pipeline->AddAttributeDescription(attrDesc);
+		}
+		else
+		{
+			for (VkVertexInputBindingDescription& bindingDesc : VulkanSkinnedVertexBuffer::GetBindingDescriptions())
+				pipeline->AddBindingDescription(bindingDesc);
+			for (auto& attrDesc : VulkanSkinnedVertexBuffer::GetAttributeDescriptions())
+				pipeline->AddAttributeDescription(attrDesc);
+		}
 
 		pipeline->SetLineWidth(1.0f);
 		pipeline->SetStencilState(true, ConvertStencilState(shader.GetStencilState()));
