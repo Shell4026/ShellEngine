@@ -4,9 +4,18 @@
 #include <queue>
 namespace sh::render
 {
-	Model::Model()
+	Model::Model(std::vector<Node> nodes)
 	{
-		rootNode = std::make_unique<Node>();
+		if (!nodes.empty())
+			SetName(nodes.front().name);
+
+		this->nodes = std::move(nodes);
+
+		for (Node& node : this->nodes)
+		{
+			if (node.mesh != nullptr)
+				meshes.push_back(node.mesh);
+		}
 	}
 	Model::~Model()
 	{
@@ -22,33 +31,10 @@ namespace sh::render
 		std::vector<int> a;
 		a.push_back(0);
 	}
-	SH_RENDER_API void Model::AddMeshes(std::unique_ptr<Node>&& node)
-	{
-		rootNode = std::move(node);
-		std::queue<Node*> q;
-		q.push(rootNode.get());
-		while (!q.empty())
-		{
-			Node* curNode = q.front();
-			q.pop();
-			if (curNode->mesh != nullptr)
-			{
-				meshes.push_back(curNode->mesh);
-			}
-			for (auto& child : curNode->children)
-				q.push(child.get());
-		}
-	}
-	SH_RENDER_API auto sh::render::Model::GetMeshes() const -> const core::SVector<Mesh*>&
-	{
-		return meshes;
-	}
-	SH_RENDER_API auto Model::GetRootNode() const -> const Node*
-	{
-		return rootNode.get();
-	}
+
 	SH_RENDER_API auto Model::Serialize() const -> core::Json
 	{
+		// 노트 데이터는 직렬화 안 함 (ModelAsset에서 따로 저장)
 		core::Json mainJson = Super::Serialize();
 		for (auto mesh : meshes)
 		{

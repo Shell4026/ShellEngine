@@ -1,12 +1,15 @@
 ﻿#pragma once
 #include "Export.h"
 #include "Mesh.h"
+#include "Skeleton.h"
 
 #include "Core/SObject.h"
 #include "Core/SContainer.hpp"
 
+#include <glm/glm.hpp>
 #include <vector>
 #include <memory>
+#include <string>
 namespace sh::render
 {
 	/// @brief 메쉬의 집합
@@ -17,29 +20,26 @@ namespace sh::render
 		struct Node
 		{
 			std::string name;
-			glm::mat4 modelMatrix = glm::mat4{ 1.0f };
+			glm::mat4 modelMatrix{ 1.0f };
 			Mesh* mesh = nullptr;
-			std::vector<std::unique_ptr<Node>> children;
+			int skeletonIdx = -1;
+			std::vector<int> childrenIdx;
 		};
 	private:
-		std::unique_ptr<Node> rootNode;
-
+		std::vector<Node> nodes;
 		core::SVector<Mesh*> meshes;
+		std::vector<Skeleton> skeletons;
 	public:
-		SH_RENDER_API Model();
+		SH_RENDER_API Model(std::vector<Node> nodes);
 		SH_RENDER_API ~Model();
 
 		SH_RENDER_API void Destroy() override;
 
-		/// @brief 노드에 있는 모든 메쉬를 추가한다.
-		/// @param node 이동할 노드
-		SH_RENDER_API void AddMeshes(std::unique_ptr<Node>&& node);
-		/// @brief 해당 모델의 모든 메쉬를 가져오는 함수.
-		/// @return 메쉬 벡터
-		SH_RENDER_API auto GetMeshes() const -> const core::SVector<Mesh*>&;
-		/// @brief 루트 노드를 가져오는 함수.
-		/// @return 루트 노드 포인터
-		SH_RENDER_API auto GetRootNode() const -> const Node*;
+		SH_RENDER_API void SetSkeletons(std::vector<Skeleton> skeletons) { this->skeletons = std::move(skeletons); }
+
+		SH_RENDER_API auto GetMeshes() const -> const core::SVector<Mesh*>& { return meshes; }
+		SH_RENDER_API auto GetNodes() const -> const std::vector<Node>& { return nodes; }
+		SH_RENDER_API auto GetSkeletons() const -> const std::vector<Skeleton>& { return skeletons; }
 
 		SH_RENDER_API auto Serialize() const -> core::Json override;
 		SH_RENDER_API void Deserialize(const core::Json& json) override;
