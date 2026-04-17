@@ -6,6 +6,7 @@
 #include "Core/FileSystem.h"
 
 #include "Render/Model.h"
+#include "Render/SkinnedMesh.h"
 
 #define TINYOBJLOADER_IMPLEMENTATION
 #include "External/tinyobjloader/tiny_obj_loader.h"
@@ -19,6 +20,9 @@
 #include <string>
 #include <cstdint>
 #include <limits>
+#include <unordered_map>
+#include <map>
+#include <queue>
 namespace sh::game
 {
 	SH_GAME_API auto ModelLoader::LoadObj(const std::filesystem::path& path) const -> render::Model*
@@ -38,7 +42,9 @@ namespace sh::game
 		std::vector<render::Mesh::Vertex> verts;
 		std::vector<uint32_t> indices;
 
-		glm::vec3 min{}, max{};
+		const float minLimit = std::numeric_limits<float>::min();
+		const float maxLimit = std::numeric_limits<float>::max();
+		glm::vec3 min{ maxLimit, maxLimit, maxLimit }, max{ minLimit, minLimit, minLimit };
 		for (const auto& shape : shapes)
 		{
 			uint32_t n = 0;
@@ -50,17 +56,19 @@ namespace sh::game
 					attrib.vertices[3 * index.vertex_index + 1],
 					attrib.vertices[3 * index.vertex_index + 2]
 				};
-				glm::vec3 normal
+				glm::vec3 normal{ 0.f, 1.f, 0.f };
+				if(index.normal_index != -1)
 				{
-					attrib.normals[3 * index.normal_index + 0],
-					attrib.normals[3 * index.normal_index + 1],
-					attrib.normals[3 * index.normal_index + 2]
-				};
-				glm::vec2 uv
+					normal.x = attrib.normals[3 * index.normal_index + 0];
+					normal.y = attrib.normals[3 * index.normal_index + 1];
+					normal.z = attrib.normals[3 * index.normal_index + 2];
+				}
+				glm::vec2 uv{ 0.f, 0.f };
+				if (index.texcoord_index != -1)
 				{
-					attrib.texcoords[2 * index.texcoord_index + 0],
-					1 - attrib.texcoords[2 * index.texcoord_index + 1],
-				};
+					uv.x = attrib.texcoords[2 * index.texcoord_index + 0];
+					uv.y = 1 - attrib.texcoords[2 * index.texcoord_index + 1];
+				}
 
 				if (vert.x < min.x) min.x = vert.x;
 				if (vert.y < min.y) min.y = vert.y;
@@ -87,9 +95,6 @@ namespace sh::game
 
 		CreateTangents(verts, indices);
 
-		auto model = core::SObject::Create<render::Model>();
-		model->SetName(path.filename().u8string());
-
 		auto mesh = core::SObject::Create<render::Mesh>();
 		mesh->GetBoundingBox().Set(min, max);
 		mesh->SetName("Mesh");
@@ -99,13 +104,17 @@ namespace sh::game
 
 		mesh->Build(context);
 
-		auto rootNode = std::make_unique<render::Model::Node>();
-		auto node = std::make_unique<render::Model::Node>();
-		node->mesh = mesh;
+		std::vector<render::Model::Node> nodes;
+		render::Model::Node& rootNode = nodes.emplace_back();
+		rootNode.name = "root";
 
-		rootNode->children.push_back(std::move(node));
+		rootNode.childrenIdx.push_back(nodes.size());
 
-		model->AddMeshes(std::move(rootNode));
+		render::Model::Node& node = nodes.emplace_back();
+		node.mesh = mesh;
+
+		auto model = core::SObject::Create<render::Model>(std::move(nodes));
+		model->SetName(path.filename().u8string());
 		return model;
 	}
 	SH_GAME_API auto ModelLoader::LoadGLTF(const std::filesystem::path& dir) const -> render::Model*
@@ -123,68 +132,83 @@ namespace sh::game
 			SH_ERROR_FORMAT("{}", error);
 			return nullptr;
 		}
+		if (gltfModel.scenes.empty())
+		{
+			SH_ERROR_FORMAT("Scene is empty: {}", dir.u8string());
+			return nullptr;
+		}
+
 		const auto& scene = gltfModel.scenes[0];
 
-		auto model = core::SObject::Create<render::Model>();
-		model->SetName(dir.filename().u8string());
+		std::vector<render::Model::Node> nodes;
+		nodes.reserve(gltfModel.nodes.size());
+		render::Model::Node rootNode{};
+		rootNode.name = "root";
+		nodes.push_back(std::move(rootNode));
 
-		auto rootNode = std::make_unique<render::Model::Node>();
+		using GLTFNodeIdx = int;
+		using NodeIdx = int;
+		std::map<GLTFNodeIdx, NodeIdx> nodeMap;
 
-		std::queue<std::pair<int, render::Model::Node*>> nodeQ{};
+		std::queue<std::pair<GLTFNodeIdx, NodeIdx>> nodeQ{}; // 노드idx, 부모idx
 		for (int nodeIdx : scene.nodes)
-			nodeQ.push({ nodeIdx, rootNode.get() });
-		
+			nodeQ.push({ nodeIdx, 0 });
+
 		while (!nodeQ.empty())
 		{
-			auto [nodeIdx, parentNode] = nodeQ.front();
+			auto [gltfNodeIdx, parentNodeIdx] = nodeQ.front();
 			nodeQ.pop();
 
-			auto modelNode = std::make_unique<render::Model::Node>();
+			const int idx = nodes.size();
+			nodeMap.insert({ gltfNodeIdx, idx });
 
-			tinygltf::Node& node = gltfModel.nodes[nodeIdx];
-			modelNode->name = node.name;
+			nodes[parentNodeIdx].childrenIdx.push_back(idx);
 
-			for (int childIdx : node.children)
-				nodeQ.push({ childIdx, modelNode.get() });
+			tinygltf::Node& gltfNode = gltfModel.nodes[gltfNodeIdx];
+
+			for (int childIdx : gltfNode.children)
+				nodeQ.push({ childIdx, idx });
+
+			render::Model::Node& node = nodes.emplace_back();
+			node.name = gltfNode.name;
+			node.skeletonIdx = gltfNode.skin; // -1이면 스킨 없음
 
 			glm::mat4 matrix{ 1.0f };
-			if (node.matrix.size() == 16)
+			if (gltfNode.matrix.size() == 16)
 			{
-				matrix = glm::make_mat4x4(node.matrix.data());
+				matrix = glm::make_mat4x4(gltfNode.matrix.data());
 			}
 			else
 			{
-				if (node.translation.size() == 3)
-					matrix = glm::translate(matrix, glm::vec3{ glm::make_vec3(node.translation.data()) });
-				if (node.rotation.size() == 4)
+				if (gltfNode.translation.size() == 3)
+					matrix = glm::translate(matrix, glm::vec3{ glm::make_vec3(gltfNode.translation.data()) });
+				if (gltfNode.rotation.size() == 4)
 				{
-					glm::quat q{ glm::make_quat(node.rotation.data()) };
+					glm::quat q{ glm::make_quat(gltfNode.rotation.data()) };
 					matrix *= glm::mat4(q);
 				}
-				if (node.scale.size() == 3)
+				if (gltfNode.scale.size() == 3)
 				{
-					matrix = glm::scale(matrix, glm::vec3{ glm::make_vec3(node.scale.data()) });
+					matrix = glm::scale(matrix, glm::vec3{ glm::make_vec3(gltfNode.scale.data()) });
 				}
 			}
-			modelNode->modelMatrix = matrix;
+			node.modelMatrix = matrix;
 
-			if (node.mesh >= 0)
+			if (gltfNode.mesh >= 0)
 			{
-				auto mesh = core::SObject::Create<render::Mesh>();
-				mesh->SetName(node.name);
-				modelNode->mesh = mesh;
-
 				const float minLimit = std::numeric_limits<float>::min();
 				const float maxLimit = std::numeric_limits<float>::max();
 				glm::vec3 min{ maxLimit, maxLimit, maxLimit }, max{ minLimit, minLimit, minLimit };
 
 				std::vector<render::Mesh::Vertex> verts;
 				std::vector<uint32_t> indices;
+				std::vector<render::SkinnedMesh::BoneVertex> boneVerts;
+				bool bSkinned = (gltfNode.skin >= 0);
 
-				const tinygltf::Mesh& gltfMesh = gltfModel.meshes[node.mesh];
+				const tinygltf::Mesh& gltfMesh = gltfModel.meshes[gltfNode.mesh];
 
 				uint32_t indexCount = 0;
-				for (auto& primitive : gltfMesh.primitives) // 면의 단위
+				for (auto& primitive : gltfMesh.primitives)
 				{
 					uint32_t firstIndex = static_cast<uint32_t>(indices.size());
 					uint32_t vertexStart = static_cast<uint32_t>(verts.size());
@@ -192,6 +216,9 @@ namespace sh::game
 					const float* positionBuffer = nullptr;
 					const float* normalsBuffer = nullptr;
 					const float* texCoordsBuffer = nullptr;
+					const uint8_t* jointsBuffer = nullptr;
+					const float* weightsBuffer = nullptr;
+					int jointsCompType = 0;
 					std::size_t vertexCount = 0;
 
 					if (auto it = primitive.attributes.find("POSITION"); it != primitive.attributes.end())
@@ -213,6 +240,23 @@ namespace sh::game
 						const tinygltf::BufferView& view = gltfModel.bufferViews[accessor.bufferView];
 						texCoordsBuffer = reinterpret_cast<const float*>(&(gltfModel.buffers[view.buffer].data[accessor.byteOffset + view.byteOffset]));
 					}
+					if (bSkinned)
+					{
+						if (auto it = primitive.attributes.find("JOINTS_0"); it != primitive.attributes.end())
+						{
+							const tinygltf::Accessor& accessor = gltfModel.accessors[it->second];
+							const tinygltf::BufferView& view = gltfModel.bufferViews[accessor.bufferView];
+							jointsBuffer = &gltfModel.buffers[view.buffer].data[accessor.byteOffset + view.byteOffset];
+							jointsCompType = accessor.componentType;
+						}
+						if (auto it = primitive.attributes.find("WEIGHTS_0"); it != primitive.attributes.end())
+						{
+							const tinygltf::Accessor& accessor = gltfModel.accessors[it->second];
+							const tinygltf::BufferView& view = gltfModel.bufferViews[accessor.bufferView];
+							weightsBuffer = reinterpret_cast<const float*>(&gltfModel.buffers[view.buffer].data[accessor.byteOffset + view.byteOffset]);
+						}
+					}
+
 					for (size_t v = 0; v < vertexCount; v++)
 					{
 						render::Mesh::Vertex vert{};
@@ -224,12 +268,28 @@ namespace sh::game
 						min.x = std::min(min.x, vert.vertex.x);
 						min.y = std::min(min.y, vert.vertex.y);
 						min.z = std::min(min.z, vert.vertex.z);
-
 						max.x = std::max(max.x, vert.vertex.x);
 						max.y = std::max(max.y, vert.vertex.y);
 						max.z = std::max(max.z, vert.vertex.z);
+
+						if (bSkinned && jointsBuffer != nullptr && weightsBuffer != nullptr)
+						{
+							render::SkinnedMesh::BoneVertex bv{};
+							if (jointsCompType == TINYGLTF_COMPONENT_TYPE_UNSIGNED_BYTE)
+							{
+								const uint8_t* j = jointsBuffer + v * 4;
+								bv.boneIndices = glm::ivec4{ j[0], j[1], j[2], j[3] };
+							}
+							else // UNSIGNED_SHORT
+							{
+								const uint16_t* j = reinterpret_cast<const uint16_t*>(jointsBuffer) + v * 4;
+								bv.boneIndices = glm::ivec4{ j[0], j[1], j[2], j[3] };
+							}
+							bv.boneWeights = glm::make_vec4(&weightsBuffer[v * 4]);
+							boneVerts.push_back(bv);
+						}
 					}
-					// indicies
+					// indices
 					{
 						const tinygltf::Accessor& accessor = gltfModel.accessors[primitive.indices];
 						const tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
@@ -268,16 +328,65 @@ namespace sh::game
 				}
 				CreateTangents(verts, indices);
 
-				mesh->GetBoundingBox().Set(min, max);
-
-				mesh->SetVertex(std::move(verts));
-				mesh->SetIndices(std::move(indices));
-
-				mesh->Build(context);
+				render::Mesh* meshPtr = nullptr;
+				if (bSkinned)
+				{
+					auto skinnedMesh = core::SObject::Create<render::SkinnedMesh>();
+					skinnedMesh->SetName(gltfNode.name);
+					skinnedMesh->GetBoundingBox().Set(min, max);
+					skinnedMesh->SetVertex(std::move(verts));
+					skinnedMesh->SetIndices(std::move(indices));
+					skinnedMesh->SetBoneVertices(std::move(boneVerts));
+					skinnedMesh->Build(context);
+					meshPtr = skinnedMesh;
+				}
+				else
+				{
+					auto mesh = core::SObject::Create<render::Mesh>();
+					mesh->SetName(gltfNode.name);
+					mesh->GetBoundingBox().Set(min, max);
+					mesh->SetVertex(std::move(verts));
+					mesh->SetIndices(std::move(indices));
+					mesh->Build(context);
+					meshPtr = mesh;
+				}
+				node.mesh = meshPtr;
 			}
-			parentNode->children.push_back(std::move(modelNode));
+		} // while (!nodeQ.empty())
+
+		// 스킨 데이터
+		std::vector<render::Skeleton> skeletons;
+		skeletons.reserve(gltfModel.skins.size());
+		for (const tinygltf::Skin& gltfSkin : gltfModel.skins)
+		{
+			render::Skeleton& skeleton = skeletons.emplace_back();
+
+			const std::size_t jointCount = gltfSkin.joints.size();
+			skeleton.joints.resize(jointCount);
+
+			for (std::size_t i = 0; i < jointCount; ++i)
+			{
+				const GLTFNodeIdx jNodeIdx = gltfSkin.joints[i];
+				if (auto it = nodeMap.find(jNodeIdx); it != nodeMap.end())
+					skeleton.joints[i].nodeIdx = it->second;
+			}
+
+			if (gltfSkin.inverseBindMatrices >= 0)
+			{
+				const tinygltf::Accessor& acc = gltfModel.accessors[gltfSkin.inverseBindMatrices];
+				const tinygltf::BufferView& bv = gltfModel.bufferViews[acc.bufferView];
+				const float* ibmData = reinterpret_cast<const float*>(
+					&gltfModel.buffers[bv.buffer].data[acc.byteOffset + bv.byteOffset]);
+				for (std::size_t i = 0; i < jointCount && i < acc.count; ++i)
+				{
+					skeleton.joints[i].inverseBindMat = glm::make_mat4x4(ibmData + i * 16);
+				}
+			}
 		}
-		model->AddMeshes(std::move(rootNode));
+
+		auto model = core::SObject::Create<render::Model>(std::move(nodes));
+		model->SetName(dir.filename().u8string());
+		model->SetSkeletons(std::move(skeletons));
 		return model;
 	}
 	auto ModelLoader::CalculateTangent(
@@ -289,7 +398,11 @@ namespace sh::game
 		glm::vec2 deltaUV0 = uv1 - uv0;
 		glm::vec2 deltaUV1 = uv2 - uv0;
 
-		float f = 1.0f / (deltaUV0.x * deltaUV1.y - deltaUV1.x * deltaUV0.y);
+		const float delta = deltaUV0.x * deltaUV1.y - deltaUV1.x * deltaUV0.y;
+		if (delta < 1e-6)
+			return glm::vec3{ 0.f };
+
+		float f = 1.0f / delta;
 
 		float x = f * (deltaUV1.y * e0.x - deltaUV0.y * e1.x);
 		float y = f * (deltaUV1.y * e0.y - deltaUV0.y * e1.y);
@@ -298,7 +411,7 @@ namespace sh::game
 	}
 	void ModelLoader::CreateTangents(std::vector<render::Mesh::Vertex>& verts, const std::vector<uint32_t>& indices)
 	{
-		for (int i = 0; i < indices.size(); i += 3)
+		for (std::size_t i = 0; i < indices.size(); i += 3)
 		{
 			const glm::vec3& v0 = verts[indices[i + 0]].vertex;
 			const glm::vec3& v1 = verts[indices[i + 1]].vertex;
@@ -343,87 +456,11 @@ namespace sh::game
 			return nullptr;
 		}
 		const auto& modelAsset = static_cast<const game::ModelAsset&>(asset);
-		const game::ModelAsset::ModelHeader header = modelAsset.GetHeader();
-		const game::ModelAsset::ModelData modelData = modelAsset.GetData();
-		const uint8_t* cursor = modelData.dataPtr;
+		if (modelAsset.GetData().empty())
+			return nullptr;
 
-		std::vector<render::Mesh*> meshes;
-		meshes.reserve(header.meshCount);
-
-		// 메쉬 로드
-		for (size_t i = 0; i < header.meshCount; ++i)
-		{
-			game::ModelAsset::MeshHeader meshHeader;
-			if (cursor + sizeof(meshHeader) > modelData.dataPtr + modelData.size)
-				return nullptr;
-
-			std::memcpy(&meshHeader, cursor, sizeof(game::ModelAsset::MeshHeader));
-			cursor += sizeof(meshHeader);
-
-			// Vertex 배열 읽기
-			std::vector<render::Mesh::Vertex> vertices(meshHeader.vertexCount);
-			if (meshHeader.vertexCount > 0)
-			{
-				size_t vertexBytes = meshHeader.vertexCount * sizeof(render::Mesh::Vertex);
-				if (cursor + vertexBytes > modelData.dataPtr + modelData.size)
-					return nullptr;
-				std::memcpy(vertices.data(), cursor, vertexBytes);
-				cursor += vertexBytes;
-			}
-			// Index 배열 읽기
-			std::vector<uint32_t> indices(meshHeader.indexCount);
-			if (meshHeader.indexCount > 0)
-			{
-				size_t indexBytes = meshHeader.indexCount * sizeof(uint32_t);
-				if (cursor + indexBytes > modelData.dataPtr + modelData.size)
-					return nullptr;
-				std::memcpy(indices.data(), cursor, indexBytes);
-				cursor += indexBytes;
-			}
-			// Mesh 객체 생성
-			auto mesh = core::SObject::Create<render::Mesh>();
-			mesh->SetUUID(meshHeader.uuid);
-			mesh->SetVertex(std::move(vertices));
-			mesh->SetIndices(std::move(indices));
-			mesh->Build(context);
-
-			meshes.push_back(mesh);
-		}
-		// 노드 로드
-		std::vector<game::ModelAsset::NodeHeader> nodeHeaders(header.nodeCount);
-		if (header.nodeCount > 0)
-		{
-			size_t nodeBytes = header.nodeCount * sizeof(game::ModelAsset::NodeHeader);
-			if (cursor + nodeBytes > modelData.dataPtr + modelData.size)
-				return nullptr;
-			std::memcpy(nodeHeaders.data(), cursor, nodeBytes);
-			cursor += nodeBytes;
-		}
-		std::vector<std::unique_ptr<render::Model::Node>> nodes(header.nodeCount);
-		std::vector<render::Model::Node*> rawNodes(header.nodeCount);
-		for (size_t i = 0; i < nodeHeaders.size(); ++i)
-		{
-			nodes[i] = std::make_unique<render::Model::Node>();
-			nodes[i]->modelMatrix = nodeHeaders[i].modelMatrix;
-			nodes[i]->name = nodeHeaders[i].name;
-			rawNodes[i] = nodes[i].get();
-
-			if (nodeHeaders[i].meshIndex >= 0 && static_cast<size_t>(nodeHeaders[i].meshIndex) < meshes.size())
-				nodes[i]->mesh = meshes[nodeHeaders[i].meshIndex];
-		}
-		render::Model::Node* rootNodePtr = nullptr;
-		for (size_t i = 0; i < nodeHeaders.size(); ++i)
-		{
-			int32_t parentIdx = nodeHeaders[i].parentIndex;
-			if (parentIdx >= 0)
-				rawNodes[parentIdx]->children.push_back(std::move(nodes[i]));
-			else
-				rootNodePtr = nodes[i].release();
-		}
-
-		auto model = core::SObject::Create<render::Model>();
-		model->AddMeshes(std::unique_ptr<render::Model::Node>(rootNodePtr));
-
+		auto model = core::SObject::Create<render::Model>(modelAsset.GetData());
+		model->SetSkeletons(modelAsset.GetSkeletonData());
 		return model;
 	}
 
