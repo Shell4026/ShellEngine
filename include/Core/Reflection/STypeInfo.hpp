@@ -93,6 +93,7 @@ namespace sh::core::reflection
 			hash(data.hash), super(data.super),
 			name(data.name), type(GetType<T>())
 		{
+			typeInfoMap.insert({ type.hash, this });
 		}
 		STypeInfo(const STypeInfo& other) = delete;
 		SH_CORE_API ~STypeInfo();
@@ -116,6 +117,13 @@ namespace sh::core::reflection
 		SH_CORE_API auto GetFunction(const core::Name& name) const -> Function*;
 		SH_CORE_API auto GetFunction(std::string_view name) const -> Function*;
 		SH_CORE_API auto GetFunctions() const -> const std::vector<std::unique_ptr<Function>>& { return functions; }
+
+		/// @brief TypeInfo를 STypeInfo로 변환하는 함수.
+		/// 
+		/// TypeInfo가 가르키는 타입이 포인터였어도 STypeInfo는 원본 클래스의 타입을 가르킨다.
+		/// @param typeInfo 일반 타입
+		/// @return 변환 할 수 없으면 nullptr
+		SH_CORE_API static auto ConvertFromTypeInfo(const core::reflection::TypeInfo& typeInfo) -> const STypeInfo*;
 	public:
 		const core::Name name;
 		const TypeInfo& type;
@@ -127,6 +135,8 @@ namespace sh::core::reflection
 		std::vector<Property*> sobjPtrs;
 		std::vector<Property*> sobjPtrContainers;
 		std::vector<std::unique_ptr<Function>> functions;
+
+		SH_CORE_API static std::unordered_map<std::size_t, const core::reflection::STypeInfo*> typeInfoMap; // key = typeHash
 	};//STypeInfo
 
 	/// @brief 리플렉션 데이터의 DLL간 공유를 위한 구조체

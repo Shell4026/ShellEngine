@@ -4,6 +4,7 @@
 namespace sh::core::reflection
 {
 	std::unordered_map<STypes::Info, STypeInfo*, STypes::InfoHasher> STypes::types{};
+	std::unordered_map<std::size_t, const core::reflection::STypeInfo*> STypeInfo::typeInfoMap;
 
 	STypeInfo::~STypeInfo()
 	{
@@ -12,6 +13,7 @@ namespace sh::core::reflection
 		info.size = type.size;
 		// DLL 핫스왑용
 		STypes::types.erase(info);
+		typeInfoMap.erase(type.hash);
 	}
 
 	SH_CORE_API auto STypeInfo::AddProperty(std::unique_ptr<Property>&& prop) -> Property*
@@ -123,5 +125,13 @@ namespace sh::core::reflection
 	{
 		core::Name key{ name };
 		return GetFunction(key);
+	}
+
+	SH_CORE_API auto STypeInfo::ConvertFromTypeInfo(const core::reflection::TypeInfo& typeInfo) -> const STypeInfo*
+	{
+		auto it = typeInfoMap.find(typeInfo.hash);
+		if (it == typeInfoMap.end())
+			return nullptr;
+		return it->second;
 	}
 }//namespace
