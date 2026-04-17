@@ -3,7 +3,7 @@
 #include "Core/Logger.h"
 namespace sh::editor
 {
-	SH_EDITOR_API void AssetLoaderRegistry::RegisterLoader(AssetExtensions::Type ext, std::unique_ptr<core::IAssetLoader>&& loader, int priority, bool bObjDataInMeta)
+	SH_EDITOR_API void AssetLoaderRegistry::RegisterLoader(AssetExtensions::Type ext, std::unique_ptr<core::IAssetLoader> loader, int priority, bool bObjDataInMeta)
 	{
 		auto it = loaders.find(ext);
 		if (it != loaders.end())
@@ -11,11 +11,21 @@ namespace sh::editor
 			SH_ERROR_FORMAT("Asset loader({}) is already exist!", AssetExtensions::ToString(ext));
 			return;
 		}
+
+		assetTypeMap[loader->GetAssetName()] = ext;
+
 		Importer importer{};
 		importer.loader = std::move(loader);
 		importer.priority = priority;
 		importer.bObjDataInMeta = bObjDataInMeta;
 		loaders.insert({ ext, std::move(importer) });
+	}
+	SH_EDITOR_API auto AssetLoaderRegistry::GetLoader(const char* assetType) const -> const Importer*
+	{
+		auto it = assetTypeMap.find(assetType);
+		if (it == assetTypeMap.end())
+			return nullptr;
+		return GetLoader(it->second);
 	}
 	SH_EDITOR_API auto AssetLoaderRegistry::GetLoader(AssetExtensions::Type ext) const -> const Importer*
 	{

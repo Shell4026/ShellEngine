@@ -11,6 +11,7 @@
 
 #include "Render/Renderer.h"
 #include "Render/Model.h"
+#include "Render/SkinnedMesh.h"
 #include "Render/VulkanImpl/VulkanShaderPassBuilder.h"
 #include "Render/VulkanImpl/VulkanContext.h"
 
@@ -19,6 +20,7 @@
 
 #include "Game/Asset/TextureLoader.h"
 #include "Game/Asset/ModelLoader.h"
+#include "Game/Asset/MeshLoader.h"
 #include "Game/Asset/MaterialLoader.h"
 #include "Game/Asset/ShaderLoader.h"
 #include "Game/Asset/WorldLoader.h"
@@ -72,6 +74,8 @@ namespace sh::editor
 		this->projectPath = projectPath;
 		this->guiCtx = &imgui;
 		libPath = projectPath / "Library";
+		if (!std::filesystem::exists(libPath))
+			std::filesystem::create_directories(libPath);
 
 		assert(ctx.GetRenderAPIType() == render::RenderAPI::Vulkan); // TODO
 		static render::vk::VulkanShaderPassBuilder passBuilder{ static_cast<const render::vk::VulkanContext&>(ctx) };
@@ -80,6 +84,7 @@ namespace sh::editor
 
 		assetLoaders.Clear();
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Model, std::make_unique<game::ModelLoader>(ctx), 2, true);
+		assetLoaders.RegisterLoader(AssetExtensions::Type::Mesh, std::make_unique<game::MeshLoader>(ctx), 2, true);
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Texture, std::make_unique<game::TextureLoader>(ctx), 2, true);
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Shader, std::move(shaderLoader), 2, false);
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Binary, std::make_unique<game::BinaryLoader>(), 2, false);
@@ -221,36 +226,47 @@ namespace sh::editor
 			return nullptr;
 
 		const std::string extension = abPath.extension().string();
-
-		const auto type = AssetExtensions::CheckType(extension);
-		const AssetLoaderRegistry::Importer* const importerPtr = assetLoaders.GetLoader(type);
-		if (importerPtr == nullptr)
-			return nullptr;
-
-		const bool bAssetChanged = IsAssetChanged(abPath);
-
-		core::SObject* const objPtr = LoadAsset(abPath, *importerPtr->loader, importerPtr->bObjDataInMeta);
-
-		// 모델 파일은 특수처리 필요
-		if (type == AssetExtensions::Type::Model)
+		if (extension != ".asset")
 		{
-			if (objPtr != nullptr && bAssetChanged)
+			const AssetExtensions::Type type = AssetExtensions::CheckType(extension);
+			const AssetLoaderRegistry::Importer* const importerPtr = assetLoaders.GetLoader(type);
+			if (importerPtr == nullptr)
+				return nullptr;
+
+			const bool bAssetChanged = IsAssetChanged(abPath);
+
+			core::SObject* const objPtr = LoadAsset(abPath, *importerPtr->loader, importerPtr->bObjDataInMeta);
+
+			// 모델 파일은 특수처리 필요
+			if (type == AssetExtensions::Type::Model)
 			{
-				render::Model* const modelPtr = static_cast<render::Model*>(objPtr);
-				for (const auto& mesh : modelPtr->GetMeshes())
+				if (objPtr != nullptr && bAssetChanged)
 				{
-					if (mesh == nullptr)
-						continue;
-					const std::filesystem::path cachePath{ libPath / fmt::format("{}.asset", mesh->GetUUID().ToString()) };
-					ExportAsset(*mesh, cachePath);
-					paths.insert_or_assign(mesh->GetUUID(), AssetInfo{ std::filesystem::path{}, std::filesystem::relative(cachePath, projectPath) });
+					render::Model* const modelPtr = static_cast<render::Model*>(objPtr);
+					for (const auto& mesh : modelPtr->GetMeshes())
+					{
+						if (mesh == nullptr)
+							continue;
+						const std::filesystem::path cachePath{ libPath / fmt::format("{}.asset", mesh->GetUUID().ToString()) };
+						ExportAsset(*mesh, cachePath);
+						paths.insert_or_assign(mesh->GetUUID(), AssetInfo{ std::filesystem::relative(cachePath, projectPath), std::filesystem::relative(cachePath, projectPath) });
+					}
 				}
 			}
-		}
-		if (objPtr != nullptr)
-			onAssetImported.Notify(objPtr);
+			if (objPtr != nullptr)
+				onAssetImported.Notify(objPtr);
 
-		return objPtr;
+			return objPtr;
+		}
+		// .asset파일의 경우 그냥 불러오고 포인터 반환
+		std::unique_ptr<core::Asset> asset = core::AssetImporter::Load(projectPath / abPath);
+		if (asset == nullptr)
+			return nullptr;
+
+		const AssetLoaderRegistry::Importer* const importerPtr = assetLoaders.GetLoader(asset->GetType());
+		if (importerPtr == nullptr)
+			return nullptr;
+		return importerPtr->loader->Load(*asset);
 	}
 
 	SH_EDITOR_API bool AssetDatabase::CreateAsset(const std::filesystem::path& dir, const core::SObject& obj)
@@ -406,6 +422,8 @@ namespace sh::editor
 		else if (obj.GetType() == render::Material::GetStaticType())
 			assetType = game::MaterialAsset::ASSET_NAME;
 		else if (obj.GetType() == render::Mesh::GetStaticType())
+			assetType = game::MeshAsset::ASSET_NAME;
+		else if (obj.GetType() == render::SkinnedMesh::GetStaticType())
 			assetType = game::MeshAsset::ASSET_NAME;
 		else if (obj.GetType() == render::Shader::GetStaticType())
 			assetType = game::ShaderAsset::ASSET_NAME;

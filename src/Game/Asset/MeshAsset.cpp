@@ -1,4 +1,4 @@
-﻿#include "Asset/MeshAsset.h"
+#include "Asset/MeshAsset.h"
 
 namespace sh::game
 {
@@ -12,9 +12,16 @@ namespace sh::game
 		meshPtr = &mesh;
 		assetUUID = meshPtr->GetUUID();
 	}
+	MeshAsset::MeshAsset(const render::SkinnedMesh& mesh) :
+		Asset(ASSET_NAME)
+	{
+		meshPtr = &mesh;
+		assetUUID = meshPtr->GetUUID();
+	}
 	SH_GAME_API void MeshAsset::SetAsset(const core::SObject& obj)
 	{
-		if (obj.GetType() != render::Mesh::GetStaticType())
+		if (obj.GetType() != render::Mesh::GetStaticType() &&
+			obj.GetType() != render::SkinnedMesh::GetStaticType())
 			return;
 
 		meshPtr = static_cast<const render::Mesh*>(&obj);
@@ -36,17 +43,19 @@ namespace sh::game
 		if (!meshPtr.IsValid())
 			return;
 
+		const bool bSkinned = (meshPtr->GetType() == render::SkinnedMesh::GetStaticType());
+		const render::SkinnedMesh* skinnedPtr = bSkinned ? static_cast<const render::SkinnedMesh*>(meshPtr.Get()) : nullptr;
+
 		Header header{};
 		header.vertexCount = meshPtr->GetVertexCount();
 		header.indexCount = meshPtr->GetIndices().size();
+		header.boneVertexCount = bSkinned ? skinnedPtr->GetBoneVertices().size() : 0;
 
-		size_t totalSize = sizeof(Header);
-		size_t vertexBytes = header.vertexCount * sizeof(render::Mesh::Vertex);
-		size_t indexBytes = header.indexCount * sizeof(uint32_t);
-		totalSize += vertexBytes;
-		totalSize += indexBytes;
+		const size_t vertexBytes = header.vertexCount * sizeof(render::Mesh::Vertex);
+		const size_t indexBytes = header.indexCount * sizeof(uint32_t);
+		const size_t boneVertexBytes = header.boneVertexCount * sizeof(render::SkinnedMesh::BoneVertex);
 
-		data.resize(totalSize);
+		data.resize(sizeof(Header) + vertexBytes + indexBytes + boneVertexBytes);
 
 		uint8_t* cursor = data.data();
 		std::memcpy(cursor, &header, sizeof(Header));
@@ -54,6 +63,9 @@ namespace sh::game
 		std::memcpy(cursor, meshPtr->GetVertex().data(), vertexBytes);
 		cursor += vertexBytes;
 		std::memcpy(cursor, meshPtr->GetIndices().data(), indexBytes);
+		cursor += indexBytes;
+		if (bSkinned)
+			std::memcpy(cursor, skinnedPtr->GetBoneVertices().data(), boneVertexBytes);
 	}
 	SH_GAME_API auto MeshAsset::ParseAssetData() -> bool
 	{

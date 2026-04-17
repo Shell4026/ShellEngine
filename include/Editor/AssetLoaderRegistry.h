@@ -19,10 +19,12 @@ namespace sh::editor
 			bool bObjDataInMeta;
 		};
 	public:
-		SH_EDITOR_API void RegisterLoader(AssetExtensions::Type ext, std::unique_ptr<core::IAssetLoader>&& loader, int priority, bool bObjDataInMeta);
+		SH_EDITOR_API void RegisterLoader(AssetExtensions::Type ext, std::unique_ptr<core::IAssetLoader> loader, int priority, bool bObjDataInMeta);
+		SH_EDITOR_API auto GetLoader(const char* assetType) const -> const Importer*;
 		SH_EDITOR_API auto GetLoader(AssetExtensions::Type ext) const -> const Importer*;
 		SH_EDITOR_API void Clear();
 	private:
 		std::unordered_map<AssetExtensions::Type, Importer> loaders;
+		std::unordered_map<const char*, AssetExtensions::Type> assetTypeMap;
 	};
 }//namespace

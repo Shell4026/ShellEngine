@@ -17,26 +17,6 @@ namespace sh::core
 		data(std::move(other.data))
 	{
 	}
-	SH_CORE_API auto Asset::GetVersion() const -> uint32_t
-	{
-		return assetVersion;
-	}
-	SH_CORE_API auto Asset::GetAssetSize() const -> uint64_t
-	{
-		return sizeof(Header) + data.size();
-	}
-	SH_CORE_API auto Asset::GetAssetDataSize() const -> uint64_t
-	{
-		return data.size();
-	}
-	SH_CORE_API auto Asset::GetAssetUUID() const -> const UUID&
-	{
-		return assetUUID;
-	}
-	SH_CORE_API auto Asset::GetType() const -> const char*
-	{
-		return type;
-	}
 	SH_CORE_API void Asset::SetWriteTime(const std::filesystem::path& filePath)
 	{
 		if (std::filesystem::exists(filePath))
@@ -45,13 +25,5 @@ namespace sh::core
 	SH_CORE_API void Asset::SetWriteTime(int64_t time)
 	{
 		writeTime = time;
-	}
-	SH_CORE_API auto Asset::GetWriteTime() const -> int64_t
-	{
-		return writeTime;
-	}
-	SH_CORE_API auto Asset::IsEmpty() const -> bool
-	{
-		return data.empty();
 	}
 }//namespace

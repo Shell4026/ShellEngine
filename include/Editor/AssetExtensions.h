@@ -12,6 +12,7 @@ namespace sh::editor
 		{
 			None,
 			Model,
+			Mesh,
 			Texture,
 			Material,
 			World,

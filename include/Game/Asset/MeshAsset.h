@@ -1,10 +1,11 @@
-﻿#pragma once
+#pragma once
 #include "../Export.h"
 
 #include "Core/Asset.h"
 #include "Core/SContainer.hpp"
 
 #include "Render/Mesh.h"
+#include "Render/SkinnedMesh.h"
 namespace sh::game
 {
 	class MeshAsset : public core::Asset
@@ -13,8 +14,9 @@ namespace sh::game
 	public:
 		struct Header
 		{
-			uint64_t vertexCount;
-			uint64_t indexCount;
+			uint64_t vertexCount = 0;
+			uint64_t indexCount = 0;
+			uint64_t boneVertexCount = 0; // 0이면 일반 메쉬
 		};
 		struct MeshData
 		{
@@ -24,6 +26,7 @@ namespace sh::game
 	public:
 		SH_GAME_API MeshAsset();
 		SH_GAME_API MeshAsset(const render::Mesh& mesh);
+		SH_GAME_API MeshAsset(const render::SkinnedMesh& mesh);
 
 		SH_GAME_API void SetAsset(const core::SObject& obj) override;
 
