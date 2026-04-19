@@ -175,11 +175,11 @@ namespace sh::editor
 
 			if (ImGui::BeginDragDropTarget())
 			{
-				if (render::Shader* shaderPtr = dragdrop::AcceptAsset<render::Shader>())
+				if (render::Shader* const shaderPtr = dragdrop::AcceptAsset<render::Shader>())
 				{
 					for (auto matPtr : mats)
 						if (matPtr != nullptr)
-							matPtr->SetShader(shader);
+							matPtr->SetShader(shaderPtr);
 					bChanged = true;
 				}
 				ImGui::EndDragDropTarget();
