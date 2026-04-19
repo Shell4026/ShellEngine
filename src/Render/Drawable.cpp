@@ -61,48 +61,16 @@ namespace sh::render
 		if (context != nullptr && core::IsValid(mat.GetShader()))
 			materialData.Create(*context, *mat.GetShader(), true); // 얘도 sync타이밍에 이뤄짐
 	}
-
-	SH_RENDER_API auto Drawable::GetMaterial() const -> const Material*
-	{
-		return mat;
-	}
-	SH_RENDER_API auto Drawable::GetMesh() const -> const Mesh*
-	{
-		return mesh;
-	}
-	SH_RENDER_API auto Drawable::GetMaterialData() const -> const MaterialData&
-	{
-		return materialData;
-	}
-	SH_RENDER_API auto Drawable::GetMaterialData() -> MaterialData&
-	{
-		return materialData;
-	}
-
 	SH_RENDER_API void Drawable::SetModelMatrix(const glm::mat4& mat)
 	{
 		modelMatrix[core::ThreadType::Game] = mat;
 		bMatrixDirty = true;
 		SyncDirty();
 	}
-	SH_RENDER_API auto Drawable::GetModelMatrix(core::ThreadType thr) const -> const glm::mat4&
-	{
-		return modelMatrix[thr];
-	}
-
-	SH_RENDER_API auto Drawable::CheckAssetValid() const -> bool
-	{
-		return core::IsValid(mat) && core::IsValid(mesh);
-	}
 	SH_RENDER_API void Drawable::SetRenderTagId(uint32_t tagId)
 	{
 		renderTag = tagId;
 	}
-	SH_RENDER_API auto Drawable::GetRenderTagId() const -> uint32_t
-	{
-		return renderTag;
-	}
-
 	SH_RENDER_API void Drawable::SetTopology(Mesh::Topology topology)
 	{
 		assert(core::ThreadSyncManager::IsMainThread());
@@ -112,10 +80,6 @@ namespace sh::render
 			syncDatas[2].changed = topology;
 			SyncDirty();
 		}
-	}
-	SH_RENDER_API auto Drawable::GetTopology(core::ThreadType thr) const -> Mesh::Topology
-	{
-		return topology[thr];
 	}
 	SH_RENDER_API void Drawable::SetPriority(int priority)
 	{
@@ -127,10 +91,16 @@ namespace sh::render
 			SyncDirty();
 		}
 	}
-	SH_RENDER_API auto Drawable::GetPriority(core::ThreadType thr) const -> int
+	SH_RENDER_API void Drawable::SetSubMeshIndex(int idx)
 	{
-		return priority[thr];
+		subMeshIndex = idx;
 	}
+
+	SH_RENDER_API auto Drawable::CheckAssetValid() const -> bool
+	{
+		return core::IsValid(mat) && core::IsValid(mesh);
+	}
+
 	SH_RENDER_API void Drawable::SyncDirty()
 	{
 		if (bDirty)

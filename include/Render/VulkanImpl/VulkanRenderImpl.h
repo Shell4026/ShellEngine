@@ -25,7 +25,7 @@ namespace sh::render::vk
 		void BindCameraSet(VulkanCommandBuffer& cmd, VkPipelineLayout layout, const ShaderPass& pass, const Material& mat, uint32_t cameraOffset) const;
 		void BindMaterialSet(VulkanCommandBuffer& cmd, VkPipelineLayout layout, const ShaderPass& pass, const Material& mat) const;
 		void BindObjectSet(VulkanCommandBuffer& cmd, VkPipelineLayout layout, const ShaderPass& pass, Drawable& drawable) const;
-		void DrawMesh(VulkanCommandBuffer& cmd, const ShaderPass& pass, const Mesh& mesh) const;
+		void DrawMesh(VulkanCommandBuffer& cmd, const ShaderPass& pass, const Mesh& mesh, int subMeshIndex = -1) const;
 		void RenderDrawable(VulkanCommandBuffer& cmd, const core::Name& passName, const RenderTarget& renderData, const DrawList& drawList, const RenderTargetLayout& layout) const;
 	private:
 		VulkanContext& ctx;

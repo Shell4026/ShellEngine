@@ -13,9 +13,10 @@ namespace sh::game
 		id = PickingIdManager::AssignId(this);
 		//SH_INFO_FORMAT("ID: {}", id);
 
-		auto mat = static_cast<render::Material*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ "bbc4ef7ec45dce223297a224f8093f12" }));
-		assert(mat);
-		SetMaterial(mat);
+		mats.push_back(static_cast<render::Material*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ "bbc4ef7ec45dce223297a224f8093f12" })));
+		assert(mats[0]);
+		SearchLocalProperties();
+		SetDefaultLocalProperties();
 	}
 	SH_GAME_API PickingRenderer::~PickingRenderer()
 	{
@@ -43,7 +44,7 @@ namespace sh::game
 			float b = ((id & 0x00FF0000) >> 16) / 255.0f;
 			float a = 1.f;
 
-			auto propertyBlock = GetMaterialPropertyBlock();
+			render::MaterialPropertyBlock* const propertyBlock = GetMaterialPropertyBlock();
 			propertyBlock->SetProperty("id", glm::vec4{ r, g, b, a });
 			UpdatePropertyBlockData();
 		}
@@ -69,6 +70,11 @@ namespace sh::game
 	{
 		// 직렬화 할 필요가 없다.
 		return core::Json{};
+	}
+
+	void PickingRenderer::CreateDrawable(bool)
+	{
+		Super::CreateDrawable(false);
 	}
 
 	SH_GAME_API auto PickingIdManager::AssignId(PickingRenderer* renderer) -> uint32_t

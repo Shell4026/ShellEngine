@@ -24,46 +24,10 @@ namespace sh::game
 		MeshRenderer::Start();
 	}
 
-	SH_GAME_API auto SkinnedMeshRenderer::Serialize() const -> core::Json
+	SH_GAME_API void SkinnedMeshRenderer::OnPropertyChanged(const core::reflection::Property& prop)
 	{
-		core::Json mainJson = Super::Serialize();
-		core::Json& skinJson = mainJson["SkinnedMeshRenderer"];
-		for (const glm::mat4& ibm : inverseBindMatrices)
-		{
-			core::Json matJson;
-			for (int i = 0; i < 4; ++i)
-				matJson.push_back(core::Json{ ibm[i].x, ibm[i].y, ibm[i].z, ibm[i].w });
-			skinJson["ibm"].push_back(std::move(matJson));
-		}
-
-		return mainJson;
-	}
-
-	SH_GAME_API void SkinnedMeshRenderer::Deserialize(const core::Json& json)
-	{
-		Super::Deserialize(json);
-		inverseBindMatrices.clear();
-		const core::Json& skinJson = json["SkinnedMeshRenderer"];
-		if (!skinJson.contains("ibm"))
-			return;
-		inverseBindMatrices.resize(skinJson["ibm"].size());
-		int i = 0;
-		for (const core::Json& matJson : skinJson["ibm"])
-		{
-			std::array<float, 16> arr{ 0.f };
-			if (matJson.size() == 4)
-			{
-				for (int col = 0; col < 4; ++col)
-				{
-					for (int row = 0; row < 4; ++row)
-					{
-						arr[col * 4 + row] = matJson[col][row];
-					}
-				}
-				inverseBindMatrices[i] = glm::make_mat4(arr.data());
-			}
-			++i;
-		}
+		if (prop.GetName() == core::Util::ConstexprHash("bones"))
+			CalculateIBM();
 	}
 
 	SH_GAME_API void SkinnedMeshRenderer::SetSkinnedMesh(render::SkinnedMesh* mesh)
@@ -75,6 +39,18 @@ namespace sh::game
 	{
 		bones = std::move(boneTransforms);
 
+		CalculateIBM();
+	}
+
+	SH_GAME_API void SkinnedMeshRenderer::UpdateDrawable()
+	{
+		ComputeBoneMatrices();
+		UploadBoneMatrices();
+		MeshRenderer::UpdateDrawable();
+	}
+
+	void SkinnedMeshRenderer::CalculateIBM()
+	{
 		inverseBindMatrices.resize(bones.size());
 		for (std::size_t i = 0; i < bones.size(); ++i)
 		{
@@ -83,17 +59,6 @@ namespace sh::game
 			else
 				inverseBindMatrices[i] = glm::mat4{ 1.0f };
 		}
-	}
-
-	SH_GAME_API void SkinnedMeshRenderer::CreateDrawable()
-	{
-		MeshRenderer::CreateDrawable();
-	}
-	SH_GAME_API void SkinnedMeshRenderer::UpdateDrawable()
-	{
-		ComputeBoneMatrices();
-		UploadBoneMatrices();
-		MeshRenderer::UpdateDrawable();
 	}
 
 	void SkinnedMeshRenderer::ComputeBoneMatrices()
@@ -112,28 +77,33 @@ namespace sh::game
 	}
 	void SkinnedMeshRenderer::UploadBoneMatrices()
 	{
-		if (!drawable)
-			return;
-
-		const render::Material* mat = GetMaterial();
-		if (!mat || !mat->GetShader())
+		if (drawables.empty())
 			return;
 
 		const std::size_t dataSize = render::SkinnedMesh::MAX_BONES * sizeof(glm::mat4);
 
-		for (const auto& lightingPass : mat->GetShader()->GetAllShaderPass())
+		for (std::size_t i = 0; i < drawables.size(); ++i)
 		{
-			for (const auto& passRef : lightingPass.passes)
+			render::Drawable* const drawable = drawables[i];
+			if (drawable == nullptr)
+				continue;
+			const render::Material* const mat = GetMaterial(i);
+			if (mat == nullptr || !mat->GetShader())
+				continue;
+
+			for (const render::Shader::LightingPassData& lightingPass : mat->GetShader()->GetAllShaderPass())
 			{
-				render::ShaderPass& pass = passRef.get();
-				if (pass.IsPendingKill())
-					continue;
-				drawable->GetMaterialData().SetUniformData(
-					pass,
-					render::UniformStructLayout::Type::Object,
-					0,
-					finalBoneMatrices.data(),
-					dataSize);
+				for (render::ShaderPass& pass : lightingPass.passes)
+				{
+					if (pass.IsPendingKill())
+						continue;
+					drawable->GetMaterialData().SetUniformData(
+						pass,
+						render::UniformStructLayout::Type::Object,
+						0,
+						finalBoneMatrices.data(),
+						dataSize);
+				}
 			}
 		}
 	}

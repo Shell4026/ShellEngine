@@ -1,21 +1,21 @@
 ﻿#include "Component/Render/MeshRenderer.h"
-#include "Component/Render/Camera.h"
-#include "Component/Render/PickingRenderer.h"
 #include "Component/Render/PointLight.h"
 #include "Component/Render/DirectionalLight.h"
 
 #include "World.h"
-
-#include "Core/Reflection.hpp"
 
 #include <cstring>
 #include <algorithm>
 
 namespace sh::game
 {
+	static core::UUID errorMatUUID{ "bbc4ef7ec45dce223297a224f8093f10" };
+	static core::UUID errorShaderUUID{ "bbc4ef7ec45dce223297a224f8093f0f" };
+	static core::UUID blackTexUUID{ "bbc4ef7ec45dce223297a224f8093f18" };
+
 	MeshRenderer::MeshRenderer(GameObject& owner) :
 		Component(owner),
-		mesh(nullptr), mat(nullptr), drawable(nullptr)
+		mesh(nullptr)
 	{
 		onMatrixUpdateListener.SetCallback(
 			[this](const glm::mat4& mat)
@@ -32,20 +32,92 @@ namespace sh::game
 				if (!core::IsValid(shader))
 					return;
 				SearchLocalProperties();
-				if (!localUniformLocations.empty())
-				{
-					if (propertyBlock == nullptr)
-						propertyBlock = std::make_unique<render::MaterialPropertyBlock>();
-					SetDefaultLocalProperties();
-				}
+				SetDefaultLocalProperties();
 			}
 		);
 
 		canPlayInEditor = true;
 	}
 
-	MeshRenderer::~MeshRenderer()
+	MeshRenderer::~MeshRenderer() = default;
+
+	SH_GAME_API void MeshRenderer::OnDestroy()
 	{
+		for (render::Drawable* const drawable : drawables)
+		{
+			if (drawable != nullptr)
+				drawable->Destroy();
+		}
+		drawables.clear();
+		Super::OnDestroy();
+	}
+	SH_GAME_API void MeshRenderer::Awake()
+	{
+		Super::Awake();
+
+		render::Material* const errorMat = static_cast<render::Material*>(core::SObject::GetSObjectUsingResolver(errorMatUUID));
+		if (mats.empty() || !core::IsValid(mats[0]))
+		{
+			if (mats.empty())
+				mats.push_back(nullptr);
+			mats[0] = errorMat;
+		}
+	}
+	SH_GAME_API void MeshRenderer::Start()
+	{
+		if (drawables.empty())
+			CreateDrawable(true);
+	}
+	SH_GAME_API void MeshRenderer::LateUpdate()
+	{
+		if (!sh::core::IsValid(mesh) || mats.empty() || drawables.empty())
+			return;
+
+		sh::render::Renderer* const renderer = &gameObject.world.renderer;
+		if (renderer->IsPause())
+			return;
+
+		for (std::size_t i = 0; i < drawables.size(); ++i)
+		{
+			render::Material* const mat = GetMaterial(i);
+			if (!core::IsValid(mat) || !core::IsValid(mat->GetShader()))
+				continue;
+			mat->UpdateUniformBuffers();
+		}
+		UpdateDrawable();
+
+		for (render::Drawable* const drawable : drawables)
+			gameObject.world.renderer.PushDrawAble(drawable);
+	}
+	SH_GAME_API void MeshRenderer::Deserialize(const core::Json& json)
+	{
+		Super::Deserialize(json);
+		if (json.contains("MeshRenderer") && json["MeshRenderer"].contains("mat")) // 레거시
+		{
+			const std::string& matUUIDStr = json["MeshRenderer"]["mat"].get_ref<const std::string&>();
+			render::Material* const mat = static_cast<render::Material*>(core::SObject::GetSObjectUsingResolver(core::UUID{ matUUIDStr }));
+			if (core::IsValid(mat))
+				SetMaterial(mat);
+		}
+	}
+	SH_GAME_API void MeshRenderer::OnPropertyChanged(const core::reflection::Property& prop)
+	{
+		if (prop.GetName() == core::Util::ConstexprHash("mesh"))
+		{
+			SetMesh(mesh);
+		}
+		else if (prop.GetName() == core::Util::ConstexprHash("mats"))
+		{
+			CreateDrawable(true);
+		}
+		else if (prop.GetName() == core::Util::ConstexprHash("renderTag"))
+		{
+			for (auto* d : drawables)
+			{
+				if (d != nullptr)
+					d->SetRenderTagId(renderTag);
+			}
+		}
 	}
 
 	SH_GAME_API void MeshRenderer::SetMesh(const render::Mesh* mesh)
@@ -54,307 +126,298 @@ namespace sh::game
 		if (core::IsValid(mesh))
 		{
 			worldAABB = mesh->GetBoundingBox().GetWorldAABB(gameObject.transform->localToWorldMatrix);
-
-			if (drawable == nullptr)
-				CreateDrawable();
-			else
-				drawable->SetMesh(*this->mesh);
+			CreateDrawable(true);
 		}
-	}
-
-	SH_GAME_API auto MeshRenderer::GetMesh() const -> const sh::render::Mesh*
-	{
-		return mesh;
 	}
 
 	SH_GAME_API void MeshRenderer::SetMaterial(sh::render::Material* mat)
 	{
-		if (this->mat != nullptr)
-			this->mat->onShaderChanged.UnRegister(onShaderChangedListener);
+		SetMaterial(0, mat);
+	}
 
-		if (core::IsValid(mat))
-			this->mat = mat;
-		else
-			this->mat = static_cast<render::Material*>(core::SObject::GetSObjectUsingResolver(core::UUID{ "bbc4ef7ec45dce223297a224f8093f10" })); // errorMat
+	SH_GAME_API void MeshRenderer::SetMaterial(std::size_t index, sh::render::Material* mat)
+	{
+		if (mats.size() <= index)
+			mats.resize(index + 1, nullptr);
 
-		this->mat->onShaderChanged.Register(onShaderChangedListener);
+		if (core::IsValid(mats[index]))
+			mats[index]->onShaderChanged.UnRegister(onShaderChangedListener);
 
-		if (drawable == nullptr)
-			CreateDrawable();
-		else
-			drawable->SetMaterial(*this->mat);
+		render::Material* const errorMat = static_cast<render::Material*>(core::SObject::GetSObjectUsingResolver(errorMatUUID));
+		mats[index] = core::IsValid(mat) ? mat : errorMat;
 
-		if (core::IsValid(this->mat->GetShader()))
+		if (!core::IsValid(mats[index]->GetShader()))
+			mats[index]->SetShader(static_cast<render::Shader*>(core::SObject::GetSObjectUsingResolver(errorShaderUUID)));
+
+		mats[index]->onShaderChanged.Register(onShaderChangedListener);
+
+		render::Shader* const shader = mats[index]->GetShader();
+		if (core::IsValid(shader))
 		{
-			if (mat->GetShader()->IsUsingLight())
-			{
-				if (drawable != nullptr)
-					FillLightStruct(*drawable, *mat->GetShader());
-			}
+			if (shader->IsUsingLight() && index < drawables.size() && drawables[index] != nullptr)
+				FillLightStruct(*drawables[index], *shader);
 
 			SearchLocalProperties();
-			if (!localUniformLocations.empty())
-			{
-				if (propertyBlock == nullptr)
-					propertyBlock = std::make_unique<render::MaterialPropertyBlock>();
-				SetDefaultLocalProperties();
-			}
+			SetDefaultLocalProperties();
 		}
+
+		if (index < drawables.size() && drawables[index] != nullptr)
+			drawables[index]->SetMaterial(*mats[index]);
 		else
-		{
-			mat->SetShader(static_cast<render::Shader*>(core::SObject::GetSObjectUsingResolver(core::UUID{ "bbc4ef7ec45dce223297a224f8093f0f" })));
-		}
+			CreateDrawable(true);
 	}
-	SH_GAME_API auto MeshRenderer::GetMaterial() const -> sh::render::Material*
-	{
-		return mat;
-	}
-	SH_GAME_API void MeshRenderer::OnDestroy()
-	{
-		if (drawable != nullptr)
-		{
-			drawable->Destroy();
-			drawable = nullptr;
-		}
-		Super::OnDestroy();
-	}
-	SH_GAME_API void MeshRenderer::Awake()
-	{
-		Super::Awake();
 
-		if (!core::IsValid(mat))
-			mat = static_cast<render::Material*>(core::SObject::GetSObjectUsingResolver(core::UUID{"bbc4ef7ec45dce223297a224f8093f10"})); // Error mat
-	}
-	SH_GAME_API void MeshRenderer::Start()
+	SH_GAME_API auto MeshRenderer::GetMaterial(std::size_t index) const -> sh::render::Material*
 	{
-		if (drawable == nullptr)
-			CreateDrawable();
+		if (index < mats.size())
+			return mats[index];
+		if (!mats.empty())
+			return mats.back();
+		return nullptr;
 	}
-	SH_GAME_API void MeshRenderer::LateUpdate()
+
+	SH_GAME_API auto MeshRenderer::GetMaterialCount() const -> std::size_t
 	{
-		if (!sh::core::IsValid(mesh) || !sh::core::IsValid(mat) || !sh::core::IsValid(mat->GetShader()) || drawable == nullptr)
-			return;
-
-		sh::render::Renderer* renderer = &gameObject.world.renderer;
-		if (renderer->IsPause())
-			return;
-
-		mat->UpdateUniformBuffers();
-		UpdateDrawable();
-
-		gameObject.world.renderer.PushDrawAble(drawable);
+		return mats.size();
 	}
 
 	SH_GAME_API void MeshRenderer::SetMaterialPropertyBlock(std::unique_ptr<render::MaterialPropertyBlock>&& block)
 	{
-		propertyBlock = std::move(block);
+		SetMaterialPropertyBlock(0, std::move(block));
+	}
+
+	SH_GAME_API void MeshRenderer::SetMaterialPropertyBlock(std::size_t index, std::unique_ptr<render::MaterialPropertyBlock>&& block)
+	{
+		if (propertyBlocks.size() <= index)
+			propertyBlocks.resize(index + 1);
+		propertyBlocks[index] = std::move(block);
 		SetDefaultLocalProperties();
 	}
 
-	SH_GAME_API auto MeshRenderer::GetMaterialPropertyBlock() const -> render::MaterialPropertyBlock*
+	SH_GAME_API auto MeshRenderer::GetMaterialPropertyBlock(std::size_t index) const -> render::MaterialPropertyBlock*
 	{
-		return propertyBlock.get();
+		if (index < propertyBlocks.size())
+			return propertyBlocks[index].get();
+		return nullptr;
 	}
+
 	SH_GAME_API void MeshRenderer::UpdatePropertyBlockData()
 	{
-		if (drawable == nullptr || propertyBlock == nullptr || !core::IsValid(mat))
-			return;
-		render::Shader* shader = mat->GetShader();
-		if (!core::IsValid(shader))
+		if (drawables.empty() || propertyBlocks.empty())
 			return;
 
-		for (auto& [passPtr, layoutPtr] : localUniformLocations)
+		for (std::size_t i = 0; i < drawables.size(); ++i)
 		{
-			if (layoutPtr->type == render::UniformStructLayout::Type::Material)
+			render::Drawable* const drawable = drawables[i];
+			if (drawable == nullptr)
+				continue;
+			if (i >= propertyBlocks.size() || propertyBlocks[i] == nullptr)
+				continue;
+			if (i >= localUniformLocationsList.size())
 				continue;
 
-			std::vector<uint8_t> data(layoutPtr->GetSize());
-			bool isSampler = false;
-			for (auto& member : layoutPtr->GetMembers())
+			auto* mat = GetMaterial(i);
+			if (!core::IsValid(mat) || !core::IsValid(mat->GetShader()))
+				continue;
+
+			render::MaterialPropertyBlock& block = *propertyBlocks[i];
+			auto& locations = localUniformLocationsList[i];
+
+			for (auto& [passPtr, layoutPtr] : locations)
 			{
-				if (member.typeHash == core::reflection::GetType<int>().hash)
+				if (layoutPtr->type == render::UniformStructLayout::Type::Material)
+					continue;
+
+				std::vector<uint8_t> data(layoutPtr->GetSize());
+				bool isSampler = false;
+				for (auto& member : layoutPtr->GetMembers())
 				{
-					auto var = propertyBlock->GetScalarProperty(member.name);
-					if (var.has_value())
-						SetData(static_cast<int>(var.value()), data, member.offset);
-					else
-						SetData(0, data, member.offset);
-				}
-				else if (member.typeHash == core::reflection::GetType<float>().hash)
-				{
-					auto var = propertyBlock->GetScalarProperty(member.name);
-					if (var.has_value())
-						SetData(var.value(), data, member.offset);
-					else
-						SetData(0.0f, data, member.offset);
-				}
-				else if (member.typeHash == core::reflection::GetType<glm::vec2>().hash)
-				{
-					auto var = propertyBlock->GetVectorProperty(member.name);
-					if (var)
-						SetData(glm::vec2{ var->x, var->y }, data, member.offset);
-					else
-						SetData(glm::vec2{ 0.f }, data, member.offset);
-				}
-				else if (member.typeHash == core::reflection::GetType<glm::vec3>().hash)
-				{
-					auto var = propertyBlock->GetVectorProperty(member.name);
-					if (var)
-						SetData(glm::vec3{ var->x, var->y, var->z }, data, member.offset);
-					else
-						SetData(glm::vec3{ 0.f }, data, member.offset);
-				}
-				else if (member.typeHash == core::reflection::GetType<glm::vec4>().hash)
-				{
-					auto var = propertyBlock->GetVectorProperty(member.name);
-					if (var)
-						SetData(*var, data, member.offset);
-					else
-						SetData(glm::vec4{ 0.f }, data, member.offset);
-				}
-				else if (member.typeHash == core::reflection::GetType<glm::mat2>().hash)
-				{
-					auto var = propertyBlock->GetMatrixProperty(member.name);
-					if (var)
-						SetData(core::Util::ConvertMat4ToMat2(*var), data, member.offset);
-					else
-						SetData(glm::mat2{ 1.f }, data, member.offset);
-				}
-				else if (member.typeHash == core::reflection::GetType<glm::mat3>().hash)
-				{
-					auto var = propertyBlock->GetMatrixProperty(member.name);
-					if (var)
-						SetData(core::Util::ConvertMat4ToMat3(*var), data, member.offset);
-					else
-						SetData(glm::mat3{ 1.f }, data, member.offset);
-				}
-				else if (member.typeHash == core::reflection::GetType<glm::mat4>().hash)
-				{
-					auto var = propertyBlock->GetMatrixProperty(member.name);
-					if (var)
-						SetData(*var, data, member.offset);
-					else
-						SetData(glm::mat2{ 1.f }, data, member.offset);
-				}
-				else if (member.typeHash == core::reflection::GetType<render::Texture>().hash)
-				{
-					auto var = propertyBlock->GetTextureProperty(member.name);
-					if (core::IsValid(var))
-						drawable->GetMaterialData().SetTextureData(*passPtr, layoutPtr->type, layoutPtr->binding, *var);
-					else
+					if (member.typeHash == core::reflection::GetType<int>().hash)
 					{
-						static core::UUID blackTexUUID{ "bbc4ef7ec45dce223297a224f8093f18" };
-						auto texPtr = static_cast<render::Texture*>(core::SObject::GetSObjectUsingResolver(blackTexUUID));
-						if (texPtr != nullptr)
-							drawable->GetMaterialData().SetTextureData(*passPtr, layoutPtr->type, layoutPtr->binding, *texPtr);
-						else
-							SH_ERROR("Can't get default texture!");
+						auto var = block.GetScalarProperty(member.name);
+						SetData(var.has_value() ? static_cast<int>(var.value()) : 0, data, member.offset);
 					}
-					isSampler = true;
+					else if (member.typeHash == core::reflection::GetType<float>().hash)
+					{
+						auto var = block.GetScalarProperty(member.name);
+						SetData(var.has_value() ? var.value() : 0.0f, data, member.offset);
+					}
+					else if (member.typeHash == core::reflection::GetType<glm::vec2>().hash)
+					{
+						auto var = block.GetVectorProperty(member.name);
+						SetData(var ? glm::vec2{ var->x, var->y } : glm::vec2{ 0.f }, data, member.offset);
+					}
+					else if (member.typeHash == core::reflection::GetType<glm::vec3>().hash)
+					{
+						auto var = block.GetVectorProperty(member.name);
+						SetData(var ? glm::vec3{ var->x, var->y, var->z } : glm::vec3{ 0.f }, data, member.offset);
+					}
+					else if (member.typeHash == core::reflection::GetType<glm::vec4>().hash)
+					{
+						auto var = block.GetVectorProperty(member.name);
+						SetData(var ? *var : glm::vec4{ 0.f }, data, member.offset);
+					}
+					else if (member.typeHash == core::reflection::GetType<glm::mat2>().hash)
+					{
+						auto var = block.GetMatrixProperty(member.name);
+						SetData(var ? core::Util::ConvertMat4ToMat2(*var) : glm::mat2{ 1.f }, data, member.offset);
+					}
+					else if (member.typeHash == core::reflection::GetType<glm::mat3>().hash)
+					{
+						auto var = block.GetMatrixProperty(member.name);
+						SetData(var ? core::Util::ConvertMat4ToMat3(*var) : glm::mat3{ 1.f }, data, member.offset);
+					}
+					else if (member.typeHash == core::reflection::GetType<glm::mat4>().hash)
+					{
+						auto var = block.GetMatrixProperty(member.name);
+						SetData(var ? *var : glm::mat4{ 1.f }, data, member.offset);
+					}
+					else if (member.typeHash == core::reflection::GetType<render::Texture>().hash)
+					{
+						auto var = block.GetTextureProperty(member.name);
+						if (core::IsValid(var))
+							drawable->GetMaterialData().SetTextureData(*passPtr, layoutPtr->type, layoutPtr->binding, *var);
+						else
+						{
+							render::Texture* const texPtr = static_cast<render::Texture*>(core::SObject::GetSObjectUsingResolver(blackTexUUID));
+							if (texPtr != nullptr)
+								drawable->GetMaterialData().SetTextureData(*passPtr, layoutPtr->type, layoutPtr->binding, *texPtr);
+							else
+								SH_ERROR("Can't get default texture!");
+						}
+						isSampler = true;
+					}
 				}
+				if (!isSampler)
+					drawable->GetMaterialData().SetUniformData(*passPtr, layoutPtr->type, layoutPtr->binding, std::move(data));
 			}
-			if (!isSampler)
-				drawable->GetMaterialData().SetUniformData(*passPtr, layoutPtr->type, layoutPtr->binding, std::move(data));
 		}
 	}
 	SH_GAME_API void MeshRenderer::SetRenderTagId(uint32_t tagId)
 	{
 		renderTag = tagId;
 	}
-
-	SH_GAME_API auto MeshRenderer::GetRenderTagId() const -> uint32_t
-	{
-		return renderTag;
-	}
-
-	SH_GAME_API void MeshRenderer::OnPropertyChanged(const core::reflection::Property& prop)
-	{
-		if (prop.GetName() == core::Util::ConstexprHash("mesh"))
-		{
-			SetMesh(mesh);
-		}
-		else if (prop.GetName() == core::Util::ConstexprHash("mat"))
-		{
-			SetMaterial(mat);
-		}
-		else if (prop.GetName() == core::Util::ConstexprHash("renderTag"))
-		{
-			if (drawable != nullptr)
-				drawable->SetRenderTagId(renderTag);
-		}
-	}
-	SH_GAME_API void MeshRenderer::CreateDrawable()
+	SH_GAME_API void MeshRenderer::CreateDrawable(bool bUseSubMesh)
 	{
 		if (!core::IsValid(mesh))
 		{
 			mesh = nullptr;
 			return;
 		}
-		if (!core::IsValid(mat))
-			mat = static_cast<render::Material*>(core::SObject::GetSObjectUsingResolver(core::UUID{ "bbc4ef7ec45dce223297a224f8093f10" }));
-		if (!core::IsValid(mat->GetShader()))
-			return;
+		render::Material* const errorMat = static_cast<render::Material*>(core::SObject::GetSObjectUsingResolver(errorMatUUID));
 
-		drawable = core::SObject::Create<render::Drawable>(*mat, *mesh);
-		drawable->SetRenderTagId(renderTag);
-		drawable->SetTopology(mesh->GetTopology());
-		drawable->Build(*world.renderer.GetContext());
+		for (render::Drawable* drawable : drawables)
+		{
+			if (drawable != nullptr)
+				drawable->Destroy();
+		}
+		drawables.clear();
+
+		const auto& subMeshes = mesh->GetSubMeshes();
+		const std::size_t count = subMeshes.empty() || !bUseSubMesh ? 1 : subMeshes.size();
+
+		while (mats.size() < count)
+			mats.push_back(errorMat);
+
+		propertyBlocks.resize(count);
+		localUniformLocationsList.resize(count);
+
+		for (std::size_t i = 0; i < count; ++i)
+		{
+			render::Material* const mat = core::IsValid(mats[i]) ? mats[i] : errorMat;
+			if (!core::IsValid(mat->GetShader()))
+				continue;
+
+			render::Drawable* const drawable = core::SObject::Create<render::Drawable>(*mat, *mesh);
+			if (!subMeshes.empty() && bUseSubMesh)
+				drawable->SetSubMeshIndex(static_cast<int>(i));
+			drawable->SetRenderTagId(renderTag);
+			drawable->SetTopology(mesh->GetTopology());
+			drawable->Build(*world.renderer.GetContext());
+			drawables.push_back(drawable);
+		}
 	}
 	SH_GAME_API void MeshRenderer::UpdateDrawable()
 	{
-		if (mat->GetShader()->IsUsingLight())
-			FillLightStruct(*drawable, *mat->GetShader());
+		for (std::size_t i = 0; i < drawables.size(); ++i)
+		{
+			render::Drawable* const drawable = drawables[i];
+			if (drawable == nullptr)
+				continue;
+			render::Material* const mat = GetMaterial(i);
+			if (!core::IsValid(mat) || !core::IsValid(mat->GetShader()))
+				continue;
 
-		drawable->SetModelMatrix(gameObject.transform->localToWorldMatrix);
+			if (mat->GetShader()->IsUsingLight())
+				FillLightStruct(*drawable, *mat->GetShader());
+
+			drawable->SetModelMatrix(gameObject.transform->localToWorldMatrix);
+		}
 	}
+
 	void MeshRenderer::SearchLocalProperties()
 	{
-		// 로컬 프로퍼티 위치 파악
-		localUniformLocations.clear();
+		localUniformLocationsList.resize(mats.size());
 
-		render::Shader* shader = mat->GetShader();
-		if (!core::IsValid(shader))
-			return;
-
-		for (auto& [propName, propInfo] : shader->GetProperties())
+		for (std::size_t i = 0; i < mats.size(); ++i)
 		{
-			for (auto& location : propInfo.locations)
+			localUniformLocationsList[i].clear();
+
+			if (!core::IsValid(mats[i]))
+				continue;
+			render::Shader* const shader = mats[i]->GetShader();
+			if (!core::IsValid(shader))
+				continue;
+
+			for (auto& [propName, propInfo] : shader->GetProperties())
 			{
-				if (location.layoutPtr->type != render::UniformStructLayout::Type::Object)
-					continue;
-				auto it = std::find(localUniformLocations.begin(), localUniformLocations.end(), std::pair{ location.passPtr.Get(), location.layoutPtr });
-				if (it == localUniformLocations.end())
-					localUniformLocations.push_back({ location.passPtr.Get(), location.layoutPtr });
+				for (auto& location : propInfo.locations)
+				{
+					if (location.layoutPtr->type != render::UniformStructLayout::Type::Object)
+						continue;
+					auto& locs = localUniformLocationsList[i];
+					auto it = std::find(locs.begin(), locs.end(), std::pair{ location.passPtr.Get(), location.layoutPtr });
+					if (it == locs.end())
+						locs.push_back({ location.passPtr.Get(), location.layoutPtr });
+				}
 			}
 		}
 	}
 
 	void MeshRenderer::SetDefaultLocalProperties()
 	{
-		if (!core::IsValid(mat))
-			return;
-		render::Shader* shader = mat->GetShader();
-		if (!core::IsValid(shader))
-			return;
+		propertyBlocks.resize(mats.size());
 
-		if (propertyBlock == nullptr)
-			propertyBlock = std::make_unique<render::MaterialPropertyBlock>();
-
-		for (const auto& [propName, propInfo] : shader->GetProperties())
+		for (std::size_t i = 0; i < mats.size(); ++i)
 		{
-			if (!propInfo.bLocalProperty)
+			if (i >= localUniformLocationsList.size() || localUniformLocationsList[i].empty())
+				continue;
+			if (!core::IsValid(mats[i]))
+				continue;
+			render::Shader* const shader = mats[i]->GetShader();
+			if (!core::IsValid(shader))
 				continue;
 
-			if (propInfo.type == core::reflection::GetType<int>() || propInfo.type == core::reflection::GetType<float>())
-				propertyBlock->SetProperty(propName, 0.f);
-			else if (propInfo.type == core::reflection::GetType<glm::vec4>())
-				propertyBlock->SetProperty(propName, glm::vec4{ 0.f });
-			else if (propInfo.type == core::reflection::GetType<glm::vec3>())
-				propertyBlock->SetProperty(propName, glm::vec3{ 0.f });
-			else if (propInfo.type == core::reflection::GetType<glm::vec2>())
-				propertyBlock->SetProperty(propName, glm::vec2{ 0.f });
-			else if (propInfo.type == core::reflection::GetType<render::Texture>())
-				propertyBlock->SetProperty(propName, static_cast<render::Texture*>(core::SObject::GetSObjectUsingResolver(core::UUID{ "bbc4ef7ec45dce223297a224f8093f18" })));
+			if (propertyBlocks[i] == nullptr)
+				propertyBlocks[i] = std::make_unique<render::MaterialPropertyBlock>();
+
+			render::MaterialPropertyBlock& block = *propertyBlocks[i];
+			for (const auto& [propName, propInfo] : shader->GetProperties())
+			{
+				if (!propInfo.bLocalProperty)
+					continue;
+
+				if (propInfo.type == core::reflection::GetType<int>() || propInfo.type == core::reflection::GetType<float>())
+					block.SetProperty(propName, 0.f);
+				else if (propInfo.type == core::reflection::GetType<glm::vec4>())
+					block.SetProperty(propName, glm::vec4{ 0.f });
+				else if (propInfo.type == core::reflection::GetType<glm::vec3>())
+					block.SetProperty(propName, glm::vec3{ 0.f });
+				else if (propInfo.type == core::reflection::GetType<glm::vec2>())
+					block.SetProperty(propName, glm::vec2{ 0.f });
+				else if (propInfo.type == core::reflection::GetType<render::Texture>())
+					block.SetProperty(propName, static_cast<render::Texture*>(core::SObject::GetSObjectUsingResolver(blackTexUUID)));
+			}
 		}
 		UpdatePropertyBlockData();
 	}
@@ -394,7 +457,7 @@ namespace sh::game
 			{
 				if (pass.IsPendingKill() || pass.GetLightingBinding() == -1)
 					continue;
-				
+
 				drawable.GetMaterialData().SetUniformData(pass, render::UniformStructLayout::Type::Object, pass.GetLightingBinding(), &lightStruct, sizeof(Light));
 			}
 		}

@@ -31,8 +31,7 @@ namespace sh::game
 		SH_GAME_API void Awake() override;
 		SH_GAME_API void Start() override;
 
-		SH_GAME_API auto Serialize() const -> core::Json override;
-		SH_GAME_API void Deserialize(const core::Json& json) override;
+		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 
 		SH_GAME_API void SetSkinnedMesh(render::SkinnedMesh* mesh);
 		SH_GAME_API void SetBones(std::vector<Transform*> bones);
@@ -40,12 +39,13 @@ namespace sh::game
 		SH_GAME_API auto GetBones() const -> const std::vector<Transform*>& { return bones; }
 		SH_GAME_API auto GetInverseBindMatrices() const -> const std::vector<glm::mat4>& { return inverseBindMatrices; }
 	protected:
-		SH_GAME_API void CreateDrawable() override;
 		SH_GAME_API void UpdateDrawable() override;
 	private:
+		void CalculateIBM();
 		void ComputeBoneMatrices();
 		void UploadBoneMatrices();
-		PROPERTY(bones)
+	private:
+		PROPERTY(bones, core::PropertyOption::invisible)
 		std::vector<Transform*> bones;
 		std::vector<glm::mat4> inverseBindMatrices;
 		std::array<glm::mat4, render::SkinnedMesh::MAX_BONES> finalBoneMatrices;

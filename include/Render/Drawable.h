@@ -30,25 +30,23 @@ namespace sh::render
 		/// @param mesh 메쉬
 		SH_RENDER_API void SetMesh(const Mesh& mesh);
 		SH_RENDER_API void SetMaterial(const Material& mat);
-
-		SH_RENDER_API auto GetMesh() const -> const Mesh*;
-		SH_RENDER_API auto GetMaterial() const -> const Material*;
-		SH_RENDER_API auto GetMaterialData() const -> const MaterialData&;
-		SH_RENDER_API auto GetMaterialData() -> MaterialData&;
-
 		SH_RENDER_API void SetModelMatrix(const glm::mat4& mat);
-		SH_RENDER_API auto GetModelMatrix(core::ThreadType thr) const -> const glm::mat4&;
+		SH_RENDER_API void SetRenderTagId(uint32_t tagId);
+		SH_RENDER_API void SetTopology(Mesh::Topology topology);
+		SH_RENDER_API void SetPriority(int priority);
+		SH_RENDER_API void SetSubMeshIndex(int idx);
 
 		SH_RENDER_API auto CheckAssetValid() const -> bool;
 
-		SH_RENDER_API void SetRenderTagId(uint32_t tagId);
-		SH_RENDER_API auto GetRenderTagId() const -> uint32_t;
-
-		SH_RENDER_API void SetTopology(Mesh::Topology topology);
-		SH_RENDER_API auto GetTopology(core::ThreadType thr = core::ThreadType::Game) const -> Mesh::Topology;
-
-		SH_RENDER_API void SetPriority(int priority);
-		SH_RENDER_API auto GetPriority(core::ThreadType thr = core::ThreadType::Game) const -> int;
+		SH_RENDER_API auto GetMesh() const -> const Mesh* { return mesh; }
+		SH_RENDER_API auto GetMaterial() const -> const Material* { return mat; }
+		SH_RENDER_API auto GetMaterialData() const -> const MaterialData& { return materialData; }
+		SH_RENDER_API auto GetMaterialData() -> MaterialData& { return materialData; }
+		SH_RENDER_API auto GetModelMatrix(core::ThreadType thr) const -> const glm::mat4& { return modelMatrix[thr]; }
+		SH_RENDER_API auto GetRenderTagId() const -> uint32_t { return renderTag; }
+		SH_RENDER_API auto GetTopology(core::ThreadType thr = core::ThreadType::Game) const -> Mesh::Topology { return topology[thr]; }
+		SH_RENDER_API auto GetPriority(core::ThreadType thr = core::ThreadType::Game) const -> int { return priority[thr]; }
+		SH_RENDER_API auto GetSubMeshIndex() const -> int { return subMeshIndex; }
 	protected:
 		SH_RENDER_API void SyncDirty() override;
 		SH_RENDER_API void Sync() override;
@@ -72,6 +70,8 @@ namespace sh::render
 			std::variant<std::monostate, const Material*, const Mesh*, Mesh::Topology, int> changed;
 		};
 		std::array<SyncData, 4> syncDatas;
+
+		int subMeshIndex = -1;
 
 		bool bDirty = false;
 		bool bMatrixDirty = false;

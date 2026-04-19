@@ -44,5 +44,7 @@ namespace sh::game
 		SH_GAME_API void SetMeshRenderer(const MeshRenderer& meshRenderer);
 
 		SH_GAME_API auto Serialize() const -> core::Json override;
+	protected:
+		void CreateDrawable(bool) override;
 	};
 }//namespace

@@ -17,5 +17,7 @@ namespace sh::editor
 		SH_EDITOR_API void BeginUpdate() override;
 
 		SH_EDITOR_API auto Serialize() const -> core::Json override;
+	protected:
+		SH_EDITOR_API void CreateDrawable(bool) override;
 	};
 }//namespace

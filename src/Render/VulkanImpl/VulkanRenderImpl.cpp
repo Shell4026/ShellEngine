@@ -246,8 +246,22 @@ namespace sh::render::vk
 			static_cast<uint32_t>(UniformStructLayout::Type::Object),
 			1, &objectDescriptorSet, 0, nullptr);
 	}
-	void VulkanRenderImpl::DrawMesh(VulkanCommandBuffer& cmd, const ShaderPass& pass, const Mesh& mesh) const
+	void VulkanRenderImpl::DrawMesh(VulkanCommandBuffer& cmd, const ShaderPass& pass, const Mesh& mesh, int subMeshIndex) const
 	{
+		uint32_t indexCount;
+		uint32_t firstIndex;
+		const auto& subMeshes = mesh.GetSubMeshes();
+		if (subMeshIndex >= 0 && subMeshIndex < static_cast<int>(subMeshes.size()))
+		{
+			indexCount = static_cast<uint32_t>(subMeshes[subMeshIndex].indexCount);
+			firstIndex = static_cast<uint32_t>(subMeshes[subMeshIndex].indexOffset);
+		}
+		else
+		{
+			indexCount = static_cast<uint32_t>(mesh.GetIndices().size());
+			firstIndex = 0;
+		}
+
 		const SkinnedMesh* skinnedMesh = core::reflection::Cast<const SkinnedMesh>(&mesh);
 		if (skinnedMesh)
 		{
@@ -261,7 +275,6 @@ namespace sh::render::vk
 			VkDeviceSize offsets[2] = { 0, 0 };
 			vkCmdBindVertexBuffers(cmd.GetCommandBuffer(), 0, 2, buffers, offsets);
 			vkCmdBindIndexBuffer(cmd.GetCommandBuffer(), vkSkinnedVB->GetIndexBuffer().GetBuffer(), 0, VK_INDEX_TYPE_UINT32);
-			vkCmdDrawIndexed(cmd.GetCommandBuffer(), static_cast<uint32_t>(mesh.GetIndices().size()), 1, 0, 0, 0);
 		}
 		else
 		{
@@ -272,8 +285,8 @@ namespace sh::render::vk
 			VkDeviceSize offsets[1] = { 0 };
 			vkCmdBindVertexBuffers(cmd.GetCommandBuffer(), 0, 1, buffers.data(), offsets);
 			vkCmdBindIndexBuffer(cmd.GetCommandBuffer(), vkVertexBuffer->GetIndexBuffer().GetBuffer(), 0, VkIndexType::VK_INDEX_TYPE_UINT32);
-			vkCmdDrawIndexed(cmd.GetCommandBuffer(), static_cast<uint32_t>(mesh.GetIndices().size()), 1, 0, 0, 0);
 		}
+		vkCmdDrawIndexed(cmd.GetCommandBuffer(), indexCount, 1, firstIndex, 0, 0);
 	}
 	void VulkanRenderImpl::RenderDrawable(VulkanCommandBuffer& cmd, const core::Name& passName, const RenderTarget& renderData, const DrawList& drawList, const RenderTargetLayout& layout) const
 	{
@@ -347,7 +360,7 @@ namespace sh::render::vk
 								0, sizeof(glm::mat4),
 								&drawable->GetModelMatrix(core::ThreadType::Render));
 
-						DrawMesh(cmd, pass, *mesh);
+						DrawMesh(cmd, pass, *mesh, drawable->GetSubMeshIndex());
 					}
 				}
 			}
@@ -408,7 +421,7 @@ namespace sh::render::vk
 							0, sizeof(glm::mat4),
 							&renderItem.drawable->GetModelMatrix(core::ThreadType::Render));
 
-					DrawMesh(cmd, pass, *mesh);
+					DrawMesh(cmd, pass, *mesh, renderItem.drawable->GetSubMeshIndex());
 				}
 			}
 		}
