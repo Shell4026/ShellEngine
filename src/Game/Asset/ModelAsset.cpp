@@ -129,8 +129,9 @@ namespace sh::game
             std::memcpy(&nodeHeader, data.data() + cursor, sizeof(NodeHeader));
             cursor += sizeof(NodeHeader);
             const core::UUID meshUUID{ nodeHeader.meshUUID };
-            nodeData[i].mesh = meshUUID.IsEmpty() ? nullptr : static_cast<render::Mesh*>(core::SObject::GetSObjectUsingResolver(meshUUID));
             nodeData[i].skeletonIdx = nodeHeader.skeletonIdx;
+            nodeData[i].modelMatrix = nodeHeader.modelMatrix;
+            nodeData[i].mesh = meshUUID.IsEmpty() ? nullptr : static_cast<render::Mesh*>(core::SObject::GetSObjectUsingResolver(meshUUID));
 
             if (cursor + sizeof(char) * nodeHeader.nameSize > data.size())
                 return false;

@@ -33,9 +33,12 @@ namespace sh::render
 		SH_RENDER_API void Build(const IRenderContext& context) override;
 
 		SH_RENDER_API void SetBoneVertices(std::vector<BoneVertex> bv) { boneVerts = std::move(bv); }
+		SH_RENDER_API void SetInverseBindMatrices(std::vector<glm::mat4> ibms) { inverseBindMatrices = std::move(ibms); }
 
 		SH_RENDER_API auto GetBoneVertices() const -> const std::vector<BoneVertex>& { return boneVerts; }
+		SH_RENDER_API auto GetInverseBindMatrices() const -> const std::vector<glm::mat4>& { return inverseBindMatrices; }
 	private:
 		std::vector<BoneVertex> boneVerts;
+		std::vector<glm::mat4> inverseBindMatrices;
 	};
 }//namespace

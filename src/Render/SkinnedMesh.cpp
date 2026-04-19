@@ -7,12 +7,14 @@ namespace sh::render
 
 	SkinnedMesh::SkinnedMesh(const SkinnedMesh& other) :
 		Mesh(other),
-		boneVerts(other.boneVerts)
+		boneVerts(other.boneVerts),
+		inverseBindMatrices(other.inverseBindMatrices)
 	{
 	}
 	SkinnedMesh::SkinnedMesh(SkinnedMesh&& other) noexcept :
 		Mesh(std::move(other)),
-		boneVerts(std::move(other.boneVerts))
+		boneVerts(std::move(other.boneVerts)),
+		inverseBindMatrices(std::move(other.inverseBindMatrices))
 	{
 	}
 	SkinnedMesh::~SkinnedMesh() = default;

@@ -28,8 +28,9 @@ namespace sh::game
 		const size_t indexBytes = header.indexCount * sizeof(uint32_t);
 		const size_t boneVertexBytes = header.boneVertexCount * sizeof(render::SkinnedMesh::BoneVertex);
 		const size_t subMeshBytes = header.subMeshCount * sizeof(render::SubMesh);
+		const size_t ibmBytes = header.ibmCount * sizeof(glm::mat4);
 
-		if (data.size < vertexBytes + indexBytes + boneVertexBytes + subMeshBytes)
+		if (data.size < vertexBytes + indexBytes + boneVertexBytes + subMeshBytes + ibmBytes)
 		{
 			SH_ERROR_FORMAT("Invalid mesh asset!: {}", asset.GetAssetUUID().ToString());
 			return nullptr;
@@ -45,7 +46,7 @@ namespace sh::game
 		std::memcpy(indices.data(), cursor, indexBytes);
 		cursor += indexBytes;
 
-		render::Mesh* const mesh = header.boneVertexCount > 0 ? 
+		render::Mesh* const mesh = header.boneVertexCount > 0 ?
 			core::SObject::Create<render::SkinnedMesh>() : core::SObject::Create<render::Mesh>();
 
 		mesh->SetUUID(asset.GetAssetUUID());
@@ -54,14 +55,28 @@ namespace sh::game
 
 		if (header.boneVertexCount > 0)
 		{
+			render::SkinnedMesh* const skinnedMesh = static_cast<render::SkinnedMesh*>(mesh);
+
 			std::vector<render::SkinnedMesh::BoneVertex> boneVerts(header.boneVertexCount);
 			std::memcpy(boneVerts.data(), cursor, boneVertexBytes);
+			skinnedMesh->SetBoneVertices(std::move(boneVerts));
+			cursor += boneVertexBytes;
 
-			static_cast<render::SkinnedMesh*>(mesh)->SetBoneVertices(std::move(boneVerts));
+			std::memcpy(subMeshes.data(), cursor, subMeshBytes);
+			cursor += subMeshBytes;
+
+			if (header.ibmCount > 0)
+			{
+				std::vector<glm::mat4> ibms(header.ibmCount);
+				std::memcpy(ibms.data(), cursor, ibmBytes);
+				skinnedMesh->SetInverseBindMatrices(std::move(ibms));
+			}
 		}
-		cursor += boneVertexBytes;
-		std::memcpy(subMeshes.data(), cursor, subMeshBytes);
-		
+		else
+		{
+			std::memcpy(subMeshes.data(), cursor, subMeshBytes);
+		}
+
 		mesh->SetSubMeshes(std::move(subMeshes));
 		mesh->Build(ctx);
 

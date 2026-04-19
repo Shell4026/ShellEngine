@@ -341,6 +341,20 @@ namespace sh::game
 					skinnedMesh->SetIndices(std::move(indices));
 					skinnedMesh->SetBoneVertices(std::move(boneVerts));
 					skinnedMesh->SetSubMeshes(std::move(subMeshes));
+
+					const tinygltf::Skin& gltfSkin = gltfModel.skins[gltfNode.skin];
+					if (gltfSkin.inverseBindMatrices >= 0)
+					{
+						const tinygltf::Accessor& acc = gltfModel.accessors[gltfSkin.inverseBindMatrices];
+						const tinygltf::BufferView& bv = gltfModel.bufferViews[acc.bufferView];
+						const float* ibmData = reinterpret_cast<const float*>(
+							&gltfModel.buffers[bv.buffer].data[acc.byteOffset + bv.byteOffset]);
+						std::vector<glm::mat4> ibms(acc.count);
+						for (std::size_t i = 0; i < acc.count; ++i)
+							ibms[i] = glm::make_mat4x4(ibmData + i * 16);
+						skinnedMesh->SetInverseBindMatrices(std::move(ibms));
+					}
+
 					skinnedMesh->Build(context);
 					meshPtr = skinnedMesh;
 				}

@@ -1,5 +1,7 @@
 ﻿#include "Asset/MeshAsset.h"
 
+#include <glm/glm.hpp>
+
 namespace sh::game
 {
 	MeshAsset::MeshAsset() :
@@ -51,13 +53,15 @@ namespace sh::game
 		header.indexCount = meshPtr->GetIndices().size();
 		header.boneVertexCount = bSkinned ? skinnedPtr->GetBoneVertices().size() : 0;
 		header.subMeshCount = meshPtr->GetSubMeshes().size();
+		header.ibmCount = bSkinned ? skinnedPtr->GetInverseBindMatrices().size() : 0;
 
 		const size_t vertexBytes = header.vertexCount * sizeof(render::Mesh::Vertex);
 		const size_t indexBytes = header.indexCount * sizeof(uint32_t);
 		const size_t boneVertexBytes = header.boneVertexCount * sizeof(render::SkinnedMesh::BoneVertex);
 		const size_t subMeshBytes = header.subMeshCount * sizeof(render::SubMesh);
+		const size_t ibmBytes = header.ibmCount * sizeof(glm::mat4);
 
-		data.resize(sizeof(Header) + vertexBytes + indexBytes + boneVertexBytes + subMeshBytes);
+		data.resize(sizeof(Header) + vertexBytes + indexBytes + boneVertexBytes + subMeshBytes + ibmBytes);
 
 		uint8_t* cursor = data.data();
 		std::memcpy(cursor, &header, sizeof(Header));
@@ -72,6 +76,9 @@ namespace sh::game
 			cursor += boneVertexBytes;
 		}
 		std::memcpy(cursor, meshPtr->GetSubMeshes().data(), subMeshBytes);
+		cursor += subMeshBytes;
+		if (bSkinned && header.ibmCount > 0)
+			std::memcpy(cursor, skinnedPtr->GetInverseBindMatrices().data(), ibmBytes);
 	}
 	SH_GAME_API auto MeshAsset::ParseAssetData() -> bool
 	{

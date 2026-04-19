@@ -17,17 +17,10 @@ namespace sh::game
 
 	SH_GAME_API void SkinnedMeshRenderer::Awake()
 	{
-		MeshRenderer::Awake();
-	}
-	SH_GAME_API void SkinnedMeshRenderer::Start()
-	{
-		MeshRenderer::Start();
-	}
-
-	SH_GAME_API void SkinnedMeshRenderer::OnPropertyChanged(const core::reflection::Property& prop)
-	{
-		if (prop.GetName() == core::Util::ConstexprHash("bones"))
-			CalculateIBM();
+		Super::Awake();
+		const render::SkinnedMesh* const skinnedMesh = static_cast<const render::SkinnedMesh*>(GetMesh());
+		if (core::IsValid(skinnedMesh))
+			inverseBindMatrices = skinnedMesh->GetInverseBindMatrices();
 	}
 
 	SH_GAME_API void SkinnedMeshRenderer::SetSkinnedMesh(render::SkinnedMesh* mesh)
@@ -39,7 +32,9 @@ namespace sh::game
 	{
 		bones = std::move(boneTransforms);
 
-		CalculateIBM();
+		const render::SkinnedMesh* const skinnedMesh = static_cast<const render::SkinnedMesh*>(GetMesh());
+		if (core::IsValid(skinnedMesh))
+			inverseBindMatrices = skinnedMesh->GetInverseBindMatrices();
 	}
 
 	SH_GAME_API void SkinnedMeshRenderer::UpdateDrawable()
@@ -47,18 +42,6 @@ namespace sh::game
 		ComputeBoneMatrices();
 		UploadBoneMatrices();
 		MeshRenderer::UpdateDrawable();
-	}
-
-	void SkinnedMeshRenderer::CalculateIBM()
-	{
-		inverseBindMatrices.resize(bones.size());
-		for (std::size_t i = 0; i < bones.size(); ++i)
-		{
-			if (core::IsValid(bones[i]))
-				inverseBindMatrices[i] = glm::inverse(bones[i]->localToWorldMatrix);
-			else
-				inverseBindMatrices[i] = glm::mat4{ 1.0f };
-		}
 	}
 
 	void SkinnedMeshRenderer::ComputeBoneMatrices()
@@ -71,7 +54,6 @@ namespace sh::game
 		{
 			if (!core::IsValid(bones[i]))
 				continue;
-			// finalBoneMatrix[i] = bone 월드 행렬 * 역바인드 행렬
 			finalBoneMatrices[i] = bones[i]->localToWorldMatrix * inverseBindMatrices[i];
 		}
 	}
