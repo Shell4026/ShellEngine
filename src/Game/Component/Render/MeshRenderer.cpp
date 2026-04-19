@@ -158,13 +158,15 @@ namespace sh::game
 				FillLightStruct(*drawables[index], *shader);
 
 			SearchLocalProperties();
-			SetDefaultLocalProperties();
 		}
 
 		if (index < drawables.size() && drawables[index] != nullptr)
 			drawables[index]->SetMaterial(*mats[index]);
 		else
 			CreateDrawable(true);
+
+		if (core::IsValid(shader))
+			SetDefaultLocalProperties();
 	}
 
 	SH_GAME_API auto MeshRenderer::GetMaterial(std::size_t index) const -> sh::render::Material*
@@ -336,6 +338,8 @@ namespace sh::game
 			drawable->Build(*world.renderer.GetContext());
 			drawables.push_back(drawable);
 		}
+
+		UpdatePropertyBlockData();
 	}
 	SH_GAME_API void MeshRenderer::UpdateDrawable()
 	{
