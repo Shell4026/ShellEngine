@@ -117,6 +117,6 @@ cmake --build out/build/linux-release
 ```
 
 # TODO
-- [ ]스켈레탈 메쉬
-- [ ]애니메이션, 애니메이터
-- [ ]Undo/Redo
+- [x] 스켈레탈 메쉬
+- [ ] 애니메이션, 애니메이터
+- [x] Undo/Redo
