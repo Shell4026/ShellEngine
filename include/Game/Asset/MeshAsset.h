@@ -17,6 +17,7 @@ namespace sh::game
 			uint64_t vertexCount = 0;
 			uint64_t indexCount = 0;
 			uint64_t boneVertexCount = 0; // 0이면 일반 메쉬
+			uint64_t subMeshCount = 0;
 		};
 		struct MeshData
 		{

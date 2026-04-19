@@ -19,6 +19,11 @@ namespace sh::render
 {
 	class IVertexBuffer;
 
+	struct SubMesh
+	{
+		std::size_t indexOffset = 0;
+		std::size_t indexCount = 0;
+	};
 	/// @brief 모델 데이터를 지니는 클래스. 반드시 사용전 Build를 호출 해야한다.
 	class Mesh : public core::SObject, public core::INonCopyable, public render::IRenderResource
 	{
@@ -60,6 +65,8 @@ namespace sh::render
 		SH_RENDER_API void SetIndices(std::vector<uint32_t> indices) noexcept { this->indices = std::move(indices); }
 		SH_RENDER_API void SetIndices(const std::initializer_list<uint32_t>& indices);
 
+		SH_RENDER_API void SetSubMeshes(std::vector<SubMesh> subMeshes) { this->subMeshes = std::move(subMeshes); }
+
 		SH_RENDER_API void Build(const IRenderContext& context) override;
 
 		SH_RENDER_API void SetTopology(Topology topology) { this->topology = topology; }
@@ -74,6 +81,7 @@ namespace sh::render
 		SH_RENDER_API auto GetTopology() const -> Topology { return topology; }
 		SH_RENDER_API auto GetBoundingBox() const -> const AABB& { return bounding; }
 		SH_RENDER_API auto GetBoundingBox() -> AABB& { return bounding; }
+		SH_RENDER_API auto GetSubMeshes() const -> const std::vector<SubMesh>& { return subMeshes; }
 	protected:
 		SH_RENDER_API void SetVertexBuffer(std::unique_ptr<IVertexBuffer> buf);
 		SH_RENDER_API void CreateFace();
@@ -83,11 +91,12 @@ namespace sh::render
 		std::vector<Vertex> verts;
 		std::vector<uint32_t> indices;
 		std::vector<Face> faces;
+		std::vector<SubMesh> subMeshes;
 
 		std::unique_ptr<IVertexBuffer> buffer;
 
 		AABB bounding;
 
 		Topology topology;
-	};
-}
+	};//Mesh
+}//namespace

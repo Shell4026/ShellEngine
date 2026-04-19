@@ -203,13 +203,15 @@ namespace sh::game
 				std::vector<render::Mesh::Vertex> verts;
 				std::vector<uint32_t> indices;
 				std::vector<render::SkinnedMesh::BoneVertex> boneVerts;
+				std::vector<render::SubMesh> subMeshes;
 				bool bSkinned = (gltfNode.skin >= 0);
 
 				const tinygltf::Mesh& gltfMesh = gltfModel.meshes[gltfNode.mesh];
 
-				uint32_t indexCount = 0;
 				for (auto& primitive : gltfMesh.primitives)
 				{
+					render::SubMesh& subMesh = subMeshes.emplace_back();
+
 					uint32_t firstIndex = static_cast<uint32_t>(indices.size());
 					uint32_t vertexStart = static_cast<uint32_t>(verts.size());
 
@@ -295,7 +297,8 @@ namespace sh::game
 						const tinygltf::BufferView& bufferView = gltfModel.bufferViews[accessor.bufferView];
 						const tinygltf::Buffer& buffer = gltfModel.buffers[bufferView.buffer];
 
-						indexCount += static_cast<uint32_t>(accessor.count);
+						subMesh.indexOffset = indices.size();
+						subMesh.indexCount = static_cast<uint32_t>(accessor.count);
 
 						switch (accessor.componentType)
 						{
@@ -325,7 +328,7 @@ namespace sh::game
 							return nullptr;
 						}
 					}
-				}
+				} // for (auto& primitive : gltfMesh.primitives)
 				CreateTangents(verts, indices);
 
 				render::Mesh* meshPtr = nullptr;
@@ -337,6 +340,7 @@ namespace sh::game
 					skinnedMesh->SetVertex(std::move(verts));
 					skinnedMesh->SetIndices(std::move(indices));
 					skinnedMesh->SetBoneVertices(std::move(boneVerts));
+					skinnedMesh->SetSubMeshes(std::move(subMeshes));
 					skinnedMesh->Build(context);
 					meshPtr = skinnedMesh;
 				}
@@ -347,6 +351,7 @@ namespace sh::game
 					mesh->GetBoundingBox().Set(min, max);
 					mesh->SetVertex(std::move(verts));
 					mesh->SetIndices(std::move(indices));
+					mesh->SetSubMeshes(std::move(subMeshes));
 					mesh->Build(context);
 					meshPtr = mesh;
 				}

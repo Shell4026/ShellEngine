@@ -1,4 +1,6 @@
-#include "Asset/MeshLoader.h"
+﻿#include "Asset/MeshLoader.h"
+
+#include "Core/Logger.h"
 
 #include "Render/SkinnedMesh.h"
 
@@ -25,12 +27,17 @@ namespace sh::game
 		const size_t vertexBytes = header.vertexCount * sizeof(render::Mesh::Vertex);
 		const size_t indexBytes = header.indexCount * sizeof(uint32_t);
 		const size_t boneVertexBytes = header.boneVertexCount * sizeof(render::SkinnedMesh::BoneVertex);
+		const size_t subMeshBytes = header.subMeshCount * sizeof(render::SubMesh);
 
-		if (data.size < vertexBytes + indexBytes + boneVertexBytes)
+		if (data.size < vertexBytes + indexBytes + boneVertexBytes + subMeshBytes)
+		{
+			SH_ERROR_FORMAT("Invalid mesh asset!: {}", asset.GetAssetUUID().ToString());
 			return nullptr;
+		}
 
 		std::vector<render::Mesh::Vertex> vertices(header.vertexCount);
 		std::vector<uint32_t> indices(header.indexCount);
+		std::vector<render::SubMesh> subMeshes(header.subMeshCount);
 
 		const uint8_t* cursor = data.dataPtr;
 		std::memcpy(vertices.data(), cursor, vertexBytes);
@@ -38,28 +45,27 @@ namespace sh::game
 		std::memcpy(indices.data(), cursor, indexBytes);
 		cursor += indexBytes;
 
+		render::Mesh* const mesh = header.boneVertexCount > 0 ? 
+			core::SObject::Create<render::SkinnedMesh>() : core::SObject::Create<render::Mesh>();
+
+		mesh->SetUUID(asset.GetAssetUUID());
+		mesh->SetVertex(std::move(vertices));
+		mesh->SetIndices(std::move(indices));
+
 		if (header.boneVertexCount > 0)
 		{
 			std::vector<render::SkinnedMesh::BoneVertex> boneVerts(header.boneVertexCount);
 			std::memcpy(boneVerts.data(), cursor, boneVertexBytes);
 
-			auto mesh = core::SObject::Create<render::SkinnedMesh>();
-			mesh->SetUUID(asset.GetAssetUUID());
-			mesh->SetVertex(std::move(vertices));
-			mesh->SetIndices(std::move(indices));
-			mesh->SetBoneVertices(std::move(boneVerts));
-			mesh->Build(ctx);
-			return mesh;
+			static_cast<render::SkinnedMesh*>(mesh)->SetBoneVertices(std::move(boneVerts));
 		}
-		else
-		{
-			auto mesh = core::SObject::Create<render::Mesh>();
-			mesh->SetUUID(asset.GetAssetUUID());
-			mesh->SetVertex(std::move(vertices));
-			mesh->SetIndices(std::move(indices));
-			mesh->Build(ctx);
-			return mesh;
-		}
+		cursor += boneVertexBytes;
+		std::memcpy(subMeshes.data(), cursor, subMeshBytes);
+		
+		mesh->SetSubMeshes(std::move(subMeshes));
+		mesh->Build(ctx);
+
+		return mesh;
 	}
 	SH_GAME_API auto MeshLoader::GetAssetName() const -> const char*
 	{

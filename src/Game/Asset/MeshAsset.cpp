@@ -1,4 +1,4 @@
-#include "Asset/MeshAsset.h"
+﻿#include "Asset/MeshAsset.h"
 
 namespace sh::game
 {
@@ -50,12 +50,14 @@ namespace sh::game
 		header.vertexCount = meshPtr->GetVertexCount();
 		header.indexCount = meshPtr->GetIndices().size();
 		header.boneVertexCount = bSkinned ? skinnedPtr->GetBoneVertices().size() : 0;
+		header.subMeshCount = meshPtr->GetSubMeshes().size();
 
 		const size_t vertexBytes = header.vertexCount * sizeof(render::Mesh::Vertex);
 		const size_t indexBytes = header.indexCount * sizeof(uint32_t);
 		const size_t boneVertexBytes = header.boneVertexCount * sizeof(render::SkinnedMesh::BoneVertex);
+		const size_t subMeshBytes = header.subMeshCount * sizeof(render::SubMesh);
 
-		data.resize(sizeof(Header) + vertexBytes + indexBytes + boneVertexBytes);
+		data.resize(sizeof(Header) + vertexBytes + indexBytes + boneVertexBytes + subMeshBytes);
 
 		uint8_t* cursor = data.data();
 		std::memcpy(cursor, &header, sizeof(Header));
@@ -65,7 +67,11 @@ namespace sh::game
 		std::memcpy(cursor, meshPtr->GetIndices().data(), indexBytes);
 		cursor += indexBytes;
 		if (bSkinned)
+		{
 			std::memcpy(cursor, skinnedPtr->GetBoneVertices().data(), boneVertexBytes);
+			cursor += boneVertexBytes;
+		}
+		std::memcpy(cursor, meshPtr->GetSubMeshes().data(), subMeshBytes);
 	}
 	SH_GAME_API auto MeshAsset::ParseAssetData() -> bool
 	{
