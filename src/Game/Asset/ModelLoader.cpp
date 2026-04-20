@@ -23,6 +23,7 @@
 #include <unordered_map>
 #include <map>
 #include <queue>
+#include <numeric>
 namespace sh::game
 {
 	SH_GAME_API auto ModelLoader::LoadObj(const std::filesystem::path& path) const -> render::Model*
@@ -417,9 +418,7 @@ namespace sh::game
 		glm::vec2 deltaUV0 = uv1 - uv0;
 		glm::vec2 deltaUV1 = uv2 - uv0;
 
-		const float delta = deltaUV0.x * deltaUV1.y - deltaUV1.x * deltaUV0.y;
-		if (delta < 1e-6)
-			return glm::vec3{ 0.f };
+		const float delta = std::max(deltaUV0.x * deltaUV1.y - deltaUV1.x * deltaUV0.y, std::numeric_limits<float>::epsilon());
 
 		float f = 1.0f / delta;
 
