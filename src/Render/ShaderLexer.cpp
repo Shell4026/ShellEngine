@@ -310,6 +310,8 @@ namespace sh::render
 					{"MATRIX_PROJ", TokenType::MATRIX_PROJ},
 					{"BONE_WEIGHTS", TokenType::BONE_WEIGHTS},
 					{"BONE_INDICES", TokenType::BONE_INDICES},
+					{"SKIN", TokenType::SKIN},
+					{"MATRIX_SKIN", TokenType::MATRIX_SKIN}
 				};
 				auto it = keywordMap.find(ident);
 				if (it == keywordMap.end()) 

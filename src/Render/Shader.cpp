@@ -41,40 +41,8 @@ namespace sh::render
 			}
 		}
 	}
-	Shader::~Shader()
-	{
-	}
-	SH_RENDER_API auto Shader::GetShaderPasses(const core::Name& lightingPassName) const -> const std::vector<std::reference_wrapper<ShaderPass>>*
-	{
-		const LightingPassData* lightingPassData = GetLightingPass(lightingPassName);
-		if (lightingPassData == nullptr)
-			return nullptr;
-		return &lightingPassData->passes;
-	}
-	SH_RENDER_API auto Shader::GetAllShaderPass() const -> const std::vector<LightingPassData>&
-	{
-		return passDatas;
-	}
-	SH_RENDER_API auto Shader::GetProperties() const -> const std::unordered_map<std::string, PropertyInfo>&
-	{
-		return properties;
-	}
-	SH_RENDER_API auto Shader::GetProperty(const std::string& name) const -> const PropertyInfo*
-	{
-		auto it = properties.find(name);
-		if (it == properties.end())
-			return nullptr;
-		return &it->second;
-	}
+	Shader::~Shader() = default;
 
-	SH_RENDER_API auto Shader::GetShaderAST() const -> const ShaderAST::ShaderNode&
-	{
-		return shaderNode;
-	}
-	SH_RENDER_API auto Shader::IsUsingLight() const -> bool
-	{
-		return bUsingLight;
-	}
 	SH_RENDER_API void Shader::OnDestroy()
 	{
 		for (ShaderPass* shaderPass : passes)
@@ -114,6 +82,21 @@ namespace sh::render
 			shaderNode.Deserialize(shaderJson["AST"]);
 	}
 
+	SH_RENDER_API auto Shader::GetShaderPasses(const core::Name& lightingPassName) const -> const std::vector<std::reference_wrapper<ShaderPass>>*
+	{
+		const LightingPassData* lightingPassData = GetLightingPass(lightingPassName);
+		if (lightingPassData == nullptr)
+			return nullptr;
+		return &lightingPassData->passes;
+	}
+	SH_RENDER_API auto Shader::GetProperty(const std::string& name) const -> const PropertyInfo*
+	{
+		auto it = properties.find(name);
+		if (it == properties.end())
+			return nullptr;
+		return &it->second;
+	}
+
 	void Shader::Clear()
 	{
 		properties.clear();
@@ -127,6 +110,9 @@ namespace sh::render
 		{
 			if (pass->GetLightingBinding() != -1)
 				bUsingLight = true;
+			if (pass->GetSkinBinding() != -1)
+				bUsingSkin = true;
+
 			const core::Name& lightingPassName = this->passes.back()->GetLightingPassName();
 
 			LightingPassData* lightingPassData = GetLightingPass(lightingPassName);

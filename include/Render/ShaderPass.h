@@ -69,6 +69,9 @@ namespace sh::render
 		/// @brief 라이트 유니폼의 바인딩 번호를 리턴한다.
 		/// @return 라이팅을 안 쓸 시 -1
 		SH_RENDER_API auto GetLightingBinding() const -> int { return lightingBinding; }
+		/// @brief 스킨 유니폼의 바인딩 번호를 리턴한다.
+		/// @return 스킨을 안 쓸 시 -1
+		SH_RENDER_API auto GetSkinBinding() const -> int { return skinBinding; }
 		SH_RENDER_API auto GetConstants() const -> const std::unordered_map<std::string, ConstantInfo>& { return constantNameMap; }
 		SH_RENDER_API auto GetConstantsInfo(const std::string& name) const -> const ConstantInfo*;
 		SH_RENDER_API auto GetConstantSize() const -> std::size_t;
@@ -117,6 +120,7 @@ namespace sh::render
 		uint8_t colorMask = 7; //0b111
 		std::size_t constantSize = 0;
 		int lightingBinding = -1;
+		int skinBinding = -1;
 		bool bZWrite = true;
 		bool bZTest = true;
 		bool bHasConstant = false;

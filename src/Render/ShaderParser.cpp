@@ -599,7 +599,7 @@ namespace sh::render
 		};
 
 		// 버텍스 입력 어트리뷰트를 한 번만 등록하는 헬퍼
-		auto ensureInput = [&](bool& bRegistered, const char* name, int binding, ShaderAST::VariableType type)
+		auto registerAttributeFn = [&](bool& bRegistered, const char* name, int binding, ShaderAST::VariableType type)
 		{
 			if (bRegistered)
 				return;
@@ -634,6 +634,8 @@ namespace sh::render
 		bool usingMatrixModel = false;
 		bool usingCamera = false;
 		bool usingLIGHT = false;
+		bool usingSKIN = false;
+		bool usingMATRIX_SKIN = false;
 
 		while (nested != 0 || PeekToken().type != ShaderLexer::TokenType::EndOfFile)
 		{
@@ -651,17 +653,17 @@ namespace sh::render
 					code.pop_back();
 			}
 			else if (CheckToken(ShaderLexer::TokenType::VERTEX))
-				ensureInput(usingVertex, "VERTEX", Mesh::VERTEX_ID, ShaderAST::VariableType::Vec3);
+				registerAttributeFn(usingVertex, "VERTEX", Mesh::VERTEX_ID, ShaderAST::VariableType::Vec3);
 			else if (CheckToken(ShaderLexer::TokenType::UV))
-				ensureInput(usingUV, "UV", Mesh::UV_ID, ShaderAST::VariableType::Vec2);
+				registerAttributeFn(usingUV, "UV", Mesh::UV_ID, ShaderAST::VariableType::Vec2);
 			else if (CheckToken(ShaderLexer::TokenType::NORMAL))
-				ensureInput(usingNormal, "NORMAL", Mesh::NORMAL_ID, ShaderAST::VariableType::Vec3);
+				registerAttributeFn(usingNormal, "NORMAL", Mesh::NORMAL_ID, ShaderAST::VariableType::Vec3);
 			else if (CheckToken(ShaderLexer::TokenType::TANGENT))
-				ensureInput(usingTangent, "TANGENT", Mesh::TANGENT_ID, ShaderAST::VariableType::Vec3);
+				registerAttributeFn(usingTangent, "TANGENT", Mesh::TANGENT_ID, ShaderAST::VariableType::Vec3);
 			else if (CheckToken(ShaderLexer::TokenType::BONE_WEIGHTS))
-				ensureInput(usingBoneWeights, "BONE_WEIGHTS", SkinnedMesh::BONE_WEIGHT_ID, ShaderAST::VariableType::Vec4);
+				registerAttributeFn(usingBoneWeights, "BONE_WEIGHTS", SkinnedMesh::BONE_WEIGHT_ID, ShaderAST::VariableType::Vec4);
 			else if (CheckToken(ShaderLexer::TokenType::BONE_INDICES))
-				ensureInput(usingBoneIndices, "BONE_INDICES", SkinnedMesh::BONE_INDEX_ID, ShaderAST::VariableType::IVec4);
+				registerAttributeFn(usingBoneIndices, "BONE_INDICES", SkinnedMesh::BONE_INDEX_ID, ShaderAST::VariableType::IVec4);
 			else if (CheckToken(ShaderLexer::TokenType::MATRIX_VIEW) || CheckToken(ShaderLexer::TokenType::MATRIX_PROJ))
 			{
 				if (!usingCamera)
@@ -727,6 +729,31 @@ namespace sh::render
 					usingLIGHT = true;
 				}
 			}
+			else if (CheckToken(ShaderLexer::TokenType::SKIN) || CheckToken(ShaderLexer::TokenType::MATRIX_SKIN))
+			{
+				registerAttributeFn(usingBoneWeights, "BONE_WEIGHTS", SkinnedMesh::BONE_WEIGHT_ID, ShaderAST::VariableType::Vec4);
+				registerAttributeFn(usingBoneIndices, "BONE_INDICES", SkinnedMesh::BONE_INDEX_ID, ShaderAST::VariableType::IVec4);
+				if (CheckToken(ShaderLexer::TokenType::MATRIX_SKIN))
+					usingMATRIX_SKIN = true;
+				if (!usingSKIN)
+				{
+					auto it = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(),
+						[](const ShaderAST::UBONode& ubo) { return ubo.name == "SKIN"; });
+					if (it == stageNode.uniforms.end())
+					{
+						ShaderAST::UBONode uboNode{};
+						uboNode.name = "SKIN";
+						uboNode.set = static_cast<uint32_t>(UniformStructLayout::Type::Object);
+						uboNode.binding = lastObjectUniformBinding++;
+						uboNode.bSampler = false;
+						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 128, "ibm" });
+						stageNode.uniforms.push_back(std::move(uboNode));
+						stageNode.skinBinding = uboNode.binding;
+						uboit = refreshUboIt();
+					}
+					usingSKIN = true;
+				}
+			}
 			else if (token.type == ShaderLexer::TokenType::Identifier)
 			{
 				if (uboit != stageNode.uniforms.end())
@@ -739,6 +766,15 @@ namespace sh::render
 			}
 			code += SubstitutionFunctionToken(token) + " ";
 			NextToken();
+		}
+		if (usingMATRIX_SKIN)
+		{
+			code = "mat4 MATRIX_SKIN = "
+				"BONE_WEIGHTS.x * SKIN.ibm[BONE_INDICES.x] + "
+				"BONE_WEIGHTS.y * SKIN.ibm[BONE_INDICES.y] + "
+				"BONE_WEIGHTS.z * SKIN.ibm[BONE_INDICES.z] + "
+				"BONE_WEIGHTS.w * SKIN.ibm[BONE_INDICES.w]; "
+				+ code;
 		}
 		return code;
 	}

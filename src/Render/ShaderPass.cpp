@@ -14,10 +14,9 @@ namespace sh::render
 		for (auto& stage : passNode.stages)
 		{
 			if (stage.lightingBinding != -1)
-			{
 				lightingBinding = stage.lightingBinding;
-				break;
-			}
+			if (stage.skinBinding != -1)
+				skinBinding = stage.skinBinding;
 		}
 		if (!passNode.constants.empty())
 		{
@@ -60,12 +59,11 @@ namespace sh::render
 		cull(other.cull), colorMask(other.colorMask),
 		bZWrite(other.bZWrite),
 		bHasConstant(other.bHasConstant),
-		lightingBinding(other.lightingBinding)
+		lightingBinding(other.lightingBinding),
+		skinBinding(other.skinBinding)
 	{
 	}
-	ShaderPass::~ShaderPass()
-	{
-	}
+	ShaderPass::~ShaderPass() = default;
 
 	auto ShaderPass::operator=(ShaderPass&& other) noexcept -> ShaderPass&
 	{
@@ -85,6 +83,7 @@ namespace sh::render
 		bZWrite = other.bZWrite;
 		bHasConstant = other.bHasConstant;
 		lightingBinding = other.lightingBinding;
+		skinBinding = other.skinBinding;
 
 		return *this;
 	}

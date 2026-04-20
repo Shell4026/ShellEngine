@@ -82,7 +82,7 @@ namespace sh::game
 					drawable->GetMaterialData().SetUniformData(
 						pass,
 						render::UniformStructLayout::Type::Object,
-						0,
+						pass.GetSkinBinding(),
 						finalBoneMatrices.data(),
 						dataSize);
 				}
