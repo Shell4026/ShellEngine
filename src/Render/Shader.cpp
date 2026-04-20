@@ -53,7 +53,6 @@ namespace sh::render
 	{
 		core::Json mainJson = Super::Serialize();
 
-		mainJson["shader"] = core::Json{};
 		core::Json& json = mainJson["shader"];
 
 		json["AST"] = shaderNode.Serialize();
