@@ -11,9 +11,7 @@ namespace sh::render::vk
 	{
 	}
 
-	VulkanShaderPassBuilder::~VulkanShaderPassBuilder()
-	{
-	}
+	VulkanShaderPassBuilder::~VulkanShaderPassBuilder() = default;
 
 	SH_RENDER_API auto VulkanShaderPassBuilder::GetContext() const -> const VulkanContext&
 	{
@@ -64,7 +62,7 @@ namespace sh::render::vk
 		shaderModules.vert = vertShader;
 		shaderModules.frag = fragShader;
 
-		auto retShader = core::SObject::Create<render::vk::VulkanShaderPass>(context, shaderModules, passNode);
+		render::vk::VulkanShaderPass* const retShader = core::SObject::Create<render::vk::VulkanShaderPass>(context, shaderModules, passNode);
 		retShader->StoreShaderCode(std::move(shaderCode));
 		retShader->Build();
 

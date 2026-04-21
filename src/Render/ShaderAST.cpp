@@ -6,17 +6,22 @@ namespace sh::render
 	{
 		core::Json json;
 		json["type"] = static_cast<int>(type);
-		json["size"] = size;
+		json["arraySize"] = arraySize;
 		json["name"] = name;
 		json["default"] = defaultValue;
 		json["attribute"] = static_cast<int>(attribute);
+		json["dynamicArray"] = bDynamicArray;
 		return json;
 	}
 
 	void ShaderAST::VariableNode::Deserialize(const core::Json& json)
 	{
 		type = static_cast<VariableType>(json.at("type").get<int>());
-		size = json.at("size").get<int>();
+		if (json.contains("arraySize"))
+		{
+			arraySize = json.at("arraySize").get<uint32_t>();
+			bDynamicArray = json.value("dynamicArray", false);
+		}
 		name = json.at("name").get<std::string>();
 		if (json.contains("default"))
 			defaultValue = json["default"].get<std::string>();
@@ -37,15 +42,13 @@ namespace sh::render
 		var.Deserialize(json.at("var"));
 	}
 
-	auto ShaderAST::UBONode::Serialize() const -> core::Json
+	auto ShaderAST::BufferNode::Serialize() const -> core::Json
 	{
 		core::Json json;
+		json["bufferType"] = static_cast<int>(bufferType);
 		json["set"] = set;
 		json["binding"] = binding;
 		json["name"] = name;
-		json["sampler"] = bSampler;
-		json["constant"] = bConstant;
-
 		core::Json varArray = core::Json::array();
 		for (const auto& v : vars)
 		{
@@ -55,13 +58,14 @@ namespace sh::render
 		return json;
 	}
 
-	void ShaderAST::UBONode::Deserialize(const core::Json& json)
+	void ShaderAST::BufferNode::Deserialize(const core::Json& json)
 	{
 		set = json.at("set").get<uint32_t>();
 		binding = json.at("binding").get<uint32_t>();
 		name = json.at("name").get<std::string>();
-		bSampler = json.at("sampler").get<bool>();
-		bConstant = json.at("constant").get<bool>();
+
+		if (json.contains("bufferType"))
+			bufferType = static_cast<BufferType>(json.at("bufferType").get<int>());
 
 		vars.clear();
 		for (const auto& v : json.at("vars"))
@@ -93,10 +97,10 @@ namespace sh::render
 		json["out"] = std::move(outArray);
 
 		// uniforms
-		core::Json uboArray = core::Json::array();
-		for (const auto& u : uniforms)
-			uboArray.push_back(u.Serialize());
-		json["uniforms"] = std::move(uboArray);
+		core::Json bufferArray = core::Json::array();
+		for (const auto& u : buffers)
+			bufferArray.push_back(u.Serialize());
+		json["buffers"] = std::move(bufferArray);
 
 		// declaration
 		json["declaration"] = declaration;
@@ -133,12 +137,12 @@ namespace sh::render
 		}
 
 		// uniforms
-		uniforms.clear();
-		for (const auto& u : json.at("uniforms"))
+		buffers.clear();
+		for (const auto& u : json.at("buffers"))
 		{
-			UBONode ubo;
+			BufferNode ubo;
 			ubo.Deserialize(u);
-			uniforms.push_back(std::move(ubo));
+			buffers.push_back(std::move(ubo));
 		}
 
 		// declaration

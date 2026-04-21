@@ -10,5 +10,6 @@ namespace sh::render
 		virtual void SetData(const void* data) = 0;
 		virtual auto GetData() const -> void* = 0;
 		virtual auto GetSize() const -> size_t = 0;
+		virtual auto Resize(std::size_t size) -> bool = 0;
 	};
 }//namespace

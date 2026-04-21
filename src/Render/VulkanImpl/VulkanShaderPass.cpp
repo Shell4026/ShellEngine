@@ -1,6 +1,9 @@
 ﻿#include "VulkanShaderPass.h"
-#include "VulkanShaderPass.h"
 #include "VulkanContext.h"
+
+#include "Core/Logger.h"
+
+#include <stdexcept>
 
 namespace sh::render::vk
 {
@@ -8,7 +11,7 @@ namespace sh::render::vk
 		ShaderPass(passNode, ShaderType::SPIR),
 		context(context),
 		vertShader(shaderModules.vert), fragShader(shaderModules.frag),
-		descriptorSetLayout(1), pipelineLayout(nullptr)
+		pipelineLayout(nullptr)
 	{
 		// Specialization constant (컴파일 상수)
 		if (!passNode.constants.empty())
@@ -37,9 +40,9 @@ namespace sh::render::vk
 		}
 		for (auto& stage : passNode.stages)
 		{
-			for (auto& uniform : stage.uniforms)
+			for (auto& uniform : stage.buffers)
 			{
-				if (uniform.bConstant)
+				if (uniform.bufferType == ShaderAST::BufferType::PushConstant)
 				{
 					bUseMatrixModel = true;
 					break;
@@ -54,8 +57,7 @@ namespace sh::render::vk
 		ShaderPass(std::move(other)),
 		context(other.context),
 		vertShader(other.vertShader), fragShader(other.fragShader),
-		descriptorBindings(std::move(other.descriptorBindings)),
-		descriptorSetLayout(std::move(other.descriptorSetLayout)),
+		setlayouts(std::move(other.setlayouts)),
 		pipelineLayout(other.pipelineLayout),
 		specializationEntry(std::move(other.specializationEntry)),
 		bUseMatrixModel(other.bUseMatrixModel)
@@ -69,6 +71,7 @@ namespace sh::render::vk
 	{
 		Clear();
 	}
+
 	SH_RENDER_API void VulkanShaderPass::Clear()
 	{
 		specializationEntry.clear();
@@ -86,31 +89,78 @@ namespace sh::render::vk
 			fragShader = nullptr;
 		}
 	}
-	void VulkanShaderPass::CleanDescriptors()
+	SH_RENDER_API void VulkanShaderPass::Build()
 	{
-		if (pipelineLayout)
+		CleanDescriptors();
+		// 유니폼 레이아웃 생성
+		for (const std::vector<UniformStructLayout>* const uniforms : { &vertexUniforms, &fragmentUniforms })
 		{
-			vkDestroyPipelineLayout(context.GetDevice(), pipelineLayout, nullptr);
-			pipelineLayout = nullptr;
+			for (const UniformStructLayout& uniformLayout : *uniforms)
+			{
+				if (uniformLayout.IsPushConstant())
+					continue;
+				const uint32_t set = static_cast<uint32_t>(uniformLayout.usage);
+
+				// set == 0 카메라 데이터
+				VkDescriptorType type = (set == 0) ?
+					VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC : VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+				if (uniformLayout.GetKind() == UniformStructLayout::Kind::Storage)
+					type = VkDescriptorType::VK_DESCRIPTOR_TYPE_STORAGE_BUFFER;
+
+				VkShaderStageFlagBits stage = VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT;
+				if (uniforms == &fragmentUniforms)
+					stage = VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT;
+
+				AddDescriptorBinding(set, uniformLayout.binding, type, stage);
+			}
+		}
+		for (const UniformStructLayout& uniformLayout : samplerUniforms)
+		{
+			const uint32_t set = static_cast<uint32_t>(uniformLayout.usage);
+			AddDescriptorBinding(set, uniformLayout.binding,
+				VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT);
+		}
+		VkResult result = CreateDescriptorLayout();
+		assert(result == VkResult::VK_SUCCESS);
+		if (result != VkResult::VK_SUCCESS)
+		{
+			SH_ERROR_FORMAT("Failed to CreateDescriptorLayout(): {}", string_VkResult(result));
+			throw std::runtime_error{ "Failed to CreateDescriptorLayout()" };
 		}
 
-		descriptorBindings.clear();
-
-		for (std::size_t i = 0; i < descriptorSetLayout.size(); ++i)
+		result = CreatePipelineLayout();
+		assert(result == VkResult::VK_SUCCESS);
+		if (result != VkResult::VK_SUCCESS)
 		{
-			if (descriptorSetLayout[i] != context.GetEmptyDescriptorSetLayout())
-				vkDestroyDescriptorSetLayout(context.GetDevice(), descriptorSetLayout[i], nullptr);
+			SH_ERROR_FORMAT("Failed to CreatePipelineLayout(): {}", string_VkResult(result));
+			throw std::runtime_error{ "Failed to CreatePipelineLayout()" };
 		}
-		descriptorSetLayout.clear();
 	}
 
-	SH_RENDER_API auto VulkanShaderPass::GetVertexShader() const -> const VkShaderModule
+	SH_RENDER_API auto VulkanShaderPass::GetDescriptorSetLayout(uint32_t set) const -> VkDescriptorSetLayout
 	{
-		return vertShader;
+		if (setlayouts.size() < set)
+			return VK_NULL_HANDLE;
+		return setlayouts[set].descriptorSetLayout;
 	}
-	SH_RENDER_API auto VulkanShaderPass::GetFragmentShader() const -> const VkShaderModule
+
+	SH_RENDER_API auto VulkanShaderPass::GetSetLayout(uint32_t set) const -> std::optional<SetLayout>
 	{
-		return fragShader;
+		if (setlayouts.size() < set)
+			return {};
+		return setlayouts[set];
+	}
+
+	SH_RENDER_API auto VulkanShaderPass::GetDescriptorBinding(uint32_t set, uint32_t binding) const -> std::optional<VkDescriptorSetLayoutBinding>
+	{
+		if (setlayouts.size() < set)
+			return {};
+		const SetLayout& setlayout = setlayouts[set];
+		auto it = setlayout.descriptorSetLayoutBindings.find(binding);
+		if (it == setlayout.descriptorSetLayoutBindings.end())
+			return{};
+		return it->second;
 	}
 
 	void VulkanShaderPass::AddDescriptorBinding(uint32_t set, uint32_t binding, VkDescriptorType type, VkShaderStageFlagBits stage)
@@ -122,35 +172,40 @@ namespace sh::render::vk
 		layoutBinding.pImmutableSamplers = nullptr;
 		layoutBinding.stageFlags = stage;
 
-		if (descriptorBindings.size() <= set)
-			descriptorBindings.resize(set + 1, std::vector<VkDescriptorSetLayoutBinding>());
-
-		descriptorBindings[set].push_back(layoutBinding);
+		if (setlayouts.size() <= set)
+		{
+			setlayouts.resize(set + 1);
+		}
+		setlayouts[set].set = set;
+		setlayouts[set].descriptorSetLayoutBindings.insert_or_assign(binding, layoutBinding);
 	}
 	auto VulkanShaderPass::CreateDescriptorLayout() -> VkResult
 	{
-		descriptorSetLayout.resize(descriptorBindings.size());
-
 		VkResult result = VkResult::VK_SUCCESS;
-		for (int i = 0; i < descriptorBindings.size(); ++i)
+		for (int i = 0; i < setlayouts.size(); ++i)
 		{
-			if (descriptorBindings[i].empty())
+			if (setlayouts[i].descriptorSetLayoutBindings.empty())
 			{
-				descriptorSetLayout[i] = context.GetEmptyDescriptorSetLayout();
+				setlayouts[i].set = i;
+				setlayouts[i].descriptorSetLayout = context.GetEmptyDescriptorSetLayout();
 				continue;
 			}
+			std::vector<VkDescriptorSetLayoutBinding> bindings;
+			bindings.reserve(setlayouts[i].descriptorSetLayoutBindings.size());
+			for (const auto& [binding, descriptorSetLayoytBinding] : setlayouts[i].descriptorSetLayoutBindings)
+				bindings.push_back(descriptorSetLayoytBinding);
+
 			VkDescriptorSetLayoutCreateInfo info{};
 			info.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-			info.bindingCount = descriptorBindings[i].size();
-			info.pBindings = descriptorBindings[i].data();
+			info.bindingCount = bindings.size();
+			info.pBindings = bindings.data();
 
 			VkDescriptorSetLayout layout{};
 			result = vkCreateDescriptorSetLayout(context.GetDevice(), &info, nullptr, &layout);
-			assert(result == VkResult::VK_SUCCESS);
 			if (result != VkResult::VK_SUCCESS)
-				throw std::runtime_error{ std::string{"Failed to create descriptor layout!: "} + string_VkResult(result) };
+				return result;
 
-			descriptorSetLayout[i] = layout;
+			setlayouts[i].descriptorSetLayout = layout;
 		}
 		return result;
 	}
@@ -162,76 +217,32 @@ namespace sh::render::vk
 		pushConstantRange.offset = 0;
 		pushConstantRange.size = sizeof(glm::mat4);
 
+		std::vector<VkDescriptorSetLayout> layouts(setlayouts.size(), VK_NULL_HANDLE);
+		for (int i = 0; i < setlayouts.size(); ++i)
+			layouts[i] = setlayouts[i].descriptorSetLayout;
+
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-		pipelineLayoutInfo.setLayoutCount = descriptorSetLayout.size();
-		pipelineLayoutInfo.pSetLayouts = descriptorSetLayout.data();
+		pipelineLayoutInfo.setLayoutCount = layouts.size();
+		pipelineLayoutInfo.pSetLayouts = layouts.data();
 		pipelineLayoutInfo.pushConstantRangeCount = bUseMatrixModel ? 1 : 0;
 		pipelineLayoutInfo.pPushConstantRanges = &pushConstantRange;
 
 		return vkCreatePipelineLayout(context.GetDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout);
 	}
-
-	SH_RENDER_API void VulkanShaderPass::Build()
+	void VulkanShaderPass::CleanDescriptors()
 	{
-		CleanDescriptors();
-		// 유니폼 레이아웃 생성
-		for (auto& uniformLayout : vertexUniforms)
+		if (pipelineLayout != VK_NULL_HANDLE)
 		{
-			if (uniformLayout.bConstant)
-				continue;
-			uint32_t set = static_cast<uint32_t>(uniformLayout.type);
-
-			VkDescriptorType type = (set == 0) ? 
-				VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC : VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			
-			AddDescriptorBinding(set, uniformLayout.binding, type,
-				VkShaderStageFlagBits::VK_SHADER_STAGE_VERTEX_BIT);
+			vkDestroyPipelineLayout(context.GetDevice(), pipelineLayout, nullptr);
+			pipelineLayout = VK_NULL_HANDLE;
 		}
-		for (auto& uniformLayout : fragmentUniforms)
+
+		for (std::size_t i = 0; i < setlayouts.size(); ++i)
 		{
-			if (uniformLayout.bConstant)
-				continue;
-			uint32_t set = static_cast<uint32_t>(uniformLayout.type);
-
-			VkDescriptorType type = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-			if (set == 0)
-				type = VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-			
-			AddDescriptorBinding(set, uniformLayout.binding, type,
-				VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT);
+			if (setlayouts[i].descriptorSetLayout != context.GetEmptyDescriptorSetLayout())
+				vkDestroyDescriptorSetLayout(context.GetDevice(), setlayouts[i].descriptorSetLayout, nullptr);
 		}
-		for (auto& uniformLayout : samplerUniforms)
-		{
-			uint32_t set = static_cast<uint32_t>(uniformLayout.type);
-			AddDescriptorBinding(set, uniformLayout.binding,
-				VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				VkShaderStageFlagBits::VK_SHADER_STAGE_FRAGMENT_BIT);
-		}
-		auto result = CreateDescriptorLayout();
-		assert(result == VkResult::VK_SUCCESS);
-
-		result = CreatePipelineLayout();
-		assert(result == VkResult::VK_SUCCESS);
+		setlayouts.clear();
 	}
-
-	SH_RENDER_API auto VulkanShaderPass::GetDescriptorSetLayout(uint32_t set) const -> DescryptorSetLayoutInfo
-	{
-		DescryptorSetLayoutInfo info{};
-		info.layout = descriptorSetLayout[set];
-		info.bDynamic = (set == 0);
-		return info;
-	}
-	SH_RENDER_API auto VulkanShaderPass::GetSetCount() const -> uint32_t
-	{
-		return static_cast<uint32_t>(descriptorSetLayout.size());
-	}
-	SH_RENDER_API auto VulkanShaderPass::GetPipelineLayout() const -> VkPipelineLayout
-	{
-		return pipelineLayout;
-	}
-	SH_RENDER_API auto sh::render::vk::VulkanShaderPass::GetSpecializationMapEntry() const -> const std::vector<VkSpecializationMapEntry>&
-	{
-		return specializationEntry;
-	}
-}
+}//namespace

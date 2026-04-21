@@ -3,7 +3,7 @@
 #include "Core/ThreadSyncManager.h"
 
 #include <cassert>
-
+#include <variant>
 namespace sh::render
 {
 	Drawable::Drawable(const Material& mat, const Mesh& mesh) :
@@ -114,24 +114,25 @@ namespace sh::render
 	{
 		for (auto& syncData : syncDatas)
 		{
-			std::size_t index = syncData.changed.index();
-			if (index == 0)
+			if (std::holds_alternative<std::monostate>(syncData.changed))
+			{
 				continue;
-			else if (index == 1) // 메테리얼이 변경됨
-			{
-				this->mat = std::get<1>(syncData.changed);
 			}
-			else if (index == 2)
+			else if (std::holds_alternative<const Material*>(syncData.changed)) // 메테리얼이 변경됨
 			{
-				this->mesh = std::get<2>(syncData.changed);
+				this->mat = std::get<const Material*>(syncData.changed);
 			}
-			else if (index == 3)
+			else if (std::holds_alternative<const Mesh*>(syncData.changed))
 			{
-				topology[core::ThreadType::Render] = std::get<3>(syncData.changed);
+				this->mesh = std::get<const Mesh*>(syncData.changed);
 			}
-			else if (index == 4)
+			else if (std::holds_alternative<Mesh::Topology>(syncData.changed))
 			{
-				priority[core::ThreadType::Render] = std::get<4>(syncData.changed);
+				topology[core::ThreadType::Render] = std::get<Mesh::Topology>(syncData.changed);
+			}
+			else if (std::holds_alternative<int>(syncData.changed))
+			{
+				priority[core::ThreadType::Render] = std::get<int>(syncData.changed);
 			}
 			syncData.changed = std::monostate{};
 		}

@@ -1,6 +1,6 @@
 ﻿message("Build ShellEngine Renderer")
 file(GLOB_RECURSE SRC CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
-file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/include/Render/*.{h,hpp})
+file(GLOB_RECURSE HEADERS CONFIGURE_DEPENDS ${CMAKE_SOURCE_DIR}/include/Render/*.h ${CMAKE_SOURCE_DIR}/include/Render/*.hpp)
 
 add_library(ShellEngineRender SHARED ${SRC} ${HEADERS})
 add_library(ShellEngine::Render ALIAS ShellEngineRender)

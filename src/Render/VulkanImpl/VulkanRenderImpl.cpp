@@ -1,7 +1,7 @@
 ﻿#include "VulkanRenderImpl.h"
 #include "VulkanCommandBuffer.h"
 #include "VulkanSwapChain.h"
-#include "VulkanUniformBuffer.h"
+#include "VulkanDescriptorSet.h"
 #include "VulkanVertexBuffer.h"
 #include "VulkanSkinnedVertexBuffer.h"
 #include "VulkanPipelineManager.h"
@@ -211,39 +211,39 @@ namespace sh::render::vk
 	void VulkanRenderImpl::BindCameraSet(VulkanCommandBuffer& cmd, VkPipelineLayout layout, const ShaderPass& pass, const Material& mat, uint32_t cameraOffset) const
 	{
 		// 카메라 데이터는 다이나믹 디스크립터셋
-		auto cameraUBO = static_cast<VulkanUniformBuffer*>(
-			mat.GetMaterialData().GetUniformBuffer(pass, UniformStructLayout::Type::Camera));
+		VulkanDescriptorSet* const cameraUBO = static_cast<VulkanDescriptorSet*>(
+			mat.GetMaterialData().GetUniformBuffer(pass, UniformStructLayout::Usage::Camera));
 
 		VkDescriptorSet cameraSet = cameraUBO ? cameraUBO->GetVkDescriptorSet() : ctx.GetEmptyDescriptorSet();
 		uint32_t dynamicCount = cameraUBO ? 1 : 0;
 
 		vkCmdBindDescriptorSets(cmd.GetCommandBuffer(),
 			VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, layout,
-			static_cast<uint32_t>(UniformStructLayout::Type::Camera),
+			static_cast<uint32_t>(UniformStructLayout::Usage::Camera),
 			1, &cameraSet, dynamicCount, &cameraOffset);
 	}
 	void VulkanRenderImpl::BindMaterialSet(VulkanCommandBuffer& cmd, VkPipelineLayout layout, const ShaderPass& pass, const Material& mat) const
 	{
-		auto materialUniformBuffer = static_cast<VulkanUniformBuffer*>(
-			mat.GetMaterialData().GetUniformBuffer(pass, UniformStructLayout::Type::Material));
+		VulkanDescriptorSet* const materialUniformBuffer = static_cast<VulkanDescriptorSet*>(
+			mat.GetMaterialData().GetUniformBuffer(pass, UniformStructLayout::Usage::Material));
 
 		VkDescriptorSet materialDescriptorSet = materialUniformBuffer ? materialUniformBuffer->GetVkDescriptorSet() : ctx.GetEmptyDescriptorSet();
 
 		vkCmdBindDescriptorSets(cmd.GetCommandBuffer(),
 			VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, layout,
-			static_cast<uint32_t>(UniformStructLayout::Type::Material),
+			static_cast<uint32_t>(UniformStructLayout::Usage::Material),
 			1, &materialDescriptorSet, 0, nullptr);
 	}
 	void VulkanRenderImpl::BindObjectSet(VulkanCommandBuffer& cmd, VkPipelineLayout layout, const ShaderPass& pass, Drawable& drawable) const
 	{
-		auto objectUniformBuffer = static_cast<VulkanUniformBuffer*>(
-			drawable.GetMaterialData().GetUniformBuffer(pass, UniformStructLayout::Type::Object));
+		VulkanDescriptorSet* const objectUniformBuffer = static_cast<VulkanDescriptorSet*>(
+			drawable.GetMaterialData().GetUniformBuffer(pass, UniformStructLayout::Usage::Object));
 
 		VkDescriptorSet objectDescriptorSet = objectUniformBuffer ? objectUniformBuffer->GetVkDescriptorSet() : ctx.GetEmptyDescriptorSet();
 
 		vkCmdBindDescriptorSets(cmd.GetCommandBuffer(),
 			VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, layout,
-			static_cast<uint32_t>(UniformStructLayout::Type::Object),
+			static_cast<uint32_t>(UniformStructLayout::Usage::Object),
 			1, &objectDescriptorSet, 0, nullptr);
 	}
 	void VulkanRenderImpl::DrawMesh(VulkanCommandBuffer& cmd, const ShaderPass& pass, const Mesh& mesh, int subMeshIndex) const

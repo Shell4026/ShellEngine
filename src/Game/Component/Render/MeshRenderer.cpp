@@ -227,7 +227,7 @@ namespace sh::game
 
 			for (auto& [passPtr, layoutPtr] : locations)
 			{
-				if (layoutPtr->type == render::UniformStructLayout::Type::Material)
+				if (layoutPtr->usage == render::UniformStructLayout::Usage::Material)
 					continue;
 
 				std::vector<uint8_t> data(layoutPtr->GetSize());
@@ -278,12 +278,12 @@ namespace sh::game
 					{
 						auto var = block.GetTextureProperty(member.name);
 						if (core::IsValid(var))
-							drawable->GetMaterialData().SetTextureData(*passPtr, layoutPtr->type, layoutPtr->binding, *var);
+							drawable->GetMaterialData().SetTextureData(*passPtr, layoutPtr->usage, layoutPtr->binding, *var);
 						else
 						{
 							render::Texture* const texPtr = static_cast<render::Texture*>(core::SObject::GetSObjectUsingResolver(blackTexUUID));
 							if (texPtr != nullptr)
-								drawable->GetMaterialData().SetTextureData(*passPtr, layoutPtr->type, layoutPtr->binding, *texPtr);
+								drawable->GetMaterialData().SetTextureData(*passPtr, layoutPtr->usage, layoutPtr->binding, *texPtr);
 							else
 								SH_ERROR("Can't get default texture!");
 						}
@@ -291,7 +291,7 @@ namespace sh::game
 					}
 				}
 				if (!isSampler)
-					drawable->GetMaterialData().SetUniformData(*passPtr, layoutPtr->type, layoutPtr->binding, std::move(data));
+					drawable->GetMaterialData().SetUniformData(*passPtr, layoutPtr->usage, layoutPtr->binding, std::move(data));
 			}
 		}
 	}
@@ -377,7 +377,7 @@ namespace sh::game
 			{
 				for (auto& location : propInfo.locations)
 				{
-					if (location.layoutPtr->type != render::UniformStructLayout::Type::Object)
+					if (location.layoutPtr->usage != render::UniformStructLayout::Usage::Object)
 						continue;
 					auto& locs = localUniformLocationsList[i];
 					auto it = std::find(locs.begin(), locs.end(), std::pair{ location.passPtr.Get(), location.layoutPtr });
@@ -462,7 +462,7 @@ namespace sh::game
 				if (pass.IsPendingKill() || pass.GetLightingBinding() == -1)
 					continue;
 
-				drawable.GetMaterialData().SetUniformData(pass, render::UniformStructLayout::Type::Object, pass.GetLightingBinding(), &lightStruct, sizeof(Light));
+				drawable.GetMaterialData().SetUniformData(pass, render::UniformStructLayout::Usage::Object, pass.GetLightingBinding(), &lightStruct, sizeof(Light));
 			}
 		}
 	}

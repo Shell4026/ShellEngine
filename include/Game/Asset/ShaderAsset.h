@@ -12,15 +12,8 @@ namespace sh::game
 	class ShaderAsset : public core::Asset
 	{
 		SASSET(ShaderAsset, "shad")
-	private:
-		core::SObjWeakPtr<const render::Shader> shaderPtr;
-
-		core::Json shaderObjJson;
 	public:
 		constexpr static const char* ASSET_NAME = "shad";
-	protected:
-		SH_GAME_API void SetAssetData() const override;
-		SH_GAME_API auto ParseAssetData() -> bool override;
 	public:
 		SH_GAME_API ShaderAsset();
 		SH_GAME_API ShaderAsset(const render::Shader& shader);
@@ -28,5 +21,12 @@ namespace sh::game
 		SH_GAME_API void SetAsset(const core::SObject& obj) override;
 
 		SH_GAME_API auto GetShaderObjectJson() const -> const core::Json&;
+	protected:
+		SH_GAME_API void SetAssetData() const override;
+		SH_GAME_API auto ParseAssetData() -> bool override;
+	private:
+		core::SObjWeakPtr<const render::Shader> shaderPtr;
+
+		core::Json shaderObjJson;
 	};
 }//namespace

@@ -157,10 +157,11 @@ namespace sh::render::vk
 	}
 	auto VulkanDescriptorPool::CreatePool(uint32_t setCapacity) -> VkDescriptorPool
 	{
-		std::array<VkDescriptorPoolSize, 3> poolSizes{};
+		std::array<VkDescriptorPoolSize, 4> poolSizes{};
 		poolSizes[0] = { VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, setCapacity };
 		poolSizes[1] = { VkDescriptorType::VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, setCapacity };
 		poolSizes[2] = { VkDescriptorType::VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, setCapacity };
+		poolSizes[3] = { VkDescriptorType::VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, setCapacity };
 
 		VkDescriptorPoolCreateInfo info{};
 		info.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;

@@ -41,6 +41,9 @@ namespace sh::render::vk
 	}
 	SH_RENDER_API auto VulkanBuffer::operator=(const VulkanBuffer& other) -> VulkanBuffer&
 	{
+		if (&other == this)
+			return *this;
+
 		Create(other.size, other.bufferInfo.usage, other.bufferInfo.sharingMode, other.memProperty, other.persistentMapping);
 		SetData(other.dataPtr);
 		
@@ -48,6 +51,9 @@ namespace sh::render::vk
 	}
 	SH_RENDER_API auto VulkanBuffer::operator=(VulkanBuffer&& other) noexcept -> VulkanBuffer&
 	{
+		if (&other == this)
+			return *this;
+
 		buffer = other.buffer;
 		bufferMem = other.bufferMem;
 		dataPtr = other.dataPtr;
@@ -61,6 +67,14 @@ namespace sh::render::vk
 		other.dataPtr = nullptr;
 
 		return *this;
+	}
+	SH_RENDER_API auto VulkanBuffer::Resize(std::size_t size) -> bool
+	{
+		Clean();
+		const VkResult result = Create(size, bufferInfo.usage, bufferInfo.sharingMode, memProperty, this->persistentMapping);
+		if (result == VkResult::VK_SUCCESS)
+			return true;
+		return false;
 	}
 	SH_RENDER_API void VulkanBuffer::Clean()
 	{
@@ -83,6 +97,7 @@ namespace sh::render::vk
 	{
 		this->size = size;
 		this->persistentMapping = persistentMapping;
+		this->memProperty = memPropFlagBits;
 
 		Clean();
 		bufferInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
@@ -147,26 +162,6 @@ namespace sh::render::vk
 		else
 			std::memcpy(this->dataPtr, data, static_cast<size_t>(bufferInfo.size));
 	}
-	SH_RENDER_API auto VulkanBuffer::GetData() const -> void*
-	{
-		return dataPtr;
-	}
-	SH_RENDER_API auto VulkanBuffer::GetBuffer() const -> VkBuffer
-	{
-		return buffer;
-	}
-	SH_RENDER_API auto VulkanBuffer::GetBufferInfo() const -> const VkBufferCreateInfo&
-	{
-		return bufferInfo;
-	}
-	SH_RENDER_API auto VulkanBuffer::GetBufferMemory() const -> VmaAllocation
-	{
-		return bufferMem;
-	}
-	SH_RENDER_API auto VulkanBuffer::GetSize() const -> size_t
-	{
-		return size;
-	}
 	auto VulkanBuffer::FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) -> uint32_t
 	{
 		VkPhysicalDeviceMemoryProperties memProperties;
@@ -179,4 +174,4 @@ namespace sh::render::vk
 
 		throw std::runtime_error("Failed to find suitable memory type!");
 	}
-}
+}//namespace

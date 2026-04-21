@@ -22,7 +22,6 @@ namespace sh::render
 
 		static constexpr uint8_t BONE_INDEX_ID = 4;
 		static constexpr uint8_t BONE_WEIGHT_ID = 5;
-		static constexpr uint32_t MAX_BONES = 128;
 	public:
 		SH_RENDER_API SkinnedMesh();
 		SH_RENDER_API SkinnedMesh(const SkinnedMesh& other);

@@ -29,7 +29,7 @@ namespace sh::render
 		struct PassData
 		{
 			const ShaderPass* pass;
-			std::map<uint32_t, std::vector<std::unique_ptr<IBuffer>>> uniformData; //set, binding
+			std::map<uint32_t, std::vector<std::unique_ptr<IBuffer>>> buffers; //set, binding
 			std::map<uint32_t, std::unique_ptr<IUniformBuffer>> uniformBuffer; // set
 		};
 		struct SyncData
@@ -61,25 +61,20 @@ namespace sh::render
 		/// @param binding 바인딩 번호
 		/// @param data 데이터 위치 포인터
 		/// @param dataSize 데이터 사이즈
-		SH_RENDER_API void SetUniformData(const ShaderPass& shaderPass, UniformStructLayout::Type type, uint32_t binding, const void* data, std::size_t dataSize);
+		SH_RENDER_API void SetUniformData(const ShaderPass& shaderPass, UniformStructLayout::Usage usage, uint32_t binding, const void* data, std::size_t dataSize);
 		/// @brief 유니폼에 데이터를 지정한다.
 		/// @param pass 패스 번호
 		/// @param binding 바인딩 번호
 		/// @param data 데이터
-		SH_RENDER_API void SetUniformData(const ShaderPass& shaderPass, UniformStructLayout::Type type, uint32_t binding, const std::vector<uint8_t>& data);
-		/// @brief 유니폼에 데이터를 지정한다.
-		/// @param pass 패스 번호
-		/// @param binding 바인딩 번호
-		/// @param data 데이터
-		SH_RENDER_API void SetUniformData(const ShaderPass& shaderPass, UniformStructLayout::Type type, uint32_t binding, std::vector<uint8_t>&& data);
+		SH_RENDER_API void SetUniformData(const ShaderPass& shaderPass, UniformStructLayout::Usage usage, uint32_t binding, std::vector<uint8_t> data);
 		/// @brief 유니폼 텍스쳐 데이터를 지정한다.
 		/// /// @param pass 패스 번호
 		/// @param binding 텍스쳐 바인딩 번호
 		/// @param tex 텍스쳐
-		SH_RENDER_API void SetTextureData(const ShaderPass& shaderPass, UniformStructLayout::Type type, uint32_t binding, const Texture& tex);
+		SH_RENDER_API void SetTextureData(const ShaderPass& shaderPass, UniformStructLayout::Usage usage, uint32_t binding, const Texture& tex);
 
-		SH_RENDER_API auto GetShaderBuffer(const ShaderPass& shaderPass, UniformStructLayout::Type type, uint32_t binding) const -> IBuffer*;
-		SH_RENDER_API auto GetUniformBuffer(const ShaderPass& shaderPass, UniformStructLayout::Type type) const -> IUniformBuffer*;
+		SH_RENDER_API auto GetShaderBuffer(const ShaderPass& shaderPass, UniformStructLayout::Usage usage, uint32_t binding) const -> IBuffer*;
+		SH_RENDER_API auto GetUniformBuffer(const ShaderPass& shaderPass, UniformStructLayout::Usage usage) const -> IUniformBuffer*;
 
 		SH_RENDER_API void SyncDirty() override;
 	protected:

@@ -11,7 +11,6 @@ namespace sh::game
 	SkinnedMeshRenderer::SkinnedMeshRenderer(GameObject& owner) :
 		MeshRenderer(owner)
 	{
-		finalBoneMatrices.fill(glm::mat4{ 1.0f });
 	}
 	SkinnedMeshRenderer::~SkinnedMeshRenderer() = default;
 
@@ -25,12 +24,12 @@ namespace sh::game
 
 	SH_GAME_API void SkinnedMeshRenderer::SetSkinnedMesh(render::SkinnedMesh* mesh)
 	{
-		finalBoneMatrices.fill(glm::mat4{ 1.0f });
 		SetMesh(mesh);
 	}
 	SH_GAME_API void SkinnedMeshRenderer::SetBones(std::vector<Transform*> boneTransforms)
 	{
 		bones = std::move(boneTransforms);
+		finalBoneMatrices.resize(bones.size());
 
 		const render::SkinnedMesh* const skinnedMesh = static_cast<const render::SkinnedMesh*>(GetMesh());
 		if (core::IsValid(skinnedMesh))
@@ -50,6 +49,9 @@ namespace sh::game
 		if (jointCount == 0)
 			return;
 
+		if (finalBoneMatrices.size() < bones.size())
+			finalBoneMatrices.resize(bones.size());
+
 		for (std::size_t i = 0; i < jointCount; ++i)
 		{
 			if (!core::IsValid(bones[i]))
@@ -62,7 +64,7 @@ namespace sh::game
 		if (drawables.empty())
 			return;
 
-		const std::size_t dataSize = render::SkinnedMesh::MAX_BONES * sizeof(glm::mat4);
+		const std::size_t dataSize = bones.size() * sizeof(glm::mat4);
 
 		for (std::size_t i = 0; i < drawables.size(); ++i)
 		{
@@ -81,7 +83,7 @@ namespace sh::game
 						continue;
 					drawable->GetMaterialData().SetUniformData(
 						pass,
-						render::UniformStructLayout::Type::Object,
+						render::UniformStructLayout::Usage::Object,
 						pass.GetSkinBinding(),
 						finalBoneMatrices.data(),
 						dataSize);

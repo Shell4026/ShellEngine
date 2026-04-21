@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "Export.h"
 #include "ShaderEnum.h"
+#include "Texture.h"
 
 #include "Core/Reflection.hpp"
 #include "Core/Util.h"
@@ -14,76 +15,90 @@
 #include <type_traits>
 namespace sh::render
 {
-	class Texture;
-
-	/// @brief 셰이더 유니폼 구조체 레이아웃
-	class UniformStructLayout : core::ISerializable
+	/// @brief 셰이더 유니폼/스토리지 버퍼 구조체 레이아웃
+	class UniformStructLayout
 	{
 	public:
-		enum class Layout
+		enum class Layout : uint8_t
 		{
-			STD140, STD430
+			STD140, // UBO 기본
+			STD430  // SSBO 기본
 		};
-		enum class Type
+		/// @brief 버퍼 타입
+		enum class Kind : uint8_t
 		{
-			Camera = 0, // 카메라 데이터
-			Object = 1, // 객체마다 고유
-			Material = 2, // 메테리얼간 공유
+			Uniform, // UBO — std140 권장
+			Storage, // SSBO — std430 권장, 가변 배열 가능
+			Sampler,
+			PushConstant // 푸시 상수
+		};
+		/// @brief 용도
+		enum class Usage : uint8_t
+		{
+			Camera = 0,
+			Object = 1,
+			Material = 2,
 		};
 		struct UniformMember
 		{
 			std::string name;
-			std::size_t typeHash;
-			uint32_t offset;
-			uint32_t layoutSize;
-			uint32_t count;
-			bool isArray = false;
-			bool isSampler = false;
+			std::size_t typeHash = 0;
+			uint32_t offset = 0;
+			uint32_t layoutSize = 0; // 바이트 (가변 배열이면 0)
+			uint32_t baseAlignment = 0;
+			uint32_t count = 1; // 배열 원소 개수 (단일이면 1)
+			bool bDynamicArray = false; // SSBO
+
+			auto IsArray() const -> bool { return count > 1 || bDynamicArray; }
 		};
-		struct Std140LayoutInfo 
+		struct LayoutInfo
 		{
 			uint32_t baseAlignment; // 오프셋의 정렬 단위
-			uint32_t std140Size; // 실제 차지하는 총 크기(패딩 포함)
+			uint32_t bytes;         // 실제 차지하는 총 크기(패딩 포함)
 		};
-	private:
-		std::vector<UniformMember> members;
 	public:
+		SH_RENDER_API UniformStructLayout(std::string name, uint32_t binding, Usage type, ShaderStage stage, Kind kind = Kind::Uniform);
+		SH_RENDER_API UniformStructLayout(std::string name, uint32_t binding, Usage type, ShaderStage stage, Kind kind, Layout layout);
+
+		/// @brief 구조체의 맴버 변수를 추가. 구조체의 변수 순서대로 호출해야 한다.
+		template<typename T>
+		void AddMember(const std::string& name);
+		/// @brief 구조체의 고정 배열 맴버를 추가. 구조체의 변수 순서대로 호출해야 한다.
+		/// @param count 원소 개수 (>= 1)
+		template<typename T>
+		void AddArrayMember(const std::string& name, uint32_t count);
+		/// @brief SSBO 끝에 들어가는 가변 배열 맴버 추가. 반드시 마지막에 호출.
+		template<typename T>
+		void AddDynamicArrayMember(const std::string& name);
+
+		SH_RENDER_API auto GetMember(const std::string& name) const -> const UniformMember*;
+		SH_RENDER_API auto GetMembers() const -> const std::vector<UniformMember>& { return members; }
+		SH_RENDER_API auto HasMember(const std::string& name) const -> bool;
+
+		/// @brief 구조체의 사이즈(바이트). 가변 배열 맴버가 있으면 고정 부분까지의 크기만 반환.
+		SH_RENDER_API auto GetSize() const -> std::size_t;
+		SH_RENDER_API auto GetLayout() const -> Layout { return layout; }
+		SH_RENDER_API auto GetKind() const -> Kind { return kind; }
+		SH_RENDER_API auto IsSampler() const -> bool { return kind == Kind::Sampler; }
+		SH_RENDER_API auto IsPushConstant() const -> bool { return kind == Kind::PushConstant; }
+	private:
+		template<typename T>
+		static auto GetLayoutInfo() -> LayoutInfo;
+
+		template<typename T>
+		void AddMemberImpl(const std::string& name, uint32_t count, bool bDynamic);
+	public:
+		const Kind kind;
 		const Layout layout;
-		const Type type;
+		const Usage usage;
 		const ShaderStage stage;
 		const uint32_t binding;
 		const std::string name;
-		const bool bConstant;
 	private:
-		template<typename T>
-		static auto GetSTD140Layout() -> Std140LayoutInfo;
-	public:
-		SH_RENDER_API UniformStructLayout(const std::string name, uint32_t binding, Type type, ShaderStage stage, bool bConstant = false, Layout layout = Layout::STD140);
-		/// @brief 구조체의 맴버 변수를 추가 하는 함수. 구조체의 변수 순서대로 호출 해야 한다.
-		/// @tparam T 타입
-		/// @param name 이름
-		              template<typename T>
-		              void AddMember(const std::string& name);
-		/// @brief 구조체의 배열 맴버 변수를 추가 하는 함수. 구조체의 변수 순서대로 호출 해야 한다.
-		/// @tparam T 타입
-		/// @param name 이름
-		/// @param count 배열 원소 갯수
-					  template<typename T>
-		              void AddArrayMember(const std::string& name, std::size_t count);
-
-		SH_RENDER_API auto GetMember(const std::string& name) const -> const UniformMember*;
-		SH_RENDER_API auto GetMembers() const -> const std::vector<UniformMember>&;
-		SH_RENDER_API auto HasMember(const std::string& name) const -> bool;
-
-		/// @brief 유니폼 구조체의 사이즈를 반환 하는 함수.
-		/// @return 바이트
-		SH_RENDER_API auto GetSize() const -> std::size_t;
-
-		SH_RENDER_API auto Serialize() const -> core::Json override;
-		SH_RENDER_API void Deserialize(const core::Json& json) override;
+		std::vector<UniformMember> members;
 	};
 	template<typename T>
-	inline auto UniformStructLayout::GetSTD140Layout() -> Std140LayoutInfo
+	inline auto UniformStructLayout::GetLayoutInfo() -> LayoutInfo
 	{
 		if constexpr (std::is_same_v<T, float>)
 			return { 4, 4 };
@@ -103,50 +118,76 @@ namespace sh::render
 			return { 16, 64 };
 #if defined(_MSC_VER)
 		else
-			static_assert(std::_Always_false<T>, "Unknown type for GetSTD140Layout: " __FUNCSIG__);
+			static_assert(std::_Always_false<T>, "Unknown type for GetLayoutInfo: " __FUNCSIG__);
 #elif defined(__GNUC__) || defined(__clang__)
 		else
-			static_assert(core::alwaysFalse<T>, "Unknown type for GetSTD140Layout ");
+			static_assert(core::alwaysFalse<T>, "Unknown type for GetLayoutInfo");
 # else
 		else
-			static_assert(always_false<T>, "Unknown type for GetSTD140Layout: Unknown compiler");
+			static_assert(always_false<T>, "Unknown type for GetLayoutInfo: Unknown compiler");
 #endif
 	}
 	template<typename T>
 	inline void UniformStructLayout::AddMember(const std::string& name)
 	{
-		AddArrayMember<T>(name, 1);
+		AddMemberImpl<T>(name, 1, false);
 	}
 	template<typename T>
-	inline void UniformStructLayout::AddArrayMember(const std::string& name, std::size_t count)
+	inline void UniformStructLayout::AddArrayMember(const std::string& name, uint32_t count)
+	{
+		AddMemberImpl<T>(name, count, false);
+	}
+	template<typename T>
+	inline void UniformStructLayout::AddDynamicArrayMember(const std::string& name)
+	{
+		AddMemberImpl<T>(name, 0, true);
+	}
+	template<typename T>
+	inline void UniformStructLayout::AddMemberImpl(const std::string& name, uint32_t count, bool bDynamic)
 	{
 		if constexpr (std::is_same_v<T, Texture>)
 		{
-			UniformMember member{ name, core::reflection::GetType<Texture>().hash, 0, 0, count, (count > 1), true };
+			UniformMember member{};
+			member.name = name;
+			member.typeHash = core::reflection::GetType<Texture>().hash;
+			member.count = count;
+			member.bDynamicArray = bDynamic;
 			members.push_back(std::move(member));
+			return;
 		}
 		else
 		{
-			if (layout == Layout::STD140)
-			{
-				Std140LayoutInfo info = GetSTD140Layout<T>();
-				uint32_t arrayBaseAlignment = (count > 1) ?
-					std::max(info.baseAlignment, 16u) : info.baseAlignment; // 배열이면 최소 16정렬
-				uint32_t arrayStride = (count > 1) ?
-					core::Util::AlignTo(info.std140Size, arrayBaseAlignment) : info.std140Size;
-				uint32_t totalSize = arrayStride * static_cast<uint32_t>(count);
+			const LayoutInfo info = GetLayoutInfo<T>();
+			const bool isArray = (count > 1 || bDynamic);
 
-				UniformMember member{ name, core::reflection::GetType<T>().hash, 0, totalSize, count, (count > 1), false };
-				if (members.empty())
-				{
-					members.push_back(std::move(member));
-					return;
-				}
-				auto& prev = members.back();
-				uint32_t prevEnd = prev.offset + prev.layoutSize;
-				member.offset = core::Util::AlignTo(prevEnd, arrayBaseAlignment);
-				members.push_back(std::move(member));
+			// STD140: 배열 원소 stride는 최소 16바이트 정렬
+			// STD430: 타입 고유 alignment 사용
+			const uint32_t baseAlignment = (layout == Layout::STD140 && isArray)
+				? std::max(info.baseAlignment, 16u)
+				: info.baseAlignment;
+
+			// 배열은 stride를 baseAlignment에 맞춤
+			const uint32_t elementStride = isArray
+				? core::Util::AlignTo(info.bytes, baseAlignment)
+				: info.bytes;
+
+			// 가변 배열은 런타임에 크기 결정
+			const uint32_t totalSize = bDynamic ? 0 : (elementStride * count);
+
+			UniformMember member{};
+			member.name = name;
+			member.typeHash = core::reflection::GetType<T>().hash;
+			member.layoutSize = totalSize;
+			member.baseAlignment = baseAlignment;
+			member.count = bDynamic ? 0 : count;
+			member.bDynamicArray = bDynamic;
+
+			if (!members.empty())
+			{
+				const UniformMember& prev = members.back();
+				member.offset = core::Util::AlignTo(prev.offset + prev.layoutSize, baseAlignment);
 			}
+			members.push_back(std::move(member));
 		}
 	}
 }//namespace

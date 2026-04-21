@@ -62,7 +62,7 @@ namespace sh::render
 		{
 			if (std::holds_alternative<SyncData::BufferSyncData>(syncData.data)) // 버퍼
 			{
-				auto& bufferData = std::get<0>(syncData.data);
+				const SyncData::BufferSyncData& bufferData = std::get<0>(syncData.data);
 				SetUniformDataAtSync(bufferData);
 			}
 			else // 텍스쳐
@@ -75,11 +75,11 @@ namespace sh::render
 
 		bDirty = false;
 	}
-	SH_RENDER_API void MaterialData::SetUniformData(const ShaderPass& shaderPass, UniformStructLayout::Type type, uint32_t binding, const void* data, std::size_t dataSize)
+	SH_RENDER_API void MaterialData::SetUniformData(const ShaderPass& shaderPass, UniformStructLayout::Usage usage, uint32_t binding, const void* data, std::size_t dataSize)
 	{
 		SyncData::BufferSyncData syncData{};
 		syncData.pass = &shaderPass;
-		syncData.set = static_cast<uint32_t>(type);
+		syncData.set = static_cast<uint32_t>(usage);
 		syncData.binding = binding;
 		syncData.data.resize(dataSize);
 		std::memcpy(syncData.data.data(), data, syncData.data.size());
@@ -87,33 +87,22 @@ namespace sh::render
 		syncDatas.push_back(SyncData{ std::move(syncData) });
 		SyncDirty();
 	}
-	SH_RENDER_API void MaterialData::SetUniformData(const ShaderPass& shaderPass, UniformStructLayout::Type type, uint32_t binding, const std::vector<uint8_t>& data)
+	SH_RENDER_API void MaterialData::SetUniformData(const ShaderPass& shaderPass, UniformStructLayout::Usage usage, uint32_t binding, std::vector<uint8_t> data)
 	{
 		SyncData::BufferSyncData syncData{};
 		syncData.pass = &shaderPass;
-		syncData.set = static_cast<uint32_t>(type);
-		syncData.binding = binding;
-		syncData.data = data;
-
-		syncDatas.push_back(SyncData{ std::move(syncData) });
-		SyncDirty();
-	}
-	SH_RENDER_API void MaterialData::SetUniformData(const ShaderPass& shaderPass, UniformStructLayout::Type type, uint32_t binding, std::vector<uint8_t>&& data)
-	{
-		SyncData::BufferSyncData syncData{};
-		syncData.pass = &shaderPass;
-		syncData.set = static_cast<uint32_t>(type);
+		syncData.set = static_cast<uint32_t>(usage);
 		syncData.binding = binding;
 		syncData.data = std::move(data);
 
 		syncDatas.push_back(SyncData{ std::move(syncData) });
 		SyncDirty();
 	}
-	SH_RENDER_API void MaterialData::SetTextureData(const ShaderPass& shaderPass, UniformStructLayout::Type type, uint32_t binding, const Texture& tex)
+	SH_RENDER_API void MaterialData::SetTextureData(const ShaderPass& shaderPass, UniformStructLayout::Usage usage, uint32_t binding, const Texture& tex)
 	{
 		SyncData::UniformBufferSyncData syncData{};
 		syncData.pass = &shaderPass;
-		syncData.set = static_cast<uint32_t>(type);
+		syncData.set = static_cast<uint32_t>(usage);
 		syncData.binding = binding;
 		syncData.tex = &tex;
 
@@ -121,15 +110,15 @@ namespace sh::render
 
 		SyncDirty();
 	}
-	SH_RENDER_API auto MaterialData::GetShaderBuffer(const ShaderPass& shaderPass, UniformStructLayout::Type type, uint32_t binding) const -> IBuffer*
+	SH_RENDER_API auto MaterialData::GetShaderBuffer(const ShaderPass& shaderPass, UniformStructLayout::Usage usage, uint32_t binding) const -> IBuffer*
 	{
 		const PassData* passData = GetMaterialPassData(shaderPass);
 		if (passData == nullptr)
 			return nullptr;
 
-		uint32_t set = static_cast<uint32_t>(type);
-		auto itSet = passData->uniformData.find(set);
-		if (itSet == passData->uniformData.end())
+		uint32_t set = static_cast<uint32_t>(usage);
+		auto itSet = passData->buffers.find(set);
+		if (itSet == passData->buffers.end())
 			return nullptr;
 
 		const auto& buffers = itSet->second;
@@ -138,13 +127,13 @@ namespace sh::render
 
 		return buffers[binding] ? buffers[binding].get() : nullptr;
 	}
-	SH_RENDER_API auto MaterialData::GetUniformBuffer(const ShaderPass& shaderPass, UniformStructLayout::Type type) const -> IUniformBuffer*
+	SH_RENDER_API auto MaterialData::GetUniformBuffer(const ShaderPass& shaderPass, UniformStructLayout::Usage usage) const -> IUniformBuffer*
 	{
 		const PassData* passData = GetMaterialPassData(shaderPass);
 		if (passData == nullptr)
 			return nullptr;
 
-		uint32_t set = static_cast<uint32_t>(type);
+		uint32_t set = static_cast<uint32_t>(usage);
 		auto it = passData->uniformBuffer.find(set);
 		if (it == passData->uniformBuffer.end())
 			return nullptr;
@@ -162,9 +151,9 @@ namespace sh::render
 
 	void MaterialData::CreateBuffers(const IRenderContext& context, const Shader& shader, bool bPerObject)
 	{
-		std::vector<UniformStructLayout::Type> usages = { UniformStructLayout::Type::Camera, UniformStructLayout::Type::Material };
+		std::initializer_list<UniformStructLayout::Usage> usages = { UniformStructLayout::Usage::Camera, UniformStructLayout::Usage::Material };
 		if (bPerObject)
-			usages = { UniformStructLayout::Type::Object };
+			usages = { UniformStructLayout::Usage::Object };
 
 		for (auto& [passName, shaderPasses] : shader.GetAllShaderPass())
 		{
@@ -173,50 +162,55 @@ namespace sh::render
 				PassData passData{};
 				uint32_t maxSet = 0;
 				std::vector<uint32_t> sets;
-				// 유니폼 데이터 버퍼 (텍스쳐외 모든 GPU에 저장할 데이터)
-				auto layoutsPerPass = { shaderPass.GetVertexUniforms(), shaderPass.GetFragmentUniforms() };
-				for (const std::vector<UniformStructLayout>& layouts : layoutsPerPass)
+				// 버퍼 (텍스쳐외 모든 GPU에 저장할 데이터)
+				for (const std::vector<UniformStructLayout>* layouts : { &shaderPass.GetVertexUniforms(), &shaderPass.GetFragmentUniforms() })
 				{
-					for (const UniformStructLayout& uniformLayout : layouts)
+					for (const UniformStructLayout& uniformLayout : *layouts)
 					{
-						if (uniformLayout.bConstant)
+						if (uniformLayout.IsPushConstant())
 							continue;
-						if (std::find(usages.begin(), usages.end(), uniformLayout.type) == usages.end())
+						if (std::find(usages.begin(), usages.end(), uniformLayout.usage) == usages.end())
 							continue;
 
-						uint32_t set = static_cast<uint32_t>(uniformLayout.type);
+						const uint32_t set = static_cast<uint32_t>(uniformLayout.usage);
 						maxSet = (maxSet < set) ? set : maxSet;
 						if (std::find(sets.begin(), sets.end(), set) == sets.end())
 							sets.push_back(set);
 
-						auto& bindingBuffers = passData.uniformData[set];
+						std::vector<std::unique_ptr<IBuffer>>& bindingBuffers = passData.buffers[set];
 						if (bindingBuffers.size() <= uniformLayout.binding)
 							bindingBuffers.resize(uniformLayout.binding + 1);
 
 						if (set == 0) // 카메라 데이터는 다른 곳에서 관리한다.
 							continue;
-						bindingBuffers[uniformLayout.binding] = BufferFactory::Create(context, uniformLayout.GetSize());
+
+						BufferFactory::CreateInfo info{};
+						info.size = uniformLayout.GetSize();
+						info.bDynamic = (uniformLayout.GetKind() == UniformStructLayout::Kind::Storage);
+						if (info.bDynamic && info.size == 0)
+							info.size = 1; // 실제 데이터 업로드 시 Resize됨
+						bindingBuffers[uniformLayout.binding] = BufferFactory::Create(context, info);
 					}
 				}
 				for (const UniformStructLayout& layout : shaderPass.GetSamplerUniforms())
 				{
-					uint32_t set = static_cast<uint32_t>(layout.type);
+					uint32_t set = static_cast<uint32_t>(layout.usage);
 					maxSet = (maxSet < set) ? set : maxSet;
 					if (std::find(sets.begin(), sets.end(), set) == sets.end())
 						sets.push_back(set);
 
-					auto& bindingBuffers = passData.uniformData[set];
+					std::vector<std::unique_ptr<IBuffer>>& bindingBuffers = passData.buffers[set];
 					if (bindingBuffers.size() <= layout.binding)
 						bindingBuffers.resize(layout.binding + 1);
 				}
 				// 유니폼 버퍼 (GPU로 데이터 전송 역할)
 				for (uint32_t set : sets)
 				{
-					passData.uniformBuffer[set] = BufferFactory::CreateUniformBuffer(context, shaderPass, static_cast<UniformStructLayout::Type>(set));
-					auto it = passData.uniformData.find(set);
-					if (it == passData.uniformData.end())
+					passData.uniformBuffer[set] = BufferFactory::CreateUniformBuffer(context, shaderPass, static_cast<UniformStructLayout::Usage>(set));
+					auto it = passData.buffers.find(set);
+					if (it == passData.buffers.end())
 						continue;
-					auto& bufferVec = it->second;
+					const std::vector<std::unique_ptr<IBuffer>>& bufferVec = it->second;
 					for (uint32_t binding = 0; binding < bufferVec.size(); ++binding)
 					{
 						if (set != 0) // 카메라 데이터는 다른 곳에서 관리한다.
@@ -227,6 +221,7 @@ namespace sh::render
 						}
 						else
 						{
+							assert(context.GetRenderAPIType() == RenderAPI::Vulkan); // 언젠가 API 추가되면 빼기
 							// 카메라 데이터
 							if (context.GetRenderAPIType() == RenderAPI::Vulkan)
 							{
@@ -258,17 +253,29 @@ namespace sh::render
 			return;
 
 		const uint32_t set = bufferSyncData.set;
-		auto itSet = passData->uniformData.find(set);
-		if (itSet == passData->uniformData.end())
+		auto itSet = passData->buffers.find(set);
+		if (itSet == passData->buffers.end())
 			return;
 
 		const uint32_t binding = bufferSyncData.binding;
-		auto& bufferVec = itSet->second;
+		const std::vector<std::unique_ptr<IBuffer>>& bufferVec = itSet->second;
 		if (bufferSyncData.binding >= bufferVec.size() || bufferVec[bufferSyncData.binding] == nullptr)
 			return;
 
 		if (bufferVec[binding]->GetSize() != bufferSyncData.data.size())
 		{
+			for (const std::vector<UniformStructLayout>* layouts : { &bufferSyncData.pass->GetVertexUniforms(), &bufferSyncData.pass->GetFragmentUniforms() })
+			{
+				for (const UniformStructLayout& layout : *layouts)
+				{
+					if (static_cast<uint32_t>(layout.usage) != set || layout.binding != binding || layout.GetKind() != UniformStructLayout::Kind::Storage)
+						continue;
+					bufferVec[binding]->Resize(bufferSyncData.data.size());
+					passData->uniformBuffer.at(set)->Link(binding, *bufferVec[binding].get());
+					bufferVec[binding]->SetData(bufferSyncData.data.data());
+					return;
+				}
+			}
 			SH_ERROR_FORMAT("Buffer size is different! expected: {}, current: {}", bufferVec[binding]->GetSize(), bufferSyncData.data.size());
 			return;
 		}
@@ -291,7 +298,7 @@ namespace sh::render
 		bool bFind = false;
 		for (auto& layout : shaderPass->GetSamplerUniforms())
 		{
-			if (static_cast<uint32_t>(layout.type) == set && layout.binding == binding)
+			if (static_cast<uint32_t>(layout.usage) == set && layout.binding == binding)
 			{
 				bFind = true;
 				break;

@@ -92,7 +92,7 @@ namespace sh::render
 	{
 		if (stage == ShaderStage::Vertex)
 		{
-			for (auto& uniformStruct : GetVertexUniforms())
+			for (const UniformStructLayout& uniformStruct : GetVertexUniforms())
 			{
 				if (uniformStruct.HasMember(name))
 					return &uniformStruct;
@@ -100,12 +100,12 @@ namespace sh::render
 		}
 		else if (stage == ShaderStage::Fragment)
 		{
-			for (auto& uniformStruct : GetFragmentUniforms())
+			for (const UniformStructLayout& uniformStruct : GetFragmentUniforms())
 			{
 				if (uniformStruct.HasMember(name))
 					return &uniformStruct;
 			}
-			for (auto& uniformStruct : GetSamplerUniforms())
+			for (const UniformStructLayout& uniformStruct : GetSamplerUniforms())
 			{
 				if (uniformStruct.HasMember(name))
 					return &uniformStruct;
@@ -154,8 +154,6 @@ namespace sh::render
 	SH_RENDER_API auto ShaderPass::Serialize() const -> core::Json
 	{
 		core::Json mainJson = Super::Serialize();
-
-		mainJson["shaderPass"] = core::Json{};
 		core::Json& shaderPassJson = mainJson["shaderPass"];
 
 		shaderPassJson["vertShaderData"] = shaderCode.vert;
@@ -225,32 +223,49 @@ namespace sh::render
 					}
 				}
 			}
-			for (auto& uniform : stage.uniforms)
+			for (const ShaderAST::BufferNode& bufferNode : stage.buffers)
 			{
-				UniformStructLayout::Type uniformType = static_cast<UniformStructLayout::Type>(uniform.set);
+				UniformStructLayout::Usage uniformUsage = static_cast<UniformStructLayout::Usage>(bufferNode.set);
 
-				render::UniformStructLayout uniformLayout{ uniform.name, uniform.binding, uniformType, stageType, uniform.bConstant };
-
-				bHasConstant |= uniform.bConstant;
-
-				if (!uniform.bSampler)
+				UniformStructLayout::Kind kind = UniformStructLayout::Kind::Uniform;
+				switch (bufferNode.bufferType)
 				{
-					for (auto& var : uniform.vars)
+				case render::ShaderAST::BufferType::Storage: kind = UniformStructLayout::Kind::Storage; break;
+				case render::ShaderAST::BufferType::Sampler: kind = UniformStructLayout::Kind::Sampler; break;
+				case render::ShaderAST::BufferType::PushConstant: kind = UniformStructLayout::Kind::PushConstant; break;
+				case render::ShaderAST::BufferType::Uniform: kind = UniformStructLayout::Kind::Uniform; break;
+				}
+
+				render::UniformStructLayout uniformLayout{ bufferNode.name, bufferNode.binding, uniformUsage, stageType, kind };
+
+				bHasConstant |= (kind == UniformStructLayout::Kind::PushConstant);
+
+				if (kind != UniformStructLayout::Kind::Sampler)
+				{
+					for (auto& var : bufferNode.vars)
 					{
+						auto addFn = [&](auto typeTag)
+						{
+							using T = decltype(typeTag);
+							if (var.bDynamicArray)
+								uniformLayout.AddDynamicArrayMember<T>(var.name);
+							else
+								uniformLayout.AddArrayMember<T>(var.name, var.arraySize);
+						};
 						switch (var.type)
 						{
-						case render::ShaderAST::VariableType::Vec4:  uniformLayout.AddArrayMember<glm::vec4>(var.name, var.size); break;
-						case render::ShaderAST::VariableType::Vec3:  uniformLayout.AddArrayMember<glm::vec3>(var.name, var.size); break;
-						case render::ShaderAST::VariableType::Vec2:  uniformLayout.AddArrayMember<glm::vec2>(var.name, var.size); break;
-						case render::ShaderAST::VariableType::Mat4:  uniformLayout.AddArrayMember<glm::mat4>(var.name, var.size); break;
-						case render::ShaderAST::VariableType::Mat3:  uniformLayout.AddArrayMember<glm::mat3>(var.name, var.size); break;
-						case render::ShaderAST::VariableType::Float: uniformLayout.AddArrayMember<    float>(var.name, var.size); break;
-						case render::ShaderAST::VariableType::Int:   uniformLayout.AddArrayMember<      int>(var.name, var.size); break;
+						case render::ShaderAST::VariableType::Vec4: addFn(glm::vec4{}); break;
+						case render::ShaderAST::VariableType::Vec3: addFn(glm::vec3{}); break;
+						case render::ShaderAST::VariableType::Vec2: addFn(glm::vec2{}); break;
+						case render::ShaderAST::VariableType::Mat4: addFn(glm::mat4{}); break;
+						case render::ShaderAST::VariableType::Mat3: addFn(glm::mat3{}); break;
+						case render::ShaderAST::VariableType::Float: addFn(float{}); break;
+						case render::ShaderAST::VariableType::Int:  addFn(int{}); break;
 						}
 					}
 				}
 				else
-					uniformLayout.AddMember<render::Texture>(uniform.name);
+					uniformLayout.AddMember<render::Texture>(bufferNode.name);
 
 				AddUniformLayout(stageType, std::move(uniformLayout));
 			}
@@ -258,11 +273,6 @@ namespace sh::render
 	}
 	auto ShaderPass::IsSamplerLayout(const UniformStructLayout& layout) const -> bool
 	{
-		for (auto& member : layout.GetMembers())
-		{
-			if (member.isSampler)
-				return true;
-		}
-		return false;
+		return layout.IsSampler();
 	}
 }//namespace

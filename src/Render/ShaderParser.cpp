@@ -237,7 +237,7 @@ namespace sh::render
 			if (PreviousToken().type == ShaderLexer::TokenType::LSquareBracket)
 			{
 				ConsumeToken(ShaderLexer::TokenType::Number);
-				varNode.size = std::stoi(PreviousToken().text);
+				varNode.arraySize = static_cast<uint32_t>(std::stoi(PreviousToken().text));
 				ConsumeToken(ShaderLexer::TokenType::RSquareBracket);
 				ConsumeToken(ShaderLexer::TokenType::Semicolon);
 			}
@@ -590,8 +590,8 @@ namespace sh::render
 		// uniforms 벡터 수정 후 UBO 이터레이터를 갱신하는 헬퍼
 		auto refreshUboIt = [&]()
 		{
-			return std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(),
-				[](const ShaderAST::UBONode& ubo) 
+			return std::find_if(stageNode.buffers.begin(), stageNode.buffers.end(),
+				[](const ShaderAST::BufferNode& ubo) 
 				{ 
 					return ubo.name == "UBO"; 
 				}
@@ -615,7 +615,7 @@ namespace sh::render
 				layoutNode.binding = binding;
 				layoutNode.var.name = name;
 				layoutNode.var.type = type;
-				layoutNode.var.size = 1;
+				layoutNode.var.arraySize = 1;
 				stageNode.in.push_back(std::move(layoutNode));
 			}
 			bRegistered = true;
@@ -668,18 +668,18 @@ namespace sh::render
 			{
 				if (!usingCamera)
 				{
-					auto it = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(),
-						[](const ShaderAST::UBONode& ubo) { return ubo.name == "CAMERA"; });
-					if (it == stageNode.uniforms.end())
+					auto it = std::find_if(stageNode.buffers.begin(), stageNode.buffers.end(),
+						[](const ShaderAST::BufferNode& ubo) { return ubo.name == "CAMERA"; });
+					if (it == stageNode.buffers.end())
 					{
-						ShaderAST::UBONode uboNode{};
+						ShaderAST::BufferNode uboNode{};
+						uboNode.bufferType = ShaderAST::BufferType::Uniform;
 						uboNode.name = "CAMERA";
-						uboNode.set = static_cast<uint32_t>(UniformStructLayout::Type::Camera);
+						uboNode.set = static_cast<uint32_t>(UniformStructLayout::Usage::Camera);
 						uboNode.binding = 0;
-						uboNode.bSampler = false;
 						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 1, "view" });
 						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 1, "proj" });
-						stageNode.uniforms.push_back(std::move(uboNode));
+						stageNode.buffers.push_back(std::move(uboNode));
 						uboit = refreshUboIt();
 					}
 					usingCamera = true;
@@ -689,18 +689,17 @@ namespace sh::render
 			{
 				if (!usingMatrixModel)
 				{
-					auto it = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(),
-						[](const ShaderAST::UBONode& ubo) { return ubo.name == "CONSTANTS"; });
-					if (it == stageNode.uniforms.end())
+					auto it = std::find_if(stageNode.buffers.begin(), stageNode.buffers.end(),
+						[](const ShaderAST::BufferNode& ubo) { return ubo.name == "CONSTANTS"; });
+					if (it == stageNode.buffers.end())
 					{
-						ShaderAST::UBONode uboNode{};
+						ShaderAST::BufferNode uboNode{};
+						uboNode.bufferType = ShaderAST::BufferType::PushConstant;
 						uboNode.name = "CONSTANTS";
-						uboNode.set = static_cast<uint32_t>(UniformStructLayout::Type::Object); // 의미 없음
+						uboNode.set = static_cast<uint32_t>(UniformStructLayout::Usage::Object); // 의미 없음
 						uboNode.binding = 0; // 의미 없음
-						uboNode.bConstant = true;
-						uboNode.bSampler = false;
 						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 1, "model" });
-						stageNode.uniforms.push_back(std::move(uboNode));
+						stageNode.buffers.push_back(std::move(uboNode));
 						uboit = refreshUboIt();
 					}
 					usingMatrixModel = true;
@@ -710,19 +709,19 @@ namespace sh::render
 			{
 				if (!usingLIGHT)
 				{
-					auto it = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(),
-						[](const ShaderAST::UBONode& ubo) { return ubo.name == "LIGHT"; });
-					if (it == stageNode.uniforms.end())
+					auto it = std::find_if(stageNode.buffers.begin(), stageNode.buffers.end(),
+						[](const ShaderAST::BufferNode& ubo) { return ubo.name == "LIGHT"; });
+					if (it == stageNode.buffers.end())
 					{
-						ShaderAST::UBONode uboNode{};
+						ShaderAST::BufferNode uboNode{};
+						uboNode.bufferType = ShaderAST::BufferType::Uniform;
 						uboNode.name = "LIGHT";
-						uboNode.set = static_cast<uint32_t>(UniformStructLayout::Type::Object);
+						uboNode.set = static_cast<uint32_t>(UniformStructLayout::Usage::Object);
 						uboNode.binding = lastObjectUniformBinding++;
-						uboNode.bSampler = false;
 						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Int, 1, "count" });
 						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec4, 10, "pos" });
 						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec4, 10, "other" });
-						stageNode.uniforms.push_back(std::move(uboNode));
+						stageNode.buffers.push_back(std::move(uboNode));
 						stageNode.lightingBinding = uboNode.binding;
 						uboit = refreshUboIt();
 					}
@@ -737,18 +736,18 @@ namespace sh::render
 					usingMATRIX_SKIN = true;
 				if (!usingSKIN)
 				{
-					auto it = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(),
-						[](const ShaderAST::UBONode& ubo) { return ubo.name == "SKIN"; });
-					if (it == stageNode.uniforms.end())
+					auto it = std::find_if(stageNode.buffers.begin(), stageNode.buffers.end(),
+						[](const ShaderAST::BufferNode& ssbo) { return ssbo.name == "SKIN"; });
+					if (it == stageNode.buffers.end())
 					{
-						ShaderAST::UBONode uboNode{};
-						uboNode.name = "SKIN";
-						uboNode.set = static_cast<uint32_t>(UniformStructLayout::Type::Object);
-						uboNode.binding = lastObjectUniformBinding++;
-						uboNode.bSampler = false;
-						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 128, "ibm" });
-						stageNode.uniforms.push_back(std::move(uboNode));
-						stageNode.skinBinding = uboNode.binding;
+						ShaderAST::BufferNode ssboNode{};
+						ssboNode.bufferType = ShaderAST::BufferType::Storage;
+						ssboNode.name = "SKIN";
+						ssboNode.set = static_cast<uint32_t>(UniformStructLayout::Usage::Object);
+						ssboNode.binding = lastObjectUniformBinding++;
+						ssboNode.vars.push_back(ShaderAST::VariableNode::MakeDynamicArray(ShaderAST::VariableType::Mat4, "ibm"));
+						stageNode.buffers.push_back(std::move(ssboNode));
+						stageNode.skinBinding = ssboNode.binding;
 						uboit = refreshUboIt();
 					}
 					usingSKIN = true;
@@ -756,7 +755,7 @@ namespace sh::render
 			}
 			else if (token.type == ShaderLexer::TokenType::Identifier)
 			{
-				if (uboit != stageNode.uniforms.end())
+				if (uboit != stageNode.buffers.end())
 				{
 					auto varit = std::find_if(uboit->vars.begin(), uboit->vars.end(),
 						[&](const ShaderAST::VariableNode& var) { return var.name == token.text; });
@@ -783,7 +782,7 @@ namespace sh::render
 	{
 		ConsumeToken(ShaderLexer::TokenType::Layout);
 		ShaderAST::LayoutNode layoutNode{};
-		ShaderAST::UBONode uboNode{};
+		ShaderAST::BufferNode uboNode{};
 		ConsumeToken(ShaderLexer::TokenType::LBracket); // (
 
 		ConsumeToken(ShaderLexer::TokenType::Identifier);
@@ -848,7 +847,7 @@ namespace sh::render
 			}
 			else if (CheckToken(ShaderLexer::TokenType::Sampler2D))
 			{
-				uboNode.bSampler = true;
+				uboNode.bufferType = ShaderAST::BufferType::Sampler;
 				NextToken();
 				ConsumeToken(ShaderLexer::TokenType::Identifier);
 				uboNode.name = PreviousToken().text;
@@ -857,7 +856,7 @@ namespace sh::render
 			else
 				throw ShaderParserException({ GetTokenErrorString("Not found Identifier or Sampler2D keyword").c_str()});
 
-			stageNode.uniforms.push_back(std::move(uboNode));
+			stageNode.buffers.push_back(std::move(uboNode));
 		}
 	}
 	void ShaderParser::ParseUniform(const ShaderAST::ShaderNode& shaderNode, ShaderAST::StageNode& stageNode)
@@ -886,20 +885,20 @@ namespace sh::render
 		if (PreviousToken().type == ShaderLexer::TokenType::LSquareBracket)
 		{
 			ConsumeToken(ShaderLexer::TokenType::Number);
-			varNode.size = std::stoi(PreviousToken().text);
+			varNode.arraySize = static_cast<uint32_t>(std::stoi(PreviousToken().text));
 			ConsumeToken(ShaderLexer::TokenType::RSquareBracket);
 			ConsumeToken(ShaderLexer::TokenType::Semicolon);
 		}
 
 		// 프로퍼티 구문에 있는지 검사
 		bool hasProperty = false;
-		uint32_t set = static_cast<uint32_t>(UniformStructLayout::Type::Material);
+		uint32_t set = static_cast<uint32_t>(UniformStructLayout::Usage::Material);
 		for (auto& property : shaderNode.properties)
 		{
-			if (property.type == varNode.type && property.size == varNode.size && property.name == varNode.name)
+			if (property.type == varNode.type && property.arraySize == varNode.arraySize && property.name == varNode.name)
 			{
 				set = (property.attribute == ShaderAST::VariableAttribute::Local) ? 
-					static_cast<uint32_t>(UniformStructLayout::Type::Object) : static_cast<uint32_t>(UniformStructLayout::Type::Material);
+					static_cast<uint32_t>(UniformStructLayout::Usage::Object) : static_cast<uint32_t>(UniformStructLayout::Usage::Material);
 				hasProperty = true;
 				break;
 			}
@@ -909,40 +908,40 @@ namespace sh::render
 
 		if (varNode.type != ShaderAST::VariableType::Sampler)
 		{
-			auto it = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(), [](const ShaderAST::UBONode& uboNode)
+			auto it = std::find_if(stageNode.buffers.begin(), stageNode.buffers.end(), [](const ShaderAST::BufferNode& uboNode)
 				{
 					return uboNode.name == "UBO";
 				}
 			);
-			if (it == stageNode.uniforms.end())
+			if (it == stageNode.buffers.end())
 			{
-				ShaderAST::UBONode uboNode{};
+				ShaderAST::BufferNode uboNode{};
+				uboNode.bufferType = ShaderAST::BufferType::Uniform;
 				uboNode.set = set;
 				uboNode.binding = (set == static_cast<uint32_t>(ShaderAST::VariableAttribute::Local)) ?
 					lastObjectUniformBinding++ : lastMaterialUniformBinding++;
 				uboNode.name = "UBO";
-				uboNode.bSampler = false;
 				uboNode.vars.push_back(std::move(varNode));
-				stageNode.uniforms.push_back(std::move(uboNode));
+				stageNode.buffers.push_back(std::move(uboNode));
 			}
 			else
 			{
-				ShaderAST::UBONode& uboNode = *it;
+				ShaderAST::BufferNode& uboNode = *it;
 				uboNode.vars.push_back(std::move(varNode));
 			}
 		}
 		else
 		{
-			ShaderAST::UBONode uboNode{};
-			uboNode.bSampler = true;
+			ShaderAST::BufferNode uboNode{};
+			uboNode.bufferType = ShaderAST::BufferType::Sampler;
 			uboNode.name = varNode.name;
 			uboNode.set = set;
-			uboNode.binding = (set == static_cast<uint32_t>(ShaderAST::VariableAttribute::Local)) ? 
+			uboNode.binding = (set == static_cast<uint32_t>(ShaderAST::VariableAttribute::Local)) ?
 				lastObjectUniformBinding++ : lastMaterialUniformBinding++;
-			stageNode.uniforms.push_back(std::move(uboNode));
+			stageNode.buffers.push_back(std::move(uboNode));
 		}
 	}
-	void ShaderParser::ParseUniformBody(ShaderAST::UBONode& uboNode)
+	void ShaderParser::ParseUniformBody(ShaderAST::BufferNode& uboNode)
 	{
 		ConsumeToken(ShaderLexer::TokenType::LBrace); // {
 
@@ -957,7 +956,7 @@ namespace sh::render
 			{
 				NextToken();
 				ConsumeToken(ShaderLexer::TokenType::Number);
-				varNode.size = std::stoi(PreviousToken().text);
+				varNode.arraySize = static_cast<uint32_t>(std::stoi(PreviousToken().text));
 				ConsumeToken(ShaderLexer::TokenType::RSquareBracket);
 			}
 			ConsumeToken(ShaderLexer::TokenType::Semicolon);
@@ -1002,14 +1001,14 @@ namespace sh::render
 			for (auto& stageNode : passNode.stages)
 			{
 				// UBO 유니폼 변수 정렬 (레이아웃 재배치)
-				auto it = std::find_if(stageNode.uniforms.begin(), stageNode.uniforms.end(), [&](const ShaderAST::UBONode& uboNode)
+				auto it = std::find_if(stageNode.buffers.begin(), stageNode.buffers.end(), [&](const ShaderAST::BufferNode& uboNode)
 				{
 					return uboNode.name == "UBO";
 				});
-				if (it == stageNode.uniforms.end())
+				if (it == stageNode.buffers.end())
 					continue;
 
-				ShaderAST::UBONode& uboNode = *it;
+				ShaderAST::BufferNode& uboNode = *it;
 
 				std::sort(uboNode.vars.begin(), uboNode.vars.end(), [&](const ShaderAST::VariableNode& varNode1, const ShaderAST::VariableNode& varNode2)
 				{
@@ -1037,27 +1036,39 @@ namespace sh::render
 		for (auto& out : stageNode.out)
 			code += fmt::format("layout(location = {}) out {} {};\n", out.binding, VariableTypeToString(out.var.type), out.var.name);
 
-		for (auto& uniform : stageNode.uniforms)
+		for (auto& uniform : stageNode.buffers)
 		{
-			if (uniform.bSampler)
+			if (uniform.bufferType == ShaderAST::BufferType::Sampler)
 			{
 				code += fmt::format("layout(set = {}, binding = {}) uniform sampler2D {};\n", uniform.set, uniform.binding, uniform.name);
 				continue;
 			}
 			std::string uniformMembers;
+			bool bDynamicArrayFlag = false;
 			for (auto& member : uniform.vars)
 			{
-				if (member.size == 1)
+				if (member.bDynamicArray)
+				{
+					assert(!bDynamicArrayFlag);
+					if (bDynamicArrayFlag)
+						throw ShaderParserException{ "SSBO must have at most one dynamic array!" };
+					uniformMembers += fmt::format("{} {}[];\n", VariableTypeToString(member.type), member.name);
+					bDynamicArrayFlag = true;
+				}
+				else if (member.arraySize == 1)
 					uniformMembers += fmt::format("{} {};\n", VariableTypeToString(member.type), member.name);
 				else
-					uniformMembers += fmt::format("{} {}[{}];\n", VariableTypeToString(member.type), member.name, member.size);
+					uniformMembers += fmt::format("{} {}[{}];\n", VariableTypeToString(member.type), member.name, member.arraySize);
 			}
-			if (uniform.bConstant)
+			if (uniform.bufferType == ShaderAST::BufferType::PushConstant)
 			{
 				code += fmt::format("layout(push_constant) uniform UNIFORM_{} {{\n {} }} {};\n", uniform.name, uniformMembers, uniform.name);
 				continue;
 			}
-			code += fmt::format("layout(set = {}, binding = {}) uniform {} {{\n {} }} {};\n", uniform.set, uniform.binding, "UNIFORM_" + uniform.name, uniformMembers, uniform.name);
+			if (uniform.bufferType == ShaderAST::BufferType::Storage)
+				code += fmt::format("layout(std430, set = {}, binding = {}) readonly buffer {} {{\n {} }} {};\n", uniform.set, uniform.binding, "UNIFORM_" + uniform.name, uniformMembers, uniform.name);
+			else
+				code += fmt::format("layout(set = {}, binding = {}) uniform {} {{\n {} }} {};\n", uniform.set, uniform.binding, "UNIFORM_" + uniform.name, uniformMembers, uniform.name);
 		}
 		for (int i = 0; i < passNode.constants.size(); ++i)
 		{

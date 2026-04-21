@@ -42,15 +42,24 @@ namespace sh::render
 		struct VariableNode : core::ISerializable
 		{
 			VariableType type = VariableType::Int;
-			int size = 1;
+			uint32_t arraySize = 1; // 배열 원소 개수 (단일 변수면 1)
 			std::string name;
 			std::string defaultValue;
 			VariableAttribute attribute = VariableAttribute::None;
+			bool bDynamicArray = false; // SSBO 끝의 가변 배열 (arraySize 무시)
 
 			VariableNode() = default;
-			VariableNode(VariableType type, int size, std::string name) :
-				type(type), size(size), name(name)
+			VariableNode(VariableType type, uint32_t arraySize, std::string name) :
+				type(type), arraySize(arraySize), name(std::move(name))
 			{
+			}
+			static auto MakeDynamicArray(VariableType type, std::string name) -> VariableNode
+			{
+				VariableNode v;
+				v.type = type;
+				v.bDynamicArray = true;
+				v.name = std::move(name);
+				return v;
 			}
 
 			SH_RENDER_API auto Serialize() const -> core::Json override;
@@ -78,13 +87,19 @@ namespace sh::render
 			SH_RENDER_API auto Serialize() const -> core::Json override;
 			SH_RENDER_API void Deserialize(const core::Json& json) override;
 		};
-		struct UBONode : core::ISerializable
+		enum class BufferType : uint8_t
 		{
-			uint32_t set;
-			uint32_t binding;
+			Uniform, // UBO (std140)
+			Storage, // SSBO (std430)
+			Sampler,
+			PushConstant // 푸시 상수
+		};
+		struct BufferNode : core::ISerializable
+		{
+			BufferType bufferType = BufferType::Uniform;
+			uint32_t set = 0;
+			uint32_t binding = 0;
 			std::string name;
-			bool bSampler = false;
-			bool bConstant = false;
 			std::vector<VariableNode> vars;
 
 			SH_RENDER_API auto Serialize() const -> core::Json override;
@@ -95,7 +110,7 @@ namespace sh::render
 			StageType type;
 			std::vector<LayoutNode> in;
 			std::vector<LayoutNode> out;
-			std::vector<UBONode> uniforms;
+			std::vector<BufferNode> buffers;
 			std::vector<std::string> declaration;
 			std::vector<std::string> functions;
 			std::string code;

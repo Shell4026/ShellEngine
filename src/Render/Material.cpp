@@ -154,7 +154,7 @@ namespace sh::render
 
 		for (auto& [pass, uniformLayout] : dirtyProps)
 		{
-			if (uniformLayout->type == UniformStructLayout::Type::Object)
+			if (uniformLayout->usage == UniformStructLayout::Usage::Object)
 				continue;
 
 			std::vector<uint8_t> data(uniformLayout->GetSize(), 0);
@@ -229,13 +229,13 @@ namespace sh::render
 				{
 					auto var = propertyBlock.GetTextureProperty(member.name);
 					if (core::IsValid(var))
-						materialData->SetTextureData(*pass, uniformLayout->type, uniformLayout->binding, *var);
+						materialData->SetTextureData(*pass, uniformLayout->usage, uniformLayout->binding, *var);
 
 					isSampler = true;
 				}
 			}
 			if (!isSampler)
-				materialData->SetUniformData(*pass, uniformLayout->type, uniformLayout->binding, std::move(data));
+				materialData->SetUniformData(*pass, uniformLayout->usage, uniformLayout->binding, std::move(data));
 		}
 		dirtyProps.clear();
 		bPropertyDirty = false;

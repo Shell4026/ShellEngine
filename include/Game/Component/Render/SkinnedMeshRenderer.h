@@ -36,6 +36,6 @@ namespace sh::game
 		PROPERTY(bones, core::PropertyOption::invisible)
 		std::vector<Transform*> bones;
 		std::vector<glm::mat4> inverseBindMatrices;
-		std::array<glm::mat4, render::SkinnedMesh::MAX_BONES> finalBoneMatrices;
+		std::vector<glm::mat4> finalBoneMatrices;
 	};
 }//namespace

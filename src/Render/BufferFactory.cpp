@@ -3,7 +3,7 @@
 
 #include "VulkanContext.h"
 #include "VulkanImpl/VulkanBuffer.h"
-#include "VulkanImpl/VulkanUniformBuffer.h"
+#include "VulkanImpl/VulkanDescriptorSet.h"
 
 #include "Core/Logger.h"
 
@@ -11,15 +11,16 @@
 
 namespace sh::render
 {
-	auto BufferFactory::CreateVkUniformBuffer(const vk::VulkanContext& context, std::size_t size, bool bTransferDst) -> std::unique_ptr<IBuffer>
+	auto BufferFactory::CreateVkUniformBuffer(const vk::VulkanContext& context, const CreateInfo& info) -> std::unique_ptr<IBuffer>
 	{
 		std::unique_ptr<vk::VulkanBuffer> buffer = std::make_unique<vk::VulkanBuffer>(context);
 
-		VkBufferUsageFlags usage = VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-		if (bTransferDst)
+		VkBufferUsageFlags usage = 
+			info.bDynamic ? VkBufferUsageFlagBits::VK_BUFFER_USAGE_STORAGE_BUFFER_BIT : VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+		if (info.bTransferDst)
 			usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-		auto result = buffer->Create(size, usage,
+		VkResult result = buffer->Create(info.size, usage,
 			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 			VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
 			true);
@@ -32,20 +33,20 @@ namespace sh::render
 		return buffer;
 	}
 
-	auto BufferFactory::Create(const IRenderContext& context, std::size_t size, bool bTransferDst) -> std::unique_ptr<IBuffer>
+	auto BufferFactory::Create(const IRenderContext& context, const CreateInfo& info) -> std::unique_ptr<IBuffer>
 	{
 		assert(context.GetRenderAPIType() == RenderAPI::Vulkan);
 		if (context.GetRenderAPIType() == RenderAPI::Vulkan)
-			return CreateVkUniformBuffer(static_cast<const vk::VulkanContext&>(context), size, bTransferDst);
+			return CreateVkUniformBuffer(static_cast<const vk::VulkanContext&>(context), info);
 
 		return nullptr;
 	}
-	auto BufferFactory::CreateUniformBuffer(const IRenderContext& context, const ShaderPass& shader, UniformStructLayout::Type type) -> std::unique_ptr<IUniformBuffer>
+	auto BufferFactory::CreateUniformBuffer(const IRenderContext& context, const ShaderPass& shader, UniformStructLayout::Usage usage) -> std::unique_ptr<IUniformBuffer>
 	{
 		if (context.GetRenderAPIType() == RenderAPI::Vulkan)
 		{
-			auto ptr = std::make_unique<vk::VulkanUniformBuffer>();
-			ptr->Create(context, shader, type);
+			auto ptr = std::make_unique<vk::VulkanDescriptorSet>();
+			ptr->Create(context, shader, usage);
 			return ptr;
 		}
 		else

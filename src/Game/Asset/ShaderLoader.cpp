@@ -118,7 +118,7 @@ namespace sh::game
 			SH_ERROR_FORMAT("Asset({}) is not a shader!", asset.GetAssetUUID().ToString());
 			return nullptr;
 		}
-		const auto& shaderAsset = static_cast<const game::ShaderAsset&>(asset);
+		const game::ShaderAsset& shaderAsset = static_cast<const game::ShaderAsset&>(asset);
 		const core::Json& shaderObjJson = shaderAsset.GetShaderObjectJson();
 
 		if (!shaderObjJson.contains("shader"))

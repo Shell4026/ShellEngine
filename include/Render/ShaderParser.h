@@ -60,7 +60,7 @@ namespace sh::render
 		auto ParseFunctionBody(ShaderAST::StageNode& stageNode) -> std::string;
 		void ParseLayout(ShaderAST::StageNode& stageNode);
 		void ParseUniform(const ShaderAST::ShaderNode& shaderNode, ShaderAST::StageNode& stageNode);
-		void ParseUniformBody(ShaderAST::UBONode& uboNode);
+		void ParseUniformBody(ShaderAST::BufferNode& uboNode);
 		void ParseConstexpr(ShaderAST::PassNode& passNode);
 
 		void Optimize(ShaderAST::ShaderNode& shaderNode);

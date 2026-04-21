@@ -254,6 +254,7 @@ namespace sh::render::vk
 		VkDescriptorSetLayoutCreateInfo info{};
 		info.sType = VkStructureType::VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		info.bindingCount = 0;
+		info.pBindings = nullptr;
 
 		vkCreateDescriptorSetLayout(device, &info, nullptr, &emptyDescLayout);
 
