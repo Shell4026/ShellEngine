@@ -11,7 +11,7 @@ namespace sh::render
 		bZTest = passNode.bZTest;
 		colorMask = passNode.colorMask;
 		FillAttributes(passNode);
-		for (auto& stage : passNode.stages)
+		for (const ShaderAST::StageNode& stage : passNode.stages)
 		{
 			if (stage.lightingBinding != -1)
 				lightingBinding = stage.lightingBinding;

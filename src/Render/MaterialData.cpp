@@ -62,7 +62,7 @@ namespace sh::render
 		{
 			if (std::holds_alternative<SyncData::BufferSyncData>(syncData.data)) // 버퍼
 			{
-				const SyncData::BufferSyncData& bufferData = std::get<0>(syncData.data);
+				const SyncData::BufferSyncData& bufferData = std::get<SyncData::BufferSyncData>(syncData.data);
 				SetUniformDataAtSync(bufferData);
 			}
 			else // 텍스쳐
@@ -151,7 +151,7 @@ namespace sh::render
 
 	void MaterialData::CreateBuffers(const IRenderContext& context, const Shader& shader, bool bPerObject)
 	{
-		std::initializer_list<UniformStructLayout::Usage> usages = { UniformStructLayout::Usage::Camera, UniformStructLayout::Usage::Material };
+		std::vector<UniformStructLayout::Usage> usages{ UniformStructLayout::Usage::Camera, UniformStructLayout::Usage::Material };
 		if (bPerObject)
 			usages = { UniformStructLayout::Usage::Object };
 
@@ -169,10 +169,12 @@ namespace sh::render
 					{
 						if (uniformLayout.IsPushConstant())
 							continue;
+						
 						if (std::find(usages.begin(), usages.end(), uniformLayout.usage) == usages.end())
 							continue;
 
 						const uint32_t set = static_cast<uint32_t>(uniformLayout.usage);
+
 						maxSet = (maxSet < set) ? set : maxSet;
 						if (std::find(sets.begin(), sets.end(), set) == sets.end())
 							sets.push_back(set);
