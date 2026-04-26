@@ -22,7 +22,8 @@ namespace sh::editor
 			Font,
 			Binary,
 			Sound,
-			ScriptableObject
+			ScriptableObject,
+			ComputeShader,
 		};
 	public:
 		SH_EDITOR_API static void AddExtension(const std::string& ext, Type type);

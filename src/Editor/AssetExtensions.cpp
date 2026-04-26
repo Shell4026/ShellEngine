@@ -18,7 +18,8 @@ namespace sh::editor
 		{".ttf", Type::Binary},
 		{".ogg", Type::Sound},
 		{".wav", Type::Sound},
-		{".srpo", Type::ScriptableObject}
+		{".srpo", Type::ScriptableObject},
+		{".compute", Type::ComputeShader}
 	};
 
 	SH_EDITOR_API void AssetExtensions::AddExtension(const std::string& ext, Type type)
@@ -60,6 +61,8 @@ namespace sh::editor
 			return "Sound";
 		case Type::ScriptableObject:
 			return "ScriptableObject";
+		case Type::ComputeShader:
+			return "ComputeShader";
 		}
 		return "None";
 	}

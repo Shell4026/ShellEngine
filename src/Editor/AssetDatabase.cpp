@@ -30,6 +30,7 @@
 #include "Game/Asset/TextLoader.h"
 #include "Game/Asset/FontLoader.h"
 #include "Game/Asset/ScriptableObjectLoader.h"
+#include "Game/Asset/ComputeShaderLoader.h"
 
 #include "Game/Asset/TextureAsset.h"
 #include "Game/Asset/ModelAsset.h"
@@ -43,6 +44,7 @@
 #include "Game/Asset/TextAsset.h"
 #include "Game/Asset/FontAsset.h"
 #include "Game/Asset/ScriptableObjectAsset.h"
+#include "Game/Asset/ComputeShaderAsset.h"
 
 #include "Sound/SoundClip.h"
 
@@ -79,13 +81,17 @@ namespace sh::editor
 
 		assert(ctx.GetRenderAPIType() == render::RenderAPI::Vulkan); // TODO
 		static render::vk::VulkanShaderPassBuilder passBuilder{ static_cast<const render::vk::VulkanContext&>(ctx) };
-		auto shaderLoader = std::make_unique<game::ShaderLoader>(&passBuilder);
+		std::unique_ptr<game::ShaderLoader> shaderLoader = std::make_unique<game::ShaderLoader>(&passBuilder);
 		shaderLoader->SetCachePath(projectPath / "temp");
+
+		std::unique_ptr<game::ComputeShaderLoader> computeShaderLoader = std::make_unique<game::ComputeShaderLoader>();
+		computeShaderLoader->SetCachePath(projectPath / "temp");
 
 		assetLoaders.Clear();
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Model, std::make_unique<game::ModelLoader>(ctx), 2, true);
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Mesh, std::make_unique<game::MeshLoader>(ctx), 2, true);
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Texture, std::make_unique<game::TextureLoader>(ctx), 2, true);
+		assetLoaders.RegisterLoader(AssetExtensions::Type::ComputeShader, std::move(computeShaderLoader), 2, false);
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Shader, std::move(shaderLoader), 2, false);
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Binary, std::make_unique<game::BinaryLoader>(), 2, false);
 		assetLoaders.RegisterLoader(AssetExtensions::Type::Sound, std::make_unique<game::SoundLoader>(), 2, false);
@@ -439,13 +445,15 @@ namespace sh::editor
 			assetType = game::SoundAsset::ASSET_NAME;
 		else if (obj.GetType().IsChildOf(game::ScriptableObject::GetStaticType()))
 			assetType = game::ScriptableObjectAsset::ASSET_NAME;
+		else if (obj.GetType() == render::ComputeShader::GetStaticType())
+			assetType = game::ComputeShaderAsset::ASSET_NAME;
 		else
 		{
 			SH_ERROR_FORMAT("Failed to export asset (type: {})", obj.GetType().name.ToString());
 			return false;
 		}
 
-		auto asset = core::Factory<core::Asset>::GetInstance()->Create(assetType);
+		std::unique_ptr<core::Asset> asset = core::Factory<core::Asset>::GetInstance()->Create(assetType);
 		if (asset == nullptr)
 		{
 			SH_ERROR_FORMAT("Asset type({}) is invalid", assetType);
