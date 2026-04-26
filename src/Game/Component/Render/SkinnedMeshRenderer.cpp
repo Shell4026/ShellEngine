@@ -1,6 +1,8 @@
 ﻿#include "Component/Render/SkinnedMeshRenderer.h"
 #include "Game/Component/Transform.h"
 
+#include "Core/ThreadPool.h"
+
 #include "Render/UniformStructLayout.h"
 #include "Render/Shader.h"
 
@@ -52,12 +54,49 @@ namespace sh::game
 		if (finalBoneMatrices.size() < bones.size())
 			finalBoneMatrices.resize(bones.size());
 
-		for (std::size_t i = 0; i < jointCount; ++i)
+		//for (std::size_t i = 0; i < jointCount; ++i)
+		//{
+		//	if (!core::IsValid(bones[i]))
+		//		continue;
+		//	finalBoneMatrices[i] = bones[i]->localToWorldMatrix * inverseBindMatrices[i];
+		//}
+
+		const auto calcMatricesFn =
+			[this](std::size_t start, std::size_t end)
+			{
+				for (std::size_t i = start; i < end; ++i)
+				{
+					if (!core::IsValid(bones[i]))
+						continue;
+					finalBoneMatrices[i] = bones[i]->localToWorldMatrix * inverseBindMatrices[i];
+				}
+			};
+
+		if (jointCount > 100)
 		{
-			if (!core::IsValid(bones[i]))
-				continue;
-			finalBoneMatrices[i] = bones[i]->localToWorldMatrix * inverseBindMatrices[i];
+			static core::ThreadPool& threadPool = *core::ThreadPool::GetInstance();
+			const std::size_t threadCount = 4;
+			std::vector<std::future<void>> futures(threadCount);
+			const std::size_t perTask = jointCount / threadCount;
+			const std::size_t rest = jointCount % threadCount;
+
+			std::size_t start = 0;
+			std::size_t futureIdx = 0;
+			for (int i = 0; i < rest; ++i)
+			{
+				futures[futureIdx++] = threadPool.AddTask(calcMatricesFn, start, start + perTask + 1);
+				start = start + perTask + 1;
+			}
+			for (int i = 0; i < threadCount - rest; ++i)
+			{
+				futures[futureIdx++] = threadPool.AddTask(calcMatricesFn, start, start + perTask);
+				start = start + perTask;
+			}
+			for (std::future<void>& future : futures)
+				future.get();
 		}
+		else
+			calcMatricesFn(0, jointCount);
 	}
 	void SkinnedMeshRenderer::UploadBoneMatrices()
 	{
