@@ -46,6 +46,8 @@ namespace sh::render
 	{
 		core::Json json;
 		json["bufferType"] = static_cast<int>(bufferType);
+		json["access"] = static_cast<int>(access);
+		json["anonymous"] = bAnonymousInstance;
 		json["set"] = set;
 		json["binding"] = binding;
 		json["name"] = name;
@@ -66,6 +68,10 @@ namespace sh::render
 
 		if (json.contains("bufferType"))
 			bufferType = static_cast<BufferType>(json.at("bufferType").get<int>());
+		if (json.contains("access"))
+			access = static_cast<BufferAccess>(json.at("access").get<int>());
+		if (json.contains("anonymous"))
+			bAnonymousInstance = json.at("anonymous").get<bool>();
 
 		vars.clear();
 		for (const auto& v : json.at("vars"))
@@ -268,6 +274,46 @@ namespace sh::render
 			pass.Deserialize(p);
 			passes.push_back(std::move(pass));
 		}
+	}
+
+	auto ShaderAST::ComputeShaderNode::Serialize() const -> core::Json
+	{
+		core::Json json;
+		json["version"] = version.Serialize();
+		json["shaderName"] = shaderName;
+		json["numthreadsX"] = numthreadsX;
+		json["numthreadsY"] = numthreadsY;
+		json["numthreadsZ"] = numthreadsZ;
+		json["code"] = code;
+
+		core::Json bufferArray = core::Json::array();
+		for (const auto& b : buffers)
+			bufferArray.push_back(b.Serialize());
+		json["buffers"] = std::move(bufferArray);
+
+		json["declaration"] = declaration;
+		json["functions"] = functions;
+		return json;
+	}
+
+	void ShaderAST::ComputeShaderNode::Deserialize(const core::Json& json)
+	{
+		version.Deserialize(json.at("version"));
+		shaderName = json.at("shaderName").get<std::string>();
+		numthreadsX = json.value("numthreadsX", 1u);
+		numthreadsY = json.value("numthreadsY", 1u);
+		numthreadsZ = json.value("numthreadsZ", 1u);
+		code = json.at("code").get<std::string>();
+
+		buffers.clear();
+		for (const auto& b : json.at("buffers"))
+		{
+			BufferNode buf;
+			buf.Deserialize(b);
+			buffers.push_back(std::move(buf));
+		}
+		declaration = json.at("declaration").get<std::vector<std::string>>();
+		functions = json.at("functions").get<std::vector<std::string>>();
 	}
 
 }//namespace

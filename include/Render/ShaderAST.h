@@ -31,7 +31,8 @@ namespace sh::render
 			Float,
 			Int,
 			Sampler,
-			Boolean
+			Boolean,
+			Struct
 		};
 		enum class VariableAttribute
 		{
@@ -94,13 +95,21 @@ namespace sh::render
 			Sampler,
 			PushConstant // 푸시 상수
 		};
+		enum class BufferAccess : uint8_t
+		{
+			Read,      // readonly
+			Write,     // writeonly
+			ReadWrite  // (no qualifier)
+		};
 		struct BufferNode : core::ISerializable
 		{
 			BufferType bufferType = BufferType::Uniform;
+			BufferAccess access = BufferAccess::Read;
 			uint32_t set = 0;
 			uint32_t binding = 0;
 			std::string name;
 			std::vector<VariableNode> vars;
+			bool bAnonymousInstance = false; // true이면 블록 인스턴스 이름 없이 멤버를 전역으로 노출
 
 			SH_RENDER_API auto Serialize() const -> core::Json override;
 			SH_RENDER_API void Deserialize(const core::Json& json) override;
@@ -152,6 +161,22 @@ namespace sh::render
 			std::string shaderName;
 			std::vector<VariableNode> properties;
 			std::vector<PassNode> passes;
+
+			SH_RENDER_API auto Serialize() const -> core::Json override;
+			SH_RENDER_API void Deserialize(const core::Json& json) override;
+		};
+
+		struct ComputeShaderNode : core::ISerializable
+		{
+			VersionNode version;
+			std::string shaderName;
+			uint32_t numthreadsX = 1;
+			uint32_t numthreadsY = 1;
+			uint32_t numthreadsZ = 1;
+			std::vector<BufferNode> buffers;
+			std::vector<std::string> declaration;
+			std::vector<std::string> functions;
+			std::string code;
 
 			SH_RENDER_API auto Serialize() const -> core::Json override;
 			SH_RENDER_API void Deserialize(const core::Json& json) override;
