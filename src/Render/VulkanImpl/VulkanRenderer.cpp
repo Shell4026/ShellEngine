@@ -180,7 +180,6 @@ namespace sh::render::vk
 			cams.push_back(camera);
 		}
 
-		SetDrawCallCount(0);
 		uint32_t renderCallCount = 0;
 		for (const Camera* cam : cams)
 		{
