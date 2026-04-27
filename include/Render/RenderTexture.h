@@ -15,7 +15,7 @@ namespace sh::render
 	template<>
 	struct IRenderThrMethod<class RenderTexture>
 	{
-		static void ChangeUsage(RenderTexture& rt, ImageUsage newUsage);
+		static void ChangeUsage(RenderTexture& rt, ResourceUsage newUsage);
 	};
 
 	class RenderTexture : public Texture
@@ -37,9 +37,9 @@ namespace sh::render
 		SH_RENDER_API auto GetLayout() const -> const RenderTargetLayout& { return layout; }
 		SH_RENDER_API auto GetMSAABuffer() const -> ITextureBuffer* { return msaaBuffer.get(); }
 		SH_RENDER_API auto GetDepthBuffer() const -> ITextureBuffer* { return depthBuffer.get(); }
-		SH_RENDER_API auto GetUsage() const -> ImageUsage { return usage; }
+		SH_RENDER_API auto GetUsage() const -> ResourceUsage { return usage; }
 	protected:
-		SH_RENDER_API void ChangeUsage(ImageUsage newUsage);
+		SH_RENDER_API void ChangeUsage(ResourceUsage newUsage);
 	private:
 		void CreateBuffers();
 	private:
@@ -53,12 +53,12 @@ namespace sh::render
 		std::unique_ptr<ITextureBuffer> msaaBuffer;
 		std::unique_ptr<ITextureBuffer> depthBuffer;
 
-		ImageUsage usage = ImageUsage::Undefined;
+		ResourceUsage usage = ResourceUsage::Undefined;
 
 		bool bChangeSize = false;
 	};
 
-	inline void IRenderThrMethod<class RenderTexture>::ChangeUsage(RenderTexture& rt, ImageUsage newUsage)
+	inline void IRenderThrMethod<class RenderTexture>::ChangeUsage(RenderTexture& rt, ResourceUsage newUsage)
 	{
 		rt.ChangeUsage(newUsage);
 	}

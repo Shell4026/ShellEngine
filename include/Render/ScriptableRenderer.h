@@ -75,7 +75,7 @@ namespace sh::render
 
 		std::vector<std::unique_ptr<ScriptableRenderPass>> allPasses;
 	private:
-		SH_RENDER_API static std::vector<ImageUsage> swapChainStates;
+		SH_RENDER_API static std::vector<ResourceUsage> swapChainStates;
 
 		std::vector<ScriptableRenderPass*> activePasses;
 		std::vector<SubmittedCommand> submittedCmds;

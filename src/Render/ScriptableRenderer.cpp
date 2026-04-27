@@ -11,7 +11,7 @@
 #include <algorithm>
 namespace sh::render
 {
-	std::vector<ImageUsage> ScriptableRenderer::swapChainStates{};
+	std::vector<ResourceUsage> ScriptableRenderer::swapChainStates{};
 
 	ScriptableRenderer::ScriptableRenderer(IRenderContext& ctx) :
 		ctx(ctx)
@@ -144,8 +144,8 @@ namespace sh::render
 		IRenderThrMethod<ScriptableRenderPass>::Configure(*cpyPass, target);
 
 		std::vector<BarrierInfo> preBarriers = BuildBarrierInfo(*cpyPass, imgIdx);
-		std::vector<BarrierInfo> postBarriers = { BarrierInfo{imgIdx, swapChainStates[imgIdx], ImageUsage::Present} };
-		swapChainStates[imgIdx] = ImageUsage::Present;
+		std::vector<BarrierInfo> postBarriers = { BarrierInfo{imgIdx, swapChainStates[imgIdx], ResourceUsage::Present} };
+		swapChainStates[imgIdx] = ResourceUsage::Present;
 
 		RenderTarget rt{};
 		rt.frameIndex = imgIdx;
@@ -183,7 +183,7 @@ namespace sh::render
 	SH_RENDER_API void ScriptableRenderer::ResetSwapChainStates()
 	{
 		for (auto& state : swapChainStates)
-			state = ImageUsage::Undefined;
+			state = ResourceUsage::Undefined;
 	}
 
 	auto ScriptableRenderer::BuildBarrierInfo(ScriptableRenderPass& pass, uint32_t imgIdx) -> std::vector<BarrierInfo>
@@ -198,7 +198,7 @@ namespace sh::render
 			{
 				barrierInfo.target = imgIdx;
 				if (swapChainStates.size() <= imgIdx)
-					swapChainStates.resize(imgIdx + 1, ImageUsage::Undefined);
+					swapChainStates.resize(imgIdx + 1, ResourceUsage::Undefined);
 
 				barrierInfo.lastUsage = swapChainStates[imgIdx];
 				swapChainStates[imgIdx] = usage;

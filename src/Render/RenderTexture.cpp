@@ -63,7 +63,7 @@ namespace sh::render
 	{
 		return { width, height };
 	}
-	SH_RENDER_API void RenderTexture::ChangeUsage(ImageUsage newUsage)
+	SH_RENDER_API void RenderTexture::ChangeUsage(ResourceUsage newUsage)
 	{
 		usage = newUsage;
 	}
@@ -112,6 +112,6 @@ namespace sh::render
 			depthBuffer->Create(*context, ci);
 		}
 
-		usage = ImageUsage::Undefined;
+		usage = ResourceUsage::Undefined;
 	}
 }//namespace

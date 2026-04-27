@@ -44,36 +44,36 @@ namespace sh::render::vk
 			VkPipelineStageFlags srcStage, dstStage;
 			VkAccessFlags srcAccess, dstAccess;
 
-			auto mapUsageFn = 
+			auto mapUsageFn =
 				[&](
-				ImageUsage u,
+				ResourceUsage u,
 				VkImageLayout& layout,
 				VkPipelineStageFlags& stage,
 				VkAccessFlags& access)
 				{
 					switch (u)
 					{
-					case ImageUsage::Undefined:
+					case ResourceUsage::Undefined:
 						layout = VkImageLayout::VK_IMAGE_LAYOUT_UNDEFINED;
 						stage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
 						access = 0;
 						return;
-					case ImageUsage::ColorAttachment:
+					case ResourceUsage::ColorAttachment:
 						layout = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 						stage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
 						access = VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VkAccessFlagBits::VK_ACCESS_COLOR_ATTACHMENT_READ_BIT;
 						return;
-					case ImageUsage::SampledRead:
+					case ResourceUsage::SampledRead:
 						layout = VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 						stage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_ALL_GRAPHICS_BIT;
 						access = VkAccessFlagBits::VK_ACCESS_SHADER_READ_BIT;
 						return;
-					case ImageUsage::Present:
+					case ResourceUsage::Present:
 						layout = VkImageLayout::VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 						stage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT;
 						access = 0;
 						return;
-					case ImageUsage::Src:
+					case ResourceUsage::TransferSrc:
 						layout = VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 						stage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT;
 						access = VkAccessFlagBits::VK_ACCESS_TRANSFER_READ_BIT;
@@ -88,7 +88,7 @@ namespace sh::render::vk
 			if (msaaBuffer != nullptr)
 			{
 				// MSAA 버퍼를 다른 용도로 쓸 일이 없을듯?
-				//if (barrier.curUsage != ImageUsage::Present)
+				//if (barrier.curUsage != ResourceUsage::Present)
 					//VulkanImageBuffer::BarrierCommand(cmd.GetCommandBuffer(), *msaaBuffer, srcLayout, dstLayout, srcStage, dstStage, srcAccess, dstAccess);
 			}
 		}

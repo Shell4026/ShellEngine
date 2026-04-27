@@ -17,7 +17,7 @@ namespace sh::render
 
 		renderTextures.clear();
 		for (auto& cpyData : cpyDatas)
-			renderTextures[cpyData.src] = ImageUsage::Src;
+			renderTextures[cpyData.src] = ResourceUsage::TransferSrc;
 	}
 	SH_RENDER_API void CopyPass::Record(CommandBuffer& cmd, const IRenderContext& ctx, const RenderTarget& renderData)
 	{

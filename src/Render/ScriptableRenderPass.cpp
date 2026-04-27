@@ -4,6 +4,7 @@
 #include "RenderTexture.h"
 
 #include "Core/Logger.h"
+#include "Core/Util.h"
 
 namespace sh::render
 {
@@ -28,36 +29,49 @@ namespace sh::render
 		if (renderData.drawables == nullptr)
 			return list;
 
-		for (auto drawable : *renderData.drawables)
+		std::vector<DrawList::RenderGroup>& groups = std::get<std::vector<DrawList::RenderGroup>>(list.renderData);
+
+		struct GroupKey
+		{
+			const Material* mat;
+			Mesh::Topology topology;
+			bool operator==(const GroupKey& other) const noexcept { return mat == other.mat && topology == other.topology; }
+		};
+		struct GroupKeyHash
+		{
+			std::size_t operator()(const GroupKey& k) const noexcept
+			{
+				return core::Util::CombineHash(std::hash<const Material*>{}(k.mat), std::hash<int>{}(static_cast<int>(k.topology)));
+			}
+		};
+		std::unordered_map<GroupKey, std::size_t, GroupKeyHash> groupIndex;
+		groupIndex.reserve(renderData.drawables->size());
+
+		for (Drawable* drawable : *renderData.drawables)
 		{
 			if (!core::IsValid(drawable) || !drawable->CheckAssetValid() || drawable->GetMaterial()->GetShader()->GetShaderPasses(passName) == nullptr)
 				continue;
 
-			const Material* mat = drawable->GetMaterial();
+			const Material* const mat = drawable->GetMaterial();
 			Mesh::Topology topology = drawable->GetTopology(core::ThreadType::Render);
 
-			DrawList::RenderGroup* renderGroup = nullptr;
-			for (auto& group : std::get<0>(list.renderData))
-			{
-				if (group.material == mat && group.topology == topology)
-				{
-					renderGroup = &group;
-					break;
-				}
-			}
-			if (renderGroup == nullptr)
+			GroupKey key{ mat, topology };
+			auto it = groupIndex.find(key);
+			if (it == groupIndex.end())
 			{
 				DrawList::RenderGroup group{};
 				group.material = mat;
 				group.topology = topology;
 				group.drawables.push_back(drawable);
 
-				std::get<0>(list.renderData).push_back(std::move(group));
+				groupIndex.emplace(key, groups.size());
+				groups.push_back(std::move(group));
 			}
 			else
 			{
-				renderGroup->drawables.push_back(drawable);
+				groups[it->second].drawables.push_back(drawable);
 			}
+			++list.drawableCount;
 		}
 		return list;
 	}
@@ -67,28 +81,13 @@ namespace sh::render
 	}
 	SH_RENDER_API auto ScriptableRenderPass::GetRenderCallCount() const -> uint32_t
 	{
-		uint32_t renderCallCount = drawList.drawCall.size();
-		if (drawList.renderData.index() == 0)
-		{
-			const auto& renderGroups = std::get<0>(drawList.renderData);
-			for (const auto& renderGroup : renderGroups)
-			{
-				renderCallCount += renderGroup.drawables.size();
-			}
-		}
-		else
-		{
-			const auto& renderItems = std::get<1>(drawList.renderData);
-			renderCallCount += renderItems.size();
-		}
-
-		return renderCallCount;
+		return static_cast<uint32_t>(drawList.drawCall.size()) + drawList.drawableCount;
 	}
 
 	void ScriptableRenderPass::CollectRenderImages(const RenderTarget& renderData, const DrawList& drawList)
 	{
 		renderTextures.clear();
-		renderTextures[renderData.target] = ImageUsage::ColorAttachment;
+		renderTextures[renderData.target] = ResourceUsage::ColorAttachment;
 
 		const auto collectFn =
 			[this](const Material* mat)
@@ -98,14 +97,14 @@ namespace sh::render
 					auto it = renderTextures.find(rt);
 					if (it != renderTextures.end())
 					{
-						if (it->second == ImageUsage::ColorAttachment)
+						if (it->second == ResourceUsage::ColorAttachment)
 						{
 							SH_ERROR_FORMAT("RenderTexture {} is used as ColorAttachment", it->first->GetName().ToString());
 							continue;
 						}
 					}
 					else
-						renderTextures[rt] = ImageUsage::SampledRead;
+						renderTextures[rt] = ResourceUsage::SampledRead;
 				}
 			};
 

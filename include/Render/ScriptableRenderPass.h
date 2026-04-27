@@ -53,7 +53,7 @@ namespace sh::render
 		SH_RENDER_API ScriptableRenderPass(const core::Name& passName, RenderQueue renderQueue);
 		SH_RENDER_API virtual ~ScriptableRenderPass() = default;
 
-		SH_RENDER_API auto GetRenderTextures() const -> const std::unordered_map<const RenderTexture*, ImageUsage>& { return renderTextures; }
+		SH_RENDER_API auto GetRenderTextures() const -> const std::unordered_map<const RenderTexture*, ResourceUsage>& { return renderTextures; }
 		SH_RENDER_API auto IsStoreImage() const -> bool { return bStoreImage; }
 	protected:
 		SH_RENDER_API virtual void Configure(const RenderTarget& renderData);
@@ -71,7 +71,7 @@ namespace sh::render
 		const RenderQueue renderQueue;
 	protected:
 		DrawList drawList;
-		std::unordered_map<const RenderTexture*, ImageUsage> renderTextures;
+		std::unordered_map<const RenderTexture*, ResourceUsage> renderTextures;
 	private:
 		bool bStoreImage = true;
 	};

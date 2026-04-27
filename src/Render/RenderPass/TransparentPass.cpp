@@ -32,6 +32,7 @@ namespace sh::render
 			item.drawable = drawable;
 
 			std::get<std::vector<DrawList::RenderItem>>(list.renderData).push_back(item);
+			++list.drawableCount;
 		}
 
 		const auto& camPos = renderData.camera->GetPos(core::ThreadType::Render);

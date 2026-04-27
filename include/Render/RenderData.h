@@ -39,23 +39,26 @@ namespace sh::render
 		std::variant<std::vector<RenderGroup>, std::vector<RenderItem>> renderData;
 		std::vector<std::function<void(CommandBuffer&)>> drawCall;
 
+		uint32_t drawableCount = 0;
+
 		bool bClearColor = true;
 		bool bClearDepth = true;
 	};
 
-	enum class ImageUsage
+	/// @brief 리소스(이미지/버퍼) 사용 의도. 배리어 계산의 입력으로 쓰임
+	enum class ResourceUsage
 	{
 		Undefined,
 		ColorAttachment,
 		SampledRead,
 		Present,
-		Src
+		TransferSrc
 	};
 
 	struct BarrierInfo
 	{
 		std::variant<const RenderTexture*, uint32_t> target; // uint32_t = 스왑체인
-		ImageUsage lastUsage;
-		ImageUsage curUsage;
+		ResourceUsage lastUsage;
+		ResourceUsage curUsage;
 	};
 }//namespace

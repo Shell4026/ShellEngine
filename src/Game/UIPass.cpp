@@ -20,7 +20,7 @@ namespace sh::game
 	{
 		ScriptableRenderPass::Configure(renderData);
 		if (viewportTexture != nullptr)
-			renderTextures[viewportTexture] = render::ImageUsage::SampledRead;
+			renderTextures[viewportTexture] = render::ResourceUsage::SampledRead;
 	}
 	SH_GAME_API auto UIPass::BuildDrawList(const render::RenderTarget& renderData) -> render::DrawList
 	{

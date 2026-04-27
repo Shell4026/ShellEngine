@@ -62,6 +62,7 @@ namespace sh::editor
 		renderItem.drawable = drawable;
 
 		std::get<1>(list.renderData).push_back(renderItem);
+		list.drawableCount = 1;
 
 		return list;
 	}
