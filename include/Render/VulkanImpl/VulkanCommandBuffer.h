@@ -44,6 +44,7 @@ namespace sh::render::vk
         SH_RENDER_API void End() override;
 
         SH_RENDER_API void Blit(RenderTexture& src, int x, int y, IBuffer& dst) override;
+        SH_RENDER_API void Dispatch(const ComputeShader& shader, uint32_t x, uint32_t y, uint32_t z) override;
 
         SH_RENDER_API auto ResetCommand(VkCommandBufferResetFlags flags = 0) -> VkResult;
 

@@ -27,6 +27,7 @@ namespace sh::render::vk
 	class VulkanCommandBuffer;
 	class VulkanDescriptorPool;
 	class VulkanPipelineManager;
+	class VulkanComputePipelineManager;
 	class VulkanQueueManager;
 	class VulkanRenderImpl;
 
@@ -41,8 +42,9 @@ namespace sh::render::vk
 
 		SH_RENDER_API auto GetRenderAPIType() const -> RenderAPI override { return RenderAPI::Vulkan; }
 
-		SH_RENDER_API auto AllocateCommandBuffer() -> CommandBuffer* override;
+		SH_RENDER_API auto AllocateCommandBuffer(bool bCompute) -> CommandBuffer* override;
 		SH_RENDER_API void DeallocateCommandBuffer(CommandBuffer& cmd) override;
+		SH_RENDER_API void SubmitCommand(CommandBuffer& cmd) override;
 
 		SH_RENDER_API void SetViewport(const glm::vec2& start, const glm::vec2& end) override;
 		SH_RENDER_API auto GetViewportStart() const -> const glm::vec2 & override;
@@ -72,6 +74,7 @@ namespace sh::render::vk
 		SH_RENDER_API auto GetDescriptorPool() const -> VulkanDescriptorPool& { return *descPool; }
 		SH_RENDER_API auto GetAllocator() const -> VmaAllocator { return allocator; }
 		SH_RENDER_API auto GetPipelineManager() const -> VulkanPipelineManager& { return *pipelineManager; }
+		SH_RENDER_API auto GetComputePipelineManager() const -> VulkanComputePipelineManager& { return *computePipelineManager; }
 		SH_RENDER_API auto GetEmptyDescriptorSetLayout() const -> VkDescriptorSetLayout { return emptyDescLayout; }
 		SH_RENDER_API auto GetEmptyDescriptorSet() const -> VkDescriptorSet { return emptyDescSet; }
 		SH_RENDER_API auto GetMaxSampleCount() const -> VkSampleCountFlagBits;
@@ -124,6 +127,7 @@ namespace sh::render::vk
 		std::unique_ptr<VulkanCommandBufferPool> cmdPool;
 		std::unique_ptr<VulkanDescriptorPool> descPool;
 		std::unique_ptr<VulkanPipelineManager> pipelineManager;
+		std::unique_ptr<VulkanComputePipelineManager> computePipelineManager;
 		std::unique_ptr<VulkanRenderImpl> renderImpl;
 
 		VkDescriptorSetLayout emptyDescLayout;

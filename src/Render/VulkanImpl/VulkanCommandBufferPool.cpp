@@ -4,8 +4,8 @@
 #include "Core/Logger.h"
 namespace sh::render::vk
 {
-	VulkanCommandBufferPool::VulkanCommandBufferPool(const VulkanContext& context, uint32_t graphicsQueueFamily, uint32_t transferQueueFamily) :
-		context(context), graphicsQueueFamily(graphicsQueueFamily), transferQueueFamily(transferQueueFamily)
+	VulkanCommandBufferPool::VulkanCommandBufferPool(const VulkanContext& context, uint32_t graphicsQueueFamily, uint32_t transferQueueFamily, uint32_t computeQueueFamily) :
+		context(context), graphicsQueueFamily(graphicsQueueFamily), transferQueueFamily(transferQueueFamily), computeQueueFamily(computeQueueFamily)
 	{
 
 	}
@@ -40,6 +40,8 @@ namespace sh::render::vk
 					return QueueType::Graphics;
 				if (qt == VK_QUEUE_TRANSFER_BIT)  
 					return QueueType::Transfer;
+				if (qt == VK_QUEUE_COMPUTE_BIT)
+					return QueueType::Compute;
 
 				SH_ERROR_FORMAT("Incorrect queueType: {}", string_VkQueueFlagBits(qt));
 				assert(false);
@@ -49,7 +51,7 @@ namespace sh::render::vk
 
 		// thread 데이터 찾기 (없으면 생성)
 		PerThreadData* td = nullptr;
-		for (auto& t : threadDatas)
+		for (PerThreadData& t : threadDatas)
 		{
 			if (t.id == thr) 
 			{ 
@@ -140,6 +142,8 @@ namespace sh::render::vk
 			poolInfo.queueFamilyIndex = graphicsQueueFamily;
 		else if (queueType == VkQueueFlagBits::VK_QUEUE_TRANSFER_BIT)
 			poolInfo.queueFamilyIndex = transferQueueFamily;
+		else if (queueType == VkQueueFlagBits::VK_QUEUE_COMPUTE_BIT)
+			poolInfo.queueFamilyIndex = computeQueueFamily;
 		else
 		{
 			assert(false);
@@ -148,7 +152,7 @@ namespace sh::render::vk
 		}
 
 		poolInfo.flags = VkCommandPoolCreateFlagBits::VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT; //명령 버퍼가 개별적으로 기록되도록 허용
-		auto result = vkCreateCommandPool(context.GetDevice(), &poolInfo, nullptr, &pool);
+		VkResult result = vkCreateCommandPool(context.GetDevice(), &poolInfo, nullptr, &pool);
 		assert(result == VkResult::VK_SUCCESS);
 		if (result != VkResult::VK_SUCCESS)
 		{

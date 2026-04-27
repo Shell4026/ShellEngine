@@ -6,6 +6,7 @@
 #include "VulkanCommandBuffer.h"
 #include "VulkanDescriptorPool.h"
 #include "VulkanPipelineManager.h"
+#include "VulkanComputePipelineManager.h"
 #include "VulkanRenderImpl.h"
 
 #include "Core/Util.h"
@@ -243,7 +244,8 @@ namespace sh::render::vk
 		cmdPool = std::make_unique<VulkanCommandBufferPool>(
 			*this, 
 			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Graphics), 
-			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Transfer));
+			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Transfer),
+			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Compute));
 	}
 	void VulkanContext::DestroyCommandPool()
 	{
@@ -327,7 +329,7 @@ namespace sh::render::vk
 		CreateEmptyDescriptor();
 
 		pipelineManager = std::make_unique<VulkanPipelineManager>(*this);
-
+		computePipelineManager = std::make_unique<VulkanComputePipelineManager>(*this);
 		renderImpl = std::make_unique<VulkanRenderImpl>(*this);
 	}
 	SH_RENDER_API void VulkanContext::Clear()
@@ -354,14 +356,24 @@ namespace sh::render::vk
 		gpus.clear();
 		DestroyInstance();
 	}
-	SH_RENDER_API auto VulkanContext::AllocateCommandBuffer() -> CommandBuffer*
+	SH_RENDER_API auto VulkanContext::AllocateCommandBuffer(bool bCompute) -> CommandBuffer*
 	{
-		auto cmd = GetCommandBufferPool().AllocateCommandBuffer(std::this_thread::get_id(), VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT);
+		VkQueueFlagBits flag = VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT;
+		if (bCompute)
+			flag = VkQueueFlagBits::VK_QUEUE_COMPUTE_BIT;
+		VulkanCommandBuffer* const cmd = GetCommandBufferPool().AllocateCommandBuffer(std::this_thread::get_id(), flag);
 		return cmd;
 	}
 	SH_RENDER_API void VulkanContext::DeallocateCommandBuffer(CommandBuffer& cmd)
 	{
 		GetCommandBufferPool().DeallocateCommandBuffer(static_cast<VulkanCommandBuffer&>(cmd));
+	}
+	SH_RENDER_API void VulkanContext::SubmitCommand(CommandBuffer& cmd)
+	{
+		VulkanCommandBuffer& vkCmd = static_cast<VulkanCommandBuffer&>(cmd);
+		VkFence fence = vkCmd.GetOrCreateFence();
+		GetQueueManager().Submit(VulkanQueueManager::Role::Compute, vkCmd, fence);
+		vkWaitForFences(device, 1, &fence, true, std::numeric_limits<uint64_t>::max());
 	}
 	SH_RENDER_API void VulkanContext::SetViewport(const glm::vec2& start, const glm::vec2& end)
 	{

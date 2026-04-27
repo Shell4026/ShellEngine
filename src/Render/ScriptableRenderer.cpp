@@ -1,9 +1,12 @@
 ﻿#include "ScriptableRenderer.h"
 #include "RenderTexture.h"
 #include "BufferFactory.h"
+#include "ComputeShader.h"
+#include "RenderPass/CopyPass.h"
 
 #include "Core/ThreadPool.h"
 #include "Core/ThreadSyncManager.h"
+#include "Core/Logger.h"
 
 #include <algorithm>
 namespace sh::render
@@ -15,6 +18,7 @@ namespace sh::render
 	{
 		cpyPass = std::make_unique<CopyPass>();
 	}
+	ScriptableRenderer::~ScriptableRenderer() = default;
 
 	SH_RENDER_API auto ScriptableRenderer::AddRenderPass(const core::Name& passName, RenderQueue renderQueue) -> ScriptableRenderPass&
 	{
@@ -31,6 +35,21 @@ namespace sh::render
 		data.y = y;
 
 		return syncDatas.emplace_back(std::move(data)).promise.get_future();
+	}
+
+	SH_RENDER_API void ScriptableRenderer::Dispatch(const ComputeShader& computeShader, uint32_t x, uint32_t y, uint32_t z)
+	{
+		CommandBuffer* const cmdPtr = ctx.AllocateCommandBuffer(true);
+		if (cmdPtr == nullptr)
+		{
+			SH_ERROR("Failed to allocate command buffer!");
+			return;
+		}
+		cmdPtr->Begin(true);
+		cmdPtr->Dispatch(computeShader, x, y, z);
+		cmdPtr->End();
+		ctx.SubmitCommand(*cmdPtr);
+		ctx.DeallocateCommandBuffer(*cmdPtr);
 	}
 
 	SH_RENDER_API void ScriptableRenderer::SyncDirty()
@@ -58,7 +77,7 @@ namespace sh::render
 
 	SH_RENDER_API void ScriptableRenderer::Setup(const RenderTarget& data)
 	{
-		for (auto& pass : allPasses)
+		for (const std::unique_ptr<ScriptableRenderPass>& pass : allPasses)
 			activePasses.push_back(pass.get());
 	}
 	SH_RENDER_API void ScriptableRenderer::Execute(const RenderTarget& data)
@@ -71,7 +90,7 @@ namespace sh::render
 			}
 		);
 
-		for (auto& pass : activePasses)
+		for (ScriptableRenderPass* pass : activePasses)
 		{
 			IRenderThrMethod<ScriptableRenderPass>::Configure(*pass, data);
 			renderCallCount += IRenderThrMethod<ScriptableRenderPass>::GetRenderCallCount(*pass);
@@ -94,7 +113,7 @@ namespace sh::render
 			futurePasses.push_back(core::ThreadPool::GetInstance()->AddTask(
 				[idx, pass, &ctx = ctx, &data, &barriers]() -> std::pair<ScriptableRenderPass*, CommandBuffer*>
 				{
-					CommandBuffer* cmd = ctx.AllocateCommandBuffer();
+					CommandBuffer* cmd = ctx.AllocateCommandBuffer(false);
 					cmd->Begin(true);
 					IRenderThrMethod<ScriptableRenderPass>::EmitBarrier(*pass, *cmd, ctx, barriers[idx]);
 					IRenderThrMethod<ScriptableRenderPass>::Record(*pass, *cmd, ctx, data);
@@ -134,7 +153,7 @@ namespace sh::render
 		rt.target = nullptr;
 		rt.drawables = nullptr;
 
-		CommandBuffer* cmd = ctx.AllocateCommandBuffer();
+		CommandBuffer* cmd = ctx.AllocateCommandBuffer(false);
 		cmd->Begin(true);
 		IRenderThrMethod<ScriptableRenderPass>::EmitBarrier(*cpyPass, *cmd, ctx, preBarriers);
 		IRenderThrMethod<ScriptableRenderPass>::Record(*cpyPass, *cmd, ctx, rt);

@@ -84,7 +84,7 @@ namespace sh::editor
 		std::unique_ptr<game::ShaderLoader> shaderLoader = std::make_unique<game::ShaderLoader>(&passBuilder);
 		shaderLoader->SetCachePath(projectPath / "temp");
 
-		std::unique_ptr<game::ComputeShaderLoader> computeShaderLoader = std::make_unique<game::ComputeShaderLoader>();
+		std::unique_ptr<game::ComputeShaderLoader> computeShaderLoader = std::make_unique<game::ComputeShaderLoader>(ctx);
 		computeShaderLoader->SetCachePath(projectPath / "temp");
 
 		assetLoaders.Clear();

@@ -23,8 +23,9 @@ namespace sh::render
 		virtual void Clear() = 0;
 		virtual auto GetRenderAPIType() const -> RenderAPI = 0;
 
-		virtual auto AllocateCommandBuffer() -> CommandBuffer* = 0;
+		virtual auto AllocateCommandBuffer(bool bCompute) -> CommandBuffer* = 0;
 		virtual void DeallocateCommandBuffer(CommandBuffer& cmd) = 0;
+		virtual void SubmitCommand(CommandBuffer& cmd) = 0;
 
 		virtual void SetViewport(const glm::vec2& start, const glm::vec2& end) = 0;
 		virtual auto GetViewportStart() const -> const glm::vec2& = 0;

@@ -17,6 +17,7 @@ namespace sh::render::vk
 		SH_RENDER_API ~VulkanDescriptorSet();
 
 		SH_RENDER_API void Create(const IRenderContext& context, const ShaderPass& shader, UniformStructLayout::Usage usage) override;
+		SH_RENDER_API void Create(const IRenderContext& context, const ComputeShader& shader) override;
 		SH_RENDER_API void Clear() override;
 		SH_RENDER_API void Link(uint32_t binding, const IBuffer& buffer, std::size_t bufferSize) override;
 		SH_RENDER_API void Link(uint32_t binding, const Texture& texture) override;

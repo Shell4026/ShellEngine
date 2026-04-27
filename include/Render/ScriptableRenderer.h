@@ -5,7 +5,6 @@
 #include "ScriptableRenderPass.h"
 #include "IRenderThrMethod.h"
 #include "IBuffer.h"
-#include "RenderPass/CopyPass.h"
 
 #include "Core/Util.h"
 #include "Core/ISyncable.h"
@@ -16,6 +15,9 @@
 #include <future>
 namespace sh::render
 {
+	class CopyPass;
+	class ComputeShader;
+
 	template<>
 	struct IRenderThrMethod<class ScriptableRenderer>
 	{
@@ -40,11 +42,12 @@ namespace sh::render
 		};
 	public:
 		SH_RENDER_API ScriptableRenderer(IRenderContext& ctx);
-		SH_RENDER_API virtual ~ScriptableRenderer() = default;
+		SH_RENDER_API virtual ~ScriptableRenderer();
 
 		SH_RENDER_API auto AddRenderPass(const core::Name& passName, RenderQueue renderQueue) -> ScriptableRenderPass&;
 
 		SH_RENDER_API auto ReadRenderTextureAsync(RenderTexture& rt, int x, int y) -> std::future<std::unique_ptr<IBuffer>>;
+		SH_RENDER_API void Dispatch(const ComputeShader& computeShader, uint32_t x, uint32_t y, uint32_t z);
 
 		SH_RENDER_API auto GetSubmittedCommands() const -> const std::vector<SubmittedCommand>& { return submittedCmds; }
 
@@ -78,7 +81,6 @@ namespace sh::render
 		std::vector<SubmittedCommand> submittedCmds;
 
 		std::unique_ptr<CopyPass> cpyPass;
-
 		struct SyncData
 		{
 			RenderTexture* src;

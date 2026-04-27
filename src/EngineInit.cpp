@@ -45,6 +45,7 @@
 #include "Game/Asset/FontLoader.h"
 #include "Game/Asset/SoundLoader.h"
 #include "Game/Asset/ScriptableObjectLoader.h"
+#include "Game/Asset/ComputeShaderLoader.h"
 
 #include "Game/Asset/TextureAsset.h"
 #include "Game/Asset/MaterialAsset.h"
@@ -58,6 +59,7 @@
 #include "Game/Asset/FontAsset.h"
 #include "Game/Asset/SoundAsset.h"
 #include "Game/Asset/ScriptableObjectAsset.h"
+#include "Game/Asset/ComputeShaderAsset.h"
 #endif
 
 namespace sh
@@ -236,6 +238,7 @@ namespace sh
 		assetLoaderFactory->RegisterLoader(game::FontAsset::ASSET_NAME, std::make_unique<game::FontLoader>());
 		assetLoaderFactory->RegisterLoader(game::SoundAsset::ASSET_NAME, std::make_unique<game::SoundLoader>());
 		assetLoaderFactory->RegisterLoader(game::ScriptableObjectAsset::ASSET_NAME, std::make_unique<game::ScriptableObjectLoader>());
+		assetLoaderFactory->RegisterLoader(game::ComputeShaderAsset::ASSET_NAME, std::make_unique<game::ComputeShaderLoader>(*renderer->GetContext()));
 
 		core::AssetResolverRegistry::SetResolver(
 			[this](const core::UUID& uuid) -> core::SObject*

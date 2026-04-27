@@ -17,7 +17,7 @@ namespace sh::render::vk
 	class VulkanCommandBufferPool
 	{
 	public:
-		SH_RENDER_API VulkanCommandBufferPool(const VulkanContext& context, uint32_t graphicsQueueFamily, uint32_t transferQueueFamily);
+		SH_RENDER_API VulkanCommandBufferPool(const VulkanContext& context, uint32_t graphicsQueueFamily, uint32_t transferQueueFamily, uint32_t computeQueueFamily);
 		SH_RENDER_API ~VulkanCommandBufferPool();
 
 		/// @brief 해당 스레드에서 큐 타입에 맞는 커맨드 버퍼를 할당 받는다.
@@ -34,22 +34,16 @@ namespace sh::render::vk
 		const VulkanContext& context;
 		const uint32_t graphicsQueueFamily;
 		const uint32_t transferQueueFamily;
-
+		const uint32_t computeQueueFamily;
 		enum QueueType
 		{
 			Graphics = 0,
-			Transfer = 1
+			Transfer = 1,
+			Compute = 2
 		};
 
 		struct PerThreadData
 		{
-			PerThreadData() = default;
-			PerThreadData(PerThreadData&& other) noexcept :
-				id(other.id)
-			{
-				for (int i = 0; i < commands.size(); ++i)
-					commands[i] = std::move(other.commands[i]);
-			}
 			struct Command
 			{
 				Command() = default;
@@ -68,7 +62,7 @@ namespace sh::render::vk
 			};
 
 			std::thread::id id;
-			std::array<Command, 2> commands;
+			std::array<Command, 3> commands;
 		};
 		
 		struct AllocData

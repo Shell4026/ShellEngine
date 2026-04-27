@@ -8,12 +8,17 @@
 
 #include <filesystem>
 
+namespace sh::render
+{
+	class IRenderContext;
+}
 namespace sh::game
 {
+	
 	class ComputeShaderLoader : public core::IAssetLoader
 	{
 	public:
-		SH_GAME_API ComputeShaderLoader();
+		SH_GAME_API ComputeShaderLoader(const render::IRenderContext& ctx);
 		SH_GAME_API ~ComputeShaderLoader();
 
 		SH_GAME_API void SetCachePath(const std::filesystem::path& path) { cachePath = path; }
@@ -25,6 +30,7 @@ namespace sh::game
 		SH_GAME_API auto GetAssetName() const -> const char* override { return ASSET_NAME; }
 	private:
 		static constexpr const char* ASSET_NAME = "comp";
+		const render::IRenderContext& ctx;
 
 		std::filesystem::path cachePath;
 	};

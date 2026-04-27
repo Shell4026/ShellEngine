@@ -3,7 +3,8 @@
 #include "VulkanCommandBuffer.h"
 
 #include <cassert>
-#include <unordered_map>
+#include <map>
+#include <algorithm>
 
 namespace sh::render::vk
 {
@@ -20,22 +21,25 @@ namespace sh::render::vk
         graphicsQueue(other.graphicsQueue),
         presentQueue(other.presentQueue),
         transferQueue(other.transferQueue),
+        computeQueue(other.computeQueue),
         graphicsPriorities(std::move(other.graphicsPriorities)),
         presentPriorities(std::move(other.presentPriorities)),
         transferPriorities(std::move(other.transferPriorities)),
+        computePriorities(std::move(other.computePriorities)),
         bFamiliesReady(other.bFamiliesReady),
         bQueuesReady(other.bQueuesReady)
     {
         other.graphicsQueue = VK_NULL_HANDLE;
         other.presentQueue = VK_NULL_HANDLE;
         other.transferQueue = VK_NULL_HANDLE;
+        other.computeQueue = VK_NULL_HANDLE;
         other.bFamiliesReady = false;
         other.bQueuesReady = false;
 
-        // mutex 포인터는 move 이후 재결합이 필요 → FetchQueues에서 재설정하게 둔다
         graphicsLock = &graphicsMtx;
         presentLock = &presentMtx;
         transferLock = &transferMtx;
+        computeLock = &computeMtx;
     }
     SH_RENDER_API void VulkanQueueManager::QueryFamilies(VkSurfaceKHR surface)
     {
@@ -51,9 +55,14 @@ namespace sh::render::vk
         if (!t.has_value()) 
             throw std::runtime_error("No transfer queue family found");
 
+        auto c = PickComputeFamily();
+        if (!c.has_value())
+            throw std::runtime_error("No compute queue family found");
+
         selection.graphics = *g;
         selection.present = *p;
         selection.transfer = *t;
+        selection.compute = *c;
 
         ComputeRequestedCountsAndIndices();
 
@@ -75,7 +84,7 @@ namespace sh::render::vk
         auto addReqFn = 
             [&](const Family& family)
             {
-                for (auto& r : reqs)
+                for (Req& r : reqs)
                     if (r.family == family.index)
                     { 
                         r.count = std::max(r.count, family.requestedCount);
@@ -87,6 +96,7 @@ namespace sh::render::vk
         addReqFn(selection.graphics);
         addReqFn(selection.present);
         addReqFn(selection.transfer);
+        addReqFn(selection.compute);
 
         std::vector<VkDeviceQueueCreateInfo> infos;
         infos.reserve(reqs.size());
@@ -94,28 +104,23 @@ namespace sh::render::vk
         graphicsPriorities.clear();
         presentPriorities.clear();
         transferPriorities.clear();
+        computePriorities.clear();
 
-        struct Blob 
-        { 
-            uint32_t family; 
-            std::vector<float>* prios; 
-        };
-        std::vector<Blob> blobs;
-        blobs.reserve(reqs.size());
-
-        auto pickStorageFn = 
+        auto pickPriorityFn = 
             [&](uint32_t family) -> std::vector<float>&
             {
                 if (family == selection.graphics.index) 
                     return graphicsPriorities;
                 if (family == selection.present.index)  
                     return presentPriorities;
-                return transferPriorities;
+                if (family == selection.transfer.index)
+                    return transferPriorities;
+                return computePriorities;
             };
 
-        for (auto& req : reqs)
+        for (const Req& req : reqs)
         {
-            auto& prios = pickStorageFn(req.family);
+            auto& prios = pickPriorityFn(req.family);
             prios.assign(req.count, 1.0f);
 
             VkDeviceQueueCreateInfo q{};
@@ -139,18 +144,26 @@ namespace sh::render::vk
         vkGetDeviceQueue(device, selection.graphics.index, selection.graphicsQIndex, &graphicsQueue);
         vkGetDeviceQueue(device, selection.present.index, selection.presentQIndex, &presentQueue);
         vkGetDeviceQueue(device, selection.transfer.index, selection.transferQIndex, &transferQueue);
+        vkGetDeviceQueue(device, selection.compute.index, selection.computeQIndex, &computeQueue);
 
         // 동일 VkQueue면 락도 공유
         graphicsLock = &graphicsMtx;
         presentLock = &presentMtx;
         transferLock = &transferMtx;
+        computeLock = &computeMtx;
 
         if (presentQueue == graphicsQueue)
             presentLock = graphicsLock;
+
         if (transferQueue == graphicsQueue)
             transferLock = graphicsLock;
         if (transferQueue == presentQueue)
             transferLock = presentLock;
+
+        if (computeQueue == graphicsQueue) 
+            computeLock = graphicsLock;
+        if (computeQueue == transferQueue)
+            computeLock = transferLock;
 
         bQueuesReady = true;
     }
@@ -166,6 +179,8 @@ namespace sh::render::vk
             return presentQueue;
         case Role::Transfer: 
             return transferQueue;
+        case Role::Compute:
+            return computeQueue;
         }
         return VK_NULL_HANDLE;
     }
@@ -179,6 +194,8 @@ namespace sh::render::vk
             return selection.present.index;
         case Role::Transfer: 
             return selection.transfer.index;
+        case Role::Compute:
+            return selection.compute.index;
         }
         return UINT32_MAX;
     }
@@ -204,7 +221,7 @@ namespace sh::render::vk
 
         bool bHasTimeline = false;
 
-        for (auto& wait : waits)
+        for (const VulkanCommandBuffer::WaitSemaphore& wait : waits)
         {
             waitSems.push_back(wait.semaphore);
             waitStages.push_back(wait.stageMask);
@@ -219,7 +236,7 @@ namespace sh::render::vk
         signalSems.reserve(signals.size());
         signalValues.reserve(signals.size());
 
-        for (auto& signal : signals)
+        for (const VulkanCommandBuffer::SignalSemaphore& signal : signals)
         {
             signalSems.push_back(signal.semaphore);
             signalValues.push_back(signal.value);
@@ -247,7 +264,7 @@ namespace sh::render::vk
         si.signalSemaphoreCount = (uint32_t)signalSems.size();
         si.pSignalSemaphores = signalSems.empty() ? nullptr : signalSems.data();
 
-        std::mutex* muPtr = GetMutexForRole(role);
+        std::mutex* const muPtr = GetMutexForRole(role);
         std::lock_guard<std::mutex> lock(*muPtr);
 
         VkResult result = vkQueueSubmit(q, 1, &si, fence);
@@ -315,10 +332,10 @@ namespace sh::render::vk
     }
     auto VulkanQueueManager::PickTransferFamily(uint32_t avoidFamily) const -> std::optional<VulkanQueueManager::Family>
     {
-        // 전용 transfer (TRANSFER 있고 GRAPHICS/COMPUTE 없는 패밀리) 우선
+        // 전용 transfer 패밀리 우선
         for (int i = 0; i < props.size(); ++i)
         {
-            const auto& p = props[i];
+            const VkQueueFamilyProperties& p = props[i];
             if (p.queueCount == 0) 
                 continue;
             const bool hasTransfer = (p.queueFlags & VkQueueFlagBits::VK_QUEUE_TRANSFER_BIT) != 0;
@@ -336,7 +353,7 @@ namespace sh::render::vk
         // 그래픽과 다른 transfer 가능 패밀리 선호
         for (int i = 0; i < props.size(); ++i)
         {
-            const auto& p = props[i];
+            const VkQueueFamilyProperties& p = props[i];
             if (p.queueCount == 0) 
                 continue;
             if (!(p.queueFlags & VkQueueFlagBits::VK_QUEUE_TRANSFER_BIT)) 
@@ -350,7 +367,7 @@ namespace sh::render::vk
             return fam;
         }
 
-        // 일치하는 게 하나도 없는 경우 - 그래픽 패밀리(대부분 transfer 포함)
+        // 일치하는 게 하나도 없는 경우 그래픽 패밀리(대부분 transfer 포함)
         if (avoidFamily != UINT32_MAX)
         {
             const auto& p = props[avoidFamily];
@@ -365,62 +382,76 @@ namespace sh::render::vk
 
         return {};
     }
+    auto VulkanQueueManager::PickComputeFamily() const -> std::optional<Family>
+    {
+        // Compute전용 큐 패밀리 우선
+        // 메모) Vulkan 스펙상 GRAPHICS나 COMPUTE 비트가 켜진 패밀리는 TRANSFER 작업을 반드시 지원
+        for (int i = 0; i < props.size(); ++i)
+        {
+            const VkQueueFamilyProperties& p = props[i];
+            if (p.queueCount == 0)
+                continue;
+            const bool hasGraphics = (p.queueFlags & VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT) != 0;
+            const bool hasCompute = (p.queueFlags & VkQueueFlagBits::VK_QUEUE_COMPUTE_BIT) != 0;
+            if (hasCompute && !hasGraphics)
+            {
+                Family fam{};
+                fam.index = i;
+                fam.availableCount = p.queueCount;
+                return fam;
+            }
+        }
+
+        for (int i = 0; i < props.size(); ++i)
+        {
+            const VkQueueFamilyProperties& p = props[i];
+            if (p.queueCount == 0)
+                continue;
+            if (p.queueFlags & VkQueueFlagBits::VK_QUEUE_COMPUTE_BIT)
+            {
+                Family fam{};
+                fam.index = i;
+                fam.availableCount = p.queueCount;
+                return fam;
+            }
+        }
+        return {};
+    }
     void VulkanQueueManager::ComputeRequestedCountsAndIndices()
     {
-        selection.graphics.requestedCount = 1;
-        selection.present.requestedCount = 1;
-        selection.transfer.requestedCount = 1;
-
-        // 같은 패밀리 공유 시, 가능한 한 큐 인덱스를 분리해서 받도록 요청 개수 증가
-        if (selection.present.index == selection.graphics.index)
-            selection.graphics.requestedCount += 1;
-
-        if (selection.transfer.index == selection.graphics.index)
-            selection.graphics.requestedCount += 1;
-
-        if (selection.transfer.index == selection.present.index && selection.transfer.index != selection.graphics.index)
-            selection.present.requestedCount += 1;
-
-        selection.graphics.requestedCount = ClampRequested(selection.graphics.requestedCount, selection.graphics.availableCount);
-        selection.present.requestedCount = ClampRequested(selection.present.requestedCount, selection.present.availableCount);
-        selection.transfer.requestedCount = ClampRequested(selection.transfer.requestedCount, selection.transfer.availableCount);
-
-        // 역할별 queue index 결정
-        selection.graphicsQIndex = 0;
-
-        // present
-        if (selection.present.index == selection.graphics.index)
+        // 역할을 우선순위 순으로 처리하며 같은 패밀리 안에서 다음 큐 인덱스를 발급한다.
+        // 패밀리 큐가 모자라면 0번으로 fallback (= 같은 VkQueue 공유, lock도 공유됨).
+        struct RoleSlot
         {
-            selection.presentQIndex = (selection.graphics.requestedCount >= 2) ? 1 : 0;
-        }
-        else
+            Family* family;
+            uint32_t* qIndex;
+        };
+        const RoleSlot slots[] =
         {
-            selection.presentQIndex = 0;
-        }
+            { &selection.graphics, &selection.graphicsQIndex },
+            { &selection.present,&selection.presentQIndex },
+            { &selection.transfer, &selection.transferQIndex },
+            { &selection.compute, &selection.computeQIndex },
+        };
 
-        // transfer
-        if (selection.transfer.index == selection.graphics.index)
+        std::map<uint32_t, uint32_t> nextIndexInFamily;
+
+        for (const RoleSlot& slot : slots)
         {
-            // graphics/present가 이미 0/1을 썼을 가능성이 있으니 가능한 인덱스를 고름
-            uint32_t want = 1;
-            if (selection.present.index == selection.graphics.index && selection.presentQIndex == 1)
-                want = 2;
-            selection.transferQIndex = (selection.graphics.requestedCount >= (want + 1)) ? want : 0;
+            Family& fam = *slot.family;
+            const uint32_t want = nextIndexInFamily[fam.index]; // 0부터 시작
+            const uint32_t needCount = want + 1;
+
+            fam.requestedCount = std::max(fam.requestedCount, needCount);
+            fam.requestedCount = std::clamp(fam.requestedCount, 0u, fam.availableCount);
+
+            // 요청한 만큼 못 받았으면 0번으로 fallback
+            const bool granted = fam.requestedCount >= needCount;
+            *slot.qIndex = granted ? want : 0;
+
+            if (granted)
+                nextIndexInFamily[fam.index] = want + 1;
         }
-        else if (selection.transfer.index == selection.present.index)
-        {
-            selection.transferQIndex = (selection.present.requestedCount >= 2) ? 1 : 0;
-        }
-        else
-        {
-            selection.transferQIndex = 0;
-        }
-    }
-    uint32_t VulkanQueueManager::ClampRequested(uint32_t want, uint32_t avail) const
-    {
-        if (avail == 0) 
-            return 0;
-        return (want > avail) ? avail : want;
     }
     auto VulkanQueueManager::GetMutexForRole(Role role) const -> std::mutex*
     {
@@ -432,6 +463,8 @@ namespace sh::render::vk
             return presentLock;
         case Role::Transfer: 
             return transferLock;
+        case Role::Compute:
+            return computeLock;
         }
         return graphicsLock;
     }

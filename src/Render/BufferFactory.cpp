@@ -46,8 +46,20 @@ namespace sh::render
 	{
 		if (context.GetRenderAPIType() == RenderAPI::Vulkan)
 		{
-			auto ptr = std::make_unique<vk::VulkanDescriptorSet>();
+			std::unique_ptr<vk::VulkanDescriptorSet> ptr = std::make_unique<vk::VulkanDescriptorSet>();
 			ptr->Create(context, shader, usage);
+			return ptr;
+		}
+		else
+			assert(false);
+		return nullptr;
+	}
+	SH_RENDER_API auto BufferFactory::CreateShaderBinding(const IRenderContext& context, const ComputeShader& shader) -> std::unique_ptr<IShaderBinding>
+	{
+		if (context.GetRenderAPIType() == RenderAPI::Vulkan)
+		{
+			std::unique_ptr<vk::VulkanDescriptorSet> ptr = std::make_unique<vk::VulkanDescriptorSet>();
+			ptr->Create(context, shader);
 			return ptr;
 		}
 		else

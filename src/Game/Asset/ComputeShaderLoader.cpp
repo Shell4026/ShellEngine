@@ -31,7 +31,8 @@ namespace sh::game
 		return result;
 	}
 
-	ComputeShaderLoader::ComputeShaderLoader()
+	ComputeShaderLoader::ComputeShaderLoader(const render::IRenderContext& ctx) :
+		ctx(ctx)
 	{
 		cachePath = std::filesystem::current_path() / "cache";
 		if (!std::filesystem::exists(cachePath))
@@ -118,7 +119,7 @@ namespace sh::game
 		}
 		csCI.spirv = std::move(spirvOpt.value());
 
-		render::ComputeShader* const shader = core::SObject::Create<render::ComputeShader>(std::move(csCI));
+		render::ComputeShader* const shader = core::SObject::Create<render::ComputeShader>(ctx, std::move(csCI));
 		return shader;
 	}
 
@@ -153,7 +154,7 @@ namespace sh::game
 			oldShaderPtr->Deserialize(shaderObjJson);
 			return oldShaderPtr;
 		}
-		render::ComputeShader* const shader = core::SObject::Create<render::ComputeShader>(std::move(csCI));
+		render::ComputeShader* const shader = core::SObject::Create<render::ComputeShader>(ctx, std::move(csCI));
 		shader->Deserialize(shaderObjJson);
 
 		return shader;

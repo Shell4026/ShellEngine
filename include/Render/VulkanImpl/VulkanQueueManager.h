@@ -15,7 +15,7 @@ namespace sh::render::vk
     class VulkanQueueManager : public core::INonCopyable
     {
     public:
-        enum class Role { Graphics, Present, Transfer };
+        enum class Role { Graphics, Present, Transfer, Compute };
 
         struct Family
         {
@@ -29,11 +29,13 @@ namespace sh::render::vk
             Family graphics;
             Family present;
             Family transfer;
+            Family compute;
 
             // 역할별 queue index(패밀리 내부 인덱스)
             uint32_t graphicsQIndex = 0;
             uint32_t presentQIndex = 0;
             uint32_t transferQIndex = 0;
+            uint32_t computeQIndex = 0;
         };
 
     public:
@@ -56,12 +58,11 @@ namespace sh::render::vk
         auto PickGraphicsFamily() const -> std::optional<Family>;
         auto PickPresentFamily(VkSurfaceKHR surface, uint32_t preferFamily) const -> std::optional<Family>;
         auto PickTransferFamily(uint32_t avoidFamily) const -> std::optional<Family>;
+        auto PickComputeFamily() const -> std::optional<Family>;
 
         void ComputeRequestedCountsAndIndices();
-        auto ClampRequested(uint32_t want, uint32_t avail) const ->uint32_t;
 
         auto GetMutexForRole(Role role) const -> std::mutex*;
-
     private:
         const VulkanContext& ctx;
 
@@ -71,20 +72,23 @@ namespace sh::render::vk
         VkQueue graphicsQueue = VK_NULL_HANDLE;
         VkQueue presentQueue = VK_NULL_HANDLE;
         VkQueue transferQueue = VK_NULL_HANDLE;
+        VkQueue computeQueue = VK_NULL_HANDLE;
 
         // 동일 VkQueue를 공유하면 동일 mutex를 공유하도록 포인터로 묶는다
         mutable std::mutex graphicsMtx;
         mutable std::mutex presentMtx;
         mutable std::mutex transferMtx;
+        mutable std::mutex computeMtx;
 
         mutable std::mutex* graphicsLock = &graphicsMtx;
         mutable std::mutex* presentLock = &presentMtx;
         mutable std::mutex* transferLock = &transferMtx;
+        mutable std::mutex* computeLock = &computeMtx;
 
-        // BuildQueueCreateInfos에서 사용하는 우선순위 배열 (가변 길이)
         std::vector<float> graphicsPriorities;
         std::vector<float> presentPriorities;
         std::vector<float> transferPriorities;
+        std::vector<float> computePriorities;
 
         bool bFamiliesReady = false;
         bool bQueuesReady = false;

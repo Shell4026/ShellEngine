@@ -89,7 +89,6 @@ namespace sh::render
 		SH_RENDER_API void Deserialize(const core::Json& json) override;
 	protected:
 		ShaderPass(const ShaderAST::PassNode& passNode, ShaderType type);
-		ShaderPass(const ShaderPass& other);
 		ShaderPass(ShaderPass&& other) noexcept;
 	private:
 		void AddUniformLayout(ShaderStage stage, const UniformStructLayout& layout);

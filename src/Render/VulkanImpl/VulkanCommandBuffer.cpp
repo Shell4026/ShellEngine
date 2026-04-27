@@ -1,8 +1,12 @@
 ﻿#include "VulkanCommandBuffer.h"
 #include "VulkanContext.h"
 #include "VulkanImageBuffer.h"
-#include "RenderTexture.h"
 #include "VulkanBuffer.h"
+#include "VulkanDescriptorSet.h"
+#include "VulkanComputePipeline.h"
+#include "VulkanComputePipelineManager.h"
+#include "Render/RenderTexture.h"
+#include "Render/ComputeShader.h"
 
 #include "Core/Logger.h"
 
@@ -50,6 +54,19 @@ namespace sh::render::vk
         cpy.imageExtent = { 1, 1, 1 };
 
         vkCmdCopyImageToBuffer(this->buffer, imgBuffer.GetImage(), VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL, buffer.GetBuffer(), 1, &cpy);
+    }
+
+    SH_RENDER_API void VulkanCommandBuffer::Dispatch(const ComputeShader& shader, uint32_t x, uint32_t y, uint32_t z)
+    {
+        const VulkanDescriptorSet* const descSet = static_cast<VulkanDescriptorSet*>(shader.GetShaderBinding());
+        if (descSet == nullptr)
+            return;
+        const VulkanComputePipeline& pipeline = context.GetComputePipelineManager().GetOrCreatePipeline(shader);
+        VkDescriptorSet vkDescriptorSet = descSet->GetVkDescriptorSet();
+
+        vkCmdBindPipeline(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.GetPipeline());
+        vkCmdBindDescriptorSets(buffer, VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_COMPUTE, pipeline.GetPipelineLayout(), 0, 1, &vkDescriptorSet, 0, nullptr);
+        vkCmdDispatch(buffer, x, y, z);
     }
 
     SH_RENDER_API auto VulkanCommandBuffer::Create(VkCommandPool pool, VkCommandBufferLevel level) -> VkResult
@@ -112,6 +129,10 @@ namespace sh::render::vk
     {
         waitSemaphores.clear();
         signalSemaphores.clear();
+        if (fence != VK_NULL_HANDLE)
+        {
+            vkResetFences(context.GetDevice(), 1, &fence);
+        }
     }
     SH_RENDER_API void VulkanCommandBuffer::SetWaitSemaphores(const std::vector<WaitSemaphore>& waits)
     {

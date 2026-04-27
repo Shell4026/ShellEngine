@@ -4,6 +4,9 @@
 #include "VulkanBuffer.h"
 #include "VulkanImageBuffer.h"
 #include "VulkanDescriptorPool.h"
+#include "VulkanComputePipelineManager.h"
+#include "VulkanComputePipeline.h"
+#include "ComputeShader.h"
 
 #include <mutex>
 namespace sh::render::vk
@@ -45,6 +48,25 @@ namespace sh::render::vk
 		const VkDescriptorSetLayout descLayout = vkShader.GetDescriptorSetLayout(set);
 		if (descLayout != VK_NULL_HANDLE)
 			descSet = this->context->GetDescriptorPool().AllocateDescriptorSet(descLayout);
+	}
+	SH_RENDER_API void VulkanDescriptorSet::Create(const IRenderContext& ctx, const ComputeShader& shader)
+	{
+		Clear();
+		context = &static_cast<const VulkanContext&>(ctx);
+		set = 0;
+		const VulkanComputePipeline& pipeline = context->GetComputePipelineManager().GetOrCreatePipeline(shader);
+		
+		const VkDescriptorSetLayout descLayout = pipeline.GetDescriptorSetLayout(set);
+		if (descLayout != VK_NULL_HANDLE)
+			descSet = this->context->GetDescriptorPool().AllocateDescriptorSet(descLayout);
+
+		for (const VulkanComputePipeline::SetLayout& setLayout : pipeline.GetSetLayouts())
+		{
+			if (set != setLayout.set)
+				continue;
+			for (const auto& [binding, layoutBinding] : setLayout.descriptorSetLayoutBindings)
+				descriptorTypes[binding] = layoutBinding.descriptorType;
+		}
 	}
 	void VulkanDescriptorSet::Clear()
 	{
