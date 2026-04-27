@@ -42,7 +42,7 @@ namespace sh::render
 
 		return nullptr;
 	}
-	auto BufferFactory::CreateUniformBuffer(const IRenderContext& context, const ShaderPass& shader, UniformStructLayout::Usage usage) -> std::unique_ptr<IUniformBuffer>
+	auto BufferFactory::CreateShaderBinding(const IRenderContext& context, const ShaderPass& shader, UniformStructLayout::Usage usage) -> std::unique_ptr<IShaderBinding>
 	{
 		if (context.GetRenderAPIType() == RenderAPI::Vulkan)
 		{

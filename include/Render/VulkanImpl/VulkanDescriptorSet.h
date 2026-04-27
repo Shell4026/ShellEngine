@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "../Export.h"
 #include "VulkanConfig.h"
-#include "../IUniformBuffer.h"
+#include "../IShaderBinding.h"
 
 #include <vector>
 namespace sh::render::vk
@@ -9,7 +9,7 @@ namespace sh::render::vk
 	class VulkanContext;
 
 	/// @brief 디스크립터 셋을 추상화한 클래스
-	class VulkanDescriptorSet : public IUniformBuffer
+	class VulkanDescriptorSet : public IShaderBinding
 	{
 	public:
 		SH_RENDER_API VulkanDescriptorSet();

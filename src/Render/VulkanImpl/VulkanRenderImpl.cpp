@@ -212,7 +212,7 @@ namespace sh::render::vk
 	{
 		// 카메라 데이터는 다이나믹 디스크립터셋
 		VulkanDescriptorSet* const cameraUBO = static_cast<VulkanDescriptorSet*>(
-			mat.GetMaterialData().GetUniformBuffer(pass, UniformStructLayout::Usage::Camera));
+			mat.GetMaterialData().GetShaderBinding(pass, UniformStructLayout::Usage::Camera));
 
 		VkDescriptorSet cameraSet = cameraUBO ? cameraUBO->GetVkDescriptorSet() : ctx.GetEmptyDescriptorSet();
 		uint32_t dynamicCount = cameraUBO ? 1 : 0;
@@ -225,7 +225,7 @@ namespace sh::render::vk
 	void VulkanRenderImpl::BindMaterialSet(VulkanCommandBuffer& cmd, VkPipelineLayout layout, const ShaderPass& pass, const Material& mat) const
 	{
 		VulkanDescriptorSet* const materialUniformBuffer = static_cast<VulkanDescriptorSet*>(
-			mat.GetMaterialData().GetUniformBuffer(pass, UniformStructLayout::Usage::Material));
+			mat.GetMaterialData().GetShaderBinding(pass, UniformStructLayout::Usage::Material));
 
 		VkDescriptorSet materialDescriptorSet = materialUniformBuffer ? materialUniformBuffer->GetVkDescriptorSet() : ctx.GetEmptyDescriptorSet();
 
@@ -237,7 +237,7 @@ namespace sh::render::vk
 	void VulkanRenderImpl::BindObjectSet(VulkanCommandBuffer& cmd, VkPipelineLayout layout, const ShaderPass& pass, Drawable& drawable) const
 	{
 		VulkanDescriptorSet* const objectUniformBuffer = static_cast<VulkanDescriptorSet*>(
-			drawable.GetMaterialData().GetUniformBuffer(pass, UniformStructLayout::Usage::Object));
+			drawable.GetMaterialData().GetShaderBinding(pass, UniformStructLayout::Usage::Object));
 
 		VkDescriptorSet objectDescriptorSet = objectUniformBuffer ? objectUniformBuffer->GetVkDescriptorSet() : ctx.GetEmptyDescriptorSet();
 

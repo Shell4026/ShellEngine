@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 #include "Export.h"
 #include "UniformStructLayout.h"
 
@@ -12,10 +12,10 @@ namespace sh::render
 	class Texture;
 	class IBuffer;
 
-	class IUniformBuffer : public core::INonCopyable
+	class IShaderBinding : public core::INonCopyable
 	{
 	public:
-		SH_RENDER_API virtual ~IUniformBuffer() = default;
+		SH_RENDER_API virtual ~IShaderBinding() = default;
 
 		SH_RENDER_API virtual void Create(const IRenderContext& context, const ShaderPass& shader, UniformStructLayout::Usage usage) = 0;
 		SH_RENDER_API virtual void Clear() = 0;

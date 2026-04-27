@@ -291,7 +291,7 @@ namespace sh::game
 					}
 				}
 				if (!isSampler)
-					drawable->GetMaterialData().SetUniformData(*passPtr, layoutPtr->usage, layoutPtr->binding, std::move(data));
+					drawable->GetMaterialData().SetBindingData(*passPtr, layoutPtr->usage, layoutPtr->binding, std::move(data));
 			}
 		}
 	}
@@ -462,7 +462,7 @@ namespace sh::game
 				if (pass.IsPendingKill() || pass.GetLightingBinding() == -1)
 					continue;
 
-				drawable.GetMaterialData().SetUniformData(pass, render::UniformStructLayout::Usage::Object, pass.GetLightingBinding(), &lightStruct, sizeof(Light));
+				drawable.GetMaterialData().SetBindingData(pass, render::UniformStructLayout::Usage::Object, pass.GetLightingBinding(), &lightStruct, sizeof(Light));
 			}
 		}
 	}

@@ -235,7 +235,7 @@ namespace sh::render
 				}
 			}
 			if (!isSampler)
-				materialData->SetUniformData(*pass, uniformLayout->usage, uniformLayout->binding, std::move(data));
+				materialData->SetBindingData(*pass, uniformLayout->usage, uniformLayout->binding, std::move(data));
 		}
 		dirtyProps.clear();
 		bPropertyDirty = false;

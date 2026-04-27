@@ -67,15 +67,15 @@ namespace sh::render
 			}
 			else // 텍스쳐
 			{
-				auto& uniformBufferData = std::get<1>(syncData.data);
-				SetTextureDataAtSync(uniformBufferData);
+				auto& shaderBindingsData = std::get<1>(syncData.data);
+				SetTextureDataAtSync(shaderBindingsData);
 			}
 		}
 		syncDatas.clear();
 
 		bDirty = false;
 	}
-	SH_RENDER_API void MaterialData::SetUniformData(const ShaderPass& shaderPass, UniformStructLayout::Usage usage, uint32_t binding, const void* data, std::size_t dataSize)
+	SH_RENDER_API void MaterialData::SetBindingData(const ShaderPass& shaderPass, UniformStructLayout::Usage usage, uint32_t binding, const void* data, std::size_t dataSize)
 	{
 		SyncData::BufferSyncData syncData{};
 		syncData.pass = &shaderPass;
@@ -87,7 +87,7 @@ namespace sh::render
 		syncDatas.push_back(SyncData{ std::move(syncData) });
 		SyncDirty();
 	}
-	SH_RENDER_API void MaterialData::SetUniformData(const ShaderPass& shaderPass, UniformStructLayout::Usage usage, uint32_t binding, std::vector<uint8_t> data)
+	SH_RENDER_API void MaterialData::SetBindingData(const ShaderPass& shaderPass, UniformStructLayout::Usage usage, uint32_t binding, std::vector<uint8_t> data)
 	{
 		SyncData::BufferSyncData syncData{};
 		syncData.pass = &shaderPass;
@@ -100,7 +100,7 @@ namespace sh::render
 	}
 	SH_RENDER_API void MaterialData::SetTextureData(const ShaderPass& shaderPass, UniformStructLayout::Usage usage, uint32_t binding, const Texture& tex)
 	{
-		SyncData::UniformBufferSyncData syncData{};
+		SyncData::ShaderBindingSyncData syncData{};
 		syncData.pass = &shaderPass;
 		syncData.set = static_cast<uint32_t>(usage);
 		syncData.binding = binding;
@@ -127,15 +127,15 @@ namespace sh::render
 
 		return buffers[binding] ? buffers[binding].get() : nullptr;
 	}
-	SH_RENDER_API auto MaterialData::GetUniformBuffer(const ShaderPass& shaderPass, UniformStructLayout::Usage usage) const -> IUniformBuffer*
+	SH_RENDER_API auto MaterialData::GetShaderBinding(const ShaderPass& shaderPass, UniformStructLayout::Usage usage) const -> IShaderBinding*
 	{
 		const PassData* passData = GetMaterialPassData(shaderPass);
 		if (passData == nullptr)
 			return nullptr;
 
 		uint32_t set = static_cast<uint32_t>(usage);
-		auto it = passData->uniformBuffer.find(set);
-		if (it == passData->uniformBuffer.end())
+		auto it = passData->shaderBindings.find(set);
+		if (it == passData->shaderBindings.end())
 			return nullptr;
 
 		return it->second.get();
@@ -208,7 +208,7 @@ namespace sh::render
 				// 유니폼 버퍼 (GPU로 데이터 전송 역할)
 				for (uint32_t set : sets)
 				{
-					passData.uniformBuffer[set] = BufferFactory::CreateUniformBuffer(context, shaderPass, static_cast<UniformStructLayout::Usage>(set));
+					passData.shaderBindings[set] = BufferFactory::CreateShaderBinding(context, shaderPass, static_cast<UniformStructLayout::Usage>(set));
 					auto it = passData.buffers.find(set);
 					if (it == passData.buffers.end())
 						continue;
@@ -219,7 +219,7 @@ namespace sh::render
 						{
 							if (bufferVec[binding] == nullptr)
 								continue;
-							passData.uniformBuffer[set]->Link(binding, *bufferVec[binding].get());
+							passData.shaderBindings[set]->Link(binding, *bufferVec[binding].get());
 						}
 						else
 						{
@@ -227,7 +227,7 @@ namespace sh::render
 							// 카메라 데이터
 							if (context.GetRenderAPIType() == RenderAPI::Vulkan)
 							{
-								passData.uniformBuffer[set]->Link(binding, vk::VulkanCameraBuffers::GetInstance()->GetCameraBuffer(), 128);
+								passData.shaderBindings[set]->Link(binding, vk::VulkanCameraBuffers::GetInstance()->GetCameraBuffer(), 128);
 							}
 						}
 					}
@@ -273,7 +273,7 @@ namespace sh::render
 					if (static_cast<uint32_t>(layout.usage) != set || layout.binding != binding || layout.GetKind() != UniformStructLayout::Kind::Storage)
 						continue;
 					bufferVec[binding]->Resize(bufferSyncData.data.size());
-					passData->uniformBuffer.at(set)->Link(binding, *bufferVec[binding].get());
+					passData->shaderBindings.at(set)->Link(binding, *bufferVec[binding].get());
 					bufferVec[binding]->SetData(bufferSyncData.data.data());
 					return;
 				}
@@ -284,18 +284,18 @@ namespace sh::render
 
 		bufferVec[binding]->SetData(bufferSyncData.data.data());
 	}
-	void MaterialData::SetTextureDataAtSync(const SyncData::UniformBufferSyncData& uniformBufferSyncData)
+	void MaterialData::SetTextureDataAtSync(const SyncData::ShaderBindingSyncData& shaderBindingsSyncData)
 	{
-		const ShaderPass* shaderPass = uniformBufferSyncData.pass;
-		if (!core::IsValid(shaderPass) || !core::IsValid(uniformBufferSyncData.tex))
+		const ShaderPass* shaderPass = shaderBindingsSyncData.pass;
+		if (!core::IsValid(shaderPass) || !core::IsValid(shaderBindingsSyncData.tex))
 			return;
 
 		const PassData* passData = GetMaterialPassData(*shaderPass);
 		if (passData == nullptr)
 			return;
 
-		const uint32_t set = uniformBufferSyncData.set;
-		const uint32_t binding = uniformBufferSyncData.binding;
+		const uint32_t set = shaderBindingsSyncData.set;
+		const uint32_t binding = shaderBindingsSyncData.binding;
 
 		bool bFind = false;
 		for (auto& layout : shaderPass->GetSamplerUniforms())
@@ -309,11 +309,11 @@ namespace sh::render
 		if (!bFind)
 			return;
 
-		auto itUb = passData->uniformBuffer.find(set);
-		if (itUb == passData->uniformBuffer.end() || itUb->second == nullptr)
+		auto itUb = passData->shaderBindings.find(set);
+		if (itUb == passData->shaderBindings.end() || itUb->second == nullptr)
 			return;
 
-		IUniformBuffer& uniformBuffer = *itUb->second.get();
-		uniformBuffer.Link(binding, *uniformBufferSyncData.tex);
+		IShaderBinding& shaderBindings = *itUb->second.get();
+		shaderBindings.Link(binding, *shaderBindingsSyncData.tex);
 	}
 }//namespace

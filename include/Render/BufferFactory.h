@@ -8,7 +8,7 @@
 namespace sh::render
 {
 	class IBuffer;
-	class IUniformBuffer;
+	class IShaderBinding;
 	class IRenderContext;
 	namespace vk
 	{
@@ -26,7 +26,7 @@ namespace sh::render
 		};
 	public:
 		SH_RENDER_API static auto Create(const IRenderContext& context, const CreateInfo& info) -> std::unique_ptr<IBuffer>;
-		SH_RENDER_API static auto CreateUniformBuffer(const IRenderContext& context, const ShaderPass& shader, UniformStructLayout::Usage usage) -> std::unique_ptr<IUniformBuffer>;
+		SH_RENDER_API static auto CreateShaderBinding(const IRenderContext& context, const ShaderPass& shader, UniformStructLayout::Usage usage) -> std::unique_ptr<IShaderBinding>;
 	private:
 		static auto CreateVkUniformBuffer(const vk::VulkanContext& context, const CreateInfo& info) -> std::unique_ptr<IBuffer>;
 	};

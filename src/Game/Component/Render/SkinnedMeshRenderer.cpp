@@ -120,7 +120,7 @@ namespace sh::game
 				{
 					if (pass.IsPendingKill())
 						continue;
-					drawable->GetMaterialData().SetUniformData(
+					drawable->GetMaterialData().SetBindingData(
 						pass,
 						render::UniformStructLayout::Usage::Object,
 						pass.GetSkinBinding(),

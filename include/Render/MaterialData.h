@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include "Export.h"
 #include "IBuffer.h"
-#include "IUniformBuffer.h"
+#include "IShaderBinding.h"
 #include "ShaderEnum.h"
 
 #include "Core/ISyncable.h"
@@ -30,7 +30,7 @@ namespace sh::render
 		{
 			const ShaderPass* pass;
 			std::map<uint32_t, std::vector<std::unique_ptr<IBuffer>>> buffers; //set, binding
-			std::map<uint32_t, std::unique_ptr<IUniformBuffer>> uniformBuffer; // set
+			std::map<uint32_t, std::unique_ptr<IShaderBinding>> shaderBindings; // set
 		};
 		struct SyncData
 		{
@@ -41,14 +41,14 @@ namespace sh::render
 				uint32_t binding;
 				std::vector<uint8_t> data;
 			};
-			struct UniformBufferSyncData
+			struct ShaderBindingSyncData
 			{
 				const ShaderPass* pass;
 				uint32_t set;
 				uint32_t binding;
 				const Texture* tex = nullptr;
 			};
-			std::variant<BufferSyncData, UniformBufferSyncData> data;
+			std::variant<BufferSyncData, ShaderBindingSyncData> data;
 		};
 	public:
 		SH_RENDER_API MaterialData() = default;
@@ -56,17 +56,17 @@ namespace sh::render
 
 		SH_RENDER_API void Create(const IRenderContext& context, const Shader& shader, bool bPerObject = false);
 		SH_RENDER_API void Clear();
-		/// @brief 유니폼에 데이터를 지정한다.
+		/// @brief 버퍼에 데이터를 지정한다.
 		/// @param pass 패스 번호
 		/// @param binding 바인딩 번호
 		/// @param data 데이터 위치 포인터
 		/// @param dataSize 데이터 사이즈
-		SH_RENDER_API void SetUniformData(const ShaderPass& shaderPass, UniformStructLayout::Usage usage, uint32_t binding, const void* data, std::size_t dataSize);
-		/// @brief 유니폼에 데이터를 지정한다.
+		SH_RENDER_API void SetBindingData(const ShaderPass& shaderPass, UniformStructLayout::Usage usage, uint32_t binding, const void* data, std::size_t dataSize);
+		/// @brief 버퍼에 데이터를 지정한다.
 		/// @param pass 패스 번호
 		/// @param binding 바인딩 번호
 		/// @param data 데이터
-		SH_RENDER_API void SetUniformData(const ShaderPass& shaderPass, UniformStructLayout::Usage usage, uint32_t binding, std::vector<uint8_t> data);
+		SH_RENDER_API void SetBindingData(const ShaderPass& shaderPass, UniformStructLayout::Usage usage, uint32_t binding, std::vector<uint8_t> data);
 		/// @brief 유니폼 텍스쳐 데이터를 지정한다.
 		/// /// @param pass 패스 번호
 		/// @param binding 텍스쳐 바인딩 번호
@@ -74,7 +74,7 @@ namespace sh::render
 		SH_RENDER_API void SetTextureData(const ShaderPass& shaderPass, UniformStructLayout::Usage usage, uint32_t binding, const Texture& tex);
 
 		SH_RENDER_API auto GetShaderBuffer(const ShaderPass& shaderPass, UniformStructLayout::Usage usage, uint32_t binding) const -> IBuffer*;
-		SH_RENDER_API auto GetUniformBuffer(const ShaderPass& shaderPass, UniformStructLayout::Usage usage) const -> IUniformBuffer*;
+		SH_RENDER_API auto GetShaderBinding(const ShaderPass& shaderPass, UniformStructLayout::Usage usage) const -> IShaderBinding*;
 
 		SH_RENDER_API void SyncDirty() override;
 	protected:
@@ -83,7 +83,7 @@ namespace sh::render
 		void CreateBuffers(const IRenderContext& context, const Shader& shader, bool bPerObject);
 		auto GetMaterialPassData(const ShaderPass& shaderPass) const -> const MaterialData::PassData*;
 		void SetUniformDataAtSync(const SyncData::BufferSyncData& bufferSyncData);
-		void SetTextureDataAtSync(const SyncData::UniformBufferSyncData& uniformBufferSyncData);
+		void SetTextureDataAtSync(const SyncData::ShaderBindingSyncData& uniformBufferSyncData);
 	private:
 		const IRenderContext* context = nullptr;
 		const Shader* shader = nullptr;
