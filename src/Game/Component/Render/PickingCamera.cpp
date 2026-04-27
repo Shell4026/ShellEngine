@@ -15,6 +15,8 @@ namespace sh::game
 	PickingCamera::PickingCamera(GameObject& owner) :
 		Camera(owner)
 	{
+		pixels.resize(4);
+
 		render::RenderTargetLayout rt{};
 		rt.format = render::TextureFormat::RGBA32;
 		rt.depthFormat = render::TextureFormat::D24S8;
@@ -55,7 +57,7 @@ namespace sh::game
 			auto status = bufferFuture.wait_for(std::chrono::milliseconds(0));
 			if (status == std::future_status::ready)
 			{
-				pixels = reinterpret_cast<uint8_t*>(bufferFuture.get()->GetData());
+				pixels = bufferFuture.get()->GetData();
 				SH_INFO_FORMAT("{}, {}, {}, {}", pixels[0], pixels[1], pixels[2], pixels[3]);
 
 				pickingCallback.Notify({ pixels[0], pixels[1], pixels[2], pixels[3] });

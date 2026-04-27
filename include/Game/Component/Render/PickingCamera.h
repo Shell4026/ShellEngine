@@ -39,7 +39,7 @@ namespace sh::game
 
 		int x = 0, y = 0;
 
-		uint8_t* pixels = nullptr;
+		std::vector<uint8_t> pixels;
 
 		std::future<std::unique_ptr<render::IBuffer>> bufferFuture;
 

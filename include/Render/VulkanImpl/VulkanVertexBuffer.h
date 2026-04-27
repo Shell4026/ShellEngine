@@ -29,8 +29,8 @@ namespace sh::render::vk
 		SH_RENDER_API static auto GetBindingDescription() -> VkVertexInputBindingDescription;
 		SH_RENDER_API static auto GetAttributeDescriptions() -> std::vector<VkVertexInputAttributeDescription>;
 
-		SH_RENDER_API auto GetVertexBuffer() const -> const VulkanBuffer&;
-		SH_RENDER_API auto GetIndexBuffer() const -> const VulkanBuffer&;
+		SH_RENDER_API auto GetVertexBuffer() const -> const VulkanBuffer& { return vertexBuffer; }
+		SH_RENDER_API auto GetIndexBuffer() const -> const VulkanBuffer& { return indexBuffer; }
 	private:
 		void CreateVertexBuffer(const Mesh& mesh);
 	private:

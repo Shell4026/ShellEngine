@@ -17,13 +17,14 @@ namespace sh::render
 
 		VkBufferUsageFlags usage = 
 			info.bDynamic ? VkBufferUsageFlagBits::VK_BUFFER_USAGE_STORAGE_BUFFER_BIT : VkBufferUsageFlagBits::VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-		if (info.bTransferDst)
-			usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_DST_BIT;
 
-		VkResult result = buffer->Create(info.size, usage,
-			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
-			VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-			true);
+		usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
+		usage |= VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_DST_BIT;
+
+		const VkMemoryPropertyFlags memFlag = info.bGPUOnly ? VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT :
+			VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+
+		const VkResult result = buffer->Create(info.size, usage, VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,memFlag, true);
 		assert(result == VkResult::VK_SUCCESS);
 		if (result != VkResult::VK_SUCCESS)
 		{

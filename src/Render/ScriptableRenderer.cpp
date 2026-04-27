@@ -47,7 +47,6 @@ namespace sh::render
 		{
 			BufferFactory::CreateInfo ci{};
 			ci.size = sizeof(uint8_t) * 4;
-			ci.bTransferDst = true;
 			std::unique_ptr<IBuffer> buffer = BufferFactory::Create(ctx, ci);
 			IRenderThrMethod<CopyPass>::EnqueCopyImagePixelToBuffer(*cpyPass, *data.src, data.x, data.y, *buffer.get());
 

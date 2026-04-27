@@ -23,14 +23,15 @@ namespace sh::render::vk
 		SH_RENDER_API auto Create(size_t size, VkBufferUsageFlags usageBits, VkSharingMode sharing, VkMemoryPropertyFlags memPropFlagBits, bool persistentMapping = false) -> VkResult;
 		SH_RENDER_API void Clean();
 		SH_RENDER_API void SetData(const void* data);
+		SH_RENDER_API void SetData(const void* data, std::size_t offset, std::size_t size) override;
 
-		SH_RENDER_API auto GetData() const -> void* override { return dataPtr; }
+		SH_RENDER_API auto GetData() const -> std::vector<uint8_t> override;
 		SH_RENDER_API auto GetBuffer() const -> VkBuffer { return buffer; }
 		SH_RENDER_API auto GetBufferInfo() const -> const VkBufferCreateInfo& { return bufferInfo; }
 		SH_RENDER_API auto GetBufferMemory() const -> VmaAllocation { return bufferMem; }
 		SH_RENDER_API auto GetSize() const -> size_t { return size; }
 	private:
-		auto FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) -> uint32_t;
+		// auto FindMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) -> uint32_t; // 이제 안 씀
 	private:
 		const VulkanContext& context;
 
@@ -42,6 +43,6 @@ namespace sh::render::vk
 		size_t size;
 
 		void* dataPtr;
-		bool persistentMapping; // 즉시 맵핑
+		bool bPersistentMapping; // 즉시 맵핑
 	};
 }//namespace

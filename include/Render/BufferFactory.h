@@ -22,7 +22,7 @@ namespace sh::render
 		{
 			std::size_t size = 0;
 			bool bDynamic = false; // SSBO
-			bool bTransferDst = false;
+			bool bGPUOnly = false;
 		};
 	public:
 		SH_RENDER_API static auto Create(const IRenderContext& context, const CreateInfo& info) -> std::unique_ptr<IBuffer>;

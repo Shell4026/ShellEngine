@@ -101,70 +101,25 @@ namespace sh::render::vk
 		}
 		return attribDescriptions;
 	}
-	SH_RENDER_API auto VulkanVertexBuffer::GetVertexBuffer() const -> const VulkanBuffer&
-	{
-		return vertexBuffer;
-	}
-	SH_RENDER_API auto VulkanVertexBuffer::GetIndexBuffer() const -> const VulkanBuffer&
-	{
-		return indexBuffer;
-	}
 	void VulkanVertexBuffer::CreateVertexBuffer(const Mesh& mesh)
 	{
 		if (mesh.GetVertexCount() == 0)
 			return;
 
-		VulkanCommandBuffer* cmd = context.GetCommandBufferPool().AllocateCommandBuffer(std::this_thread::get_id(), VkQueueFlagBits::VK_QUEUE_TRANSFER_BIT);
-		assert(cmd != nullptr);
 		// 버텍스 버퍼
-		size_t vertexBufferSize = sizeof(Mesh::Vertex) * mesh.GetVertexCount();
-		VulkanBuffer stagingBuffer1{ context };
-		stagingBuffer1.Create(vertexBufferSize, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
-			VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-		stagingBuffer1.SetData(mesh.GetVertex().data());
-
+		const size_t vertexBufferSize = sizeof(Mesh::Vertex) * mesh.GetVertexCount();
 		vertexBuffer.Create(vertexBufferSize,
 			VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_DST_BIT | VkBufferUsageFlagBits::VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 			VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
+		vertexBuffer.SetData(mesh.GetVertex().data());
 
 		// 인덱스 버퍼
-		size_t indicesSize = sizeof(uint32_t) * mesh.GetIndices().size();
-		VulkanBuffer stagingBuffer2{ context };
-		stagingBuffer2.Create(indicesSize, VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
-			VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_HOST_COHERENT_BIT);
-		stagingBuffer2.SetData(mesh.GetIndices().data());
-
+		const size_t indicesSize = sizeof(uint32_t) * mesh.GetIndices().size();
 		indexBuffer.Create(indicesSize,
 			VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_DST_BIT | VkBufferUsageFlagBits::VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
 			VkSharingMode::VK_SHARING_MODE_EXCLUSIVE,
 			VkMemoryPropertyFlagBits::VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT);
-
-		cmd->Build(
-			[&]()
-			{
-				VkBufferCopy cpy{};
-				cpy.srcOffset = 0;
-				cpy.dstOffset = 0;
-				cpy.size = vertexBufferSize;
-				vkCmdCopyBuffer(cmd->GetCommandBuffer(), stagingBuffer1.GetBuffer(), vertexBuffer.GetBuffer(), 1, &cpy);
-
-				VkBufferCopy cpyIndices{};
-				cpyIndices.srcOffset = 0;
-				cpyIndices.dstOffset = 0;
-				cpyIndices.size = indicesSize;
-				vkCmdCopyBuffer(cmd->GetCommandBuffer(), stagingBuffer2.GetBuffer(), indexBuffer.GetBuffer(), 1, &cpyIndices);
-			},
-			true
-		);
-
-		VkFence fence = cmd->GetOrCreateFence();
-		context.GetQueueManager().Submit(VulkanQueueManager::Role::Transfer, *cmd, fence);
-		vkWaitForFences(context.GetDevice(), 1, &fence, true, std::numeric_limits<uint64_t>::max());
-		vkResetFences(context.GetDevice(), 1, &fence);
-
-		context.GetCommandBufferPool().DeallocateCommandBuffer(*cmd);
+		indexBuffer.SetData(mesh.GetIndices().data());
 	}
-}
+}//namespace
