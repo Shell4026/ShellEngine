@@ -84,6 +84,7 @@ namespace sh::render
 	{
 		this->pos[core::ThreadType::Game] = pos;
 		dirtyMask |= 1;
+		UpdateProjMatrix();
 		UpdateViewMatrix();
 		SyncDirty();
 	}
@@ -91,6 +92,7 @@ namespace sh::render
 	{
 		this->to[core::ThreadType::Game] = pos;
 		dirtyMask |= 2;
+		UpdateProjMatrix();
 		UpdateViewMatrix();
 		SyncDirty();
 	}
