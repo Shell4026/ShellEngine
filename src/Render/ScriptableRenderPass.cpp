@@ -87,7 +87,10 @@ namespace sh::render
 	void ScriptableRenderPass::CollectRenderImages(const RenderTarget& renderData, const DrawList& drawList)
 	{
 		renderTextures.clear();
-		renderTextures[renderData.target] = ResourceUsage::ColorAttachment;
+		if (renderData.target != nullptr && IsDepthTexture(renderData.target->GetTextureFormat()))
+			renderTextures[renderData.target] = ResourceUsage::DepthStencilAttachment;
+		else
+			renderTextures[renderData.target] = ResourceUsage::ColorAttachment;
 
 		const auto collectFn =
 			[this](const Material* mat)
@@ -97,25 +100,28 @@ namespace sh::render
 					auto it = renderTextures.find(rt);
 					if (it != renderTextures.end())
 					{
-						if (it->second == ResourceUsage::ColorAttachment)
+						if (it->second == ResourceUsage::ColorAttachment ||
+							it->second == ResourceUsage::DepthStencilAttachment)
 						{
-							SH_ERROR_FORMAT("RenderTexture {} is used as ColorAttachment", it->first->GetName().ToString());
+							SH_ERROR_FORMAT("RenderTexture {} is used as Attachment", it->first->GetName().ToString());
 							continue;
 						}
 					}
 					else
-						renderTextures[rt] = ResourceUsage::SampledRead;
+					{
+						renderTextures[rt] = rt->IsDepthOnly() ? ResourceUsage::DepthStencilSampledRead : ResourceUsage::SampledRead;
+					}
 				}
 			};
 
-		if (drawList.renderData.index() == 0)
+		if (std::holds_alternative<std::vector<DrawList::RenderGroup>>(drawList.renderData))
 		{
-			for (const auto& group : std::get<0>(drawList.renderData))
+			for (const DrawList::RenderGroup& group : std::get<std::vector<DrawList::RenderGroup>>(drawList.renderData))
 				collectFn(group.material);
 		}
 		else
 		{
-			for (const auto& item : std::get<1>(drawList.renderData))
+			for (const DrawList::RenderItem& item : std::get<std::vector<DrawList::RenderItem>>(drawList.renderData))
 				collectFn(item.material);
 		}
 	}

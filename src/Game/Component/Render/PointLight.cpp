@@ -14,9 +14,9 @@ namespace sh::game
 	{
 	}
 
-	SH_GAME_API void PointLight::Destroy()
+	SH_GAME_API void PointLight::OnDestroy()
 	{
-		Super::Destroy();
+		Super::OnDestroy();
 		world.GetLightOctree().Erase(*this);
 	}
 
@@ -103,6 +103,31 @@ namespace sh::game
 	SH_GAME_API auto PointLight::GetLightType() const -> ILight::Type
 	{
 		return ILight::Type::Point;
+	}
+
+	SH_GAME_API auto PointLight::IsCastShadow() const -> bool
+	{
+		return bCastShadow;
+	}
+	SH_GAME_API void PointLight::SetCastShadow(bool b)
+	{
+		bCastShadow = b;
+	}
+	SH_GAME_API auto PointLight::GetShadowBias() const -> float
+	{
+		return shadowBias;
+	}
+	SH_GAME_API void PointLight::SetShadowBias(float bias)
+	{
+		shadowBias = bias;
+	}
+	SH_GAME_API auto PointLight::GetShadowMapResolution() const -> uint32_t
+	{
+		return shadowMapResolution;
+	}
+	SH_GAME_API void PointLight::SetShadowMapResolution(uint32_t res)
+	{
+		shadowMapResolution = res;
 	}
 
 	SH_GAME_API void PointLight::OnPropertyChanged(const core::reflection::Property& prop)

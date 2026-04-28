@@ -15,6 +15,7 @@ namespace sh::editor
 	{
 		AddRenderPass(core::Name{ "EditorPicking" }, render::RenderQueue::Picking);
 		outlinePass = &AddRenderPass<EditorOutlinePass>();
+		AddShadowPass();
 		AddRenderPass(core::Name{ "Opaque" }, render::RenderQueue::Opaque);
 		AddRenderPass<render::TransparentPass>();
 		AddRenderPass<render::TransparentPass>("UI", render::RenderQueue::Transparent);
@@ -25,27 +26,32 @@ namespace sh::editor
 	SH_EDITOR_API void EditorRenderer::SetImGUICamera(const render::Camera& camera)
 	{
 		ImGUICamera = &camera;
-		allowedCamera["ImGUI"].push_back(&camera);
-		ignoreCamera["Opaque"].push_back(&camera);
-		ignoreCamera["Transparent"].push_back(&camera);
-		ignoreCamera["UI"].push_back(&camera);
+		allowedCamera[core::Name{ "ImGUI" }].insert(&camera);
+		for (const std::unique_ptr<render::ScriptableRenderPass>& pass : allPasses)
+		{
+			if (pass->passName == "ImGUI")
+				continue;
+			ignoreCamera[pass->passName].insert(&camera);
+		}
 	}
 	SH_EDITOR_API void EditorRenderer::SetEditorCamera(const render::Camera& camera)
 	{
 		editorCamera = &camera;
-		allowedCamera[outlinePass->passName].push_back(&camera);
-		allowedCamera[postOutlinePass->passName].push_back(&camera);
+		allowedCamera[outlinePass->passName].insert(&camera);
+		allowedCamera[postOutlinePass->passName].insert(&camera);
 
 		uiPass->viewportTexture = editorCamera->GetRenderTexture();
 	}
 	SH_EDITOR_API void EditorRenderer::SetPickingCamera(const render::Camera& camera)
 	{
 		pickingCamera = &camera;
-		allowedCamera["EditorPicking"].push_back(&camera);
-		ignoreCamera["Opaque"].push_back(&camera);
-		ignoreCamera["Transparent"].push_back(&camera);
-		ignoreCamera["ImGUI"].push_back(&camera);
-		ignoreCamera["UI"].push_back(&camera);
+		allowedCamera[core::Name{ "EditorPicking" }].insert(&camera);
+		for (const std::unique_ptr<render::ScriptableRenderPass>& pass : allPasses)
+		{
+			if (pass->passName == "EditorPicking")
+				continue;
+			ignoreCamera[pass->passName].insert(&camera);
+		}
 	}
 
 	SH_EDITOR_API void EditorRenderer::Setup(const render::RenderTarget& data)

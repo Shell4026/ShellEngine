@@ -52,7 +52,9 @@ namespace sh::render
 		ColorAttachment,
 		SampledRead,
 		Present,
-		TransferSrc
+		TransferSrc,
+		DepthStencilAttachment,
+		DepthStencilSampledRead
 	};
 
 	struct BarrierInfo

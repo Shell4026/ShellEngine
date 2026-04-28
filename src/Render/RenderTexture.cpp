@@ -71,6 +71,9 @@ namespace sh::render
 	void RenderTexture::CreateBuffers()
 	{
 		assert(context->GetRenderAPIType() == RenderAPI::Vulkan);
+
+		const bool bDepthOnly = (layout.format == TextureFormat::None);
+
 		if (textureBuffer == nullptr)
 		{
 			if (context->GetRenderAPIType() == RenderAPI::Vulkan)
@@ -79,7 +82,7 @@ namespace sh::render
 		ITextureBuffer::CreateInfo ci{};
 		ci.width = width;
 		ci.height = height;
-		ci.format = GetTextureFormat();
+		ci.format = bDepthOnly ? layout.depthFormat : GetTextureFormat();
 		ci.aniso = 0;
 		ci.filtering = 1;
 		ci.mipLevel = 1;
@@ -87,6 +90,10 @@ namespace sh::render
 		ci.bRenderTarget = true;
 
 		textureBuffer->Create(*context, ci);
+		usage = ResourceUsage::Undefined;
+
+		if (bDepthOnly)
+			return;
 
 		if (layout.bUseMSAA)
 		{
@@ -111,7 +118,13 @@ namespace sh::render
 			ci.format = layout.depthFormat;
 			depthBuffer->Create(*context, ci);
 		}
-
-		usage = ResourceUsage::Undefined;
+	}
+	SH_RENDER_API auto RenderTexture::GetDepthBuffer() const -> ITextureBuffer*
+	{
+		if (depthBuffer != nullptr)
+			return depthBuffer.get();
+		if (layout.format == TextureFormat::None)
+			return textureBuffer.get(); // depth only인 경우 textureBuffer 자체가 DepthBuffer
+		return nullptr;
 	}
 }//namespace

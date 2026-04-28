@@ -77,6 +77,19 @@ namespace sh::render::vk
 						layout = VkImageLayout::VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
 						stage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_TRANSFER_BIT;
 						access = VkAccessFlagBits::VK_ACCESS_TRANSFER_READ_BIT;
+						return;
+					case ResourceUsage::DepthStencilAttachment:
+						layout = VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+						stage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT |
+								VkPipelineStageFlagBits::VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT;
+						access = VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT |
+								 VkAccessFlagBits::VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT;
+						return;
+					case ResourceUsage::DepthStencilSampledRead:
+						layout = VkImageLayout::VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+						stage = VkPipelineStageFlagBits::VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
+						access = VkAccessFlagBits::VK_ACCESS_SHADER_READ_BIT;
+						return;
 					}
 				};
 
@@ -93,6 +106,124 @@ namespace sh::render::vk
 			}
 		}
 	}
+	namespace
+	{
+		struct ResolvedTarget
+		{
+			VulkanImageBuffer* color = nullptr;
+			VulkanImageBuffer* colorMSAA = nullptr;
+			VulkanImageBuffer* depth = nullptr;
+			RenderTargetLayout layout{};
+			uint32_t width = 0;
+			uint32_t height = 0;
+			bool bSwapChain = false;
+			bool bDepthOnly = false;
+		};
+
+		auto ResolveTarget(VulkanContext& ctx, const RenderTarget& renderData) -> ResolvedTarget
+		{
+			ResolvedTarget target{};
+			if (core::IsValid(renderData.target))
+			{
+				target.bSwapChain = false;
+				target.bDepthOnly = renderData.target->IsDepthOnly();
+				target.color = target.bDepthOnly ? nullptr : static_cast<VulkanImageBuffer*>(renderData.target->GetTextureBuffer());
+				target.colorMSAA = static_cast<VulkanImageBuffer*>(renderData.target->GetMSAABuffer());
+				target.depth = static_cast<VulkanImageBuffer*>(renderData.target->GetDepthBuffer());
+				target.layout = renderData.target->GetLayout();
+
+				VulkanImageBuffer* const sizeRef = target.color != nullptr ? target.color : target.depth;
+				target.width = sizeRef->GetWidth();
+				target.height = sizeRef->GetHeight();
+			}
+			else
+			{
+				target.bSwapChain = true;
+				const uint32_t idx = renderData.frameIndex;
+				target.colorMSAA = &ctx.GetSwapChain().GetSwapChainMSAAImages()[idx];
+				target.color = &ctx.GetSwapChain().GetSwapChainImages()[idx];
+				target.depth = &ctx.GetSwapChain().GetSwapChainDepthImages()[idx];
+				target.layout = ctx.GetSwapChain().GetRenderTargetLayout();
+				target.width = target.color->GetWidth();
+				target.height = target.color->GetHeight();
+			}
+			return target;
+		}
+
+		auto BuildViewport(VulkanContext& ctx, const ResolvedTarget& target) -> VkViewport
+		{
+			VkViewport viewport{};
+			viewport.minDepth = 0.0f;
+			viewport.maxDepth = 1.0f;
+			if (target.bSwapChain)
+			{
+				const float w = ctx.GetViewportEnd().x - ctx.GetViewportStart().x;
+				const float h = ctx.GetViewportEnd().y - ctx.GetViewportStart().y;
+				const float surfW = static_cast<float>(ctx.GetSwapChain().GetSwapChainSize().width);
+				const float surfH = static_cast<float>(ctx.GetSwapChain().GetSwapChainSize().height);
+				viewport.x = ctx.GetViewportStart().x;
+				viewport.y = ctx.GetViewportEnd().y;
+				viewport.width = std::min(w, surfW);
+				viewport.height = -std::min(h, surfH);
+			}
+			else
+			{
+				viewport.x = 0.f;
+				viewport.y = static_cast<float>(target.height);
+				viewport.width = static_cast<float>(target.width);
+				viewport.height = -static_cast<float>(target.height);
+			}
+			return viewport;
+		}
+
+		auto BuildScissor(VulkanContext& ctx, const ResolvedTarget& target) -> VkRect2D
+		{
+			VkRect2D scissor{};
+			scissor.offset = { 0, 0 };
+			scissor.extent = target.bSwapChain ? ctx.GetSwapChain().GetSwapChainSize() : VkExtent2D{ target.width, target.height };
+			return scissor;
+		}
+
+		auto BuildColorAttachment(const ResolvedTarget& target, const DrawList& drawList, bool bStoreImage) -> VkRenderingAttachmentInfoKHR
+		{
+			VkRenderingAttachmentInfoKHR info{};
+			info.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+			const bool bMSAA = (target.colorMSAA != nullptr);
+			info.imageView = bMSAA ? target.colorMSAA->GetImageView() : target.color->GetImageView();
+			info.imageLayout = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+			info.loadOp = drawList.bClearColor ? VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR : VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_LOAD;
+			info.storeOp = bStoreImage ? VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE : VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			info.clearValue.color = { { 0.f, 0.f, 0.f, 1.f } };
+			if (bMSAA)
+			{
+				info.resolveImageView = target.color->GetImageView();
+				info.resolveImageLayout = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+				info.resolveMode = VkResolveModeFlagBitsKHR::VK_RESOLVE_MODE_AVERAGE_BIT_KHR;
+			}
+			return info;
+		}
+
+		auto BuildDepthAttachment(const ResolvedTarget& target, const DrawList& drawList, bool bStoreImage) -> VkRenderingAttachmentInfoKHR
+		{
+			VkRenderingAttachmentInfoKHR info{};
+			info.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
+			info.imageView = target.depth->GetImageView();
+			info.imageLayout = VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+			info.loadOp = drawList.bClearDepth ? VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR : VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_LOAD;
+			info.storeOp = bStoreImage ? VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE : VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
+			info.clearValue.depthStencil = { 1.0f, 0 };
+			return info;
+		}
+
+		auto HasDrawables(const DrawList& drawList) -> bool
+		{
+			if (std::holds_alternative<std::vector<DrawList::RenderGroup>>(drawList.renderData))
+				return !std::get<std::vector<DrawList::RenderGroup>>(drawList.renderData).empty();
+
+			return !std::get<std::vector<DrawList::RenderItem>>(drawList.renderData).empty();
+		}
+	}//anonymous namespace
+
 	SH_RENDER_API void VulkanRenderImpl::RecordCommand(CommandBuffer& _cmd, const core::Name& passName, const RenderTarget& renderData, const DrawList& drawList, bool bStoreImage) const
 	{
 		// 드로우 목적이 아닌 경우
@@ -103,109 +234,46 @@ namespace sh::render::vk
 			return;
 		}
 
-		auto& cmd = static_cast<VulkanCommandBuffer&>(_cmd);
-
-		const float width = ctx.GetViewportEnd().x - ctx.GetViewportStart().x;
-		const float height = ctx.GetViewportEnd().y - ctx.GetViewportStart().y;
-		const float surfWidth = static_cast<float>(ctx.GetSwapChain().GetSwapChainSize().width);
-		const float surfHeight = static_cast<float>(ctx.GetSwapChain().GetSwapChainSize().height);
-
-		VkViewport viewport{};
-		viewport.minDepth = 0.0f;
-		viewport.maxDepth = 1.0f;
-		viewport.x = ctx.GetViewportStart().x;
-		viewport.y = ctx.GetViewportEnd().y;
-		viewport.width = std::min(width, surfWidth);
-		viewport.height = -std::min(height, surfHeight);
-
-		VkRect2D scissor{};
-		scissor.offset = { 0, 0 };
-		scissor.extent = ctx.GetSwapChain().GetSwapChainSize();
-
-		VulkanImageBuffer* imgBufferMSAA = nullptr;
-		VulkanImageBuffer* imgBuffer = nullptr;
-		VulkanImageBuffer* depthBuffer = nullptr;
-
-		RenderTargetLayout rtLayout;
-
-		if (core::IsValid(renderData.target))
-		{
-			float w = renderData.target->GetSize().x;
-			float h = renderData.target->GetSize().y;
-
-			viewport.x = 0;
-			viewport.y = h;
-			viewport.width = w;
-			viewport.height = -h;
-			scissor.extent = { static_cast<uint32_t>(w), static_cast<uint32_t>(h) };
-
-			imgBuffer = static_cast<VulkanImageBuffer*>(renderData.target->GetTextureBuffer());
-			imgBufferMSAA = static_cast<VulkanImageBuffer*>(renderData.target->GetMSAABuffer());
-			depthBuffer = static_cast<VulkanImageBuffer*>(renderData.target->GetDepthBuffer());
-
-			rtLayout = renderData.target->GetLayout();
-		}
-		else
-		{
-			imgBufferMSAA = &ctx.GetSwapChain().GetSwapChainMSAAImages()[renderData.frameIndex];
-			imgBuffer = &ctx.GetSwapChain().GetSwapChainImages()[renderData.frameIndex];
-			depthBuffer = &ctx.GetSwapChain().GetSwapChainDepthImages()[renderData.frameIndex];
-
-			rtLayout = ctx.GetSwapChain().GetRenderTargetLayout();
-		}
-
+		VulkanCommandBuffer& cmd = static_cast<VulkanCommandBuffer&>(_cmd);
 		VkCommandBuffer commandBuffer = cmd.GetCommandBuffer();
 
-		const bool bMSAA = imgBufferMSAA != nullptr;
+		const ResolvedTarget target = ResolveTarget(ctx, renderData);
+		const VkViewport viewport = BuildViewport(ctx, target);
+		const VkRect2D scissor = BuildScissor(ctx, target);
 
-		VkRenderingAttachmentInfoKHR colorAttachment{};
-		colorAttachment.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-		colorAttachment.imageView = bMSAA ? imgBufferMSAA->GetImageView() : imgBuffer->GetImageView();
-		colorAttachment.imageLayout = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-		colorAttachment.loadOp = drawList.bClearColor ? VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR : VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_LOAD;
-		colorAttachment.storeOp = bStoreImage ? VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE : VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
-		colorAttachment.clearValue = { 0.f, 0.f, 0.f, 1.f };
-		if (bMSAA)
-		{
-			colorAttachment.resolveImageView = imgBuffer->GetImageView();
-			colorAttachment.resolveImageLayout = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-			colorAttachment.resolveMode = VkResolveModeFlagBitsKHR::VK_RESOLVE_MODE_AVERAGE_BIT_KHR;
-		}
-
-		VkRenderingAttachmentInfoKHR depthAttachment{};
-		if (depthBuffer != nullptr)
-		{
-			depthAttachment.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-			depthAttachment.imageView = depthBuffer->GetImageView();
-			depthAttachment.imageLayout = VkImageLayout::VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-			depthAttachment.loadOp = drawList.bClearDepth ? VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR : VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_LOAD;
-			depthAttachment.storeOp = bStoreImage ? VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE : VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
-			depthAttachment.clearValue = { 1.0f, 0.f };
-		}
+		VkRenderingAttachmentInfoKHR colorAttach{};
+		VkRenderingAttachmentInfoKHR depthAttach{};
+		if (!target.bDepthOnly)
+			colorAttach = BuildColorAttachment(target, drawList, bStoreImage);
+		const bool bHasDepth = (target.depth != nullptr);
+		if (bHasDepth)
+			depthAttach = BuildDepthAttachment(target, drawList, bStoreImage);
 
 		VkRenderingInfoKHR renderingInfo{};
 		renderingInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
-		renderingInfo.colorAttachmentCount = 1;
-		renderingInfo.pColorAttachments = &colorAttachment;
-		renderingInfo.pDepthAttachment = depthBuffer != nullptr ? &depthAttachment : nullptr;
-		renderingInfo.pStencilAttachment = depthBuffer != nullptr ? &depthAttachment : nullptr;
-		renderingInfo.renderArea = { 0, 0, imgBuffer->GetWidth(), imgBuffer->GetHeight() };
+		renderingInfo.colorAttachmentCount = target.bDepthOnly ? 0 : 1;
+		renderingInfo.pColorAttachments = target.bDepthOnly ? nullptr : &colorAttach;
+		renderingInfo.pDepthAttachment = bHasDepth ? &depthAttach : nullptr;
+		// depth-only RT는 view aspect=DEPTH-only이므로 stencil 첨부는 비활성화
+		renderingInfo.pStencilAttachment = (bHasDepth && !target.bDepthOnly) ? &depthAttach : nullptr;
+		renderingInfo.renderArea = { { 0, 0 }, { target.width, target.height } };
 		renderingInfo.layerCount = 1;
 
-		static PFN_vkCmdBeginRenderingKHR  pfnCmdBeginRenderingKHR = (PFN_vkCmdBeginRenderingKHR)vkGetDeviceProcAddr(ctx.GetDevice(), "vkCmdBeginRenderingKHR");
-		pfnCmdBeginRenderingKHR(commandBuffer, &renderingInfo);
+		static PFN_vkCmdBeginRenderingKHR pfnBegin = (PFN_vkCmdBeginRenderingKHR)vkGetDeviceProcAddr(ctx.GetDevice(), "vkCmdBeginRenderingKHR");
+		static PFN_vkCmdEndRenderingKHR pfnEnd = (PFN_vkCmdEndRenderingKHR)  vkGetDeviceProcAddr(ctx.GetDevice(), "vkCmdEndRenderingKHR");
+
+		// 5) 기록
+		pfnBegin(commandBuffer, &renderingInfo);
 		vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 		vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-		if (drawList.renderData.index() == 0 && !std::get<0>(drawList.renderData).empty() ||
-			drawList.renderData.index() == 1 && !std::get<1>(drawList.renderData).empty())
-			RenderDrawable(cmd, passName, renderData, drawList, rtLayout);
+		if (HasDrawables(drawList))
+			RenderDrawable(cmd, passName, renderData, drawList, target.layout);
 
 		for (auto& call : drawList.drawCall)
 			call(_cmd);
 
-		static PFN_vkCmdEndRenderingKHR pfnCmdEndRenderingKHR = (PFN_vkCmdEndRenderingKHR)vkGetDeviceProcAddr(ctx.GetDevice(), "vkCmdEndRenderingKHR");;
-		pfnCmdEndRenderingKHR(commandBuffer);
+		pfnEnd(commandBuffer);
 	}
 
 	void VulkanRenderImpl::BindCameraSet(VulkanCommandBuffer& cmd, VkPipelineLayout layout, const ShaderPass& pass, const Material& mat, uint32_t cameraOffset) const
@@ -215,7 +283,7 @@ namespace sh::render::vk
 			mat.GetMaterialData().GetShaderBinding(pass, UniformStructLayout::Usage::Camera));
 
 		VkDescriptorSet cameraSet = cameraUBO ? cameraUBO->GetVkDescriptorSet() : ctx.GetEmptyDescriptorSet();
-		uint32_t dynamicCount = cameraUBO ? 1 : 0;
+		const uint32_t dynamicCount = cameraUBO ? 1 : 0;
 
 		vkCmdBindDescriptorSets(cmd.GetCommandBuffer(),
 			VkPipelineBindPoint::VK_PIPELINE_BIND_POINT_GRAPHICS, layout,
@@ -290,7 +358,7 @@ namespace sh::render::vk
 	}
 	void VulkanRenderImpl::RenderDrawable(VulkanCommandBuffer& cmd, const core::Name& passName, const RenderTarget& renderData, const DrawList& drawList, const RenderTargetLayout& layout) const
 	{
-		auto cameraOffsetOpt = cameraManager->GetDynamicOffset(*renderData.camera);
+		std::optional<uint32_t> cameraOffsetOpt = cameraManager->GetDynamicOffset(*renderData.camera);
 		if (!cameraOffsetOpt.has_value())
 			return;
 

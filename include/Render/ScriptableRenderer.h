@@ -35,7 +35,7 @@ namespace sh::render
 	{
 		friend IRenderThrMethod<class ScriptableRenderer>;
 	public:
-		struct SubmittedCommand
+		struct RecordedCommand
 		{
 			ScriptableRenderPass& pass;
 			CommandBuffer& cmd;
@@ -44,12 +44,14 @@ namespace sh::render
 		SH_RENDER_API ScriptableRenderer(IRenderContext& ctx);
 		SH_RENDER_API virtual ~ScriptableRenderer();
 
+		SH_RENDER_API virtual void Init() {};
 		SH_RENDER_API auto AddRenderPass(const core::Name& passName, RenderQueue renderQueue) -> ScriptableRenderPass&;
 
 		SH_RENDER_API auto ReadRenderTextureAsync(RenderTexture& rt, int x, int y) -> std::future<std::unique_ptr<IBuffer>>;
 		SH_RENDER_API void Dispatch(const ComputeShader& computeShader, uint32_t x, uint32_t y, uint32_t z);
 
-		SH_RENDER_API auto GetSubmittedCommands() const -> const std::vector<SubmittedCommand>& { return submittedCmds; }
+		SH_RENDER_API auto GetRecordedCommands() const -> const std::vector<RecordedCommand>& { return recordedCmds; }
+		SH_RENDER_API auto HasPass(const core::Name& passName) const -> bool;
 
 		template<typename T, typename = std::enable_if_t<std::is_base_of_v<ScriptableRenderPass, T>>, typename... Args>
 		auto AddRenderPass(Args&&... args) -> T&;
@@ -78,7 +80,7 @@ namespace sh::render
 		SH_RENDER_API static std::vector<ResourceUsage> swapChainStates;
 
 		std::vector<ScriptableRenderPass*> activePasses;
-		std::vector<SubmittedCommand> submittedCmds;
+		std::vector<RecordedCommand> recordedCmds;
 
 		std::unique_ptr<CopyPass> cpyPass;
 		struct SyncData

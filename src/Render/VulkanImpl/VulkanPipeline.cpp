@@ -223,12 +223,14 @@ namespace sh::render::vk
 		colorBlendAttachment.alphaBlendOp = VkBlendOp::VK_BLEND_OP_ADD;
 		colorBlendAttachment.dstAlphaBlendFactor = VkBlendFactor::VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;;
 
+		const bool bDepthOnly = (rtLayout.format == TextureFormat::None);
+
 		VkPipelineColorBlendStateCreateInfo colorBlending{};
 		colorBlending.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 		colorBlending.logicOpEnable = VK_FALSE;
 		colorBlending.logicOp = VkLogicOp::VK_LOGIC_OP_COPY;
-		colorBlending.attachmentCount = 1;
-		colorBlending.pAttachments = &colorBlendAttachment;
+		colorBlending.attachmentCount = bDepthOnly ? 0 : 1;
+		colorBlending.pAttachments = bDepthOnly ? nullptr : &colorBlendAttachment;
 		colorBlending.blendConstants[0] = 0.0f;
 		colorBlending.blendConstants[1] = 0.0f;
 		colorBlending.blendConstants[2] = 0.0f;
@@ -262,10 +264,11 @@ namespace sh::render::vk
 
 		VkPipelineRenderingCreateInfoKHR pipelineRenderingCI{};
 		pipelineRenderingCI.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
-		pipelineRenderingCI.colorAttachmentCount = 1;
-		pipelineRenderingCI.pColorAttachmentFormats = &colorFormat;
+		pipelineRenderingCI.colorAttachmentCount = bDepthOnly ? 0 : 1;
+		pipelineRenderingCI.pColorAttachmentFormats = bDepthOnly ? nullptr : &colorFormat;
 		pipelineRenderingCI.depthAttachmentFormat = depthFormat;
-		pipelineRenderingCI.stencilAttachmentFormat = depthFormat;
+		// depth-only RT는 view aspect=DEPTH-only로 만들었으므로 stencil 포맷도 비활성화.
+		pipelineRenderingCI.stencilAttachmentFormat = bDepthOnly ? VkFormat::VK_FORMAT_UNDEFINED : depthFormat;
 
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;

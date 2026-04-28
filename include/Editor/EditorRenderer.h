@@ -3,7 +3,7 @@
 #include "EditorOutlinePass.h"
 #include "EditorPostOutlinePass.h"
 
-#include "Render/ScriptableRenderer.h"
+#include "Render/RenderPass/ShadowMapPass.h"
 
 #include "Game/Component/Render/Camera.h"
 #include "Game/GameRenderer.h"

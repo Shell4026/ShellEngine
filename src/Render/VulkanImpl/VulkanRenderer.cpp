@@ -172,7 +172,7 @@ namespace sh::render::vk
 		// 카메라 데이터 GPU에 업로드
 		std::vector<const Camera*> cams{};
 		cams.reserve(cameras.size());
-		for (auto camera : cameras)
+		for (const Camera* camera : cameras)
 		{
 			if (!camera->GetActive())
 				continue;
@@ -184,6 +184,7 @@ namespace sh::render::vk
 		for (const Camera* cam : cams)
 		{
 			std::vector<Drawable*> filteredDrawables;
+			filteredDrawables.reserve(drawables.size());
 
 			RenderTarget rt{};
 			rt.frameIndex = imgIdx;
@@ -203,10 +204,10 @@ namespace sh::render::vk
 		SetDrawCallCount(renderCallCount);
 		IRenderThrMethod<ScriptableRenderer>::ExecuteTransfer(*renderer, imgIdx);
 
-		const auto& submittedCmds = renderer->GetSubmittedCommands();
-		if (submittedCmds.size() == 1)
+		const std::vector<ScriptableRenderer::RecordedCommand>& recordedCmds = renderer->GetRecordedCommands();
+		if (recordedCmds.size() == 1)
 		{
-			VulkanCommandBuffer& cmd = static_cast<VulkanCommandBuffer&>(submittedCmds.front().cmd);
+			VulkanCommandBuffer& cmd = static_cast<VulkanCommandBuffer&>(recordedCmds.front().cmd);
 			cmd.AddWaitSemaphore(
 				WaitSemaphore
 				{
@@ -219,14 +220,14 @@ namespace sh::render::vk
 		}
 		else
 		{
-			VulkanCommandBuffer& endCmd = static_cast<VulkanCommandBuffer&>(submittedCmds.back().cmd);
+			VulkanCommandBuffer& endCmd = static_cast<VulkanCommandBuffer&>(recordedCmds.back().cmd);
 			endCmd.AddSignalSemaphore(SignalSemaphore{ renderFinishedSemaphore });
 
 			bool bUsedImageAvailableSemaphore = false;
-			for (const auto& submittedCmd : submittedCmds)
+			for (const ScriptableRenderer::RecordedCommand& recordedCmd : recordedCmds)
 			{
-				ScriptableRenderPass& pass = submittedCmd.pass;
-				VulkanCommandBuffer& cmd = static_cast<VulkanCommandBuffer&>(submittedCmd.cmd);
+				ScriptableRenderPass& pass = recordedCmd.pass;
+				VulkanCommandBuffer& cmd = static_cast<VulkanCommandBuffer&>(recordedCmd.cmd);
 
 				// 스왑체인을 쓰는 첫 패스는 imageAvailableSemaphore대기
 				if (!bUsedImageAvailableSemaphore)

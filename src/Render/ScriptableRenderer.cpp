@@ -52,6 +52,16 @@ namespace sh::render
 		ctx.DeallocateCommandBuffer(*cmdPtr);
 	}
 
+	SH_RENDER_API auto ScriptableRenderer::HasPass(const core::Name& passName) const -> bool
+	{
+		for (const std::unique_ptr<ScriptableRenderPass>& pass : allPasses)
+		{
+			if (pass->passName == passName)
+				return true;
+		}
+		return false;
+	}
+
 	SH_RENDER_API void ScriptableRenderer::SyncDirty()
 	{
 		if (bSyncDirty)
@@ -128,7 +138,7 @@ namespace sh::render
 		{
 			auto [pass, cmd] = futurePass.get();
 
-			submittedCmds.push_back({ *pass, *cmd });
+			recordedCmds.push_back({ *pass, *cmd });
 		}
 
 		activePasses.clear();
@@ -160,7 +170,7 @@ namespace sh::render
 		IRenderThrMethod<ScriptableRenderPass>::EmitBarrier(*cpyPass, *cmd, ctx, postBarriers);
 		cmd->End();
 
-		submittedCmds.push_back({ *cpyPass, *cmd});
+		recordedCmds.push_back({ *cpyPass, *cmd});
 	}
 	SH_RENDER_API void ScriptableRenderer::CallReadbacks()
 	{
@@ -175,9 +185,9 @@ namespace sh::render
 	}
 	SH_RENDER_API void ScriptableRenderer::ResetSubmittedCommands(IRenderContext& ctx)
 	{
-		for (auto& submittedCmd : submittedCmds)
-			ctx.DeallocateCommandBuffer(submittedCmd.cmd);
-		submittedCmds.clear();
+		for (RecordedCommand& recordedCmd : recordedCmds)
+			ctx.DeallocateCommandBuffer(recordedCmd.cmd);
+		recordedCmds.clear();
 	}
 
 	SH_RENDER_API void ScriptableRenderer::ResetSwapChainStates()
