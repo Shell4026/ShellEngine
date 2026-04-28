@@ -129,7 +129,9 @@ namespace sh::game
 		if (customRenderer == nullptr)
 		{
 			renderer.AddCamera(uiCamera);
-			customRenderer = std::make_unique<GameRenderer>(*renderer.GetContext(), GetUiContext());
+			customRenderer = std::make_unique<GameRenderer>(*renderer.GetContext(), GetUiContext(), *this);
+			customRenderer->Init();
+
 			renderer.SetScriptableRenderer(*customRenderer);
 		}
 		

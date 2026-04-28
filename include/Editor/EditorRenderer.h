@@ -6,19 +6,23 @@
 #include "Render/ScriptableRenderer.h"
 
 #include "Game/Component/Render/Camera.h"
+#include "Game/GameRenderer.h"
 
 #include <unordered_map>
 namespace sh::game
 {
 	class ImGUImpl;
 	class UIPass;
+	class World;
 }
 namespace sh::editor
 {
-	class EditorRenderer : public render::ScriptableRenderer
+	class EditorRenderer : public game::GameRenderer
 	{
 	public:
-		SH_EDITOR_API EditorRenderer(render::IRenderContext& ctx, game::ImGUImpl& guictx);
+		SH_EDITOR_API EditorRenderer(render::IRenderContext& ctx, game::ImGUImpl& guictx, game::World& world);
+
+		SH_EDITOR_API void Init() override;
 
 		SH_EDITOR_API auto GetOutlinePass() const -> EditorOutlinePass* { return outlinePass; }
 		SH_EDITOR_API auto GetPostOutlinePass() const -> EditorPostOutlinePass* { return postOutlinePass; }
@@ -37,8 +41,5 @@ namespace sh::editor
 		EditorPostOutlinePass* postOutlinePass = nullptr;
 		game::UIPass* uiPass = nullptr;
 		//render::TransparentPipeline* transParentPass = nullptr;
-
-		std::unordered_map<std::string, std::vector<const render::Camera*>> allowedCamera;
-		std::unordered_map<std::string, std::vector<const render::Camera*>> ignoreCamera;
 	};
 }//namespace

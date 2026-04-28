@@ -1,20 +1,27 @@
 ﻿#include "GameRenderer.h"
 #include "UIPass.h"
+#include "World.h"
 
 #include "Render/RenderPass/TransparentPass.h"
 namespace sh::game
 {
-	GameRenderer::GameRenderer(render::IRenderContext& ctx, game::ImGUImpl& guictx) :
-		ScriptableRenderer(ctx)
+	GameRenderer::GameRenderer(render::IRenderContext& ctx, game::ImGUImpl& guictx, World& world) :
+		ScriptableRenderer(ctx),
+		renderCtx(ctx),
+		world(world),
+		guiCtx(guictx)
+	{
+	}
+	SH_GAME_API void GameRenderer::Init()
 	{
 		AddRenderPass(core::Name{ "Opaque" }, render::RenderQueue::Opaque);
 		AddRenderPass<render::TransparentPass>();
 		AddRenderPass<render::TransparentPass>("UI", render::RenderQueue::UI);
-		AddRenderPass<game::UIPass>().SetImGUIContext(guictx);
+		AddRenderPass<game::UIPass>().SetImGUIContext(guiCtx);
 	}
 	SH_GAME_API void GameRenderer::Setup(const render::RenderTarget& data)
 	{
-		for (auto& pass : allPasses)
+		for (const std::unique_ptr<render::ScriptableRenderPass>& pass : allPasses)
 		{
 			auto allowedIt = allowedCamera.find(pass->passName.ToString());
 			if (allowedIt != allowedCamera.end())

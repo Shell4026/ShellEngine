@@ -80,9 +80,10 @@ namespace sh::editor
 
 	SH_EDITOR_API void EditorWorld::SetupRenderer()
 	{
-		customRenderer = std::make_unique<EditorRenderer>(*renderer.GetContext(), GetUiContext());
+		customRenderer = std::make_unique<EditorRenderer>(*renderer.GetContext(), GetUiContext(), *this);
 		renderer.SetScriptableRenderer(*customRenderer);
-		auto& editorRenderer = static_cast<EditorRenderer&>(*customRenderer);
+		EditorRenderer& editorRenderer = static_cast<EditorRenderer&>(*customRenderer);
+		editorRenderer.Init();
 
 		auto& uiCamera = GetUICamera();
 		uiCamera.SetPriority(1000);
