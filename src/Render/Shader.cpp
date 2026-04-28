@@ -107,18 +107,20 @@ namespace sh::render
 		this->passes = std::move(passes);
 		for (ShaderPass* pass : this->passes)
 		{
+			if (pass == nullptr)
+				continue;
 			if (pass->GetLightingBinding() != -1)
 				bUsingLight = true;
 			if (pass->GetSkinBinding() != -1)
 				bUsingSkin = true;
 
-			const core::Name& lightingPassName = this->passes.back()->GetLightingPassName();
+			const core::Name& lightingPassName = pass->GetLightingPassName();
 
-			LightingPassData* lightingPassData = GetLightingPass(lightingPassName);
+			LightingPassData* const lightingPassData = GetLightingPass(lightingPassName);
 			if (lightingPassData == nullptr)
 			{
 				std::vector<std::reference_wrapper<ShaderPass>> v{};
-				v.push_back(*this->passes.back());
+				v.push_back(*pass);
 
 				LightingPassData passData{ lightingPassName };
 				passData.passes = std::move(v);
