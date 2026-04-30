@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "Mesh.h"
-#include "CommandBuffer.h"
 
 #include "Core/SContainer.hpp"
 
@@ -13,6 +12,7 @@ namespace sh::render
 	class RenderTexture;
 	class Drawable;
 	class Material;
+	class CommandBuffer;
 
 	struct RenderTarget
 	{
@@ -22,28 +22,23 @@ namespace sh::render
 		const std::vector<Drawable*>* drawables;
 	};
 
-	struct DrawList
-	{
-		struct RenderGroup
-		{
-			const Material* material;
-			Mesh::Topology topology;
-			std::vector<Drawable*> drawables;
-		};
-		struct RenderItem
-		{
-			const Material* material;
-			Mesh::Topology topology;
-			Drawable* drawable;
-		};
-		std::variant<std::vector<RenderGroup>, std::vector<RenderItem>> renderData;
-		std::vector<std::function<void(CommandBuffer&)>> drawCall;
-
-		uint32_t drawableCount = 0;
-
-		bool bClearColor = true;
-		bool bClearDepth = true;
-	};
+	//struct DrawList
+	//{
+	//	struct RenderGroup
+	//	{
+	//		const Material* material;
+	//		Mesh::Topology topology;
+	//		std::vector<Drawable*> drawables;
+	//	};
+	//	struct RenderItem
+	//	{
+	//		const Material* material;
+	//		Mesh::Topology topology;
+	//		Drawable* drawable;
+	//	};
+	//	std::variant<std::vector<RenderGroup>, std::vector<RenderItem>> renderData;
+	//	uint32_t drawableCount = 0;
+	//};
 
 	/// @brief 리소스(이미지/버퍼) 사용 의도. 배리어 계산의 입력으로 쓰임
 	enum class ResourceUsage

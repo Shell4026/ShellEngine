@@ -35,6 +35,15 @@ namespace sh::editor
 		rd.frameIndex = renderData.frameIndex;
 		rd.target = output.Get();
 
-		ScriptableRenderPass::Record(cmd, ctx, rd);
+		SetViewportScissor(cmd, ctx, rd);
+		cmd.SetRenderTarget(rd, true, true, true, true);
+
+		if (rd.drawables == nullptr)
+			return;
+
+		for (const RenderBatch& batch : renderBatches)
+		{
+			cmd.DrawMeshBatch(batch.drawables, passName);
+		}
 	}
 }//namespace

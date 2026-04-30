@@ -12,34 +12,41 @@ namespace sh::render
 		ScriptableRenderPass(core::Name(name), renderQueue)
 	{
 	}
-	SH_RENDER_API auto TransparentPass::BuildDrawList(const RenderTarget& renderData) -> DrawList
+
+	SH_RENDER_API void TransparentPass::Configure(const RenderTarget& renderData)
 	{
-		DrawList list{};
-		list.renderData = std::vector<DrawList::RenderItem>{};
-		list.bClearColor = false;
-		list.bClearDepth = false;
-		if (renderData.drawables == nullptr)
-			return list;
+		SetImageUsages(renderData);
+	}
+	SH_RENDER_API void TransparentPass::Record(CommandBuffer& cmd, const IRenderContext& ctx, const RenderTarget& renderTarget)
+	{
+		cmd.SetRenderTarget(renderTarget, false, false, true, false);
+		SetViewportScissor(cmd, ctx, renderTarget);
 
-		for (auto drawable : *renderData.drawables)
+		if (renderTarget.drawables == nullptr)
+			return;
+
+		struct RenderItem
 		{
-			if (!core::IsValid(drawable) || !drawable->CheckAssetValid() || drawable->GetMaterial()->GetShader()->GetShaderPasses(passName) == nullptr)
-				continue;
+			const Material* material;
+			Mesh::Topology topology;
+			const Drawable* drawable;
+		};
 
-			DrawList::RenderItem item{};
+		std::vector<RenderItem> items;
+		for (const Drawable* drawable : *renderTarget.drawables)
+		{
+			RenderItem item{};
 			item.material = drawable->GetMaterial();
 			item.topology = drawable->GetTopology(core::ThreadType::Render);
 			item.drawable = drawable;
-
-			std::get<std::vector<DrawList::RenderItem>>(list.renderData).push_back(item);
-			++list.drawableCount;
+			items.push_back(item);
 		}
 
-		const auto& camPos = renderData.camera->GetPos(core::ThreadType::Render);
-		const auto& camTo = renderData.camera->GetLookPos(core::ThreadType::Render);
+		const glm::vec3& camPos = renderTarget.camera->GetPos(core::ThreadType::Render);
+		const glm::vec3& camTo = renderTarget.camera->GetLookPos(core::ThreadType::Render);
 		const glm::vec3 to = glm::normalize(camTo - camPos);
-		std::stable_sort(std::get<1>(list.renderData).begin(), std::get<1>(list.renderData).end(),
-			[&camPos, &to](const DrawList::RenderItem& left, const DrawList::RenderItem& right) -> bool
+		std::stable_sort(items.begin(), items.end(),
+			[&camPos, &to](const RenderItem& left, const RenderItem& right) -> bool
 			{
 				const glm::vec3 posLeft = left.drawable->GetModelMatrix(core::ThreadType::Render)[3];
 				const glm::vec3 posRight = right.drawable->GetModelMatrix(core::ThreadType::Render)[3];
@@ -48,6 +55,8 @@ namespace sh::render
 				return leftLen > rightLen;
 			}
 		);
-		return list;
+
+		for (const RenderItem& item : items)
+			cmd.DrawMesh(*item.drawable, passName);
 	}
 }//namespace

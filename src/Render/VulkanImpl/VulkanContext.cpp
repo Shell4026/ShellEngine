@@ -7,7 +7,6 @@
 #include "VulkanDescriptorPool.h"
 #include "VulkanPipelineManager.h"
 #include "VulkanComputePipelineManager.h"
-#include "VulkanRenderImpl.h"
 
 #include "Core/Util.h"
 #include "Core/Logger.h"
@@ -330,7 +329,6 @@ namespace sh::render::vk
 
 		pipelineManager = std::make_unique<VulkanPipelineManager>(*this);
 		computePipelineManager = std::make_unique<VulkanComputePipelineManager>(*this);
-		renderImpl = std::make_unique<VulkanRenderImpl>(*this);
 	}
 	SH_RENDER_API void VulkanContext::Clear()
 	{
@@ -388,11 +386,6 @@ namespace sh::render::vk
 	SH_RENDER_API auto VulkanContext::GetViewportEnd() const -> const glm::vec2&
 	{
 		return viewportEnd;
-	}
-
-	SH_RENDER_API auto VulkanContext::GetRenderImpl() const -> IRenderImpl&
-	{
-		return *renderImpl;
 	}
 
 	SH_RENDER_API auto VulkanContext::ReSizing() -> bool

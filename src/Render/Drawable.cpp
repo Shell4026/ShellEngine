@@ -1,4 +1,5 @@
 ﻿#include "Drawable.h"
+#include "SkinnedMesh.h"
 
 #include "Core/ThreadSyncManager.h"
 
@@ -17,16 +18,23 @@ namespace sh::render
 
 		priority[core::ThreadType::Game] = 0;
 		priority[core::ThreadType::Render] = 0;
+
+		if (mesh.GetType().IsChildOf(SkinnedMesh::GetStaticType()))
+			bSkinned = true;
 	}
 	Drawable::Drawable(Drawable&& other) noexcept :
 		mat(other.mat), mesh(other.mesh), modelMatrix(other.modelMatrix),
 		materialData(std::move(other.materialData)),
 		renderTag(other.renderTag),
-		priority(other.priority)
+		priority(other.priority),
+		topology(other.topology),
+		subMeshIndex(other.subMeshIndex),
+		syncDatas(other.syncDatas),
+		bSkinned(other.bSkinned),
+		bDirty(other.bDirty),
+		bMatrixDirty(other.bMatrixDirty)
 	{
 		other.bDirty = false;
-		topology[core::ThreadType::Game] = other.topology[core::ThreadType::Game];
-		topology[core::ThreadType::Render] = other.topology[core::ThreadType::Render];
 	}
 	Drawable::~Drawable()
 	{
@@ -91,14 +99,14 @@ namespace sh::render
 			SyncDirty();
 		}
 	}
-	SH_RENDER_API void Drawable::SetSubMeshIndex(int idx)
+	SH_RENDER_API void Drawable::SetSubMeshIndex(uint32_t idx)
 	{
 		subMeshIndex = idx;
 	}
 
 	SH_RENDER_API auto Drawable::CheckAssetValid() const -> bool
 	{
-		return core::IsValid(mat) && core::IsValid(mesh);
+		return core::IsValid(mesh) && core::IsValid(mat) && core::IsValid(mesh);
 	}
 
 	SH_RENDER_API void Drawable::SyncDirty()
@@ -120,11 +128,13 @@ namespace sh::render
 			}
 			else if (std::holds_alternative<const Material*>(syncData.changed)) // 메테리얼이 변경됨
 			{
-				this->mat = std::get<const Material*>(syncData.changed);
+				mat = std::get<const Material*>(syncData.changed);
 			}
 			else if (std::holds_alternative<const Mesh*>(syncData.changed))
 			{
-				this->mesh = std::get<const Mesh*>(syncData.changed);
+				mesh = std::get<const Mesh*>(syncData.changed);
+				if (mesh->GetType().IsChildOf(SkinnedMesh::GetStaticType()))
+					bSkinned = true;
 			}
 			else if (std::holds_alternative<Mesh::Topology>(syncData.changed))
 			{

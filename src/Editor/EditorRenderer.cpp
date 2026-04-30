@@ -15,7 +15,7 @@ namespace sh::editor
 	{
 		AddRenderPass(core::Name{ "EditorPicking" }, render::RenderQueue::Picking);
 		outlinePass = &AddRenderPass<EditorOutlinePass>();
-		AddShadowPass();
+		//AddShadowPass();
 		AddRenderPass(core::Name{ "Opaque" }, render::RenderQueue::Opaque);
 		AddRenderPass<render::TransparentPass>();
 		AddRenderPass<render::TransparentPass>("UI", render::RenderQueue::Transparent);

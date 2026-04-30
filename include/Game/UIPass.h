@@ -17,7 +17,7 @@ namespace sh::game
 		SH_GAME_API void SetImGUIContext(ImGUImpl& gui);
 	protected:
 		SH_GAME_API void Configure(const render::RenderTarget& renderData) override;
-		SH_GAME_API auto BuildDrawList(const render::RenderTarget& renderData) -> render::DrawList override;
+		SH_GAME_API void Record(render::CommandBuffer& cmd, const render::IRenderContext& ctx, const render::RenderTarget& renderData) override;
 	public:
 		render::RenderTexture* viewportTexture = nullptr;
 	private:

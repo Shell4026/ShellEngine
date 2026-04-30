@@ -20,7 +20,7 @@ namespace sh::editor
 		SH_EDITOR_API void SetOutlineMaterial(render::Material& mat);
 	protected:
 		SH_EDITOR_API void Configure(const render::RenderTarget& renderData) override;
-		SH_EDITOR_API auto BuildDrawList(const render::RenderTarget& renderData) -> render::DrawList override;
+		SH_EDITOR_API void Record(render::CommandBuffer& cmd, const render::IRenderContext& ctx, const render::RenderTarget& renderData) override;
 	private:
 		const render::IRenderContext& ctx;
 

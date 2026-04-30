@@ -18,22 +18,14 @@ namespace sh::game
 	}
 	SH_GAME_API void UIPass::Configure(const render::RenderTarget& renderData)
 	{
-		ScriptableRenderPass::Configure(renderData);
+		renderTextures[renderData.target] = render::ResourceUsage::ColorAttachment;
 		if (viewportTexture != nullptr)
 			renderTextures[viewportTexture] = render::ResourceUsage::SampledRead;
 	}
-	SH_GAME_API auto UIPass::BuildDrawList(const render::RenderTarget& renderData) -> render::DrawList
+
+	SH_GAME_API void UIPass::Record(render::CommandBuffer& cmd, const render::IRenderContext& ctx, const render::RenderTarget& renderData)
 	{
-		render::DrawList list{};
-
-		list.drawCall.push_back(
-			[&](render::CommandBuffer& cmd)
-			{
-				ImGui_ImplVulkan_RenderDrawData(&gui->GetDrawData(), static_cast<render::vk::VulkanCommandBuffer&>(cmd).GetCommandBuffer());
-			}
-		);
-		list.bClearColor = false;
-
-		return list;
+		ScriptableRenderPass::Record(cmd, ctx, renderData);
+		ImGui_ImplVulkan_RenderDrawData(&gui->GetDrawData(), static_cast<render::vk::VulkanCommandBuffer&>(cmd).GetCommandBuffer());
 	}
 }//namespace

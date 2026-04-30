@@ -10,6 +10,7 @@ namespace sh::render
 	public:
 		SH_RENDER_API TransparentPass(std::string_view name = "Transparent", RenderQueue renderQueue = RenderQueue::Transparent);
 
-		SH_RENDER_API auto BuildDrawList(const RenderTarget& renderData) -> DrawList override;
+		SH_RENDER_API void Configure(const RenderTarget& renderData) override;
+		SH_RENDER_API void Record(CommandBuffer& cmd, const IRenderContext& ctx, const RenderTarget& renderData) override;
 	};
 }//namespace

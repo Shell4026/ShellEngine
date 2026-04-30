@@ -125,7 +125,7 @@ namespace sh::render
 				{
 					CommandBuffer* cmd = ctx.AllocateCommandBuffer(false);
 					cmd->Begin(true);
-					IRenderThrMethod<ScriptableRenderPass>::EmitBarrier(*pass, *cmd, ctx, barriers[idx]);
+					cmd->EmitBarrier(barriers[idx]);
 					IRenderThrMethod<ScriptableRenderPass>::Record(*pass, *cmd, ctx, data);
 					cmd->End();
 					return { pass, cmd };
@@ -154,8 +154,19 @@ namespace sh::render
 		IRenderThrMethod<ScriptableRenderPass>::Configure(*cpyPass, target);
 
 		std::vector<BarrierInfo> preBarriers = BuildBarrierInfo(*cpyPass, imgIdx);
-		std::vector<BarrierInfo> postBarriers = { BarrierInfo{imgIdx, swapChainStates[imgIdx], ResourceUsage::Present} };
-		swapChainStates[imgIdx] = ResourceUsage::Present;
+		std::vector<BarrierInfo> postBarriers;
+		if (swapChainStates.size() > imgIdx)
+		{
+			postBarriers = { BarrierInfo{imgIdx, swapChainStates[imgIdx], ResourceUsage::Present} };
+			swapChainStates[imgIdx] = ResourceUsage::Present;
+		}
+		else
+		{
+			swapChainStates.resize(imgIdx + 1, ResourceUsage::Undefined);
+			postBarriers = { BarrierInfo{imgIdx, ResourceUsage::Undefined, ResourceUsage::Present} };
+			swapChainStates[imgIdx] = ResourceUsage::Present;
+		}
+
 
 		RenderTarget rt{};
 		rt.frameIndex = imgIdx;
@@ -165,9 +176,9 @@ namespace sh::render
 
 		CommandBuffer* cmd = ctx.AllocateCommandBuffer(false);
 		cmd->Begin(true);
-		IRenderThrMethod<ScriptableRenderPass>::EmitBarrier(*cpyPass, *cmd, ctx, preBarriers);
+		cmd->EmitBarrier(preBarriers);
 		IRenderThrMethod<ScriptableRenderPass>::Record(*cpyPass, *cmd, ctx, rt);
-		IRenderThrMethod<ScriptableRenderPass>::EmitBarrier(*cpyPass, *cmd, ctx, postBarriers);
+		cmd->EmitBarrier(postBarriers);
 		cmd->End();
 
 		recordedCmds.push_back({ *cpyPass, *cmd});

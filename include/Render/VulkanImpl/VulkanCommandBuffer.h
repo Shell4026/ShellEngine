@@ -1,12 +1,18 @@
 ﻿#pragma once
 #include "../Export.h"
 #include "../CommandBuffer.h"
+#include "../RenderTarget.h"
 #include "VulkanConfig.h"
 #include "Core/NonCopyable.h"
 
 #include <vector>
 #include <functional>
 
+namespace sh::render
+{
+    class Camera;
+    class Mesh;
+}
 namespace sh::render::vk
 {
     class VulkanContext;
@@ -42,11 +48,16 @@ namespace sh::render::vk
         SH_RENDER_API auto Build(const std::function<void()>& recordFn, bool bOneTimeSubmit = true) -> VkResult;
         SH_RENDER_API void Begin(bool bOnetime) override;
         SH_RENDER_API void End() override;
+        SH_RENDER_API void Reset() override;
 
         SH_RENDER_API void Blit(RenderTexture& src, int x, int y, IBuffer& dst) override;
         SH_RENDER_API void Dispatch(const ComputeShader& shader, uint32_t x, uint32_t y, uint32_t z) override;
-
-        SH_RENDER_API auto ResetCommand(VkCommandBufferResetFlags flags = 0) -> VkResult;
+        SH_RENDER_API void SetRenderTarget(const RenderTarget& renderTarget, bool bClearColor = true, bool bClearDepth = true, bool bStoreColor = false, bool bStoreDepth = false) override;
+        SH_RENDER_API void SetViewport(int x, int y, int width, int height) override;
+        SH_RENDER_API void SetScissor(uint32_t x, uint32_t y, uint32_t width, uint32_t height) override;
+        SH_RENDER_API void DrawMesh(const Drawable& drawable, core::Name passName) override;
+        SH_RENDER_API void DrawMeshBatch(const std::vector<const Drawable*>& drawables, core::Name passName) override;
+        SH_RENDER_API void EmitBarrier(const std::vector<BarrierInfo>& barriers) override;
 
         SH_RENDER_API auto GetOrCreateFence() -> VkFence;
         SH_RENDER_API void DestroyFence();
@@ -59,21 +70,38 @@ namespace sh::render::vk
         SH_RENDER_API void AddWaitSemaphore(const WaitSemaphore& w);
         SH_RENDER_API void AddSignalSemaphore(const SignalSemaphore& s);
 
-        SH_RENDER_API auto GetWaitSemaphores() const -> const std::vector<WaitSemaphore>&;
-        SH_RENDER_API auto GetSignalSemaphores() const -> const std::vector<SignalSemaphore>&;
-
-        SH_RENDER_API auto GetCommandBuffer() const -> VkCommandBuffer;
-        SH_RENDER_API auto GetCommandPool() const -> VkCommandPool;
+        SH_RENDER_API auto GetWaitSemaphores() const -> const std::vector<WaitSemaphore>& { return waitSemaphores; }
+        SH_RENDER_API auto GetSignalSemaphores() const -> const std::vector<SignalSemaphore>& { return signalSemaphores; }
+        SH_RENDER_API auto GetCommandBuffer() const -> VkCommandBuffer { return buffer; }
+        SH_RENDER_API auto GetCommandPool() const -> VkCommandPool { return cmdPool; }
 
         SH_RENDER_API void Clear();
     private:
+        void BindCameraSet(const Material& mat, const ShaderPass& pass, VkPipelineLayout pipelineLayout, uint32_t cameraOffset);
+        void BindMaterialSet(const Material& mat, const ShaderPass& pass, VkPipelineLayout pipelineLayout);
+        void BindObjectSet(const Drawable& drawable, const ShaderPass& pass, VkPipelineLayout pipelineLayout);
+        void BindMesh(const Mesh& mesh, uint32_t subMeshIdx, bool bSkinned);
+    private:
+        struct RenderState
+        {
+            RenderTargetLayout layout{};
+            const Camera* camera = nullptr;
+            uint32_t targetWidth = 0;
+            uint32_t targetHeight = 0;
+           
+            uint32_t lastPipelineIdx = 0xffffffff;
+            uint32_t lastPipelineGen = 0xffffffff;
+            bool bDepthOnly = false;
+        } renderState;
+
         const VulkanContext& context;
         VkCommandBuffer buffer = VK_NULL_HANDLE;
         VkCommandPool cmdPool = VK_NULL_HANDLE;
 
-        std::vector<WaitSemaphore>   waitSemaphores;
+        std::vector<WaitSemaphore> waitSemaphores;
         std::vector<SignalSemaphore> signalSemaphores;
 
         VkFence fence = VK_NULL_HANDLE;
+        bool bBeginRender = false;
     };
 }//namespace

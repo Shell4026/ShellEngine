@@ -270,7 +270,7 @@ namespace sh::render
 
 		bPropertyDirty = true;
 
-		if (data->GetType() == RenderTexture::GetStaticType())
+		if (data->GetType().IsChildOf(RenderTexture::GetStaticType()))
 			cachedRts[name] = static_cast<const RenderTexture*>(data);
 	}
 	SH_RENDER_API void Material::SetProperty(const std::string& name, const glm::vec4& data)

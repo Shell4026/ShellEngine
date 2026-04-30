@@ -5,7 +5,6 @@
 #include "Material.h"
 #include "Shader.h"
 #include "IRenderContext.h"
-#include "IRenderImpl.h"
 
 namespace sh::render
 {

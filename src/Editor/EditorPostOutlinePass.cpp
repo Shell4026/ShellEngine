@@ -45,25 +45,18 @@ namespace sh::editor
 
 			core::GarbageCollection::GetInstance()->SetRootSet(drawable);
 		}
-		ScriptableRenderPass::Configure(renderData);
+		if (mat != nullptr)
+		{
+			for (auto& [name, rt] : mat->GetCachedRenderTextures())
+				renderTextures[rt] = render::ResourceUsage::SampledRead;
+		}
 	}
-	SH_EDITOR_API auto EditorPostOutlinePass::BuildDrawList(const render::RenderTarget& renderData) -> render::DrawList
+	SH_EDITOR_API void EditorPostOutlinePass::Record(render::CommandBuffer& cmd, const render::IRenderContext& ctx, const render::RenderTarget& renderData)
 	{
-		render::DrawList list{};
-		list.renderData = std::vector<render::DrawList::RenderItem>{};
-		list.bClearColor = false;
-
-		if (!core::IsValid(drawable) || !drawable->CheckAssetValid() || drawable->GetMaterial()->GetShader()->GetShaderPasses(passName) == nullptr)
-			return list;
-
-		render::DrawList::RenderItem renderItem;
-		renderItem.material = mat;
-		renderItem.topology = drawable->GetTopology(core::ThreadType::Render);
-		renderItem.drawable = drawable;
-
-		std::get<1>(list.renderData).push_back(renderItem);
-		list.drawableCount = 1;
-
-		return list;
+		if (!core::IsValid(drawable->GetMesh()) || !core::IsValid(drawable->GetMaterial()))
+			return;
+		cmd.SetRenderTarget(renderData, false, false, false, false);
+		SetViewportScissor(cmd, ctx, renderData);
+		cmd.DrawMesh(*drawable, passName);
 	}
 }//namespace

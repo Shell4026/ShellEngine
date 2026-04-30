@@ -1,6 +1,6 @@
 ﻿#pragma once
-#include "../Export.h"
-#include "../IRenderContext.h"
+#include "Render/Export.h"
+#include "Render/IRenderContext.h"
 #include "VulkanConfig.h"
 
 #include "Core/ISyncable.h"
@@ -29,7 +29,6 @@ namespace sh::render::vk
 	class VulkanPipelineManager;
 	class VulkanComputePipelineManager;
 	class VulkanQueueManager;
-	class VulkanRenderImpl;
 
 	class VulkanContext : public IRenderContext
 	{
@@ -49,8 +48,6 @@ namespace sh::render::vk
 		SH_RENDER_API void SetViewport(const glm::vec2& start, const glm::vec2& end) override;
 		SH_RENDER_API auto GetViewportStart() const -> const glm::vec2 & override;
 		SH_RENDER_API auto GetViewportEnd() const -> const glm::vec2 & override;
-
-		SH_RENDER_API auto GetRenderImpl() const -> IRenderImpl& override;
 
 		SH_RENDER_API auto ReSizing() -> bool;
 
@@ -128,7 +125,6 @@ namespace sh::render::vk
 		std::unique_ptr<VulkanDescriptorPool> descPool;
 		std::unique_ptr<VulkanPipelineManager> pipelineManager;
 		std::unique_ptr<VulkanComputePipelineManager> computePipelineManager;
-		std::unique_ptr<VulkanRenderImpl> renderImpl;
 
 		VkDescriptorSetLayout emptyDescLayout;
 		VkDescriptorSet emptyDescSet;
