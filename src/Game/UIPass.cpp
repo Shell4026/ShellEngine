@@ -25,7 +25,8 @@ namespace sh::game
 
 	SH_GAME_API void UIPass::Record(render::CommandBuffer& cmd, const render::IRenderContext& ctx, const render::RenderTarget& renderData)
 	{
-		ScriptableRenderPass::Record(cmd, ctx, renderData);
+		cmd.SetRenderTarget(renderData, false, true, false, false);
+		SetViewportScissor(cmd, ctx, renderData);
 		ImGui_ImplVulkan_RenderDrawData(&gui->GetDrawData(), static_cast<render::vk::VulkanCommandBuffer&>(cmd).GetCommandBuffer());
 	}
 }//namespace

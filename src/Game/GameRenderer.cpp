@@ -14,7 +14,7 @@ namespace sh::game
 	}
 	SH_GAME_API void GameRenderer::Init()
 	{
-		AddShadowPass();
+		//AddShadowPass();
 		AddRenderPass(core::Name{ "Opaque" }, render::RenderQueue::Opaque);
 		AddRenderPass<render::TransparentPass>();
 		AddRenderPass<render::TransparentPass>("UI", render::RenderQueue::UI);
