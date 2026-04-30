@@ -108,14 +108,15 @@ namespace sh::game
 		}
 		else if (prop.GetName() == core::Util::ConstexprHash("mats"))
 		{
-			CreateDrawable(true);
+			for (std::size_t i = 0; i < mats.size(); ++i)
+				SetMaterial(i, mats[i]);
 		}
 		else if (prop.GetName() == core::Util::ConstexprHash("renderTag"))
 		{
-			for (auto* d : drawables)
+			for (render::Drawable* drawable : drawables)
 			{
-				if (d != nullptr)
-					d->SetRenderTagId(renderTag);
+				if (drawable != nullptr)
+					drawable->SetRenderTagId(renderTag);
 			}
 		}
 	}
