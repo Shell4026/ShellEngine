@@ -10,16 +10,6 @@ namespace sh::core
 	/// @brief 같은 문자열은 같은 주소를 가르키며 생성 시 스레드 안전하다.
 	class Name
 	{
-	private:
-		friend struct std::hash<sh::core::Name>;
-
-		SH_CORE_API static std::unordered_map<std::size_t, std::string> map;
-		SH_CORE_API static std::shared_mutex mu;
-
-#if SH_DEBUG
-		std::string debugString;
-#endif
-		std::size_t hash;
 	public:
 		SH_CORE_API Name(std::string_view str);
 		SH_CORE_API Name(const Name& other) noexcept;
@@ -37,13 +27,23 @@ namespace sh::core
 
 		SH_CORE_API operator const std::string& () const;
 		SH_CORE_API auto ToString() const -> const std::string&;
+	private:
+		friend struct std::hash<sh::core::Name>;
+
+		SH_CORE_API static std::unordered_map<std::size_t, std::string> map;
+		SH_CORE_API static std::shared_mutex mu;
+
+#if SH_DEBUG
+		std::string debugString;
+#endif
+		std::size_t hash;
 	};
 
-	static auto operator==(std::string_view str, const sh::core::Name& name) -> bool
+	inline static auto operator==(std::string_view str, const sh::core::Name& name) -> bool
 	{
 		return name == str;
 	}
-	static auto operator!=(std::string_view str, const sh::core::Name& name) -> bool
+	inline static auto operator!=(std::string_view str, const sh::core::Name& name) -> bool
 	{
 		return name != str;
 	}
@@ -59,4 +59,4 @@ namespace std
 			return name.hash;
 		}
 	};
-}
+}//namespace
