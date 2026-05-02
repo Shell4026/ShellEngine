@@ -58,7 +58,7 @@ SH_RENDER_API void Renderer::Sync()
   std::swap(drawcall[core::ThreadType::Game], drawcall[core::ThreadType::Render]);
 }
 ```
-> swap방식은 메모리를 추가로 먹지만 매우 빠르게 작동하니 성능에 중요한 곳에서 사용하면 좋습니다.
+> swap방식은 메모리를 추가로 먹지만 매우 빠르게 작동하니 성능에 중요한 곳에서 사용하면 됩니다.
 
 # 스레드 풀
 core모듈의 ThreadPool클래스를 이용하여 작업을 할당하고 future로 값을 받아올 수 있습니다.
@@ -88,4 +88,19 @@ for (auto& renderPipeline : renderPipelines)
 // 스레드풀에 할당된 작업이 다 끝나면 넘어간다.
 for (auto& futureCommand : futureCommands)
   recordedCommands.push_back(futureCommand.get());
+```
+# MPSC큐
+MSPC큐는 Multi Producer Single Consumer큐의 약자로, 다수의 스레드에서 쓰기 작업을 수행하고, 하나의 스레드에서 읽기 작업을 하는데 특화된 락-프리 큐입니다.
+
+```cpp
+core::LockFreeMPSCQueue<int> requestID;
+// 다수의 스레드에서 실행
+requestID.Push(threadID);
+// 하나의 스레드에서 읽어오기
+requestID.Drain(
+  [this](int threadID)
+  {
+    SH_INFO_FORMAT("Request: {}", threadID);
+  }
+)
 ```
