@@ -37,6 +37,7 @@ namespace sh::render
 {
 	class Renderer;
 	class ScriptableRenderer;
+	class ShadowMapManager;
 }
 
 namespace sh::game
@@ -118,6 +119,8 @@ namespace sh::game
 		auto GetLightOctree() -> Octree& { return lightOctree; }
 		auto GetLightOctree() const -> const Octree& { return lightOctree; }
 		auto GetMainCamera() const -> Camera* { return mainCamera; }
+		auto GetShadowMapManager() -> render::ShadowMapManager& { return *shadowMapManager; }
+		auto GetShadowMapManager() const -> const render::ShadowMapManager& { return *shadowMapManager; }
 		auto GetGameObjects() const -> const std::vector<GameObject*>& { return objs; }
 		auto GetGameObjectPool() -> core::memory::MemoryPool<GameObject>& { return objPool; }
 		auto GetCameras() const -> const std::vector<Camera*>& { return cameras; }
@@ -141,6 +144,7 @@ namespace sh::game
 		std::vector<Camera*> cameras;
 
 		std::unique_ptr<render::ScriptableRenderer> customRenderer;
+		std::unique_ptr<render::ShadowMapManager> shadowMapManager;
 	private:
 		core::GarbageCollection* gc;
 		ImGUImpl* imgui = nullptr;

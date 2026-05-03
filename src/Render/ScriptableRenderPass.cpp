@@ -107,7 +107,8 @@ namespace sh::render
 	SH_RENDER_API void ScriptableRenderPass::SetImageUsages(const RenderData& renderData)
 	{
 		renderTextures.clear();
-		if (renderData.target != nullptr && IsDepthTexture(renderData.target->GetTextureFormat()))
+		
+		if (renderData.target != nullptr && renderData.target->IsDepthOnly())
 			renderTextures[renderData.target] = ResourceUsage::DepthStencilAttachment;
 		else
 			renderTextures[renderData.target] = ResourceUsage::ColorAttachment;

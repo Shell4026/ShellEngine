@@ -1,7 +1,6 @@
 ﻿#include "Component/Render/DirectionalLight.h"
 
 #include "World.h"
-#include "GameRenderer.h"
 
 #include "Core/SObject.h"
 
@@ -10,7 +9,6 @@
 #include "Render/RenderTexture.h"
 
 #include <glm/gtc/matrix_transform.hpp>
-#include <limits>
 
 namespace sh::game
 {
@@ -18,20 +16,6 @@ namespace sh::game
 		Component(owner)
 	{
 		world.GetLightOctree().Insert(*this);
-
-		renderData.priority = 1000;
-
-		GameRenderer* const srPtr = dynamic_cast<GameRenderer*>(world.renderer.GetScriptableRenderer());
-		if (srPtr != nullptr)
-		{
-			//world.renderer.AddCamera(shadowCamera);
-			//srPtr->AddShadowCasterCamera(shadowCamera);
-		}
-		else
-		{
-			SH_ERROR("ScriptableRenderer is not GameRenderer!");
-		}
-
 		canPlayInEditor = true;
 	}
 	DirectionalLight::~DirectionalLight() = default;
@@ -40,26 +24,12 @@ namespace sh::game
 	{
 		Super::Awake();
 		if (bCastShadow)
-			EnsureShadowResources();
-	}
-
-	SH_GAME_API void DirectionalLight::BeginUpdate()
-	{
-		Super::BeginUpdate();
-		if (bCastShadow && shadowSlot != render::ShadowMapManager::InvalidSlot)
-			UpdateShadowCamera();
+			RegisterToShadowManager();
 	}
 
 	SH_GAME_API void DirectionalLight::OnDestroy()
 	{
-		ReleaseShadowResources();
-
-		GameRenderer* const srPtr = dynamic_cast<GameRenderer*>(world.renderer.GetScriptableRenderer());
-		if (srPtr != nullptr)
-		{
-			//srPtr->RemoveShadowCasterCamera(shadowCamera);
-			//world.renderer.RemoveCamera(shadowCamera);
-		}
+		UnregisterFromShadowManager();
 		world.GetLightOctree().Erase(*this);
 		Super::OnDestroy();
 	}
@@ -69,23 +39,9 @@ namespace sh::game
 		if (prop.GetName() == "bCastShadow")
 		{
 			if (bCastShadow)
-			{
-				if (shadowSlot == render::ShadowMapManager::InvalidSlot)
-					EnsureShadowResources();
-			}
+				RegisterToShadowManager();
 			else
-			{
-				ReleaseShadowResources();
-			}
-		}
-		else if (prop.GetName() == "shadowMapResolution")
-		{
-			if (bCastShadow)
-			{
-				// 슬롯 크기는 변경 불가. 해제 후 재할당으로 새 해상도 슬롯을 받는다.
-				ReleaseShadowResources();
-				EnsureShadowResources();
-			}
+				UnregisterFromShadowManager();
 		}
 	}
 
@@ -107,9 +63,9 @@ namespace sh::game
 			return;
 		bCastShadow = b;
 		if (bCastShadow)
-			EnsureShadowResources();
+			RegisterToShadowManager();
 		else
-			ReleaseShadowResources();
+			UnregisterFromShadowManager();
 	}
 	SH_GAME_API void DirectionalLight::SetShadowBias(float bias)
 	{
@@ -117,90 +73,67 @@ namespace sh::game
 	}
 	SH_GAME_API void DirectionalLight::SetShadowMapResolution(uint32_t res)
 	{
-		if (shadowMapResolution == res)
-			return;
 		shadowMapResolution = res;
-		if (bCastShadow)
-		{
-			ReleaseShadowResources();
-			EnsureShadowResources();
-		}
 	}
 
-	SH_GAME_API auto DirectionalLight::GetLightSpaceMatrix() const -> glm::mat4
-	{
-		const glm::vec3 dir = glm::normalize(glm::vec3{ direction.x, direction.y, direction.z });
-		const glm::vec3 sceneCenter = glm::vec3{ 0.f, 0.f, 0.f };
-		const float distance = shadowFarPlane * 0.5f;
-		const glm::vec3 lightPos = sceneCenter - dir * distance;
-
-		const glm::vec3 worldUp = (glm::abs(dir.y) > 0.99f) ? glm::vec3{ 0.f, 0.f, 1.f } : glm::vec3{ 0.f, 1.f, 0.f };
-
-		const glm::mat4 view = glm::lookAt(lightPos, lightPos + dir, worldUp);
-		const glm::mat4 proj = glm::ortho(-shadowOrthoSize, shadowOrthoSize, -shadowOrthoSize, shadowOrthoSize, shadowNearPlane, shadowFarPlane);
-		return proj * view;
-	}
 	SH_GAME_API auto DirectionalLight::GetShadowMap() const -> render::RenderTexture*
 	{
 		if (!bCastShadow)
 			return nullptr;
-		return render::ShadowMapManager::GetInstance()->GetAtlas();
+		return world.GetShadowMapManager().GetAtlas();
 	}
 	SH_GAME_API auto DirectionalLight::GetShadowSlot() const -> render::ShadowMapManager::Slot
 	{
-		if (!bCastShadow || shadowSlot == render::ShadowMapManager::InvalidSlot)
+		if (!bCastShadow)
 			return render::ShadowMapManager::Slot{};
-		return render::ShadowMapManager::GetInstance()->GetSlot(shadowSlot);
+		return world.GetShadowMapManager().GetSlot(*this);
 	}
-
-	void DirectionalLight::EnsureShadowResources()
+	SH_GAME_API auto DirectionalLight::GetLightSpaceMatrix() const -> glm::mat4
 	{
-		render::ShadowMapManager* mgr = render::ShadowMapManager::GetInstance();
-
-		if (shadowSlot == render::ShadowMapManager::InvalidSlot)
-		{
-			shadowSlot = mgr->AllocateSlot(shadowMapResolution);
-			if (shadowSlot == render::ShadowMapManager::InvalidSlot)
-			{
-				SH_ERROR("DirectionalLight: failed to allocate shadow slot");
-				return;
-			}
-			mgr->RegisterCameraSlot(&shadowCamera, shadowSlot);
-		}
-
-		render::RenderTexture* atlas = mgr->GetAtlas();
-
-		shadowCamera.SetOrthographic(true);
-		shadowCamera.SetWidth(shadowOrthoSize * 2.f);
-		shadowCamera.SetHeight(shadowOrthoSize * 2.f);
-		shadowCamera.SetNearPlane(shadowNearPlane);
-		shadowCamera.SetFarPlane(shadowFarPlane);
-		shadowCamera.SetRenderTexture(atlas);
-
-		UpdateShadowCamera();
+		return GetShadowProjMatrix() * GetShadowViewMatrix();
 	}
 
-	void DirectionalLight::ReleaseShadowResources()
-	{
-		if (shadowSlot == render::ShadowMapManager::InvalidSlot)
-			return;
-		render::ShadowMapManager* mgr = render::ShadowMapManager::GetInstance();
-		mgr->UnregisterCameraSlot(&shadowCamera);
-		mgr->ReleaseSlot(shadowSlot);
-		shadowSlot = render::ShadowMapManager::InvalidSlot;
-		shadowCamera.SetRenderTexture(nullptr);
-	}
-
-	void DirectionalLight::UpdateShadowCamera()
+	SH_GAME_API auto DirectionalLight::GetShadowViewMatrix() const -> glm::mat4
 	{
 		const glm::vec3 dir = glm::normalize(glm::vec3{ direction.x, direction.y, direction.z });
-		const glm::vec3 sceneCenter = glm::vec3{ 0.f, 0.f, 0.f };
+		const glm::vec3 sceneCenter{ 0.f, 0.f, 0.f };
 		const float distance = shadowFarPlane * 0.5f;
 		const glm::vec3 lightPos = sceneCenter - dir * distance;
 		const glm::vec3 worldUp = (glm::abs(dir.y) > 0.99f) ? glm::vec3{ 0.f, 0.f, 1.f } : glm::vec3{ 0.f, 1.f, 0.f };
+		return glm::lookAt(lightPos, lightPos + dir, worldUp);
+	}
+	SH_GAME_API auto DirectionalLight::GetShadowProjMatrix() const -> glm::mat4
+	{
+		return glm::orthoRH_ZO(-shadowOrthoSize, shadowOrthoSize, -shadowOrthoSize, shadowOrthoSize, shadowNearPlane, shadowFarPlane);
+	}
+	SH_GAME_API auto DirectionalLight::GetShadowPos() const -> glm::vec3
+	{
+		const glm::vec3 dir = glm::normalize(glm::vec3{ direction.x, direction.y, direction.z });
+		const glm::vec3 sceneCenter{ 0.f, 0.f, 0.f };
+		const float distance = shadowFarPlane * 0.5f;
+		return sceneCenter - dir * distance;
+	}
+	SH_GAME_API auto DirectionalLight::GetShadowLookAt() const -> glm::vec3
+	{
+		return glm::vec3{ 0.f, 0.f, 0.f };
+	}
+	SH_GAME_API auto DirectionalLight::GetPos() const -> const Vec3&
+	{
+		return gameObject.transform->GetWorldPosition();
+	}
 
-		shadowCamera.SetPos(lightPos);
-		shadowCamera.SetLookPos(sceneCenter);
-		shadowCamera.SetUpVector(worldUp);
+	void DirectionalLight::RegisterToShadowManager()
+	{
+		if (bRegistered)
+			return;
+		world.GetShadowMapManager().Register(*this);
+		bRegistered = true;
+	}
+	void DirectionalLight::UnregisterFromShadowManager()
+	{
+		if (!bRegistered)
+			return;
+		world.GetShadowMapManager().Unregister(*this);
+		bRegistered = false;
 	}
 }//namespace

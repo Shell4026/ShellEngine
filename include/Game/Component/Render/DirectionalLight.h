@@ -15,7 +15,7 @@ namespace sh::render
 
 namespace sh::game
 {
-	class DirectionalLight : public Component, public ILight
+	class DirectionalLight : public Component, public ILight, public render::IShadowCaster
 	{
 		COMPONENT(DirectionalLight)
 	public:
@@ -23,7 +23,6 @@ namespace sh::game
 		SH_GAME_API ~DirectionalLight();
 
 		SH_GAME_API void Awake() override;
-		SH_GAME_API void BeginUpdate() override;
 		SH_GAME_API void OnDestroy() override;
 		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 
@@ -35,27 +34,29 @@ namespace sh::game
 		SH_GAME_API void SetShadowBias(float bias) override;
 		SH_GAME_API void SetShadowMapResolution(uint32_t res) override;
 
-		/// @brief 디렉셔널 라이트의 광원 공간 변환 행렬 (proj * view)을 계산한다.
-		SH_GAME_API auto GetLightSpaceMatrix() const -> glm::mat4;
 		/// @brief 그림자 아틀라스 텍스처를 반환한다 (모든 광원이 공유)
 		SH_GAME_API auto GetShadowMap() const -> render::RenderTexture*;
 		/// @brief 아틀라스 내에서 이 광원의 슬롯 정보를 반환한다.
 		SH_GAME_API auto GetShadowSlot() const -> render::ShadowMapManager::Slot;
+		/// @brief 디렉셔널 라이트의 광원 공간 변환 행렬 (proj * view)을 반환한다.
+		SH_GAME_API auto GetLightSpaceMatrix() const -> glm::mat4;
 
-		auto GetPos() const -> const Vec3 & override { return gameObject.transform->GetWorldPosition(); }
+		SH_GAME_API auto GetShadowMapResolution() const -> uint32_t override { return shadowMapResolution; }
+		SH_GAME_API auto GetShadowViewMatrix() const -> glm::mat4 override;
+		SH_GAME_API auto GetShadowProjMatrix() const -> glm::mat4 override;
+		SH_GAME_API auto GetShadowPos() const -> glm::vec3 override;
+		SH_GAME_API auto GetShadowLookAt() const -> glm::vec3 override;
+
+		SH_GAME_API auto GetPos() const -> const Vec3& override;
 		auto GetLightType() const -> ILight::Type override { return ILight::Type::Directional; }
 		auto IsCastShadow() const -> bool override { return bCastShadow; }
 		auto GetShadowBias() const -> float override { return shadowBias; }
-		auto GetShadowMapResolution() const -> uint32_t override { return shadowMapResolution; }
 		auto GetDirection() const -> const Vec3& { return direction; }
 		auto GetIntensity() const -> float { return intensity; }
 	private:
-		/// @brief bCastShadow=true 시점에 호출. 매니저로부터 슬롯을 할당받고 카메라를 설정.
-		void EnsureShadowResources();
-		/// @brief 슬롯을 매니저에 반납하고 카메라 매핑을 해제.
-		void ReleaseShadowResources();
-		/// @brief 매 프레임 광원 방향에 맞춰 shadowCamera의 pos/lookAt을 갱신.
-		void UpdateShadowCamera();
+		/// @brief bCastShadow 변경 시 월드의 ShadowMapManager에 등록/해제한다.
+		void RegisterToShadowManager();
+		void UnregisterFromShadowManager();
 	private:
 		PROPERTY(direction)
 		Vec3 direction{ -1.f, -1.f, -1.f };
@@ -75,7 +76,6 @@ namespace sh::game
 		PROPERTY(shadowFarPlane)
 		float shadowFarPlane = 100.f;
 
-		render::RenderData renderData;
-		render::ShadowMapManager::SlotHandle shadowSlot = render::ShadowMapManager::InvalidSlot;
+		bool bRegistered = false;
 	};
 }//namespace

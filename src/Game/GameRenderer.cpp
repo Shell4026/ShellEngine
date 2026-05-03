@@ -3,7 +3,6 @@
 #include "World.h"
 
 #include "Render/RenderPass/TransparentPass.h"
-#include "Render/ShadowMapManager.h"
 
 #include <cstring>
 namespace sh::game
@@ -14,7 +13,6 @@ namespace sh::game
 		world(world),
 		guiCtx(guictx)
 	{
-		//render::ShadowMapManager::GetInstance()->Init(ctx);
 	}
 	SH_GAME_API void GameRenderer::Init()
 	{

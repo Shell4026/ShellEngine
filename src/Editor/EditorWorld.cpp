@@ -12,6 +12,7 @@
 #include "Render/Renderer.h"
 #include "Render/Mesh/Grid.h"
 #include "Render/Model.h"
+#include "Render/ShadowMapManager.h"
 
 #include "Editor/Component/EditorControl.h"
 
@@ -81,10 +82,16 @@ namespace sh::editor
 
 	SH_EDITOR_API void EditorWorld::SetupRenderer()
 	{
-		customRenderer = std::make_unique<EditorRenderer>(*renderer.GetContext(), GetUiContext(), *this);
-		renderer.SetScriptableRenderer(*customRenderer);
-		EditorRenderer& editorRenderer = static_cast<EditorRenderer&>(*customRenderer);
-		editorRenderer.Init();
+		if (customRenderer == nullptr)
+		{
+			customRenderer = std::make_unique<EditorRenderer>(*renderer.GetContext(), GetUiContext(), *this);
+			EditorRenderer& editorRenderer = static_cast<EditorRenderer&>(*customRenderer);
+			editorRenderer.Init();
+
+			renderer.SetScriptableRenderer(*customRenderer);
+		}
+		if (shadowMapManager != nullptr)
+			shadowMapManager->Init(*renderer.GetContext());
 	}
 	SH_EDITOR_API void EditorWorld::InitResource()
 	{

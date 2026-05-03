@@ -3,6 +3,7 @@
 #include "Game/GUIPass.h"
 
 #include "Render/RenderPass/TransparentPass.h"
+#include "Render/RenderPass/ShadowMapPass.h"
 
 #include <algorithm>
 namespace sh::editor
@@ -15,7 +16,7 @@ namespace sh::editor
 	{
 		pickingPass = &AddRenderPass(core::Name{ "EditorPicking" }, render::RenderQueue::Picking);
 		outlinePass = &AddRenderPass<EditorOutlinePass>();
-		//AddShadowPass();
+		shadowMapPass = &AddRenderPass<render::ShadowMapPass>();
 		opaquePass = &AddRenderPass(core::Name{ "Opaque" }, render::RenderQueue::Opaque);
 		transparentPass = &AddRenderPass<render::TransparentPass>();
 		uiPass = &AddRenderPass<render::TransparentPass>("UI", render::RenderQueue::Transparent);
@@ -48,6 +49,11 @@ namespace sh::editor
 		if (data.tag == "ImGUI")
 		{
 			EnqueRenderPass(*guiPass);
+			return;
+		}
+		if (data.tag == "Shadow")
+		{
+			EnqueRenderPass(*shadowMapPass);
 			return;
 		}
 	}

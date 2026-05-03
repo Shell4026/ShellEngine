@@ -14,6 +14,7 @@
 #include "Core/Asset.h"
 
 #include "Render/Renderer.h"
+#include "Render/ShadowMapManager.h"
 
 #include <utility>
 #include <cstdint>
@@ -28,6 +29,8 @@ namespace sh::game
 	{
 		SetName("World");
 		gc = core::GarbageCollection::GetInstance();
+
+		shadowMapManager = std::make_unique<render::ShadowMapManager>();
 
 		physEventSubscriber.SetCallback(
 			[](const phys::PhysicsEvent& evt)
@@ -241,6 +244,8 @@ namespace sh::game
 	}
 	SH_GAME_API void World::Clear()
 	{
+		if (shadowMapManager != nullptr)
+			shadowMapManager->Clear();
 		CleanObjs();
 
 		while (!deallocatedObjs.empty())
@@ -256,17 +261,15 @@ namespace sh::game
 	}
 	SH_GAME_API void World::SetupRenderer()
 	{
-		//uiCamera.SetPriority(1000);
 		if (customRenderer == nullptr)
 		{
-			//renderer.AddCamera(uiCamera);
 			customRenderer = std::make_unique<GameRenderer>(*renderer.GetContext(), GetUiContext(), *this);
 			customRenderer->Init();
 
 			renderer.SetScriptableRenderer(*customRenderer);
 		}
-		
-		//static_cast<GameRenderer*>(customRenderer.get())->SetUICamera(uiCamera);
+		if (shadowMapManager != nullptr)
+			shadowMapManager->Init(*renderer.GetContext());
 	}
 	SH_GAME_API void World::InitResource()
 	{
@@ -456,6 +459,8 @@ namespace sh::game
 				continue;
 			obj->LateUpdate();
 		}
+		if (shadowMapManager != nullptr)
+			shadowMapManager->Submit(renderer);
 	}
 
 	SH_GAME_API void World::BeforeSync()
