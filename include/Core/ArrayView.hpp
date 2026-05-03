@@ -9,17 +9,17 @@ namespace sh::core
 	class ArrayView
 	{
 	private:
-		const T* ptr;
+		T* const ptr;
 		std::size_t len;
 	public:
-		ArrayView(const T* ptr, std::size_t len) noexcept :
+		ArrayView(T* ptr, std::size_t len) noexcept :
 			ptr(ptr), len(len)
 		{}
 
 		auto operator[](int i) const noexcept -> T const& { return ptr[i]; }
 		auto size() const noexcept -> std::size_t { return len; }
 
-		auto begin() noexcept -> const T* { return ptr; }
-		auto end() noexcept -> const T* { return ptr + len; }
+		auto begin() noexcept -> T* { return ptr; }
+		auto end() noexcept -> T* { return ptr + len; }
 	};
-}
+}//namespace
