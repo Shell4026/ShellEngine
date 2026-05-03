@@ -36,7 +36,7 @@ namespace sh::editor
 		this->mat = &mat;
 	}
 
-	SH_EDITOR_API void EditorPostOutlinePass::Configure(const render::RenderTarget& renderData)
+	SH_EDITOR_API void EditorPostOutlinePass::Configure(const render::RenderData& renderData)
 	{
 		if (drawable == nullptr && mat != nullptr)
 		{
@@ -45,18 +45,26 @@ namespace sh::editor
 
 			core::GarbageCollection::GetInstance()->SetRootSet(drawable);
 		}
+
+		renderTextures.clear();
+		renderTextures[renderData.target] = render::ResourceUsage::ColorAttachment;
 		if (mat != nullptr)
 		{
 			for (auto& [name, rt] : mat->GetCachedRenderTextures())
 				renderTextures[rt] = render::ResourceUsage::SampledRead;
 		}
 	}
-	SH_EDITOR_API void EditorPostOutlinePass::Record(render::CommandBuffer& cmd, const render::IRenderContext& ctx, const render::RenderTarget& renderData)
+	SH_EDITOR_API void EditorPostOutlinePass::Record(render::CommandBuffer& cmd, const render::IRenderContext& ctx, const render::RenderData& renderData)
 	{
 		if (!core::IsValid(drawable->GetMesh()) || !core::IsValid(drawable->GetMaterial()))
 			return;
-		cmd.SetRenderTarget(renderData, false, false, false, false);
-		SetViewportScissor(cmd, ctx, renderData);
-		cmd.DrawMesh(*drawable, passName);
+		cmd.SetRenderData(renderData, false, false, false, false);
+		std::size_t viewerIdx = 0;
+		for (const render::RenderViewer& viewer : renderData.renderViewers)
+		{
+			SetViewportScissor(cmd, ctx, viewer);
+			cmd.DrawMesh(*drawable, passName, viewerIdx);
+			++viewerIdx;
+		}
 	}
 }//namespace

@@ -1,6 +1,5 @@
 ﻿#pragma once
 #include "Export.h"
-#include "Camera.h"
 #include "ScriptableRenderer.h"
 
 #include "Core/ISyncable.h"
@@ -41,8 +40,12 @@ namespace sh::render
 		SH_RENDER_API void SyncDirty() override;
 		SH_RENDER_API void Sync() override;
 
-		SH_RENDER_API virtual bool Init(sh::window::Window& win);
+		SH_RENDER_API virtual void CreateContext(const window::Window& win) = 0;
+		SH_RENDER_API virtual void DestroyContext() = 0;
+		SH_RENDER_API virtual bool Init(window::Window& win);
 		SH_RENDER_API virtual bool Resizing() = 0;
+		/// @brief 렌더러 상태를 초기화 한다.
+		SH_RENDER_API virtual void Reset();
 		SH_RENDER_API virtual void Clear();
 
 		SH_RENDER_API virtual void Render();
@@ -53,12 +56,13 @@ namespace sh::render
 		SH_RENDER_API virtual auto GetWidth() const -> uint32_t = 0;
 		SH_RENDER_API virtual auto GetHeight() const -> uint32_t = 0;
 		SH_RENDER_API virtual void WaitForCurrentFrame() = 0;
-		SH_RENDER_API virtual auto GetContext() const->IRenderContext* = 0;
+		SH_RENDER_API virtual auto GetContext() const -> IRenderContext* = 0;
 
 		/// @brief 드로우 객체를 큐에 집어 넣는다.
 		/// @brief 큐에 들어간 객체는 렌더 스레드 프레임 시작 시 반영된다.
 		/// @param drawable 드로우 객체 포인터
 		SH_RENDER_API void PushDrawAble(Drawable* drawable);
+		SH_RENDER_API void PushRenderData(const RenderData& renderData);
 
 		SH_RENDER_API auto GetWindow() const -> sh::window::Window&;
 
@@ -67,56 +71,33 @@ namespace sh::render
 		SH_RENDER_API auto IsPause() const -> bool;
 
 		SH_RENDER_API void SetScriptableRenderer(ScriptableRenderer& renderer);
-		SH_RENDER_API auto GetScriptableRenderer() const -> ScriptableRenderer* { return renderer; }
-		/// @brief 카메라를 추가한다. 렌더 스레드에서 반영된다.
-		/// @param camera 카메라 참조
-		SH_RENDER_API void AddCamera(const Camera& camera);
-		/// @brief 카메라를 제거한다. 렌더 스레드에서 반영된다.
-		/// @param camera 카메라 참조
-		SH_RENDER_API void RemoveCamera(const Camera& camera);
 
-		SH_RENDER_API auto GetDrawCall(core::ThreadType thread) const -> uint32_t;
-
+		auto GetDrawCall(core::ThreadType thread) const -> uint32_t { return drawcall[static_cast<uint32_t>(thread)]; }
 		/// @brief 현재 렌더러가 돌아가는 스레드의 번호를 반환한다. 한번이라도 렌더링을 한 후에 갱신된다.
-		SH_RENDER_API auto GetThreadId() const -> std::thread::id;
+		auto GetThreadId() const -> std::thread::id { return threadId; }
+		auto GetScriptableRenderer() const -> ScriptableRenderer* { return renderer; }
 	protected:
-		virtual void OnCameraAdded(const Camera* camera) {};
-		virtual void OnCameraRemoved(const Camera* camera) {};
-
 		SH_RENDER_API void SetDrawCallCount(uint32_t drawcall);
 		SH_RENDER_API void DrainRenderCommands();
 	protected:
-		struct CameraCompare
-		{
-			bool operator()(const Camera* left, const Camera* right) const
-			{
-				if (left->GetPriority() == right->GetPriority())
-					return left->id < right->id;
-				return left->GetPriority() < right->GetPriority();
-			}
-		};
 		struct RenderCommand
 		{
 			enum class Type
 			{
-				PushDrawable,
-				AddCamera,
-				RemoveCamera
+				PushDrawable
 			};
 			Type type = Type::PushDrawable;
-			std::variant<core::SObjWeakPtr<Drawable>, const Camera*> data;
+			core::SObjWeakPtr<Drawable> data;
 		};
 
 		core::LockFreeMPSCQueue<RenderCommand> renderCommands;
 		std::vector<Drawable*> drawables;
-		std::set<const Camera*, CameraCompare> cameras;
-		std::vector<std::function<void()>> drawCalls;
 
 		std::atomic_bool bPause;
 
 		ScriptableRenderer* renderer = nullptr;
 	private:
-		sh::window::Window* window;
+		window::Window* window;
 
 		core::SyncArray<uint32_t> drawcall;
 

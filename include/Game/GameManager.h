@@ -12,6 +12,8 @@
 #include "Game/ImGUImpl.h"
 #include "Game/ComponentLoader.h"
 
+#include "Render/RenderData.h"
+
 #include <unordered_map>
 #include <filesystem>
 #include <filesystem>
@@ -100,6 +102,8 @@ namespace sh::game
 		World* immortalWorld = nullptr;
 
 		core::SVector<core::SObject*> defaultAssets;
+
+		render::RenderData guiRenderData;
 
 		bool bLoadingWorld = false;
 	};

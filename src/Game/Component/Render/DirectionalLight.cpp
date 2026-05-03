@@ -5,7 +5,12 @@
 
 #include "Core/SObject.h"
 
+#include "Render/Renderer.h"
+#include "Render/ShadowMapManager.h"
+#include "Render/RenderTexture.h"
+
 #include <glm/gtc/matrix_transform.hpp>
+#include <limits>
 
 namespace sh::game
 {
@@ -13,12 +18,14 @@ namespace sh::game
 		Component(owner)
 	{
 		world.GetLightOctree().Insert(*this);
-		
+
+		renderData.priority = 1000;
+
 		GameRenderer* const srPtr = dynamic_cast<GameRenderer*>(world.renderer.GetScriptableRenderer());
 		if (srPtr != nullptr)
 		{
-			world.renderer.AddCamera(shadowCamera);
-			srPtr->AddShadowCasterCamera(shadowCamera);
+			//world.renderer.AddCamera(shadowCamera);
+			//srPtr->AddShadowCasterCamera(shadowCamera);
 		}
 		else
 		{
@@ -39,17 +46,19 @@ namespace sh::game
 	SH_GAME_API void DirectionalLight::BeginUpdate()
 	{
 		Super::BeginUpdate();
-		if (bCastShadow && shadowMap != nullptr)
+		if (bCastShadow && shadowSlot != render::ShadowMapManager::InvalidSlot)
 			UpdateShadowCamera();
 	}
 
 	SH_GAME_API void DirectionalLight::OnDestroy()
 	{
+		ReleaseShadowResources();
+
 		GameRenderer* const srPtr = dynamic_cast<GameRenderer*>(world.renderer.GetScriptableRenderer());
 		if (srPtr != nullptr)
 		{
-			srPtr->RemoveShadowCasterCamera(shadowCamera);
-			world.renderer.RemoveCamera(shadowCamera);
+			//srPtr->RemoveShadowCasterCamera(shadowCamera);
+			//world.renderer.RemoveCamera(shadowCamera);
 		}
 		world.GetLightOctree().Erase(*this);
 		Super::OnDestroy();
@@ -59,15 +68,24 @@ namespace sh::game
 	{
 		if (prop.GetName() == "bCastShadow")
 		{
-			if (bCastShadow && shadowMap == nullptr)
-				EnsureShadowResources();
-			// bCastShadow=false로 바뀌어도 RT는 보존(토글 시 재할당 비용 회피).
-			// 메모리 회수가 필요하면 별도 정리 API를 도입할 것.
+			if (bCastShadow)
+			{
+				if (shadowSlot == render::ShadowMapManager::InvalidSlot)
+					EnsureShadowResources();
+			}
+			else
+			{
+				ReleaseShadowResources();
+			}
 		}
 		else if (prop.GetName() == "shadowMapResolution")
 		{
-			if (shadowMap != nullptr)
-				shadowMap->SetSize(shadowMapResolution, shadowMapResolution);
+			if (bCastShadow)
+			{
+				// 슬롯 크기는 변경 불가. 해제 후 재할당으로 새 해상도 슬롯을 받는다.
+				ReleaseShadowResources();
+				EnsureShadowResources();
+			}
 		}
 	}
 
@@ -83,20 +101,15 @@ namespace sh::game
 	{
 		direction = dir;
 	}
-	SH_GAME_API auto DirectionalLight::GetPos() const -> const Vec3&
-	{
-		return gameObject.transform->GetWorldPosition();
-	}
-
-	SH_GAME_API auto DirectionalLight::GetLightType() const -> ILight::Type
-	{
-		return ILight::Type::Directional;
-	}
 	SH_GAME_API void DirectionalLight::SetCastShadow(bool b)
 	{
+		if (bCastShadow == b)
+			return;
 		bCastShadow = b;
-		if (bCastShadow && shadowMap == nullptr)
+		if (bCastShadow)
 			EnsureShadowResources();
+		else
+			ReleaseShadowResources();
 	}
 	SH_GAME_API void DirectionalLight::SetShadowBias(float bias)
 	{
@@ -104,9 +117,14 @@ namespace sh::game
 	}
 	SH_GAME_API void DirectionalLight::SetShadowMapResolution(uint32_t res)
 	{
+		if (shadowMapResolution == res)
+			return;
 		shadowMapResolution = res;
-		if (shadowMap != nullptr)
-			shadowMap->SetSize(res, res);
+		if (bCastShadow)
+		{
+			ReleaseShadowResources();
+			EnsureShadowResources();
+		}
 	}
 
 	SH_GAME_API auto DirectionalLight::GetLightSpaceMatrix() const -> glm::mat4
@@ -122,43 +140,55 @@ namespace sh::game
 		const glm::mat4 proj = glm::ortho(-shadowOrthoSize, shadowOrthoSize, -shadowOrthoSize, shadowOrthoSize, shadowNearPlane, shadowFarPlane);
 		return proj * view;
 	}
-
-	SH_GAME_API auto DirectionalLight::GetShadowCamera() -> render::Camera*
-	{
-		return bCastShadow ? &shadowCamera : nullptr;
-	}
-	SH_GAME_API auto DirectionalLight::GetShadowCamera() const -> const render::Camera*
-	{
-		return bCastShadow ? &shadowCamera : nullptr;
-	}
 	SH_GAME_API auto DirectionalLight::GetShadowMap() const -> render::RenderTexture*
 	{
-		return bCastShadow ? shadowMap : nullptr;
+		if (!bCastShadow)
+			return nullptr;
+		return render::ShadowMapManager::GetInstance()->GetAtlas();
+	}
+	SH_GAME_API auto DirectionalLight::GetShadowSlot() const -> render::ShadowMapManager::Slot
+	{
+		if (!bCastShadow || shadowSlot == render::ShadowMapManager::InvalidSlot)
+			return render::ShadowMapManager::Slot{};
+		return render::ShadowMapManager::GetInstance()->GetSlot(shadowSlot);
 	}
 
 	void DirectionalLight::EnsureShadowResources()
 	{
-		if (shadowMap == nullptr)
-		{
-			render::RenderTargetLayout layout{};
-			layout.format = render::TextureFormat::None;
-			layout.depthFormat = render::TextureFormat::D32;
-			layout.bUseMSAA = false;
+		render::ShadowMapManager* mgr = render::ShadowMapManager::GetInstance();
 
-			shadowMap = core::SObject::Create<render::RenderTexture>(layout);
-			shadowMap->SetSize(shadowMapResolution, shadowMapResolution);
-			shadowMap->Build(*world.renderer.GetContext());
-			shadowMap->SetName("DirectionalShadowMap");
+		if (shadowSlot == render::ShadowMapManager::InvalidSlot)
+		{
+			shadowSlot = mgr->AllocateSlot(shadowMapResolution);
+			if (shadowSlot == render::ShadowMapManager::InvalidSlot)
+			{
+				SH_ERROR("DirectionalLight: failed to allocate shadow slot");
+				return;
+			}
+			mgr->RegisterCameraSlot(&shadowCamera, shadowSlot);
 		}
+
+		render::RenderTexture* atlas = mgr->GetAtlas();
 
 		shadowCamera.SetOrthographic(true);
 		shadowCamera.SetWidth(shadowOrthoSize * 2.f);
 		shadowCamera.SetHeight(shadowOrthoSize * 2.f);
 		shadowCamera.SetNearPlane(shadowNearPlane);
 		shadowCamera.SetFarPlane(shadowFarPlane);
-		shadowCamera.SetRenderTexture(shadowMap);
+		shadowCamera.SetRenderTexture(atlas);
 
 		UpdateShadowCamera();
+	}
+
+	void DirectionalLight::ReleaseShadowResources()
+	{
+		if (shadowSlot == render::ShadowMapManager::InvalidSlot)
+			return;
+		render::ShadowMapManager* mgr = render::ShadowMapManager::GetInstance();
+		mgr->UnregisterCameraSlot(&shadowCamera);
+		mgr->ReleaseSlot(shadowSlot);
+		shadowSlot = render::ShadowMapManager::InvalidSlot;
+		shadowCamera.SetRenderTexture(nullptr);
 	}
 
 	void DirectionalLight::UpdateShadowCamera()

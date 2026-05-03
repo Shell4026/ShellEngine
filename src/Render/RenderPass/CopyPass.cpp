@@ -9,7 +9,7 @@ namespace sh::render
 	{
 	}
 
-	SH_RENDER_API void CopyPass::Configure(const RenderTarget& renderData)
+	SH_RENDER_API void CopyPass::Configure(const RenderData& renderData)
 	{
 		if (cpyDatas.empty())
 			return;
@@ -18,7 +18,7 @@ namespace sh::render
 		for (const CopyData& cpyData : cpyDatas)
 			renderTextures[cpyData.src] = ResourceUsage::TransferSrc;
 	}
-	SH_RENDER_API void CopyPass::Record(CommandBuffer& cmd, const IRenderContext& ctx, const RenderTarget& renderData)
+	SH_RENDER_API void CopyPass::Record(CommandBuffer& cmd, const IRenderContext& ctx, const RenderData& renderData)
 	{
 		if (cpyDatas.empty())
 			return;

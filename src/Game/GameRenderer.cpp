@@ -1,8 +1,11 @@
 ﻿#include "GameRenderer.h"
-#include "UIPass.h"
+#include "GUIPass.h"
 #include "World.h"
 
 #include "Render/RenderPass/TransparentPass.h"
+#include "Render/ShadowMapManager.h"
+
+#include <cstring>
 namespace sh::game
 {
 	GameRenderer::GameRenderer(render::IRenderContext& ctx, game::ImGUImpl& guictx, World& world) :
@@ -11,6 +14,7 @@ namespace sh::game
 		world(world),
 		guiCtx(guictx)
 	{
+		//render::ShadowMapManager::GetInstance()->Init(ctx);
 	}
 	SH_GAME_API void GameRenderer::Init()
 	{
@@ -18,71 +22,23 @@ namespace sh::game
 		AddRenderPass(core::Name{ "Opaque" }, render::RenderQueue::Opaque);
 		AddRenderPass<render::TransparentPass>();
 		AddRenderPass<render::TransparentPass>("UI", render::RenderQueue::UI);
-		AddRenderPass<game::UIPass>().SetImGUIContext(guiCtx);
+		guiPass = &AddRenderPass<game::GUIPass>();
+		guiPass->SetImGUIContext(guiCtx);
 	}
-	SH_GAME_API void GameRenderer::Setup(const render::RenderTarget& data)
+	SH_GAME_API void GameRenderer::Setup(const render::RenderData& data)
 	{
+		if (data.tag == "ImGUI")
+		{
+			if (guiPass != nullptr)
+				EnqueRenderPass(*guiPass);
+			return;
+		}
+
 		for (const std::unique_ptr<render::ScriptableRenderPass>& pass : allPasses)
 		{
-			auto allowedIt = allowedCamera.find(pass->passName);
-			if (allowedIt != allowedCamera.end())
-			{
-				const std::set<const render::Camera*>& allowedCams = allowedIt->second;
-				bool bAllowed = allowedCams.find(data.camera) != allowedCams.end();
-				if (!bAllowed)
-					continue;
-			}
-
-			auto it = ignoreCamera.find(pass->passName);
-			if (it == ignoreCamera.end())
-			{
-				EnqueRenderPass(*pass);
-				continue;
-			}
-			const std::set<const render::Camera*>& ignoreCams = it->second;
-			bool bIgnore = ignoreCams.find(data.camera) != ignoreCams.end();
-			if (bIgnore)
+			if (pass.get() == guiPass)
 				continue;
 			EnqueRenderPass(*pass);
 		}
-	}
-	SH_GAME_API void GameRenderer::SetUICamera(const render::Camera& camera)
-	{
-		uiCamera = &camera;
-		allowedCamera[core::Name{ "UI" }].insert(&camera);
-		allowedCamera[core::Name{ "ImGUI" }].insert(&camera);
-		for (const std::unique_ptr<render::ScriptableRenderPass>& pass : allPasses)
-		{
-			if (pass->passName == "UI" || pass->passName == "ImGUI")
-				continue;
-			ignoreCamera[pass->passName].insert(&camera);
-		}
-	}
-
-	SH_GAME_API void GameRenderer::AddShadowCasterCamera(const render::Camera& camera)
-	{
-		allowedCamera[core::Name{ "ShadowMapPass" }].insert(&camera);
-		for (const std::unique_ptr<render::ScriptableRenderPass>& pass : allPasses)
-		{
-			if (pass->passName == "ShadowMapPass")
-				continue;
-			ignoreCamera[pass->passName].insert(&camera);
-		}
-	}
-
-	SH_GAME_API void GameRenderer::RemoveShadowCasterCamera(const render::Camera& camera)
-	{
-		allowedCamera[core::Name{ "ShadowMapPass" }].erase(&camera);
-		for (const std::unique_ptr<render::ScriptableRenderPass>& pass : allPasses)
-		{
-			if (pass->passName == "ShadowMapPass")
-				continue;
-			ignoreCamera[pass->passName].erase(&camera);
-		}
-	}
-	SH_GAME_API void GameRenderer::AddShadowPass()
-	{
-		shadowMapPass = &AddRenderPass<render::ShadowMapPass>();
-		allowedCamera.insert({ shadowMapPass->passName, {} });
 	}
 }//namespace

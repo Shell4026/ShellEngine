@@ -19,8 +19,8 @@ namespace sh::editor
 		SH_EDITOR_API ~EditorPostOutlinePass();
 		SH_EDITOR_API void SetOutlineMaterial(render::Material& mat);
 	protected:
-		SH_EDITOR_API void Configure(const render::RenderTarget& renderData) override;
-		SH_EDITOR_API void Record(render::CommandBuffer& cmd, const render::IRenderContext& ctx, const render::RenderTarget& renderData) override;
+		SH_EDITOR_API void Configure(const render::RenderData& renderData) override;
+		SH_EDITOR_API void Record(render::CommandBuffer& cmd, const render::IRenderContext& ctx, const render::RenderData& renderData) override;
 	private:
 		const render::IRenderContext& ctx;
 

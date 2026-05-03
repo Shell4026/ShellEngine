@@ -4,6 +4,8 @@
 
 #include "World.h"
 
+#include "Render/Renderer.h"
+
 #include <cstring>
 #include <algorithm>
 

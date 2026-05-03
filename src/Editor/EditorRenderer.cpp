@@ -1,6 +1,6 @@
 ﻿#include "EditorRenderer.h"
 
-#include "Game/UIPass.h"
+#include "Game/GUIPass.h"
 
 #include "Render/RenderPass/TransparentPass.h"
 
@@ -13,49 +13,42 @@ namespace sh::editor
 	}
 	SH_EDITOR_API void EditorRenderer::Init()
 	{
-		AddRenderPass(core::Name{ "EditorPicking" }, render::RenderQueue::Picking);
+		pickingPass = &AddRenderPass(core::Name{ "EditorPicking" }, render::RenderQueue::Picking);
 		outlinePass = &AddRenderPass<EditorOutlinePass>();
 		//AddShadowPass();
-		AddRenderPass(core::Name{ "Opaque" }, render::RenderQueue::Opaque);
-		AddRenderPass<render::TransparentPass>();
-		AddRenderPass<render::TransparentPass>("UI", render::RenderQueue::Transparent);
+		opaquePass = &AddRenderPass(core::Name{ "Opaque" }, render::RenderQueue::Opaque);
+		transparentPass = &AddRenderPass<render::TransparentPass>();
+		uiPass = &AddRenderPass<render::TransparentPass>("UI", render::RenderQueue::Transparent);
 		postOutlinePass = &AddRenderPass<EditorPostOutlinePass>(ctx);
-		uiPass = &AddRenderPass<game::UIPass>();
-		uiPass->SetImGUIContext(guiCtx);
+		guiPass = &AddRenderPass<game::GUIPass>();
+		guiPass->SetImGUIContext(guiCtx);
 	}
-	SH_EDITOR_API void EditorRenderer::SetImGUICamera(const render::Camera& camera)
+	SH_EDITOR_API void EditorRenderer::Setup(const render::RenderData& data)
 	{
-		ImGUICamera = &camera;
-		allowedCamera[core::Name{ "ImGUI" }].insert(&camera);
-		for (const std::unique_ptr<render::ScriptableRenderPass>& pass : allPasses)
+		if (data.tag == "ImGUI")
 		{
-			if (pass->passName == "ImGUI")
-				continue;
-			ignoreCamera[pass->passName].insert(&camera);
+			EnqueRenderPass(*guiPass);
+			return;
 		}
-	}
-	SH_EDITOR_API void EditorRenderer::SetEditorCamera(const render::Camera& camera)
-	{
-		editorCamera = &camera;
-		allowedCamera[outlinePass->passName].insert(&camera);
-		allowedCamera[postOutlinePass->passName].insert(&camera);
-
-		uiPass->viewportTexture = editorCamera->GetRenderTexture();
-	}
-	SH_EDITOR_API void EditorRenderer::SetPickingCamera(const render::Camera& camera)
-	{
-		pickingCamera = &camera;
-		allowedCamera[core::Name{ "EditorPicking" }].insert(&camera);
-		for (const std::unique_ptr<render::ScriptableRenderPass>& pass : allPasses)
+		if (data.tag == "EditorCamera")
 		{
-			if (pass->passName == "EditorPicking")
-				continue;
-			ignoreCamera[pass->passName].insert(&camera);
+			guiPass->viewportTexture = data.target;
+			EnqueRenderPass(*outlinePass);
+			EnqueRenderPass(*opaquePass);
+			EnqueRenderPass(*transparentPass);
+			EnqueRenderPass(*uiPass);
+			EnqueRenderPass(*postOutlinePass);
+			return;
 		}
-	}
-
-	SH_EDITOR_API void EditorRenderer::Setup(const render::RenderTarget& data)
-	{
-		GameRenderer::Setup(data);
+		if (data.tag == "PickingCamera")
+		{
+			EnqueRenderPass(*pickingPass);
+			return;
+		}
+		if (data.tag == "ImGUI")
+		{
+			EnqueRenderPass(*guiPass);
+			return;
+		}
 	}
 }//namespace

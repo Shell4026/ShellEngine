@@ -40,8 +40,8 @@ namespace sh::render
 	template<>
 	struct IRenderThrMethod<class ScriptableRenderPass>
 	{
-		static void Configure(ScriptableRenderPass& pass, const RenderTarget& renderData);
-		static void Record(ScriptableRenderPass& pass, CommandBuffer& cmd, const IRenderContext& ctx, const RenderTarget& renderTarget);
+		static void Configure(ScriptableRenderPass& pass, const RenderData& renderData);
+		static void Record(ScriptableRenderPass& pass, CommandBuffer& cmd, const IRenderContext& ctx, const RenderData& renderTarget);
 		/// @brief Configure 이후에 호출해야 정확한 렌더콜 갯수를 알 수 있음
 		/// @param pass 패스
 		/// @return 렌더콜 횟수
@@ -64,12 +64,13 @@ namespace sh::render
 			bool bSkinned = false;
 			std::vector<const Drawable*> drawables;
 		};
-		SH_RENDER_API virtual void Configure(const RenderTarget& renderData);
-		SH_RENDER_API virtual void Record(CommandBuffer& cmd, const IRenderContext& ctx, const RenderTarget& renderData);
+		SH_RENDER_API virtual void Configure(const RenderData& renderData);
+		SH_RENDER_API virtual void Record(CommandBuffer& cmd, const IRenderContext& ctx, const RenderData& renderData);
 
 		SH_RENDER_API auto CreateRenderBatch(const std::vector<Drawable*>& drawables) const -> std::vector<RenderBatch>;
-		SH_RENDER_API void SetImageUsages(const RenderTarget& renderData);
-		SH_RENDER_API void SetViewportScissor(CommandBuffer& cmd, const IRenderContext& ctx, const RenderTarget& renderTarget);
+		SH_RENDER_API void SetImageUsages(const RenderData& renderData);
+		SH_RENDER_API void SetImageUsages(const std::vector<Drawable*>& drawables);
+		SH_RENDER_API void SetViewportScissor(CommandBuffer& cmd, const IRenderContext& ctx, const RenderViewer& renderViewer);
 
 		/// @brief Configure 이후에 호출해야 정확한 렌더콜 갯수를 알 수 있음
 		SH_RENDER_API auto GetRenderCallCount() const -> uint32_t { return renderCallCount; }
@@ -83,11 +84,11 @@ namespace sh::render
 		uint32_t renderCallCount = 0;
 	};
 
-	inline void IRenderThrMethod<ScriptableRenderPass>::Configure(ScriptableRenderPass& pass, const RenderTarget& renderData)
+	inline void IRenderThrMethod<ScriptableRenderPass>::Configure(ScriptableRenderPass& pass, const RenderData& renderData)
 	{
 		pass.Configure(renderData);
 	}
-	inline void IRenderThrMethod<ScriptableRenderPass>::Record(ScriptableRenderPass& pass, CommandBuffer& cmd, const IRenderContext& ctx, const RenderTarget& renderData)
+	inline void IRenderThrMethod<ScriptableRenderPass>::Record(ScriptableRenderPass& pass, CommandBuffer& cmd, const IRenderContext& ctx, const RenderData& renderData)
 	{
 		pass.Record(cmd, ctx, renderData);
 	}

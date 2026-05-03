@@ -1,6 +1,7 @@
 ﻿#pragma once
 #include "Render/Export.h"
 #include "Render/IRenderContext.h"
+#include "Render/RenderDataManager.h"
 #include "VulkanConfig.h"
 
 #include "Core/ISyncable.h"
@@ -39,15 +40,17 @@ namespace sh::render::vk
 		SH_RENDER_API void Init() override;
 		SH_RENDER_API void Clear() override;
 
-		SH_RENDER_API auto GetRenderAPIType() const -> RenderAPI override { return RenderAPI::Vulkan; }
+		              auto GetRenderAPIType() const -> RenderAPI override { return RenderAPI::Vulkan; }
 
 		SH_RENDER_API auto AllocateCommandBuffer(bool bCompute) -> CommandBuffer* override;
 		SH_RENDER_API void DeallocateCommandBuffer(CommandBuffer& cmd) override;
 		SH_RENDER_API void SubmitCommand(CommandBuffer& cmd) override;
 
 		SH_RENDER_API void SetViewport(const glm::vec2& start, const glm::vec2& end) override;
-		SH_RENDER_API auto GetViewportStart() const -> const glm::vec2 & override;
-		SH_RENDER_API auto GetViewportEnd() const -> const glm::vec2 & override;
+		              auto GetViewportStart() const -> const glm::vec2& override { return viewportStart; }
+		              auto GetViewportEnd() const -> const glm::vec2& override { return viewportEnd; }
+					  auto GetRenderDataManager() const -> const RenderDataManager & override { return renderDataManager; }
+					  auto GetRenderDataManager() -> RenderDataManager& override { return renderDataManager; }
 
 		SH_RENDER_API auto ReSizing() -> bool;
 
@@ -58,23 +61,23 @@ namespace sh::render::vk
 		/// @brief 멀티 샘플링의 샘플을 지정한다. 기기에서 지원하지 않는다면 최대 지원하는 샘플 수로 지정된다.
 		/// @param sample 샘플 수
 		SH_RENDER_API void SetSampleCount(VkSampleCountFlagBits sample);
-		SH_RENDER_API auto GetSampleCount() const -> VkSampleCountFlagBits { return sample; }
 
-		SH_RENDER_API auto GetInstance() const -> VkInstance { return instance; }
-		SH_RENDER_API auto GetGPU() const -> VkPhysicalDevice { return gpu; }
-		SH_RENDER_API auto GetGPUName() const -> std::string_view { return gpuProp.deviceName; }
-		SH_RENDER_API auto GetGPUProperty() const -> const VkPhysicalDeviceProperties& { return gpuProp; }
-		SH_RENDER_API auto GetDevice() const -> VkDevice { return device; }
-		SH_RENDER_API auto GetSwapChain() const -> VulkanSwapChain& { return *swapChain; }
-		SH_RENDER_API auto GetCommandBufferPool() const -> VulkanCommandBufferPool& { return *cmdPool; }
-		SH_RENDER_API auto GetQueueManager() const -> VulkanQueueManager& { return *queueManager; }
-		SH_RENDER_API auto GetDescriptorPool() const -> VulkanDescriptorPool& { return *descPool; }
-		SH_RENDER_API auto GetAllocator() const -> VmaAllocator { return allocator; }
-		SH_RENDER_API auto GetPipelineManager() const -> VulkanPipelineManager& { return *pipelineManager; }
-		SH_RENDER_API auto GetComputePipelineManager() const -> VulkanComputePipelineManager& { return *computePipelineManager; }
-		SH_RENDER_API auto GetEmptyDescriptorSetLayout() const -> VkDescriptorSetLayout { return emptyDescLayout; }
-		SH_RENDER_API auto GetEmptyDescriptorSet() const -> VkDescriptorSet { return emptyDescSet; }
 		SH_RENDER_API auto GetMaxSampleCount() const -> VkSampleCountFlagBits;
+		auto GetSampleCount() const -> VkSampleCountFlagBits { return sample; }
+		auto GetInstance() const -> VkInstance { return instance; }
+		auto GetGPU() const -> VkPhysicalDevice { return gpu; }
+		auto GetGPUName() const -> std::string_view { return gpuProp.deviceName; }
+		auto GetGPUProperty() const -> const VkPhysicalDeviceProperties& { return gpuProp; }
+		auto GetDevice() const -> VkDevice { return device; }
+		auto GetSwapChain() const -> VulkanSwapChain& { return *swapChain; }
+		auto GetCommandBufferPool() const -> VulkanCommandBufferPool& { return *cmdPool; }
+		auto GetQueueManager() const -> VulkanQueueManager& { return *queueManager; }
+		auto GetDescriptorPool() const -> VulkanDescriptorPool& { return *descPool; }
+		auto GetAllocator() const -> VmaAllocator { return allocator; }
+		auto GetPipelineManager() const -> VulkanPipelineManager& { return *pipelineManager; }
+		auto GetComputePipelineManager() const -> VulkanComputePipelineManager& { return *computePipelineManager; }
+		auto GetEmptyDescriptorSetLayout() const -> VkDescriptorSetLayout { return emptyDescLayout; }
+		auto GetEmptyDescriptorSet() const -> VkDescriptorSet { return emptyDescSet; }
 	private:
 		void PrepareValidationLayer();
 		void CreateDebugInfo();
@@ -137,8 +140,10 @@ namespace sh::render::vk
 		mutable std::shared_mutex commandPoolMutex;
 		mutable std::shared_mutex commandBufferMutex;
 
+		RenderDataManager renderDataManager;
+
 		bool bInit = false;
 		bool bFindValidationLayer = false;
 		bool bEnableValidationLayers = false;
 	};
-}
+}//namespace

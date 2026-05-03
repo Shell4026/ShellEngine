@@ -3,6 +3,8 @@
 
 #include "Core/Util.h"
 
+#include "Render/Renderer.h"
+
 #include "Render/Model.h"
 namespace sh::game
 {

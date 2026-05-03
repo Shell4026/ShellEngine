@@ -16,7 +16,6 @@ namespace sh::game
 		lastLookPos(lookPos), middleDragRight(), middleDragUp(),
 		rotationSpeed(0.2f), moveSpeed(0.02f)
 	{
-		auto& type = GetStaticType();
 	}
 
 	SH_GAME_API void EditorCamera::Start()
@@ -26,7 +25,7 @@ namespace sh::game
 		const float pitch = glm::degrees(asin(forward.y));
 		xdir = pitch;
 		ydir = yaw;
-		camera.SetFarPlane(10000.0f);
+		SetFarPlane(10'000.f);
 	}
 
 	SH_GAME_API void EditorCamera::BeginUpdate()
@@ -210,9 +209,9 @@ namespace sh::game
 
 		glm::vec3 v = gameObject.transform->GetWorldPosition() - lookPos;
 		//glm::vec3 up = glm::cross(glm::vec3{ 1.0f, 0.f, 0.f }, glm::normalize(v));
-		Vec3 up = camera.GetUpVector(core::ThreadType::Game);
+		Vec3 up = GetUpVector();
 		up.y = (xdir >= 90 && xdir <= 270) ? -1 : 1;
-		camera.SetUpVector(up);
+		SetUpVector(up);
 	}
 
 	void EditorCamera::UpdateCameraPosition()

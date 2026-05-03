@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Export.h"
+#include "Util.h"
 
 #include <string_view>
 #include <unordered_map>
@@ -16,17 +17,18 @@ namespace sh::core
 		SH_CORE_API Name(Name&& other) noexcept;
 		SH_CORE_API ~Name();
 
-		SH_CORE_API auto operator=(const Name& other) noexcept -> Name&;
-		SH_CORE_API auto operator=(Name&& other) noexcept -> Name&;
-		SH_CORE_API auto operator==(const Name& other) const -> bool;
-		SH_CORE_API auto operator!=(const Name& other) const -> bool;
-		SH_CORE_API auto operator==(const std::string_view str) const -> bool;
-		SH_CORE_API auto operator!=(const std::string_view str) const -> bool;
-		SH_CORE_API auto operator==(std::size_t hash) const -> bool;
-		SH_CORE_API auto operator!=(std::size_t hash) const -> bool;
-
 		SH_CORE_API operator const std::string& () const;
 		SH_CORE_API auto ToString() const -> const std::string&;
+
+		SH_CORE_API auto operator=(const Name& other) noexcept -> Name&;
+		SH_CORE_API auto operator=(Name&& other) noexcept -> Name&;
+
+		auto operator==(const Name& other) const -> bool { return hash == other.hash; }
+		auto operator!=(const Name& other) const -> bool { return hash != other.hash; }
+		auto operator==(const std::string_view str) const -> bool { return hash == core::Util::ConstexprHash(str); }
+		auto operator!=(const std::string_view str) const -> bool { return hash != core::Util::ConstexprHash(str); }
+		auto operator==(std::size_t hash) const -> bool { return this->hash == hash; }
+		auto operator!=(std::size_t hash) const -> bool { return this->hash != hash; }
 	private:
 		friend struct std::hash<sh::core::Name>;
 

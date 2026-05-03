@@ -12,8 +12,12 @@
 namespace sh::game
 {
 	class ImGUImpl;
-	class UIPass;
+	class GUIPass;
 	class World;
+}
+namespace sh::render
+{
+	class TransparentPass;
 }
 namespace sh::editor
 {
@@ -24,22 +28,16 @@ namespace sh::editor
 
 		SH_EDITOR_API void Init() override;
 
-		SH_EDITOR_API auto GetOutlinePass() const -> EditorOutlinePass* { return outlinePass; }
-		SH_EDITOR_API auto GetPostOutlinePass() const -> EditorPostOutlinePass* { return postOutlinePass; }
-
-		SH_EDITOR_API void SetImGUICamera(const render::Camera& camera);
-		SH_EDITOR_API void SetEditorCamera(const render::Camera& camera);
-		SH_EDITOR_API void SetPickingCamera(const render::Camera& camera);
+		auto GetOutlinePass() const -> EditorOutlinePass* { return outlinePass; }
+		auto GetPostOutlinePass() const -> EditorPostOutlinePass* { return postOutlinePass; }
 	protected:
-		SH_EDITOR_API void Setup(const render::RenderTarget& data) override;
+		SH_EDITOR_API void Setup(const render::RenderData& data) override;
 	private:
-		const render::Camera* editorCamera = nullptr;
-		const render::Camera* ImGUICamera = nullptr;
-		const render::Camera* pickingCamera = nullptr;
-
+		render::ScriptableRenderPass* pickingPass = nullptr;
+		render::ScriptableRenderPass* opaquePass = nullptr;
+		render::TransparentPass* transparentPass = nullptr;
+		render::TransparentPass* uiPass = nullptr;
 		EditorOutlinePass* outlinePass = nullptr;
 		EditorPostOutlinePass* postOutlinePass = nullptr;
-		game::UIPass* uiPass = nullptr;
-		//render::TransparentPipeline* transParentPass = nullptr;
 	};
 }//namespace

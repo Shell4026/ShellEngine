@@ -11,7 +11,7 @@ namespace sh::render
 	class Material;
 	class Drawable;
 	class ShaderPass;
-	struct RenderTarget;
+	struct RenderData;
 	struct BarrierInfo;
 
 	class CommandBuffer : public core::INonCopyable
@@ -25,12 +25,11 @@ namespace sh::render
 
 		virtual void Blit(RenderTexture& src, int x, int y, IBuffer& dst) = 0;
 		virtual void Dispatch(const ComputeShader& shader, uint32_t x, uint32_t y, uint32_t z) = 0;
-		virtual void SetRenderTarget(const RenderTarget& renderTarget, bool bClearColor = true, bool bClearDepth = true, bool bStoreColor = false, bool bStoreDepth = false) = 0;
-		virtual void SetViewport(int x, int y, int width, int height) = 0;
+		virtual void SetRenderData(const RenderData& renderData, bool bClearColor = true, bool bClearDepth = true, bool bStoreColor = false, bool bStoreDepth = false) = 0;
+		virtual void SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height) = 0;
 		virtual void SetScissor(uint32_t x, uint32_t y, uint32_t width, uint32_t height) = 0;
-		virtual void DrawMeshBatch(const std::vector<const Drawable*>& drawables, core::Name passName) = 0;
-		virtual void DrawMesh(const Drawable& drawable, core::Name passName) = 0;
+		virtual void DrawMeshBatch(const std::vector<const Drawable*>& drawables, core::Name passName, std::size_t viewerIdx = 0) = 0;
+		virtual void DrawMesh(const Drawable& drawable, core::Name passName, std::size_t viewerIdx = 0) = 0;
 		virtual void EmitBarrier(const std::vector<BarrierInfo>& barriers) = 0;
-
 	};
 }//namespace

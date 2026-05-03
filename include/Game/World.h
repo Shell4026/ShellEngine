@@ -2,9 +2,7 @@
 #include "Export.h"
 #include "ComponentModule.h"
 #include "Octree.h"
-#include "UICamera.h"
 #include "GameObject.h"
-#include "Component/Render/Camera.h"
 
 #include "Core/NonCopyable.h"
 #include "Core/SObject.h"
@@ -45,6 +43,7 @@ namespace sh::game
 {
 	class Component;
 	class ImGUImpl;
+	class Camera;
 
 	class World : public sh::core::SObject, public sh::core::INonCopyable
 	{
@@ -58,6 +57,8 @@ namespace sh::game
 		SH_GAME_API virtual ~World();
 
 		SH_GAME_API void OnDestroy() override;
+		SH_GAME_API auto Serialize() const -> core::Json override;
+		SH_GAME_API void Deserialize(const core::Json& json) override;
 
 		SH_GAME_API virtual void Clear();
 
@@ -74,20 +75,13 @@ namespace sh::game
 		/// @param name 이름
 		/// @return 못 찾을 시 nullptr, 찾을 시 게임 오브젝트 포인터
 		SH_GAME_API auto GetGameObject(std::string_view name) const -> GameObject*;
-		SH_GAME_API auto GetGameObjects() const -> const std::vector<GameObject*>& { return objs; }
-		SH_GAME_API auto GetGameObjectPool() -> core::memory::MemoryPool<GameObject>&;
 		/// @brief 게임 오브젝트가 할당된 메모리를 반환 큐에 넣는 함수.
 		/// @param ptr 오브젝트 포인터
 		SH_GAME_API void PushDeAllocatedGameObject(GameObject* ptr);
 
-		SH_GAME_API void RegisterCamera(Camera* cam);
-		SH_GAME_API void UnRegisterCamera(Camera* cam);
+		SH_GAME_API void RegisterCamera(Camera& cam);
+		SH_GAME_API void UnRegisterCamera(Camera& cam);
 		SH_GAME_API void SetMainCamera(Camera* cam);
-		SH_GAME_API	auto GetMainCamera() const -> Camera*;
-
-		SH_GAME_API auto GetPhysWorld() -> phys::PhysWorld*;
-		SH_GAME_API auto GetLightOctree() -> Octree&;
-		SH_GAME_API auto GetLightOctree() const -> const Octree&;
 
 		SH_GAME_API virtual void Start();
 		SH_GAME_API virtual void Update(double deltaTime);
@@ -100,24 +94,16 @@ namespace sh::game
 		/// @param func 함수
 		SH_GAME_API void AddAfterSyncTask(const std::function<void()>& func);
 
-		SH_GAME_API auto Serialize() const->core::Json override;
-		SH_GAME_API void Deserialize(const core::Json& json) override;
-
 		SH_GAME_API void SaveWorldPoint(const core::Json& json, std::string_view name = "default");
 		SH_GAME_API void SaveWorldPoint(core::Json&& json, std::string_view name = "default");
-		
 		SH_GAME_API void LoadWorldPoint();
 		SH_GAME_API void LoadWorldPoint(const std::string& name);
-
 		SH_GAME_API auto GetWorldPoint() const -> const core::Json*;
 		SH_GAME_API auto GetWorldPoint(const std::string& name) const -> const core::Json*;
 		SH_GAME_API auto GetWorldPoint() -> core::Json*;
 		SH_GAME_API auto GetWorldPoint(const std::string& name) -> core::Json*;
-
 		SH_GAME_API void ClearWorldPoints();
 		SH_GAME_API void ClearWorldPoint(const std::string& name = "default");
-
-		SH_GAME_API auto GetUiContext() const -> ImGUImpl&;
 
 		SH_GAME_API void PublishEvent(const core::IEvent& event);
 		SH_GAME_API void SubscribeEvent(core::ISubscriber& subscriber);
@@ -125,16 +111,20 @@ namespace sh::game
 		SH_GAME_API void Play();
 		SH_GAME_API void Stop();
 
-		SH_GAME_API auto GetCameras() const -> const core::SVector<Camera*>& { return cameras; }
-		SH_GAME_API auto IsPlaying() const -> bool;
-		SH_GAME_API auto IsStart() const -> bool;
-		SH_GAME_API auto IsLoaded() const -> bool;
-		SH_GAME_API auto GetUICamera() -> UICamera& { return uiCamera; }
-		SH_GAME_API auto GetUICamera() const -> const UICamera& { return uiCamera; }
-
 		SH_GAME_API virtual void ReallocateUUIDS();
 
-		SH_GAME_API auto GetFixedAccumulator() const -> double { return dtAccumulator; }
+		auto GetUiContext() const -> ImGUImpl& { return *imgui; }
+		auto GetPhysWorld() -> phys::PhysWorld& { return physWorld; }
+		auto GetLightOctree() -> Octree& { return lightOctree; }
+		auto GetLightOctree() const -> const Octree& { return lightOctree; }
+		auto GetMainCamera() const -> Camera* { return mainCamera; }
+		auto GetGameObjects() const -> const std::vector<GameObject*>& { return objs; }
+		auto GetGameObjectPool() -> core::memory::MemoryPool<GameObject>& { return objPool; }
+		auto GetCameras() const -> const std::vector<Camera*>& { return cameras; }
+		auto IsPlaying() const -> bool { return bPlaying; }
+		auto IsStart() const -> bool { return bOnStart; }
+		auto IsLoaded() const -> bool { return bLoaded; }
+		auto GetFixedAccumulator() const -> double { return dtAccumulator; }
 	protected:
 		SH_GAME_API void CleanObjs();
 	private:
@@ -148,7 +138,7 @@ namespace sh::game
 		core::EventBus eventBus;
 		std::unordered_map<GameObject*, std::size_t> objIdx;
 		std::vector<GameObject*> objs;
-		core::SVector<Camera*> cameras;
+		std::vector<Camera*> cameras;
 
 		std::unique_ptr<render::ScriptableRenderer> customRenderer;
 	private:
@@ -162,7 +152,7 @@ namespace sh::game
 		double dt = 0.0;
 		double dtAccumulator = 0.0;
 
-		PROPERTY(mainCamera)
+		PROPERTY(mainCamera, core::PropertyOption::sobjPtr)
 		Camera* mainCamera = nullptr;
 
 		phys::PhysWorld physWorld;
@@ -175,8 +165,6 @@ namespace sh::game
 
 		std::unordered_map<std::string, core::Json> savePoints;
 
-		UICamera uiCamera;
-
 		core::EventSubscriber<phys::PhysicsEvent> physEventSubscriber;
 
 		bool bStartLoop = false;
@@ -185,4 +173,4 @@ namespace sh::game
 		bool bLoaded = false;
 		bool bOnStart = false;
 	};
-}
+}//namespace

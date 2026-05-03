@@ -1,50 +1,56 @@
 ﻿#include "Component/Render/Camera.h"
 #include "World.h"
 
+#include "Render/Renderer.h"
 #include "Render/IRenderContext.h"
+#include "Render/RenderData.h"
 
 #include "Physics/Ray.h"
 
 #include "glm/gtc/matrix_transform.hpp"
 
 #include <cstdint>
-
 namespace sh::game
 {
 	Camera::Camera(GameObject& owner) :
 		Component(owner),
-
-		fov(60.f), fovx(0.f),
-		camera(), depth(0),
-
 		renderTexture(nullptr)
 	{
-		SetFov(60);
-		owner.world.RegisterCamera(this);
-		camera.SetNearPlane(0.1f);
-		camera.SetFarPlane(1000.f);
+		fovRadians = glm::radians(fov);
+		owner.world.RegisterCamera(*this);
+		renderData.renderViewers.resize(1);
 		canPlayInEditor = true;
 	}
-	Camera::~Camera()
-	{
-	}
+	Camera::~Camera() = default;
 	
 	SH_GAME_API void Camera::BeginUpdate()
 	{
+		render::RenderViewer& viewer = renderData.renderViewers[0];
 		if (renderTexture == nullptr)
 		{
-			glm::vec2 size = gameObject.world.renderer.GetContext()->GetViewportEnd() - gameObject.world.renderer.GetContext()->GetViewportStart();
-			camera.SetWidth(size.x);
-			camera.SetHeight(size.y);
+			const glm::vec2 size = gameObject.world.renderer.GetContext()->GetViewportEnd() - gameObject.world.renderer.GetContext()->GetViewportStart();
+			width = size.x;
+			height = size.y;
+			viewer.viewportRect = { 0, 0, size.x, size.y };
+			viewer.viewportScissor = { 0, 0, size.x, size.y };
 		}
 		else
 		{
-			glm::vec2 size = renderTexture->GetSize();
-			camera.SetWidth(size.x);
-			camera.SetHeight(size.y);
+			const glm::vec2 size = renderTexture->GetSize();
+			width = size.x;
+			height = size.y;
+			viewer.viewportRect = { 0, 0, size.x, size.y };
+			viewer.viewportScissor = { 0, 0, size.x, size.y };
+
+			renderData.target = renderTexture;
 		}
-		camera.SetPos(gameObject.transform->GetWorldPosition());
-		camera.SetLookPos(lookPos);
+		gameObject.transform->UpdateMatrix();
+		viewer.pos = gameObject.transform->GetWorldPosition();
+		viewer.to = lookPos;
+		UpdateViewMatrix();
+		UpdateProjMatrix();
+
+		world.renderer.PushRenderData(renderData);
 	}
 	SH_GAME_API void Camera::OnDestroy()
 	{
@@ -52,93 +58,37 @@ namespace sh::game
 		{
 			gameObject.world.SetMainCamera(nullptr);
 		}
-		gameObject.world.UnRegisterCamera(this);
+		gameObject.world.UnRegisterCamera(*this);
 		Super::OnDestroy();
 	}
-	SH_GAME_API void Camera::SetActive(bool b)
-	{
-		Super::SetActive(b);
-		camera.SetActive(b);
-	}
-
-	SH_GAME_API auto Camera::GetProjMatrix() const -> const glm::mat4&
-	{
-		return camera.GetProjMatrix(core::ThreadType::Game);
-	}
-
-	SH_GAME_API auto Camera::GetViewMatrix() const -> const glm::mat4&
-	{
-		return camera.GetViewMatrix(core::ThreadType::Game);
-	}
-
-	SH_GAME_API void Camera::SetDepth(int depth)
-	{
-		this->depth = depth;
-		camera.SetPriority(depth);
-	}
-	SH_GAME_API void Camera::SetFov(float degree)
-	{
-		const float aspect = camera.GetWidth(core::ThreadType::Game) / camera.GetHeight(core::ThreadType::Game);
-		fov = degree;
-		fovx = glm::degrees(glm::atan(glm::tan(glm::radians(fov) * 0.5f) * aspect) * 2.f);
-
-		camera.SetFov(degree);
-	}
-
-	SH_GAME_API void Camera::SetRenderTexture(render::RenderTexture* renderTexture)
-	{
-		this->renderTexture = renderTexture;
-		camera.SetRenderTexture(renderTexture);
-	}
-	SH_GAME_API auto Camera::GetRenderTexture() const -> render::RenderTexture*
-	{
-		return renderTexture;
-	}
-
-	SH_GAME_API auto Camera::GetNative() -> render::Camera&
-	{
-		return camera;
-	}
-
-	SH_GAME_API auto Camera::GetNative() const -> const render::Camera&
-	{
-		return camera;
-	}
-
 	SH_GAME_API auto Camera::ScreenPointToRay(const Vec2& mousePos) const -> phys::Ray
 	{
-		float w = camera.GetWidth(core::ThreadType::Game);
-		float h = camera.GetHeight(core::ThreadType::Game);
-		float aspect = w / h;
+		const float aspect = width / height;
 
-		float ndcX = 2.f * mousePos.x / w - 1.0f;
-		float ndcY = 1.0f - 2.f * mousePos.y / h;
+		const float ndcX = 2.f * mousePos.x / width - 1.0f;
+		const float ndcY = 1.0f - 2.f * mousePos.y / height;
 
 		glm::vec4 camCoord{ 0.f, 0.f, 0.f, 1.f };
 
 		camCoord.x = aspect * ndcX;
 		camCoord.y = ndcY;
-		camCoord.z = -1.f / glm::tan(camera.GetFovRadian(core::ThreadType::Game) / 2.f);
+		camCoord.z = -1.f / glm::tan(fovRadians / 2.f);
 
-		glm::vec3 worldCoord{ glm::inverse(camera.GetViewMatrix(core::ThreadType::Game)) * camCoord };
+		glm::vec3 worldCoord{ glm::inverse(GetViewMatrix()) * camCoord };
 		glm::vec3 dir = glm::normalize(worldCoord - glm::vec3{ gameObject.transform->position });
 
 		return phys::Ray(gameObject.transform->position, dir);
 	}
-
 	SH_GAME_API auto Camera::ScreenPointToRayOrtho(const Vec2& mousePos) const -> phys::Ray
 	{
-		float w = camera.GetWidth(core::ThreadType::Game);
-		float h = camera.GetHeight(core::ThreadType::Game);
-
-		float ndcX = 2.f * (mousePos.x / w) - 1.f;
-		float ndcY = 1.f - 2.f * (mousePos.y / h);
+		const float ndcX = 2.f * (mousePos.x / width) - 1.f;
+		const float ndcY = 1.f - 2.f * (mousePos.y / height);
 
 		// Vulkan z_ndc = 0 ~ 1
 		glm::vec4 ndcNear(ndcX, ndcY, 0.f, 1.f);
 		glm::vec4 ndcFar(ndcX, ndcY, 1.f, 1.f);
 
-		glm::mat4 invViewProj = glm::inverse(camera.GetProjMatrix(core::ThreadType::Game) * camera.GetViewMatrix(core::ThreadType::Game));
+		glm::mat4 invViewProj = glm::inverse(GetProjMatrix() * GetViewMatrix());
 
 		glm::vec4 worldNear4 = invViewProj * ndcNear;
 		glm::vec4 worldFar4 = invViewProj * ndcFar;
@@ -150,78 +100,29 @@ namespace sh::game
 
 		return phys::Ray(worldNear, dir);
 	}
-
-	SH_GAME_API void Camera::SetLookPos(const Vec3& pos)
+	SH_GAME_API void Camera::SetFov(float degree)
 	{
-		lookPos = pos;
-	}
-	SH_GAME_API auto Camera::GetLookPos() const -> const Vec3&
-	{
-		return lookPos;
-	}
-	SH_GAME_API void Camera::SetUpVector(const Vec3& up)
-	{
-		camera.SetUpVector(up);
-	}
-	SH_GAME_API auto Camera::GetUpVector() const -> Vec3
-	{
-		return camera.GetUpVector(core::ThreadType::Game);
-	}
-	SH_GAME_API void Camera::SetWidth(float width)
-	{
-		camera.SetWidth(width);
-	}
-	SH_GAME_API auto Camera::GetWidth() const -> float
-	{
-		return camera.GetWidth(core::ThreadType::Game);
-	}
-	SH_GAME_API void Camera::SetHeight(float height)
-	{
-		camera.SetHeight(height);
-	}
-	SH_GAME_API auto Camera::GetHeight() const -> float
-	{
-		return camera.GetHeight(core::ThreadType::Game);
+		const float aspect = width / height;
+		fov = degree;
+		fovx = glm::degrees(glm::atan(glm::tan(glm::radians(fov) * 0.5f) * aspect) * 2.f);
+		fovRadians = glm::radians(fov);
 	}
 
-	SH_GAME_API void Camera::SetProjection(Projection proj)
+	SH_GAME_API void Camera::UpdateViewMatrix()
 	{
-		projection = proj;
-		if (proj == Projection::Perspective)
-			camera.SetOrthographic(false);
+		renderData.renderViewers.front().viewMatrix = glm::lookAt(glm::vec3{ gameObject.transform->GetWorldPosition() }, glm::vec3{ lookPos }, glm::vec3{ up });
+	}
+	SH_GAME_API void Camera::UpdateProjMatrix()
+	{
+		if (projection == Projection::Perspective)
+		{
+			renderData.renderViewers.front().projMatrix = glm::perspectiveFovRH_ZO(fovRadians, width, height, nearPlane, farPlane);
+		}
 		else
-			camera.SetOrthographic(true);
+		{
+			const float dis = glm::length(glm::vec3{ lookPos } - glm::vec3{ gameObject.transform->GetWorldPosition() }) / 2.0f;
+			const float aspect = width / height;
+			renderData.renderViewers.front().projMatrix = glm::orthoRH_ZO(-dis * aspect, dis * aspect, -dis, dis, nearPlane, farPlane);
+		}
 	}
-
-	SH_GAME_API auto Camera::GetProjection() const -> Projection
-	{
-		return projection;
-	}
-
-	SH_GAME_API void Camera::SetNearPlane(float near)
-	{
-		camera.SetNearPlane(near);
-	}
-	SH_GAME_API auto Camera::GetNearPlane() const -> float
-	{
-		return camera.GetNearPlane(core::ThreadType::Game);
-	}
-	SH_GAME_API void Camera::SetFarPlane(float far)
-	{
-		camera.SetFarPlane(far);
-	}
-	SH_GAME_API auto Camera::GetFarPlane() const -> float
-	{
-		return camera.GetFarPlane(core::ThreadType::Game);
-	}
-
-	SH_GAME_API void Camera::OnPropertyChanged(const core::reflection::Property& prop)
-	{
-		if (prop.GetName() == core::Util::ConstexprHash("depth"))
-			SetDepth(depth);
-		else if (prop.GetName() == core::Util::ConstexprHash("fov"))
-			SetFov(fov);
-		else if (prop.GetName() == core::Util::ConstexprHash("projection"))
-			SetProjection(projection);
-	}
-}
+}//namespace

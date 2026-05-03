@@ -3,10 +3,15 @@
 #include "Game/ILight.h"
 #include "Game/Component/Component.h"
 
-#include "Render/Camera.h"
-#include "Render/RenderTexture.h"
+#include "Render/RenderData.h"
+#include "Render/ShadowMapManager.h"
 
 #include <glm/mat4x4.hpp>
+
+namespace sh::render
+{
+	class RenderTexture;
+}
 
 namespace sh::game
 {
@@ -30,26 +35,25 @@ namespace sh::game
 		SH_GAME_API void SetShadowBias(float bias) override;
 		SH_GAME_API void SetShadowMapResolution(uint32_t res) override;
 
-		SH_GAME_API auto GetPos() const -> const Vec3 & override;
-		SH_GAME_API auto GetLightType() const -> ILight::Type override;
-		SH_GAME_API auto IsCastShadow() const -> bool override { return bCastShadow; }
-		SH_GAME_API auto GetShadowBias() const -> float override { return shadowBias; }
-		SH_GAME_API auto GetShadowMapResolution() const -> uint32_t override { return shadowMapResolution; }
-		SH_GAME_API auto GetDirection() const -> const Vec3& { return direction; }
-		SH_GAME_API auto GetIntensity() const -> float { return intensity; }
-
 		/// @brief 디렉셔널 라이트의 광원 공간 변환 행렬 (proj * view)을 계산한다.
-		/// @details 디렉셔널 라이트는 평행광이므로 직교 투영을 사용한다. 광원 위치는 씬 중심에서 광선
-		///          반대 방향으로 farPlane * 0.5 만큼 이동한 가상 위치를 사용한다.
-		///          현재 구현은 단일 셰도우 맵 기준이며, CSM은 후속 작업으로 남겨둔다.
 		SH_GAME_API auto GetLightSpaceMatrix() const -> glm::mat4;
-
-		SH_GAME_API auto GetShadowCamera() -> render::Camera*;
-		SH_GAME_API auto GetShadowCamera() const -> const render::Camera*;
+		/// @brief 그림자 아틀라스 텍스처를 반환한다 (모든 광원이 공유)
 		SH_GAME_API auto GetShadowMap() const -> render::RenderTexture*;
+		/// @brief 아틀라스 내에서 이 광원의 슬롯 정보를 반환한다.
+		SH_GAME_API auto GetShadowSlot() const -> render::ShadowMapManager::Slot;
+
+		auto GetPos() const -> const Vec3 & override { return gameObject.transform->GetWorldPosition(); }
+		auto GetLightType() const -> ILight::Type override { return ILight::Type::Directional; }
+		auto IsCastShadow() const -> bool override { return bCastShadow; }
+		auto GetShadowBias() const -> float override { return shadowBias; }
+		auto GetShadowMapResolution() const -> uint32_t override { return shadowMapResolution; }
+		auto GetDirection() const -> const Vec3& { return direction; }
+		auto GetIntensity() const -> float { return intensity; }
 	private:
-		/// @brief bCastShadow=true 시점에 호출. RT를 생성/빌드하고 카메라를 직교투영으로 설정.
+		/// @brief bCastShadow=true 시점에 호출. 매니저로부터 슬롯을 할당받고 카메라를 설정.
 		void EnsureShadowResources();
+		/// @brief 슬롯을 매니저에 반납하고 카메라 매핑을 해제.
+		void ReleaseShadowResources();
 		/// @brief 매 프레임 광원 방향에 맞춰 shadowCamera의 pos/lookAt을 갱신.
 		void UpdateShadowCamera();
 	private:
@@ -71,9 +75,7 @@ namespace sh::game
 		PROPERTY(shadowFarPlane)
 		float shadowFarPlane = 100.f;
 
-		PROPERTY(shadowMap, core::PropertyOption::invisible)
-		render::RenderTexture* shadowMap = nullptr;
-
-		render::Camera shadowCamera;
+		render::RenderData renderData;
+		render::ShadowMapManager::SlotHandle shadowSlot = render::ShadowMapManager::InvalidSlot;
 	};
 }//namespace

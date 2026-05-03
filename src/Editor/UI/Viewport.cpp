@@ -14,6 +14,7 @@
 #include "Game/Component/Render/PickingRenderer.h"
 #include "Game/GameManager.h"
 
+#include "Render/Renderer.h"
 #include "Render/RenderTexture.h"
 
 #include "External/imgui/ImGuizmo.h"
@@ -261,9 +262,7 @@ namespace sh::editor
 			std::sort(cams.begin(), cams.end(),
 				[](const game::Camera* left, const game::Camera* right)
 				{
-					if (left->GetDepth() == right->GetDepth())
-						return left->GetNative().id < right->GetNative().id;
-					return left->GetDepth() < right->GetDepth();
+					return left->GetPriority() < right->GetPriority();
 				}
 			);
 

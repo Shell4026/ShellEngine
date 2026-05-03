@@ -3,7 +3,7 @@
 #include "Core/GarbageCollection.h"
 
 #include "Render/RenderTexture.h"
-
+#include "Render/CommandBuffer.h"
 namespace sh::editor
 {
 	EditorOutlinePass::EditorOutlinePass() :
@@ -15,28 +15,30 @@ namespace sh::editor
 	}
 	SH_EDITOR_API void EditorOutlinePass::SetOutTexture(render::RenderTexture& tex)
 	{
-		output = &tex;
+		rd.target = &tex;
+		rd.renderViewers.resize(1);
 	}
 
-	SH_EDITOR_API void EditorOutlinePass::Configure(const render::RenderTarget& renderData)
+	SH_EDITOR_API void EditorOutlinePass::Configure(const render::RenderData& renderData)
 	{
-		render::RenderTarget rd;
-		rd.camera = renderData.camera;
-		rd.frameIndex = renderData.frameIndex;
-		rd.target = output.Get();
+		renderTextures.clear();
+		renderTextures[rd.target] = render::ResourceUsage::ColorAttachment;
+		if (renderData.drawables != nullptr)
+		{
+			SetImageUsages(*renderData.drawables);
+			renderBatches = CreateRenderBatch(*renderData.drawables);
+		}
+	}
+	SH_EDITOR_API void EditorOutlinePass::Record(render::CommandBuffer& cmd, const render::IRenderContext& ctx, const render::RenderData& renderData)
+	{
+		if (renderData.renderViewers.empty())
+			return;
+		rd.renderViewers[0] = renderData.renderViewers.front();
 		rd.drawables = renderData.drawables;
 
-		ScriptableRenderPass::Configure(rd);
-	}
-	SH_EDITOR_API void EditorOutlinePass::Record(render::CommandBuffer& cmd, const render::IRenderContext& ctx, const render::RenderTarget& renderData)
-	{
-		render::RenderTarget rd;
-		rd.camera = renderData.camera;
-		rd.frameIndex = renderData.frameIndex;
-		rd.target = output.Get();
-
-		SetViewportScissor(cmd, ctx, rd);
-		cmd.SetRenderTarget(rd, true, true, true, true);
+		cmd.SetRenderData(rd, true, true, true, true);
+		cmd.SetViewport(0, 0, rd.target->GetSize().x, rd.target->GetSize().y);
+		cmd.SetScissor(0, 0, rd.target->GetSize().x, rd.target->GetSize().y);
 
 		if (rd.drawables == nullptr)
 			return;

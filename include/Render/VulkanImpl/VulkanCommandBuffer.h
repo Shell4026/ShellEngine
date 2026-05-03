@@ -1,7 +1,7 @@
 ﻿#pragma once
-#include "../Export.h"
-#include "../CommandBuffer.h"
-#include "../RenderTarget.h"
+#include "Render/Export.h"
+#include "Render/CommandBuffer.h"
+#include "Render/RenderData.h"
 #include "VulkanConfig.h"
 #include "Core/NonCopyable.h"
 
@@ -12,6 +12,7 @@ namespace sh::render
 {
     class Camera;
     class Mesh;
+    struct RenderView;
 }
 namespace sh::render::vk
 {
@@ -52,11 +53,11 @@ namespace sh::render::vk
 
         SH_RENDER_API void Blit(RenderTexture& src, int x, int y, IBuffer& dst) override;
         SH_RENDER_API void Dispatch(const ComputeShader& shader, uint32_t x, uint32_t y, uint32_t z) override;
-        SH_RENDER_API void SetRenderTarget(const RenderTarget& renderTarget, bool bClearColor = true, bool bClearDepth = true, bool bStoreColor = false, bool bStoreDepth = false) override;
-        SH_RENDER_API void SetViewport(int x, int y, int width, int height) override;
+        SH_RENDER_API void SetRenderData(const RenderData& renderData, bool bClearColor = true, bool bClearDepth = true, bool bStoreColor = false, bool bStoreDepth = false) override;
+        SH_RENDER_API void SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height) override;
         SH_RENDER_API void SetScissor(uint32_t x, uint32_t y, uint32_t width, uint32_t height) override;
-        SH_RENDER_API void DrawMesh(const Drawable& drawable, core::Name passName) override;
-        SH_RENDER_API void DrawMeshBatch(const std::vector<const Drawable*>& drawables, core::Name passName) override;
+        SH_RENDER_API void DrawMesh(const Drawable& drawable, core::Name passName, std::size_t viewerIdx = 0) override;
+        SH_RENDER_API void DrawMeshBatch(const std::vector<const Drawable*>& drawables, core::Name passName, std::size_t viewerIdx = 0) override;
         SH_RENDER_API void EmitBarrier(const std::vector<BarrierInfo>& barriers) override;
 
         SH_RENDER_API auto GetOrCreateFence() -> VkFence;
@@ -85,7 +86,7 @@ namespace sh::render::vk
         struct RenderState
         {
             RenderTargetLayout layout{};
-            const Camera* camera = nullptr;
+            const RenderData* renderData = nullptr;
             uint32_t targetWidth = 0;
             uint32_t targetHeight = 0;
            

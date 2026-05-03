@@ -3,6 +3,8 @@
 #include "Game/World.h"
 #include "Game/GameObject.h"
 
+#include "Render/Renderer.h"
+
 #include <chrono>
 namespace sh::game
 {
@@ -25,8 +27,6 @@ namespace sh::game
 		renderTex = core::SObject::Create<render::RenderTexture>(rt);
 		renderTex->SetSize(1024, 768);
 		renderTex->Build(*world.renderer.GetContext());
-		camera.SetWidth(1024);
-		camera.SetHeight(768);
 		renderTex->SetName("PickingFramebuffer");
 
 		SetRenderTexture(renderTex);
@@ -75,8 +75,6 @@ namespace sh::game
 
 	SH_GAME_API void PickingCamera::SetTextureSize(const Vec2& size)
 	{
-		camera.SetWidth(size.x);
-		camera.SetHeight(size.y);
 		renderTex->SetSize(size.x, size.y);
 	}
 

@@ -3,7 +3,6 @@
 #include "VulkanSwapChain.h"
 #include "VulkanQueueManager.h"
 #include "VulkanPipelineManager.h"
-#include "VulkanCameraBuffers.h"
 #include "VulkanCommandBufferPool.h"
 #include "Drawable.h"
 
@@ -34,79 +33,30 @@ namespace sh::render::vk
 		if (isInit)
 		{
 			Clear();
-
-			camManager->Destroy();
 			DestroySyncObjects();
-			context->Clear();
 		}
 	}
 
 	SH_RENDER_API void VulkanRenderer::Clear()
 	{
 		vkDeviceWaitIdle(context->GetDevice());
-
-		frameFences.clear();
-		camManager->Clear();
-
 		Renderer::Clear();
+		frameFences.clear();
 	}
 
-	auto VulkanRenderer::CreateSyncObjects() -> VkResult
+	void VulkanRenderer::CreateContext(const window::Window& win)
 	{
-		VkSemaphoreCreateInfo semaphoreInfo{};
-		semaphoreInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-		VkFenceCreateInfo fenceInfo{};
-		fenceInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		fenceInfo.flags = 0;
-
-		VkResult result;
-		result = vkCreateSemaphore(context->GetDevice(), &semaphoreInfo, nullptr, &imageAvailableSemaphore);
-		if (result != VK_SUCCESS) return result;
-
-		result = vkCreateSemaphore(context->GetDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphore);
-		if (result != VK_SUCCESS) return result;
-
-		VkSemaphoreTypeCreateInfo timelineCreateInfo{};
-		timelineCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
-		timelineCreateInfo.semaphoreType = VkSemaphoreType::VK_SEMAPHORE_TYPE_TIMELINE;
-		timelineCreateInfo.initialValue = 0;
-		semaphoreInfo.pNext = &timelineCreateInfo;
-
-		result = vkCreateSemaphore(context->GetDevice(), &semaphoreInfo, nullptr, &timelineSemaphore);
-		if (result != VK_SUCCESS) return result;
-
-		result = vkCreateFence(context->GetDevice(), &fenceInfo, nullptr, &inFlightFence);
-		if (result != VK_SUCCESS) return result;
-
-		return VK_SUCCESS;
+		context = std::make_unique<VulkanContext>(win);
+		context->Init();
 	}
-
-	void VulkanRenderer::DestroySyncObjects()
+	SH_RENDER_API void VulkanRenderer::DestroyContext()
 	{
-		vkDestroySemaphore(context->GetDevice(), imageAvailableSemaphore, nullptr);
-		vkDestroySemaphore(context->GetDevice(), renderFinishedSemaphore, nullptr);
-		vkDestroySemaphore(context->GetDevice(), timelineSemaphore, nullptr);
-		vkDestroyFence(context->GetDevice(), inFlightFence, nullptr);
+		context->Clear();
+		context.reset();
 	}
-	void VulkanRenderer::OnCameraAdded(const Camera* camera)
-	{
-		VulkanCameraBuffers::GetInstance()->AddCamera(*camera);
-	}
-	void VulkanRenderer::OnCameraRemoved(const Camera* camera)
-	{
-		VulkanCameraBuffers::GetInstance()->RemoveCamera(*camera);
-	}
-
 	SH_RENDER_API bool VulkanRenderer::Init(sh::window::Window& win)
 	{
 		Renderer::Init(win);
-
-		context = std::make_unique<VulkanContext>(win);
-		context->Init();
-
-		camManager = VulkanCameraBuffers::GetInstance();
-		camManager->Init(*context);
 
 		if (CreateSyncObjects() != VkResult::VK_SUCCESS)
 			return false;
@@ -128,11 +78,6 @@ namespace sh::render::vk
 		return context->ReSizing();
 	}
 
-	SH_RENDER_API bool VulkanRenderer::IsInit() const
-	{
-		return isInit;
-	}
-
 	SH_RENDER_API void VulkanRenderer::WaitForCurrentFrame()
 	{
 		vkDeviceWaitIdle(context->GetDevice());
@@ -142,13 +87,10 @@ namespace sh::render::vk
 	{
 		using SignalSemaphore = VulkanCommandBuffer::SignalSemaphore;
 		using WaitSemaphore = VulkanCommandBuffer::WaitSemaphore;
-		Renderer::Render();
 
 		if (!isInit || bPause.load(std::memory_order::memory_order_acquire))
 			return;
 		if (renderer == nullptr)
-			return;
-		if (cameras.size() == 0)
 			return;
 
 		// 스왑체인에서 이미지를 가져오고, 변경 사항이 있다면 리사이징
@@ -169,39 +111,19 @@ namespace sh::render::vk
 		}
 		assert(result == VkResult::VK_SUCCESS);
 
-		// 카메라 데이터 GPU에 업로드
-		std::vector<const Camera*> cams{};
-		cams.reserve(cameras.size());
-		for (const Camera* camera : cameras)
+		Renderer::Render();
+
+		core::ArrayView<RenderData>& renderDatas = IRenderThrMethod<RenderDataManager>::GetRenderDatas(context->GetRenderDataManager());
+		std::size_t viewIdx = 0;
+		for (RenderData& rd : renderDatas)
 		{
-			if (!camera->GetActive())
-				continue;
-			camManager->UploadDataToGPU(*camera);
-			cams.push_back(camera);
+			rd.frameIndex = imgIdx;
+			rd.drawables = &drawables;
+
+			IRenderThrMethod<ScriptableRenderer>::Setup(*renderer, rd);
+			IRenderThrMethod<ScriptableRenderer>::Execute(*renderer, rd); // ScriptableRenderer에 등록된 패스들을 렌더큐 순서대로, 병렬적으로 커맨드에 기록
 		}
 
-		uint32_t renderCallCount = 0;
-		for (const Camera* cam : cams)
-		{
-			std::vector<Drawable*> filteredDrawables;
-			filteredDrawables.reserve(drawables.size());
-
-			RenderTarget rt{};
-			rt.frameIndex = imgIdx;
-			rt.camera = cam;
-			rt.target = cam->GetRenderTexture();
-			rt.drawables = &filteredDrawables;
-			
-			for (Drawable* drawable : drawables)
-			{
-				if (cam->CheckRenderTag(drawable->GetRenderTagId()))
-					filteredDrawables.push_back(drawable);
-			}
-			IRenderThrMethod<ScriptableRenderer>::Setup(*renderer, rt);
-			IRenderThrMethod<ScriptableRenderer>::Execute(*renderer, rt); // ScriptableRenderer에 등록된 패스들을 렌더큐 순서대로, 병렬적으로 커맨드에 기록
-			renderCallCount += IRenderThrMethod<ScriptableRenderer>::GetRenderCallCount(*renderer);
-		}
-		SetDrawCallCount(renderCallCount);
 		IRenderThrMethod<ScriptableRenderer>::ExecuteTransfer(*renderer, imgIdx);
 
 		const std::vector<ScriptableRenderer::RecordedCommand>& recordedCmds = renderer->GetRecordedCommands();
@@ -277,10 +199,6 @@ namespace sh::render::vk
 		IRenderThrMethod<ScriptableRenderer>::ResetSubmittedCommands(*renderer, *context);
 	}
 
-	SH_RENDER_API auto VulkanRenderer::GetCurrentFrame() const -> int
-	{
-		return currentFrame;
-	}
 	SH_RENDER_API auto VulkanRenderer::GetWidth() const -> uint32_t
 	{
 		return context->GetSwapChain().GetSwapChainSize().width;
@@ -289,14 +207,6 @@ namespace sh::render::vk
 	{
 		return context->GetSwapChain().GetSwapChainSize().height;
 	}
-	SH_RENDER_API auto VulkanRenderer::GetTimelineSemaphore() const -> VkSemaphore
-	{
-		return timelineSemaphore;
-	}
-	SH_RENDER_API auto VulkanRenderer::GetTimelineValue() const -> uint64_t
-	{
-		return timelineValueAtomic.load(std::memory_order::memory_order_acquire);
-	}
 	SH_RENDER_API auto VulkanRenderer::GetContext() const -> IRenderContext*
 	{
 		return context.get();
@@ -304,6 +214,45 @@ namespace sh::render::vk
 	SH_RENDER_API void VulkanRenderer::Sync()
 	{
 		Renderer::Sync();
+	}
+
+	auto VulkanRenderer::CreateSyncObjects() -> VkResult
+	{
+		VkSemaphoreCreateInfo semaphoreInfo{};
+		semaphoreInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+		VkFenceCreateInfo fenceInfo{};
+		fenceInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		fenceInfo.flags = 0;
+
+		VkResult result;
+		result = vkCreateSemaphore(context->GetDevice(), &semaphoreInfo, nullptr, &imageAvailableSemaphore);
+		if (result != VK_SUCCESS) return result;
+
+		result = vkCreateSemaphore(context->GetDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphore);
+		if (result != VK_SUCCESS) return result;
+
+		VkSemaphoreTypeCreateInfo timelineCreateInfo{};
+		timelineCreateInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_SEMAPHORE_TYPE_CREATE_INFO;
+		timelineCreateInfo.semaphoreType = VkSemaphoreType::VK_SEMAPHORE_TYPE_TIMELINE;
+		timelineCreateInfo.initialValue = 0;
+		semaphoreInfo.pNext = &timelineCreateInfo;
+
+		result = vkCreateSemaphore(context->GetDevice(), &semaphoreInfo, nullptr, &timelineSemaphore);
+		if (result != VK_SUCCESS) return result;
+
+		result = vkCreateFence(context->GetDevice(), &fenceInfo, nullptr, &inFlightFence);
+		if (result != VK_SUCCESS) return result;
+
+		return VK_SUCCESS;
+	}
+
+	void VulkanRenderer::DestroySyncObjects()
+	{
+		vkDestroySemaphore(context->GetDevice(), imageAvailableSemaphore, nullptr);
+		vkDestroySemaphore(context->GetDevice(), renderFinishedSemaphore, nullptr);
+		vkDestroySemaphore(context->GetDevice(), timelineSemaphore, nullptr);
+		vkDestroyFence(context->GetDevice(), inFlightFence, nullptr);
 	}
 }//namespace
 

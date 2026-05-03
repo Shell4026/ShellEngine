@@ -85,12 +85,12 @@ namespace sh::render
 		bSyncDirty = false;
 	}
 
-	SH_RENDER_API void ScriptableRenderer::Setup(const RenderTarget& data)
+	SH_RENDER_API void ScriptableRenderer::Setup(const RenderData& data)
 	{
 		for (const std::unique_ptr<ScriptableRenderPass>& pass : allPasses)
 			activePasses.push_back(pass.get());
 	}
-	SH_RENDER_API void ScriptableRenderer::Execute(const RenderTarget& data)
+	SH_RENDER_API void ScriptableRenderer::Execute(const RenderData& data)
 	{
 		renderCallCount = 0;
 		std::stable_sort(activePasses.begin(), activePasses.end(),
@@ -145,13 +145,11 @@ namespace sh::render
 	}
 	SH_RENDER_API void ScriptableRenderer::ExecuteTransfer(uint32_t imgIdx)
 	{
-		RenderTarget target{};
-		target.camera = nullptr;
-		target.target = nullptr;
-		target.drawables = nullptr;
-		target.frameIndex = imgIdx;
+		RenderData data{};
+		data.frameIndex = imgIdx;
+		data.drawables = nullptr;
 
-		IRenderThrMethod<ScriptableRenderPass>::Configure(*cpyPass, target);
+		IRenderThrMethod<ScriptableRenderPass>::Configure(*cpyPass, data);
 
 		std::vector<BarrierInfo> preBarriers = BuildBarrierInfo(*cpyPass, imgIdx);
 		std::vector<BarrierInfo> postBarriers;
@@ -167,17 +165,10 @@ namespace sh::render
 			swapChainStates[imgIdx] = ResourceUsage::Present;
 		}
 
-
-		RenderTarget rt{};
-		rt.frameIndex = imgIdx;
-		rt.camera = nullptr;
-		rt.target = nullptr;
-		rt.drawables = nullptr;
-
 		CommandBuffer* cmd = ctx.AllocateCommandBuffer(false);
 		cmd->Begin(true);
 		cmd->EmitBarrier(preBarriers);
-		IRenderThrMethod<ScriptableRenderPass>::Record(*cpyPass, *cmd, ctx, rt);
+		IRenderThrMethod<ScriptableRenderPass>::Record(*cpyPass, *cmd, ctx, data);
 		cmd->EmitBarrier(postBarriers);
 		cmd->End();
 

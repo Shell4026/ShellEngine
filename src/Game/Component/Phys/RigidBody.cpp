@@ -21,8 +21,8 @@ namespace sh::game
 	SH_GAME_API RigidBody::RigidBody(GameObject& owner) :
 		Component(owner)
 	{
-		auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(gameObject.world.GetPhysWorld()->GetContext());
-		auto world = reinterpret_cast<reactphysics3d::PhysicsWorld*>(gameObject.world.GetPhysWorld()->GetNative());
+		auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(gameObject.world.GetPhysWorld().GetContext());
+		auto world = reinterpret_cast<reactphysics3d::PhysicsWorld*>(gameObject.world.GetPhysWorld().GetNative());
 
 		reactphysics3d::Vector3 physPos{ gameObject.transform->position.x, gameObject.transform->position.y, gameObject.transform->position.z };
 		auto& quat = gameObject.transform->GetQuat();
@@ -80,7 +80,7 @@ namespace sh::game
 	{
 		nativeMap.erase(impl->rigidbody);
 
-		auto physWorld = reinterpret_cast<reactphysics3d::PhysicsWorld*>(gameObject.world.GetPhysWorld()->GetNative());
+		auto physWorld = reinterpret_cast<reactphysics3d::PhysicsWorld*>(gameObject.world.GetPhysWorld().GetNative());
 		physWorld->destroyRigidBody(impl->rigidbody);
 		impl->rigidbody = nullptr;
 
@@ -289,7 +289,7 @@ namespace sh::game
 		if (this == &other)
 			return true;
 
-		auto world = reinterpret_cast<reactphysics3d::PhysicsWorld*>(gameObject.world.GetPhysWorld()->GetNative());
+		auto world = reinterpret_cast<reactphysics3d::PhysicsWorld*>(gameObject.world.GetPhysWorld().GetNative());
 		return world->testOverlap(impl->rigidbody, other.impl->rigidbody);
 	}
 	SH_GAME_API auto RigidBody::GetRigidBodyUsingHandle(RigidBodyHandle handle) -> RigidBody*

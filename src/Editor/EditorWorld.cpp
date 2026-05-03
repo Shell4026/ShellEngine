@@ -9,6 +9,7 @@
 
 #include "Core/Name.h"
 
+#include "Render/Renderer.h"
 #include "Render/Mesh/Grid.h"
 #include "Render/Model.h"
 
@@ -84,22 +85,17 @@ namespace sh::editor
 		renderer.SetScriptableRenderer(*customRenderer);
 		EditorRenderer& editorRenderer = static_cast<EditorRenderer&>(*customRenderer);
 		editorRenderer.Init();
-
-		auto& uiCamera = GetUICamera();
-		uiCamera.SetPriority(1000);
-		renderer.AddCamera(uiCamera);
-
-		editorRenderer.SetImGUICamera(uiCamera);
 	}
 	SH_EDITOR_API void EditorWorld::InitResource()
 	{
 		Super::InitResource();
-		auto* editorRenderer = static_cast<EditorRenderer*>(customRenderer.get());
+		EditorRenderer* const editorRenderer = static_cast<EditorRenderer*>(customRenderer.get());
 
 		// editorRenderer가 없으면 addtive로 추가된 월드임
 		if (editorRenderer != nullptr)
 		{
-			auto viewportPtr = static_cast<render::RenderTexture*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ "180635b4e4d1a98ebb0064ab47dc452a" }));
+			render::RenderTexture* const viewportPtr = 
+				static_cast<render::RenderTexture*>(core::SObjectManager::GetInstance()->GetSObject(core::UUID{ "180635b4e4d1a98ebb0064ab47dc452a" }));
 			if (!core::IsValid(viewportPtr))
 			{
 				if (viewportPtr != nullptr && viewportPtr->IsPendingKill())
@@ -117,24 +113,21 @@ namespace sh::editor
 			else
 				viewportTexture = viewportPtr;
 
-			game::GameObject* camObj = AddGameObject("EditorCamera");
+			game::GameObject* const camObj = AddGameObject("EditorCamera");
 			camObj->transform->SetPosition({ 2.f, 2.f, 2.f });
 			camObj->hideInspector = true;
 			camObj->bNotSave = true;
 			editorCamera = camObj->AddComponent<game::EditorCamera>();
 			editorCamera->SetRenderTexture(viewportTexture);
-			editorCamera->GetNative().SetActive(true);
-			editorRenderer->SetEditorCamera(editorCamera->GetNative());
+			editorCamera->SetTag(core::Name{ "EditorCamera" });
 
-			auto PickingCamObj = AddGameObject("PickingCamera");
+			game::GameObject* const PickingCamObj = AddGameObject("PickingCamera");
 			PickingCamObj->bNotSave = true;
 			PickingCamObj->transform->SetParent(camObj->transform);
 			PickingCamObj->transform->SetPosition({ 0.f, 0.f, 0.f });
 			pickingCamera = PickingCamObj->AddComponent<game::PickingCamera>();
 			pickingCamera->SetFollowCamera(editorCamera);
-			pickingCamera->GetNative().SetActive(true);
-
-			editorRenderer->SetPickingCamera(pickingCamera->GetNative());
+			pickingCamera->SetTag(core::Name{ "PickingCamera" });
 
 			auto outlineTexture = EditorResource::GetInstance()->GetTexture("OutlineTexture");
 			assert(outlineTexture);

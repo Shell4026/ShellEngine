@@ -1,6 +1,8 @@
 ﻿#include "UI/AssetExplorer.h"
 #include "EditorWorld.h"
 
+#include "Render/Renderer.h"
+
 #include "Game/ImGUImpl.h"
 
 #include "Window/Window.h"

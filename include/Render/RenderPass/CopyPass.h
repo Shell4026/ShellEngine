@@ -14,8 +14,8 @@ namespace sh::render
 	public:
 		SH_RENDER_API CopyPass();
 	protected:
-		SH_RENDER_API void Configure(const RenderTarget& renderData) override;
-		SH_RENDER_API void Record(CommandBuffer& cmd, const IRenderContext& ctx, const RenderTarget& renderData) override;
+		SH_RENDER_API void Configure(const RenderData& renderData) override;
+		SH_RENDER_API void Record(CommandBuffer& cmd, const IRenderContext& ctx, const RenderData& renderData) override;
 
 		SH_RENDER_API void EnqueCopyImagePixelToBuffer(RenderTexture& rt, int x, int y, IBuffer& buffer);
 		SH_RENDER_API auto IsEmpty() const -> bool { return cpyDatas.empty(); }

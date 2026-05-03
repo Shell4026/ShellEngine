@@ -8,7 +8,6 @@
 #include "VulkanComputePipelineManager.h"
 #include "VulkanSwapChain.h"
 #include "VulkanShaderPass.h"
-#include "VulkanCameraBuffers.h"
 #include "VulkanVertexBuffer.h"
 #include "VulkanSkinnedVertexBuffer.h"
 #include "Render/RenderTexture.h"
@@ -19,7 +18,6 @@
 #include "Render/SkinnedMesh.h"
 #include "Render/Drawable.h"
 #include "Render/ShaderPass.h"
-#include "Render/Camera.h"
 #include "Render/RenderData.h"
 
 #include "Core/Reflection.hpp"
@@ -127,7 +125,7 @@ namespace sh::render::vk
         vkCmdDispatch(buffer, x, y, z);
     }
 
-    SH_RENDER_API void VulkanCommandBuffer::SetRenderTarget(const RenderTarget& renderTarget, bool bClearColor, bool bClearDepth, bool bStoreColor, bool bStoreDepth)
+    SH_RENDER_API void VulkanCommandBuffer::SetRenderData(const RenderData& renderData, bool bClearColor, bool bClearDepth, bool bStoreColor, bool bStoreDepth)
     {
         if (bBeginRender)
         {
@@ -136,23 +134,25 @@ namespace sh::render::vk
             bBeginRender = false;
         }
 
-        const bool bDepthOnly = renderTarget.target == nullptr ? false : renderTarget.target->IsDepthOnly();
+        const RenderTexture* const target = renderData.target;
+
+        const bool bDepthOnly = target == nullptr ? false : target->IsDepthOnly();
         const VulkanImageBuffer* colorImg = nullptr;
         const VulkanImageBuffer* colorMSAAImg = nullptr;
         const VulkanImageBuffer* depthImg = nullptr;
         RenderTargetLayout rtLayout{};
-        if (renderTarget.target != nullptr)
+        if (target != nullptr)
         {
-            colorImg = bDepthOnly ? nullptr : static_cast<VulkanImageBuffer*>(renderTarget.target->GetTextureBuffer());
-            colorMSAAImg = static_cast<VulkanImageBuffer*>(renderTarget.target->GetMSAABuffer());
-            depthImg = static_cast<VulkanImageBuffer*>(renderTarget.target->GetDepthBuffer());
-            rtLayout = renderTarget.target->GetLayout();
+            colorImg = bDepthOnly ? nullptr : static_cast<VulkanImageBuffer*>(target->GetTextureBuffer());
+            colorMSAAImg = static_cast<VulkanImageBuffer*>(target->GetMSAABuffer());
+            depthImg = static_cast<VulkanImageBuffer*>(target->GetDepthBuffer());
+            rtLayout = target->GetLayout();
         }
         else
         {
-            colorImg = &context.GetSwapChain().GetSwapChainImages()[renderTarget.frameIndex];
-            colorMSAAImg = &context.GetSwapChain().GetSwapChainMSAAImages()[renderTarget.frameIndex];
-            depthImg = &context.GetSwapChain().GetSwapChainDepthImages()[renderTarget.frameIndex];
+            colorImg = &context.GetSwapChain().GetSwapChainImages()[renderData.frameIndex];
+            colorMSAAImg = &context.GetSwapChain().GetSwapChainMSAAImages()[renderData.frameIndex];
+            depthImg = &context.GetSwapChain().GetSwapChainDepthImages()[renderData.frameIndex];
             rtLayout = context.GetSwapChain().GetRenderTargetLayout();
         }
         const VulkanImageBuffer* const sizeRef = colorImg != nullptr ? colorImg : depthImg;
@@ -204,21 +204,21 @@ namespace sh::render::vk
 
         renderState = RenderState{};
         renderState.layout = rtLayout;
-        renderState.camera = renderTarget.camera;
+        renderState.renderData = &renderData;
         renderState.targetWidth = width;
         renderState.targetHeight = height;
         renderState.bDepthOnly = bDepthOnly;
     }
 
-    SH_RENDER_API void VulkanCommandBuffer::SetViewport(int x, int y, int width, int height)
+    SH_RENDER_API void VulkanCommandBuffer::SetViewport(uint32_t x, uint32_t y, uint32_t width, uint32_t height)
     {
         VkViewport viewport{};
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
         viewport.x = static_cast<float>(x);
-        viewport.y = static_cast<float>(y);
+        viewport.y = static_cast<float>(height) - static_cast<float>(y);
         viewport.width = static_cast<float>(width);
-        viewport.height = static_cast<float>(height);
+        viewport.height = -static_cast<float>(height);
 
         vkCmdSetViewport(buffer, 0, 1, &viewport);
     }
@@ -234,10 +234,15 @@ namespace sh::render::vk
         vkCmdSetScissor(buffer, 0, 1, &rect);
     }
 
-    SH_RENDER_API void VulkanCommandBuffer::DrawMesh(const Drawable& drawable, core::Name passName)
+    SH_RENDER_API void VulkanCommandBuffer::DrawMesh(const Drawable& drawable, core::Name passName, std::size_t viewerIdx)
     {
-        if (!bBeginRender || renderState.camera == nullptr)
+        if (!bBeginRender || renderState.renderData == nullptr)
             return;
+        if (renderState.renderData->renderViewers.size() <= viewerIdx)
+        {
+            assert(renderState.renderData->renderViewers.size() <= viewerIdx);
+            return;
+        }
 
         const Material& mat = *drawable.GetMaterial();
         const Mesh& mesh = *drawable.GetMesh();
@@ -251,10 +256,7 @@ namespace sh::render::vk
         if (passes == nullptr)
             return;
 
-        std::optional<uint32_t> cameraOffsetOpt = VulkanCameraBuffers::GetInstance()->GetDynamicOffset(*renderState.camera);
-        if (!cameraOffsetOpt.has_value())
-            return;
-        const uint32_t cameraOffset = cameraOffsetOpt.value();
+        const uint32_t cameraOffset = renderState.renderData->renderViewers[viewerIdx].offset;
 
         for (const ShaderPass& pass : *passes)
         {
@@ -294,9 +296,9 @@ namespace sh::render::vk
             BindMesh(mesh, drawable.GetSubMeshIndex(), bSkinned);
         }
     }
-    SH_RENDER_API void VulkanCommandBuffer::DrawMeshBatch(const std::vector<const Drawable*>& drawables, core::Name passName)
+    SH_RENDER_API void VulkanCommandBuffer::DrawMeshBatch(const std::vector<const Drawable*>& drawables, core::Name passName, std::size_t viewerIdx)
     {
-        if (drawables.empty())
+        if (drawables.empty() || renderState.renderData == nullptr)
             return;
 
         const Material& mat = *drawables.front()->GetMaterial();
@@ -311,10 +313,7 @@ namespace sh::render::vk
         if (passes == nullptr)
             return;
 
-        std::optional<uint32_t> cameraOffsetOpt = VulkanCameraBuffers::GetInstance()->GetDynamicOffset(*renderState.camera);
-        if (!cameraOffsetOpt.has_value())
-            return;
-        const uint32_t cameraOffset = cameraOffsetOpt.value();
+        const uint32_t cameraOffset = renderState.renderData->renderViewers[viewerIdx].offset;
 
         for (const ShaderPass& pass : *passes)
         {

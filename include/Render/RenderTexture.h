@@ -1,7 +1,6 @@
 ﻿#pragma once
 #include "Export.h"
 #include "Texture.h"
-#include "RenderTarget.h"
 #include "RenderData.h"
 #include "IRenderThrMethod.h"
 

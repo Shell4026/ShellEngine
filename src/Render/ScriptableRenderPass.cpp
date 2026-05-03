@@ -13,7 +13,7 @@ namespace sh::render
 		renderQueue(renderQueue)
 	{
 	}
-	SH_RENDER_API void ScriptableRenderPass::Configure(const RenderTarget& renderData)
+	SH_RENDER_API void ScriptableRenderPass::Configure(const RenderData& renderData)
 	{
 		if (renderData.drawables != nullptr)
 		{
@@ -21,19 +21,19 @@ namespace sh::render
 		}
 		SetImageUsages(renderData);
 	}
-	SH_RENDER_API void ScriptableRenderPass::Record(CommandBuffer& cmd, const IRenderContext& ctx, const RenderTarget& renderTarget)
+	SH_RENDER_API void ScriptableRenderPass::Record(CommandBuffer& cmd, const IRenderContext& ctx, const RenderData& renderData)
 	{
-		cmd.SetRenderTarget(renderTarget, true, true, true, true);
-		SetViewportScissor(cmd, ctx, renderTarget);
-
-		if (renderTarget.drawables == nullptr)
+		cmd.SetRenderData(renderData, true, true, true, true);
+		if (renderData.drawables == nullptr)
 			return;
-
-		for (const RenderBatch& batch : renderBatches)
+		std::size_t viewerIdx = 0;
+		for (const RenderViewer& viewer : renderData.renderViewers)
 		{
-			cmd.DrawMeshBatch(batch.drawables, passName);
+			SetViewportScissor(cmd, ctx, viewer);
+			for (const RenderBatch& batch : renderBatches)
+				cmd.DrawMeshBatch(batch.drawables, passName, viewerIdx);
+			++viewerIdx;
 		}
-
 		//ctx.GetRenderImpl().RecordCommand(cmd, passName, renderTarget, drawList, bStoreImage);
 	}
 	SH_RENDER_API auto ScriptableRenderPass::CreateRenderBatch(const std::vector<Drawable*>& drawables) const -> std::vector<RenderBatch>
@@ -59,12 +59,28 @@ namespace sh::render
 		std::unordered_map<GroupKey, std::size_t, GroupKeyHash> groupIndex;
 		groupIndex.reserve(drawables.size());
 
+		std::map<const Material*, bool> materialFilter;
 		for (const Drawable* drawable : drawables)
 		{
 			if (!core::IsValid(drawable) || !drawable->CheckAssetValid())
 				continue;
 
 			const Material* const mat = drawable->GetMaterial();
+			if (auto it = materialFilter.find(mat); it == materialFilter.end())
+			{
+				if (mat->GetShader()->GetShaderPasses(passName) == nullptr)
+				{
+					materialFilter.insert({ mat, false });
+					continue;
+				}
+				materialFilter.insert({ mat, true });
+			}
+			else
+			{
+				if (!it->second)
+					continue;
+			}
+
 			Mesh::Topology topology = drawable->GetTopology(core::ThreadType::Render);
 			const bool bSkinned = drawable->IsSkinnedMesh();
 
@@ -88,7 +104,7 @@ namespace sh::render
 		}
 		return groups;
 	}
-	SH_RENDER_API void ScriptableRenderPass::SetImageUsages(const RenderTarget& renderData)
+	SH_RENDER_API void ScriptableRenderPass::SetImageUsages(const RenderData& renderData)
 	{
 		renderTextures.clear();
 		if (renderData.target != nullptr && IsDepthTexture(renderData.target->GetTextureFormat()))
@@ -96,10 +112,12 @@ namespace sh::render
 		else
 			renderTextures[renderData.target] = ResourceUsage::ColorAttachment;
 
-		if (renderData.drawables == nullptr)
-			return;
-
-		for (const Drawable* drawable : *renderData.drawables)
+		if (renderData.drawables != nullptr)
+			SetImageUsages(*renderData.drawables);
+	}
+	SH_RENDER_API void ScriptableRenderPass::SetImageUsages(const std::vector<Drawable*>& drawables)
+	{
+		for (const Drawable* drawable : drawables)
 		{
 			if (drawable == nullptr || !drawable->CheckAssetValid())
 				continue;
@@ -124,25 +142,9 @@ namespace sh::render
 			}
 		}
 	}
-	SH_RENDER_API void ScriptableRenderPass::SetViewportScissor(CommandBuffer& cmd, const IRenderContext& ctx, const RenderTarget& renderTarget)
+	SH_RENDER_API void ScriptableRenderPass::SetViewportScissor(CommandBuffer& cmd, const IRenderContext& ctx, const RenderViewer& renderViewer)
 	{
-		if (renderTarget.target == nullptr)
-		{
-			const int x = static_cast<int>(ctx.GetViewportStart().x);
-			const int y = static_cast<int>(ctx.GetViewportEnd().y);
-			const int w = static_cast<int>(ctx.GetViewportEnd().x - ctx.GetViewportStart().x);
-			const int h = static_cast<int>(ctx.GetViewportEnd().y - ctx.GetViewportStart().y);
-			cmd.SetViewport(x, y, w, -h);
-			cmd.SetScissor(0, 0, static_cast<uint32_t>(w), static_cast<uint32_t>(h));
-		}
-		else
-		{
-			const int x = 0;
-			const int y = static_cast<int>(renderTarget.target->GetSize().y);
-			const int w = static_cast<int>(renderTarget.target->GetSize().x);
-			const int h = y;
-			cmd.SetViewport(x, y, w, -h);
-			cmd.SetScissor(0, 0, static_cast<uint32_t>(w), static_cast<uint32_t>(h));
-		}
+		cmd.SetViewport(renderViewer.viewportRect.x, renderViewer.viewportRect.y, renderViewer.viewportRect.z, renderViewer.viewportRect.w);
+		cmd.SetScissor(renderViewer.viewportScissor.x, renderViewer.viewportScissor.y, renderViewer.viewportScissor.z, renderViewer.viewportScissor.w);
 	}
 }//namespace

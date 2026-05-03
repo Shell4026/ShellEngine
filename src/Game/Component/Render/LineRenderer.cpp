@@ -1,6 +1,7 @@
 ﻿#include "Component/Render/LineRenderer.h"
 #include "Component/Render/Camera.h"
 
+#include "Render/Renderer.h"
 #include "Render/Mesh.h"
 
 #include "World.h"

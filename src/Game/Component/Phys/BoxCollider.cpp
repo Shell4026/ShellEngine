@@ -18,7 +18,7 @@ namespace sh::game
 	{
 		impl = std::make_unique<Impl>();
 
-		auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld()->GetContext());
+		auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld().GetContext());
 		Vec3 halfSize = size / 2.0f;
 		impl->shape = ctx->createBoxShape(reactphysics3d::Vector3{ halfSize.x, halfSize.y, halfSize.z });
 
@@ -88,7 +88,7 @@ namespace sh::game
 		if (impl->shape != nullptr)
 		{
 			SH_INFO("DestroyShape()");
-			auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld()->GetContext());
+			auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld().GetContext());
 			ctx->destroyBoxShape(impl->shape);
 			impl->shape = nullptr;
 		}
