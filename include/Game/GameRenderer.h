@@ -22,6 +22,8 @@ namespace sh::game
 
 		SH_GAME_API void Init() override;
 		SH_GAME_API void Setup(const render::RenderData& data) override;
+
+		auto GetGUIPass() const -> game::GUIPass* { return guiPass; }
 	protected:
 		render::IRenderContext& renderCtx;
 		World& world;

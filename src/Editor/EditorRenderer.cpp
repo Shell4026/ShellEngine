@@ -56,5 +56,9 @@ namespace sh::editor
 			EnqueRenderPass(*shadowMapPass);
 			return;
 		}
+		// 그 외 카메라
+		EnqueRenderPass(*opaquePass);
+		EnqueRenderPass(*transparentPass);
+		EnqueRenderPass(*uiPass);
 	}
 }//namespace

@@ -23,6 +23,7 @@
 #include "Game/Component/Render/PickingRenderer.h"
 #include "Game/Component/Render/LineRenderer.h"
 #include "Game/WorldEvents.hpp"
+#include "Game/GUIPass.h"
 
 namespace sh::editor
 {
@@ -115,6 +116,7 @@ namespace sh::editor
 			}
 			else
 				viewportTexture = viewportPtr;
+			editorRenderer->GetGUIPass()->viewportTexture = viewportTexture;
 
 			game::GameObject* const camObj = AddGameObject("EditorCamera");
 			camObj->transform->SetPosition({ 2.f, 2.f, 2.f });
