@@ -50,8 +50,11 @@ namespace sh::editor
 		renderTextures[renderData.target] = render::ResourceUsage::ColorAttachment;
 		if (mat != nullptr)
 		{
-			for (auto& [name, rt] : mat->GetCachedRenderTextures())
-				renderTextures[rt] = render::ResourceUsage::SampledRead;
+			for (const render::MaterialData::CachedRT& cachedRT : render::IRenderThrMethod<render::MaterialData>::GetCachedRTs(mat->GetMaterialData()))
+			{
+				if (cachedRT.rt.IsValid() && cachedRT.pass->GetLightingPassName() == passName)
+					renderTextures[cachedRT.rt.Get()] = cachedRT.rt->IsDepthOnly() ? render::ResourceUsage::DepthStencilSampledRead : render::ResourceUsage::SampledRead;
+			}
 		}
 	}
 	SH_EDITOR_API void EditorPostOutlinePass::Record(render::CommandBuffer& cmd, const render::IRenderContext& ctx, const render::RenderData& renderData)

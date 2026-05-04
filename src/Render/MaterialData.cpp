@@ -3,6 +3,7 @@
 #include "ShaderPass.h"
 #include "BufferFactory.h"
 #include "IRenderContext.h"
+#include "RenderTexture.h"
 
 #include "Core/ThreadSyncManager.h"
 #include "Core/Logger.h"
@@ -310,5 +311,19 @@ namespace sh::render
 
 		IShaderBinding& shaderBindings = *itUb->second.get();
 		shaderBindings.Link(binding, *shaderBindingsSyncData.tex);
+
+		if (shaderBindingsSyncData.tex->GetType().IsChildOf(RenderTexture::GetStaticType()))
+		{
+			auto it = std::find_if(cachedRTs.begin(), cachedRTs.end(),
+				[&](const CachedRT& cached)
+				{
+					if (cached.set == set && cached.binding == binding && cached.pass == shaderPass)
+						return true;
+					return false;
+				}
+			);
+			if (it == cachedRTs.end())
+				cachedRTs.push_back(CachedRT{ set, binding, shaderPass, static_cast<const RenderTexture*>(shaderBindingsSyncData.tex) });
+		}
 	}
 }//namespace

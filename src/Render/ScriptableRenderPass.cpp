@@ -2,6 +2,7 @@
 #include "IRenderContext.h"
 #include "Drawable.h"
 #include "RenderTexture.h"
+#include "MaterialData.h"
 
 #include "Core/Logger.h"
 #include "Core/Util.h"
@@ -124,22 +125,15 @@ namespace sh::render
 				continue;
 
 			const Material* const mat = drawable->GetMaterial();
-			for (auto& [name, rt] : mat->GetCachedRenderTextures())
+			for (const MaterialData::CachedRT& cachedRT : IRenderThrMethod<MaterialData>::GetCachedRTs(mat->GetMaterialData()))
 			{
-				auto it = renderTextures.find(rt);
-				if (it != renderTextures.end())
-				{
-					if (it->second == ResourceUsage::ColorAttachment ||
-						it->second == ResourceUsage::DepthStencilAttachment)
-					{
-						SH_ERROR_FORMAT("RenderTexture {} is used as Attachment", it->first->GetName().ToString());
-						continue;
-					}
-				}
-				else
-				{
-					renderTextures[rt] = rt->IsDepthOnly() ? ResourceUsage::DepthStencilSampledRead : ResourceUsage::SampledRead;
-				}
+				if (cachedRT.rt.IsValid() && cachedRT.pass->GetLightingPassName() == passName)
+					renderTextures[cachedRT.rt.Get()] = cachedRT.rt->IsDepthOnly() ? ResourceUsage::DepthStencilSampledRead : ResourceUsage::SampledRead;
+			}
+			for (const MaterialData::CachedRT& cachedRT : IRenderThrMethod<MaterialData>::GetCachedRTs(drawable->GetMaterialData()))
+			{
+				if (cachedRT.rt.IsValid() && cachedRT.pass->GetLightingPassName() == passName)
+					renderTextures[cachedRT.rt.Get()] = cachedRT.rt->IsDepthOnly() ? ResourceUsage::DepthStencilSampledRead : ResourceUsage::SampledRead;
 			}
 		}
 	}
