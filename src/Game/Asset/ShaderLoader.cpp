@@ -137,7 +137,7 @@ namespace sh::game
 
 		for (int i = 0; i < shaderCI.shaderNode.passes.size(); ++i)
 		{
-			const auto& passNode = shaderCI.shaderNode.passes[i];
+			const render::ShaderAST::PassNode& passNode = shaderCI.shaderNode.passes[i];
 			const core::Json& shaderPassObjJson = *(shaderJson["passes"].begin() + i);
 			const core::Json& shaderPassJson = shaderPassObjJson["shaderPass"];
 
@@ -146,15 +146,13 @@ namespace sh::game
 			if (shaderPassJson.contains("fragShaderData"))
 				passBuilder->SetData(render::ShaderPassBuilder::shaderType::Fragment, shaderPassJson["fragShaderData"].get<std::vector<uint8_t>>());
 
-			render::ShaderPass* shaderPass = passBuilder->Build(passNode);
+			render::ShaderPass* const shaderPass = passBuilder->Build(passNode);
 			if (shaderPass == nullptr)
 				return nullptr;
-			shaderPass->Deserialize(shaderPassObjJson);
-
 			shaderCI.passes.push_back(shaderPass);
 		}
-		auto shader = core::SObject::Create<render::Shader>(std::move(shaderCI));
-		shader->Deserialize(shaderObjJson);
+		render::Shader* const shader = core::SObject::Create<render::Shader>(std::move(shaderCI));
+		shader->SetUUID(asset.GetAssetUUID());
 
 		return shader;
 	}
