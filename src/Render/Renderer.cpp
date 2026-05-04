@@ -77,11 +77,7 @@ namespace sh::render
 	{
 		if (!core::IsValid(drawable))
 			return;
-
-		RenderCommand cmd{};
-		cmd.type = RenderCommand::Type::PushDrawable;
-		cmd.data = drawable;
-		renderCommands.Push(std::move(cmd));
+		renderCommands.Push(RenderCommand{ drawable });
 	}
 	SH_RENDER_API void Renderer::PushRenderData(const RenderData& renderData)
 	{
@@ -100,7 +96,7 @@ namespace sh::render
 
 	SH_RENDER_API void Renderer::SetScriptableRenderer(ScriptableRenderer& renderer)
 	{
-		this->renderer = &renderer;
+		renderCommands.Push(RenderCommand{ &renderer });
 	}
 	SH_RENDER_API void Renderer::SetDrawCallCount(uint32_t drawcall)
 	{
@@ -114,16 +110,19 @@ namespace sh::render
 		renderCommands.Drain(
 			[this](RenderCommand& cmd)
 			{
-				switch (cmd.type)
+				if (std::holds_alternative<core::SObjWeakPtr<Drawable>>(cmd.data))
 				{
-				case RenderCommand::Type::PushDrawable:
-				{
-					Drawable* const drawable = cmd.data.Get();
+					Drawable* const drawable = std::get<core::SObjWeakPtr<Drawable>>(cmd.data).Get();
 					if (!core::IsValid(drawable) || !drawable->CheckAssetValid())
 						return;
 					drawables.push_back(drawable);
-					break;
 				}
+				else
+				{
+					ScriptableRenderer* sr = std::get<ScriptableRenderer*>(cmd.data);
+					if (sr == nullptr)
+						return;
+					renderer = sr;
 				}
 			}
 		);

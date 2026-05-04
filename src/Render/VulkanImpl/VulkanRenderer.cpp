@@ -90,6 +90,8 @@ namespace sh::render::vk
 
 		if (!isInit || bPause.load(std::memory_order::memory_order_acquire))
 			return;
+
+		Renderer::Render();
 		if (renderer == nullptr)
 			return;
 
@@ -110,9 +112,6 @@ namespace sh::render::vk
 			return;
 		}
 		assert(result == VkResult::VK_SUCCESS);
-
-		Renderer::Render();
-
 		core::ArrayView<RenderData>& renderDatas = IRenderThrMethod<RenderDataManager>::GetRenderDatas(context->GetRenderDataManager());
 		std::size_t viewIdx = 0;
 		for (RenderData& rd : renderDatas)

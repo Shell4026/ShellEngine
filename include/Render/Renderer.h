@@ -37,9 +37,6 @@ namespace sh::render
 		SH_RENDER_API Renderer();
 		SH_RENDER_API virtual ~Renderer();
 
-		SH_RENDER_API void SyncDirty() override;
-		SH_RENDER_API void Sync() override;
-
 		SH_RENDER_API virtual void CreateContext(const window::Window& win) = 0;
 		SH_RENDER_API virtual void DestroyContext() = 0;
 		SH_RENDER_API virtual bool Init(window::Window& win);
@@ -77,17 +74,15 @@ namespace sh::render
 		auto GetThreadId() const -> std::thread::id { return threadId; }
 		auto GetScriptableRenderer() const -> ScriptableRenderer* { return renderer; }
 	protected:
+		SH_RENDER_API void SyncDirty() override;
+		SH_RENDER_API void Sync() override;
+
 		SH_RENDER_API void SetDrawCallCount(uint32_t drawcall);
 		SH_RENDER_API void DrainRenderCommands();
 	protected:
 		struct RenderCommand
 		{
-			enum class Type
-			{
-				PushDrawable
-			};
-			Type type = Type::PushDrawable;
-			core::SObjWeakPtr<Drawable> data;
+			std::variant<core::SObjWeakPtr<Drawable>, ScriptableRenderer*> data;
 		};
 
 		core::LockFreeMPSCQueue<RenderCommand> renderCommands;
