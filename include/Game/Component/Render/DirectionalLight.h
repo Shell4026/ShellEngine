@@ -33,13 +33,13 @@ namespace sh::game
 		SH_GAME_API void SetCastShadow(bool b) override;
 		SH_GAME_API void SetShadowBias(float bias) override;
 		SH_GAME_API void SetShadowMapResolution(uint32_t res) override;
+		/// @brief 라이트의 광원 공간 변환 행렬 (proj * view)을 반환한다.
+		SH_GAME_API auto GetLightSpaceMatrix() const -> glm::mat4 override;
 
 		/// @brief 그림자 아틀라스 텍스처를 반환한다 (모든 광원이 공유)
 		SH_GAME_API auto GetShadowMap() const -> render::RenderTexture*;
 		/// @brief 아틀라스 내에서 이 광원의 슬롯 정보를 반환한다.
 		SH_GAME_API auto GetShadowSlot() const -> render::ShadowMapManager::Slot;
-		/// @brief 디렉셔널 라이트의 광원 공간 변환 행렬 (proj * view)을 반환한다.
-		SH_GAME_API auto GetLightSpaceMatrix() const -> glm::mat4;
 
 		SH_GAME_API auto GetShadowMapResolution() const -> uint32_t override { return shadowMapResolution; }
 		SH_GAME_API auto GetShadowViewMatrix() const -> glm::mat4 override;

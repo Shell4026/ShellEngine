@@ -137,6 +137,7 @@ namespace sh::render
 			std::string code;
 			int lightingBinding = -1;
 			int skinBinding = -1;
+			int shadowMapBinding = -1;
 
 			SH_RENDER_API auto Serialize() const -> core::Json override;
 			SH_RENDER_API void Deserialize(const core::Json& json) override;

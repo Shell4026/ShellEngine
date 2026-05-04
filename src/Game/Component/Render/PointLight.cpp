@@ -105,6 +105,11 @@ namespace sh::game
 		return ILight::Type::Point;
 	}
 
+	SH_GAME_API auto PointLight::GetLightSpaceMatrix() const -> glm::mat4
+	{
+		return glm::mat4{ 1.f };
+	}
+
 	SH_GAME_API auto PointLight::IsCastShadow() const -> bool
 	{
 		return bCastShadow;

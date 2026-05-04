@@ -17,7 +17,7 @@ namespace sh::render
 			Layout, Uniform, In, Out, Sampler2D, Constexpr,
 			Const,
 			VERTEX, UV, NORMAL, TANGENT, MVP, LIGHT, BONE_WEIGHTS, BONE_INDICES, SKIN,
-			MATRIX_MODEL, MATRIX_VIEW, MATRIX_PROJ, MATRIX_SKIN,
+			MATRIX_MODEL, MATRIX_VIEW, MATRIX_PROJ, MATRIX_SKIN, TEXTURE_SHADOW,
 			LBracket, // (
 			RBracket, // )
 			LBrace, // {

@@ -121,6 +121,7 @@ namespace sh::render
 		json["type"] = static_cast<int>(type);
 		json["lightingBinding"] = lightingBinding;
 		json["skinBinding"] = skinBinding;
+		json["shadowMapBinding"] = shadowMapBinding;
 		json["code"] = code;
 
 		// in
@@ -160,6 +161,7 @@ namespace sh::render
 		type = static_cast<StageType>(json.at("type").get<int>());
 		lightingBinding = json.value("lightingBinding", -1);
 		skinBinding = json.value("skinBinding", -1);
+		shadowMapBinding = json.value("shadowMapBinding", -1);
 		code = json.at("code").get<std::string>();
 
 		// in

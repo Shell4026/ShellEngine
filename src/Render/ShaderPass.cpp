@@ -17,6 +17,8 @@ namespace sh::render
 				lightingBinding = stage.lightingBinding;
 			if (stage.skinBinding != -1)
 				skinBinding = stage.skinBinding;
+			if (stage.shadowMapBinding != -1)
+				shadowMapBinding = stage.shadowMapBinding;
 		}
 		if (!passNode.constants.empty())
 		{

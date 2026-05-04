@@ -75,7 +75,10 @@ namespace sh::game
 	{
 		shadowMapResolution = res;
 	}
-
+	SH_GAME_API auto DirectionalLight::GetLightSpaceMatrix() const -> glm::mat4
+	{
+		return GetShadowProjMatrix() * GetShadowViewMatrix();
+	}
 	SH_GAME_API auto DirectionalLight::GetShadowMap() const -> render::RenderTexture*
 	{
 		if (!bCastShadow)
@@ -87,10 +90,6 @@ namespace sh::game
 		if (!bCastShadow)
 			return render::ShadowMapManager::Slot{};
 		return world.GetShadowMapManager().GetSlot(*this);
-	}
-	SH_GAME_API auto DirectionalLight::GetLightSpaceMatrix() const -> glm::mat4
-	{
-		return GetShadowProjMatrix() * GetShadowViewMatrix();
 	}
 
 	SH_GAME_API auto DirectionalLight::GetShadowViewMatrix() const -> glm::mat4

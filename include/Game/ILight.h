@@ -22,6 +22,7 @@ namespace sh::game
 		virtual ~ILight() {};
 		virtual void SetIntensity(float intensity) = 0;
 		virtual auto GetLightType() const -> Type = 0;
+		virtual auto GetLightSpaceMatrix() const -> glm::mat4 = 0;
 
 		virtual auto IsCastShadow() const -> bool { return false; }
 		virtual void SetCastShadow(bool b) {}

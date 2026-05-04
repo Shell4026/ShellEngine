@@ -458,7 +458,11 @@ namespace sh::game
 				const Vec3& dir = dirLight->GetDirection();
 				lightStruct.pos = { dir.x, dir.y, dir.z, dirLight->GetIntensity() };
 				lightStruct.other.w = 0;
+				render::ShadowMapManager::Slot slot = dirLight->GetShadowSlot();
+				lightStruct.shadow = { slot.uvOffset.x,slot.uvOffset.y,slot.uvSize.x, slot.uvSize.y };
 			}
+			lightStruct.lightSpaceMatrix = light->GetLightSpaceMatrix();
+			
 			std::memcpy(lightDatas.data() + offset, &lightStruct, sizeof(Light));
 			offset += sizeof(Light);
 		}
@@ -468,8 +472,9 @@ namespace sh::game
 			{
 				if (pass.IsPendingKill() || pass.GetLightingBinding() == -1)
 					continue;
-
 				drawable.GetMaterialData().SetBindingData(pass, render::UniformStructLayout::Usage::Object, pass.GetLightingBinding(), lightDatas.data(), lightDatas.size());
+				if (pass.GetShadowMapBinding() != -1 && world.GetShadowMapManager().GetAtlas() != nullptr)
+					drawable.GetMaterialData().SetTextureData(pass, render::UniformStructLayout::Usage::Object, pass.GetShadowMapBinding(), *world.GetShadowMapManager().GetAtlas());
 			}
 		}
 	}

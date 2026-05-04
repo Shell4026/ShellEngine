@@ -40,6 +40,7 @@ namespace sh::game
 		SH_GAME_API auto GetIntensity() const -> float;
 		SH_GAME_API auto GetPos() const -> const Vec3& override;
 		SH_GAME_API auto GetLightType() const -> ILight::Type override;
+		SH_GAME_API auto GetLightSpaceMatrix() const->glm::mat4 override;
 
 		SH_GAME_API auto IsCastShadow() const -> bool override;
 		SH_GAME_API void SetCastShadow(bool b) override;

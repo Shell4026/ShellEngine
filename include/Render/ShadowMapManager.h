@@ -37,8 +37,8 @@ namespace sh::render
 	public:
 		struct Slot
 		{
-			glm::uvec2 offset{ 0u, 0u };
-			glm::uvec2 size{ 0u, 0u };
+			glm::vec2 uvOffset{ 0.f, 0.f };
+			glm::vec2 uvSize{ 0.f, 0.f };
 			bool valid = false;
 		};
 	public:

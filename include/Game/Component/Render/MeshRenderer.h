@@ -82,6 +82,7 @@ namespace sh::game
 		{
 			glm::vec4 pos;
 			glm::vec4 other;
+			glm::vec4 shadow; // offset, size
 			glm::mat4 lightSpaceMatrix;
 		};
 		std::vector<uint8_t> lightDatas;

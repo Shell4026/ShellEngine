@@ -151,19 +151,19 @@ namespace sh::render
 
 	auto ShaderParser::ParseShader() -> ShaderAST::ShaderNode
 	{
-		ShaderAST::ShaderNode shaderNode;
+		curShaderNode = ShaderAST::ShaderNode{};
 		
 		while (CheckToken(ShaderLexer::TokenType::Preprocessor))
 		{
 			NextToken();
-			ParsePreprocessor(shaderNode);
+			ParsePreprocessor(curShaderNode);
 		}
 
 		ConsumeToken(ShaderLexer::TokenType::Shader);
 
 		if (auto& token = PeekToken(); token.type == ShaderLexer::TokenType::String)
 		{
-			shaderNode.shaderName = token.text;
+			curShaderNode.shaderName = token.text;
 			NextToken();
 		}
 		else
@@ -173,15 +173,15 @@ namespace sh::render
 
 		// 프로퍼티가 있으면 파싱 (없을 수도 있음)
 		if (CheckToken(ShaderLexer::TokenType::Property))
-			ParseProperty(shaderNode);
+			ParseProperty(curShaderNode);
 
 		while (!CheckToken(ShaderLexer::TokenType::RBrace) && !CheckToken(ShaderLexer::TokenType::EndOfFile))
 		{
-			shaderNode.passes.push_back(ParsePass(shaderNode));
+			curShaderNode.passes.push_back(ParsePass(curShaderNode));
 		}
 
 		ConsumeToken(ShaderLexer::TokenType::RBrace);
-		return shaderNode;
+		return curShaderNode;
 	}
 	void ShaderParser::ParsePreprocessor(ShaderAST::ShaderNode& shaderNode)
 	{ 
@@ -636,6 +636,7 @@ namespace sh::render
 		bool usingLIGHT = false;
 		bool usingSKIN = false;
 		bool usingMATRIX_SKIN = false;
+		bool usingTEXTURE_SHADOW = false;
 
 		while (nested != 0 || PeekToken().type != ShaderLexer::TokenType::EndOfFile)
 		{
@@ -717,6 +718,7 @@ namespace sh::render
 						structNode.name = "Light";
 						structNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec4, 1, "pos" });
 						structNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec4, 1, "other" });
+						structNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec4, 1, "shadow" });
 						structNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 1, "lightSpaceMatrix" });
 
 						ShaderAST::BufferNode& ssboNode = stageNode.buffers.emplace_back();
@@ -731,6 +733,32 @@ namespace sh::render
 						uboit = refreshUboIt();
 					}
 					usingLIGHT = true;
+				}
+			}
+			else if (CheckToken(ShaderLexer::TokenType::TEXTURE_SHADOW))
+			{
+				if (!usingTEXTURE_SHADOW)
+				{
+					auto it = std::find_if(stageNode.buffers.begin(), stageNode.buffers.end(),
+						[](const ShaderAST::BufferNode& ubo) { return ubo.name == "TEXTURE_SHADOW"; });
+					if (it == stageNode.buffers.end())
+					{
+						ShaderAST::BufferNode& samplerNode = stageNode.buffers.emplace_back();
+						samplerNode.bufferType = ShaderAST::BufferType::Sampler;
+						samplerNode.name = "TEXTURE_SHADOW";
+						samplerNode.set = static_cast<uint32_t>(UniformStructLayout::Usage::Object);
+						samplerNode.binding = lastObjectUniformBinding++;
+
+						stageNode.shadowMapBinding = samplerNode.binding;
+
+						ShaderAST::VariableNode& varNode = curShaderNode.properties.emplace_back();
+						varNode.name = "TEXTURE_SHADOW";
+						varNode.attribute = ShaderAST::VariableAttribute::Local;
+						varNode.type = ShaderAST::VariableType::Sampler;
+
+						uboit = refreshUboIt();
+					}
+					usingTEXTURE_SHADOW = true;
 				}
 			}
 			else if (CheckToken(ShaderLexer::TokenType::SKIN) || CheckToken(ShaderLexer::TokenType::MATRIX_SKIN))

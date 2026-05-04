@@ -117,8 +117,8 @@ namespace sh::render
 			}
 
 			Slot slot{};
-			slot.offset = glm::uvec2{ static_cast<uint32_t>(x), static_cast<uint32_t>(y) };
-			slot.size = glm::uvec2{ res, res };
+			slot.uvOffset = glm::vec2{ static_cast<float>(x) / atlasSize, static_cast<float>(y) / atlasSize };
+			slot.uvSize = glm::vec2{ static_cast<float>(res) / atlasSize, static_cast<float>(res) / atlasSize };
 			slot.valid = true;
 
 			const glm::mat4 view = caster->GetShadowViewMatrix();
@@ -132,7 +132,7 @@ namespace sh::render
 			viewer.projMatrix = proj;
 			viewer.pos = caster->GetShadowPos();
 			viewer.to = caster->GetShadowLookAt();
-			viewer.viewportRect = glm::uvec4{ slot.offset.x, slot.offset.y, slot.size.x, slot.size.y };
+			viewer.viewportRect = glm::uvec4{ atlasSize * slot.uvOffset.x, atlasSize * slot.uvOffset.y, atlasSize * slot.uvSize.x, atlasSize * slot.uvSize.y };
 			viewer.viewportScissor = viewer.viewportRect;
 			renderData.renderViewers.push_back(viewer);
 		}
