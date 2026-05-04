@@ -56,7 +56,7 @@ namespace sh::editor
 	}
 	SH_EDITOR_API void EditorPostOutlinePass::Record(render::CommandBuffer& cmd, const render::IRenderContext& ctx, const render::RenderData& renderData)
 	{
-		if (!core::IsValid(drawable->GetMesh()) || !core::IsValid(drawable->GetMaterial()))
+		if (drawable == nullptr || !core::IsValid(drawable->GetMesh()) || !core::IsValid(drawable->GetMaterial()))
 			return;
 		cmd.SetRenderData(renderData, false, false, false, false);
 		std::size_t viewerIdx = 0;

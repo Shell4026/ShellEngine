@@ -261,13 +261,9 @@ namespace sh::game
 	}
 	SH_GAME_API void World::SetupRenderer()
 	{
-		if (customRenderer == nullptr)
-		{
-			customRenderer = std::make_unique<GameRenderer>(*renderer.GetContext(), GetUiContext(), *this);
-			customRenderer->Init();
-
-			renderer.SetScriptableRenderer(*customRenderer);
-		}
+		customRenderer = std::make_unique<GameRenderer>(*renderer.GetContext(), GetUiContext(), *this);
+		customRenderer->Init();
+		renderer.SetScriptableRenderer(*customRenderer);
 		if (shadowMapManager != nullptr)
 			shadowMapManager->Init(*renderer.GetContext());
 	}

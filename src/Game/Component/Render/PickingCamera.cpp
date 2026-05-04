@@ -48,8 +48,11 @@ namespace sh::game
 		Super::BeginUpdate();
 		if (!pickingCallback.Empty() && !bRequestRead)
 		{
-			bufferFuture = world.renderer.GetScriptableRenderer()->ReadRenderTextureAsync(*renderTex, x, y);
-			bRequestRead = true;
+			if (world.renderer.GetScriptableRenderer() != nullptr)
+			{
+				bufferFuture = world.renderer.GetScriptableRenderer()->ReadRenderTextureAsync(*renderTex, x, y);
+				bRequestRead = true;
+			}
 		}
 
 		if (bufferFuture.valid())

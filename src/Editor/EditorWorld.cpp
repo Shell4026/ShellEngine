@@ -82,14 +82,10 @@ namespace sh::editor
 
 	SH_EDITOR_API void EditorWorld::SetupRenderer()
 	{
-		if (customRenderer == nullptr)
-		{
-			customRenderer = std::make_unique<EditorRenderer>(*renderer.GetContext(), GetUiContext(), *this);
-			EditorRenderer& editorRenderer = static_cast<EditorRenderer&>(*customRenderer);
-			editorRenderer.Init();
-
-			renderer.SetScriptableRenderer(*customRenderer);
-		}
+		customRenderer = std::make_unique<EditorRenderer>(*renderer.GetContext(), GetUiContext(), *this);
+		EditorRenderer& editorRenderer = static_cast<EditorRenderer&>(*customRenderer);
+		editorRenderer.Init();
+		renderer.SetScriptableRenderer(*customRenderer);
 		if (shadowMapManager != nullptr)
 			shadowMapManager->Init(*renderer.GetContext());
 	}
