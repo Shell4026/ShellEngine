@@ -37,6 +37,8 @@ namespace sh::render
 		std::size_t idx = 0;
 		for (const RenderViewer& viewer : renderTarget.renderViewers)
 		{
+			cmd.SetViewport(viewer.viewportRect.x, viewer.viewportRect.y, viewer.viewportRect.z, viewer.viewportRect.w);
+			cmd.SetScissor(viewer.viewportScissor.x, viewer.viewportScissor.y, viewer.viewportScissor.z, viewer.viewportScissor.w);
 			const glm::vec3& camPos = viewer.pos;
 			const glm::vec3& camTo = viewer.to;
 			const glm::vec3 to = glm::normalize(camTo - camPos);
