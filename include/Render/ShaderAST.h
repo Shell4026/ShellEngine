@@ -40,12 +40,14 @@ namespace sh::render
 			Local
 		};
 
+		struct StructNode;
 		struct VariableNode : core::ISerializable
 		{
 			VariableType type = VariableType::Int;
 			uint32_t arraySize = 1; // 배열 원소 개수 (단일 변수면 1)
 			std::string name;
 			std::string defaultValue;
+			std::string structType;
 			VariableAttribute attribute = VariableAttribute::None;
 			bool bDynamicArray = false; // SSBO 끝의 가변 배열 (arraySize 무시)
 
@@ -54,7 +56,10 @@ namespace sh::render
 				type(type), arraySize(arraySize), name(std::move(name))
 			{
 			}
-			static auto MakeDynamicArray(VariableType type, std::string name) -> VariableNode
+			SH_RENDER_API auto Serialize() const -> core::Json override;
+			SH_RENDER_API void Deserialize(const core::Json& json) override;
+
+			inline static auto MakeDynamicArray(VariableType type, std::string name) -> VariableNode
 			{
 				VariableNode v;
 				v.type = type;
@@ -62,6 +67,12 @@ namespace sh::render
 				v.name = std::move(name);
 				return v;
 			}
+			SH_RENDER_API static auto MakeDynamicArray(StructNode& structNode, std::string name) -> VariableNode;
+		};
+		struct StructNode : core::ISerializable
+		{
+			std::string name;
+			std::vector<VariableNode> vars;
 
 			SH_RENDER_API auto Serialize() const -> core::Json override;
 			SH_RENDER_API void Deserialize(const core::Json& json) override;
@@ -119,6 +130,7 @@ namespace sh::render
 			StageType type;
 			std::vector<LayoutNode> in;
 			std::vector<LayoutNode> out;
+			std::vector<StructNode> structs;
 			std::vector<BufferNode> buffers;
 			std::vector<std::string> declaration;
 			std::vector<std::string> functions;
@@ -128,6 +140,8 @@ namespace sh::render
 
 			SH_RENDER_API auto Serialize() const -> core::Json override;
 			SH_RENDER_API void Deserialize(const core::Json& json) override;
+
+			SH_RENDER_API auto GetStructNode(const std::string& structName) const -> const StructNode*;
 		};
 
 		struct PassNode : core::ISerializable
@@ -180,6 +194,13 @@ namespace sh::render
 
 			SH_RENDER_API auto Serialize() const -> core::Json override;
 			SH_RENDER_API void Deserialize(const core::Json& json) override;
+		};
+
+		struct alignas(16) LightBuffer
+		{
+			glm::vec4 pos;
+			glm::vec4 other;
+			glm::mat4 lightSpaceMatrix;
 		};
 	};
 }//namespace

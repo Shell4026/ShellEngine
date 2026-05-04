@@ -21,14 +21,14 @@ namespace sh::render
 	public:
 		enum class Layout : uint8_t
 		{
-			STD140, // UBO 기본
-			STD430  // SSBO 기본
+			STD140, // UBO
+			STD430  // SSBO
 		};
 		/// @brief 버퍼 타입
 		enum class Kind : uint8_t
 		{
-			Uniform, // UBO — std140 권장
-			Storage, // SSBO — std430 권장, 가변 배열 가능
+			Uniform, // UBO
+			Storage, // SSBO
 			Sampler,
 			PushConstant // 푸시 상수
 		};
@@ -54,7 +54,7 @@ namespace sh::render
 		struct LayoutInfo
 		{
 			uint32_t baseAlignment; // 오프셋의 정렬 단위
-			uint32_t bytes;         // 실제 차지하는 총 크기(패딩 포함)
+			uint32_t bytes; // 실제 차지하는 총 크기(패딩 포함)
 		};
 	public:
 		SH_RENDER_API UniformStructLayout(std::string name, uint32_t binding, Usage type, ShaderStage stage, Kind kind = Kind::Uniform);
@@ -116,6 +116,8 @@ namespace sh::render
 			return { 16, 48 };
 		else if constexpr (std::is_same_v<T, glm::mat4>)
 			return { 16, 64 };
+		else if constexpr (std::is_class_v<T>)
+			return { alignof(T), sizeof(T)};
 #if defined(_MSC_VER)
 		else
 			static_assert(std::_Always_false<T>, "Unknown type for GetLayoutInfo: " __FUNCSIG__);
@@ -157,7 +159,9 @@ namespace sh::render
 		}
 		else
 		{
-			const LayoutInfo info = GetLayoutInfo<T>();
+			LayoutInfo info = GetLayoutInfo<T>();
+			if (layout == Layout::STD140 && std::is_class_v<T>)
+				info.baseAlignment = 16;
 			const bool isArray = (count > 1 || bDynamic);
 
 			// STD140: 배열 원소 stride는 최소 16바이트 정렬

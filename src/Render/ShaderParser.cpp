@@ -713,16 +713,21 @@ namespace sh::render
 						[](const ShaderAST::BufferNode& ubo) { return ubo.name == "LIGHT"; });
 					if (it == stageNode.buffers.end())
 					{
-						ShaderAST::BufferNode uboNode{};
-						uboNode.bufferType = ShaderAST::BufferType::Uniform;
-						uboNode.name = "LIGHT";
-						uboNode.set = static_cast<uint32_t>(UniformStructLayout::Usage::Object);
-						uboNode.binding = lastObjectUniformBinding++;
-						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Int, 1, "count" });
-						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec4, 10, "pos" });
-						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec4, 10, "other" });
-						stageNode.buffers.push_back(std::move(uboNode));
-						stageNode.lightingBinding = uboNode.binding;
+						ShaderAST::StructNode& structNode = stageNode.structs.emplace_back();
+						structNode.name = "Light";
+						structNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec4, 1, "pos" });
+						structNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec4, 1, "other" });
+						structNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 1, "lightSpaceMatrix" });
+
+						ShaderAST::BufferNode& ssboNode = stageNode.buffers.emplace_back();
+						ssboNode.bufferType = ShaderAST::BufferType::Storage;
+						ssboNode.name = "LIGHT";
+						ssboNode.set = static_cast<uint32_t>(UniformStructLayout::Usage::Object);
+						ssboNode.binding = lastObjectUniformBinding++;
+						ssboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Int, 1, "count" });
+						ssboNode.vars.push_back(ShaderAST::VariableNode::MakeDynamicArray(structNode, "lights"));
+
+						stageNode.lightingBinding = ssboNode.binding;
 						uboit = refreshUboIt();
 					}
 					usingLIGHT = true;
@@ -1036,7 +1041,20 @@ namespace sh::render
 		for (auto& out : stageNode.out)
 			code += fmt::format("layout(location = {}) out {} {};\n", out.binding, VariableTypeToString(out.var.type), out.var.name);
 
-		for (auto& uniform : stageNode.buffers)
+		// 구조체 선언
+		for (const ShaderAST::StructNode& structNode : stageNode.structs)
+		{
+			std::string variables;
+			for (const ShaderAST::VariableNode& varNode : structNode.vars)
+			{
+				assert(varNode.type != ShaderAST::VariableType::Struct);
+				variables += fmt::format("{} {};\n", VariableTypeToString(varNode.type), varNode.name);
+			}
+			code += fmt::format("struct {} {{ {} }};\n", structNode.name, variables);
+		}
+
+		// 버퍼 선언
+		for (const ShaderAST::BufferNode& uniform : stageNode.buffers)
 		{
 			if (uniform.bufferType == ShaderAST::BufferType::Sampler)
 			{
@@ -1045,14 +1063,20 @@ namespace sh::render
 			}
 			std::string uniformMembers;
 			bool bDynamicArrayFlag = false;
-			for (auto& member : uniform.vars)
+			for (const ShaderAST::VariableNode& member : uniform.vars)
 			{
 				if (member.bDynamicArray)
 				{
 					assert(!bDynamicArrayFlag);
 					if (bDynamicArrayFlag)
 						throw ShaderParserException{ "SSBO must have at most one dynamic array!" };
-					uniformMembers += fmt::format("{} {}[];\n", VariableTypeToString(member.type), member.name);
+
+					std::string varType;
+					if (member.type != ShaderAST::VariableType::Struct)
+						varType = VariableTypeToString(member.type);
+					else
+						varType = member.structType;
+					uniformMembers += fmt::format("{} {}[];\n", varType, member.name);
 					bDynamicArrayFlag = true;
 				}
 				else if (member.arraySize == 1)

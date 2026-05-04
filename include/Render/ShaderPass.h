@@ -50,6 +50,13 @@ namespace sh::render
 		SH_RENDER_API virtual void Clear() = 0;
 		SH_RENDER_API virtual void Build() = 0;
 
+		/// @brief 셰이더 바이너리 데이터를 직렬화 한다.
+		/// @return 직렬화 된 json
+		SH_RENDER_API auto Serialize() const -> core::Json override;
+		/// @brief 셰이더 바이너리 데이터를 역직렬화 한다.
+		/// @param json 직렬화 된 json
+		SH_RENDER_API void Deserialize(const core::Json& json) override;
+
 		SH_RENDER_API auto HasUniformMember(const std::string& name, ShaderStage stage) const -> const UniformStructLayout*;
 
 		SH_RENDER_API auto GetStencilState() const -> const StencilState& { return stencilState; }
@@ -80,13 +87,6 @@ namespace sh::render
 		SH_RENDER_API auto GetAttribute(const std::string& name) const -> std::optional<AttributeData>;
 
 		SH_RENDER_API void StoreShaderCode(ShaderCode&& shaderCode);
-
-		/// @brief 셰이더 바이너리 데이터를 직렬화 한다.
-		/// @return 직렬화 된 json
-		SH_RENDER_API auto Serialize() const -> core::Json override;
-		/// @brief 셰이더 바이너리 데이터를 역직렬화 한다.
-		/// @param json 직렬화 된 json
-		SH_RENDER_API void Deserialize(const core::Json& json) override;
 	protected:
 		ShaderPass(const ShaderAST::PassNode& passNode, ShaderType type);
 		ShaderPass(ShaderPass&& other) noexcept;

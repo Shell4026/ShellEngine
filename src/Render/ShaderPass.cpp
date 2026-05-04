@@ -88,6 +88,30 @@ namespace sh::render
 		return *this;
 	}
 
+	SH_RENDER_API auto ShaderPass::Serialize() const -> core::Json
+	{
+		core::Json mainJson = Super::Serialize();
+		core::Json& shaderPassJson = mainJson["shaderPass"];
+
+		shaderPassJson["vertShaderData"] = shaderCode.vert;
+		shaderPassJson["fragShaderData"] = shaderCode.frag;
+
+		return mainJson;
+	}
+	SH_RENDER_API void ShaderPass::Deserialize(const core::Json& json)
+	{
+		Super::Deserialize(json);
+
+		if (!json.contains("shaderPass"))
+			return;
+
+		const core::Json& shaderPassJson = json["shaderPass"];
+		if (shaderPassJson.contains("vertShaderData"))
+			shaderCode.vert = shaderPassJson["vertShaderData"].get<std::vector<uint8_t>>();
+		if (shaderPassJson.contains("fragShaderData"))
+			shaderCode.frag = shaderPassJson["fragShaderData"].get<std::vector<uint8_t>>();
+	}
+
 	SH_RENDER_API auto ShaderPass::HasUniformMember(const std::string& name, ShaderStage stage) const -> const UniformStructLayout*
 	{
 		if (stage == ShaderStage::Vertex)
@@ -151,29 +175,6 @@ namespace sh::render
 	{
 		this->shaderCode = std::move(shaderCode);
 	}
-	SH_RENDER_API auto ShaderPass::Serialize() const -> core::Json
-	{
-		core::Json mainJson = Super::Serialize();
-		core::Json& shaderPassJson = mainJson["shaderPass"];
-
-		shaderPassJson["vertShaderData"] = shaderCode.vert;
-		shaderPassJson["fragShaderData"] = shaderCode.frag;
-
-		return mainJson;
-	}
-	SH_RENDER_API void ShaderPass::Deserialize(const core::Json& json)
-	{
-		Super::Deserialize(json);
-
-		if (!json.contains("shaderPass"))
-			return;
-
-		const auto& shaderPassJson = json["shaderPass"];
-		if (shaderPassJson.contains("vertShaderData"))
-			shaderCode.vert = shaderPassJson["vertShaderData"].get<std::vector<uint8_t>>();
-		if (shaderPassJson.contains("fragShaderData"))
-			shaderCode.frag = shaderPassJson["fragShaderData"].get<std::vector<uint8_t>>();
-	}
 
 	void ShaderPass::AddUniformLayout(ShaderStage stage, const UniformStructLayout& layout)
 	{
@@ -201,15 +202,15 @@ namespace sh::render
 	}
 	void ShaderPass::FillAttributes(const render::ShaderAST::PassNode& passNode)
 	{
-		for (auto& stage : passNode.stages)
+		for (const ShaderAST::StageNode& stage : passNode.stages)
 		{
-			auto stageType = (stage.type == render::ShaderAST::StageType::Vertex) ?
+			const ShaderStage stageType = (stage.type == render::ShaderAST::StageType::Vertex) ?
 				render::ShaderStage::Vertex :
 				render::ShaderStage::Fragment;
 
 			if (stage.type == render::ShaderAST::StageType::Vertex)
 			{
-				for (auto& in : stage.in)
+				for (const ShaderAST::LayoutNode& in : stage.in)
 				{
 					switch (in.var.type)
 					{
@@ -242,7 +243,7 @@ namespace sh::render
 
 				if (kind != UniformStructLayout::Kind::Sampler)
 				{
-					for (auto& var : bufferNode.vars)
+					for (const ShaderAST::VariableNode& var : bufferNode.vars)
 					{
 						auto addFn = [&](auto typeTag)
 						{
@@ -261,6 +262,15 @@ namespace sh::render
 						case render::ShaderAST::VariableType::Mat3: addFn(glm::mat3{}); break;
 						case render::ShaderAST::VariableType::Float: addFn(float{}); break;
 						case render::ShaderAST::VariableType::Int:  addFn(int{}); break;
+						case render::ShaderAST::VariableType::Struct:
+						{
+							struct alignas(16) Dummy
+							{
+							};
+							if (var.bDynamicArray)
+								uniformLayout.AddDynamicArrayMember<Dummy>(var.name);
+							break;
+						}
 						}
 					}
 				}
