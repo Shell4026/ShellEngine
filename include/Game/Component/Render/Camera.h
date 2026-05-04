@@ -64,8 +64,8 @@ namespace sh::game
 		auto GetProjection() const -> Projection { return projection; }
 		auto GetRenderTexture() const -> render::RenderTexture* { return renderTexture; }
 	protected:
-		SH_RENDER_API virtual void UpdateViewMatrix();
-		SH_RENDER_API virtual void UpdateProjMatrix();
+		SH_GAME_API virtual void UpdateViewMatrix();
+		SH_GAME_API virtual void UpdateProjMatrix();
 	protected:
 		PROPERTY(lookPos)
 		Vec3 lookPos;
