@@ -718,7 +718,7 @@ namespace sh::render
 						structNode.name = "Light";
 						structNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec4, 1, "pos" });
 						structNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec4, 1, "other" });
-						structNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec4, 1, "shadow" });
+						structNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec4, 1, "shadowRect" });
 						structNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 1, "lightSpaceMatrix" });
 
 						ShaderAST::BufferNode& ssboNode = stageNode.buffers.emplace_back();

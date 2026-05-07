@@ -5,19 +5,11 @@
 namespace sh::game
 {
 	SH_GAME_API PointLight::PointLight(GameObject& owner) :
-		Component(owner)
+		LightBase(owner)
 	{
-		world.GetLightOctree().Insert(*this);
-		canPlayInEditor = true;
 	}
 	SH_GAME_API PointLight::~PointLight()
 	{
-	}
-
-	SH_GAME_API void PointLight::OnDestroy()
-	{
-		Super::OnDestroy();
-		world.GetLightOctree().Erase(*this);
 	}
 
 	SH_GAME_API void PointLight::BeginUpdate()
@@ -27,8 +19,7 @@ namespace sh::game
 
 		if (bUpdateOctree)
 		{
-			world.GetLightOctree().Erase(*this);
-			world.GetLightOctree().Insert(*this);
+			UpdateLightOctree();
 		}
 	}
 
@@ -83,26 +74,9 @@ namespace sh::game
 		this->range = radius;
 		bUpdateOctree = true;
 	}
-	SH_GAME_API void PointLight::SetIntensity(float intensity)
-	{
-		this->intensity = intensity;
-	}
-	SH_GAME_API auto PointLight::GetRadius() const -> float
-	{
-		return range;
-	}
-	SH_GAME_API auto PointLight::GetIntensity() const -> float
-	{
-		return intensity;
-	}
 	SH_GAME_API auto PointLight::GetPos() const -> const Vec3&
 	{
 		return gameObject.transform->GetWorldPosition();
-	}
-
-	SH_GAME_API auto PointLight::GetLightType() const -> ILight::Type
-	{
-		return ILight::Type::Point;
 	}
 
 	SH_GAME_API auto PointLight::GetLightSpaceMatrix() const -> glm::mat4
@@ -110,33 +84,29 @@ namespace sh::game
 		return glm::mat4{ 1.f };
 	}
 
-	SH_GAME_API auto PointLight::IsCastShadow() const -> bool
+	SH_GAME_API auto PointLight::GetShadowViewMatrix() const -> glm::mat4
 	{
-		return bCastShadow;
+		return glm::mat4{ 1.f };
 	}
-	SH_GAME_API void PointLight::SetCastShadow(bool b)
+
+	SH_GAME_API auto PointLight::GetShadowProjMatrix() const -> glm::mat4
 	{
-		bCastShadow = b;
+		return glm::mat4{ 1.f };
 	}
-	SH_GAME_API auto PointLight::GetShadowBias() const -> float
+
+	SH_GAME_API auto PointLight::GetShadowPos() const -> glm::vec3
 	{
-		return shadowBias;
+		return glm::vec3{ 0.f };
 	}
-	SH_GAME_API void PointLight::SetShadowBias(float bias)
+
+	SH_GAME_API auto PointLight::GetShadowLookAt() const -> glm::vec3
 	{
-		shadowBias = bias;
-	}
-	SH_GAME_API auto PointLight::GetShadowMapResolution() const -> uint32_t
-	{
-		return shadowMapResolution;
-	}
-	SH_GAME_API void PointLight::SetShadowMapResolution(uint32_t res)
-	{
-		shadowMapResolution = res;
+		return glm::vec3{ 0.f };
 	}
 
 	SH_GAME_API void PointLight::OnPropertyChanged(const core::reflection::Property& prop)
 	{
+		Super::OnPropertyChanged(prop);
 		if (prop.GetName() == "range")
 		{
 			world.GetLightOctree().Erase(*this);

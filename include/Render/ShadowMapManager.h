@@ -24,6 +24,7 @@ namespace sh::render
 	{
 	public:
 		virtual ~IShadowCaster() = default;
+		virtual auto GetShadowBias() const -> float = 0;
 		virtual auto GetShadowMapResolution() const -> uint32_t = 0;
 		virtual auto GetShadowViewMatrix() const -> glm::mat4 = 0;
 		virtual auto GetShadowProjMatrix() const -> glm::mat4 = 0;
