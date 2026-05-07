@@ -69,7 +69,7 @@ namespace sh::game
 			std::memcpy(uniformData.data() + offset, &data, sizeof(T));
 		}
 
-		void FillLightStruct(render::Drawable& drawable, render::Shader& shader) const;
+		void FillLightStruct(render::Drawable& drawable, render::Shader& shader);
 	protected:
 		PROPERTY(drawables, core::PropertyOption::invisible, core::PropertyOption::noSave)
 		std::vector<render::Drawable*> drawables;
@@ -78,12 +78,14 @@ namespace sh::game
 		PROPERTY(mats)
 		std::vector<render::Material*> mats;
 	private:
-		struct Light
+		struct alignas(16) Light
 		{
-			alignas(16) int lightCount = 0;
-			alignas(16) glm::vec4 lightPos[10];
-			alignas(16) glm::vec4 other[10];
+			glm::vec4 pos;
+			glm::vec4 other;
+			glm::vec4 shadow; // offset, size
+			glm::mat4 lightSpaceMatrix;
 		};
+		std::vector<uint8_t> lightDatas;
 		render::AABB worldAABB;
 
 		std::vector<std::unique_ptr<render::MaterialPropertyBlock>> propertyBlocks;

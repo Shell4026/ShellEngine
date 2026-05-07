@@ -68,6 +68,7 @@ namespace sh::render
 		auto SubstitutionFunctionToken(const ShaderLexer::Token& token) const -> std::string;
 	private:
 		const std::vector<ShaderLexer::Token>* tokens;
+		ShaderAST::ShaderNode curShaderNode;
 
 		std::size_t pos; // 현재 토큰 위치
 

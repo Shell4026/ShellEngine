@@ -34,7 +34,7 @@ namespace sh::render
 		SH_RENDER_API void SetRenderTagId(uint32_t tagId);
 		SH_RENDER_API void SetTopology(Mesh::Topology topology);
 		SH_RENDER_API void SetPriority(int priority);
-		SH_RENDER_API void SetSubMeshIndex(int idx);
+		SH_RENDER_API void SetSubMeshIndex(uint32_t idx);
 
 		SH_RENDER_API auto CheckAssetValid() const -> bool;
 
@@ -46,7 +46,8 @@ namespace sh::render
 		SH_RENDER_API auto GetRenderTagId() const -> uint32_t { return renderTag; }
 		SH_RENDER_API auto GetTopology(core::ThreadType thr = core::ThreadType::Game) const -> Mesh::Topology { return topology[thr]; }
 		SH_RENDER_API auto GetPriority(core::ThreadType thr = core::ThreadType::Game) const -> int { return priority[thr]; }
-		SH_RENDER_API auto GetSubMeshIndex() const -> int { return subMeshIndex; }
+		SH_RENDER_API auto GetSubMeshIndex() const -> uint32_t { return subMeshIndex; }
+		SH_RENDER_API auto IsSkinnedMesh() const -> bool { return bSkinned; }
 	protected:
 		SH_RENDER_API void SyncDirty() override;
 		SH_RENDER_API void Sync() override;
@@ -71,8 +72,9 @@ namespace sh::render
 		};
 		std::array<SyncData, 4> syncDatas;
 
-		int subMeshIndex = -1;
+		uint32_t subMeshIndex = 0;
 
+		bool bSkinned = false;
 		bool bDirty = false;
 		bool bMatrixDirty = false;
 	};

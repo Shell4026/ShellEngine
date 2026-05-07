@@ -1,13 +1,15 @@
 {
     "Constant": [
+        [],
         []
     ],
     "Material": {
         "shader": "0131fbb6184d3156cf10504d1df27929"
     },
     "MaterialPropertyBlock": {
+        "matrix": null,
         "scalar": {
-            "ambient": 0.019999999552965164
+            "ambient": 0.0
         },
         "textures": {
             "normalTex": "05d320be6d0c3a57ec078815a45cd58b",
@@ -15,7 +17,7 @@
         },
         "vector": null
     },
-    "name": "NewMaterial.mat",
+    "name": "DefaultMaterial",
     "type": "Material",
     "uuid": "ed351337b72281ef5f457457b65b8060",
     "version": 1

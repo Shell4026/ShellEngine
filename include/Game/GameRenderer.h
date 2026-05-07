@@ -3,25 +3,33 @@
 
 #include "Render/ScriptableRenderer.h"
 
-#include "Component/Render/Camera.h"
-
 #include <unordered_map>
+#include <set>
+namespace sh::render
+{
+	class ShadowMapPass;
+}
 namespace sh::game
 {
 	class ImGUImpl;
-
+	class World;
+	class GUIPass;
+	
 	class GameRenderer : public render::ScriptableRenderer
 	{
 	public:
-		SH_GAME_API GameRenderer(render::IRenderContext& ctx, game::ImGUImpl& guictx);
+		SH_GAME_API GameRenderer(render::IRenderContext& ctx, game::ImGUImpl& guictx, World& world);
 
-		SH_GAME_API void Setup(const render::RenderTarget& data) override;
+		SH_GAME_API void Init() override;
+		SH_GAME_API void Setup(const render::RenderData& data) override;
 
-		SH_GAME_API void SetUICamera(const render::Camera& camera);
-	private:
-		const render::Camera* uiCamera = nullptr;
+		auto GetGUIPass() const -> game::GUIPass* { return guiPass; }
+	protected:
+		render::IRenderContext& renderCtx;
+		World& world;
+		game::ImGUImpl& guiCtx;
 
-		std::unordered_map<std::string, std::vector<const render::Camera*>> allowedCamera;
-		std::unordered_map<std::string, std::vector<const render::Camera*>> ignoreCamera;
+		game::GUIPass* guiPass = nullptr;
+		render::ShadowMapPass* shadowMapPass = nullptr;
 	};
 }//namespace

@@ -37,7 +37,7 @@ namespace sh::render
 			std::vector<std::reference_wrapper<ShaderPass>> passes;
 		};
 	public:
-		SH_RENDER_API Shader(ShaderCreateInfo&& shaderCreateInfo);
+		SH_RENDER_API Shader(ShaderCreateInfo shaderCreateInfo);
 		SH_RENDER_API ~Shader();
 
 		SH_RENDER_API void OnDestroy() override;

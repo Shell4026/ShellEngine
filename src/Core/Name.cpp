@@ -1,5 +1,4 @@
 ﻿#include "Name.h"
-#include "Util.h"
 
 #include <mutex>
 namespace sh::core
@@ -60,31 +59,6 @@ namespace sh::core
 #endif
 		return *this;
 	}
-	SH_CORE_API auto Name::operator==(const Name& other) const -> bool
-	{
-		return hash == other.hash;
-	}
-	SH_CORE_API auto Name::operator!=(const Name& other) const -> bool
-	{
-		return hash != other.hash;
-	}
-	SH_CORE_API auto Name::operator==(const std::string_view str) const -> bool
-	{
-		return hash == core::Util::ConstexprHash(str);
-	}
-	SH_CORE_API auto Name::operator!=(const std::string_view str) const -> bool
-	{
-		return hash != core::Util::ConstexprHash(str);
-	}
-	SH_CORE_API auto Name::operator==(std::size_t hash) const -> bool
-	{
-		return this->hash == hash;
-	}
-	SH_CORE_API auto Name::operator!=(std::size_t hash) const -> bool
-	{
-		return this->hash != hash;
-	}
-
 	SH_CORE_API Name::operator const std::string& () const
 	{
 		return ToString();

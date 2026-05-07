@@ -66,4 +66,12 @@ namespace sh::render
 			assert(false);
 		return nullptr;
 	}
+	SH_RENDER_API auto BufferFactory::GetBufferAlignment(const IRenderContext& context) -> std::size_t
+	{
+		if (context.GetRenderAPIType() == RenderAPI::Vulkan)
+		{
+			return static_cast<std::size_t>(static_cast<const vk::VulkanContext&>(context).GetGPUProperty().limits.minUniformBufferOffsetAlignment);
+		}
+		return 256u;
+	}
 }//namespace

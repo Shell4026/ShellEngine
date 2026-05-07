@@ -36,7 +36,7 @@ namespace sh::editor
 		this->mat = &mat;
 	}
 
-	SH_EDITOR_API void EditorPostOutlinePass::Configure(const render::RenderTarget& renderData)
+	SH_EDITOR_API void EditorPostOutlinePass::Configure(const render::RenderData& renderData)
 	{
 		if (drawable == nullptr && mat != nullptr)
 		{
@@ -45,25 +45,29 @@ namespace sh::editor
 
 			core::GarbageCollection::GetInstance()->SetRootSet(drawable);
 		}
-		ScriptableRenderPass::Configure(renderData);
+
+		renderTextures.clear();
+		renderTextures[renderData.target] = render::ResourceUsage::ColorAttachment;
+		if (mat != nullptr)
+		{
+			for (const render::MaterialData::CachedRT& cachedRT : render::IRenderThrMethod<render::MaterialData>::GetCachedRTs(mat->GetMaterialData()))
+			{
+				if (cachedRT.rt.IsValid() && cachedRT.pass->GetLightingPassName() == passName)
+					renderTextures[cachedRT.rt.Get()] = cachedRT.rt->IsDepthOnly() ? render::ResourceUsage::DepthStencilSampledRead : render::ResourceUsage::SampledRead;
+			}
+		}
 	}
-	SH_EDITOR_API auto EditorPostOutlinePass::BuildDrawList(const render::RenderTarget& renderData) -> render::DrawList
+	SH_EDITOR_API void EditorPostOutlinePass::Record(render::CommandBuffer& cmd, const render::IRenderContext& ctx, const render::RenderData& renderData)
 	{
-		render::DrawList list{};
-		list.renderData = std::vector<render::DrawList::RenderItem>{};
-		list.bClearColor = false;
-
-		if (!core::IsValid(drawable) || !drawable->CheckAssetValid() || drawable->GetMaterial()->GetShader()->GetShaderPasses(passName) == nullptr)
-			return list;
-
-		render::DrawList::RenderItem renderItem;
-		renderItem.material = mat;
-		renderItem.topology = drawable->GetTopology(core::ThreadType::Render);
-		renderItem.drawable = drawable;
-
-		std::get<1>(list.renderData).push_back(renderItem);
-		list.drawableCount = 1;
-
-		return list;
+		if (drawable == nullptr || !core::IsValid(drawable->GetMesh()) || !core::IsValid(drawable->GetMaterial()))
+			return;
+		cmd.SetRenderData(renderData, false, false, false, false);
+		std::size_t viewerIdx = 0;
+		for (const render::RenderViewer& viewer : renderData.renderViewers)
+		{
+			SetViewportScissor(cmd, ctx, viewer);
+			cmd.DrawMesh(*drawable, passName, viewerIdx);
+			++viewerIdx;
+		}
 	}
 }//namespace

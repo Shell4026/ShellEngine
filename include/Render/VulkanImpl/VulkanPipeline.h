@@ -1,8 +1,8 @@
 ﻿#pragma once
 #include "Render/Export.h"
 #include "Render/ShaderEnum.h"
+#include "Render/RenderData.h"
 #include "VulkanConfig.h"
-#include "../RenderTarget.h"
 
 #include "Core/NonCopyable.h"
 

@@ -5,19 +5,11 @@
 namespace sh::game
 {
 	SH_GAME_API PointLight::PointLight(GameObject& owner) :
-		Component(owner)
+		LightBase(owner)
 	{
-		world.GetLightOctree().Insert(*this);
-		canPlayInEditor = true;
 	}
 	SH_GAME_API PointLight::~PointLight()
 	{
-	}
-
-	SH_GAME_API void PointLight::Destroy()
-	{
-		Super::Destroy();
-		world.GetLightOctree().Erase(*this);
 	}
 
 	SH_GAME_API void PointLight::BeginUpdate()
@@ -27,8 +19,7 @@ namespace sh::game
 
 		if (bUpdateOctree)
 		{
-			world.GetLightOctree().Erase(*this);
-			world.GetLightOctree().Insert(*this);
+			UpdateLightOctree();
 		}
 	}
 
@@ -83,30 +74,39 @@ namespace sh::game
 		this->range = radius;
 		bUpdateOctree = true;
 	}
-	SH_GAME_API void PointLight::SetIntensity(float intensity)
-	{
-		this->intensity = intensity;
-	}
-	SH_GAME_API auto PointLight::GetRadius() const -> float
-	{
-		return range;
-	}
-	SH_GAME_API auto PointLight::GetIntensity() const -> float
-	{
-		return intensity;
-	}
 	SH_GAME_API auto PointLight::GetPos() const -> const Vec3&
 	{
 		return gameObject.transform->GetWorldPosition();
 	}
 
-	SH_GAME_API auto PointLight::GetLightType() const -> ILight::Type
+	SH_GAME_API auto PointLight::GetLightSpaceMatrix() const -> glm::mat4
 	{
-		return ILight::Type::Point;
+		return glm::mat4{ 1.f };
+	}
+
+	SH_GAME_API auto PointLight::GetShadowViewMatrix() const -> glm::mat4
+	{
+		return glm::mat4{ 1.f };
+	}
+
+	SH_GAME_API auto PointLight::GetShadowProjMatrix() const -> glm::mat4
+	{
+		return glm::mat4{ 1.f };
+	}
+
+	SH_GAME_API auto PointLight::GetShadowPos() const -> glm::vec3
+	{
+		return glm::vec3{ 0.f };
+	}
+
+	SH_GAME_API auto PointLight::GetShadowLookAt() const -> glm::vec3
+	{
+		return glm::vec3{ 0.f };
 	}
 
 	SH_GAME_API void PointLight::OnPropertyChanged(const core::reflection::Property& prop)
 	{
+		Super::OnPropertyChanged(prop);
 		if (prop.GetName() == "range")
 		{
 			world.GetLightOctree().Erase(*this);

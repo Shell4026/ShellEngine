@@ -12,7 +12,7 @@
 #include "Game/Asset/FontGenerator.h"
 #include "Game/Input.h"
 
-#include "Render/VulkanImpl/VulkanTextureBuffer.h"
+#include "Render/Renderer.h"
 #include "Render/RenderTexture.h"
 
 #include <cstring>

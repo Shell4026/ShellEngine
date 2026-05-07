@@ -56,7 +56,6 @@ namespace sh::render::vk
 		SH_RENDER_API static auto ConvertTextureFormat(TextureFormat format) -> VkFormat;
 	private:
 		static auto GetChannelCount(VkFormat format) -> uint32_t;
-		static auto IsDepthTexture(TextureFormat format) -> bool;
 	private:
 		const VulkanContext* ctx = nullptr;
 

@@ -90,7 +90,7 @@ namespace sh::game
 			return;
 		lastMesh = mesh;
 
-		auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld()->GetContext());
+		auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld().GetContext());
 
 		const auto& meshVerts = mesh->GetVertex();
 		const reactphysics3d::VertexArray verts{ meshVerts.data(), sizeof(render::Mesh::Vertex), static_cast<uint32_t>(meshVerts.size()), reactphysics3d::VertexArray::DataType::VERTEX_FLOAT_TYPE };
@@ -115,7 +115,7 @@ namespace sh::game
 
 	SH_GAME_API void ConvexCollider::DestroyShape()
 	{
-		auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld()->GetContext());
+		auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld().GetContext());
 		if (impl->shape != nullptr)
 			ctx->destroyConvexMeshShape(impl->shape);
 		if (impl->convexMesh != nullptr)

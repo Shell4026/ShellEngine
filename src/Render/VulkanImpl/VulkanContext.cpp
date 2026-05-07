@@ -6,8 +6,8 @@
 #include "VulkanCommandBuffer.h"
 #include "VulkanDescriptorPool.h"
 #include "VulkanPipelineManager.h"
+#include "VulkanComputePipeline.h"
 #include "VulkanComputePipelineManager.h"
-#include "VulkanRenderImpl.h"
 
 #include "Core/Util.h"
 #include "Core/Logger.h"
@@ -42,6 +42,196 @@ namespace sh::render::vk
 			SH_INFO_FORMAT("{}", pCallbackData->pMessage);
 		return VK_FALSE;
 	}
+
+	VulkanContext::VulkanContext(const sh::window::Window& window) :
+		window(window),
+		sample(VkSampleCountFlagBits::VK_SAMPLE_COUNT_4_BIT)
+	{
+		bEnableValidationLayers = core::Util::IsDebug();
+
+		requestedDeviceExtension = 
+		{ 
+			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
+			VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME
+		};
+	}
+	VulkanContext::~VulkanContext()
+	{
+	}
+
+	SH_RENDER_API void VulkanContext::Init()
+	{
+		if (bInit)
+			return;
+		bInit = true;
+
+		layers = std::make_unique<VulkanLayer>();
+		layers->Query();
+
+		if (bEnableValidationLayers)
+			PrepareValidationLayer();
+
+		PrepareSurfaceExtension();
+
+		CreateInstance();
+
+		if (bEnableValidationLayers)
+			InitDebugMessenger();
+
+		swapChain = std::make_unique<VulkanSwapChain>(*this);
+		swapChain->CreateSurface(window);
+
+		GetPhysicalDevices();
+
+		gpu = SelectPhysicalDevice();
+		assert(gpu != nullptr);
+		if (gpu == nullptr)
+			throw std::runtime_error("Can't find suitable GPU");
+		vkGetPhysicalDeviceProperties(gpu, &gpuProp);
+
+		queueManager = std::make_unique<VulkanQueueManager>(*this);
+		queueManager->QueryFamilies(swapChain->GetSurface());
+
+		CreateDevice(gpu);
+		
+		queueManager->FetchQueues();
+
+		CreateAllocator();
+
+		swapChain->CreateSwapChain(
+			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Graphics), 
+			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Present), 
+			false);
+
+		CreateCommandPool();
+
+		descPool = std::make_unique<VulkanDescriptorPool>(device);
+		CreateEmptyDescriptor();
+
+		pipelineManager = std::make_unique<VulkanPipelineManager>(*this);
+		computePipelineManager = std::make_unique<VulkanComputePipelineManager>(*this);
+
+		renderDataManager.Init(*this);
+	}
+	SH_RENDER_API void VulkanContext::Clear()
+	{
+		bInit = false;
+
+		vkDeviceWaitIdle(device);
+
+		pipelineManager.reset();
+		if (emptyDescLayout)
+		{
+			vkDestroyDescriptorSetLayout(device, emptyDescLayout, nullptr);
+			emptyDescLayout = nullptr;
+		}
+		descPool.reset();
+		DestroyCommandPool();
+		swapChain.reset();
+		queueManager.reset();
+		DestroyAllocator();
+		DestroyDevice();
+		if (bEnableValidationLayers)
+			DestroyDebugMessenger();
+		gpu = VK_NULL_HANDLE;
+		gpus.clear();
+		DestroyInstance();
+	}
+	SH_RENDER_API auto VulkanContext::AllocateCommandBuffer(bool bCompute) -> CommandBuffer*
+	{
+		VkQueueFlagBits flag = VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT;
+		if (bCompute)
+			flag = VkQueueFlagBits::VK_QUEUE_COMPUTE_BIT;
+		VulkanCommandBuffer* const cmd = GetCommandBufferPool().AllocateCommandBuffer(std::this_thread::get_id(), flag);
+		return cmd;
+	}
+	SH_RENDER_API void VulkanContext::DeallocateCommandBuffer(CommandBuffer& cmd)
+	{
+		GetCommandBufferPool().DeallocateCommandBuffer(static_cast<VulkanCommandBuffer&>(cmd));
+	}
+	SH_RENDER_API void VulkanContext::SubmitCommand(CommandBuffer& cmd)
+	{
+		VulkanCommandBuffer& vkCmd = static_cast<VulkanCommandBuffer&>(cmd);
+		VkFence fence = vkCmd.GetOrCreateFence();
+		GetQueueManager().Submit(VulkanQueueManager::Role::Compute, vkCmd, fence);
+		vkWaitForFences(device, 1, &fence, true, std::numeric_limits<uint64_t>::max());
+	}
+	SH_RENDER_API void VulkanContext::SetViewport(const glm::vec2& start, const glm::vec2& end)
+	{
+		viewportStart = start;
+		viewportEnd = end;
+	}
+	SH_RENDER_API auto VulkanContext::ReSizing() -> bool
+	{
+		//swapChain->DestroySwapChain();
+		swapChain->CreateSwapChain(
+			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Graphics), 
+			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Present), 
+			false);
+		return true;
+	}
+	SH_RENDER_API void VulkanContext::PrintLayers()
+	{
+		for (auto& prop : layers->GetLayerProperties())
+		{
+			SH_INFO_FORMAT("LayerName: {} - {}", prop.properties.layerName, prop.properties.description);
+			for (auto& ext : prop.extensions)
+				SH_INFO_FORMAT("ExtensionName: {}", ext.extensionName);
+		}
+		SH_INFO("-----Vulkan Extensions-----");
+		for (auto& i : layers->GetVulkanExtensions())
+			SH_INFO_FORMAT("ExtensionName: {}", i.extensionName);
+
+		SH_INFO("-----GPU Layer------");
+		for (auto& i : layers->GetGPULayerProperties())
+		{
+			SH_INFO_FORMAT("LayerName: {} - {}", i.properties.layerName, i.properties.description);
+			for (auto& ext : i.extensions)
+				SH_INFO_FORMAT("ExtensionName: {}", ext.extensionName);
+		}
+		SH_INFO("-----GPU Extensions------");
+		for (auto& i : layers->GetGPUExtensions())
+			SH_INFO_FORMAT("ExtensionName: {}", i.extensionName);
+	}
+	SH_RENDER_API auto VulkanContext::FindSupportedDepthFormat(bool bUseStencil) const -> VkFormat
+	{
+		const std::array<VkFormat, 3> formats = { VkFormat::VK_FORMAT_D32_SFLOAT_S8_UINT, VkFormat::VK_FORMAT_D24_UNORM_S8_UINT, VkFormat::VK_FORMAT_D16_UNORM_S8_UINT };
+
+		auto feature = VkFormatFeatureFlagBits::VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
+		for (VkFormat format : formats)
+		{
+			VkFormatProperties props;
+			vkGetPhysicalDeviceFormatProperties(gpu, format, &props);
+
+			if (props.optimalTilingFeatures & feature)
+				return format;
+		}
+
+		throw std::runtime_error("Failed to find supported Depth format!");
+	}
+	SH_RENDER_API void VulkanContext::SetSampleCount(VkSampleCountFlagBits sample)
+	{
+		VkSampleCountFlagBits maxSample = GetMaxSampleCount();
+		if (sample > maxSample)
+			sample = maxSample;
+
+		this->sample = sample;
+	}
+	SH_RENDER_API auto VulkanContext::GetMaxSampleCount() const -> VkSampleCountFlagBits
+	{
+		VkSampleCountFlags supportedSampleCount = 
+			std::min(gpuProp.limits.framebufferColorSampleCounts, gpuProp.limits.framebufferDepthSampleCounts);
+
+		if (supportedSampleCount & VkSampleCountFlagBits::VK_SAMPLE_COUNT_64_BIT) return VkSampleCountFlagBits::VK_SAMPLE_COUNT_64_BIT;
+		if (supportedSampleCount & VkSampleCountFlagBits::VK_SAMPLE_COUNT_32_BIT) return VkSampleCountFlagBits::VK_SAMPLE_COUNT_32_BIT;
+		if (supportedSampleCount & VkSampleCountFlagBits::VK_SAMPLE_COUNT_16_BIT) return VkSampleCountFlagBits::VK_SAMPLE_COUNT_16_BIT;
+		if (supportedSampleCount & VkSampleCountFlagBits::VK_SAMPLE_COUNT_8_BIT) return VkSampleCountFlagBits::VK_SAMPLE_COUNT_8_BIT;
+		if (supportedSampleCount & VkSampleCountFlagBits::VK_SAMPLE_COUNT_4_BIT) return VkSampleCountFlagBits::VK_SAMPLE_COUNT_4_BIT;
+		if (supportedSampleCount & VkSampleCountFlagBits::VK_SAMPLE_COUNT_2_BIT) return VkSampleCountFlagBits::VK_SAMPLE_COUNT_2_BIT;
+		
+		return VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
+	}
+
 	void VulkanContext::CreateDebugInfo()
 	{
 		//validationEnables.push_back(VkValidationFeatureEnableEXT::VK_VALIDATION_FEATURE_ENABLE_GPU_ASSISTED_EXT);
@@ -166,9 +356,9 @@ namespace sh::render::vk
 
 			bool swapchainExSupport = layers->FindGPUExtension(gpu, VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 
-			if (prop.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU || 
-				prop.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_CPU && 
-				swapchainExSupport && 
+			if (prop.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU ||
+				prop.deviceType == VkPhysicalDeviceType::VK_PHYSICAL_DEVICE_TYPE_CPU &&
+				swapchainExSupport &&
 				swapChain->IsSwapChainSupport(gpu))
 				return gpu;
 		}
@@ -242,8 +432,8 @@ namespace sh::render::vk
 	void VulkanContext::CreateCommandPool()
 	{
 		cmdPool = std::make_unique<VulkanCommandBufferPool>(
-			*this, 
-			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Graphics), 
+			*this,
+			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Graphics),
 			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Transfer),
 			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Compute));
 	}
@@ -261,208 +451,5 @@ namespace sh::render::vk
 		vkCreateDescriptorSetLayout(device, &info, nullptr, &emptyDescLayout);
 
 		emptyDescSet = descPool->AllocateDescriptorSet(emptyDescLayout);
-	}
-	VulkanContext::VulkanContext(const sh::window::Window& window) :
-		window(window),
-		sample(VkSampleCountFlagBits::VK_SAMPLE_COUNT_4_BIT)
-	{
-		bEnableValidationLayers = core::Util::IsDebug();
-
-		requestedDeviceExtension = 
-		{ 
-			VK_KHR_SWAPCHAIN_EXTENSION_NAME,
-			VK_KHR_DYNAMIC_RENDERING_EXTENSION_NAME
-		};
-	}
-	VulkanContext::~VulkanContext()
-	{
-
-	}
-
-	SH_RENDER_API void VulkanContext::Init()
-	{
-		if (bInit)
-			return;
-		bInit = true;
-
-		layers = std::make_unique<VulkanLayer>();
-		layers->Query();
-
-		if (bEnableValidationLayers)
-			PrepareValidationLayer();
-
-		PrepareSurfaceExtension();
-
-		CreateInstance();
-
-		if (bEnableValidationLayers)
-			InitDebugMessenger();
-
-		swapChain = std::make_unique<VulkanSwapChain>(*this);
-		swapChain->CreateSurface(window);
-
-		GetPhysicalDevices();
-
-		gpu = SelectPhysicalDevice();
-		assert(gpu != nullptr);
-		if (gpu == nullptr)
-			throw std::runtime_error("Can't find suitable GPU");
-		vkGetPhysicalDeviceProperties(gpu, &gpuProp);
-
-		queueManager = std::make_unique<VulkanQueueManager>(*this);
-		queueManager->QueryFamilies(swapChain->GetSurface());
-
-		CreateDevice(gpu);
-		
-		queueManager->FetchQueues();
-
-		CreateAllocator();
-
-		swapChain->CreateSwapChain(
-			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Graphics), 
-			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Present), 
-			false);
-
-		CreateCommandPool();
-
-		descPool = std::make_unique<VulkanDescriptorPool>(device);
-		CreateEmptyDescriptor();
-
-		pipelineManager = std::make_unique<VulkanPipelineManager>(*this);
-		computePipelineManager = std::make_unique<VulkanComputePipelineManager>(*this);
-		renderImpl = std::make_unique<VulkanRenderImpl>(*this);
-	}
-	SH_RENDER_API void VulkanContext::Clear()
-	{
-		bInit = false;
-
-		vkDeviceWaitIdle(device);
-
-		pipelineManager.reset();
-		if (emptyDescLayout)
-		{
-			vkDestroyDescriptorSetLayout(device, emptyDescLayout, nullptr);
-			emptyDescLayout = nullptr;
-		}
-		descPool.reset();
-		DestroyCommandPool();
-		swapChain.reset();
-		queueManager.reset();
-		DestroyAllocator();
-		DestroyDevice();
-		if (bEnableValidationLayers)
-			DestroyDebugMessenger();
-		gpu = VK_NULL_HANDLE;
-		gpus.clear();
-		DestroyInstance();
-	}
-	SH_RENDER_API auto VulkanContext::AllocateCommandBuffer(bool bCompute) -> CommandBuffer*
-	{
-		VkQueueFlagBits flag = VkQueueFlagBits::VK_QUEUE_GRAPHICS_BIT;
-		if (bCompute)
-			flag = VkQueueFlagBits::VK_QUEUE_COMPUTE_BIT;
-		VulkanCommandBuffer* const cmd = GetCommandBufferPool().AllocateCommandBuffer(std::this_thread::get_id(), flag);
-		return cmd;
-	}
-	SH_RENDER_API void VulkanContext::DeallocateCommandBuffer(CommandBuffer& cmd)
-	{
-		GetCommandBufferPool().DeallocateCommandBuffer(static_cast<VulkanCommandBuffer&>(cmd));
-	}
-	SH_RENDER_API void VulkanContext::SubmitCommand(CommandBuffer& cmd)
-	{
-		VulkanCommandBuffer& vkCmd = static_cast<VulkanCommandBuffer&>(cmd);
-		VkFence fence = vkCmd.GetOrCreateFence();
-		GetQueueManager().Submit(VulkanQueueManager::Role::Compute, vkCmd, fence);
-		vkWaitForFences(device, 1, &fence, true, std::numeric_limits<uint64_t>::max());
-	}
-	SH_RENDER_API void VulkanContext::SetViewport(const glm::vec2& start, const glm::vec2& end)
-	{
-		viewportStart = start;
-		viewportEnd = end;
-	}
-
-	SH_RENDER_API auto VulkanContext::GetViewportStart() const -> const glm::vec2&
-	{
-		return viewportStart;
-	}
-	SH_RENDER_API auto VulkanContext::GetViewportEnd() const -> const glm::vec2&
-	{
-		return viewportEnd;
-	}
-
-	SH_RENDER_API auto VulkanContext::GetRenderImpl() const -> IRenderImpl&
-	{
-		return *renderImpl;
-	}
-
-	SH_RENDER_API auto VulkanContext::ReSizing() -> bool
-	{
-		//swapChain->DestroySwapChain();
-		swapChain->CreateSwapChain(
-			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Graphics), 
-			queueManager->GetFamilyIndex(VulkanQueueManager::Role::Present), 
-			false);
-		return true;
-	}
-	SH_RENDER_API void VulkanContext::PrintLayers()
-	{
-		for (auto& prop : layers->GetLayerProperties())
-		{
-			SH_INFO_FORMAT("LayerName: {} - {}", prop.properties.layerName, prop.properties.description);
-			for (auto& ext : prop.extensions)
-				SH_INFO_FORMAT("ExtensionName: {}", ext.extensionName);
-		}
-		SH_INFO("-----Vulkan Extensions-----");
-		for (auto& i : layers->GetVulkanExtensions())
-			SH_INFO_FORMAT("ExtensionName: {}", i.extensionName);
-
-		SH_INFO("-----GPU Layer------");
-		for (auto& i : layers->GetGPULayerProperties())
-		{
-			SH_INFO_FORMAT("LayerName: {} - {}", i.properties.layerName, i.properties.description);
-			for (auto& ext : i.extensions)
-				SH_INFO_FORMAT("ExtensionName: {}", ext.extensionName);
-		}
-		SH_INFO("-----GPU Extensions------");
-		for (auto& i : layers->GetGPUExtensions())
-			SH_INFO_FORMAT("ExtensionName: {}", i.extensionName);
-	}
-	SH_RENDER_API auto VulkanContext::FindSupportedDepthFormat(bool bUseStencil) const -> VkFormat
-	{
-		const std::array<VkFormat, 3> formats = { VkFormat::VK_FORMAT_D32_SFLOAT_S8_UINT, VkFormat::VK_FORMAT_D24_UNORM_S8_UINT, VkFormat::VK_FORMAT_D16_UNORM_S8_UINT };
-
-		auto feature = VkFormatFeatureFlagBits::VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT;
-		for (VkFormat format : formats)
-		{
-			VkFormatProperties props;
-			vkGetPhysicalDeviceFormatProperties(gpu, format, &props);
-
-			if (props.optimalTilingFeatures & feature)
-				return format;
-		}
-
-		throw std::runtime_error("Failed to find supported Depth format!");
-	}
-	SH_RENDER_API void VulkanContext::SetSampleCount(VkSampleCountFlagBits sample)
-	{
-		VkSampleCountFlagBits maxSample = GetMaxSampleCount();
-		if (sample > maxSample)
-			sample = maxSample;
-
-		this->sample = sample;
-	}
-	SH_RENDER_API auto VulkanContext::GetMaxSampleCount() const -> VkSampleCountFlagBits
-	{
-		VkSampleCountFlags supportedSampleCount = 
-			std::min(gpuProp.limits.framebufferColorSampleCounts, gpuProp.limits.framebufferDepthSampleCounts);
-
-		if (supportedSampleCount & VkSampleCountFlagBits::VK_SAMPLE_COUNT_64_BIT) return VkSampleCountFlagBits::VK_SAMPLE_COUNT_64_BIT;
-		if (supportedSampleCount & VkSampleCountFlagBits::VK_SAMPLE_COUNT_32_BIT) return VkSampleCountFlagBits::VK_SAMPLE_COUNT_32_BIT;
-		if (supportedSampleCount & VkSampleCountFlagBits::VK_SAMPLE_COUNT_16_BIT) return VkSampleCountFlagBits::VK_SAMPLE_COUNT_16_BIT;
-		if (supportedSampleCount & VkSampleCountFlagBits::VK_SAMPLE_COUNT_8_BIT) return VkSampleCountFlagBits::VK_SAMPLE_COUNT_8_BIT;
-		if (supportedSampleCount & VkSampleCountFlagBits::VK_SAMPLE_COUNT_4_BIT) return VkSampleCountFlagBits::VK_SAMPLE_COUNT_4_BIT;
-		if (supportedSampleCount & VkSampleCountFlagBits::VK_SAMPLE_COUNT_2_BIT) return VkSampleCountFlagBits::VK_SAMPLE_COUNT_2_BIT;
-		
-		return VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
 	}
 }//namespace

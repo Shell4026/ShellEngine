@@ -1,7 +1,6 @@
 ﻿#pragma once
 #include "Export.h"
 #include "CommandBuffer.h"
-#include "IRenderImpl.h"
 
 #include "Core/NonCopyable.h"
 
@@ -9,6 +8,8 @@
 
 namespace sh::render
 {
+	class RenderDataManager;
+
 	enum class RenderAPI
 	{
 		OpenGL,
@@ -30,6 +31,8 @@ namespace sh::render
 		virtual void SetViewport(const glm::vec2& start, const glm::vec2& end) = 0;
 		virtual auto GetViewportStart() const -> const glm::vec2& = 0;
 		virtual auto GetViewportEnd() const -> const glm::vec2& = 0;
-		virtual auto GetRenderImpl() const -> IRenderImpl& = 0;
+
+		virtual auto GetRenderDataManager() const -> const RenderDataManager& = 0;
+		virtual auto GetRenderDataManager() -> RenderDataManager& = 0;
 	};
 }//namespace

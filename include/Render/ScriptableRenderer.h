@@ -21,8 +21,8 @@ namespace sh::render
 	template<>
 	struct IRenderThrMethod<class ScriptableRenderer>
 	{
-		static void Setup(ScriptableRenderer& renderer, const RenderTarget& data);
-		static void Execute(ScriptableRenderer& renderer, const RenderTarget& data);
+		static void Setup(ScriptableRenderer& renderer, const RenderData& data);
+		static void Execute(ScriptableRenderer& renderer, const RenderData& data);
 		static void ExecuteTransfer(ScriptableRenderer& renderer, uint32_t imgIdx);
 		static void EnqueRenderPass(ScriptableRenderer& renderer, ScriptableRenderPass& pass);
 		static void CallReadbacks(ScriptableRenderer& renderer);
@@ -35,7 +35,7 @@ namespace sh::render
 	{
 		friend IRenderThrMethod<class ScriptableRenderer>;
 	public:
-		struct SubmittedCommand
+		struct RecordedCommand
 		{
 			ScriptableRenderPass& pass;
 			CommandBuffer& cmd;
@@ -44,21 +44,23 @@ namespace sh::render
 		SH_RENDER_API ScriptableRenderer(IRenderContext& ctx);
 		SH_RENDER_API virtual ~ScriptableRenderer();
 
+		SH_RENDER_API virtual void Init() {};
 		SH_RENDER_API auto AddRenderPass(const core::Name& passName, RenderQueue renderQueue) -> ScriptableRenderPass&;
 
 		SH_RENDER_API auto ReadRenderTextureAsync(RenderTexture& rt, int x, int y) -> std::future<std::unique_ptr<IBuffer>>;
 		SH_RENDER_API void Dispatch(const ComputeShader& computeShader, uint32_t x, uint32_t y, uint32_t z);
 
-		SH_RENDER_API auto GetSubmittedCommands() const -> const std::vector<SubmittedCommand>& { return submittedCmds; }
+		SH_RENDER_API auto HasPass(const core::Name& passName) const -> bool;
 
+		auto GetRecordedCommands() const -> const std::vector<RecordedCommand>& { return recordedCmds; }
 		template<typename T, typename = std::enable_if_t<std::is_base_of_v<ScriptableRenderPass, T>>, typename... Args>
 		auto AddRenderPass(Args&&... args) -> T&;
 	protected:
 		SH_RENDER_API void SyncDirty() override;
 		SH_RENDER_API void Sync() override;
 
-		SH_RENDER_API virtual void Setup(const RenderTarget& data);
-		SH_RENDER_API virtual void Execute(const RenderTarget& data);
+		SH_RENDER_API virtual void Setup(const RenderData& data);
+		SH_RENDER_API virtual void Execute(const RenderData& data);
 		SH_RENDER_API void ExecuteTransfer(uint32_t imgIdx);
 		SH_RENDER_API void CallReadbacks();
 
@@ -78,7 +80,7 @@ namespace sh::render
 		SH_RENDER_API static std::vector<ResourceUsage> swapChainStates;
 
 		std::vector<ScriptableRenderPass*> activePasses;
-		std::vector<SubmittedCommand> submittedCmds;
+		std::vector<RecordedCommand> recordedCmds;
 
 		std::unique_ptr<CopyPass> cpyPass;
 		struct SyncData
@@ -111,11 +113,11 @@ namespace sh::render
 		return *ptr;
 	}
 
-	inline void IRenderThrMethod<class ScriptableRenderer>::Setup(ScriptableRenderer& renderer, const RenderTarget& data)
+	inline void IRenderThrMethod<class ScriptableRenderer>::Setup(ScriptableRenderer& renderer, const RenderData& data)
 	{
 		renderer.Setup(data);
 	}
-	inline void IRenderThrMethod<class ScriptableRenderer>::Execute(ScriptableRenderer& renderer, const RenderTarget& data)
+	inline void IRenderThrMethod<class ScriptableRenderer>::Execute(ScriptableRenderer& renderer, const RenderData& data)
 	{
 		renderer.Execute(data);
 	}

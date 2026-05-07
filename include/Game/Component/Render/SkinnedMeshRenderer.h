@@ -21,6 +21,7 @@ namespace sh::game
 		SH_GAME_API ~SkinnedMeshRenderer();
 
 		SH_GAME_API void Awake() override;
+		SH_GAME_API void OnPropertyChanged(const core::reflection::Property& prop) override;
 
 		SH_GAME_API void SetSkinnedMesh(render::SkinnedMesh* mesh);
 		SH_GAME_API void SetBones(std::vector<Transform*> bones);
@@ -32,6 +33,7 @@ namespace sh::game
 	private:
 		void ComputeBoneMatrices();
 		void UploadBoneMatrices();
+		void InitIBM();
 	private:
 		PROPERTY(bones, core::PropertyOption::invisible)
 		std::vector<Transform*> bones;

@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include "Editor/Export.h"
 
+#include "Core/SObject.h"
+
 #include "Game/ImGUImpl.h"
 
 #include <vector>

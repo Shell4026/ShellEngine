@@ -1,0 +1,20 @@
+﻿#pragma once
+#include "../Export.h"
+#include "../ScriptableRenderPass.h"
+
+#include <cstdint>
+namespace sh::render
+{
+	/// @brief 그림자 아틀라스에 광원의 깊이 정보를 기록하는 패스
+	class ShadowMapPass : public ScriptableRenderPass
+	{
+	public:
+		SH_RENDER_API ShadowMapPass();
+
+		SH_RENDER_API void Configure(const RenderData& renderData) override;
+		SH_RENDER_API void Record(CommandBuffer& cmd, const IRenderContext& ctx, const RenderData& renderData) override;
+	private:
+		uint32_t lastFrameIndex = ~0u;
+		uint32_t callsThisFrame = 0;
+	};
+}//namespace

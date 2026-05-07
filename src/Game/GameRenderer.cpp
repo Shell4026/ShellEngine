@@ -1,49 +1,42 @@
 ﻿#include "GameRenderer.h"
-#include "UIPass.h"
+#include "GUIPass.h"
+#include "World.h"
 
 #include "Render/RenderPass/TransparentPass.h"
+
+#include <cstring>
 namespace sh::game
 {
-	GameRenderer::GameRenderer(render::IRenderContext& ctx, game::ImGUImpl& guictx) :
-		ScriptableRenderer(ctx)
+	GameRenderer::GameRenderer(render::IRenderContext& ctx, game::ImGUImpl& guictx, World& world) :
+		ScriptableRenderer(ctx),
+		renderCtx(ctx),
+		world(world),
+		guiCtx(guictx)
 	{
+	}
+	SH_GAME_API void GameRenderer::Init()
+	{
+		//AddShadowPass();
 		AddRenderPass(core::Name{ "Opaque" }, render::RenderQueue::Opaque);
 		AddRenderPass<render::TransparentPass>();
 		AddRenderPass<render::TransparentPass>("UI", render::RenderQueue::UI);
-		AddRenderPass<game::UIPass>().SetImGUIContext(guictx);
+		guiPass = &AddRenderPass<game::GUIPass>();
+		guiPass->SetImGUIContext(guiCtx);
 	}
-	SH_GAME_API void GameRenderer::Setup(const render::RenderTarget& data)
+	SH_GAME_API void GameRenderer::Setup(const render::RenderData& data)
 	{
-		for (auto& pass : allPasses)
+		if (data.tag == "ImGUI")
 		{
-			auto allowedIt = allowedCamera.find(pass->passName.ToString());
-			if (allowedIt != allowedCamera.end())
-			{
-				const auto& allowedCams = allowedIt->second;
-				bool bAllowed = std::find(allowedCams.begin(), allowedCams.end(), data.camera) != allowedCams.end();
-				if (!bAllowed)
-					continue;
-			}
+			if (guiPass != nullptr)
+				EnqueRenderPass(*guiPass);
+			return;
+		}
 
-			auto it = ignoreCamera.find(pass->passName.ToString());
-			if (it == ignoreCamera.end())
-			{
-				EnqueRenderPass(*pass);
-				continue;
-			}
-			const auto& ignoreCams = it->second;
-			bool bIgnore = std::find(ignoreCams.begin(), ignoreCams.end(), data.camera) != ignoreCams.end();
-			if (bIgnore)
+		for (const std::unique_ptr<render::ScriptableRenderPass>& pass : allPasses)
+		{
+			if (pass.get() == guiPass)
 				continue;
 			EnqueRenderPass(*pass);
 		}
-	}
-	SH_GAME_API void GameRenderer::SetUICamera(const render::Camera& camera)
-	{
-		uiCamera = &camera;
-		allowedCamera["UI"].push_back(&camera);
-		allowedCamera["ImGUI"].push_back(&camera);
-		ignoreCamera["Opaque"].push_back(&camera);
-		ignoreCamera["Transparent"].push_back(&camera);
 	}
 }//namespace

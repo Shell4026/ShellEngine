@@ -50,6 +50,13 @@ namespace sh::render
 		SH_RENDER_API virtual void Clear() = 0;
 		SH_RENDER_API virtual void Build() = 0;
 
+		/// @brief 셰이더 바이너리 데이터를 직렬화 한다.
+		/// @return 직렬화 된 json
+		SH_RENDER_API auto Serialize() const -> core::Json override;
+		/// @brief 셰이더 바이너리 데이터를 역직렬화 한다.
+		/// @param json 직렬화 된 json
+		SH_RENDER_API void Deserialize(const core::Json& json) override;
+
 		SH_RENDER_API auto HasUniformMember(const std::string& name, ShaderStage stage) const -> const UniformStructLayout*;
 
 		SH_RENDER_API auto GetStencilState() const -> const StencilState& { return stencilState; }
@@ -72,6 +79,7 @@ namespace sh::render
 		/// @brief 스킨 유니폼의 바인딩 번호를 리턴한다.
 		/// @return 스킨을 안 쓸 시 -1
 		SH_RENDER_API auto GetSkinBinding() const -> int { return skinBinding; }
+		SH_RENDER_API auto GetShadowMapBinding() const -> int { return shadowMapBinding; }
 		SH_RENDER_API auto GetConstants() const -> const std::unordered_map<std::string, ConstantInfo>& { return constantNameMap; }
 		SH_RENDER_API auto GetConstantsInfo(const std::string& name) const -> const ConstantInfo*;
 		SH_RENDER_API auto GetConstantSize() const -> std::size_t;
@@ -80,13 +88,6 @@ namespace sh::render
 		SH_RENDER_API auto GetAttribute(const std::string& name) const -> std::optional<AttributeData>;
 
 		SH_RENDER_API void StoreShaderCode(ShaderCode&& shaderCode);
-
-		/// @brief 셰이더 바이너리 데이터를 직렬화 한다.
-		/// @return 직렬화 된 json
-		SH_RENDER_API auto Serialize() const -> core::Json override;
-		/// @brief 셰이더 바이너리 데이터를 역직렬화 한다.
-		/// @param json 직렬화 된 json
-		SH_RENDER_API void Deserialize(const core::Json& json) override;
 	protected:
 		ShaderPass(const ShaderAST::PassNode& passNode, ShaderType type);
 		ShaderPass(ShaderPass&& other) noexcept;
@@ -120,6 +121,7 @@ namespace sh::render
 		std::size_t constantSize = 0;
 		int lightingBinding = -1;
 		int skinBinding = -1;
+		int shadowMapBinding = -1;
 		bool bZWrite = true;
 		bool bZTest = true;
 		bool bHasConstant = false;

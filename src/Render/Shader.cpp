@@ -1,17 +1,15 @@
 ﻿#include "Shader.h"
 #include "ShaderCreateInfo.h"
 
-#include <algorithm>
-
 namespace sh::render
 {
-	Shader::Shader(ShaderCreateInfo&& shaderCreateInfo)
+	Shader::Shader(ShaderCreateInfo shaderCreateInfo)
 	{
 		SetName(shaderCreateInfo.shaderNode.shaderName);
 
 		AddShaderPasses(std::move(shaderCreateInfo.passes));
 
-		for (auto& prop : shaderCreateInfo.shaderNode.properties)
+		for (const ShaderAST::VariableNode& prop : shaderCreateInfo.shaderNode.properties)
 		{
 			const bool bLocal = prop.attribute == ShaderAST::VariableAttribute::Local ? true : false;
 			switch (prop.type)
@@ -56,16 +54,13 @@ namespace sh::render
 		core::Json& json = mainJson["shader"];
 
 		json["AST"] = shaderNode.Serialize();
-
-		std::set<ShaderPass*> uniquePass;
-		for (const auto& [name, passVec] : passDatas)
+		core::Json& passesJson = json["passes"];
+		for (const ShaderPass* pass : passes)
 		{
-			for (ShaderPass& pass : passVec)
-				uniquePass.insert(&pass);
+			if (pass == nullptr)
+				continue;
+			passesJson.push_back(pass->Serialize());
 		}
-		for (const ShaderPass* pass : uniquePass)
-			json["passes"].push_back(pass->Serialize());
-
 		return mainJson;
 	}
 	SH_RENDER_API void Shader::Deserialize(const core::Json& json)
@@ -76,9 +71,18 @@ namespace sh::render
 			return;
 
 		const core::Json& shaderJson = json["shader"];
-
 		if (shaderJson.contains("AST"))
 			shaderNode.Deserialize(shaderJson["AST"]);
+		if (shaderJson.contains("passes"))
+		{
+			std::size_t idx = 0;
+			for (const core::Json& passJson : shaderJson["passes"])
+			{
+				if (passes.size() >= idx)
+					break;
+				passes[idx++]->Deserialize(passJson);
+			}
+		}
 	}
 
 	SH_RENDER_API auto Shader::GetShaderPasses(const core::Name& lightingPassName) const -> const std::vector<std::reference_wrapper<ShaderPass>>*
@@ -107,18 +111,20 @@ namespace sh::render
 		this->passes = std::move(passes);
 		for (ShaderPass* pass : this->passes)
 		{
+			if (pass == nullptr)
+				continue;
 			if (pass->GetLightingBinding() != -1)
 				bUsingLight = true;
 			if (pass->GetSkinBinding() != -1)
 				bUsingSkin = true;
 
-			const core::Name& lightingPassName = this->passes.back()->GetLightingPassName();
+			const core::Name& lightingPassName = pass->GetLightingPassName();
 
-			LightingPassData* lightingPassData = GetLightingPass(lightingPassName);
+			LightingPassData* const lightingPassData = GetLightingPass(lightingPassName);
 			if (lightingPassData == nullptr)
 			{
 				std::vector<std::reference_wrapper<ShaderPass>> v{};
-				v.push_back(*this->passes.back());
+				v.push_back(*pass);
 
 				LightingPassData passData{ lightingPassName };
 				passData.passes = std::move(v);

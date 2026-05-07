@@ -52,6 +52,16 @@ namespace sh::render
 		ctx.DeallocateCommandBuffer(*cmdPtr);
 	}
 
+	SH_RENDER_API auto ScriptableRenderer::HasPass(const core::Name& passName) const -> bool
+	{
+		for (const std::unique_ptr<ScriptableRenderPass>& pass : allPasses)
+		{
+			if (pass->passName == passName)
+				return true;
+		}
+		return false;
+	}
+
 	SH_RENDER_API void ScriptableRenderer::SyncDirty()
 	{
 		if (bSyncDirty)
@@ -75,12 +85,12 @@ namespace sh::render
 		bSyncDirty = false;
 	}
 
-	SH_RENDER_API void ScriptableRenderer::Setup(const RenderTarget& data)
+	SH_RENDER_API void ScriptableRenderer::Setup(const RenderData& data)
 	{
 		for (const std::unique_ptr<ScriptableRenderPass>& pass : allPasses)
 			activePasses.push_back(pass.get());
 	}
-	SH_RENDER_API void ScriptableRenderer::Execute(const RenderTarget& data)
+	SH_RENDER_API void ScriptableRenderer::Execute(const RenderData& data)
 	{
 		renderCallCount = 0;
 		std::stable_sort(activePasses.begin(), activePasses.end(),
@@ -115,7 +125,7 @@ namespace sh::render
 				{
 					CommandBuffer* cmd = ctx.AllocateCommandBuffer(false);
 					cmd->Begin(true);
-					IRenderThrMethod<ScriptableRenderPass>::EmitBarrier(*pass, *cmd, ctx, barriers[idx]);
+					cmd->EmitBarrier(barriers[idx]);
 					IRenderThrMethod<ScriptableRenderPass>::Record(*pass, *cmd, ctx, data);
 					cmd->End();
 					return { pass, cmd };
@@ -128,39 +138,41 @@ namespace sh::render
 		{
 			auto [pass, cmd] = futurePass.get();
 
-			submittedCmds.push_back({ *pass, *cmd });
+			recordedCmds.push_back({ *pass, *cmd });
 		}
 
 		activePasses.clear();
 	}
 	SH_RENDER_API void ScriptableRenderer::ExecuteTransfer(uint32_t imgIdx)
 	{
-		RenderTarget target{};
-		target.camera = nullptr;
-		target.target = nullptr;
-		target.drawables = nullptr;
-		target.frameIndex = imgIdx;
+		RenderData data{};
+		data.frameIndex = imgIdx;
+		data.drawables = nullptr;
 
-		IRenderThrMethod<ScriptableRenderPass>::Configure(*cpyPass, target);
+		IRenderThrMethod<ScriptableRenderPass>::Configure(*cpyPass, data);
 
 		std::vector<BarrierInfo> preBarriers = BuildBarrierInfo(*cpyPass, imgIdx);
-		std::vector<BarrierInfo> postBarriers = { BarrierInfo{imgIdx, swapChainStates[imgIdx], ResourceUsage::Present} };
-		swapChainStates[imgIdx] = ResourceUsage::Present;
-
-		RenderTarget rt{};
-		rt.frameIndex = imgIdx;
-		rt.camera = nullptr;
-		rt.target = nullptr;
-		rt.drawables = nullptr;
+		std::vector<BarrierInfo> postBarriers;
+		if (swapChainStates.size() > imgIdx)
+		{
+			postBarriers = { BarrierInfo{imgIdx, swapChainStates[imgIdx], ResourceUsage::Present} };
+			swapChainStates[imgIdx] = ResourceUsage::Present;
+		}
+		else
+		{
+			swapChainStates.resize(imgIdx + 1, ResourceUsage::Undefined);
+			postBarriers = { BarrierInfo{imgIdx, ResourceUsage::Undefined, ResourceUsage::Present} };
+			swapChainStates[imgIdx] = ResourceUsage::Present;
+		}
 
 		CommandBuffer* cmd = ctx.AllocateCommandBuffer(false);
 		cmd->Begin(true);
-		IRenderThrMethod<ScriptableRenderPass>::EmitBarrier(*cpyPass, *cmd, ctx, preBarriers);
-		IRenderThrMethod<ScriptableRenderPass>::Record(*cpyPass, *cmd, ctx, rt);
-		IRenderThrMethod<ScriptableRenderPass>::EmitBarrier(*cpyPass, *cmd, ctx, postBarriers);
+		cmd->EmitBarrier(preBarriers);
+		IRenderThrMethod<ScriptableRenderPass>::Record(*cpyPass, *cmd, ctx, data);
+		cmd->EmitBarrier(postBarriers);
 		cmd->End();
 
-		submittedCmds.push_back({ *cpyPass, *cmd});
+		recordedCmds.push_back({ *cpyPass, *cmd});
 	}
 	SH_RENDER_API void ScriptableRenderer::CallReadbacks()
 	{
@@ -175,9 +187,9 @@ namespace sh::render
 	}
 	SH_RENDER_API void ScriptableRenderer::ResetSubmittedCommands(IRenderContext& ctx)
 	{
-		for (auto& submittedCmd : submittedCmds)
-			ctx.DeallocateCommandBuffer(submittedCmd.cmd);
-		submittedCmds.clear();
+		for (RecordedCommand& recordedCmd : recordedCmds)
+			ctx.DeallocateCommandBuffer(recordedCmd.cmd);
+		recordedCmds.clear();
 	}
 
 	SH_RENDER_API void ScriptableRenderer::ResetSwapChainStates()

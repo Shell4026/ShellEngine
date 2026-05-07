@@ -83,9 +83,13 @@ namespace sh::render::vk
 		const bool bColorImg = !IsDepthTexture(info.format);
 		format = ConvertTextureFormat(info.format);
 		sample = info.bMSAAImg ? ctx->GetSampleCount() : VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
-		aspect = bColorImg ? 
-			(VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT) : 
-			(VkImageAspectFlagBits::VK_IMAGE_ASPECT_DEPTH_BIT | VkImageAspectFlagBits::VK_IMAGE_ASPECT_STENCIL_BIT);
+
+		const bool bSampleableDepthRT = !bColorImg && info.bRenderTarget && !info.bMSAAImg;
+		aspect = bColorImg ?
+			(VkImageAspectFlagBits::VK_IMAGE_ASPECT_COLOR_BIT) :
+			(bSampleableDepthRT ?
+				VkImageAspectFlagBits::VK_IMAGE_ASPECT_DEPTH_BIT :
+				(VkImageAspectFlagBits::VK_IMAGE_ASPECT_DEPTH_BIT | VkImageAspectFlagBits::VK_IMAGE_ASPECT_STENCIL_BIT));
 		filter = info.filtering == 0 ? VkFilter::VK_FILTER_NEAREST : VkFilter::VK_FILTER_LINEAR;
 		
 		width = info.width == 0 ? 1 : info.width;
@@ -119,7 +123,11 @@ namespace sh::render::vk
 					VkImageUsageFlagBits::VK_IMAGE_USAGE_SAMPLED_BIT;
 			}
 			else
+			{
 				usage = VkImageUsageFlagBits::VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+				if (info.bRenderTarget)
+					usage |= VkImageUsageFlagBits::VK_IMAGE_USAGE_SAMPLED_BIT;
+			}
 		}
 		VkImageCreateInfo imageCi{};
 		imageCi.sType = VkStructureType::VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -418,6 +426,10 @@ namespace sh::render::vk
 			return VkFormat::VK_FORMAT_D24_UNORM_S8_UINT;
 		case TextureFormat::D16S8:
 			return VkFormat::VK_FORMAT_D16_UNORM_S8_UINT;
+		case TextureFormat::D32:
+			return VkFormat::VK_FORMAT_D32_SFLOAT;
+		case TextureFormat::D16:
+			return VkFormat::VK_FORMAT_D16_UNORM;
 		default:
 			return VkFormat::VK_FORMAT_UNDEFINED;
 		}
@@ -434,18 +446,12 @@ namespace sh::render::vk
 		case VkFormat::VK_FORMAT_D32_SFLOAT_S8_UINT: [[fallthrough]];
 		case VkFormat::VK_FORMAT_D24_UNORM_S8_UINT: [[fallthrough]];
 		case VkFormat::VK_FORMAT_D16_UNORM_S8_UINT: [[fallthrough]];
+		case VkFormat::VK_FORMAT_D32_SFLOAT: [[fallthrough]];
+		case VkFormat::VK_FORMAT_D16_UNORM: [[fallthrough]];
 		case VkFormat::VK_FORMAT_R8_UNORM:
 			return 1;
 		default:
 			return 0;
 		}
 	}
-	auto VulkanImageBuffer::IsDepthTexture(TextureFormat format) -> bool
-	{
-		if (format == TextureFormat::D32S8 ||
-			format == TextureFormat::D24S8 ||
-			format == TextureFormat::D16S8)
-			return true;
-		return false;
-	}
-}
+}//namespace

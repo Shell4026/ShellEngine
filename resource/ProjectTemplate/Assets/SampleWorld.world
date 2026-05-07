@@ -1,0 +1,396 @@
+{
+    "cam": {
+        "Camera": {
+            "farPlane": 10000.0,
+            "fov": 60.0,
+            "lookPos": [
+                -0.13613072037696838,
+                -0.5873733162879944,
+                -0.809805154800415
+            ],
+            "nearPlane": 0.10000000149011612,
+            "priority": 0,
+            "projection": 0,
+            "renderTexture": "180635b4e4d1a98ebb0064ab47dc452a"
+        },
+        "Component": {
+            "hideInspector": false,
+            "priority": 0
+        },
+        "EditorCamera": {
+            "distance": 9.383123397827148
+        },
+        "SObject": null,
+        "fullType": "sh::game::EditorCamera",
+        "name": "EditorCamera",
+        "type": "EditorCamera",
+        "uuid": "849679621b2c3878ef538c9b069b0ffc",
+        "version": 1
+    },
+    "camPos": [
+        0.19899359345436096,
+        5.197760581970215,
+        6.570095062255859
+    ],
+    "editorObjs": null,
+    "name": "World",
+    "objs": [
+        {
+            "Components": [
+                {
+                    "Component": {
+                        "hideInspector": false,
+                        "priority": 0
+                    },
+                    "SObject": null,
+                    "Transform": {
+                        "quat": [
+                            0.0,
+                            0.0,
+                            0.0,
+                            1.0
+                        ],
+                        "vPosition": [
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "vRotation": [
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "vScale": [
+                            5.0,
+                            5.0,
+                            5.0
+                        ]
+                    },
+                    "fullType": "sh::game::Transform",
+                    "name": "Unknown",
+                    "type": "Transform",
+                    "uuid": "8467e3e80fc4f2ee568a6397bed89eb4",
+                    "version": 1
+                },
+                {
+                    "Component": {
+                        "hideInspector": false,
+                        "priority": 0
+                    },
+                    "MeshRenderer": {
+                        "mats": [
+                            "ed351337b72281ef5f457457b65b8060"
+                        ],
+                        "mesh": "bbc4ef7ec45dce223297a224f8093f21",
+                        "renderTag": 1
+                    },
+                    "SObject": null,
+                    "fullType": "sh::game::MeshRenderer",
+                    "name": "MeshRenderer",
+                    "type": "MeshRenderer",
+                    "uuid": "48b1921fcf12e85469036c4404a65f15",
+                    "version": 1
+                }
+            ],
+            "GameObject": {
+                "bEditorOnly": false,
+                "bEnable": true,
+                "bStatic": false,
+                "hideInspector": false
+            },
+            "name": "Quad",
+            "type": "GameObject",
+            "uuid": "c84b38fb3db87ac051ac5d0b797443c1",
+            "version": 1
+        },
+        {
+            "Components": [
+                {
+                    "Component": {
+                        "hideInspector": false,
+                        "priority": 0
+                    },
+                    "SObject": null,
+                    "Transform": {
+                        "quat": [
+                            0.0,
+                            0.0,
+                            0.0,
+                            1.0
+                        ],
+                        "vPosition": [
+                            0.0,
+                            0.5,
+                            0.0
+                        ],
+                        "vRotation": [
+                            0.0,
+                            -0.0,
+                            0.0
+                        ],
+                        "vScale": [
+                            1.0,
+                            1.0,
+                            1.0
+                        ]
+                    },
+                    "fullType": "sh::game::Transform",
+                    "name": "Unknown",
+                    "type": "Transform",
+                    "uuid": "61353cbcb255ce1e1fa35b7e8aa364ad",
+                    "version": 1
+                },
+                {
+                    "Component": {
+                        "hideInspector": false,
+                        "priority": 0
+                    },
+                    "MeshRenderer": {
+                        "mats": [
+                            "ed351337b72281ef5f457457b65b8060"
+                        ],
+                        "mesh": "bbc4ef7ec45dce223297a224f8093f20",
+                        "renderTag": 1
+                    },
+                    "SObject": null,
+                    "fullType": "sh::game::MeshRenderer",
+                    "name": "MeshRenderer",
+                    "type": "MeshRenderer",
+                    "uuid": "6bf0748332a42bec3a7006ea08c3a7fb",
+                    "version": 1
+                }
+            ],
+            "GameObject": {
+                "bEditorOnly": false,
+                "bEnable": true,
+                "bStatic": false,
+                "hideInspector": false
+            },
+            "name": "Cube",
+            "type": "GameObject",
+            "uuid": "647942f843f96152cce200a1435da773",
+            "version": 1
+        },
+        {
+            "Components": [
+                {
+                    "Component": {
+                        "hideInspector": false,
+                        "priority": 0
+                    },
+                    "SObject": null,
+                    "Transform": {
+                        "quat": [
+                            0.0,
+                            0.0,
+                            0.0,
+                            1.0
+                        ],
+                        "vPosition": [
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "vRotation": [
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "vScale": [
+                            1.0,
+                            1.0,
+                            1.0
+                        ]
+                    },
+                    "fullType": "sh::game::Transform",
+                    "name": "Unknown",
+                    "type": "Transform",
+                    "uuid": "6de53e419d723c382dd4da942d436a1a",
+                    "version": 1
+                },
+                {
+                    "Component": {
+                        "hideInspector": false,
+                        "priority": 0
+                    },
+                    "DirectionalLight": {
+                        "direction": [
+                            -1.0,
+                            -1.0,
+                            -1.0
+                        ],
+                        "intensity": 1.0
+                    },
+                    "LightBase": {
+                        "bCastShadow": true,
+                        "shadowBias": 0.004999999888241291,
+                        "shadowFarPlane": 100.0,
+                        "shadowMapResolution": 1024,
+                        "shadowNearPlane": 0.10000000149011612,
+                        "shadowOrthoSize": 20.0
+                    },
+                    "SObject": null,
+                    "fullType": "sh::game::DirectionalLight",
+                    "name": "DirectionalLight",
+                    "type": "DirectionalLight",
+                    "uuid": "0db6d7a50692bfccdb72c587d78dabc7",
+                    "version": 1
+                }
+            ],
+            "GameObject": {
+                "bEditorOnly": false,
+                "bEnable": true,
+                "bStatic": false,
+                "hideInspector": false
+            },
+            "name": "Light",
+            "type": "GameObject",
+            "uuid": "6ceb7e7f4dbbc7be3314cda5662544b5",
+            "version": 1
+        },
+        {
+            "Components": [
+                {
+                    "Component": {
+                        "hideInspector": false,
+                        "priority": 0
+                    },
+                    "SObject": null,
+                    "Transform": {
+                        "quat": [
+                            0.0,
+                            0.0,
+                            0.0,
+                            1.0
+                        ],
+                        "vPosition": [
+                            -2.0,
+                            1.0,
+                            -2.0
+                        ],
+                        "vRotation": [
+                            0.0,
+                            -0.0,
+                            0.0
+                        ],
+                        "vScale": [
+                            1.0,
+                            2.0,
+                            1.0
+                        ]
+                    },
+                    "fullType": "sh::game::Transform",
+                    "name": "Unknown",
+                    "type": "Transform",
+                    "uuid": "02ca20a96bfc8bdb056cdeb4708f91fa",
+                    "version": 1
+                },
+                {
+                    "Component": {
+                        "hideInspector": false,
+                        "priority": 0
+                    },
+                    "MeshRenderer": {
+                        "mats": [
+                            "ed351337b72281ef5f457457b65b8060"
+                        ],
+                        "mesh": "bbc4ef7ec45dce223297a224f8093f20",
+                        "renderTag": 1
+                    },
+                    "SObject": null,
+                    "fullType": "sh::game::MeshRenderer",
+                    "name": "MeshRenderer",
+                    "type": "MeshRenderer",
+                    "uuid": "ed3d01dc72d0cf8ac2de51961d967c87",
+                    "version": 1
+                }
+            ],
+            "GameObject": {
+                "bEditorOnly": false,
+                "bEnable": true,
+                "bStatic": false,
+                "hideInspector": false
+            },
+            "name": "Cube",
+            "type": "GameObject",
+            "uuid": "12ff273a34e3102c74d1f52f0d17d653",
+            "version": 1
+        },
+        {
+            "Components": [
+                {
+                    "Component": {
+                        "hideInspector": false,
+                        "priority": 0
+                    },
+                    "SObject": null,
+                    "Transform": {
+                        "quat": [
+                            0.0,
+                            0.0,
+                            0.0,
+                            1.0
+                        ],
+                        "vPosition": [
+                            4.0,
+                            4.0,
+                            4.0
+                        ],
+                        "vRotation": [
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "vScale": [
+                            1.0,
+                            1.0,
+                            1.0
+                        ]
+                    },
+                    "fullType": "sh::game::Transform",
+                    "name": "Unknown",
+                    "type": "Transform",
+                    "uuid": "971f215a0d326bdec2b0f32277ccdb3d",
+                    "version": 1
+                },
+                {
+                    "Camera": {
+                        "farPlane": 1000.0,
+                        "fov": 60.0,
+                        "lookPos": [
+                            0.0,
+                            0.0,
+                            0.0
+                        ],
+                        "nearPlane": 0.10000000149011612,
+                        "priority": 0,
+                        "projection": 0
+                    },
+                    "Component": {
+                        "hideInspector": false,
+                        "priority": 0
+                    },
+                    "SObject": null,
+                    "fullType": "sh::game::Camera",
+                    "name": "Camera",
+                    "type": "Camera",
+                    "uuid": "42dd416bc98175fdc72f01bfecc37973",
+                    "version": 1
+                }
+            ],
+            "GameObject": {
+                "bEditorOnly": false,
+                "bEnable": true,
+                "bStatic": false,
+                "hideInspector": false
+            },
+            "name": "Camera",
+            "type": "GameObject",
+            "uuid": "30cc3381a4934bedcce6082de63ae3f4",
+            "version": 1
+        }
+    ],
+    "type": "EditorWorld",
+    "uuid": "12c5133bfc598964668e5266f0f74a03",
+    "version": 1
+}

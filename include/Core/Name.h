@@ -1,5 +1,6 @@
 ﻿#pragma once
 #include "Export.h"
+#include "Util.h"
 
 #include <string_view>
 #include <unordered_map>
@@ -10,6 +11,24 @@ namespace sh::core
 	/// @brief 같은 문자열은 같은 주소를 가르키며 생성 시 스레드 안전하다.
 	class Name
 	{
+	public:
+		SH_CORE_API Name(std::string_view str);
+		SH_CORE_API Name(const Name& other) noexcept;
+		SH_CORE_API Name(Name&& other) noexcept;
+		SH_CORE_API ~Name();
+
+		SH_CORE_API operator const std::string& () const;
+		SH_CORE_API auto ToString() const -> const std::string&;
+
+		SH_CORE_API auto operator=(const Name& other) noexcept -> Name&;
+		SH_CORE_API auto operator=(Name&& other) noexcept -> Name&;
+
+		auto operator==(const Name& other) const -> bool { return hash == other.hash; }
+		auto operator!=(const Name& other) const -> bool { return hash != other.hash; }
+		auto operator==(const std::string_view str) const -> bool { return hash == core::Util::ConstexprHash(str); }
+		auto operator!=(const std::string_view str) const -> bool { return hash != core::Util::ConstexprHash(str); }
+		auto operator==(std::size_t hash) const -> bool { return this->hash == hash; }
+		auto operator!=(std::size_t hash) const -> bool { return this->hash != hash; }
 	private:
 		friend struct std::hash<sh::core::Name>;
 
@@ -20,30 +39,13 @@ namespace sh::core
 		std::string debugString;
 #endif
 		std::size_t hash;
-	public:
-		SH_CORE_API Name(std::string_view str);
-		SH_CORE_API Name(const Name& other) noexcept;
-		SH_CORE_API Name(Name&& other) noexcept;
-		SH_CORE_API ~Name();
-
-		SH_CORE_API auto operator=(const Name& other) noexcept -> Name&;
-		SH_CORE_API auto operator=(Name&& other) noexcept -> Name&;
-		SH_CORE_API auto operator==(const Name& other) const -> bool;
-		SH_CORE_API auto operator!=(const Name& other) const -> bool;
-		SH_CORE_API auto operator==(const std::string_view str) const -> bool;
-		SH_CORE_API auto operator!=(const std::string_view str) const -> bool;
-		SH_CORE_API auto operator==(std::size_t hash) const -> bool;
-		SH_CORE_API auto operator!=(std::size_t hash) const -> bool;
-
-		SH_CORE_API operator const std::string& () const;
-		SH_CORE_API auto ToString() const -> const std::string&;
 	};
 
-	static auto operator==(std::string_view str, const sh::core::Name& name) -> bool
+	inline static auto operator==(std::string_view str, const sh::core::Name& name) -> bool
 	{
 		return name == str;
 	}
-	static auto operator!=(std::string_view str, const sh::core::Name& name) -> bool
+	inline static auto operator!=(std::string_view str, const sh::core::Name& name) -> bool
 	{
 		return name != str;
 	}
@@ -59,4 +61,4 @@ namespace std
 			return name.hash;
 		}
 	};
-}
+}//namespace

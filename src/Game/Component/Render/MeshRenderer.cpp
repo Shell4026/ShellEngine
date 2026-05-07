@@ -4,6 +4,8 @@
 
 #include "World.h"
 
+#include "Render/Renderer.h"
+
 #include <cstring>
 #include <algorithm>
 
@@ -108,14 +110,15 @@ namespace sh::game
 		}
 		else if (prop.GetName() == core::Util::ConstexprHash("mats"))
 		{
-			CreateDrawable(true);
+			for (std::size_t i = 0; i < mats.size(); ++i)
+				SetMaterial(i, mats[i]);
 		}
 		else if (prop.GetName() == core::Util::ConstexprHash("renderTag"))
 		{
-			for (auto* d : drawables)
+			for (render::Drawable* drawable : drawables)
 			{
-				if (d != nullptr)
-					d->SetRenderTagId(renderTag);
+				if (drawable != nullptr)
+					drawable->SetRenderTagId(renderTag);
 			}
 		}
 	}
@@ -425,13 +428,18 @@ namespace sh::game
 		}
 		UpdatePropertyBlockData();
 	}
-	void MeshRenderer::FillLightStruct(render::Drawable& drawable, render::Shader& shader) const
+	void MeshRenderer::FillLightStruct(render::Drawable& drawable, render::Shader& shader)
 	{
-		Light lightStruct{};
-		auto lights = world.GetLightOctree().Query(worldAABB);
-		int idx = 0;
-		for (int i = 0; i < std::min((int)lights.size(), 10); ++i)
+		const std::vector<game::IOctreeElement*>& lights = world.GetLightOctree().Query(worldAABB);
+
+		lightDatas.clear();
+		lightDatas.resize(sizeof(int) * 4 + lights.size() * sizeof(Light), 0); // int 3개는 패딩
+		const int count = static_cast<int>(lights.size());
+		std::memcpy(lightDatas.data(), &count, sizeof(int));
+		std::size_t offset = sizeof(int) * 4;
+		for (int i = 0; i < count; ++i)
 		{
+			Light lightStruct{};
 			const ILight* light = static_cast<ILight*>(lights[i]);
 			if (light->GetLightType() == ILight::Type::Point)
 			{
@@ -439,9 +447,8 @@ namespace sh::game
 				if (!core::IsValid(pointLight))
 					continue;
 				const Vec3& pos = pointLight->gameObject.transform->GetWorldPosition();
-				lightStruct.lightPos[idx] = { pos.x, pos.y, pos.z, 0.f };
-				lightStruct.lightPos[idx].w = pointLight->GetRadius();
-				lightStruct.other[idx].w = 1;
+				lightStruct.pos = { pos.x, pos.y, pos.z, pointLight->GetRadius() };
+				lightStruct.other.w = 1;
 			}
 			else if (light->GetLightType() == ILight::Type::Directional)
 			{
@@ -449,20 +456,25 @@ namespace sh::game
 				if (!core::IsValid(dirLight))
 					continue;
 				const Vec3& dir = dirLight->GetDirection();
-				lightStruct.lightPos[idx] = { dir.x, dir.y, dir.z, dirLight->GetIntensity() };
-				lightStruct.other[idx].w = 0;
+				lightStruct.pos = { dir.x, dir.y, dir.z, dirLight->GetIntensity() };
+				lightStruct.other.w = 0;
+				render::ShadowMapManager::Slot slot = dirLight->GetShadowSlot();
+				lightStruct.shadow = { slot.uvOffset.x,slot.uvOffset.y,slot.uvSize.x, slot.uvSize.y };
 			}
-			++idx;
+			lightStruct.lightSpaceMatrix = light->GetLightSpaceMatrix();
+			
+			std::memcpy(lightDatas.data() + offset, &lightStruct, sizeof(Light));
+			offset += sizeof(Light);
 		}
-		lightStruct.lightCount = idx;
-		for (auto& lightingPass : shader.GetAllShaderPass())
+		for (const render::Shader::LightingPassData& lightingPassData : shader.GetAllShaderPass())
 		{
-			for (render::ShaderPass& pass : lightingPass.passes)
+			for (const render::ShaderPass& pass : lightingPassData.passes)
 			{
 				if (pass.IsPendingKill() || pass.GetLightingBinding() == -1)
 					continue;
-
-				drawable.GetMaterialData().SetBindingData(pass, render::UniformStructLayout::Usage::Object, pass.GetLightingBinding(), &lightStruct, sizeof(Light));
+				drawable.GetMaterialData().SetBindingData(pass, render::UniformStructLayout::Usage::Object, pass.GetLightingBinding(), lightDatas.data(), lightDatas.size());
+				if (pass.GetShadowMapBinding() != -1 && world.GetShadowMapManager().GetAtlas() != nullptr)
+					drawable.GetMaterialData().SetTextureData(pass, render::UniformStructLayout::Usage::Object, pass.GetShadowMapBinding(), *world.GetShadowMapManager().GetAtlas());
 			}
 		}
 	}

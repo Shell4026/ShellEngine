@@ -2,10 +2,11 @@
 
 namespace sh::render
 {
-	auto ShaderAST::VariableNode::Serialize() const -> core::Json
+	SH_RENDER_API auto ShaderAST::VariableNode::Serialize() const -> core::Json
 	{
 		core::Json json;
 		json["type"] = static_cast<int>(type);
+		json["structType"] = structType;
 		json["arraySize"] = arraySize;
 		json["name"] = name;
 		json["default"] = defaultValue;
@@ -13,10 +14,11 @@ namespace sh::render
 		json["dynamicArray"] = bDynamicArray;
 		return json;
 	}
-
-	void ShaderAST::VariableNode::Deserialize(const core::Json& json)
+	SH_RENDER_API void ShaderAST::VariableNode::Deserialize(const core::Json& json)
 	{
 		type = static_cast<VariableType>(json.at("type").get<int>());
+		if (json.contains("structType"))
+			structType = json["structType"].get_ref<const std::string&>();
 		if (json.contains("arraySize"))
 		{
 			arraySize = json.at("arraySize").get<uint32_t>();
@@ -27,8 +29,42 @@ namespace sh::render
 			defaultValue = json["default"].get<std::string>();
 		attribute = static_cast<VariableAttribute>(json.at("attribute").get<int>());
 	}
+	SH_RENDER_API auto ShaderAST::VariableNode::MakeDynamicArray(StructNode& structNode, std::string name) -> VariableNode
+	{
+		VariableNode v;
+		v.type = VariableType::Struct;
+		v.structType = structNode.name;
+		v.bDynamicArray = true;
+		v.name = std::move(name);
+		return v;
+	}
 
-	auto ShaderAST::LayoutNode::Serialize() const -> core::Json
+	SH_RENDER_API auto ShaderAST::StructNode::Serialize() const -> core::Json
+	{
+		core::Json json;
+		json["name"] = name;
+		core::Json& varsJson = json["vars"];
+		for (const VariableNode& varNode : vars)
+			varsJson.push_back(varNode.Serialize());
+		return json;
+	}
+	SH_RENDER_API void ShaderAST::StructNode::Deserialize(const core::Json& json)
+	{
+		if (json.contains("name"))
+			name = json["name"].get_ref<const std::string&>();
+		if (json.contains("vars"))
+		{
+			const core::Json& varsJson = json["vars"];
+			vars.reserve(varsJson.size());
+			for (const core::Json& varJson : varsJson)
+			{
+				VariableNode varNode;
+				varNode.Deserialize(varJson);
+				vars.push_back(std::move(varNode));
+			}
+		}
+	}
+	SH_RENDER_API auto ShaderAST::LayoutNode::Serialize() const -> core::Json
 	{
 		core::Json json;
 		json["binding"] = binding;
@@ -36,13 +72,12 @@ namespace sh::render
 		return json;
 	}
 
-	void ShaderAST::LayoutNode::Deserialize(const core::Json& json)
+	SH_RENDER_API void ShaderAST::LayoutNode::Deserialize(const core::Json& json)
 	{
 		binding = json.at("binding").get<uint32_t>();
 		var.Deserialize(json.at("var"));
 	}
-
-	auto ShaderAST::BufferNode::Serialize() const -> core::Json
+	SH_RENDER_API auto ShaderAST::BufferNode::Serialize() const -> core::Json
 	{
 		core::Json json;
 		json["bufferType"] = static_cast<int>(bufferType);
@@ -59,8 +94,7 @@ namespace sh::render
 		json["vars"] = std::move(varArray);
 		return json;
 	}
-
-	void ShaderAST::BufferNode::Deserialize(const core::Json& json)
+	SH_RENDER_API void ShaderAST::BufferNode::Deserialize(const core::Json& json)
 	{
 		set = json.at("set").get<uint32_t>();
 		binding = json.at("binding").get<uint32_t>();
@@ -81,13 +115,13 @@ namespace sh::render
 			vars.push_back(std::move(var));
 		}
 	}
-
-	auto ShaderAST::StageNode::Serialize() const -> core::Json
+	SH_RENDER_API auto ShaderAST::StageNode::Serialize() const -> core::Json
 	{
 		core::Json json;
 		json["type"] = static_cast<int>(type);
 		json["lightingBinding"] = lightingBinding;
 		json["skinBinding"] = skinBinding;
+		json["shadowMapBinding"] = shadowMapBinding;
 		json["code"] = code;
 
 		// in
@@ -101,6 +135,11 @@ namespace sh::render
 		for (const auto& o : out)
 			outArray.push_back(o.Serialize());
 		json["out"] = std::move(outArray);
+
+		// structs
+		core::Json& structsJson = json["structs"];
+		for (const StructNode& structNode : structs)
+			structsJson.push_back(structNode.Serialize());
 
 		// uniforms
 		core::Json bufferArray = core::Json::array();
@@ -117,48 +156,81 @@ namespace sh::render
 		return json;
 	}
 
-	void ShaderAST::StageNode::Deserialize(const core::Json& json)
+	SH_RENDER_API void ShaderAST::StageNode::Deserialize(const core::Json& json)
 	{
 		type = static_cast<StageType>(json.at("type").get<int>());
 		lightingBinding = json.value("lightingBinding", -1);
 		skinBinding = json.value("skinBinding", -1);
+		shadowMapBinding = json.value("shadowMapBinding", -1);
 		code = json.at("code").get<std::string>();
 
 		// in
 		in.clear();
-		for (const auto& i : json.at("in"))
+		out.clear();
+		if (json.contains("in"))
 		{
-			LayoutNode l;
-			l.Deserialize(i);
-			in.push_back(std::move(l));
+			for (const auto& i : json.at("in"))
+			{
+				LayoutNode l;
+				l.Deserialize(i);
+				in.push_back(std::move(l));
+			}
 		}
 
 		// out
 		out.clear();
-		for (const auto& o : json.at("out"))
+		if (json.contains("out"))
 		{
-			LayoutNode l;
-			l.Deserialize(o);
-			out.push_back(std::move(l));
+			for (const auto& o : json.at("out"))
+			{
+				LayoutNode l;
+				l.Deserialize(o);
+				out.push_back(std::move(l));
+			}
+		}
+
+		// structs
+		structs.clear();
+		if (json.contains("structs"))
+		{
+			for (const core::Json& structJson : json.at("structs"))
+			{
+				StructNode structNode;
+				structNode.Deserialize(structJson);
+				structs.push_back(std::move(structNode));
+			}
 		}
 
 		// uniforms
 		buffers.clear();
-		for (const auto& u : json.at("buffers"))
+		if (json.contains("buffers"))
 		{
-			BufferNode ubo;
-			ubo.Deserialize(u);
-			buffers.push_back(std::move(ubo));
+			for (const auto& u : json.at("buffers"))
+			{
+				BufferNode ubo;
+				ubo.Deserialize(u);
+				buffers.push_back(std::move(ubo));
+			}
 		}
 
 		// declaration
-		declaration = json.at("declaration").get<std::vector<std::string>>();
+		if (json.contains("declaration"))
+			declaration = json.at("declaration").get<std::vector<std::string>>();
 
 		// functions
-		functions = json.at("functions").get<std::vector<std::string>>();
+		if (json.contains("functions"))
+			functions = json.at("functions").get<std::vector<std::string>>();
 	}
-
-	auto ShaderAST::PassNode::Serialize() const -> core::Json
+	SH_RENDER_API auto ShaderAST::StageNode::GetStructNode(const std::string& structName) const -> const StructNode*
+	{
+		for (const StructNode& structNode : structs)
+		{
+			if (structNode.name == structName)
+				return &structNode;
+		}
+		return nullptr;
+	}
+	SH_RENDER_API auto ShaderAST::PassNode::Serialize() const -> core::Json
 	{
 		core::Json json;
 		json["name"] = name;
@@ -184,8 +256,7 @@ namespace sh::render
 
 		return json;
 	}
-
-	void ShaderAST::PassNode::Deserialize(const core::Json& json)
+	SH_RENDER_API void ShaderAST::PassNode::Deserialize(const core::Json& json)
 	{
 		name = json.at("name").get<std::string>();
 		lightingPass = json.at("lightingPass").get<std::string>();
@@ -218,22 +289,19 @@ namespace sh::render
 			stages.push_back(std::move(stage));
 		}
 	}
-
-	auto ShaderAST::VersionNode::Serialize() const -> core::Json
+	SH_RENDER_API auto ShaderAST::VersionNode::Serialize() const -> core::Json
 	{
 		core::Json json;
 		json["versionNumber"] = versionNumber;
 		json["profile"] = profile;
 		return json;
 	}
-
-	void ShaderAST::VersionNode::Deserialize(const core::Json& json)
+	SH_RENDER_API void ShaderAST::VersionNode::Deserialize(const core::Json& json)
 	{
 		versionNumber = json.at("versionNumber").get<int>();
 		profile = json.at("profile").get<std::string>();
 	}
-
-	auto ShaderAST::ShaderNode::Serialize() const -> core::Json
+	SH_RENDER_API auto ShaderAST::ShaderNode::Serialize() const -> core::Json
 	{
 		core::Json json;
 		json["version"] = version.Serialize();
@@ -253,8 +321,7 @@ namespace sh::render
 
 		return json;
 	}
-
-	void ShaderAST::ShaderNode::Deserialize(const core::Json& json)
+	SH_RENDER_API void ShaderAST::ShaderNode::Deserialize(const core::Json& json)
 	{
 		version.Deserialize(json.at("version"));
 		shaderName = json.at("shaderName").get<std::string>();
@@ -275,8 +342,7 @@ namespace sh::render
 			passes.push_back(std::move(pass));
 		}
 	}
-
-	auto ShaderAST::ComputeShaderNode::Serialize() const -> core::Json
+	SH_RENDER_API auto ShaderAST::ComputeShaderNode::Serialize() const -> core::Json
 	{
 		core::Json json;
 		json["version"] = version.Serialize();
@@ -295,8 +361,7 @@ namespace sh::render
 		json["functions"] = functions;
 		return json;
 	}
-
-	void ShaderAST::ComputeShaderNode::Deserialize(const core::Json& json)
+	SH_RENDER_API void ShaderAST::ComputeShaderNode::Deserialize(const core::Json& json)
 	{
 		version.Deserialize(json.at("version"));
 		shaderName = json.at("shaderName").get<std::string>();
@@ -315,5 +380,4 @@ namespace sh::render
 		declaration = json.at("declaration").get<std::vector<std::string>>();
 		functions = json.at("functions").get<std::vector<std::string>>();
 	}
-
 }//namespace

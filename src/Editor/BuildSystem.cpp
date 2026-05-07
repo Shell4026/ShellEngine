@@ -85,6 +85,96 @@ namespace sh::editor
         bundle.SaveBundle(outputPath / "assets.bundle");
 
         ExportGameManager(outputPath / "gameManager.bin");
+
+        CopyRuntimeBinaries(outputPath);
+    }
+
+    void BuildSystem::CopyRuntimeBinaries(const std::filesystem::path& outputPath)
+    {
+        const std::filesystem::path engineDir = core::FileSystem::GetExecutableDirectory();
+
+#if _WIN32
+        constexpr const char* exeExt = ".exe";
+        constexpr const char* libExt = ".dll";
+        constexpr const char* libPrefix = "";
+#else
+        constexpr const char* exeExt = "";
+        constexpr const char* libExt = ".so";
+        constexpr const char* libPrefix = "lib";
+#endif
+        const std::vector<std::string> executables = {
+            "ShellGame"
+        };
+        const std::vector<std::string> libraries = {
+            "ShellEngineCore",
+            "ShellEngineWindow",
+            "ShellEngineRender",
+            "ShellEnginePhysics",
+            "ShellEngineGame",
+            "ShellEngineNetwork",
+            "ShellEngineSound"
+        };
+#if _WIN32
+        const std::vector<std::string> extraFiles = {
+            "OpenAL32.dll"
+        };
+#else
+        const std::vector<std::string> extraFiles = {
+            "libopenal.so"
+        };
+#endif
+        const std::vector<std::string> directories = {
+            "fonts"
+        };
+
+        std::error_code ec;
+        if (!std::filesystem::exists(outputPath))
+            std::filesystem::create_directories(outputPath, ec);
+
+        auto copyIfMissingFn = [&](const std::filesystem::path& src, const std::filesystem::path& dst)
+        {
+            if (!std::filesystem::exists(src))
+            {
+                SH_WARN_FORMAT("Runtime binary not found in engine path: {}", src.u8string());
+                return;
+            }
+            std::error_code copyEc;
+            std::filesystem::copy_file(src, dst, std::filesystem::copy_options::overwrite_existing, copyEc);
+            if (copyEc)
+                SH_ERROR_FORMAT("Failed to copy {} -> {}: {}", src.u8string(), dst.u8string(), copyEc.message());
+        };
+
+        for (const std::string& name : executables)
+        {
+            const std::string fileName = name + exeExt;
+            copyIfMissingFn(engineDir / fileName, outputPath / fileName);
+        }
+        for (const std::string& name : libraries)
+        {
+            const std::string fileName = libPrefix + name + libExt;
+            copyIfMissingFn(engineDir / fileName, outputPath / fileName);
+        }
+        for (const std::string& fileName : extraFiles)
+        {
+            copyIfMissingFn(engineDir / fileName, outputPath / fileName);
+        }
+        for (const std::string& dirName : directories)
+        {
+            const std::filesystem::path src = engineDir / dirName;
+            const std::filesystem::path dst = outputPath / dirName;
+            if (!std::filesystem::exists(src))
+            {
+                SH_WARN_FORMAT("Runtime directory not found in engine path: {}", src.u8string());
+                continue;
+            }
+            std::error_code copyEc;
+            std::filesystem::copy(src, dst,
+                std::filesystem::copy_options::recursive |
+                std::filesystem::copy_options::overwrite_existing,
+                copyEc);
+            if (copyEc)
+                SH_ERROR_FORMAT("Failed to copy directory {} -> {}: {}", src.u8string(), dst.u8string(), copyEc.message());
+        }
     }
     void BuildSystem::ExtractUUIDs(std::unordered_set<std::string>& set, const core::Json& worldJson)
     {

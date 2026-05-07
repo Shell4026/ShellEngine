@@ -4,6 +4,7 @@
 #include "Core/AssetExporter.h"
 #include "Core/GarbageCollection.h"
 
+#include "Render/Renderer.h"
 #include "Render/VulkanImpl/VulkanContext.h"
 #include "Render/VulkanImpl/VulkanShaderPassBuilder.h"
 #include "Render/Material.h"

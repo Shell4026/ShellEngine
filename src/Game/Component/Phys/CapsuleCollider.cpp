@@ -5,6 +5,7 @@
 #include "Game/GameObject.h"
 #include "Game/World.h"
 
+#include "Render/Renderer.h"
 #include "Render/Mesh/CapsuleMesh.h"
 
 #include "reactphysics3d/reactphysics3d.h"
@@ -20,7 +21,7 @@ namespace sh::game
 	{
 		impl = std::make_unique<Impl>();
 
-		auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld()->GetContext());
+		auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld().GetContext());
 		impl->shape = ctx->createCapsuleShape(radius, height);
 
 		if(IsEditor())
@@ -119,7 +120,7 @@ namespace sh::game
 		if (impl->shape != nullptr)
 		{
 			SH_INFO("DestroyShape()");
-			auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld()->GetContext());
+			auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld().GetContext());
 			ctx->destroyCapsuleShape(impl->shape);
 			impl->shape = nullptr;
 		}

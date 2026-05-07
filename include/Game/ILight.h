@@ -2,6 +2,8 @@
 #include "Game/Export.h"
 #include "IOctreeElement.h"
 
+#include <cstdint>
+
 namespace sh::render
 {
 	class Material;
@@ -19,7 +21,8 @@ namespace sh::game
 	public:
 		virtual ~ILight() {};
 		virtual void SetIntensity(float intensity) = 0;
+		virtual auto GetIntensity() const -> float = 0;
 		virtual auto GetLightType() const -> Type = 0;
-		//virtual void SetMaterialData(render::Material& mat) = 0;
+		virtual auto GetLightSpaceMatrix() const -> glm::mat4 = 0;
 	};
 }//namespace

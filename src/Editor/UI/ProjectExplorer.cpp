@@ -8,6 +8,7 @@
 
 #include "Core/FileSystem.h"
 
+#include "Render/Renderer.h"
 #include "Render/Font.h"
 
 #include "Game/GUITexture.h"

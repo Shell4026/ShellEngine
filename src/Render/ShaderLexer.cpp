@@ -127,91 +127,39 @@ namespace sh::render
 				++column;
 				continue;
 			}
-			if (c == '=')
-			{
-				++i;
-				++column;
-				if (i + 1 < source.size())
+			// 두 글자 합성 연산자가 가능한 연산자들
+			auto LexCompoundOp = [&](char single, std::initializer_list<char> followers)
 				{
-					if (source[i] == '=')
+					std::string op{ single };
+					++i;
+					++column;
+					if (i < source.size())
 					{
-						AddToken(TokenType::Operator, "==");
-						++i;
-						++column;
-						continue;
+						for (char f : followers)
+						{
+							if (source[i] == f)
+							{
+								op.push_back(source[i]);
+								++i;
+								++column;
+								break;
+							}
+						}
 					}
-				}
-				AddToken(TokenType::Operator, "=");
-				continue;
-			}
-			if (c == '+')
-			{
-				++i;
-				++column;
-				if (i < source.size())
-				{
-					if (source[i] == '+' || source[i] == '=')
-					{
-						AddToken(TokenType::Operator, std::string{ c } + source[i]);
-						++i;
-						++column;
-						continue;
-					}
-				}
-				AddToken(TokenType::Operator, std::string{ c });
-				continue;
-			}
-			if (c == '-')
-			{
-				++i;
-				++column;
-				if (i < source.size())
-				{
-					if (source[i] == '-' || source[i] == '=')
-					{
-						AddToken(TokenType::Operator, std::string{ c } + source[i]);
-						++i;
-						++column;
-						continue;
-					}
-				}
-				AddToken(TokenType::Operator, std::string{ c });
-				continue;
-			}
-			if (c == '*')
-			{
-				++i;
-				++column;
-				if (i < source.size())
-				{
-					if (source[i] == '=')
-					{
-						AddToken(TokenType::Operator, std::string{ c } + source[i]);
-						++i;
-						++column;
-						continue;
-					}
-				}
-				AddToken(TokenType::Operator, std::string{ c });
-				continue;
-			}
-			if (c == '/')
-			{
-				++i;
-				++column;
-				if (i < source.size())
-				{
-					if (source[i] == '=')
-					{
-						AddToken(TokenType::Operator, std::string{ c } + source[i]);
-						++i;
-						++column;
-						continue;
-					}
-				}
-				AddToken(TokenType::Operator, std::string{ c });
-				continue;
-			}
+					AddToken(TokenType::Operator, op);
+				};
+			if (c == '=') { LexCompoundOp('=', { '=' }); continue; }
+			if (c == '+') { LexCompoundOp('+', { '+', '=' }); continue; }
+			if (c == '-') { LexCompoundOp('-', { '-', '=' }); continue; }
+			if (c == '*') { LexCompoundOp('*', { '=' }); continue; }
+			if (c == '/') { LexCompoundOp('/', { '=' }); continue; }
+			if (c == '<') { LexCompoundOp('<', { '=', '<' }); continue; }
+			if (c == '>') { LexCompoundOp('>', { '=', '>' }); continue; }
+			if (c == '!') { LexCompoundOp('!', { '=' }); continue; }
+			if (c == '&') { LexCompoundOp('&', { '&', '=' }); continue; }
+			if (c == '|') { LexCompoundOp('|', { '|', '=' }); continue; }
+			if (c == '%') { LexCompoundOp('%', { '=' }); continue; }
+			if (c == '^') { LexCompoundOp('^', { '=' }); continue; }
 
 			if (c == ';')
 			{
@@ -311,7 +259,8 @@ namespace sh::render
 					{"BONE_WEIGHTS", TokenType::BONE_WEIGHTS},
 					{"BONE_INDICES", TokenType::BONE_INDICES},
 					{"SKIN", TokenType::SKIN},
-					{"MATRIX_SKIN", TokenType::MATRIX_SKIN}
+					{"MATRIX_SKIN", TokenType::MATRIX_SKIN},
+					{"TEXTURE_SHADOW", TokenType::TEXTURE_SHADOW}
 				};
 				auto it = keywordMap.find(ident);
 				if (it == keywordMap.end()) 

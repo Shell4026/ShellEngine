@@ -3,11 +3,12 @@
 #include "ShaderPass.h"
 #include "BufferFactory.h"
 #include "IRenderContext.h"
-
-#include "VulkanCameraBuffers.h"
+#include "RenderTexture.h"
 
 #include "Core/ThreadSyncManager.h"
 #include "Core/Logger.h"
+
+#include "Render/RenderDataManager.h"
 
 namespace sh::render
 {
@@ -223,12 +224,7 @@ namespace sh::render
 						}
 						else
 						{
-							assert(context.GetRenderAPIType() == RenderAPI::Vulkan); // 언젠가 API 추가되면 빼기
-							// 카메라 데이터
-							if (context.GetRenderAPIType() == RenderAPI::Vulkan)
-							{
-								passData.shaderBindings[set]->Link(binding, vk::VulkanCameraBuffers::GetInstance()->GetCameraBuffer(), 128);
-							}
+							passData.shaderBindings[set]->Link(binding, *context.GetRenderDataManager().GetBuffer(), sizeof(RenderDataManager::BufferData));
 						}
 					}
 				}
@@ -315,5 +311,19 @@ namespace sh::render
 
 		IShaderBinding& shaderBindings = *itUb->second.get();
 		shaderBindings.Link(binding, *shaderBindingsSyncData.tex);
+
+		if (shaderBindingsSyncData.tex->GetType().IsChildOf(RenderTexture::GetStaticType()))
+		{
+			auto it = std::find_if(cachedRTs.begin(), cachedRTs.end(),
+				[&](const CachedRT& cached)
+				{
+					if (cached.set == set && cached.binding == binding && cached.pass == shaderPass)
+						return true;
+					return false;
+				}
+			);
+			if (it == cachedRTs.end())
+				cachedRTs.push_back(CachedRT{ set, binding, shaderPass, static_cast<const RenderTexture*>(shaderBindingsSyncData.tex) });
+		}
 	}
 }//namespace

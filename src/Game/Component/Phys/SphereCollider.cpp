@@ -18,7 +18,7 @@ namespace sh::game
 	{
 		impl = std::make_unique<Impl>();
 
-		auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld()->GetContext());
+		auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld().GetContext());
 		impl->shape = ctx->createSphereShape(radius);
 		if (IsEditor())
 		{
@@ -88,7 +88,7 @@ namespace sh::game
 		if (impl->shape != nullptr)
 		{
 			SH_INFO("DestroyShape()");
-			auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld()->GetContext());
+			auto ctx = reinterpret_cast<reactphysics3d::PhysicsCommon*>(world.GetPhysWorld().GetContext());
 			ctx->destroySphereShape(impl->shape);
 			impl->shape = nullptr;
 		}

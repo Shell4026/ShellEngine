@@ -3,6 +3,7 @@
 #include "GameObject.h"
 #include "ComponentModule.h"
 #include "ImGUImpl.h"
+#include "Component/Render/Camera.h"
 
 #include "AssetLoaderFactory.h"
 #include "Asset/WorldAsset.h"
@@ -17,6 +18,8 @@
 #include "Core/ModuleLoader.h"
 #include "Core/ThreadSyncManager.h"
 
+#include "Render/Renderer.h"
+
 #include "Sound/SoundSystem.h"
 
 #include <algorithm>
@@ -30,6 +33,17 @@ namespace sh::game
 		immortalWorld = core::SObject::Create<World>(renderer, gui);
 		immortalWorld->SetName("immortalWorld");
 		core::GarbageCollection::GetInstance()->SetRootSet(immortalWorld);
+
+		render::RenderViewer uiViewer{};
+		uiViewer.projMatrix =
+			glm::orthoRH_ZO(0.f, 13.66f, 0.0f, 7.68f, 0.01f, 1000.f);
+		uiViewer.viewMatrix = glm::mat4{ 1.f };
+		uiViewer.viewportRect = { 0, 0, renderer.GetWidth(), renderer.GetHeight() };
+		uiViewer.viewportScissor = uiViewer.viewportRect;
+
+		guiRenderData.priority = -100;
+		guiRenderData.renderViewers.push_back(uiViewer);
+		guiRenderData.tag = core::Name{ "ImGUI" };
 	}
 	SH_GAME_API auto GameManager::GetRenderer() const -> render::Renderer&
 	{
@@ -79,6 +93,7 @@ namespace sh::game
 			worldPtr->Update(dt);
 		immortalWorld->Update(dt);
 		gui->End();
+		renderer->PushRenderData(guiRenderData);
 
 		UpdateSoundListener();
 
@@ -123,7 +138,7 @@ namespace sh::game
 							worldPtr->Clear();
 						worlds.clear();
 
-						renderer->Clear();
+						renderer->Reset();
 						gui->ClearDrawData();
 
 						loadingSingleWorld->SetupRenderer();

@@ -151,19 +151,19 @@ namespace sh::render
 
 	auto ShaderParser::ParseShader() -> ShaderAST::ShaderNode
 	{
-		ShaderAST::ShaderNode shaderNode;
+		curShaderNode = ShaderAST::ShaderNode{};
 		
 		while (CheckToken(ShaderLexer::TokenType::Preprocessor))
 		{
 			NextToken();
-			ParsePreprocessor(shaderNode);
+			ParsePreprocessor(curShaderNode);
 		}
 
 		ConsumeToken(ShaderLexer::TokenType::Shader);
 
 		if (auto& token = PeekToken(); token.type == ShaderLexer::TokenType::String)
 		{
-			shaderNode.shaderName = token.text;
+			curShaderNode.shaderName = token.text;
 			NextToken();
 		}
 		else
@@ -173,15 +173,15 @@ namespace sh::render
 
 		// 프로퍼티가 있으면 파싱 (없을 수도 있음)
 		if (CheckToken(ShaderLexer::TokenType::Property))
-			ParseProperty(shaderNode);
+			ParseProperty(curShaderNode);
 
 		while (!CheckToken(ShaderLexer::TokenType::RBrace) && !CheckToken(ShaderLexer::TokenType::EndOfFile))
 		{
-			shaderNode.passes.push_back(ParsePass(shaderNode));
+			curShaderNode.passes.push_back(ParsePass(curShaderNode));
 		}
 
 		ConsumeToken(ShaderLexer::TokenType::RBrace);
-		return shaderNode;
+		return curShaderNode;
 	}
 	void ShaderParser::ParsePreprocessor(ShaderAST::ShaderNode& shaderNode)
 	{ 
@@ -636,6 +636,7 @@ namespace sh::render
 		bool usingLIGHT = false;
 		bool usingSKIN = false;
 		bool usingMATRIX_SKIN = false;
+		bool usingTEXTURE_SHADOW = false;
 
 		while (nested != 0 || PeekToken().type != ShaderLexer::TokenType::EndOfFile)
 		{
@@ -713,19 +714,51 @@ namespace sh::render
 						[](const ShaderAST::BufferNode& ubo) { return ubo.name == "LIGHT"; });
 					if (it == stageNode.buffers.end())
 					{
-						ShaderAST::BufferNode uboNode{};
-						uboNode.bufferType = ShaderAST::BufferType::Uniform;
-						uboNode.name = "LIGHT";
-						uboNode.set = static_cast<uint32_t>(UniformStructLayout::Usage::Object);
-						uboNode.binding = lastObjectUniformBinding++;
-						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Int, 1, "count" });
-						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec4, 10, "pos" });
-						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec4, 10, "other" });
-						stageNode.buffers.push_back(std::move(uboNode));
-						stageNode.lightingBinding = uboNode.binding;
+						ShaderAST::StructNode& structNode = stageNode.structs.emplace_back();
+						structNode.name = "Light";
+						structNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec4, 1, "pos" });
+						structNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec4, 1, "other" });
+						structNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec4, 1, "shadowRect" });
+						structNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 1, "lightSpaceMatrix" });
+
+						ShaderAST::BufferNode& ssboNode = stageNode.buffers.emplace_back();
+						ssboNode.bufferType = ShaderAST::BufferType::Storage;
+						ssboNode.name = "LIGHT";
+						ssboNode.set = static_cast<uint32_t>(UniformStructLayout::Usage::Object);
+						ssboNode.binding = lastObjectUniformBinding++;
+						ssboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Int, 1, "count" });
+						ssboNode.vars.push_back(ShaderAST::VariableNode::MakeDynamicArray(structNode, "lights"));
+
+						stageNode.lightingBinding = ssboNode.binding;
 						uboit = refreshUboIt();
 					}
 					usingLIGHT = true;
+				}
+			}
+			else if (CheckToken(ShaderLexer::TokenType::TEXTURE_SHADOW))
+			{
+				if (!usingTEXTURE_SHADOW)
+				{
+					auto it = std::find_if(stageNode.buffers.begin(), stageNode.buffers.end(),
+						[](const ShaderAST::BufferNode& ubo) { return ubo.name == "TEXTURE_SHADOW"; });
+					if (it == stageNode.buffers.end())
+					{
+						ShaderAST::BufferNode& samplerNode = stageNode.buffers.emplace_back();
+						samplerNode.bufferType = ShaderAST::BufferType::Sampler;
+						samplerNode.name = "TEXTURE_SHADOW";
+						samplerNode.set = static_cast<uint32_t>(UniformStructLayout::Usage::Object);
+						samplerNode.binding = lastObjectUniformBinding++;
+
+						stageNode.shadowMapBinding = samplerNode.binding;
+
+						ShaderAST::VariableNode& varNode = curShaderNode.properties.emplace_back();
+						varNode.name = "TEXTURE_SHADOW";
+						varNode.attribute = ShaderAST::VariableAttribute::Local;
+						varNode.type = ShaderAST::VariableType::Sampler;
+
+						uboit = refreshUboIt();
+					}
+					usingTEXTURE_SHADOW = true;
 				}
 			}
 			else if (CheckToken(ShaderLexer::TokenType::SKIN) || CheckToken(ShaderLexer::TokenType::MATRIX_SKIN))
@@ -1036,7 +1069,20 @@ namespace sh::render
 		for (auto& out : stageNode.out)
 			code += fmt::format("layout(location = {}) out {} {};\n", out.binding, VariableTypeToString(out.var.type), out.var.name);
 
-		for (auto& uniform : stageNode.buffers)
+		// 구조체 선언
+		for (const ShaderAST::StructNode& structNode : stageNode.structs)
+		{
+			std::string variables;
+			for (const ShaderAST::VariableNode& varNode : structNode.vars)
+			{
+				assert(varNode.type != ShaderAST::VariableType::Struct);
+				variables += fmt::format("{} {};\n", VariableTypeToString(varNode.type), varNode.name);
+			}
+			code += fmt::format("struct {} {{ {} }};\n", structNode.name, variables);
+		}
+
+		// 버퍼 선언
+		for (const ShaderAST::BufferNode& uniform : stageNode.buffers)
 		{
 			if (uniform.bufferType == ShaderAST::BufferType::Sampler)
 			{
@@ -1045,14 +1091,20 @@ namespace sh::render
 			}
 			std::string uniformMembers;
 			bool bDynamicArrayFlag = false;
-			for (auto& member : uniform.vars)
+			for (const ShaderAST::VariableNode& member : uniform.vars)
 			{
 				if (member.bDynamicArray)
 				{
 					assert(!bDynamicArrayFlag);
 					if (bDynamicArrayFlag)
 						throw ShaderParserException{ "SSBO must have at most one dynamic array!" };
-					uniformMembers += fmt::format("{} {}[];\n", VariableTypeToString(member.type), member.name);
+
+					std::string varType;
+					if (member.type != ShaderAST::VariableType::Struct)
+						varType = VariableTypeToString(member.type);
+					else
+						varType = member.structType;
+					uniformMembers += fmt::format("{} {}[];\n", varType, member.name);
 					bDynamicArrayFlag = true;
 				}
 				else if (member.arraySize == 1)

@@ -2,6 +2,7 @@
 #include "IRenderContext.h"
 #include "Drawable.h"
 #include "RenderTexture.h"
+#include "MaterialData.h"
 
 #include "Core/Logger.h"
 #include "Core/Util.h"
@@ -13,55 +14,85 @@ namespace sh::render
 		renderQueue(renderQueue)
 	{
 	}
-	SH_RENDER_API void ScriptableRenderPass::Configure(const RenderTarget& renderData)
+	SH_RENDER_API void ScriptableRenderPass::Configure(const RenderData& renderData)
 	{
-		drawList = BuildDrawList(renderData);
-		CollectRenderImages(renderData, drawList);
+		if (renderData.drawables != nullptr)
+		{
+			renderBatches = CreateRenderBatch(*renderData.drawables);
+		}
+		SetImageUsages(renderData);
 	}
-	SH_RENDER_API void ScriptableRenderPass::Record(CommandBuffer& cmd, const IRenderContext& ctx, const RenderTarget& renderData)
+	SH_RENDER_API void ScriptableRenderPass::Record(CommandBuffer& cmd, const IRenderContext& ctx, const RenderData& renderData)
 	{
-		ctx.GetRenderImpl().RecordCommand(cmd, passName, renderData, drawList, bStoreImage);
-	}
-	SH_RENDER_API auto ScriptableRenderPass::BuildDrawList(const RenderTarget& renderData) -> DrawList
-	{
-		DrawList list{};
-		list.renderData = std::vector<DrawList::RenderGroup>{};
+		cmd.SetRenderData(renderData, true, true, true, true);
 		if (renderData.drawables == nullptr)
-			return list;
-
-		std::vector<DrawList::RenderGroup>& groups = std::get<std::vector<DrawList::RenderGroup>>(list.renderData);
-
+			return;
+		std::size_t viewerIdx = 0;
+		for (const RenderViewer& viewer : renderData.renderViewers)
+		{
+			SetViewportScissor(cmd, ctx, viewer);
+			for (const RenderBatch& batch : renderBatches)
+				cmd.DrawMeshBatch(batch.drawables, passName, viewerIdx);
+			++viewerIdx;
+		}
+		//ctx.GetRenderImpl().RecordCommand(cmd, passName, renderTarget, drawList, bStoreImage);
+	}
+	SH_RENDER_API auto ScriptableRenderPass::CreateRenderBatch(const std::vector<Drawable*>& drawables) const -> std::vector<RenderBatch>
+	{
+		std::vector<RenderBatch> groups;
 		struct GroupKey
 		{
 			const Material* mat;
 			Mesh::Topology topology;
-			bool operator==(const GroupKey& other) const noexcept { return mat == other.mat && topology == other.topology; }
+			bool bSkinned;
+
+			bool operator==(const GroupKey& other) const noexcept { return mat == other.mat && topology == other.topology && bSkinned == other.bSkinned; }
 		};
 		struct GroupKeyHash
 		{
 			std::size_t operator()(const GroupKey& k) const noexcept
 			{
-				return core::Util::CombineHash(std::hash<const Material*>{}(k.mat), std::hash<int>{}(static_cast<int>(k.topology)));
+				const std::size_t hash0 = core::Util::CombineHash(std::hash<const Material*>{}(k.mat), std::hash<int>{}(static_cast<int>(k.topology)));
+				const std::size_t hash1 = core::Util::CombineHash(hash0, std::hash<bool>{}(k.bSkinned));
+				return hash1;
 			}
 		};
 		std::unordered_map<GroupKey, std::size_t, GroupKeyHash> groupIndex;
-		groupIndex.reserve(renderData.drawables->size());
+		groupIndex.reserve(drawables.size());
 
-		for (Drawable* drawable : *renderData.drawables)
+		std::map<const Material*, bool> materialFilter;
+		for (const Drawable* drawable : drawables)
 		{
-			if (!core::IsValid(drawable) || !drawable->CheckAssetValid() || drawable->GetMaterial()->GetShader()->GetShaderPasses(passName) == nullptr)
+			if (!core::IsValid(drawable) || !drawable->CheckAssetValid())
 				continue;
 
 			const Material* const mat = drawable->GetMaterial();
-			Mesh::Topology topology = drawable->GetTopology(core::ThreadType::Render);
+			if (auto it = materialFilter.find(mat); it == materialFilter.end())
+			{
+				if (mat->GetShader()->GetShaderPasses(passName) == nullptr)
+				{
+					materialFilter.insert({ mat, false });
+					continue;
+				}
+				materialFilter.insert({ mat, true });
+			}
+			else
+			{
+				if (!it->second)
+					continue;
+			}
 
-			GroupKey key{ mat, topology };
+			Mesh::Topology topology = drawable->GetTopology(core::ThreadType::Render);
+			const bool bSkinned = drawable->IsSkinnedMesh();
+
+			GroupKey key{ mat, topology, bSkinned };
 			auto it = groupIndex.find(key);
 			if (it == groupIndex.end())
 			{
-				DrawList::RenderGroup group{};
+				RenderBatch group{};
 				group.material = mat;
 				group.topology = topology;
+				group.bSkinned = bSkinned;
 				group.drawables.push_back(drawable);
 
 				groupIndex.emplace(key, groups.size());
@@ -71,52 +102,44 @@ namespace sh::render
 			{
 				groups[it->second].drawables.push_back(drawable);
 			}
-			++list.drawableCount;
 		}
-		return list;
+		return groups;
 	}
-	SH_RENDER_API void ScriptableRenderPass::EmitBarrier(CommandBuffer& cmd, const IRenderContext& ctx, const std::vector<BarrierInfo>& barriers) const
-	{
-		ctx.GetRenderImpl().EmitBarrier(cmd, barriers);
-	}
-	SH_RENDER_API auto ScriptableRenderPass::GetRenderCallCount() const -> uint32_t
-	{
-		return static_cast<uint32_t>(drawList.drawCall.size()) + drawList.drawableCount;
-	}
-
-	void ScriptableRenderPass::CollectRenderImages(const RenderTarget& renderData, const DrawList& drawList)
+	SH_RENDER_API void ScriptableRenderPass::SetImageUsages(const RenderData& renderData)
 	{
 		renderTextures.clear();
-		renderTextures[renderData.target] = ResourceUsage::ColorAttachment;
-
-		const auto collectFn =
-			[this](const Material* mat)
-			{
-				for (auto& [name, rt] : mat->GetCachedRenderTextures())
-				{
-					auto it = renderTextures.find(rt);
-					if (it != renderTextures.end())
-					{
-						if (it->second == ResourceUsage::ColorAttachment)
-						{
-							SH_ERROR_FORMAT("RenderTexture {} is used as ColorAttachment", it->first->GetName().ToString());
-							continue;
-						}
-					}
-					else
-						renderTextures[rt] = ResourceUsage::SampledRead;
-				}
-			};
-
-		if (drawList.renderData.index() == 0)
-		{
-			for (const auto& group : std::get<0>(drawList.renderData))
-				collectFn(group.material);
-		}
+		
+		if (renderData.target != nullptr && renderData.target->IsDepthOnly())
+			renderTextures[renderData.target] = ResourceUsage::DepthStencilAttachment;
 		else
+			renderTextures[renderData.target] = ResourceUsage::ColorAttachment;
+
+		if (renderData.drawables != nullptr)
+			SetImageUsages(*renderData.drawables);
+	}
+	SH_RENDER_API void ScriptableRenderPass::SetImageUsages(const std::vector<Drawable*>& drawables)
+	{
+		for (const Drawable* drawable : drawables)
 		{
-			for (const auto& item : std::get<1>(drawList.renderData))
-				collectFn(item.material);
+			if (drawable == nullptr || !drawable->CheckAssetValid())
+				continue;
+
+			const Material* const mat = drawable->GetMaterial();
+			for (const MaterialData::CachedRT& cachedRT : IRenderThrMethod<MaterialData>::GetCachedRTs(mat->GetMaterialData()))
+			{
+				if (cachedRT.rt.IsValid() && cachedRT.pass->GetLightingPassName() == passName)
+					renderTextures[cachedRT.rt.Get()] = cachedRT.rt->IsDepthOnly() ? ResourceUsage::DepthStencilSampledRead : ResourceUsage::SampledRead;
+			}
+			for (const MaterialData::CachedRT& cachedRT : IRenderThrMethod<MaterialData>::GetCachedRTs(drawable->GetMaterialData()))
+			{
+				if (cachedRT.rt.IsValid() && cachedRT.pass->GetLightingPassName() == passName)
+					renderTextures[cachedRT.rt.Get()] = cachedRT.rt->IsDepthOnly() ? ResourceUsage::DepthStencilSampledRead : ResourceUsage::SampledRead;
+			}
 		}
+	}
+	SH_RENDER_API void ScriptableRenderPass::SetViewportScissor(CommandBuffer& cmd, const IRenderContext& ctx, const RenderViewer& renderViewer)
+	{
+		cmd.SetViewport(renderViewer.viewportRect.x, renderViewer.viewportRect.y, renderViewer.viewportRect.z, renderViewer.viewportRect.w);
+		cmd.SetScissor(renderViewer.viewportScissor.x, renderViewer.viewportScissor.y, renderViewer.viewportScissor.z, renderViewer.viewportScissor.w);
 	}
 }//namespace

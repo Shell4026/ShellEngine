@@ -166,6 +166,7 @@ namespace sh
 
 		SH_INFO("Renderer initialization");
 		renderer = std::make_unique<sh::render::vk::VulkanRenderer>();
+		renderer->CreateContext(*window);
 		renderer->Init(*window);
 		renderer->GetContext()->SetViewport({ 150.f, 0.f }, { window->GetWidth() - 150.f, window->GetHeight() - 180});
 

@@ -3,6 +3,7 @@
 #include "IBuffer.h"
 #include "IShaderBinding.h"
 #include "ShaderEnum.h"
+#include "IRenderThrMethod.h"
 
 #include "Core/ISyncable.h"
 #include "Core/SContainer.hpp"
@@ -18,6 +19,7 @@ namespace sh::render
 	class Shader;
 	class ShaderPass;
 	class IRenderContext;
+	class RenderTexture;
 
 	/// @brief 셰이더에 전달 할 데이터를 가지고 있는 클래스
 	/// @brief 모든 변경 사항은 게임 스레드에서만 작성 시 스레드 안전하다.
@@ -25,6 +27,7 @@ namespace sh::render
 		public core::ISyncable, 
 		public core::INonCopyable
 	{
+		friend struct IRenderThrMethod<MaterialData>;
 	private:
 		struct PassData
 		{
@@ -77,8 +80,17 @@ namespace sh::render
 		SH_RENDER_API auto GetShaderBinding(const ShaderPass& shaderPass, UniformStructLayout::Usage usage) const -> IShaderBinding*;
 
 		SH_RENDER_API void SyncDirty() override;
+	public:
+		struct CachedRT
+		{
+			uint32_t set = 0;
+			uint32_t binding = 0;
+			core::SObjWeakPtr<const ShaderPass> pass;
+			core::SObjWeakPtr<const RenderTexture> rt;
+		};
 	protected:
 		SH_RENDER_API void Sync() override;
+		auto GetCachedRTs() const -> const std::vector<CachedRT>& { return cachedRTs; }
 	private:
 		void CreateBuffers(const IRenderContext& context, const Shader& shader, bool bPerObject);
 		auto GetMaterialPassData(const ShaderPass& shaderPass) const -> const MaterialData::PassData*;
@@ -92,9 +104,17 @@ namespace sh::render
 
 		std::vector<SyncData> syncDatas;
 
+		std::vector<CachedRT> cachedRTs;
+
 		bool bDirty = false;
 		bool bClearDirty = false;
 		bool bCreateDirty = false;
 		bool bPerObject = false;
+	};
+
+	template<>
+	struct IRenderThrMethod<MaterialData>
+	{
+		static auto GetCachedRTs(const MaterialData& materialData) -> const std::vector<MaterialData::CachedRT>& { return materialData.GetCachedRTs(); }
 	};
 }//namespace

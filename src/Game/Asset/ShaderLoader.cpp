@@ -61,16 +61,16 @@ namespace sh::game
 			SH_ERROR_FORMAT("Shader parsing error: {}", e.what());
 			return nullptr;
 		}
-		for (auto& passNode : shaderCI.shaderNode.passes)
+		for (const render::ShaderAST::PassNode& passNode : shaderCI.shaderNode.passes)
 		{
-			auto shaderPaths = render::ShaderGenerator::GenerateShaderFile(shaderCI.shaderNode.shaderName, passNode, cachePath);
+			std::vector<std::filesystem::path> shaderPaths = render::ShaderGenerator::GenerateShaderFile(shaderCI.shaderNode.shaderName, passNode, cachePath);
 
-			for (auto& shaderPath : shaderPaths)
+			for (const std::filesystem::path& shaderPath : shaderPaths)
 			{
 				std::string name = shaderPath.filename().string() + ".spv";
 				std::filesystem::path spirvPath = (shaderPath.parent_path() / name);
 
-				auto stageType = render::ShaderPassBuilder::shaderType::Vertex;
+				render::ShaderPassBuilder::shaderType stageType = render::ShaderPassBuilder::shaderType::Vertex;
 				if (shaderPath.extension() == ".frag")
 					stageType = render::ShaderPassBuilder::shaderType::Fragment;
 
@@ -90,7 +90,7 @@ namespace sh::game
 					return nullptr;
 				}
 				// spir-v 불러오기
-				auto spirv = core::FileSystem::LoadBinary(spirvPath);
+				std::optional<std::vector<uint8_t>> spirv = core::FileSystem::LoadBinary(spirvPath);
 				if (!spirv.has_value())
 				{
 					SH_ERROR_FORMAT("Temp shader load error: {}", spirvPath.string());
@@ -100,14 +100,14 @@ namespace sh::game
 			}
 
 			// 패스 생성
-			render::ShaderPass* shaderPass = passBuilder->Build(passNode);
+			render::ShaderPass* const shaderPass = passBuilder->Build(passNode);
 			if (shaderPass == nullptr)
 				return nullptr;
 
 			shaderCI.passes.push_back(shaderPass);
 		}
 		// 셰이더 생성
-		auto shader = core::SObject::Create<render::Shader>(std::move(shaderCI));
+		render::Shader* const shader = core::SObject::Create<render::Shader>(std::move(shaderCI));
 		return shader;
 	}
 
@@ -137,7 +137,7 @@ namespace sh::game
 
 		for (int i = 0; i < shaderCI.shaderNode.passes.size(); ++i)
 		{
-			const auto& passNode = shaderCI.shaderNode.passes[i];
+			const render::ShaderAST::PassNode& passNode = shaderCI.shaderNode.passes[i];
 			const core::Json& shaderPassObjJson = *(shaderJson["passes"].begin() + i);
 			const core::Json& shaderPassJson = shaderPassObjJson["shaderPass"];
 
@@ -146,15 +146,13 @@ namespace sh::game
 			if (shaderPassJson.contains("fragShaderData"))
 				passBuilder->SetData(render::ShaderPassBuilder::shaderType::Fragment, shaderPassJson["fragShaderData"].get<std::vector<uint8_t>>());
 
-			render::ShaderPass* shaderPass = passBuilder->Build(passNode);
+			render::ShaderPass* const shaderPass = passBuilder->Build(passNode);
 			if (shaderPass == nullptr)
 				return nullptr;
-			shaderPass->Deserialize(shaderPassObjJson);
-
 			shaderCI.passes.push_back(shaderPass);
 		}
-		auto shader = core::SObject::Create<render::Shader>(std::move(shaderCI));
-		shader->Deserialize(shaderObjJson);
+		render::Shader* const shader = core::SObject::Create<render::Shader>(std::move(shaderCI));
+		shader->SetUUID(asset.GetAssetUUID());
 
 		return shader;
 	}

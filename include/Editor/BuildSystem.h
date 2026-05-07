@@ -32,6 +32,7 @@ namespace sh::editor
 		void ExtractUUIDs(std::unordered_set<std::string>& set, const core::Json& world);
 		void PackingAssets(core::AssetBundle& bundle, game::World& world);
 		void ExportGameManager(const std::filesystem::path& outputPath);
+		void CopyRuntimeBinaries(const std::filesystem::path& outputPath);
 	private:
 		Project* currentProject = nullptr;
 

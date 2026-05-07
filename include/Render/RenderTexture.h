@@ -1,7 +1,6 @@
 ﻿#pragma once
 #include "Export.h"
 #include "Texture.h"
-#include "RenderTarget.h"
 #include "RenderData.h"
 #include "IRenderThrMethod.h"
 
@@ -36,7 +35,8 @@ namespace sh::render
 
 		SH_RENDER_API auto GetLayout() const -> const RenderTargetLayout& { return layout; }
 		SH_RENDER_API auto GetMSAABuffer() const -> ITextureBuffer* { return msaaBuffer.get(); }
-		SH_RENDER_API auto GetDepthBuffer() const -> ITextureBuffer* { return depthBuffer.get(); }
+		SH_RENDER_API auto GetDepthBuffer() const -> ITextureBuffer*;
+		SH_RENDER_API auto IsDepthOnly() const -> bool { return layout.format == TextureFormat::None; }
 		SH_RENDER_API auto GetUsage() const -> ResourceUsage { return usage; }
 	protected:
 		SH_RENDER_API void ChangeUsage(ResourceUsage newUsage);
