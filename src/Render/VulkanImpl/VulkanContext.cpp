@@ -6,6 +6,7 @@
 #include "VulkanCommandBuffer.h"
 #include "VulkanDescriptorPool.h"
 #include "VulkanPipelineManager.h"
+#include "VulkanComputePipeline.h"
 #include "VulkanComputePipelineManager.h"
 
 #include "Core/Util.h"

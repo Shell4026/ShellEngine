@@ -137,7 +137,12 @@ namespace sh::sound
 		std::string requestedDevice{ deviceName };
 		impl->device = alcOpenDevice(requestedDevice.empty() ? nullptr : requestedDevice.c_str());
 		if (impl->device == nullptr)
-			throw std::runtime_error{ "Failed to open OpenAL device." };
+		{
+			// 아마도 기본 사운드 시스템이 없는 경우임
+			const ALenum err = alcGetError(nullptr);
+			SH_ERROR_FORMAT("Failed to open OpenAL device: {}", GetAlcErrorString(err));
+			return;
+		}
 
 		impl->context = alcCreateContext(impl->device, nullptr);
 		if (impl->context == nullptr)

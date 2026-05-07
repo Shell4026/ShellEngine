@@ -112,7 +112,7 @@ namespace sh::render::vk
 			return;
 		}
 		assert(result == VkResult::VK_SUCCESS);
-		core::ArrayView<RenderData>& renderDatas = IRenderThrMethod<RenderDataManager>::GetRenderDatas(context->GetRenderDataManager());
+		core::ArrayView<RenderData> renderDatas = IRenderThrMethod<RenderDataManager>::GetRenderDatas(context->GetRenderDataManager());
 		std::size_t viewIdx = 0;
 		for (RenderData& rd : renderDatas)
 		{
