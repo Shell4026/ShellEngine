@@ -1,9 +1,8 @@
 ﻿#include "EditorRenderer.h"
 
 #include "Game/GUIPass.h"
-
-#include "Render/RenderPass/TransparentPass.h"
 #include "Render/RenderPass/ShadowMapPass.h"
+#include "Render/RenderPass/TransparentPass.h"
 
 #include <algorithm>
 namespace sh::editor
@@ -14,23 +13,13 @@ namespace sh::editor
 	}
 	SH_EDITOR_API void EditorRenderer::Init()
 	{
+		GameRenderer::Init();
 		pickingPass = &AddRenderPass(core::Name{ "EditorPicking" }, render::RenderQueue::Picking);
 		outlinePass = &AddRenderPass<EditorOutlinePass>();
-		shadowMapPass = &AddRenderPass<render::ShadowMapPass>();
-		opaquePass = &AddRenderPass(core::Name{ "Opaque" }, render::RenderQueue::Opaque);
-		transparentPass = &AddRenderPass<render::TransparentPass>();
-		uiPass = &AddRenderPass<render::TransparentPass>("UI", render::RenderQueue::Transparent);
 		postOutlinePass = &AddRenderPass<EditorPostOutlinePass>(ctx);
-		guiPass = &AddRenderPass<game::GUIPass>();
-		guiPass->SetImGUIContext(guiCtx);
 	}
 	SH_EDITOR_API void EditorRenderer::Setup(const render::RenderData& data)
 	{
-		if (data.tag == "ImGUI")
-		{
-			EnqueRenderPass(*guiPass);
-			return;
-		}
 		if (data.tag == "EditorCamera")
 		{
 			guiPass->viewportTexture = data.target;
@@ -46,19 +35,6 @@ namespace sh::editor
 			EnqueRenderPass(*pickingPass);
 			return;
 		}
-		if (data.tag == "ImGUI")
-		{
-			EnqueRenderPass(*guiPass);
-			return;
-		}
-		if (data.tag == "Shadow")
-		{
-			EnqueRenderPass(*shadowMapPass);
-			return;
-		}
-		// 그 외 카메라
-		EnqueRenderPass(*opaquePass);
-		EnqueRenderPass(*transparentPass);
-		EnqueRenderPass(*uiPass);
+		GameRenderer::Setup(data);
 	}
 }//namespace

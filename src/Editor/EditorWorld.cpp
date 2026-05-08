@@ -116,7 +116,7 @@ namespace sh::editor
 			}
 			else
 				viewportTexture = viewportPtr;
-			editorRenderer->GetGUIPass()->viewportTexture = viewportTexture;
+			editorRenderer->GetGUIPass().viewportTexture = viewportTexture;
 
 			game::GameObject* const camObj = AddGameObject("EditorCamera");
 			camObj->transform->SetPosition({ 2.f, 2.f, 2.f });

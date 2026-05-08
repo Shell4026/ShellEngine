@@ -15,10 +15,6 @@ namespace sh::game
 	class GUIPass;
 	class World;
 }
-namespace sh::render
-{
-	class TransparentPass;
-}
 namespace sh::editor
 {
 	class EditorRenderer : public game::GameRenderer
@@ -34,9 +30,6 @@ namespace sh::editor
 		SH_EDITOR_API void Setup(const render::RenderData& data) override;
 	private:
 		render::ScriptableRenderPass* pickingPass = nullptr;
-		render::ScriptableRenderPass* opaquePass = nullptr;
-		render::TransparentPass* transparentPass = nullptr;
-		render::TransparentPass* uiPass = nullptr;
 		EditorOutlinePass* outlinePass = nullptr;
 		EditorPostOutlinePass* postOutlinePass = nullptr;
 	};
