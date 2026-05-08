@@ -2,6 +2,8 @@
 #include "Core/NonCopyable.h"
 #include "Core/Name.h"
 
+#include "Render/IRenderThrMethod.h"
+
 #include <array>
 namespace sh::render
 {
@@ -16,6 +18,7 @@ namespace sh::render
 
 	class CommandBuffer : public core::INonCopyable
 	{
+		friend struct IRenderThrMethod<CommandBuffer>;
 	public:
 		virtual ~CommandBuffer() = default;
 
@@ -31,5 +34,13 @@ namespace sh::render
 		virtual void DrawMeshBatch(const std::vector<const Drawable*>& drawables, core::Name passName, std::size_t viewerIdx = 0) = 0;
 		virtual void DrawMesh(const Drawable& drawable, core::Name passName, std::size_t viewerIdx = 0) = 0;
 		virtual void EmitBarrier(const std::vector<BarrierInfo>& barriers) = 0;
+	protected:
+		virtual auto GetRenderCall() const -> uint32_t = 0;
+	};
+
+	template<>
+	struct IRenderThrMethod<CommandBuffer>
+	{
+		static auto GetRenderCall(const CommandBuffer& cmd) -> uint32_t { return cmd.GetRenderCall(); }
 	};
 }//namespace

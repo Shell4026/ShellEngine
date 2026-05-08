@@ -77,6 +77,8 @@ namespace sh::render::vk
         SH_RENDER_API auto GetCommandPool() const -> VkCommandPool { return cmdPool; }
 
         SH_RENDER_API void Clear();
+    protected:
+        auto GetRenderCall() const -> uint32_t override { return renderCall; }
     private:
         void BindCameraSet(const Material& mat, const ShaderPass& pass, VkPipelineLayout pipelineLayout, uint32_t cameraOffset);
         void BindMaterialSet(const Material& mat, const ShaderPass& pass, VkPipelineLayout pipelineLayout);
@@ -103,6 +105,9 @@ namespace sh::render::vk
         std::vector<SignalSemaphore> signalSemaphores;
 
         VkFence fence = VK_NULL_HANDLE;
+
+        uint32_t renderCall = 0;
+
         bool bBeginRender = false;
     };
 }//namespace

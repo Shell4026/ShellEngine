@@ -125,10 +125,12 @@ namespace sh::render::vk
 
 		IRenderThrMethod<ScriptableRenderer>::ExecuteTransfer(*renderer, imgIdx);
 
+		uint32_t renderCall = 0;
 		const std::vector<ScriptableRenderer::RecordedCommand>& recordedCmds = renderer->GetRecordedCommands();
 		if (recordedCmds.size() == 1)
 		{
 			VulkanCommandBuffer& cmd = static_cast<VulkanCommandBuffer&>(recordedCmds.front().cmd);
+			renderCall += IRenderThrMethod<CommandBuffer>::GetRenderCall(cmd);
 			cmd.AddWaitSemaphore(
 				WaitSemaphore
 				{
@@ -149,6 +151,7 @@ namespace sh::render::vk
 			{
 				ScriptableRenderPass& pass = recordedCmd.pass;
 				VulkanCommandBuffer& cmd = static_cast<VulkanCommandBuffer&>(recordedCmd.cmd);
+				renderCall += IRenderThrMethod<CommandBuffer>::GetRenderCall(cmd);
 
 				// 스왑체인을 쓰는 첫 패스는 imageAvailableSemaphore대기
 				if (!bUsedImageAvailableSemaphore)
@@ -173,6 +176,7 @@ namespace sh::render::vk
 				context->GetQueueManager().Submit(VulkanQueueManager::Role::Graphics, cmd, fence);
 			}
 		}
+		SetDrawCallCount(renderCall);
 
 		VkPresentInfoKHR presentInfo{};
 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;

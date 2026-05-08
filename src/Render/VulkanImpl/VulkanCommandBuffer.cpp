@@ -50,6 +50,7 @@ namespace sh::render::vk
 
     SH_RENDER_API void VulkanCommandBuffer::Begin(bool bOnetime)
     {
+        renderCall = 0;
         if (buffer == VK_NULL_HANDLE)
             return;
 
@@ -608,5 +609,6 @@ namespace sh::render::vk
         }
 
         vkCmdDrawIndexed(buffer, indexCount, 1, firstIndex, 0, 0);
+        ++renderCall;
     }
 }//namespace
