@@ -2,7 +2,7 @@
 #include "GUIPass.h"
 #include "World.h"
 
-#include "Render/RenderPass/ShadowMapPass.h"
+#include "Render/RenderPass/DepthPass.h"
 #include "Render/RenderPass/TransparentPass.h"
 
 #include <cstring>
@@ -17,7 +17,7 @@ namespace sh::game
 	}
 	SH_GAME_API void GameRenderer::Init()
 	{
-		shadowMapPass = &AddRenderPass<render::ShadowMapPass>();
+		depthPass = &AddRenderPass<render::DepthPass>();
 		opaquePass = &AddRenderPass(core::Name{ "Opaque" }, render::RenderQueue::Opaque);
 		transparentPass = &AddRenderPass<render::TransparentPass>();
 		uiPass = &AddRenderPass<render::TransparentPass>("UI", render::RenderQueue::Transparent);
@@ -26,9 +26,9 @@ namespace sh::game
 	}
 	SH_GAME_API void GameRenderer::Setup(const render::RenderData& data)
 	{
-		if (data.tag == "Shadow")
+		if (data.tag == "Depth")
 		{
-			EnqueRenderPass(*shadowMapPass);
+			EnqueRenderPass(*depthPass);
 			return;
 		}
 		if (data.tag == "ImGUI")

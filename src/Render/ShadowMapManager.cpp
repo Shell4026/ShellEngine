@@ -27,7 +27,7 @@ namespace sh::render
 		this->atlasSize = atlasSize;
 		packer = std::make_unique<ShelfPacker>(static_cast<int>(atlasSize), static_cast<int>(atlasSize), 0);
 
-		renderData.tag = core::Name{ "Shadow" };
+		renderData.tag = core::Name{ "Depth" };
 		renderData.priority = 1000; // 다른 패스보다 먼저 실행되도록
 	}
 

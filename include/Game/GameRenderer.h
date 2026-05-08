@@ -7,7 +7,7 @@
 #include <set>
 namespace sh::render
 {
-	class ShadowMapPass;
+	class DepthPass;
 	class OpaquePass;
 	class TransparentPass;
 }
@@ -25,7 +25,7 @@ namespace sh::game
 		SH_GAME_API void Init() override;
 		SH_GAME_API void Setup(const render::RenderData& data) override;
 
-		auto GetShadowMapPass() const -> render::ShadowMapPass& { return *shadowMapPass; }
+		auto GetDepthPass() const -> render::DepthPass& { return *depthPass; }
 		auto GetOpaquePass() const -> render::ScriptableRenderPass& { return *opaquePass; }
 		auto GetTransparentPass() const -> render::TransparentPass& { return *transparentPass; }
 		auto GetUIPass() const -> render::TransparentPass& { return *uiPass; }
@@ -35,7 +35,7 @@ namespace sh::game
 		World& world;
 		game::ImGUImpl& guiCtx;
 
-		render::ShadowMapPass* shadowMapPass = nullptr;
+		render::DepthPass* depthPass = nullptr;
 		render::ScriptableRenderPass* opaquePass = nullptr;
 		render::TransparentPass* transparentPass = nullptr;
 		render::TransparentPass* uiPass = nullptr;

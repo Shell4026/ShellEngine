@@ -1,24 +1,24 @@
-﻿#include "RenderPass/ShadowMapPass.h"
+﻿#include "RenderPass/DepthPass.h"
 #include "CommandBuffer.h"
 #include "IRenderContext.h"
 
 namespace sh::render
 {
-	ShadowMapPass::ShadowMapPass() :
-		ScriptableRenderPass(core::Name{ "ShadowMapPass" }, RenderQueue::BeforeRendering)
+	DepthPass::DepthPass() :
+		ScriptableRenderPass(core::Name{ "DepthPass" }, RenderQueue::BeforeRendering)
 	{
 	}
 
-	SH_RENDER_API void ShadowMapPass::Configure(const RenderData& renderData)
+	SH_RENDER_API void DepthPass::Configure(const RenderData& renderData)
 	{
 		ScriptableRenderPass::Configure(renderData);
 	}
-	SH_RENDER_API void ShadowMapPass::Record(CommandBuffer& cmd, const IRenderContext& ctx, const RenderData& renderData)
+	SH_RENDER_API void DepthPass::Record(CommandBuffer& cmd, const IRenderContext& ctx, const RenderData& renderData)
 	{
 		if (renderData.target == nullptr)
 			return;
 
-		// 한 프레임 내 첫 그림자 호출에서만 아틀라스를 클리어하고, 이후엔 LOAD하여 다른 광원의 슬롯 결과를 보존
+		// 한 프레임 내 첫 호출에서만 클리어
 		if (renderData.frameIndex != lastFrameIndex)
 		{
 			lastFrameIndex = renderData.frameIndex;

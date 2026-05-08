@@ -1,7 +1,6 @@
 ﻿#include "EditorRenderer.h"
 
 #include "Game/GUIPass.h"
-#include "Render/RenderPass/ShadowMapPass.h"
 #include "Render/RenderPass/TransparentPass.h"
 
 #include <algorithm>
