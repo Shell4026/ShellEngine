@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="640" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
+  <title id="title">ShellEngine render frame flow</title>
+  <desc id="desc">Horizontal frame flow diagram from game/editor queues through render data upload, pass setup, parallel command recording, Vulkan submission, present, and cleanup.</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M 0 0 L 10 5 L 0 10 z" fill="#41566f"/>
+    </marker>
+    <style>
+      .bg { fill: #f7f9fb; }
+      .lane { fill: #ffffff; stroke: #d9e1ea; stroke-width: 1.5; }
+      .lane-title { fill: #4b5f77; font: 700 15px Arial, sans-serif; }
+      .box { fill: #eef5ff; stroke: #7ea3d8; stroke-width: 1.5; rx: 8; }
+      .box2 { fill: #f2f7f0; stroke: #7faa73; stroke-width: 1.5; rx: 8; }
+      .box3 { fill: #fff6e8; stroke: #d9a85d; stroke-width: 1.5; rx: 8; }
+      .box4 { fill: #f7f0ff; stroke: #a985d6; stroke-width: 1.5; rx: 8; }
+      .label { fill: #1f2d3d; font: 700 15px Arial, sans-serif; }
+      .sub { fill: #526578; font: 13px Arial, sans-serif; }
+      .num { fill: #ffffff; font: 700 12px Arial, sans-serif; }
+      .badge { fill: #41566f; }
+      .arrow { fill: none; stroke: #41566f; stroke-width: 2; marker-end: url(#arrow); }
+      .dash { fill: none; stroke: #8b9aae; stroke-width: 2; stroke-dasharray: 6 6; marker-end: url(#arrow); }
+      .note { fill: #526578; font: 12px Arial, sans-serif; }
+    </style>
+  </defs>
+
+  <rect class="bg" x="0" y="0" width="1280" height="640"/>
+
+  <rect class="lane" x="32" y="34" width="1216" height="146" rx="12"/>
+  <text class="lane-title" x="56" y="62">1. 입력 수집</text>
+  <rect class="lane" x="32" y="206" width="1216" height="178" rx="12"/>
+  <text class="lane-title" x="56" y="234">2. RenderData 준비와 패스 선택</text>
+  <rect class="lane" x="32" y="410" width="1216" height="196" rx="12"/>
+  <text class="lane-title" x="56" y="438">3. 커맨드 기록, 제출, 정리</text>
+
+  <g transform="translate(70 86)">
+    <rect class="box" x="0" y="0" width="210" height="70"/>
+    <circle class="badge" cx="22" cy="22" r="13"/><text class="num" x="18" y="26">1</text>
+    <text class="label" x="46" y="26">Game / Editor</text>
+    <text class="sub" x="46" y="48">drawable, render data 생성</text>
+  </g>
+  <g transform="translate(365 86)">
+    <rect class="box" x="0" y="0" width="240" height="70"/>
+    <circle class="badge" cx="22" cy="22" r="13"/><text class="num" x="18" y="26">2</text>
+    <text class="label" x="46" y="26">Renderer queue</text>
+    <text class="sub" x="46" y="48">PushDrawAble / PushRenderData</text>
+  </g>
+  <g transform="translate(710 86)">
+    <rect class="box2" x="0" y="0" width="215" height="70"/>
+    <circle class="badge" cx="22" cy="22" r="13"/><text class="num" x="18" y="26">3</text>
+    <text class="label" x="46" y="26">Renderer::Render</text>
+    <text class="sub" x="46" y="48">렌더 스레드에서 큐 drain</text>
+  </g>
+  <g transform="translate(1015 86)">
+    <rect class="box2" x="0" y="0" width="185" height="70"/>
+    <circle class="badge" cx="22" cy="22" r="13"/><text class="num" x="18" y="26">4</text>
+    <text class="label" x="46" y="26">UploadToGPU</text>
+    <text class="sub" x="46" y="48">camera buffer 업로드</text>
+  </g>
+
+  <path class="arrow" d="M280 121 H356"/>
+  <path class="arrow" d="M605 121 H701"/>
+  <path class="arrow" d="M925 121 H1006"/>
+
+  <g transform="translate(70 262)">
+    <rect class="box2" x="0" y="0" width="215" height="78"/>
+    <circle class="badge" cx="22" cy="22" r="13"/><text class="num" x="18" y="26">5</text>
+    <text class="label" x="46" y="26">Acquire image</text>
+    <text class="sub" x="46" y="48">swapchain frame index</text>
+    <text class="sub" x="46" y="66">RenderData에 연결</text>
+  </g>
+  <g transform="translate(365 262)">
+    <rect class="box3" x="0" y="0" width="215" height="78"/>
+    <circle class="badge" cx="22" cy="22" r="13"/><text class="num" x="18" y="26">6</text>
+    <text class="label" x="46" y="26">Setup</text>
+    <text class="sub" x="46" y="48">RenderData::tag 기준</text>
+    <text class="sub" x="46" y="66">활성 패스 enqueue</text>
+  </g>
+  <g transform="translate(660 262)">
+    <rect class="box3" x="0" y="0" width="215" height="78"/>
+    <circle class="badge" cx="22" cy="22" r="13"/><text class="num" x="18" y="26">7</text>
+    <text class="label" x="46" y="26">Execute</text>
+    <text class="sub" x="46" y="48">RenderQueue 정렬</text>
+    <text class="sub" x="46" y="66">Configure 호출</text>
+  </g>
+  <g transform="translate(955 262)">
+    <rect class="box3" x="0" y="0" width="215" height="78"/>
+    <circle class="badge" cx="22" cy="22" r="13"/><text class="num" x="18" y="26">8</text>
+    <text class="label" x="46" y="26">BarrierInfo</text>
+    <text class="sub" x="46" y="48">RenderTexture 사용 이력</text>
+    <text class="sub" x="46" y="66">스왑체인 상태 계산</text>
+  </g>
+
+  <path class="arrow" d="M1108 156 C1108 198 178 202 178 253"/>
+  <path class="arrow" d="M285 301 H356"/>
+  <path class="arrow" d="M580 301 H651"/>
+  <path class="arrow" d="M875 301 H946"/>
+
+  <g transform="translate(70 468)">
+    <rect class="box4" x="0" y="0" width="230" height="86"/>
+    <circle class="badge" cx="22" cy="22" r="13"/><text class="num" x="18" y="26">9</text>
+    <text class="label" x="46" y="26">ThreadPool</text>
+    <text class="sub" x="46" y="48">패스별 병렬 기록</text>
+    <text class="sub" x="46" y="66">Begin → Barrier → Record → End</text>
+  </g>
+  <g transform="translate(380 468)">
+    <rect class="box4" x="0" y="0" width="210" height="86"/>
+    <circle class="badge" cx="22" cy="22" r="13"/><text class="num" x="15" y="26">10</text>
+    <text class="label" x="46" y="26">recordedCmds</text>
+    <text class="sub" x="46" y="48">패스 순서대로 수집</text>
+    <text class="sub" x="46" y="66">제출 순서 유지</text>
+  </g>
+  <g transform="translate(670 468)">
+    <rect class="box4" x="0" y="0" width="200" height="86"/>
+    <circle class="badge" cx="22" cy="22" r="13"/><text class="num" x="15" y="26">11</text>
+    <text class="label" x="46" y="26">Submit</text>
+    <text class="sub" x="46" y="48">VulkanQueueManager</text>
+    <text class="sub" x="46" y="66">semaphore 연결</text>
+  </g>
+  <g transform="translate(950 468)">
+    <rect class="box4" x="0" y="0" width="230" height="86"/>
+    <circle class="badge" cx="22" cy="22" r="13"/><text class="num" x="15" y="26">12</text>
+    <text class="label" x="46" y="26">Present / cleanup</text>
+    <text class="sub" x="46" y="48">ExecuteTransfer, Present</text>
+    <text class="sub" x="46" y="66">readback, command 반환</text>
+  </g>
+
+  <path class="arrow" d="M1062 340 C1062 392 185 392 185 459"/>
+  <path class="arrow" d="M300 511 H371"/>
+  <path class="arrow" d="M590 511 H661"/>
+  <path class="arrow" d="M870 511 H941"/>
+
+  <path class="dash" d="M185 554 C185 588 1090 588 1090 560"/>
+  <text class="note" x="475" y="590">프레임 종료 후 다음 프레임에서 큐 수집부터 반복</text>
+</svg>
