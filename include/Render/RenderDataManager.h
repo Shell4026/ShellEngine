@@ -7,6 +7,8 @@
 #include "Core/LockFreeMPSCQueue.h"
 #include "Core/ArrayView.hpp"
 
+#include "glm/vec4.hpp"
+
 #include <memory>
 #include <map>
 #include <optional>
@@ -37,7 +39,7 @@ namespace sh::render
 		{
 			glm::mat4 view;
 			glm::mat4 proj;
-			glm::vec3 pos;
+			glm::vec4 pos;
 		};
 	private:
 		friend struct IRenderThrMethod<RenderDataManager>;

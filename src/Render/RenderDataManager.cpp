@@ -58,7 +58,7 @@ namespace sh::render
 					BufferData data;
 					data.view = viewer.viewMatrix;
 					data.proj = viewer.projMatrix;
-					data.pos = viewer.pos;
+					data.pos = glm::vec4{ viewer.pos, 1.0f };
 
 					buffer->SetData(&data, offset, sizeof(BufferData));
 

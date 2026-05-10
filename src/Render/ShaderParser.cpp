@@ -9,6 +9,7 @@
 #include <cctype>
 #include <array>
 #include <algorithm>
+#include <string_view>
 
 namespace sh::render
 {
@@ -622,7 +623,6 @@ namespace sh::render
 		};
 
 		auto uboit = refreshUboIt();
-
 		std::string code{};
 		int nested = 1;
 		bool usingVertex = false;
@@ -637,6 +637,42 @@ namespace sh::render
 		bool usingSKIN = false;
 		bool usingMATRIX_SKIN = false;
 		bool usingTEXTURE_SHADOW = false;
+		auto registerCameraFn = [&]()
+		{
+			if (usingCamera)
+				return;
+
+			auto it = std::find_if(stageNode.buffers.begin(), stageNode.buffers.end(),
+				[](const ShaderAST::BufferNode& ubo) { return ubo.name == "CAMERA"; });
+			if (it == stageNode.buffers.end())
+			{
+				ShaderAST::BufferNode uboNode{};
+				uboNode.bufferType = ShaderAST::BufferType::Uniform;
+				uboNode.name = "CAMERA";
+				uboNode.set = static_cast<uint32_t>(UniformStructLayout::Usage::Camera);
+				uboNode.binding = 0;
+				uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 1, "view" });
+				uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 1, "proj" });
+				uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec3, 1, "pos" });
+				stageNode.buffers.push_back(std::move(uboNode));
+			}
+			else
+			{
+				auto hasVar = [&](std::string_view name)
+				{
+					return std::find_if(it->vars.begin(), it->vars.end(),
+						[&](const ShaderAST::VariableNode& var) { return var.name == name; }) != it->vars.end();
+				};
+				if (!hasVar("view"))
+					it->vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 1, "view" });
+				if (!hasVar("proj"))
+					it->vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 1, "proj" });
+				if (!hasVar("pos"))
+					it->vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Vec3, 1, "pos" });
+			}
+			usingCamera = true;
+			uboit = refreshUboIt();
+		};
 
 		while (nested != 0 || PeekToken().type != ShaderLexer::TokenType::EndOfFile)
 		{
@@ -665,26 +701,11 @@ namespace sh::render
 				registerAttributeFn(usingBoneWeights, "BONE_WEIGHTS", SkinnedMesh::BONE_WEIGHT_ID, ShaderAST::VariableType::Vec4);
 			else if (CheckToken(ShaderLexer::TokenType::BONE_INDICES))
 				registerAttributeFn(usingBoneIndices, "BONE_INDICES", SkinnedMesh::BONE_INDEX_ID, ShaderAST::VariableType::IVec4);
-			else if (CheckToken(ShaderLexer::TokenType::MATRIX_VIEW) || CheckToken(ShaderLexer::TokenType::MATRIX_PROJ))
+			else if (CheckToken(ShaderLexer::TokenType::MATRIX_VIEW) ||
+				CheckToken(ShaderLexer::TokenType::MATRIX_PROJ) ||
+				CheckToken(ShaderLexer::TokenType::CAMERA))
 			{
-				if (!usingCamera)
-				{
-					auto it = std::find_if(stageNode.buffers.begin(), stageNode.buffers.end(),
-						[](const ShaderAST::BufferNode& ubo) { return ubo.name == "CAMERA"; });
-					if (it == stageNode.buffers.end())
-					{
-						ShaderAST::BufferNode uboNode{};
-						uboNode.bufferType = ShaderAST::BufferType::Uniform;
-						uboNode.name = "CAMERA";
-						uboNode.set = static_cast<uint32_t>(UniformStructLayout::Usage::Camera);
-						uboNode.binding = 0;
-						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 1, "view" });
-						uboNode.vars.push_back(ShaderAST::VariableNode{ ShaderAST::VariableType::Mat4, 1, "proj" });
-						stageNode.buffers.push_back(std::move(uboNode));
-						uboit = refreshUboIt();
-					}
-					usingCamera = true;
-				}
+				registerCameraFn();
 			}
 			else if (CheckToken(ShaderLexer::TokenType::MATRIX_MODEL))
 			{

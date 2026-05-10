@@ -256,6 +256,7 @@ namespace sh::render
 					{"MATRIX_MODEL", TokenType::MATRIX_MODEL},
 					{"MATRIX_VIEW", TokenType::MATRIX_VIEW},
 					{"MATRIX_PROJ", TokenType::MATRIX_PROJ},
+					{"CAMERA", TokenType::CAMERA},
 					{"BONE_WEIGHTS", TokenType::BONE_WEIGHTS},
 					{"BONE_INDICES", TokenType::BONE_INDICES},
 					{"SKIN", TokenType::SKIN},
