@@ -165,6 +165,20 @@ namespace sh::render::vk
 
 	void VulkanShaderPass::AddDescriptorBinding(uint32_t set, uint32_t binding, VkDescriptorType type, VkShaderStageFlagBits stage)
 	{
+		if (setlayouts.size() <= set)
+		{
+			setlayouts.resize(set + 1);
+		}
+		setlayouts[set].set = set;
+
+		auto it = setlayouts[set].descriptorSetLayoutBindings.find(binding);
+		if (it != setlayouts[set].descriptorSetLayoutBindings.end())
+		{
+			assert(it->second.descriptorType == type);
+			it->second.stageFlags |= stage;
+			return;
+		}
+
 		VkDescriptorSetLayoutBinding layoutBinding{};
 		layoutBinding.binding = binding;
 		layoutBinding.descriptorCount = 1;
@@ -172,11 +186,6 @@ namespace sh::render::vk
 		layoutBinding.pImmutableSamplers = nullptr;
 		layoutBinding.stageFlags = stage;
 
-		if (setlayouts.size() <= set)
-		{
-			setlayouts.resize(set + 1);
-		}
-		setlayouts[set].set = set;
 		setlayouts[set].descriptorSetLayoutBindings.insert_or_assign(binding, layoutBinding);
 	}
 	auto VulkanShaderPass::CreateDescriptorLayout() -> VkResult
