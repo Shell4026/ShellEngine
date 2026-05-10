@@ -1,161 +1,278 @@
-# ShellEngine 패스 기반 렌더링 구조
+﻿# ShellEngine 패스 기반 렌더링 구조
 
 ## 개요
 
+ShellEngine의 렌더링은 `RenderData`가 정의한 뷰/타겟 단위 작업을 `ScriptableRenderer`가 패스 목록으로 풀고, 각 `ScriptableRenderPass`가 자신의 리소스 사용 의도를 선언한 뒤, 백엔드 `CommandBuffer`가 실제 Vulkan 커맨드로 기록하는 구조입니다.
+
 | 계층 | 책임 |
 |---|---|
-| `ScriptableRenderPass` | 렌더링 의도 선언 (타겟, 샘플링 텍스처, 드로우 목록) |
-| `ScriptableRenderer` | 패스 간 리소스 상태 추적 및 전이 정보 계산 |
-| Vulkan 구현 계층 | 전이 정보를 실제 Vulkan API 호출로 번역 |
+| `Renderer` | 렌더 스레드 진입점, drawable/render data 큐 반영, 커맨드 제출 조율 |
+| `RenderDataManager` | 카메라/뷰 데이터를 GPU 버퍼에 업로드하고 `RenderData`를 priority 순으로 정렬 |
+| `ScriptableRenderer` | 활성 패스 선택, render queue 정렬, 리소스 전이 계산, 패스별 커맨드 버퍼 기록 |
+| `ScriptableRenderPass` | 패스 이름, render queue, 렌더 타겟/샘플링 텍스처 사용 의도, 드로우 기록 |
+| `CommandBuffer` | 배리어, 렌더 타겟 설정, draw/dispatch/blit 같은 백엔드 독립 커맨드 인터페이스 |
+| Vulkan 구현 계층 | `CommandBuffer` 호출을 dynamic rendering, pipeline bind, descriptor bind, barrier 호출로 변환 |
 
-ShellEngine의 Vulkan 렌더링 시스템은 드로우 호출을 단일 흐름으로 나열하는 방식 대신, **패스 단위로 렌더링 작업을 분리**하고 각 패스가 사용하는 렌더 텍스처와 일반 텍스쳐의 읽기/쓰기 관계를 추적하여, 리소스 전이와 실행 흐름을 자동으로 조립하는 구조로 설계되어 있습니다.
+핵심은 패스가 “무엇을 렌더링하고 어떤 이미지를 읽고 쓰는지”만 표현하고, 이미지 레이아웃 전이와 Vulkan 동기화 코드는 `ScriptableRenderer`와 `VulkanCommandBuffer`가 처리한다는 점입니다.
 
-해당 구조로 인해 프로젝트 목적에 맞게 코드를 크게 수정하지 않고 패스를 재배치 할 수 있으며 멀티스레딩과도 자연스럽게 연결됩니다.
+## 프레임 흐름
 
-## 멀티스레딩
-`ScriptableRenderer`에서 렌더큐에 맞는 패스 순서를 조정하고 리소스 의존 상태를 계산 후, 스레드 풀에 넣어 각 패스의 렌더링을 병렬적으로 수행합니다.
+1. 게임/에디터 쪽에서 `Renderer::PushDrawAble()`과 `Renderer::PushRenderData()`로 렌더링할 객체와 뷰 정보를 큐에 넣습니다.
+2. 렌더 스레드의 `Renderer::Render()`가 큐를 비우고 `RenderDataManager::UploadToGPU()`를 호출합니다.
+3. `RenderDataManager`는 각 `RenderViewer`의 view/proj/camera position을 GPU 버퍼에 업로드하고 `RenderData`를 `priority` 기준으로 정렬합니다.
+4. `VulkanRenderer::Render()`가 스왑체인 이미지를 획득한 뒤 각 `RenderData`에 frame index와 drawable 목록을 연결합니다.
+5. `ScriptableRenderer::Setup()`이 해당 `RenderData`에서 사용할 패스를 활성화합니다.
+6. `ScriptableRenderer::Execute()`가 활성 패스를 `RenderQueue` 순으로 정렬하고, 각 패스의 `Configure()`를 호출해 리소스 사용 정보를 확정합니다.
+7. 렌더러가 `BarrierInfo`를 계산한 뒤, 각 패스의 커맨드 버퍼 기록을 스레드 풀 task로 분배합니다.
+8. 모든 패스 커맨드 기록이 끝나면 `VulkanRenderer`가 기록된 커맨드들을 순서대로 제출하고 마지막 커맨드가 present semaphore를 signal합니다.
+9. 마지막에 `ExecuteTransfer()`가 readback/copy 작업을 위한 `CopyPass`를 기록하고, 스왑체인을 `Present` 상태로 전이합니다.
 
-1. **직렬 단계** - 중앙에서 리소스 상태 정리 및 의존 상태 계산
-2. **병렬 단계** - 각 패스의 커맨드 버퍼 기록을 스레드 풀에 task로 분배하여 병렬 실행
+```mermaid
+flowchart TD
+    A["Game/Editor Thread"] --> B["Renderer::PushDrawAble()\nRenderer::PushRenderData()"]
+    B --> C["Render thread\nRenderer::Render()"]
+    C --> D["DrainRenderCommands()\ndrawable/render data queue 반영"]
+    D --> E["RenderDataManager::UploadToGPU()"]
+    E --> F["RenderViewer camera buffer 업로드\nRenderData priority 정렬"]
+    F --> G["VulkanRenderer::Render()"]
+    G --> H["vkAcquireNextImageKHR()\nframe index 획득"]
+    H --> I["RenderData에 frame index와\ndrawable list 연결"]
+    I --> J["ScriptableRenderer::Setup()"]
+    J --> K["RenderData::tag 기준\n활성 패스 enqueue"]
+    K --> L["ScriptableRenderer::Execute()"]
+    L --> M["RenderQueue 정렬"]
+    M --> N["각 패스 Configure()\nRenderTexture 사용 의도 확정"]
+    N --> O["BuildBarrierInfo()\nBarrierInfo 계산"]
+    O --> P{"ThreadPool\n패스별 병렬 기록"}
+    P --> Q["CommandBuffer::Begin()"]
+    Q --> R["CommandBuffer::EmitBarrier()"]
+    R --> S["ScriptableRenderPass::Record()"]
+    S --> T["CommandBuffer::End()"]
+    T --> U["recordedCmds에 순서대로 수집"]
+    U --> V["VulkanQueueManager::Submit()\n커맨드 순차 제출"]
+    V --> W["ExecuteTransfer()\nCopyPass/readback 기록"]
+    W --> X["swapchain -> Present 전이"]
+    X --> Y["vkQueuePresentKHR()"]
+    Y --> Z["CallReadbacks()\nResetSubmittedCommands()"]
+```
 
-리소스 전이 판단이 중앙에서 선행되므로, 이후 커맨드 기록 단계는 패스 간 의존성 없이 병렬화할 수 있습니다.
+## RenderData와 RenderViewer
 
-## 패스 추가 방법
+`RenderData`는 한 번의 렌더링 작업이 사용할 뷰어, 렌더 타겟, 태그, 우선순위를 담습니다.
 
-새 패스를 추가할 때 필요한 작업은 다음과 같습니다.
-
-1. `ScriptableRenderPass` 구현체 작성
-2. `renderQueue` 설정
-3. 필요 시 ```BuildDrawList``` 오버라이딩 하여 드로우 할 물체 필터링
-4. `Configure()`에서 드로우 목록 및 리소스 등록
-5. `Record()`에서 커맨드 기록
-
-기존 패스나 배리어 코드를 사용자가 명시적으로 수정할 필요가 없습니다. `CopyPass`처럼 드로우와 성격이 다른 패스도 동일한 방법으로 이루어집니다.
-
-예시 코드:
 ```cpp
-/// 단순히 우선 순위 정렬기능만 추가된 패스
-class TransparentPass : public ScriptableRenderPass
+class RenderData
 {
 public:
-   SH_RENDER_API TransparentPass(std::string_view name = "Transparent", RenderQueue renderQueue = RenderQueue::Transparent);
+    void SetRenderTarget(const RenderTexture* renderTarget);
+    void SetRenderTargets(std::initializer_list<const RenderTexture*> renderTargets);
+    void ClearRenderTargets();
 
-   SH_RENDER_API auto BuildDrawList(const RenderTarget& renderData) -> DrawList override
-   {
-      // renderData로 들어온 카메라 정보와 드로우 할 물체들의 정보를 가지고 DrawList 구조체를 만들어서 반환
-   }
+    int priority = 0;
+    core::Name tag{ "Camera" };
+    std::vector<RenderViewer> renderViewers;
 };
 ```
 
-## 상세
-### 설계 배경
+`RenderViewer`는 view/proj 행렬, 카메라 위치/방향, viewport/scissor, GPU camera buffer offset을 가집니다. `RenderDataManager`는 각 viewer마다 `RenderDataManager::BufferData`를 업로드하고, 그 offset을 `RenderViewer::offset`에 기록합니다. Vulkan draw 단계에서는 이 offset이 카메라 descriptor set의 dynamic offset으로 전달됩니다.
 
-Vulkan 렌더링 시스템을 구현할 때 드로우 호출 자체보다 **리소스 상태 관리와 실행 순서**가 더 큰 문제가 됩니다. 
+최근 구조에서는 `RenderData`가 여러 렌더 타겟을 가질 수 있습니다.
 
-구체적으로 아래 사항들을 매 패스마다 직접 추적해야 합니다.
+- `SetRenderTarget()`은 단일 타겟용 편의 함수입니다.
+- `SetRenderTargets()`는 MRT를 구성합니다.
+- 타겟이 `nullptr`이면 현재 스왑체인 이미지를 의미합니다.
+- depth 전용 `RenderTexture`는 color attachment가 아니라 depth attachment로 취급됩니다.
 
-- 패스 간 실행 순서
-- 각 패스의 렌더 타겟 및 샘플링 텍스처
-- 이미지 레이아웃 및 접근 권한 변환
-- `vkCmdPipelineBarrier` 삽입 위치
+## 기본 패스 구성
 
-렌더링 코드를 단일 흐름으로 구성할 경우, 패스가 늘어날수록 다음과 같은 문제가 발생합니다.
+`GameRenderer::Init()`은 기본 패스를 생성하고, `GameRenderer::Setup()`은 `RenderData::tag`에 따라 필요한 패스만 enqueue합니다.
 
-- 패스 추가 시 앞뒤 리소스 상태 전이를 전체적으로 재검토해야 함
-- 배리어 누락 또는 잘못된 레이아웃 전이로 인한 런타임 오류 발생
-- 렌더링 의도 코드와 Vulkan 동기화 코드가 강하게 결합됨
-
-ShellEngine은 이 문제를 해결하기 위해서, 그리고 유연한 확장을 위해 패스의 렌더링 의도와 API 레벨의 전이 처리를 분리하는 구조를 채택했습니다.
-
----
-
-### Configure 단계
-
-`ScriptableRenderPass::Configure()`는 렌더러가 전이를 계산하는 데 필요한 데이터를 구성하는 단계입니다.
-
-1. `BuildDrawList()` - 이번 패스의 드로우 목록 생성
-2. `CollectRenderImages()` - 렌더 텍스처 수집 및 용도 분류
-   - 현재 렌더 타겟 -> `ColorAttachment`
-   - DrawList로 전달 된 메테리얼이 참조하는 `RenderTexture` -> `SampledRead`
-3. 동일 패스 내에서 같은 텍스처를 출력과 입력으로 동시에 사용하는 경우 검증
-
-이 단계를 통해 패스의 리소스 사용 관계가 확정됩니다.
-
-> [!Note]
-> ```BuildDrawList```에는 RenderTarget구조체가 전달 됩니다.
-> ```cpp
-> struct RenderTarget
-> {
->	uint32_t frameIndex;
->	const Camera* camera;
->	const RenderTexture* target;
->	const std::vector<Drawable*>* drawables;
-> };
-> ```
----
-
-### ScriptableRenderer
-
-`ScriptableRenderer::Execute()`는 패스 간 리소스 연결 관계를 계산하고 커맨드 버퍼 기록을 조율합니다.
-
-1. 활성 패스 수집
-2. renderQueue 기준 정렬
-3. 각 패스 Configure() 호출 -> 리소스 사용 정보 확정
-4. 각 패스 BuildBarrierInfo() 호출 -> 전이 정보 계산
-5. 커맨드 버퍼 기록
-
-패스는 직접 배리어를 생성하지 않으며, 리소스 사용 의도만 제공합니다. 실제 전이 계산은 렌더러가 전담합니다.
-
----
-
-### BarrierInfo
-
-`BarrierInfo`는 패스 간 리소스 의존성을 실행 가능한 형태로 담는 구조체입니다.
-
-| 필드 | 설명 |
+| 태그 | 실행 패스 |
 |---|---|
-| 대상 이미지 | 전이 대상 리소스 |
-| `lastUsage` | 이전 패스의 사용 상태 |
-| `curUsage` | 현재 패스의 사용 상태 |
+| `"Depth"` | `DepthPass` |
+| `"SSAO"` | `SSAOPass` |
+| `"Combine"` | `CombinePass` |
+| `"ImGUI"` | `GUIPass` |
+| 그 외 카메라 | `Opaque`, `Transparent`, `UI` |
 
-렌더러는 각 텍스처의 사용 이력을 추적하여 패스 사이의 상태 전이를 `BarrierInfo`로 구체화합니다.
+현재 기본 패스의 역할은 다음과 같습니다.
 
-**예시 - 3패스 렌더링 흐름:**
+| 패스 | Queue | 역할 |
+|---|---|---|
+| `DepthPass` | `BeforeRendering` | depth/shadow 계열 렌더링. depth 전용 타겟도 지원 |
+| `Opaque` | `Opaque` | 기본 불투명 렌더링 |
+| `SSAOPass` | `AfterOpaque` | 풀스크린 plane으로 depth 등을 샘플링해 AO 타겟에 기록 |
+| `CombinePass` | `AfterRendering` | 풀스크린 plane으로 AO 등 후처리 결과를 최종 타겟에 합성 |
+| `Transparent` | `Transparent` | 카메라 방향 기준 back-to-front 정렬 후 개별 draw |
+| `UI` | `Transparent` | UI shader pass용 transparent pass |
+| `GUIPass` | `UI` | ImGui draw data 기록 |
+| `CopyPass` | `AfterRendering` | readback/copy transfer 전용 내부 패스 |
 
+`SSAOPass`와 `CombinePass`는 패스 내부에서 fullscreen plane `Mesh`와 `Drawable`을 보유하고, 외부에서 `SetMaterial()`로 지정한 material을 사용합니다. 두 패스 모두 material이 참조하는 `RenderTexture`를 `Configure()`에서 샘플링 리소스로 등록합니다.
+
+## ScriptableRenderPass
+
+패스는 `passName`과 `renderQueue`를 갖고, 크게 두 단계로 동작합니다.
+
+### Configure
+
+`Configure(const RenderData&)`는 커맨드 기록 전에 리소스 사용 의도를 확정합니다.
+
+- 기본 구현은 현재 `passName`을 가진 shader pass가 있는 drawable만 `RenderBatch`로 묶습니다.
+- `SetRenderTargetImageUsages()`가 `RenderData::GetRenderTargets()`를 순회해 color/depth attachment 사용을 등록합니다.
+- `SetImageUsages()`가 drawable/material의 `MaterialData::CachedRT`를 확인해 샘플링하는 `RenderTexture`를 등록합니다.
+- depth texture를 샘플링하는 경우 `DepthStencilSampledRead`, 일반 texture는 `SampledRead`로 등록합니다.
+
+예전 문서의 `BuildDrawList()` 단계는 현재 `CreateRenderBatch()`와 `Configure()` 흐름으로 대체되었습니다.
+
+### Record
+
+`Record(CommandBuffer&, const IRenderContext&, const RenderData&)`는 실제 커맨드를 기록합니다.
+
+- 기본 구현은 `cmd.SetRenderData(renderData, true, true, true, true)`로 렌더링을 시작합니다.
+- viewer마다 viewport/scissor를 설정합니다.
+- `RenderBatch` 단위로 `cmd.DrawMeshBatch()`를 호출합니다.
+- `TransparentPass`처럼 정렬이 필요한 패스는 batch 대신 개별 `DrawMesh()`를 호출할 수 있습니다.
+- 풀스크린 후처리 패스는 내부 drawable 하나를 직접 그립니다.
+
+## 리소스 전이
+
+패스는 직접 Vulkan barrier를 만들지 않습니다. 대신 `renderTextures`에 “이번 패스에서 이 이미지를 어떤 용도로 쓸 것인지”를 기록합니다.
+
+```cpp
+enum class ResourceUsage
+{
+    Undefined,
+    ColorAttachment,
+    SampledRead,
+    Present,
+    TransferSrc,
+    DepthStencilAttachment,
+    DepthStencilSampledRead
+};
 ```
-패스 1: 씬 렌더링     ->  Undefined         -> ColorAttachment
-패스 2: 후처리 샘플링 ->  ColorAttachment   -> SampledRead
-패스 3: 스왑체인 출력 ->  SampledRead       -> Present
+
+`ScriptableRenderer::BuildBarrierInfo()`는 각 패스의 `renderTextures`를 보고 이전 사용 상태와 현재 사용 상태를 `BarrierInfo`로 만듭니다.
+
+| 대상 | 이전 상태 출처 |
+|---|---|
+| `RenderTexture*` | `RenderTexture::GetUsage()` |
+| `nullptr` 스왑체인 | `ScriptableRenderer::swapChainStates[frameIndex]` |
+
+계산된 `BarrierInfo`는 해당 패스 커맨드 버퍼 시작 직후 `cmd.EmitBarrier()`로 기록됩니다. Vulkan에서는 `VulkanCommandBuffer::EmitBarrier()`가 `ResourceUsage`를 image layout, pipeline stage, access mask로 매핑하고 `VulkanImageBuffer::BarrierCommand()`를 호출합니다.
+
+예시 흐름:
+
+```text
+depth texture   Undefined              -> DepthStencilAttachment
+depth texture   DepthStencilAttachment -> DepthStencilSampledRead
+ao texture      Undefined              -> ColorAttachment
+ao texture      ColorAttachment        -> SampledRead
+swapchain       Undefined              -> ColorAttachment
+readback src    ColorAttachment        -> TransferSrc
+swapchain       ColorAttachment        -> Present
 ```
 
----
+## 멀티스레딩
 
-### Vulkan 구현 계층
+`ScriptableRenderer::Execute()`는 리소스 전이를 먼저 직렬로 계산한 뒤, 각 패스의 커맨드 버퍼 기록을 스레드 풀에 task로 분배합니다.
 
-`VulkanRenderImpl::EmitBarrier()`는 렌더러가 계산한 `BarrierInfo`를 Vulkan API 호출로 번역합니다.
+직렬 단계:
 
-- `ResourceUsage`를 image layout, pipeline stage, access mask로 매핑
-- `VulkanImageBuffer::BarrierCommand()`를 통해 `vkCmdPipelineBarrier` 기록
+- 활성 패스 정렬
+- 모든 패스 `Configure()`
+- 모든 패스 `BarrierInfo` 계산
 
-이 계층은 전이가 필요한지 판단을 내리지 않으며, 상위에서 계산된 전이 정보를 API 호출로 변환하는 역할만 수행합니다.
+병렬 단계:
 
-## 한계
+- 패스별 `CommandBuffer` 할당
+- `Begin()`
+- `EmitBarrier()`
+- `Record()`
+- `End()`
 
-현재 구조는 아래 기능은 포함되어 있지 않습니다.
+커맨드 버퍼 기록은 병렬이지만, 제출은 `recordedCmds` 순서대로 수행됩니다. 따라서 패스 간 이미지 상태 전이는 정렬된 패스 순서를 기준으로 안정적으로 계산되고, 실제 제출 순서도 그 순서를 유지합니다.
 
-- 의존성 기반 패스 자동 재배치
-- 버퍼 리소스 상태 추적 (현재 `ResourceUsage`는 이미지 상태값만 정의됨)
+## Vulkan 구현
 
-## 구조 요약
+`VulkanCommandBuffer`는 현재 Vulkan dynamic rendering을 사용합니다.
 
-ScriptableRenderPass (N개)
-- renderTextures: 리소스 사용 의도 선언
+- `SetRenderData()`가 `RenderData::GetRenderTargets()`로 `VkRenderingAttachmentInfoKHR` 배열을 구성합니다.
+- 여러 color attachment를 지원하며, 첫 번째 타겟 또는 depth 전용 타겟에서 depth attachment를 가져옵니다.
+- 스왑체인 렌더링에서는 `nullptr` 타겟을 swapchain image로 해석합니다.
+- MSAA 타겟이 있으면 color attachment에 MSAA image를 사용하고 resolve image를 원본 color image로 지정합니다.
+- `RenderTargetLayout`은 color format 목록, depth format, MSAA 여부를 담고 pipeline cache key로 사용됩니다.
 
-ScriptableRenderer
-- 패스 순서 정렬
-- BuildBarrierInfo(): 패스 간 상태 전이 계산
-- 커맨드 버퍼 병렬 기록
+draw 단계에서는 shader pass 이름으로 material의 `ShaderPass` 목록을 찾고, topology/skinned 여부/render target layout에 맞는 pipeline을 가져옵니다. descriptor set은 usage 기준으로 다음처럼 바인딩됩니다.
 
-VulkanRenderImpl
-- EmitBarrier(): ResourceUsage -> Vulkan barrier 변환
-- vkCmdPipelineBarrier 기록
+| Set usage | 데이터 |
+|---|---|
+| `Camera` | `RenderDataManager` GPU buffer, dynamic offset 사용 |
+| `Object` | drawable별 material data |
+| `Material` | material별 uniform/texture data |
+
+Shader DSL에서 `MATRIX_VIEW`, `MATRIX_PROJ`, `CAMERA`를 사용하면 parser가 `CAMERA` uniform buffer를 자동으로 구성합니다. 현재 camera buffer는 `view`, `proj`, `pos`를 담고, `MATRIX_VIEW`와 `MATRIX_PROJ`는 각각 `CAMERA.view`, `CAMERA.proj`로 치환됩니다.
+
+## MaterialData와 텍스처 추적
+
+렌더 텍스처 샘플링 추적은 `MaterialData`의 `CachedRT`에 저장됩니다.
+
+```cpp
+struct CachedRT
+{
+    uint32_t set = 0;
+    uint32_t binding = 0;
+    core::SObjWeakPtr<const ShaderPass> pass;
+    core::SObjWeakPtr<const RenderTexture> rt;
+};
+```
+
+패스의 `Configure()`는 material/drawable이 가진 cached render texture 중 현재 `passName`과 lighting pass 이름이 같은 항목만 읽기 리소스로 등록합니다. 이 구조 덕분에 후처리 material이 depth, SSAO, color texture를 참조하더라도 패스 쪽에서 별도 barrier 코드를 직접 작성하지 않아도 됩니다.
+
+## 패스 추가 방법
+
+새 패스를 추가할 때는 다음 순서로 작업합니다.
+
+1. `ScriptableRenderPass`를 상속한 클래스를 만든다.
+2. 생성자에서 `passName`과 `RenderQueue`를 정한다.
+3. 기본 batch 드로우면 기본 `Configure()`를 쓰고, 풀스크린/특수 패스면 `Configure()`에서 `SetRenderTargetImageUsages()`와 `SetImageUsages()`를 직접 호출한다.
+4. `Record()`에서 `CommandBuffer` API로 렌더 타겟 설정, viewport/scissor, draw/dispatch/blit을 기록한다.
+5. `ScriptableRenderer` 파생 클래스의 `Init()`에서 `AddRenderPass<T>()`로 생성한다.
+6. `Setup()`에서 `RenderData::tag`나 상황에 맞춰 `EnqueRenderPass()` 한다.
+
+예시:
+
+```cpp
+class MyPostPass : public ScriptableRenderPass
+{
+public:
+    MyPostPass(const IRenderContext& ctx)
+        : ScriptableRenderPass(core::Name{ "MyPostPass" }, RenderQueue::AfterRendering),
+          ctx(ctx)
+    {
+    }
+
+protected:
+    void Configure(const RenderData& renderData) override
+    {
+        renderTextures.clear();
+        SetRenderTargetImageUsages(renderData);
+        SetImageUsages(*material);
+    }
+
+    void Record(CommandBuffer& cmd, const IRenderContext& ctx, const RenderData& renderData) override
+    {
+        cmd.SetRenderData(renderData, false, false, true, false);
+        for (std::size_t i = 0; i < renderData.renderViewers.size(); ++i)
+        {
+            SetViewportScissor(cmd, ctx, renderData.renderViewers[i]);
+            cmd.DrawMesh(*fullscreenDrawable, passName, i);
+        }
+    }
+
+private:
+    const IRenderContext& ctx;
+    Material* material = nullptr;
+    Drawable* fullscreenDrawable = nullptr;
+};
+```
