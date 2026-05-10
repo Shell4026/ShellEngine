@@ -530,6 +530,7 @@ namespace sh::game
 		AddAfterSyncTask(
 			[this, savePoint = it->second]()
 			{
+				renderer.Reset();
 				Deserialize(savePoint);
 			}
 		);

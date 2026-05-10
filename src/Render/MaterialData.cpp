@@ -312,18 +312,21 @@ namespace sh::render
 		IShaderBinding& shaderBindings = *itUb->second.get();
 		shaderBindings.Link(binding, *shaderBindingsSyncData.tex);
 
+		auto it = std::find_if(cachedRTs.begin(), cachedRTs.end(),
+			[&](const CachedRT& cached)
+			{
+				return cached.set == set && cached.binding == binding && cached.pass == shaderPass;
+			});
+
 		if (shaderBindingsSyncData.tex->GetType().IsChildOf(RenderTexture::GetStaticType()))
 		{
-			auto it = std::find_if(cachedRTs.begin(), cachedRTs.end(),
-				[&](const CachedRT& cached)
-				{
-					if (cached.set == set && cached.binding == binding && cached.pass == shaderPass)
-						return true;
-					return false;
-				}
-			);
+			const RenderTexture* const rt = static_cast<const RenderTexture*>(shaderBindingsSyncData.tex);
 			if (it == cachedRTs.end())
-				cachedRTs.push_back(CachedRT{ set, binding, shaderPass, static_cast<const RenderTexture*>(shaderBindingsSyncData.tex) });
+				cachedRTs.push_back(CachedRT{ set, binding, shaderPass, rt });
+			else
+				it->rt = rt;
 		}
+		else if (it != cachedRTs.end())
+			cachedRTs.erase(it);
 	}
 }//namespace

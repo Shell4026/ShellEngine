@@ -46,7 +46,10 @@ namespace sh::game
 		if (camera == nullptr)
 			SH_ERROR("SSAOComponent requires a Camera component on the same GameObject");
 		CreateKernel();
-		SetMaterial(static_cast<render::Material*>(core::SObject::GetSObjectUsingResolver(core::UUID{ "bbc4ef7ec45dce223297a224f8093f24" })));
+
+		mat = core::SObject::Create<render::Material>(static_cast<render::Shader*>(core::SObject::GetSObjectUsingResolver(core::UUID{ "bbc4ef7ec45dce223297a224f8093f24" })));
+		mat->Build(*world.renderer.GetContext());
+		SetMaterial(mat);
 	}
 	SH_GAME_API void SSAOComponent::OnDestroy()
 	{
@@ -58,6 +61,8 @@ namespace sh::game
 			aoRT->Destroy();
 		if (noiseTex != nullptr)
 			noiseTex->Destroy();
+		if (mat != nullptr)
+			mat->Destroy();
 
 		Super::OnDestroy();
 	}

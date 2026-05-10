@@ -92,6 +92,7 @@ namespace sh::editor
 		render::Shader* const outlinePostShader = shaders.insert_or_assign("OutlinePostShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/EditorOutlinePost.shader"))).first->second;
 		render::Shader* const uiTextShader = shaders.insert_or_assign("UITextShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/UIText.shader"))).first->second;
 		render::Shader* const ssaoShader = shaders.insert_or_assign("SSAOShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/SSAO.shader"))).first->second;
+		ssaoShader->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f24" });
 
 		render::Texture* const blackTex = textures.insert_or_assign("BlackTexture", static_cast<render::Texture*>(texLoader.Load("textures/black.png"))).first->second;
 		blackTex->Build(*renderer.GetContext());
@@ -105,7 +106,6 @@ namespace sh::editor
 		render::Material* const outlinePreMat = materials.insert_or_assign("OutlinePreMaterial", core::SObject::Create<render::Material>(outlinePreShader)).first->second;
 		render::Material* const outlinePostMat = materials.insert_or_assign("OutlinePostMaterial", core::SObject::Create<render::Material>(outlinePostShader)).first->second;
 		render::Material* const uiTextMat = materials.insert_or_assign("UITextMaterial", core::SObject::Create<render::Material>(uiTextShader)).first->second;
-		render::Material* const ssaoMat = materials.insert_or_assign("SSAOMaterial", core::SObject::Create<render::Material>(ssaoShader)).first->second;
 
 		render::Model* const sphereModel = models.insert_or_assign("SphereModel", static_cast<render::Model*>(modelLoader.Load("model/Sphere.obj"))).first->second;
 		sphereModel->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f15" });
@@ -153,10 +153,6 @@ namespace sh::editor
 		uiTextMat->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f23" });
 		uiTextMat->Build(*renderer.GetContext());
 		uiTextMat->SetProperty("color", glm::vec3{ 1.f, 1.f, 1.f });
-
-		ssaoMat->SetName("SSAOMaterial");
-		ssaoMat->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f24" });
-		ssaoMat->Build(*renderer.GetContext());
 	}
 
 	SH_EDITOR_API auto EditorResource::GetIcon(Icon icon) -> game::GUITexture*
