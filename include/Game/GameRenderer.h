@@ -10,6 +10,7 @@ namespace sh::render
 	class DepthPass;
 	class OpaquePass;
 	class SSAOPass;
+	class CombinePass;
 	class TransparentPass;
 }
 namespace sh::game
@@ -29,6 +30,7 @@ namespace sh::game
 		auto GetDepthPass() const -> render::DepthPass& { return *depthPass; }
 		auto GetOpaquePass() const -> render::ScriptableRenderPass& { return *opaquePass; }
 		auto GetSSAOPass() const -> render::SSAOPass& { return *ssaoPass; }
+		auto GetCombinePass() const -> render::CombinePass& { return *combinePass; }
 		auto GetTransparentPass() const -> render::TransparentPass& { return *transparentPass; }
 		auto GetUIPass() const -> render::TransparentPass& { return *uiPass; }
 		auto GetGUIPass() const -> game::GUIPass& { return *guiPass; }
@@ -40,6 +42,7 @@ namespace sh::game
 		render::DepthPass* depthPass = nullptr;
 		render::ScriptableRenderPass* opaquePass = nullptr;
 		render::SSAOPass* ssaoPass = nullptr;
+		render::CombinePass* combinePass = nullptr;
 		render::TransparentPass* transparentPass = nullptr;
 		render::TransparentPass* uiPass = nullptr;
 		game::GUIPass* guiPass = nullptr;

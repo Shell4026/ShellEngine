@@ -1,18 +1,17 @@
-﻿#include "RenderPass/SSAOPass.h"
-#include "RenderTexture.h"
+﻿#include "RenderPass/CombinePass.h"
 #include "CommandBuffer.h"
-#include "Mesh.h"
-#include "Material.h"
 #include "Drawable.h"
 #include "IRenderContext.h"
+#include "Material.h"
+#include "Mesh.h"
 
-#include "Core/SObject.h"
 #include "Core/GarbageCollection.h"
+#include "Core/SObject.h"
 
 namespace sh::render
 {
-	SSAOPass::SSAOPass(const IRenderContext& ctx) :
-		ScriptableRenderPass(core::Name{ "SSAOPass" }, RenderQueue::AfterOpaque),
+	CombinePass::CombinePass(const IRenderContext& ctx) :
+		ScriptableRenderPass(core::Name{ "CombinePass" }, RenderQueue::AfterRendering),
 		ctx(ctx)
 	{
 		resource.plane = core::SObject::Create<Mesh>();
@@ -36,7 +35,7 @@ namespace sh::render
 			}
 		);
 	}
-	SSAOPass::~SSAOPass()
+	CombinePass::~CombinePass()
 	{
 		core::GarbageCollection& gc = *core::GarbageCollection::GetInstance();
 		gc.ForceDelete(resource.plane);
@@ -46,7 +45,7 @@ namespace sh::render
 		resource.mat = nullptr;
 	}
 
-	SH_RENDER_API void SSAOPass::SetMaterial(Material& mat)
+	SH_RENDER_API void CombinePass::SetMaterial(Material& mat)
 	{
 		if (resource.mat == &mat || mat.IsPendingKill())
 			return;
@@ -56,7 +55,7 @@ namespace sh::render
 			resource.drawable->SetMaterial(*resource.mat);
 	}
 
-	void SSAOPass::EnsureDrawable()
+	void CombinePass::EnsureDrawable()
 	{
 		if (resource.drawable != nullptr || resource.mat == nullptr)
 			return;
@@ -64,7 +63,7 @@ namespace sh::render
 		resource.drawable->Build(ctx);
 	}
 
-	SH_RENDER_API void SSAOPass::Configure(const RenderData& renderData)
+	SH_RENDER_API void CombinePass::Configure(const RenderData& renderData)
 	{
 		renderTextures.clear();
 
@@ -78,17 +77,16 @@ namespace sh::render
 		SetRenderTargetImageUsages(renderData);
 		SetImageUsages(*resource.mat);
 	}
-	SH_RENDER_API void SSAOPass::Record(CommandBuffer& cmd, const IRenderContext& ctx, const RenderData& renderData)
+
+	SH_RENDER_API void CombinePass::Record(CommandBuffer& cmd, const IRenderContext& ctx, const RenderData& renderData)
 	{
 		if (!core::IsValid(resource.mat) || !core::IsValid(resource.drawable))
 			return;
-		localRenderData.SetRenderTargets(renderData.GetRenderTargets());
-		localRenderData.renderViewers = renderData.renderViewers;
 
-		cmd.SetRenderData(renderData, true, false, true, false);
+		cmd.SetRenderData(renderData, false, false, false, false);
 
 		std::size_t viewerIdx = 0;
-		for (const RenderViewer& viewer : localRenderData.renderViewers)
+		for (const RenderViewer& viewer : renderData.renderViewers)
 		{
 			SetViewportScissor(cmd, ctx, viewer);
 			cmd.DrawMesh(*resource.drawable, passName, viewerIdx);
@@ -96,7 +94,7 @@ namespace sh::render
 		}
 	}
 
-	SH_RENDER_API void SSAOPass::Resource::PushReferenceObjects(core::GarbageCollection& gc)
+	SH_RENDER_API void CombinePass::Resource::PushReferenceObjects(core::GarbageCollection& gc)
 	{
 		gc.PushReferenceObject(plane);
 		gc.PushReferenceObject(drawable);

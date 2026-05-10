@@ -63,6 +63,7 @@ namespace sh::game
 
 		render::RenderData depthRenderData;
 		render::RenderData ssaoRenderData;
+		render::RenderData combineRenderData;
 
 		uint32_t cachedWidth = 0;
 		uint32_t cachedHeight = 0;

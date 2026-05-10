@@ -8,6 +8,7 @@ Shader "SSAO Shader"
 		sampler2D normalTex;
 		sampler2D depthTex;
 		sampler2D noiseTex;
+		sampler2D aoTex;
 	}
 	
 	Pass
@@ -98,6 +99,40 @@ Shader "SSAO Shader"
 				occlusion = pow(occlusion, strength);
 
 				outColor = vec4(vec3(occlusion), 1.0);
+			}
+		}
+	}
+	Pass
+	{
+		LightingPass "CombinePass"
+		Cull Off;
+		ZWrite Off;
+		ZTest Off;
+
+		Stage Vertex
+		{
+			layout(location = 0) out vec2 fragUV;
+			void main()
+			{
+				fragUV = UV;
+				gl_Position = vec4(VERTEX, 1.0);
+			}
+		}
+		Stage Fragment
+		{
+			layout(location = 0) in vec2 uvs;
+
+			layout(location = 0) out vec4 outColor;
+
+			uniform sampler2D aoTex;
+
+			void main()
+			{
+				float ao = texture(aoTex, uvs).r;
+				float shadow = 1.0 - ao;
+				if (shadow <= 0.001)
+					discard;
+				outColor = vec4(0.0, 0.0, 0.0, shadow);
 			}
 		}
 	}

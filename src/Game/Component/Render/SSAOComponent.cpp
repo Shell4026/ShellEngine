@@ -12,6 +12,7 @@
 #include "Render/IRenderContext.h"
 #include "Render/Material.h"
 #include "Render/RenderTexture.h"
+#include "Render/RenderPass/CombinePass.h"
 #include "Render/RenderPass/SSAOPass.h"
 
 #include <glm/gtc/matrix_inverse.hpp>
@@ -31,6 +32,11 @@ namespace sh::game
 
 		depthRenderData.tag = core::Name{ "Depth" };
 		ssaoRenderData.tag = core::Name{ "SSAO" };
+		combineRenderData.tag = core::Name{ "Combine" };
+		depthRenderData.priority = 2;
+		ssaoRenderData.priority = 1;
+		combineRenderData.priority = -1;
+		combineRenderData.ClearRenderTargets();
 	}
 	SSAOComponent::~SSAOComponent() = default;
 
@@ -46,8 +52,12 @@ namespace sh::game
 	{
 		if (depthRT != nullptr)
 			depthRT->Destroy();
+		if (normalRT != nullptr)
+			normalRT->Destroy();
 		if (aoRT != nullptr)
 			aoRT->Destroy();
+		if (noiseTex != nullptr)
+			noiseTex->Destroy();
 
 		Super::OnDestroy();
 	}
@@ -56,12 +66,14 @@ namespace sh::game
 		if (camera == nullptr)
 			return;
 
-		depthRenderData.renderViewers = ssaoRenderData.renderViewers = camera->GetRenderData().renderViewers;
+		depthRenderData.renderViewers = ssaoRenderData.renderViewers = combineRenderData.renderViewers = camera->GetRenderData().renderViewers;
+		combineRenderData.SetRenderTargets(camera->GetRenderData().GetRenderTargets());
 		EnsureRenderTextures();
 		UpdateMaterialUniforms();
 
 		world.renderer.PushRenderData(depthRenderData);
 		world.renderer.PushRenderData(ssaoRenderData);
+		world.renderer.PushRenderData(combineRenderData);
 	}
 	SH_GAME_API void SSAOComponent::SetMaterial(render::Material* _mat)
 	{
@@ -75,6 +87,9 @@ namespace sh::game
 
 		render::SSAOPass& ssaoPass = renderer->GetSSAOPass();
 		ssaoPass.SetMaterial(*mat);
+
+		render::CombinePass& combinePass = renderer->GetCombinePass();
+		combinePass.SetMaterial(*mat);
 	}
 
 	void SSAOComponent::EnsureRenderTextures()
@@ -146,6 +161,7 @@ namespace sh::game
 		mat->SetProperty("depthTex", depthRT);
 		mat->SetProperty("normalTex", normalRT);
 		mat->SetProperty("noiseTex", noiseTex);
+		mat->SetProperty("aoTex", aoRT);
 		mat->UpdateUniformBuffers();
 		//material->SetProperty("invProj", invProj);
 		//material->SetProperty("proj", proj);

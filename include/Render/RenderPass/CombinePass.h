@@ -8,18 +8,17 @@
 
 namespace sh::render
 {
-	class RenderTexture;
 	class Mesh;
 	class Drawable;
 	class Material;
 
-	/// @brief depthRT 를 샘플링하여 aoRT(R8) 에 AO 값을 쓰는 풀스크린 패스.
-	/// @brief "SSAO" 태그가 RenderData 에 있을 때만 동작.
-	class SSAOPass : public ScriptableRenderPass
+	/// @brief aoTex 를 현재 렌더 타겟 위에 덮어쓰는 풀스크린 패스.
+	/// @brief "Combine" 태그가 RenderData 에 있을 때만 동작.
+	class CombinePass : public ScriptableRenderPass
 	{
 	public:
-		SH_RENDER_API SSAOPass(const IRenderContext& ctx);
-		SH_RENDER_API ~SSAOPass();
+		SH_RENDER_API CombinePass(const IRenderContext& ctx);
+		SH_RENDER_API ~CombinePass();
 
 		SH_RENDER_API void SetMaterial(Material& mat);
 	protected:
@@ -38,7 +37,6 @@ namespace sh::render
 
 			SH_RENDER_API void PushReferenceObjects(core::GarbageCollection& gc) override;
 		} resource;
-		RenderData localRenderData;
 
 		core::Observer<false, const core::SObject*>::Listener onMatDestroy;
 	};
