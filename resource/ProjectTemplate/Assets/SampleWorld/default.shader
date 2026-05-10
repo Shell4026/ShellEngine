@@ -10,7 +10,7 @@ Shader "Default Shader"
 	}
 	Pass
     {
-		LightingPass "ShadowMapPass"
+		LightingPass "DepthPass"
 		Cull Off;
 
         Stage Vertex
