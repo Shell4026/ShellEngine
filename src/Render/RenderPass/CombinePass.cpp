@@ -83,7 +83,7 @@ namespace sh::render
 		if (!core::IsValid(resource.mat) || !core::IsValid(resource.drawable))
 			return;
 
-		cmd.SetRenderData(renderData, false, false, false, false);
+		cmd.SetRenderData(renderData, false, false, true, false);
 
 		std::size_t viewerIdx = 0;
 		for (const RenderViewer& viewer : renderData.renderViewers)

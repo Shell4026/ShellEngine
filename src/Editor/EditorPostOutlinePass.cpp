@@ -60,7 +60,7 @@ namespace sh::editor
 	{
 		if (drawable == nullptr || !core::IsValid(drawable->GetMesh()) || !core::IsValid(drawable->GetMaterial()))
 			return;
-		cmd.SetRenderData(renderData, false, false, false, false);
+		cmd.SetRenderData(renderData, false, false, true, false);
 		std::size_t viewerIdx = 0;
 		for (const render::RenderViewer& viewer : renderData.renderViewers)
 		{

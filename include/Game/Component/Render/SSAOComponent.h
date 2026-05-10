@@ -40,7 +40,7 @@ namespace sh::game
 		void UpdateMaterialUniforms();
 		static void CreateKernel();
 	private:
-		PROPERTY(mat, core::PropertyOption::sobjPtr)
+		PROPERTY(mat, core::PropertyOption::sobjPtr, core::PropertyOption::invisible, core::PropertyOption::noSave)
 		render::Material* mat = nullptr;
 
 		PROPERTY(radius)
@@ -50,15 +50,15 @@ namespace sh::game
 		PROPERTY(power)
 		float power = 1.5f;
 
-		PROPERTY(depthRT, core::PropertyOption::sobjPtr, core::PropertyOption::invisible)
+		PROPERTY(depthRT, core::PropertyOption::sobjPtr, core::PropertyOption::invisible, core::PropertyOption::noSave)
 		render::RenderTexture* depthRT = nullptr;
-		PROPERTY(normalRT, core::PropertyOption::sobjPtr, core::PropertyOption::invisible)
+		PROPERTY(normalRT, core::PropertyOption::sobjPtr, core::PropertyOption::invisible, core::PropertyOption::noSave)
 		render::RenderTexture* normalRT = nullptr;
-		PROPERTY(aoRT, core::PropertyOption::sobjPtr, core::PropertyOption::invisible)
+		PROPERTY(aoRT, core::PropertyOption::sobjPtr, core::PropertyOption::invisible, core::PropertyOption::noSave)
 		render::RenderTexture* aoRT = nullptr;
-		PROPERTY(camera, core::PropertyOption::sobjPtr, core::PropertyOption::invisible);
+		PROPERTY(camera, core::PropertyOption::sobjPtr, core::PropertyOption::invisible, core::PropertyOption::noSave);
 		Camera* camera = nullptr;
-		PROPERTY(noiseTex, core::PropertyOption::sobjPtr, core::PropertyOption::invisible);
+		PROPERTY(noiseTex, core::PropertyOption::sobjPtr, core::PropertyOption::invisible, core::PropertyOption::noSave);
 		render::Texture* noiseTex = nullptr;
 
 		render::RenderData depthRenderData;

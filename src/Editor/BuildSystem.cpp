@@ -219,6 +219,8 @@ namespace sh::editor
         bundle.AddAsset(lineShaderAsset, true);
         game::ShaderAsset uiTextShaderAsset{ *editorResource->GetShader("UITextShader") };
         bundle.AddAsset(uiTextShaderAsset, true);
+        game::ShaderAsset ssaoShaderAsset{ *editorResource->GetShader("SSAOShader") };
+        bundle.AddAsset(ssaoShaderAsset, true);
 
         game::MaterialAsset errorMatAsset{ *editorResource->GetMaterial("ErrorMaterial") };
         bundle.AddAsset(errorMatAsset, true);

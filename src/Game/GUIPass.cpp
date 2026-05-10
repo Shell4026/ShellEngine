@@ -26,7 +26,7 @@ namespace sh::game
 
 	SH_GAME_API void GUIPass::Record(render::CommandBuffer& cmd, const render::IRenderContext& ctx, const render::RenderData& renderData)
 	{
-		cmd.SetRenderData(renderData, false, true, false, false);
+		cmd.SetRenderData(renderData, false, true, true, false);
 		for (const render::RenderViewer& viewer : renderData.renderViewers)
 		{
 			SetViewportScissor(cmd, ctx, viewer);
