@@ -2,13 +2,16 @@
 #include "VulkanImageBuffer.h"
 #include "IRenderContext.h"
 
+#include "Core/Logger.h"
+
 namespace sh::render
 {
-	RenderTexture::RenderTexture(const RenderTargetLayout& layout) :
-		Texture(layout.format, 1024, 1024, false),
+	RenderTexture::RenderTexture(TextureFormat colorFormat, TextureFormat depthFormat, bool bMSAA) :
+		Texture(colorFormat, 1024, 1024, false),
 
 		width(1024), height(1024), 
-		layout(layout)
+		depthFormat(depthFormat),
+		bMSAA(bMSAA)
 	{
 		SetAnisoLevel(0);
 	}
@@ -16,12 +19,11 @@ namespace sh::render
 		Texture(std::move(other)),
 
 		width(other.width), height(other.height),
-		layout(other.layout)
+		depthFormat(other.depthFormat),
+		bMSAA(other.bMSAA)
 	{
 	}
-	RenderTexture::~RenderTexture()
-	{
-	}
+	RenderTexture::~RenderTexture() = default;
 
 	SH_RENDER_API void RenderTexture::Build(const IRenderContext& context)
 	{
@@ -59,43 +61,34 @@ namespace sh::render
 		bChangeSize = true;
 		SyncDirty();
 	}
-	SH_RENDER_API auto RenderTexture::GetSize() const -> glm::vec2
-	{
-		return { width, height };
-	}
-	SH_RENDER_API void RenderTexture::ChangeUsage(ResourceUsage newUsage)
-	{
-		usage = newUsage;
-	}
-
 	void RenderTexture::CreateBuffers()
 	{
 		assert(context->GetRenderAPIType() == RenderAPI::Vulkan);
 
-		const bool bDepthOnly = (layout.format == TextureFormat::None);
-
-		if (textureBuffer == nullptr)
-		{
-			if (context->GetRenderAPIType() == RenderAPI::Vulkan)
-				textureBuffer = std::make_unique<vk::VulkanImageBuffer>();
-		}
 		ITextureBuffer::CreateInfo ci{};
 		ci.width = width;
 		ci.height = height;
-		ci.format = bDepthOnly ? layout.depthFormat : GetTextureFormat();
+		ci.format = IsDepthTexture() ? depthFormat : GetTextureFormat();
 		ci.aniso = 0;
 		ci.filtering = 1;
 		ci.mipLevel = 1;
 		ci.bMSAAImg = false;
 		ci.bRenderTarget = true;
 
-		textureBuffer->Create(*context, ci);
 		usage = ResourceUsage::Undefined;
 
-		if (bDepthOnly)
+		if (IsDepthTexture())
+		{
+			CreateDepthBuffer(ci);
 			return;
+		}
 
-		if (layout.bUseMSAA)
+		if (textureBuffer == nullptr)
+			if (context->GetRenderAPIType() == RenderAPI::Vulkan)
+				textureBuffer = std::make_unique<vk::VulkanImageBuffer>();
+		textureBuffer->Create(*context, ci);
+
+		if (bMSAA)
 		{
 			ci.bMSAAImg = true;
 			if (msaaBuffer == nullptr)
@@ -105,26 +98,38 @@ namespace sh::render
 			}
 			msaaBuffer->Create(*context, ci);
 		}
-
-		if (layout.depthFormat == TextureFormat::D32S8 || 
-			layout.depthFormat == TextureFormat::D24S8 ||
-			layout.depthFormat == TextureFormat::D16S8)
+		if (depthFormat != TextureFormat::None)
 		{
-			if (depthBuffer == nullptr)
-			{
-				if (context->GetRenderAPIType() == RenderAPI::Vulkan)
-					depthBuffer = std::make_unique<vk::VulkanImageBuffer>();
-			}
-			ci.format = layout.depthFormat;
-			depthBuffer->Create(*context, ci);
+			ci.format = depthFormat;
+			CreateDepthBuffer(ci);
 		}
 	}
-	SH_RENDER_API auto RenderTexture::GetDepthBuffer() const -> ITextureBuffer*
+	void RenderTexture::CreateDepthBuffer(const ITextureBuffer::CreateInfo& ci)
 	{
-		if (depthBuffer != nullptr)
-			return depthBuffer.get();
-		if (layout.format == TextureFormat::None)
-			return textureBuffer.get(); // depth only인 경우 textureBuffer 자체가 DepthBuffer
-		return nullptr;
+		const bool bValidDepthFormat =
+			depthFormat == TextureFormat::D32 ||
+			depthFormat == TextureFormat::D16 ||
+			depthFormat == TextureFormat::D32S8 ||
+			depthFormat == TextureFormat::D24S8 ||
+			depthFormat == TextureFormat::D16S8;
+		if (!bValidDepthFormat)
+		{
+			SH_ERROR_FORMAT("Invalid depth foramt!: {}", TextureFormatToString(ci.format));
+			return;
+		}
+		if (IsDepthTexture())
+		{
+			if (textureBuffer == nullptr)
+				if (context->GetRenderAPIType() == RenderAPI::Vulkan)
+					textureBuffer = std::make_unique<vk::VulkanImageBuffer>();
+			textureBuffer->Create(*context, ci);
+		}
+		else
+		{
+			if (depthBuffer == nullptr)
+				if (context->GetRenderAPIType() == RenderAPI::Vulkan)
+					depthBuffer = std::make_unique<vk::VulkanImageBuffer>();
+			depthBuffer->Create(*context, ci);
+		}
 	}
 }//namespace

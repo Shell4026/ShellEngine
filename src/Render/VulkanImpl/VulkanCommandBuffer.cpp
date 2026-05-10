@@ -24,9 +24,54 @@
 #include "Core/Logger.h"
 
 #include <cassert>
-
+#include <array>
 namespace sh::render::vk
 {
+    namespace
+    {
+        auto HasStencil(TextureFormat format) -> bool
+        {
+            return format == TextureFormat::D32S8 ||
+                format == TextureFormat::D24S8 ||
+                format == TextureFormat::D16S8;
+        }
+
+        auto BuildRenderTargetLayout(const VulkanContext& context, const std::vector<const RenderTexture*>& targets) -> RenderTargetLayout
+        {
+            RenderTargetLayout layout{};
+
+            std::vector<TextureFormat> colorFormats;
+            colorFormats.reserve(targets.size());
+
+            const RenderTexture* main = targets[0];
+            if (main == nullptr)
+            {
+                layout.depthFormat = context.GetSwapChain().GetRenderTargetLayout().depthFormat;
+                layout.bUseMSAA = context.GetSampleCount() != VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
+            }
+            else
+            {
+                layout.depthFormat = main->GetDepthFormat();
+                layout.bUseMSAA = main->GetMSAABuffer() != nullptr;
+            }
+
+            for (const RenderTexture* target : targets)
+            {
+                if (target == nullptr)
+                    colorFormats.push_back(context.GetSwapChain().GetRenderTargetLayout().colorFormats[0]);
+                else
+                {
+                    if (target->IsDepthTexture())
+                        layout.depthFormat = target->GetDepthFormat();
+                    else
+                        colorFormats.push_back(target->GetTextureFormat());
+                }
+            }
+            layout.colorFormats = std::move(colorFormats);
+            return layout;
+        }
+    }
+
     VulkanCommandBuffer::VulkanCommandBuffer(const VulkanContext& context)
         : context(context)
     {}
@@ -135,45 +180,66 @@ namespace sh::render::vk
             bBeginRender = false;
         }
 
-        const RenderTexture* const target = renderData.target;
-
-        const bool bDepthOnly = target == nullptr ? false : target->IsDepthOnly();
-        const VulkanImageBuffer* colorImg = nullptr;
-        const VulkanImageBuffer* colorMSAAImg = nullptr;
+        const VulkanImageBuffer* colorImgs[10]{}; // 힙 할당 최소화
+        const VulkanImageBuffer* colorMSAAImgs[10]{}; // 힙 할당 최소화
         const VulkanImageBuffer* depthImg = nullptr;
-        RenderTargetLayout rtLayout{};
-        if (target != nullptr)
-        {
-            colorImg = bDepthOnly ? nullptr : static_cast<VulkanImageBuffer*>(target->GetTextureBuffer());
-            colorMSAAImg = static_cast<VulkanImageBuffer*>(target->GetMSAABuffer());
-            depthImg = static_cast<VulkanImageBuffer*>(target->GetDepthBuffer());
-            rtLayout = target->GetLayout();
-        }
+        std::size_t colorImgsCount = 0;
+        std::size_t colorMSAAImgsCount = 0;
+
+        // 메모) 깊이 버퍼는 제일 앞의 렌더 텍스쳐 것을 쓰고 깊이 버퍼 전용 텍스쳐가 있으면 그걸 우선시 함
+        const RenderTexture* const main = renderData.GetRenderTargets()[0];
+        if (main == nullptr)
+            depthImg = &context.GetSwapChain().GetSwapChainDepthImages()[renderData.GetFrameIdx()];
         else
+            depthImg = static_cast<VulkanImageBuffer*>(main->GetDepthBuffer());
+
+        for (const RenderTexture* target : renderData.GetRenderTargets())
         {
-            colorImg = &context.GetSwapChain().GetSwapChainImages()[renderData.frameIndex];
-            colorMSAAImg = &context.GetSwapChain().GetSwapChainMSAAImages()[renderData.frameIndex];
-            depthImg = &context.GetSwapChain().GetSwapChainDepthImages()[renderData.frameIndex];
-            rtLayout = context.GetSwapChain().GetRenderTargetLayout();
+            if (target == nullptr)
+            {
+                colorImgs[colorImgsCount++] = &context.GetSwapChain().GetSwapChainImages()[renderData.GetFrameIdx()];
+                const std::vector<VulkanImageBuffer>& swapChainMSAAImages = context.GetSwapChain().GetSwapChainMSAAImages();
+                colorMSAAImgs[colorMSAAImgsCount++] = swapChainMSAAImages.empty() ? nullptr : &swapChainMSAAImages[renderData.GetFrameIdx()];
+            }
+            else
+            {
+                if (!target->IsDepthTexture())
+                {
+                    colorImgs[colorImgsCount++] = static_cast<VulkanImageBuffer*>(target->GetTextureBuffer());
+                    colorMSAAImgs[colorMSAAImgsCount++] = static_cast<VulkanImageBuffer*>(target->GetMSAABuffer());
+                }
+                else
+                    depthImg = static_cast<VulkanImageBuffer*>(target->GetDepthBuffer());
+            }
         }
-        const VulkanImageBuffer* const sizeRef = colorImg != nullptr ? colorImg : depthImg;
+        RenderTargetLayout rtLayout = BuildRenderTargetLayout(context, renderData.GetRenderTargets());
+
+        const VulkanImageBuffer* const sizeRef = colorImgsCount != 0 ? colorImgs[0] : depthImg;
+        if (sizeRef == nullptr)
+            return;
         const uint32_t width = sizeRef->GetWidth();
         const uint32_t height = sizeRef->GetHeight();
         const bool bHasDepth = (depthImg != nullptr);
+        const bool bDepthOnly = colorImgsCount == 0;
 
-        VkRenderingAttachmentInfoKHR colorAttachment{};
-        if (!bDepthOnly)
+        VkRenderingAttachmentInfoKHR colorAttachments[10]{}; // 힙 할당 최소화
+        const std::size_t colorAttachmentsCount = colorImgsCount;
+        for (std::size_t i = 0; i < colorAttachmentsCount; ++i)
         {
+            assert(colorImgs[i] != nullptr);
+            assert(colorImgs[i]->GetWidth() == width && colorImgs[i]->GetHeight() == height);
+
+            VkRenderingAttachmentInfoKHR& colorAttachment = colorAttachments[i];
             colorAttachment.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDERING_ATTACHMENT_INFO;
-            const bool bMSAA = (colorMSAAImg != nullptr);
-            colorAttachment.imageView = bMSAA ? colorMSAAImg->GetImageView() : colorImg->GetImageView();
+            const bool bMSAA = (i < colorMSAAImgsCount && colorMSAAImgs[i] != nullptr);
+            colorAttachment.imageView = bMSAA ? colorMSAAImgs[i]->GetImageView() : colorImgs[i]->GetImageView();
             colorAttachment.imageLayout = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
             colorAttachment.loadOp = bClearColor ? VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_CLEAR : VkAttachmentLoadOp::VK_ATTACHMENT_LOAD_OP_LOAD;
             colorAttachment.storeOp = bStoreColor ? VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_STORE : VkAttachmentStoreOp::VK_ATTACHMENT_STORE_OP_DONT_CARE;
             colorAttachment.clearValue.color = { { 0.f, 0.f, 0.f, 1.f } };
             if (bMSAA)
             {
-                colorAttachment.resolveImageView = colorImg->GetImageView();
+                colorAttachment.resolveImageView = colorImgs[i]->GetImageView();
                 colorAttachment.resolveImageLayout = VkImageLayout::VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
                 colorAttachment.resolveMode = VkResolveModeFlagBitsKHR::VK_RESOLVE_MODE_AVERAGE_BIT_KHR;
             }
@@ -191,11 +257,11 @@ namespace sh::render::vk
 
         VkRenderingInfoKHR renderingInfo{};
         renderingInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_RENDERING_INFO_KHR;
-        renderingInfo.colorAttachmentCount = bDepthOnly ? 0 : 1;
-        renderingInfo.pColorAttachments = bDepthOnly ? nullptr : &colorAttachment;
+        renderingInfo.colorAttachmentCount = static_cast<uint32_t>(colorAttachmentsCount);
+        renderingInfo.pColorAttachments = colorAttachmentsCount == 0 ? nullptr : colorAttachments;
         renderingInfo.pDepthAttachment = bHasDepth ? &depthAttachment : nullptr;
         // depth only는 스텐실 지원x
-        renderingInfo.pStencilAttachment = (bHasDepth && !bDepthOnly) ? &depthAttachment : nullptr;
+        renderingInfo.pStencilAttachment = (bHasDepth && HasStencil(rtLayout.depthFormat) && !bDepthOnly) ? &depthAttachment : nullptr;
         renderingInfo.renderArea = { { 0, 0 }, { width, height } };
         renderingInfo.layerCount = 1;
 
@@ -366,16 +432,17 @@ namespace sh::render::vk
             VulkanImageBuffer* imgBuffer = nullptr;
             VulkanImageBuffer* msaaBuffer = nullptr;
 
-            if (barrier.target.index() == 0)
+            if (std::holds_alternative<const RenderTexture*>(barrier.target))
             {
-                imgBuffer = (static_cast<VulkanImageBuffer*>(std::get<0>(barrier.target)->GetTextureBuffer()));
-                msaaBuffer = (static_cast<VulkanImageBuffer*>(std::get<0>(barrier.target)->GetMSAABuffer()));
+                imgBuffer = static_cast<VulkanImageBuffer*>(std::get<const RenderTexture*>(barrier.target)->GetTextureBuffer());
+                msaaBuffer = static_cast<VulkanImageBuffer*>(std::get<const RenderTexture*>(barrier.target)->GetMSAABuffer());
             }
             else
             {
-                const uint32_t imgIdx = std::get<1>(barrier.target);
+                const uint32_t imgIdx = std::get<uint32_t>(barrier.target);
                 imgBuffer = &context.GetSwapChain().GetSwapChainImages()[imgIdx];
-                msaaBuffer = &context.GetSwapChain().GetSwapChainMSAAImages()[imgIdx];
+                const auto& swapChainMSAAImages = context.GetSwapChain().GetSwapChainMSAAImages();
+                msaaBuffer = swapChainMSAAImages.empty() ? nullptr : &context.GetSwapChain().GetSwapChainMSAAImages()[imgIdx];
             }
 
             VkImageLayout srcLayout, dstLayout;
@@ -434,7 +501,8 @@ namespace sh::render::vk
             mapUsageFn(barrier.lastUsage, srcLayout, srcStage, srcAccess);
             mapUsageFn(barrier.curUsage, dstLayout, dstStage, dstAccess);
 
-            VulkanImageBuffer::BarrierCommand(buffer, *imgBuffer, srcLayout, dstLayout, srcStage, dstStage, srcAccess, dstAccess);
+            if (imgBuffer != nullptr)
+             VulkanImageBuffer::BarrierCommand(buffer, *imgBuffer, srcLayout, dstLayout, srcStage, dstStage, srcAccess, dstAccess);
 
             if (msaaBuffer != nullptr)
             {

@@ -163,7 +163,7 @@ namespace sh::render::vk
 		if (swapChainImageFormat == VkFormat::VK_FORMAT_B8G8R8A8_SRGB)
 			colorFormat = TextureFormat::SBGRA32;
 
-		rtLayout.format = colorFormat;
+		rtLayout.colorFormats[0] = colorFormat;
 		rtLayout.depthFormat = TextureFormat::None;
 		rtLayout.bUseMSAA = bMSAA;
 		for (VkImage img : images)

@@ -105,12 +105,7 @@ namespace sh::editor
 				if (viewportPtr != nullptr && viewportPtr->IsPendingKill())
 					viewportPtr->SetUUID(core::UUID::Generate());
 
-				render::RenderTargetLayout rt{};
-				rt.format = render::TextureFormat::SRGBA32;
-				rt.depthFormat = render::TextureFormat::D24S8;
-				rt.bUseMSAA = true;
-
-				viewportTexture = core::SObject::Create<render::RenderTexture>(rt);
+				viewportTexture = core::SObject::Create<render::RenderTexture>(render::TextureFormat::SRGBA32, render::TextureFormat::D24S8, true);
 				viewportTexture->SetUUID(core::UUID{ "180635b4e4d1a98ebb0064ab47dc452a" });
 				viewportTexture->Build(*renderer.GetContext());
 			}

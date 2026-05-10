@@ -116,8 +116,8 @@ namespace sh::render::vk
 		std::size_t viewIdx = 0;
 		for (RenderData& rd : renderDatas)
 		{
-			rd.frameIndex = imgIdx;
-			rd.drawables = &drawables;
+			IRenderThrMethod<RenderData>::SetFrameIndex(rd, imgIdx);
+			IRenderThrMethod<RenderData>::SetDrawablesPtr(rd, &drawables);
 
 			IRenderThrMethod<ScriptableRenderer>::Setup(*renderer, rd);
 			IRenderThrMethod<ScriptableRenderer>::Execute(*renderer, rd); // ScriptableRenderer에 등록된 패스들을 렌더큐 순서대로, 병렬적으로 커맨드에 기록

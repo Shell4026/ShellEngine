@@ -13,7 +13,7 @@ namespace sh::render
 	class Material;
 	class Drawable;
 	class ShaderPass;
-	struct RenderData;
+	class RenderData;
 	struct BarrierInfo;
 
 	class CommandBuffer : public core::INonCopyable

@@ -15,13 +15,10 @@ namespace sh::render
 	}
 	SH_RENDER_API void DepthPass::Record(CommandBuffer& cmd, const IRenderContext& ctx, const RenderData& renderData)
 	{
-		if (renderData.target == nullptr)
-			return;
-
 		// 한 프레임 내 첫 호출에서만 클리어
-		if (renderData.frameIndex != lastFrameIndex)
+		if (renderData.GetFrameIdx() != lastFrameIndex)
 		{
-			lastFrameIndex = renderData.frameIndex;
+			lastFrameIndex = renderData.GetFrameIdx();
 			callsThisFrame = 0;
 		}
 		const bool bClearDepth = (callsThisFrame == 0);
@@ -29,7 +26,7 @@ namespace sh::render
 
 		cmd.SetRenderData(renderData, false, bClearDepth, false, true);
 
-		if (renderData.drawables == nullptr)
+		if (renderData.GetDrawablesPtr() == nullptr)
 			return;
 
 		std::size_t viewerIdx = 0;

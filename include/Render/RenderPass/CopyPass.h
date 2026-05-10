@@ -10,7 +10,7 @@ namespace sh::render
 
 	class CopyPass : public ScriptableRenderPass
 	{
-		friend class IRenderThrMethod<CopyPass>;
+		friend struct IRenderThrMethod<CopyPass>;
 	public:
 		SH_RENDER_API CopyPass();
 	protected:

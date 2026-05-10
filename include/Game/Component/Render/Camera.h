@@ -63,6 +63,7 @@ namespace sh::game
 		auto GetTag() const -> const core::Name& { return renderData.tag; }
 		auto GetProjection() const -> Projection { return projection; }
 		auto GetRenderTexture() const -> render::RenderTexture* { return renderTexture; }
+		auto GetRenderData() const -> const render::RenderData& { return renderData; }
 	protected:
 		SH_GAME_API virtual void UpdateViewMatrix();
 		SH_GAME_API virtual void UpdateProjMatrix();

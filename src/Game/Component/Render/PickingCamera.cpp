@@ -19,12 +19,7 @@ namespace sh::game
 	{
 		pixels.resize(4);
 
-		render::RenderTargetLayout rt{};
-		rt.format = render::TextureFormat::RGBA32;
-		rt.depthFormat = render::TextureFormat::D24S8;
-		rt.bUseMSAA = false;
-
-		renderTex = core::SObject::Create<render::RenderTexture>(rt);
+		renderTex = core::SObject::Create<render::RenderTexture>(render::TextureFormat::RGBA32, render::TextureFormat::D24S8, false);
 		renderTex->SetSize(1024, 768);
 		renderTex->Build(*world.renderer.GetContext());
 		renderTex->SetName("PickingFramebuffer");

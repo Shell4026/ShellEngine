@@ -15,37 +15,34 @@ namespace sh::editor
 	}
 	SH_EDITOR_API void EditorOutlinePass::SetOutTexture(render::RenderTexture& tex)
 	{
-		rd.target = &tex;
+		rd.SetRenderTarget(&tex);
 		rd.renderViewers.resize(1);
 	}
 
 	SH_EDITOR_API void EditorOutlinePass::Configure(const render::RenderData& renderData)
 	{
 		renderTextures.clear();
-		renderTextures[rd.target] = render::ResourceUsage::ColorAttachment;
-		if (renderData.drawables != nullptr)
+		renderTextures[rd.GetRenderTargets()[0]] = render::ResourceUsage::ColorAttachment;
+		if (renderData.GetDrawablesPtr() != nullptr)
 		{
-			SetImageUsages(*renderData.drawables);
-			renderBatches = CreateRenderBatch(*renderData.drawables);
+			SetImageUsages(*renderData.GetDrawablesPtr());
+			renderBatches = CreateRenderBatch(passName, *renderData.GetDrawablesPtr());
 		}
 	}
 	SH_EDITOR_API void EditorOutlinePass::Record(render::CommandBuffer& cmd, const render::IRenderContext& ctx, const render::RenderData& renderData)
 	{
-		if (renderData.renderViewers.empty())
+		if (renderData.renderViewers.empty() || renderData.GetDrawablesPtr() == nullptr)
 			return;
+
 		rd.renderViewers[0] = renderData.renderViewers.front();
-		rd.drawables = renderData.drawables;
+		render::IRenderThrMethod<render::RenderData>::SetDrawablesPtr(rd, renderData.GetDrawablesPtr());
 
+		const render::RenderTexture& mainTaret = *rd.GetRenderTargets()[0];
 		cmd.SetRenderData(rd, true, true, true, true);
-		cmd.SetViewport(0, 0, rd.target->GetSize().x, rd.target->GetSize().y);
-		cmd.SetScissor(0, 0, rd.target->GetSize().x, rd.target->GetSize().y);
-
-		if (rd.drawables == nullptr)
-			return;
+		cmd.SetViewport(0, 0, mainTaret.GetSize().x, mainTaret.GetSize().y);
+		cmd.SetScissor(0, 0, mainTaret.GetSize().x, mainTaret.GetSize().y);
 
 		for (const RenderBatch& batch : renderBatches)
-		{
 			cmd.DrawMeshBatch(batch.drawables, passName);
-		}
 	}
 }//namespace

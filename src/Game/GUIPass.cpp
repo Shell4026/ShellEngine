@@ -19,7 +19,7 @@ namespace sh::game
 	SH_GAME_API void GUIPass::Configure(const render::RenderData& renderData)
 	{
 		renderTextures.clear();
-		renderTextures[renderData.target] = render::ResourceUsage::ColorAttachment;
+		SetRenderTargetImageUsages(renderData);
 		if (viewportTexture != nullptr)
 			renderTextures[viewportTexture] = render::ResourceUsage::SampledRead;
 	}

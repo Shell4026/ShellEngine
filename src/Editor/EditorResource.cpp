@@ -20,7 +20,7 @@ namespace sh::editor
 {
 	EditorResource::~EditorResource()
 	{
-		for (auto icon : icons)
+		for (game::GUITexture* icon : icons)
 			icon->Destroy();
 	}
 	SH_EDITOR_API void EditorResource::LoadAllAssets(Project& project)
@@ -115,12 +115,7 @@ namespace sh::editor
 		planeModel->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f17" });
 		planeModel->GetMeshes()[0]->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f21" });
 
-		render::RenderTargetLayout rt{};
-		rt.format = render::TextureFormat::R8;
-		rt.depthFormat = render::TextureFormat::D24S8;
-		rt.bUseMSAA = false;
-
-		render::RenderTexture* outlineTexture = core::SObject::Create<render::RenderTexture>(rt);
+		render::RenderTexture* outlineTexture = core::SObject::Create<render::RenderTexture>(render::TextureFormat::R8, render::TextureFormat::D24S8, false);
 		outlineTexture->SetSize(1024, 1024);
 		outlineTexture->Build(*renderer.GetContext());
 		textures.insert_or_assign("OutlineTexture", outlineTexture);

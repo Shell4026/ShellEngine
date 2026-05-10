@@ -96,4 +96,4 @@ namespace sh::render::vk
 		bool bZWrite = true;
 		bool bZTest = true;
 	};
-}
+}//namespace

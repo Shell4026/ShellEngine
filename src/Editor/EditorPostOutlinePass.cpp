@@ -33,7 +33,11 @@ namespace sh::editor
 	}
 	SH_EDITOR_API void EditorPostOutlinePass::SetOutlineMaterial(render::Material& mat)
 	{
+		if (this->mat == &mat || mat.IsPendingKill())
+			return;
 		this->mat = &mat;
+		if (drawable != nullptr)
+			drawable->SetMaterial(mat);
 	}
 
 	SH_EDITOR_API void EditorPostOutlinePass::Configure(const render::RenderData& renderData)
@@ -47,15 +51,10 @@ namespace sh::editor
 		}
 
 		renderTextures.clear();
-		renderTextures[renderData.target] = render::ResourceUsage::ColorAttachment;
+		SetRenderTargetImageUsages(renderData);
+
 		if (mat != nullptr)
-		{
-			for (const render::MaterialData::CachedRT& cachedRT : render::IRenderThrMethod<render::MaterialData>::GetCachedRTs(mat->GetMaterialData()))
-			{
-				if (cachedRT.rt.IsValid() && cachedRT.pass->GetLightingPassName() == passName)
-					renderTextures[cachedRT.rt.Get()] = cachedRT.rt->IsDepthOnly() ? render::ResourceUsage::DepthStencilSampledRead : render::ResourceUsage::SampledRead;
-			}
-		}
+			SetImageUsages(*mat);
 	}
 	SH_EDITOR_API void EditorPostOutlinePass::Record(render::CommandBuffer& cmd, const render::IRenderContext& ctx, const render::RenderData& renderData)
 	{

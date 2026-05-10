@@ -21,11 +21,11 @@ namespace sh::render
 	{
 		cmd.SetRenderData(renderTarget, false, false, true, false);
 
-		if (renderTarget.drawables == nullptr)
+		if (renderTarget.GetDrawablesPtr() == nullptr)
 			return;
 
 		items.clear();
-		for (const Drawable* drawable : *renderTarget.drawables)
+		for (const Drawable* drawable : *renderTarget.GetDrawablesPtr())
 		{
 			RenderItem item{};
 			item.material = drawable->GetMaterial();

@@ -3,6 +3,7 @@
 #include "Texture.h"
 #include "RenderData.h"
 #include "IRenderThrMethod.h"
+#include "ITextureBuffer.h"
 
 #include "glm/vec2.hpp"
 
@@ -22,7 +23,7 @@ namespace sh::render
 		friend IRenderThrMethod<RenderTexture>;
 		SCLASS(RenderTexture);
 	public:
-		SH_RENDER_API RenderTexture(const RenderTargetLayout& layout);
+		SH_RENDER_API RenderTexture(TextureFormat colorFormat, TextureFormat depthFormat = TextureFormat::D24S8, bool bMSAA = false);
 		SH_RENDER_API RenderTexture(RenderTexture&& other) noexcept;
 		SH_RENDER_API ~RenderTexture();
 
@@ -31,24 +32,25 @@ namespace sh::render
 		SH_RENDER_API void OnPropertyChanged(const core::reflection::Property& property) override;
 		
 		SH_RENDER_API void SetSize(uint32_t width, uint32_t height);
-		SH_RENDER_API auto GetSize() const -> glm::vec2;
 
-		SH_RENDER_API auto GetLayout() const -> const RenderTargetLayout& { return layout; }
-		SH_RENDER_API auto GetMSAABuffer() const -> ITextureBuffer* { return msaaBuffer.get(); }
-		SH_RENDER_API auto GetDepthBuffer() const -> ITextureBuffer*;
-		SH_RENDER_API auto IsDepthOnly() const -> bool { return layout.format == TextureFormat::None; }
-		SH_RENDER_API auto GetUsage() const -> ResourceUsage { return usage; }
+		auto GetSize() const -> glm::vec2 { return { width, height }; }
+		auto GetDepthFormat() const -> TextureFormat { return depthFormat; }
+		auto GetMSAABuffer() const -> ITextureBuffer* { return msaaBuffer.get(); }
+		auto GetDepthBuffer() const -> ITextureBuffer* { return IsDepthTexture() ? textureBuffer.get() : depthBuffer.get(); }
+		auto IsDepthTexture() const -> bool { return GetTextureFormat() == TextureFormat::None && depthFormat != TextureFormat::None; }
+		auto GetUsage() const -> ResourceUsage { return usage; }
 	protected:
-		SH_RENDER_API void ChangeUsage(ResourceUsage newUsage);
+		void ChangeUsage(ResourceUsage newUsage) { usage = newUsage; }
 	private:
 		void CreateBuffers();
+		void CreateDepthBuffer(const ITextureBuffer::CreateInfo& ci);
 	private:
 		PROPERTY(width);
 		uint32_t width;
 		PROPERTY(height);
 		uint32_t height;
 
-		RenderTargetLayout layout;
+		TextureFormat depthFormat = TextureFormat::D24S8;
 
 		std::unique_ptr<ITextureBuffer> msaaBuffer;
 		std::unique_ptr<ITextureBuffer> depthBuffer;
@@ -56,6 +58,7 @@ namespace sh::render
 		ResourceUsage usage = ResourceUsage::Undefined;
 
 		bool bChangeSize = false;
+		bool bMSAA = false;
 	};
 
 	inline void IRenderThrMethod<class RenderTexture>::ChangeUsage(RenderTexture& rt, ResourceUsage newUsage)

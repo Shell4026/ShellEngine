@@ -6,6 +6,16 @@
 #include <cassert>
 namespace sh::render::vk
 {
+	namespace
+	{
+		auto HasStencil(TextureFormat format) -> bool
+		{
+			return format == TextureFormat::D32S8 ||
+				format == TextureFormat::D24S8 ||
+				format == TextureFormat::D16S8;
+		}
+	}
+
 	SH_RENDER_API VulkanPipeline::VulkanPipeline(VkDevice device, const RenderTargetLayout& rt) :
 		device(device),
 		pipeline(nullptr), shader(nullptr),
@@ -223,14 +233,15 @@ namespace sh::render::vk
 		colorBlendAttachment.alphaBlendOp = VkBlendOp::VK_BLEND_OP_ADD;
 		colorBlendAttachment.dstAlphaBlendFactor = VkBlendFactor::VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;;
 
-		const bool bDepthOnly = (rtLayout.format == TextureFormat::None);
+		const uint32_t colorAttachmentCount = static_cast<uint32_t>(rtLayout.colorFormats.size());
 
 		VkPipelineColorBlendStateCreateInfo colorBlending{};
+		std::vector<VkPipelineColorBlendAttachmentState> colorBlendAttachments(colorAttachmentCount, colorBlendAttachment);
 		colorBlending.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 		colorBlending.logicOpEnable = VK_FALSE;
 		colorBlending.logicOp = VkLogicOp::VK_LOGIC_OP_COPY;
-		colorBlending.attachmentCount = bDepthOnly ? 0 : 1;
-		colorBlending.pAttachments = bDepthOnly ? nullptr : &colorBlendAttachment;
+		colorBlending.attachmentCount = colorAttachmentCount;
+		colorBlending.pAttachments = colorBlendAttachments.empty() ? nullptr : colorBlendAttachments.data();
 		colorBlending.blendConstants[0] = 0.0f;
 		colorBlending.blendConstants[1] = 0.0f;
 		colorBlending.blendConstants[2] = 0.0f;
@@ -259,16 +270,20 @@ namespace sh::render::vk
 				stageCreateInfo.pSpecializationInfo = &specializationInfo;
 		}
 		
-		VkFormat colorFormat = VulkanImageBuffer::ConvertTextureFormat(rtLayout.format);
+		std::vector<VkFormat> colorFormats;
+		colorFormats.reserve(colorAttachmentCount);
+		for (TextureFormat format : rtLayout.colorFormats)
+			colorFormats.push_back(VulkanImageBuffer::ConvertTextureFormat(format));
+
 		VkFormat depthFormat = VulkanImageBuffer::ConvertTextureFormat(rtLayout.depthFormat);
 
 		VkPipelineRenderingCreateInfoKHR pipelineRenderingCI{};
 		pipelineRenderingCI.sType = VkStructureType::VK_STRUCTURE_TYPE_PIPELINE_RENDERING_CREATE_INFO_KHR;
-		pipelineRenderingCI.colorAttachmentCount = bDepthOnly ? 0 : 1;
-		pipelineRenderingCI.pColorAttachmentFormats = bDepthOnly ? nullptr : &colorFormat;
+		pipelineRenderingCI.colorAttachmentCount = colorAttachmentCount;
+		pipelineRenderingCI.pColorAttachmentFormats = colorFormats.empty() ? nullptr : colorFormats.data();
 		pipelineRenderingCI.depthAttachmentFormat = depthFormat;
 		// depth-only RT는 view aspect=DEPTH-only로 만들었으므로 stencil 포맷도 비활성화.
-		pipelineRenderingCI.stencilAttachmentFormat = bDepthOnly ? VkFormat::VK_FORMAT_UNDEFINED : depthFormat;
+		pipelineRenderingCI.stencilAttachmentFormat = (!rtLayout.IsDepthOnly() && HasStencil(rtLayout.depthFormat)) ? depthFormat : VkFormat::VK_FORMAT_UNDEFINED;
 
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType = VkStructureType::VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;

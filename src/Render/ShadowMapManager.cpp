@@ -55,12 +55,7 @@ namespace sh::render
 			SH_ERROR("ShadowMapManager: context is not initialized");
 			return;
 		}
-		RenderTargetLayout layout{};
-		layout.format = TextureFormat::None;
-		layout.depthFormat = TextureFormat::D32;
-		layout.bUseMSAA = false;
-
-		atlas = core::SObject::Create<RenderTexture>(layout);
+		atlas = core::SObject::Create<RenderTexture>(TextureFormat::None, TextureFormat::D32, false);
 		atlas->SetSize(atlasSize, atlasSize);
 		atlas->Build(*ctx);
 		atlas->SetName("ShadowAtlas");
@@ -96,7 +91,7 @@ namespace sh::render
 		casterLightSpace.clear();
 
 		renderData.renderViewers.clear();
-		renderData.target = atlas;
+		renderData.SetRenderTarget(atlas);
 		renderData.renderViewers.reserve(casters.size());
 
 		for (const IShadowCaster* caster : casters)

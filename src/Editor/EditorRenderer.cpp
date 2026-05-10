@@ -21,7 +21,7 @@ namespace sh::editor
 	{
 		if (data.tag == "EditorCamera")
 		{
-			guiPass->viewportTexture = data.target;
+			guiPass->viewportTexture = data.GetRenderTargets()[0];
 			EnqueRenderPass(*outlinePass);
 			EnqueRenderPass(*opaquePass);
 			EnqueRenderPass(*transparentPass);

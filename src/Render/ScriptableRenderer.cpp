@@ -111,7 +111,7 @@ namespace sh::render
 
 		for (int i = 0; i < activePasses.size(); ++i)
 		{
-			barriers[i] = BuildBarrierInfo(*activePasses[i], data.frameIndex);
+			barriers[i] = BuildBarrierInfo(*activePasses[i], data.GetFrameIdx());
 		}
 
 		std::vector<std::future<std::pair<ScriptableRenderPass*, CommandBuffer*>>> futurePasses;
@@ -146,8 +146,8 @@ namespace sh::render
 	SH_RENDER_API void ScriptableRenderer::ExecuteTransfer(uint32_t imgIdx)
 	{
 		RenderData data{};
-		data.frameIndex = imgIdx;
-		data.drawables = nullptr;
+		IRenderThrMethod<RenderData>::SetFrameIndex(data, imgIdx);
+		IRenderThrMethod<RenderData>::SetDrawablesPtr(data, nullptr);
 
 		IRenderThrMethod<ScriptableRenderPass>::Configure(*cpyPass, data);
 

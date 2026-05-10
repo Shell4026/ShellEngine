@@ -45,19 +45,19 @@ namespace sh::render::vk
 
 		SH_RENDER_API auto IsSwapChainSupport(VkPhysicalDevice gpu) -> bool;
 
-		SH_RENDER_API auto GetSurface() const -> const VkSurfaceKHR { return surface; }
-		SH_RENDER_API auto GetSwapChain() const -> const VkSwapchainKHR { return swapChain; }
-		SH_RENDER_API auto GetSwapChainDetail() const -> const SwapChainSupportDetails& { return details; }
-		SH_RENDER_API auto GetSwapChainSize() const -> VkExtent2D { return swapChainSize; }
-		SH_RENDER_API auto GetSwapChainImageFormat() const -> VkFormat { return swapChainImageFormat; }
-		SH_RENDER_API auto GetSwapChainImages() const -> const std::vector<VulkanImageBuffer>& { return swapChainImages; }
-		SH_RENDER_API auto GetSwapChainImages() -> std::vector<VulkanImageBuffer>& { return swapChainImages; }
-		SH_RENDER_API auto GetSwapChainMSAAImages() const -> const std::vector<VulkanImageBuffer>& { return swapChainImagesMSAA; }
-		SH_RENDER_API auto GetSwapChainMSAAImages() -> std::vector<VulkanImageBuffer>& { return swapChainImagesMSAA; }
-		SH_RENDER_API auto GetSwapChainDepthImages() const -> const std::vector<VulkanImageBuffer>& { return swapChainImagesDepth; }
-		SH_RENDER_API auto GetSwapChainDepthImages() -> std::vector<VulkanImageBuffer>& { return swapChainImagesDepth; }
-		SH_RENDER_API auto GetSwapChainImageCount() const -> uint32_t { return swapChainImageCount; }
-		SH_RENDER_API auto GetRenderTargetLayout() const -> const RenderTargetLayout& { return rtLayout; }
+		auto GetSurface() const -> const VkSurfaceKHR { return surface; }
+		auto GetSwapChain() const -> const VkSwapchainKHR { return swapChain; }
+		auto GetSwapChainDetail() const -> const SwapChainSupportDetails& { return details; }
+		auto GetSwapChainSize() const -> VkExtent2D { return swapChainSize; }
+		auto GetSwapChainImageFormat() const -> VkFormat { return swapChainImageFormat; }
+		auto GetSwapChainImages() const -> const std::vector<VulkanImageBuffer>& { return swapChainImages; }
+		auto GetSwapChainImages() -> std::vector<VulkanImageBuffer>& { return swapChainImages; }
+		auto GetSwapChainMSAAImages() const -> const std::vector<VulkanImageBuffer>& { return swapChainImagesMSAA; }
+		auto GetSwapChainMSAAImages() -> std::vector<VulkanImageBuffer>& { return swapChainImagesMSAA; }
+		auto GetSwapChainDepthImages() const -> const std::vector<VulkanImageBuffer>& { return swapChainImagesDepth; }
+		auto GetSwapChainDepthImages() -> std::vector<VulkanImageBuffer>& { return swapChainImagesDepth; }
+		auto GetSwapChainImageCount() const -> uint32_t { return swapChainImageCount; }
+		auto GetRenderTargetLayout() const -> const RenderTargetLayout& { return rtLayout; }
 	private:
 		void QuerySwapChainDetails(VkPhysicalDevice gpu);
 		auto SelectSurfaceFormat() -> VkSurfaceFormatKHR;
@@ -79,4 +79,4 @@ namespace sh::render::vk
 
 		RenderTargetLayout rtLayout;
 	};
-}
+}//namespace

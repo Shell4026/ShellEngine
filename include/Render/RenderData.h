@@ -1,13 +1,17 @@
 ﻿#pragma once
 #include "Mesh.h"
 #include "Texture.h"
+#include "IRenderThrMethod.h"
+#include "Formats.hpp"
 
 #include "Core/SContainer.hpp"
 #include "Core/Name.h"
 
 #include <cstdint>
 #include <functional>
+#include <initializer_list>
 #include <variant>
+#include <vector>
 
 namespace sh
 {
@@ -34,46 +38,75 @@ namespace sh::render
 		std::size_t offset = 0;
 	};
 
-	struct RenderData
+	class RenderData
 	{
+		friend struct IRenderThrMethod<RenderData>;
+	public:
+		void SetRenderTarget(const RenderTexture* renderTarget) { targets.clear(); targets.push_back(renderTarget); }
+		void SetRenderTargets(std::initializer_list<const RenderTexture*> renderTargets)
+		{
+			if (renderTargets.size() == 0)
+			{
+				targets.clear();
+				targets.push_back(nullptr);
+			}
+			else
+				targets.assign(renderTargets.begin(), renderTargets.end());
+		}
+		void SetRenderTargets(std::vector<const RenderTexture*> renderTargets)
+		{
+			if (renderTargets.size() == 0)
+			{
+				targets.clear();
+				targets.push_back(nullptr);
+			}
+			else
+				targets = std::move(renderTargets);
+		}
+		void ClearRenderTargets() { targets.clear(); targets.push_back(nullptr); }
+		auto GetRenderTarget(std::size_t idx) const -> const RenderTexture* { return idx < targets.size() ? targets[idx] : nullptr; }
+		auto GetRenderTargets() const -> const std::vector<const RenderTexture*>& { return targets; }
+		auto GetFrameIdx() const -> uint32_t { return frameIndex; }
+		auto GetDrawablesPtr() const -> const std::vector<Drawable*>* { return drawables; }
+	public:
 		int priority = 0;
-		uint32_t frameIndex = 0;
-		const RenderTexture* target = nullptr;
 		core::Name tag{ "Camera" };
-
 		std::vector<RenderViewer> renderViewers;
+	private:
+		uint32_t frameIndex = 0;
+		std::vector<const RenderTexture*> targets{ nullptr };
 		const std::vector<Drawable*>* drawables = nullptr;
 	};
 
-	struct RenderTargetLayout
+	template<>
+	struct IRenderThrMethod<RenderData>
 	{
-		TextureFormat format;
-		TextureFormat depthFormat;
-		bool bUseMSAA = false;
-
-		auto operator==(const RenderTargetLayout& other) const -> bool
-		{
-			return format == other.format && depthFormat == other.depthFormat && bUseMSAA == other.bUseMSAA;
-		}
+		inline static void SetFrameIndex(RenderData& rd, uint32_t frameIdx) { rd.frameIndex = frameIdx; }
+		inline static void SetDrawablesPtr(RenderData& rd, const std::vector<Drawable*>* ptr) { rd.drawables = ptr; }
 	};
 
-	//struct DrawList
-	//{
-	//	struct RenderGroup
-	//	{
-	//		const Material* material;
-	//		Mesh::Topology topology;
-	//		std::vector<Drawable*> drawables;
-	//	};
-	//	struct RenderItem
-	//	{
-	//		const Material* material;
-	//		Mesh::Topology topology;
-	//		Drawable* drawable;
-	//	};
-	//	std::variant<std::vector<RenderGroup>, std::vector<RenderItem>> renderData;
-	//	uint32_t drawableCount = 0;
-	//};
+	class RenderTargetLayout
+	{
+	public:
+		auto operator==(const RenderTargetLayout& other) const -> bool
+		{
+			return colorFormats == other.colorFormats && depthFormat == other.depthFormat && bUseMSAA == other.bUseMSAA;
+		}
+		auto IsDepthOnly() const -> bool
+		{
+			for (TextureFormat format : colorFormats)
+			{
+				if (format != TextureFormat::None)
+					return false;
+			}
+			return depthFormat != TextureFormat::None;
+		}
+	public:
+		std::vector<TextureFormat> colorFormats{ TextureFormat::None };
+		TextureFormat depthFormat = TextureFormat::None;
+
+		bool bUseMSAA = false;
+	};
 
 	/// @brief 리소스(이미지/버퍼) 사용 의도. 배리어 계산의 입력으로 쓰임
 	enum class ResourceUsage
@@ -103,12 +136,12 @@ namespace std
 		auto operator()(const sh::render::RenderTargetLayout& layout) const -> std::size_t
 		{
 			std::hash<int> intHasher{};
-			std::hash<int> boolHasher{};
+			std::hash<bool> boolHasher{};
 
-			std::size_t hash = intHasher(static_cast<int>(layout.format));
-			hash = sh::core::Util::CombineHash(hash, intHasher(static_cast<int>(layout.depthFormat)));
+			std::size_t hash = intHasher(static_cast<int>(layout.depthFormat));
 			hash = sh::core::Util::CombineHash(hash, boolHasher(layout.bUseMSAA));
-
+			for (std::size_t i = 0; i < layout.colorFormats.size(); ++i)
+				hash = sh::core::Util::CombineHash(hash, intHasher(static_cast<int>(layout.colorFormats[i])));
 			return hash;
 		}
 	};

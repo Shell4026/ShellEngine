@@ -52,11 +52,6 @@ namespace sh::render
 	{
 		friend IRenderThrMethod<ScriptableRenderPass>;
 	public:
-		SH_RENDER_API ScriptableRenderPass(const core::Name& passName, RenderQueue renderQueue);
-		SH_RENDER_API virtual ~ScriptableRenderPass() = default;
-
-		SH_RENDER_API auto GetRenderTextures() const -> const std::unordered_map<const RenderTexture*, ResourceUsage>& { return renderTextures; }
-	protected:
 		struct RenderBatch
 		{
 			const Material* material;
@@ -64,12 +59,20 @@ namespace sh::render
 			bool bSkinned = false;
 			std::vector<const Drawable*> drawables;
 		};
+		SH_RENDER_API ScriptableRenderPass(const core::Name& passName, RenderQueue renderQueue);
+		SH_RENDER_API virtual ~ScriptableRenderPass() = default;
+
+		SH_RENDER_API static auto CreateRenderBatch(const core::Name& passName, const std::vector<Drawable*>& drawables) -> std::vector<RenderBatch>;
+
+		SH_RENDER_API auto GetRenderTextures() const -> const std::unordered_map<const RenderTexture*, ResourceUsage>& { return renderTextures; }
+	protected:
 		SH_RENDER_API virtual void Configure(const RenderData& renderData);
 		SH_RENDER_API virtual void Record(CommandBuffer& cmd, const IRenderContext& ctx, const RenderData& renderData);
 
-		SH_RENDER_API auto CreateRenderBatch(const std::vector<Drawable*>& drawables) const -> std::vector<RenderBatch>;
+		SH_RENDER_API void SetRenderTargetImageUsages(const RenderData& renderData);
 		SH_RENDER_API void SetImageUsages(const RenderData& renderData);
 		SH_RENDER_API void SetImageUsages(const std::vector<Drawable*>& drawables);
+		SH_RENDER_API void SetImageUsages(const Material& mat);
 		SH_RENDER_API void SetViewportScissor(CommandBuffer& cmd, const IRenderContext& ctx, const RenderViewer& renderViewer);
 
 		/// @brief Configure 이후에 호출해야 정확한 렌더콜 갯수를 알 수 있음

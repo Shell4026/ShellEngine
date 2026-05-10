@@ -14,30 +14,7 @@ namespace sh::render
 		renderQueue(renderQueue)
 	{
 	}
-	SH_RENDER_API void ScriptableRenderPass::Configure(const RenderData& renderData)
-	{
-		if (renderData.drawables != nullptr)
-		{
-			renderBatches = CreateRenderBatch(*renderData.drawables);
-		}
-		SetImageUsages(renderData);
-	}
-	SH_RENDER_API void ScriptableRenderPass::Record(CommandBuffer& cmd, const IRenderContext& ctx, const RenderData& renderData)
-	{
-		cmd.SetRenderData(renderData, true, true, true, true);
-		if (renderData.drawables == nullptr)
-			return;
-		std::size_t viewerIdx = 0;
-		for (const RenderViewer& viewer : renderData.renderViewers)
-		{
-			SetViewportScissor(cmd, ctx, viewer);
-			for (const RenderBatch& batch : renderBatches)
-				cmd.DrawMeshBatch(batch.drawables, passName, viewerIdx);
-			++viewerIdx;
-		}
-		//ctx.GetRenderImpl().RecordCommand(cmd, passName, renderTarget, drawList, bStoreImage);
-	}
-	SH_RENDER_API auto ScriptableRenderPass::CreateRenderBatch(const std::vector<Drawable*>& drawables) const -> std::vector<RenderBatch>
+	SH_RENDER_API auto ScriptableRenderPass::CreateRenderBatch(const core::Name& passName, const std::vector<Drawable*>& drawables) -> std::vector<RenderBatch>
 	{
 		std::vector<RenderBatch> groups;
 		struct GroupKey
@@ -105,17 +82,50 @@ namespace sh::render
 		}
 		return groups;
 	}
+	SH_RENDER_API void ScriptableRenderPass::Configure(const RenderData& renderData)
+	{
+		if (renderData.GetDrawablesPtr() != nullptr)
+		{
+			renderBatches = CreateRenderBatch(passName, *renderData.GetDrawablesPtr());
+		}
+		SetImageUsages(renderData);
+	}
+	SH_RENDER_API void ScriptableRenderPass::Record(CommandBuffer& cmd, const IRenderContext& ctx, const RenderData& renderData)
+	{
+		cmd.SetRenderData(renderData, true, true, true, true);
+		if (renderData.GetDrawablesPtr() == nullptr)
+			return;
+		std::size_t viewerIdx = 0;
+		for (const RenderViewer& viewer : renderData.renderViewers)
+		{
+			SetViewportScissor(cmd, ctx, viewer);
+			for (const RenderBatch& batch : renderBatches)
+				cmd.DrawMeshBatch(batch.drawables, passName, viewerIdx);
+			++viewerIdx;
+		}
+		//ctx.GetRenderImpl().RecordCommand(cmd, passName, renderTarget, drawList, bStoreImage);
+	}
 	SH_RENDER_API void ScriptableRenderPass::SetImageUsages(const RenderData& renderData)
 	{
 		renderTextures.clear();
-		
-		if (renderData.target != nullptr && renderData.target->IsDepthOnly())
-			renderTextures[renderData.target] = ResourceUsage::DepthStencilAttachment;
-		else
-			renderTextures[renderData.target] = ResourceUsage::ColorAttachment;
 
-		if (renderData.drawables != nullptr)
-			SetImageUsages(*renderData.drawables);
+		SetRenderTargetImageUsages(renderData);
+
+		if (renderData.GetDrawablesPtr() != nullptr)
+			SetImageUsages(*renderData.GetDrawablesPtr());
+	}
+	SH_RENDER_API void ScriptableRenderPass::SetRenderTargetImageUsages(const RenderData& renderData)
+	{
+		for (const RenderTexture* target : renderData.GetRenderTargets())
+		{
+			if (target == nullptr)
+			{
+				renderTextures[nullptr] = ResourceUsage::ColorAttachment;
+				continue;
+			}
+
+			renderTextures[target] = target->IsDepthTexture() ? ResourceUsage::DepthStencilAttachment : ResourceUsage::ColorAttachment;
+		}
 	}
 	SH_RENDER_API void ScriptableRenderPass::SetImageUsages(const std::vector<Drawable*>& drawables)
 	{
@@ -124,17 +134,21 @@ namespace sh::render
 			if (drawable == nullptr || !drawable->CheckAssetValid())
 				continue;
 
-			const Material* const mat = drawable->GetMaterial();
-			for (const MaterialData::CachedRT& cachedRT : IRenderThrMethod<MaterialData>::GetCachedRTs(mat->GetMaterialData()))
-			{
-				if (cachedRT.rt.IsValid() && cachedRT.pass->GetLightingPassName() == passName)
-					renderTextures[cachedRT.rt.Get()] = cachedRT.rt->IsDepthOnly() ? ResourceUsage::DepthStencilSampledRead : ResourceUsage::SampledRead;
-			}
 			for (const MaterialData::CachedRT& cachedRT : IRenderThrMethod<MaterialData>::GetCachedRTs(drawable->GetMaterialData()))
 			{
 				if (cachedRT.rt.IsValid() && cachedRT.pass->GetLightingPassName() == passName)
-					renderTextures[cachedRT.rt.Get()] = cachedRT.rt->IsDepthOnly() ? ResourceUsage::DepthStencilSampledRead : ResourceUsage::SampledRead;
+					renderTextures[cachedRT.rt.Get()] = cachedRT.rt->IsDepthTexture() ? ResourceUsage::DepthStencilSampledRead : ResourceUsage::SampledRead;
 			}
+			const Material* const mat = drawable->GetMaterial();
+			SetImageUsages(*mat);
+		}
+	}
+	SH_RENDER_API void ScriptableRenderPass::SetImageUsages(const Material& mat)
+	{
+		for (const MaterialData::CachedRT& cachedRT : IRenderThrMethod<MaterialData>::GetCachedRTs(mat.GetMaterialData()))
+		{
+			if (cachedRT.rt.IsValid() && cachedRT.pass->GetLightingPassName() == passName)
+				renderTextures[cachedRT.rt.Get()] = cachedRT.rt->IsDepthTexture() ? ResourceUsage::DepthStencilSampledRead : ResourceUsage::SampledRead;
 		}
 	}
 	SH_RENDER_API void ScriptableRenderPass::SetViewportScissor(CommandBuffer& cmd, const IRenderContext& ctx, const RenderViewer& renderViewer)

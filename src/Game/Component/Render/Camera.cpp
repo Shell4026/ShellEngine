@@ -33,6 +33,7 @@ namespace sh::game
 			height = size.y;
 			viewer.viewportRect = { 0, 0, size.x, size.y };
 			viewer.viewportScissor = { 0, 0, size.x, size.y };
+			renderData.ClearRenderTargets();
 		}
 		else
 		{
@@ -42,7 +43,7 @@ namespace sh::game
 			viewer.viewportRect = { 0, 0, size.x, size.y };
 			viewer.viewportScissor = { 0, 0, size.x, size.y };
 
-			renderData.target = renderTexture;
+			renderData.SetRenderTarget(renderTexture);
 		}
 		gameObject.transform->UpdateMatrix();
 		viewer.pos = gameObject.transform->GetWorldPosition();

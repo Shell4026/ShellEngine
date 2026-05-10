@@ -4,6 +4,7 @@
 
 #include "Render/RenderPass/DepthPass.h"
 #include "Render/RenderPass/TransparentPass.h"
+#include "Render/RenderPass/SSAOPass.h"
 
 #include <cstring>
 namespace sh::game
@@ -19,6 +20,7 @@ namespace sh::game
 	{
 		depthPass = &AddRenderPass<render::DepthPass>();
 		opaquePass = &AddRenderPass(core::Name{ "Opaque" }, render::RenderQueue::Opaque);
+		ssaoPass = &AddRenderPass<render::SSAOPass>(renderCtx);
 		transparentPass = &AddRenderPass<render::TransparentPass>();
 		uiPass = &AddRenderPass<render::TransparentPass>("UI", render::RenderQueue::Transparent);
 		guiPass = &AddRenderPass<game::GUIPass>();
@@ -29,6 +31,11 @@ namespace sh::game
 		if (data.tag == "Depth")
 		{
 			EnqueRenderPass(*depthPass);
+			return;
+		}
+		if (data.tag == "SSAO")
+		{
+			EnqueRenderPass(*ssaoPass);
 			return;
 		}
 		if (data.tag == "ImGUI")
