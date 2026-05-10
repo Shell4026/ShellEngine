@@ -6,6 +6,8 @@
 #include "Core/SContainer.hpp"
 #include "Core/Logger.h"
 
+#include <algorithm>
+
 namespace sh::render
 {
 	SH_RENDER_API Material::Material() :
@@ -161,69 +163,147 @@ namespace sh::render
 			bool isSampler = false;
 			for (const UniformStructLayout::UniformMember& member : uniformLayout->GetMembers())
 			{
+				const auto writeArrayFn = [&](const auto* values, auto convertFn)
+				{
+					if (values == nullptr || member.count == 0)
+						return;
+
+					const uint32_t stride = member.layoutSize / member.count;
+					const uint32_t count = std::min<uint32_t>(member.count, static_cast<uint32_t>(values->size()));
+					for (uint32_t i = 0; i < count; ++i)
+					{
+						auto converted = convertFn((*values)[i]);
+						SetData(converted, data, member.offset + stride * i);
+					}
+				};
+
 				if (member.typeHash == core::reflection::GetType<int>().hash)
 				{
-					auto var = propertyBlock.GetScalarProperty(member.name);
-					if (var.has_value())
-						SetData(static_cast<int>(var.value()), data, member.offset);
+					if (member.IsArray())
+					{
+						writeArrayFn(propertyBlock.GetIntArrayProperty(member.name),
+							[](int value) { return value; });
+					}
 					else
-						SetData(0, data, member.offset);
+					{
+						auto var = propertyBlock.GetScalarProperty(member.name);
+						if (var.has_value())
+							SetData(static_cast<int>(var.value()), data, member.offset);
+						else
+							SetData(0, data, member.offset);
+					}
 				}
 				else if (member.typeHash == core::reflection::GetType<float>().hash)
 				{
-					auto var = propertyBlock.GetScalarProperty(member.name);
-					if (var.has_value())
-						SetData(var.value(), data, member.offset);
+					if (member.IsArray())
+					{
+						writeArrayFn(propertyBlock.GetScalarArrayProperty(member.name),
+							[](float value) { return value; });
+					}
 					else
-						SetData(0.0f, data, member.offset);
+					{
+						auto var = propertyBlock.GetScalarProperty(member.name);
+						if (var.has_value())
+							SetData(var.value(), data, member.offset);
+						else
+							SetData(0.0f, data, member.offset);
+					}
 				}
 				else if (member.typeHash == core::reflection::GetType<glm::vec2>().hash)
 				{
-					auto var = propertyBlock.GetVectorProperty(member.name);
-					if (var)
-						SetData(glm::vec2{ var->x, var->y }, data, member.offset);
+					if (member.IsArray())
+					{
+						writeArrayFn(propertyBlock.GetVectorArrayProperty(member.name),
+							[](const glm::vec4& value) { return glm::vec2{ value.x, value.y }; });
+					}
 					else
-						SetData(glm::vec2{ 0.f }, data, member.offset);
+					{
+						auto var = propertyBlock.GetVectorProperty(member.name);
+						if (var)
+							SetData(glm::vec2{ var->x, var->y }, data, member.offset);
+						else
+							SetData(glm::vec2{ 0.f }, data, member.offset);
+					}
 				}
 				else if (member.typeHash == core::reflection::GetType<glm::vec3>().hash)
 				{
-					auto var = propertyBlock.GetVectorProperty(member.name);
-					if (var)
-						SetData(glm::vec3{ var->x, var->y, var->z }, data, member.offset);
+					if (member.IsArray())
+					{
+						writeArrayFn(propertyBlock.GetVectorArrayProperty(member.name),
+							[](const glm::vec4& value) { return glm::vec3{ value.x, value.y, value.z }; });
+					}
 					else
-						SetData(glm::vec3{ 0.f }, data, member.offset);
+					{
+						auto var = propertyBlock.GetVectorProperty(member.name);
+						if (var)
+							SetData(glm::vec3{ var->x, var->y, var->z }, data, member.offset);
+						else
+							SetData(glm::vec3{ 0.f }, data, member.offset);
+					}
 				}
 				else if (member.typeHash == core::reflection::GetType<glm::vec4>().hash)
 				{
-					auto var = propertyBlock.GetVectorProperty(member.name);
-					if (var)
-						SetData(*var, data, member.offset);
+					if (member.IsArray())
+					{
+						writeArrayFn(propertyBlock.GetVectorArrayProperty(member.name),
+							[](const glm::vec4& value) { return value; });
+					}
 					else
-						SetData(glm::vec4{ 0.f }, data, member.offset);
+					{
+						auto var = propertyBlock.GetVectorProperty(member.name);
+						if (var)
+							SetData(*var, data, member.offset);
+						else
+							SetData(glm::vec4{ 0.f }, data, member.offset);
+					}
 				}
 				else if (member.typeHash == core::reflection::GetType<glm::mat2>().hash)
 				{
-					auto var = propertyBlock.GetMatrixProperty(member.name);
-					if (var)
-						SetData(core::Util::ConvertMat4ToMat2(*var), data, member.offset);
+					if (member.IsArray())
+					{
+						writeArrayFn(propertyBlock.GetMatrixArrayProperty(member.name),
+							[](const glm::mat4& value) { return core::Util::ConvertMat4ToMat2(value); });
+					}
 					else
-						SetData(glm::mat2{ 1.f }, data, member.offset);
+					{
+						auto var = propertyBlock.GetMatrixProperty(member.name);
+						if (var)
+							SetData(core::Util::ConvertMat4ToMat2(*var), data, member.offset);
+						else
+							SetData(glm::mat2{ 1.f }, data, member.offset);
+					}
 				}
 				else if (member.typeHash == core::reflection::GetType<glm::mat3>().hash)
 				{
-					auto var = propertyBlock.GetMatrixProperty(member.name);
-					if (var)
-						SetData(core::Util::ConvertMat4ToMat3(*var), data, member.offset);
+					if (member.IsArray())
+					{
+						writeArrayFn(propertyBlock.GetMatrixArrayProperty(member.name),
+							[](const glm::mat4& value) { return core::Util::ConvertMat4ToMat3(value); });
+					}
 					else
-						SetData(glm::mat3{ 1.f }, data, member.offset);
+					{
+						auto var = propertyBlock.GetMatrixProperty(member.name);
+						if (var)
+							SetData(core::Util::ConvertMat4ToMat3(*var), data, member.offset);
+						else
+							SetData(glm::mat3{ 1.f }, data, member.offset);
+					}
 				}
 				else if (member.typeHash == core::reflection::GetType<glm::mat4>().hash)
 				{
-					auto var = propertyBlock.GetMatrixProperty(member.name);
-					if (var)
-						SetData(*var, data, member.offset);
+					if (member.IsArray())
+					{
+						writeArrayFn(propertyBlock.GetMatrixArrayProperty(member.name),
+							[](const glm::mat4& value) { return value; });
+					}
 					else
-						SetData(glm::mat2{ 1.f }, data, member.offset);
+					{
+						auto var = propertyBlock.GetMatrixProperty(member.name);
+						if (var)
+							SetData(*var, data, member.offset);
+						else
+							SetData(glm::mat4{ 1.f }, data, member.offset);
+					}
 				}
 				else if (member.typeHash == core::reflection::GetType<Texture>().hash)
 				{
@@ -378,6 +458,132 @@ namespace sh::render
 						);
 						SetProperty(name, vecValue);
 					}
+				}
+			}
+			if (propertyJson.contains("matrix"))
+			{
+				const auto& matJson = propertyJson["matrix"];
+				for (const auto& [name, value] : matJson.items())
+				{
+					if (!value.is_array() || value.size() != 4)
+						continue;
+
+					glm::mat4 mat{ 0.f };
+					for (int i = 0; i < 4; ++i)
+					{
+						const core::Json& col = value[i];
+						if (!col.is_array() || col.size() != 4)
+							continue;
+						mat[i] = { col[0], col[1], col[2], col[3] };
+					}
+					SetProperty(name, mat);
+				}
+			}
+			if (propertyJson.contains("scalarArrays"))
+			{
+				const auto& scalarArrayJson = propertyJson["scalarArrays"];
+				for (const auto& [name, value] : scalarArrayJson.items())
+				{
+					if (!value.is_array())
+						continue;
+
+					std::vector<float> values = value.get<std::vector<float>>();
+					SetProperty(name, values);
+				}
+			}
+			if (propertyJson.contains("intArrays"))
+			{
+				const auto& intArrayJson = propertyJson["intArrays"];
+				for (const auto& [name, value] : intArrayJson.items())
+				{
+					if (!value.is_array())
+						continue;
+
+					std::vector<int> values = value.get<std::vector<int>>();
+					SetProperty(name, values);
+				}
+			}
+			if (propertyJson.contains("vectorArrays"))
+			{
+				const auto& vectorArrayJson = propertyJson["vectorArrays"];
+				for (const auto& [name, value] : vectorArrayJson.items())
+				{
+					if (!value.is_array())
+						continue;
+
+					std::vector<glm::vec4> values{};
+					for (const core::Json& vecJson : value)
+					{
+						if (!vecJson.is_array() || vecJson.size() != 4)
+							continue;
+						values.push_back(glm::vec4{
+							vecJson[0].get<float>(),
+							vecJson[1].get<float>(),
+							vecJson[2].get<float>(),
+							vecJson[3].get<float>()
+						});
+					}
+
+					const Shader::PropertyInfo* propInfo = core::IsValid(shader) ? shader->GetProperty(name) : nullptr;
+					if (propInfo != nullptr && propInfo->type == core::reflection::GetType<glm::vec2>())
+					{
+						std::vector<glm::vec2> vec2Values(values.size());
+						for (std::size_t i = 0; i < values.size(); ++i)
+							vec2Values[i] = glm::vec2{ values[i].x, values[i].y };
+						SetProperty(name, vec2Values);
+					}
+					else if (propInfo != nullptr && propInfo->type == core::reflection::GetType<glm::vec3>())
+					{
+						std::vector<glm::vec3> vec3Values(values.size());
+						for (std::size_t i = 0; i < values.size(); ++i)
+							vec3Values[i] = glm::vec3{ values[i].x, values[i].y, values[i].z };
+						SetProperty(name, vec3Values);
+					}
+					else
+						SetProperty(name, values);
+				}
+			}
+			if (propertyJson.contains("matrixArrays"))
+			{
+				const auto& matrixArrayJson = propertyJson["matrixArrays"];
+				for (const auto& [name, value] : matrixArrayJson.items())
+				{
+					if (!value.is_array())
+						continue;
+
+					std::vector<glm::mat4> values{};
+					for (const core::Json& matJson : value)
+					{
+						if (!matJson.is_array() || matJson.size() != 4)
+							continue;
+						glm::mat4 mat{ 0.f };
+						for (int i = 0; i < 4; ++i)
+						{
+							const core::Json& col = matJson[i];
+							if (!col.is_array() || col.size() != 4)
+								continue;
+							mat[i] = { col[0], col[1], col[2], col[3] };
+						}
+						values.push_back(mat);
+					}
+
+					const Shader::PropertyInfo* propInfo = core::IsValid(shader) ? shader->GetProperty(name) : nullptr;
+					if (propInfo != nullptr && propInfo->type == core::reflection::GetType<glm::mat2>())
+					{
+						std::vector<glm::mat2> mat2Values(values.size());
+						for (std::size_t i = 0; i < values.size(); ++i)
+							mat2Values[i] = core::Util::ConvertMat4ToMat2(values[i]);
+						SetProperty(name, mat2Values);
+					}
+					else if (propInfo != nullptr && propInfo->type == core::reflection::GetType<glm::mat3>())
+					{
+						std::vector<glm::mat3> mat3Values(values.size());
+						for (std::size_t i = 0; i < values.size(); ++i)
+							mat3Values[i] = core::Util::ConvertMat4ToMat3(values[i]);
+						SetProperty(name, mat3Values);
+					}
+					else
+						SetProperty(name, values);
 				}
 			}
 			if (propertyJson.contains("textures"))

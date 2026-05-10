@@ -25,6 +25,8 @@
 #include <unordered_set>
 #include <cassert>
 #include <optional>
+#include <array>
+#include <algorithm>
 
 namespace sh::render
 {
@@ -53,6 +55,12 @@ namespace sh::render
 
 		              template<typename T>
 		              void SetProperty(const std::string& name, const T& data);
+		              template<typename T>
+		              void SetProperty(const std::string& name, const std::vector<T>& data);
+		              template<typename T, std::size_t N>
+		              void SetProperty(const std::string& name, const std::array<T, N>& data);
+		              template<typename T>
+		              void SetPropertyArray(const std::string& name, const T* data, std::size_t count);
 		SH_RENDER_API void SetProperty(const std::string& name, const glm::vec4& data);
 		SH_RENDER_API void SetProperty(const std::string& name, const Texture* data);
 		SH_RENDER_API void SetProperty(const std::string& name, Texture* data);
@@ -126,6 +134,46 @@ namespace sh::render
 			auto it = std::find(dirtyProps.begin(), dirtyProps.end(), std::pair{ location.passPtr.Get(), location.layoutPtr});
 			if (it == dirtyProps.end())
 				dirtyProps.push_back({ location.passPtr.Get(), location.layoutPtr});
+		}
+
+		bPropertyDirty = true;
+	}
+	template<typename T>
+	inline void Material::SetProperty(const std::string& name, const std::vector<T>& data)
+	{
+		SetPropertyArray(name, data.data(), data.size());
+	}
+	template<typename T, std::size_t N>
+	inline void Material::SetProperty(const std::string& name, const std::array<T, N>& data)
+	{
+		SetPropertyArray(name, data.data(), data.size());
+	}
+	template<typename T>
+	inline void Material::SetPropertyArray(const std::string& name, const T* data, std::size_t count)
+	{
+		if (!core::IsValid(shader))
+			return;
+
+		const Shader::PropertyInfo* propInfo = shader->GetProperty(name);
+		assert(propInfo != nullptr);
+		if (propInfo == nullptr)
+			return;
+
+		assert(propInfo->type == core::reflection::GetType<T>());
+		if (propInfo->type != core::reflection::GetType<T>())
+			return;
+
+		assert(propInfo->locations.empty() || propInfo->locations.front().memberPtr->IsArray());
+		if (!propInfo->locations.empty() && !propInfo->locations.front().memberPtr->IsArray())
+			return;
+
+		propertyBlock.SetArrayProperty(name, data, count);
+
+		for (auto& location : propInfo->locations)
+		{
+			auto it = std::find(dirtyProps.begin(), dirtyProps.end(), std::pair{ location.passPtr.Get(), location.layoutPtr });
+			if (it == dirtyProps.end())
+				dirtyProps.push_back({ location.passPtr.Get(), location.layoutPtr });
 		}
 
 		bPropertyDirty = true;
