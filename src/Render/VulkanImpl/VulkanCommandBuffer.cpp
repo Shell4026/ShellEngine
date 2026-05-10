@@ -185,7 +185,6 @@ namespace sh::render::vk
         const VulkanImageBuffer* depthImg = nullptr;
         std::size_t colorImgsCount = 0;
         std::size_t colorMSAAImgsCount = 0;
-
         // 메모) 깊이 버퍼는 제일 앞의 렌더 텍스쳐 것을 쓰고 깊이 버퍼 전용 텍스쳐가 있으면 그걸 우선시 함
         const RenderTexture* const main = renderData.GetRenderTargets()[0];
         if (main == nullptr)

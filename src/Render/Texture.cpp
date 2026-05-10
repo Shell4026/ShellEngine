@@ -25,7 +25,7 @@ namespace sh::render
 		int mipHeight = height;
 		for (int i = 0; i < mipLevels; ++i)
 		{
-			pixels[i].resize(mipWidth * mipHeight * GetTextureFormatChannel(format));
+			pixels[i].resize(mipWidth * mipHeight * GetTextureFormatPixelSize(format));
 			mipWidth = std::max(1, mipWidth / 2);
 			mipHeight = std::max(1, mipHeight / 2);
 		}
@@ -41,21 +41,44 @@ namespace sh::render
 		if (other.bDirty.test_and_set(std::memory_order::memory_order_acquire))
 			bDirty.test_and_set(std::memory_order::memory_order_relaxed);
 	}
-	Texture::~Texture()
-	{
-	}
+	Texture::~Texture() = default;
 
-	SH_RENDER_API void Texture::SetPixelData(const std::vector<uint8_t>& pixels, uint32_t mipLevel)
+	SH_RENDER_API void Texture::SyncDirty()
 	{
-		assert(this->pixels[mipLevel].size() == pixels.size());
-		this->pixels[mipLevel] = pixels;
-		if (textureBuffer != nullptr)
+		if (!bDirty.test_and_set(std::memory_order::memory_order_acquire))
+			core::ThreadSyncManager::PushSyncable(*this);
+	}
+	SH_RENDER_API void Texture::Sync()
+	{
+		if (bSetDataDirty)
 		{
-			bSetDataDirty = true;
-			SyncDirty();
+			CreateTextureBuffer();
+			bSetDataDirty = false;
+		}
+
+		bDirty.clear(std::memory_order::memory_order_relaxed);
+	}
+	SH_RENDER_API void Texture::OnPropertyChanged(const core::reflection::Property& prop)
+	{
+		if (prop.GetName() == core::Util::ConstexprHash("aniso"))
+		{
+			SetAnisoLevel(aniso);
+		}
+		else if (prop.GetName() == core::Util::ConstexprHash("bSRGB"))
+		{
+			SetSRGB(bSRGB);
+		}
+		else if (prop.GetName() == core::Util::ConstexprHash("bGenerateMipmap"))
+		{
+			SetGenerateMipmap(bGenerateMipmap);
+		}
+		else if (prop.GetName() == core::Util::ConstexprHash("filtering"))
+		{
+			SetFiltering(filtering);
 		}
 	}
-	SH_RENDER_API void Texture::SetPixelData(std::vector<uint8_t>&& pixels, uint32_t mipLevel)
+
+	SH_RENDER_API void Texture::SetPixelData(std::vector<uint8_t> pixels, uint32_t mipLevel)
 	{
 		assert(this->pixels[mipLevel].size() == pixels.size());
 		this->pixels[mipLevel] = std::move(pixels);
@@ -68,17 +91,13 @@ namespace sh::render
 	SH_RENDER_API void Texture::SetPixelData(const uint8_t* pixels, std::size_t size, uint32_t mipLevel)
 	{
 		assert(this->pixels[mipLevel].size() == size);
+		this->pixels[mipLevel].resize(size);
 		std::memcpy(this->pixels[mipLevel].data(), pixels, size);
 		if (textureBuffer != nullptr)
 		{
 			bSetDataDirty = true;
 			SyncDirty();
 		}
-	}
-
-	SH_RENDER_API auto Texture::GetPixelData() const -> const std::vector<std::vector<Byte>>&
-	{
-		return pixels;
 	}
 	SH_RENDER_API auto Texture::GetPixelData(uint32_t mipLevel) const -> const std::vector<Byte>&
 	{
@@ -99,18 +118,6 @@ namespace sh::render
 	{
 		return textureBuffer.get();
 	}
-	SH_RENDER_API auto Texture::GetTextureFormat() const -> TextureFormat
-	{
-		return format;
-	}
-	SH_RENDER_API auto Texture::GetWidth() const -> uint32_t
-	{
-		return width;
-	}
-	SH_RENDER_API auto Texture::GetHeight() const -> uint32_t
-	{
-		return height;
-	}
 
 	SH_RENDER_API void Texture::ChangeTextureFormat(TextureFormat target)
 	{
@@ -125,10 +132,6 @@ namespace sh::render
 
 			SyncDirty();
 		}
-	}
-	SH_RENDER_API auto Texture::IsSRGB() const -> bool
-	{
-		return bSRGB;
 	}
 	SH_RENDER_API auto Texture::GetMipLevel() const -> uint32_t
 	{
@@ -145,34 +148,11 @@ namespace sh::render
 			SyncDirty();
 		}
 	}
-	SH_RENDER_API auto Texture::GetAnisoLevel() const -> uint32_t
-	{
-		return aniso;
-	}
 	SH_RENDER_API void Texture::SetGenerateMipmap(bool bGenerate)
 	{
 		bGenerateMipmap = bGenerate;
 		bSetDataDirty = true;
 		SyncDirty();
-	}
-	SH_RENDER_API auto Texture::IsGenerateMipmap() const -> bool
-	{
-		return bGenerateMipmap;
-	}
-	SH_RENDER_API void Texture::SyncDirty()
-	{
-		if (!bDirty.test_and_set(std::memory_order::memory_order_acquire))
-			core::ThreadSyncManager::PushSyncable(*this);
-	}
-	SH_RENDER_API void Texture::Sync()
-	{
-		if (bSetDataDirty)
-		{
-			CreateTextureBuffer();
-			bSetDataDirty = false;
-		}
-
-		bDirty.clear(std::memory_order::memory_order_relaxed);
 	}
 	SH_RENDER_API void Texture::SetSRGB(bool bSRGB)
 	{
@@ -198,29 +178,6 @@ namespace sh::render
 		{
 			bSetDataDirty = true;
 			SyncDirty();
-		}
-	}
-	SH_RENDER_API auto Texture::GetFiltering() const -> Filtering
-	{
-		return filtering;
-	}
-	SH_RENDER_API void Texture::OnPropertyChanged(const core::reflection::Property& prop)
-	{
-		if (prop.GetName() == core::Util::ConstexprHash("aniso"))
-		{
-			SetAnisoLevel(aniso);
-		}
-		else if (prop.GetName() == core::Util::ConstexprHash("bSRGB"))
-		{
-			SetSRGB(bSRGB);
-		}
-		else if (prop.GetName() == core::Util::ConstexprHash("bGenerateMipmap"))
-		{
-			SetGenerateMipmap(bGenerateMipmap);
-		}
-		else if (prop.GetName() == core::Util::ConstexprHash("filtering"))
-		{
-			SetFiltering(filtering);
 		}
 	}
 	SH_RENDER_API void Texture::ExportToPNG(const std::filesystem::path& path)
@@ -260,4 +217,4 @@ namespace sh::render
 			return true;
 		return false;
 	}
-}
+}//namespace

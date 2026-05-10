@@ -1,5 +1,8 @@
 ﻿#pragma once
 
+#include <cstddef>
+#include <cstdint>
+
 namespace sh::render
 {
 	enum class TextureFormat
@@ -10,6 +13,7 @@ namespace sh::render
 		SBGR24,
 		SBGRA32,
 		RGB24,
+		RG32F,
 		RGBA32,
 		BGR24,
 		BGRA32,
@@ -25,10 +29,25 @@ namespace sh::render
 	{
 		switch (format)
 		{
+		case TextureFormat::RG32F:
+			return 2;
 		case TextureFormat::R8:
 			return 1;
 		}
 		return 4;
+	}
+
+	inline static auto GetTextureFormatPixelSize(TextureFormat format) -> std::size_t
+	{
+		switch (format)
+		{
+		case TextureFormat::RG32F:
+			return sizeof(uint16_t) * 2;
+		case TextureFormat::R8:
+			return 1;
+		default:
+			return 4;
+		}
 	}
 
 	inline static auto IsDepthTexture(TextureFormat format) -> bool
@@ -52,6 +71,7 @@ namespace sh::render
 		case TextureFormat::SBGR24: return "SBGR24";
 		case TextureFormat::SBGRA32: return "SBGRA32";
 		case TextureFormat::RGB24: return "RGB24";
+		case TextureFormat::RG32F: return "RG32F";
 		case TextureFormat::RGBA32: return "RGBA32";
 		case TextureFormat::R8: return "R8";
 		case TextureFormat::D32S8: return "D32S8";

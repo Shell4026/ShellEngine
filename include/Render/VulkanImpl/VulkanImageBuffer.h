@@ -55,7 +55,7 @@ namespace sh::render::vk
 			VkAccessFlags dstAccess);
 		SH_RENDER_API static auto ConvertTextureFormat(TextureFormat format) -> VkFormat;
 	private:
-		static auto GetChannelCount(VkFormat format) -> uint32_t;
+		static auto GetFormatPixelSize(VkFormat format) -> uint32_t;
 	private:
 		const VulkanContext* ctx = nullptr;
 
@@ -70,7 +70,7 @@ namespace sh::render::vk
 		VkSampleCountFlagBits sample = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
 		uint32_t width = 0;
 		uint32_t height = 0;
-		uint32_t channel = 4;
+		uint32_t pixelSize = 4;
 		uint32_t aniso = 0;
 		uint32_t mipLevel = 1;
 

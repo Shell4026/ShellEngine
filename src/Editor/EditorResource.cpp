@@ -82,36 +82,38 @@ namespace sh::editor
 		for (auto icon : icons)
 			icon->SetName("icon");
 
-		auto lineShader = shaders.insert_or_assign("Line", static_cast<render::Shader*>(shaderLoader.Load("shaders/line.shader"))).first->second;
-		auto errorShader = shaders.insert_or_assign("ErrorShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/error.shader"))).first->second;
-		auto gridShader = shaders.insert_or_assign("GridShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/grid.shader"))).first->second;
-		auto pickingShader = shaders.insert_or_assign("EditorPickingShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/EditorPicking.shader"))).first->second;
-		auto outlineShader = shaders.insert_or_assign("OutlineShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/outline.shader"))).first->second;
-		auto triangleShader = shaders.insert_or_assign("TriangleShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/triangle.shader"))).first->second;
-		auto outlinePreShader = shaders.insert_or_assign("OutlinePreShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/EditorOutlinePre.shader"))).first->second;
-		auto outlinePostShader = shaders.insert_or_assign("OutlinePostShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/EditorOutlinePost.shader"))).first->second;
-		auto uiTextShader = shaders.insert_or_assign("UITextShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/UIText.shader"))).first->second;
+		render::Shader* const lineShader = shaders.insert_or_assign("Line", static_cast<render::Shader*>(shaderLoader.Load("shaders/line.shader"))).first->second;
+		render::Shader* const errorShader = shaders.insert_or_assign("ErrorShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/error.shader"))).first->second;
+		render::Shader* const gridShader = shaders.insert_or_assign("GridShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/grid.shader"))).first->second;
+		render::Shader* const pickingShader = shaders.insert_or_assign("EditorPickingShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/EditorPicking.shader"))).first->second;
+		render::Shader* const outlineShader = shaders.insert_or_assign("OutlineShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/outline.shader"))).first->second;
+		render::Shader* const triangleShader = shaders.insert_or_assign("TriangleShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/triangle.shader"))).first->second;
+		render::Shader* const outlinePreShader = shaders.insert_or_assign("OutlinePreShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/EditorOutlinePre.shader"))).first->second;
+		render::Shader* const outlinePostShader = shaders.insert_or_assign("OutlinePostShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/EditorOutlinePost.shader"))).first->second;
+		render::Shader* const uiTextShader = shaders.insert_or_assign("UITextShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/UIText.shader"))).first->second;
+		render::Shader* const ssaoShader = shaders.insert_or_assign("SSAOShader", static_cast<render::Shader*>(shaderLoader.Load("shaders/SSAO.shader"))).first->second;
 
-		auto blackTex = textures.insert_or_assign("BlackTexture", static_cast<render::Texture*>(texLoader.Load("textures/black.png"))).first->second;
+		render::Texture* const blackTex = textures.insert_or_assign("BlackTexture", static_cast<render::Texture*>(texLoader.Load("textures/black.png"))).first->second;
 		blackTex->Build(*renderer.GetContext());
 		blackTex->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f18" });
 
-		auto errorMat = materials.insert_or_assign("ErrorMaterial", core::SObject::Create<render::Material>(errorShader)).first->second;
-		auto lineMat = materials.insert_or_assign("LineMaterial", core::SObject::Create<render::Material>(lineShader)).first->second;
-		auto gridMat = materials.insert_or_assign("GridMaterial", core::SObject::Create<render::Material>(gridShader)).first->second;
-		auto pickingMat = materials.insert_or_assign("PickingMaterial", core::SObject::Create<render::Material>(pickingShader)).first->second;
-		auto triMat = materials.insert_or_assign("TriangleMaterial", core::SObject::Create<render::Material>(triangleShader)).first->second;
-		auto outlinePreMat = materials.insert_or_assign("OutlinePreMaterial", core::SObject::Create<render::Material>(outlinePreShader)).first->second;
-		auto outlinePostMat = materials.insert_or_assign("OutlinePostMaterial", core::SObject::Create<render::Material>(outlinePostShader)).first->second;
-		auto uiTextMat = materials.insert_or_assign("UITextMaterial", core::SObject::Create<render::Material>(uiTextShader)).first->second;
+		render::Material* const errorMat = materials.insert_or_assign("ErrorMaterial", core::SObject::Create<render::Material>(errorShader)).first->second;
+		render::Material* const lineMat = materials.insert_or_assign("LineMaterial", core::SObject::Create<render::Material>(lineShader)).first->second;
+		render::Material* const gridMat = materials.insert_or_assign("GridMaterial", core::SObject::Create<render::Material>(gridShader)).first->second;
+		render::Material* const pickingMat = materials.insert_or_assign("PickingMaterial", core::SObject::Create<render::Material>(pickingShader)).first->second;
+		render::Material* const triMat = materials.insert_or_assign("TriangleMaterial", core::SObject::Create<render::Material>(triangleShader)).first->second;
+		render::Material* const outlinePreMat = materials.insert_or_assign("OutlinePreMaterial", core::SObject::Create<render::Material>(outlinePreShader)).first->second;
+		render::Material* const outlinePostMat = materials.insert_or_assign("OutlinePostMaterial", core::SObject::Create<render::Material>(outlinePostShader)).first->second;
+		render::Material* const uiTextMat = materials.insert_or_assign("UITextMaterial", core::SObject::Create<render::Material>(uiTextShader)).first->second;
+		render::Material* const ssaoMat = materials.insert_or_assign("SSAOMaterial", core::SObject::Create<render::Material>(ssaoShader)).first->second;
 
-		auto sphereModel = models.insert_or_assign("SphereModel", static_cast<render::Model*>(modelLoader.Load("model/Sphere.obj"))).first->second;
+		render::Model* const sphereModel = models.insert_or_assign("SphereModel", static_cast<render::Model*>(modelLoader.Load("model/Sphere.obj"))).first->second;
 		sphereModel->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f15" });
 		sphereModel->GetMeshes()[0]->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f19" });
-		auto cubeModel = models.insert_or_assign("CubeModel", static_cast<render::Model*>(modelLoader.Load("model/cube.obj"))).first->second;
+		render::Model* const cubeModel = models.insert_or_assign("CubeModel", static_cast<render::Model*>(modelLoader.Load("model/cube.obj"))).first->second;
 		cubeModel->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f16" });
 		cubeModel->GetMeshes()[0]->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f20" });
-		auto planeModel = models.insert_or_assign("PlaneModel", static_cast<render::Model*>(modelLoader.Load("model/Plane.glb"))).first->second;
+		render::Model* const planeModel = models.insert_or_assign("PlaneModel", static_cast<render::Model*>(modelLoader.Load("model/Plane.glb"))).first->second;
 		planeModel->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f17" });
 		planeModel->GetMeshes()[0]->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f21" });
 
@@ -151,6 +153,10 @@ namespace sh::editor
 		uiTextMat->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f23" });
 		uiTextMat->Build(*renderer.GetContext());
 		uiTextMat->SetProperty("color", glm::vec3{ 1.f, 1.f, 1.f });
+
+		ssaoMat->SetName("SSAOMaterial");
+		ssaoMat->SetUUID(core::UUID{ "bbc4ef7ec45dce223297a224f8093f24" });
+		ssaoMat->Build(*renderer.GetContext());
 	}
 
 	SH_EDITOR_API auto EditorResource::GetIcon(Icon icon) -> game::GUITexture*

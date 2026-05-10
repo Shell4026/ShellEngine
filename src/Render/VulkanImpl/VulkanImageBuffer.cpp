@@ -25,7 +25,7 @@ namespace sh::render::vk
 		sample(other.sample),
 		width(other.width),
 		height(other.height),
-		channel(other.channel),
+		pixelSize(other.pixelSize),
 		aniso(other.aniso),
 		mipLevel(other.mipLevel),
 
@@ -51,7 +51,7 @@ namespace sh::render::vk
 		sample = other.sample;
 		width = other.width;
 		height = other.height;
-		channel = other.channel;
+		pixelSize = other.pixelSize;
 		aniso = other.aniso;
 		mipLevel = other.mipLevel;
 
@@ -94,7 +94,7 @@ namespace sh::render::vk
 		
 		width = info.width == 0 ? 1 : info.width;
 		height = info.height == 0 ? 1 : info.height;
-		channel = GetChannelCount(format);
+		pixelSize = GetFormatPixelSize(format);
 		aniso = info.aniso;
 		mipLevel = actualMip;
 
@@ -208,7 +208,7 @@ namespace sh::render::vk
 		filter = VkFilter::VK_FILTER_LINEAR;
 		format = VkFormat::VK_FORMAT_UNDEFINED;
 		width = height = 0;
-		channel = 4;
+		pixelSize = 4;
 		aniso = 0;
 		mipLevel = 1;
 
@@ -250,7 +250,7 @@ namespace sh::render::vk
 			mipWidth = std::max(1u, mipWidth / 2);
 			mipHeight = std::max(1u, mipHeight / 2);
 		}
-		std::size_t bufferSize = mipWidth * mipHeight * channel;
+		std::size_t bufferSize = mipWidth * mipHeight * pixelSize;
 		
 		stagingBuffer.Create(bufferSize,
 			VkBufferUsageFlagBits::VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -326,7 +326,7 @@ namespace sh::render::vk
 		sample = VkSampleCountFlagBits::VK_SAMPLE_COUNT_1_BIT;
 		width = swapChain.GetSwapChainSize().width;
 		height = swapChain.GetSwapChainSize().height;
-		channel = GetChannelCount(format);
+		pixelSize = GetFormatPixelSize(format);
 		aniso = 0;
 		mipLevel = 1;
 
@@ -415,6 +415,8 @@ namespace sh::render::vk
 		case TextureFormat::RGB24: [[fallthrough]]; // 대부분 지원 안 함
 		case TextureFormat::RGBA32:
 			return VkFormat::VK_FORMAT_R8G8B8A8_UNORM;
+		case TextureFormat::RG32F:
+			return VkFormat::VK_FORMAT_R16G16_SFLOAT;
 		case TextureFormat::BGR24: [[fallthrough]]; // 대부분 지원 안 함
 		case TextureFormat::BGRA32:
 			return VkFormat::VK_FORMAT_B8G8R8A8_UNORM;
@@ -434,7 +436,7 @@ namespace sh::render::vk
 			return VkFormat::VK_FORMAT_UNDEFINED;
 		}
 	}
-	auto VulkanImageBuffer::GetChannelCount(VkFormat format) -> uint32_t
+	auto VulkanImageBuffer::GetFormatPixelSize(VkFormat format) -> uint32_t
 	{
 		switch (format)
 		{
@@ -443,6 +445,8 @@ namespace sh::render::vk
 		case VkFormat::VK_FORMAT_B8G8R8A8_UNORM: [[fallthrough]];
 		case VkFormat::VK_FORMAT_B8G8R8A8_SRGB: [[fallthrough]];
 			return 4;
+		case VkFormat::VK_FORMAT_R16G16_SFLOAT:
+			return sizeof(uint16_t) * 2;
 		case VkFormat::VK_FORMAT_D32_SFLOAT_S8_UINT: [[fallthrough]];
 		case VkFormat::VK_FORMAT_D24_UNORM_S8_UINT: [[fallthrough]];
 		case VkFormat::VK_FORMAT_D16_UNORM_S8_UINT: [[fallthrough]];

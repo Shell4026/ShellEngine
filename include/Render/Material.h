@@ -129,7 +129,7 @@ namespace sh::render
 
 		propertyBlock.SetProperty(name, data);
 
-		for (auto& location : propInfo->locations)
+		for (const Shader::PropertyInfo::Location& location : propInfo->locations)
 		{
 			auto it = std::find(dirtyProps.begin(), dirtyProps.end(), std::pair{ location.passPtr.Get(), location.layoutPtr});
 			if (it == dirtyProps.end())
@@ -169,7 +169,7 @@ namespace sh::render
 
 		propertyBlock.SetArrayProperty(name, data, count);
 
-		for (auto& location : propInfo->locations)
+		for (const Shader::PropertyInfo::Location& location : propInfo->locations)
 		{
 			auto it = std::find(dirtyProps.begin(), dirtyProps.end(), std::pair{ location.passPtr.Get(), location.layoutPtr });
 			if (it == dirtyProps.end())

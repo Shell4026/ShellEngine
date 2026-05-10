@@ -13,6 +13,7 @@
 #include "Render/Mesh/Grid.h"
 #include "Render/Model.h"
 #include "Render/ShadowMapManager.h"
+#include "Render/RenderPass/SSAOPass.h"
 
 #include "Editor/Component/EditorControl.h"
 
