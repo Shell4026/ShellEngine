@@ -57,6 +57,8 @@ namespace sh::render::vk
 	}
 	VulkanContext::~VulkanContext()
 	{
+		if (device != nullptr)
+			Clear();
 	}
 
 	SH_RENDER_API void VulkanContext::Init()
@@ -119,7 +121,9 @@ namespace sh::render::vk
 
 		vkDeviceWaitIdle(device);
 
+		IRenderThrMethod<RenderDataManager>::ClearBuffer(renderDataManager);
 		pipelineManager.reset();
+		computePipelineManager.reset();
 		if (emptyDescLayout)
 		{
 			vkDestroyDescriptorSetLayout(device, emptyDescLayout, nullptr);
@@ -136,6 +140,8 @@ namespace sh::render::vk
 		gpu = VK_NULL_HANDLE;
 		gpus.clear();
 		DestroyInstance();
+
+		device = nullptr;
 	}
 	SH_RENDER_API auto VulkanContext::AllocateCommandBuffer(bool bCompute) -> CommandBuffer*
 	{
