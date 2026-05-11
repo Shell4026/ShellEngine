@@ -32,10 +32,15 @@ namespace sh::render::vk
 		bSwapChainImg(other.bSwapChainImg),
 		bRenderTarget(other.bRenderTarget)
 	{
-		other.Clear();
+		other.img = nullptr;
+		other.imgMem = nullptr;
+		other.imgView = nullptr;
+		other.sampler = nullptr;
 	}
 	SH_RENDER_API auto VulkanImageBuffer::operator=(VulkanImageBuffer&& other) noexcept -> VulkanImageBuffer&
 	{
+		if (this == &other)
+			return *this;
 		Clear();
 
 		ctx = other.ctx;

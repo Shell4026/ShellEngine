@@ -77,4 +77,4 @@ namespace sh::render::vk
 		bool bSwapChainImg = false;
 		bool bRenderTarget = false;
 	};
-}
+}//namespace
